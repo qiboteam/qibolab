@@ -1,7 +1,8 @@
 How to connect Qibolab to your lab?
 ===================================
 
-In this section we will show how to let ``Qibolab`` communicate with your lab’s instruments and run an experiment.
+In this section we will show how to let ``Qibolab`` communicate with your lab's
+instruments and run an experiment.
 
 The main required object, in this case, is the `Platform`. A Platform is defined
 as a QPU (quantum processing unit with one or more qubits) controlled by one ore
@@ -10,11 +11,11 @@ more instruments.
 How to define a platform for a self-hosted QPU?
 -----------------------------------------------
 
-The :class:`qibolab.platform.Platform` object holds all the information
-required to execute programs, and in particular :class:`qibolab.pulses.PulseSequence`
-in a real QPU. It is comprised by different objects that contain information
-about the qubit characterization and connectivity, the native gates and the
-lab's instrumentation.
+The :class:`qibolab.platform.Platform` object holds all the information required
+to execute programs, and in particular :class:`qibolab.pulses.PulseSequence` in
+a real QPU. It is comprised by different objects that contain information about
+the qubit characterization and connectivity, the native gates and the lab's
+instrumentation.
 
 The following cell shows how to define a single qubit platform from scratch,
 using different Qibolab primitives.
@@ -28,6 +29,7 @@ using different Qibolab primitives.
     from qibolab.native import NativePulse, SingleQubitNatives
     from qibolab.instruments.dummy import DummyInstrument
 
+
     def create():
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
@@ -40,6 +42,7 @@ using different Qibolab primitives.
 
         # create the qubit object
         qubit = Qubit(0)
+
         # assign native gates to the qubit
         qubit.native_gates = SingleQubitNatives(
             RX=NativePulse(
@@ -61,6 +64,7 @@ using different Qibolab primitives.
                 frequency=int(7e9)
             )
         )
+
         # assign channels to the qubit
         qubit.readout = channels["ch1out"]
         qubit.feedback = channels["ch1in"]
@@ -70,36 +74,43 @@ using different Qibolab primitives.
         qubits = {qubit.name: qubit}
         pairs = {} # empty as for single qubit we have no qubit pairs
         instruments = {instrument.name: instrument}
+
+        # allocate and return Platform object
         return Platform("my_platform", qubits, pairs, instruments, resonator_type="3D")
 
 
 This code creates a platform with a single qubit that is controlled by the
 :class:`qibolab.instruments.dummy.DummyInstrument`. In real applications, if
 Qibolab provides drivers for the instruments in the lab, these can be directly
-used in place of the ``DummyInstrument`` above, otherwise new drivers need to
-be coded following the abstract :class:`qibolab.instruments.abstract.Instrument`
+used in place of the ``DummyInstrument`` above, otherwise new drivers need to be
+coded following the abstract :class:`qibolab.instruments.abstract.Instrument`
 interface.
 
-Furthermore, above we defined three channels that connect the
-qubit to the control instrument and we assigned two native gates to the qubit.
-In this example we neglected or characterization parameters associated to the
-qubit. These can be passed when defining the :class:`qibolab.qubits.Qubit`
-objects.
+Furthermore, above we defined three channels that connect the qubit to the
+control instrument and we assigned two native gates to the qubit. In this
+example we neglected or characterization parameters associated to the qubit.
+These can be passed when defining the :class:`qibolab.qubits.Qubit` objects.
 
-When the QPU contains more than one qubit, some of the qubits are connected
-so that two-qubit gates can be applied. For such connected pairs of qubits one
-needs to additionally define :class:`qibolab.qubits.QubitPair` objects,
-which hold the parameters of the two-qubit gates.
+When the QPU contains more than one qubit, some of the qubits are connected so
+that two-qubit gates can be applied. For such connected pairs of qubits one
+needs to additionally define :class:`qibolab.qubits.QubitPair` objects, which
+hold the parameters of the two-qubit gates.
 
 .. code-block::  python
 
     from qibolab.qubits import Qubit, QubitPair
     from qibolab.pulses import PulseType
-    from qibolab.native import NativePulse, NativeSequence, SingleQubitNatives, TwoQubitNatives
+    from qibolab.native import (
+        NativePulse,
+        NativeSequence,
+        SingleQubitNatives,
+        TwoQubitNatives,
+    )
 
     # create the qubit objects
     qubit0 = Qubit(0)
     qubit1 = Qubit(1)
+
     # assign single-qubit native gates to each qubit
     qubit0.native_gates = SingleQubitNatives(
         RX=NativePulse(
@@ -109,7 +120,7 @@ which hold the parameters of the two-qubit gates.
             shape="Gaussian(5)",
             pulse_type=PulseType.DRIVE,
             qubit=qubit0,
-            frequency=int(4.7e9)
+            frequency=int(4.7e9),
         ),
         MZ=NativePulse(
             name="MZ",
@@ -118,8 +129,8 @@ which hold the parameters of the two-qubit gates.
             shape="Rectangular()",
             pulse_type=PulseType.READOUT,
             qubit=qubit0,
-            frequency=int(7e9)
-        )
+            frequency=int(7e9),
+        ),
     )
     qubit1.native_gates = SingleQubitNatives(
         RX=NativePulse(
@@ -129,7 +140,7 @@ which hold the parameters of the two-qubit gates.
             shape="Gaussian(5)",
             pulse_type=PulseType.DRIVE,
             qubit=qubit1,
-            frequency=int(5.1e9)
+            frequency=int(5.1e9),
         ),
         MZ=NativePulse(
             name="MZ",
@@ -138,15 +149,15 @@ which hold the parameters of the two-qubit gates.
             shape="Rectangular()",
             pulse_type=PulseType.READOUT,
             qubit=qubit1,
-            frequency=int(7.5e9)
-        )
+            frequency=int(7.5e9),
+        ),
     )
 
     # define the pair of qubits
     pair = QubitPair(qubit0, qubit1)
     pair.native_gates = TwoQubitNatives(
         CZ=NativeSequence(
-            name="CZ"
+            name="CZ",
             pulses=[
                 NativePulse(
                     name="CZ1",
@@ -156,8 +167,10 @@ which hold the parameters of the two-qubit gates.
                     pulse_type=PulseType.FLUX,
                     qubit=qubit1,
                 )
-            ])
+            ],
+        )
     )
+
 
 
 The platform automatically creates the connectivity graph of the given chip
@@ -166,9 +179,9 @@ using the dictionary of :class:`qibolab.qubits.QubitPair` objects.
 Registering platforms
 ^^^^^^^^^^^^^^^^^^^^^
 
-The ``create()`` function defined in the above example can be called or
-imported directly in any Python script.
-Alternatively, it is also possible to make the platform available as
+The ``create()`` function defined in the above example can be called or imported
+directly in any Python script. Alternatively, it is also possible to make the
+platform available as
 
 .. code-block::  python
 
@@ -180,22 +193,24 @@ Alternatively, it is also possible to make the platform available as
 
 To do so, ``create()`` needs to be saved in a module called ``my_platform.py``
 and the environment flag ``QIBOLAB_PLATFORMS`` needs to point to the directory
-that contains this module.
+that contains this module. Examples of advanced platforms are available at `this
+repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 .. _using_runcards:
 
 Using runcards
 ^^^^^^^^^^^^^^
 
-Operating a QPU requires calibrating a set of parameters, the number of
-which increases with the number of qubits. Hardcoding such parameters
-in the ``create()`` function, as shown in the above examples, is not
-scalable. However, since ``create()`` is part of a Python module,
-is is possible to load parameters from an external file or database.
+Operating a QPU requires calibrating a set of parameters, the number of which
+increases with the number of qubits. Hardcoding such parameters in the
+``create()`` function, as shown in the above examples, is not scalable. However,
+since ``create()`` is part of a Python module, is is possible to load parameters
+from an external file or database.
 
-Qibolab provides some utility functions, accessible through :py:mod:`qibolab.utils`,
-for loading calibration parameters stored in a YAML file with a specific format.
-We call such file a runcard. Here is a runcard for a two-qubit system:
+Qibolab provides some utility functions, accessible through
+:py:mod:`qibolab.utils`, for loading calibration parameters stored in a YAML
+file with a specific format. We call such file a runcard. Here is a runcard for
+a two-qubit system:
 
 .. code-block::  yaml
 
@@ -285,23 +300,21 @@ We call such file a runcard. Here is a runcard for a two-qubit system:
                 iq_angle: 4.912447775569025
 
 
-This file contains different sections: ``qubits`` is a list with
-the qubit names, ``settings`` defines default execution parameters,
-``topology`` defines the qubit connectivity (qubit pairs),
-``native_gates`` specifies the calibrated pulse parameters for
-implementing single and two-qubit gates and ``characterization``
-provides the physical parameters associated to each qubit.
-Note that such parameters may slightly differ depending on the
-QPU architecture, however the pulses under ``native_gates``
-should comply with the :class:`qibolab.pulses.Pulse` API
-and the parameters under ``characterization`` should be
-a subset of :class:`qibolab.qubits.Qubit` attributes.
+This file contains different sections: ``qubits`` is a list with the qubit
+names, ``settings`` defines default execution parameters, ``topology`` defines
+the qubit connectivity (qubit pairs), ``native_gates`` specifies the calibrated
+pulse parameters for implementing single and two-qubit gates and
+``characterization`` provides the physical parameters associated to each qubit.
+Note that such parameters may slightly differ depending on the QPU architecture,
+however the pulses under ``native_gates`` should comply with the
+:class:`qibolab.pulses.Pulse` API and the parameters under ``characterization``
+should be a subset of :class:`qibolab.qubits.Qubit` attributes.
 
-Providing the above runcard is not sufficient to instantiate
-a :class:`qibolab.platform.Platform`. This should still be done
-using a ``create()`` method, however this is significantly
-simplified by ``qibolab.utils``. Here is the ``create()``
-method that loads the parameters of the above runcard:
+Providing the above runcard is not sufficient to instantiate a
+:class:`qibolab.platform.Platform`. This should still be done using a
+``create()`` method, however this is significantly simplified by
+``qibolab.utils``. Here is the ``create()`` method that loads the parameters of
+the above runcard:
 
 .. code-block::  python
 
@@ -337,7 +350,9 @@ method that loads the parameters of the above runcard:
         instruments = {instrument.name: instrument}
         # load ``settings`` from the runcard
         settings = load_settings(runcard)
-        return Platform("my_platform", qubits, pairs, instruments, settings, resonator_type="2D")
+        return Platform(
+            "my_platform", qubits, pairs, instruments, settings, resonator_type="2D"
+        )
 
 Note that this assumes that the runcard is saved as ``my_platform.yml`` in the
 same directory with the Python file that contains ``create()``.
