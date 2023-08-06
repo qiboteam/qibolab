@@ -100,6 +100,20 @@ def test_rz_to_sequence(platform):
     assert len(sequence) == 0
 
 
+def test_GPI2_to_sequence(platform):
+    circuit = Circuit(1)
+    circuit.add(gates.GPI2(0, phi=0.2))
+    sequence = compile_circuit(circuit, platform)
+    assert len(sequence.pulses) == 1
+    assert len(sequence.qd_pulses) == 1
+
+    RX90_pulse = platform.create_RX90_pulse(0, start=0, relative_phase=0.2)
+    s = PulseSequence(RX90_pulse)
+
+    np.testing.assert_allclose(sequence.duration, RX90_pulse.duration)
+    assert sequence.serial == s.serial
+
+
 def test_u3_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))

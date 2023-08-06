@@ -27,12 +27,10 @@ def test_create_platform_error():
         platform = create_platform("nonexistent")
 
 
-def test_abstractplatform_pickle(platform):
+def test_platform_pickle(platform):
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
     assert new_platform.name == platform.name
-    assert new_platform.runcard == platform.runcard
-    assert new_platform.settings == platform.settings
     assert new_platform.is_connected == platform.is_connected
 
 
@@ -64,10 +62,8 @@ def test_update(platform, par):
         if "frequency" in par:
             value *= 1e9
         if "states" in par:
-            assert value == platform.settings["characterization"]["single_qubit"][i][par]
             assert value == getattr(qubit, par)
         else:
-            assert value == float(platform.settings["characterization"]["single_qubit"][i][par])
             assert value == float(getattr(qubit, par))
 
 
@@ -81,7 +77,7 @@ def qpu_platform(connected_platform):
 
 
 @pytest.mark.qpu
-def test_abstractplatform_setup_start_stop(qpu_platform):
+def test_platform_setup_start_stop(qpu_platform):
     pass
 
 
@@ -105,7 +101,7 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=NotImplementedError, reason="Qblox does not support long waveforms.")
-def test_multiqubitplatform_execute_one_long_drive_pulse(qpu_platform):
+def test_platform_execute_one_long_drive_pulse(qpu_platform):
     # Long duration
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
@@ -116,7 +112,7 @@ def test_multiqubitplatform_execute_one_long_drive_pulse(qpu_platform):
 
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=NotImplementedError, reason="Qblox does not support long waveforms.")
-def test_multiqubitplatform_execute_one_extralong_drive_pulse(qpu_platform):
+def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     # Extra Long duration
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
@@ -126,7 +122,7 @@ def test_multiqubitplatform_execute_one_extralong_drive_pulse(qpu_platform):
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_one_drive_one_readout(qpu_platform):
+def test_platform_execute_one_drive_one_readout(qpu_platform):
     # One drive pulse and one readout pulse
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
@@ -137,7 +133,7 @@ def test_multiqubitplatform_execute_one_drive_one_readout(qpu_platform):
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(qpu_platform):
+def test_platform_execute_multiple_drive_pulses_one_readout(qpu_platform):
     # Multiple qubit drive pulses and one readout pulse
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
@@ -150,7 +146,7 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout(qpu_platfo
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing(
+def test_platform_execute_multiple_drive_pulses_one_readout_no_spacing(
     qpu_platform,
 ):
     # Multiple qubit drive pulses and one readout pulse with no spacing between them
@@ -165,7 +161,7 @@ def test_multiqubitplatform_execute_multiple_drive_pulses_one_readout_no_spacing
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout(
+def test_platform_execute_multiple_overlaping_drive_pulses_one_readout(
     qpu_platform,
 ):
     # Multiple overlapping qubit drive pulses and one readout pulse
@@ -180,7 +176,7 @@ def test_multiqubitplatform_execute_multiple_overlaping_drive_pulses_one_readout
 
 
 @pytest.mark.qpu
-def test_multiqubitplatform_execute_multiple_readout_pulses(qpu_platform):
+def test_platform_execute_multiple_readout_pulses(qpu_platform):
     # Multiple readout pulses
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
