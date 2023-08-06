@@ -24,7 +24,9 @@ Add an instrument
 -----------------
 
 The base of an instrument is :class:`qibolab.instruments.abstract.Instrument`.
-To accomodate different kind of instruments, a flexible interface is implemented with four abstract methods that are required to be implemented in the child instrument:
+To accomodate different kind of instruments, a flexible interface is implemented
+with four abstract methods that are required to be implemented in the child
+instrument:
 
 * ``connect()``
 * ``setup()``
@@ -32,12 +34,17 @@ To accomodate different kind of instruments, a flexible interface is implemented
 * ``stop()``
 * ``disconnect()``
 
-In the execution of an experiment these functions are called sequentially, so first a connection is established, the instrument is set up with the required parameters, the instrument starts operating, then stops and gets disconnected.
-Note that it's perfectly fine to leave the majority of these functions empty if not needed.
+In the execution of an experiment these functions are called sequentially, so
+first a connection is established, the instrument is set up with the required
+parameters, the instrument starts operating, then stops and gets disconnected.
+Note that it's perfectly fine to leave the majority of these functions empty if
+not needed.
 
-Moreover, it's important call the ``super.__init__(self, name, address)`` since it initialize the folders eventually required to store temporary files.
+Moreover, it's important call the ``super.__init__(self, name, address)`` since
+it initialize the folders eventually required to store temporary files.
 
-A good example of a instrument driver is the :class:`qibolab.instruments.rhode_schwartz.SGS100A` driver.
+A good example of a instrument driver is the
+:class:`qibolab.instruments.rohde_schwarz.SGS100A` driver.
 
 Here, let's write a basic example of instrument whose job is to deliver a fixed bias for the duration of the experiment:
 
@@ -49,12 +56,18 @@ Here, let's write a basic example of instrument whose job is to deliver a fixed 
     # and control of the device
     from proprietary_instruments import biaser_driver
 
+
     class Biaser(Instrument):
         """An instrument that delivers constand biases."""
+
         def __init__(self, name, address, min_value=-1, max_value=1):
             super().__init__(name, address)
-            self.max_value: float = max_value  # attribute example, maximum value of voltage allowed
-            self.min_value: float = min_value  # attribute example, minimum value of voltage allowed
+            self.max_value: float = (
+                max_value  # attribute example, maximum value of voltage allowed
+            )
+            self.min_value: float = (
+                min_value  # attribute example, minimum value of voltage allowed
+            )
             self.bias: float = 0
 
             self.device = biaser_driver(address)
@@ -82,7 +95,8 @@ Here, let's write a basic example of instrument whose job is to deliver a fixed 
 Add a controller
 ----------------
 
-The controller is an instrument that has some additional methods, its abstract implementation can be found in :class:`qibolab.instruments.abstract.Controller`.
+The controller is an instrument that has some additional methods, its abstract
+implementation can be found in :class:`qibolab.instruments.abstract.Controller`.
 
 The additional methods required are:
 
@@ -90,7 +104,9 @@ The additional methods required are:
 * ``play_sequences()``
 * ``sweep()``
 
-The simplest real example is the RFSoCs driver in :class:`qibolab.instruments.rfsoc.driver.RFSoC`, but still the code is much more complex than the local oscillator ones.
+The simplest real example is the RFSoCs driver in
+:class:`qibolab.instruments.rfsoc.driver.RFSoC`, but still the code is much more
+complex than the local oscillator ones.
 
 Let's see a minimal example:
 
@@ -99,8 +115,8 @@ Let's see a minimal example:
     from qibolab.instruments.abstract import Controller
     from proprietary_instruments import controller_driver
 
-    class myController(Controller):
 
+    class myController(Controller):
         def __init__(self, name, address):
             self.device = controller_driver(address)
             super().__init__(name, address)
@@ -126,17 +142,16 @@ Let's see a minimal example:
             sequence: PulseSequence,
             execution_parameters: ExecutionParameters,
         ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-        """Executes a PulseSequence."""
+            """Executes a PulseSequence."""
 
-            # usually, some modification on the qubit objects, sequences or parameters
-            # is needed so that the qibolab interface comply with the one of the device
-            # here these are equal
+            # usually, some modification on the qubit objects, sequences or
+            # parameters is needed so that the qibolab interface comply with the one
+            # of the device here these are equal
             results = self.device.run_experiment(qubits, sequence, execution_parameters)
 
-            # also the results are, in qibolab, specific objects that need some kind of conversion.
-            # Refer to the results section in the documentation.
+            # also the results are, in qibolab, specific objects that need some kind
+            # of conversion. Refer to the results section in the documentation.
             return results
-
 
         def sweep(
             self,
@@ -145,14 +160,13 @@ Let's see a minimal example:
             execution_parameters: ExecutionParameters,
             *sweepers: Sweeper,
         ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-
-            # usually, some modification on the qubit objects, sequences or parameters
-            # is needed so that the qibolab interface comply with the one of the device
-            # here these are equal
+            # usually, some modification on the qubit objects, sequences or
+            # parameters is needed so that the qibolab interface comply with the one
+            # of the device here these are equal
             results = self.device.run_sca(qubits, sequence, sweepers, execution_parameters)
 
-            # also the results are, in qibolab, specific objects that need some kind of conversion.
-            # Refer to the results section in the documentation.
+            # also the results are, in qibolab, specific objects that need some kind
+            # of conversion. Refer to the results section in the documentation.
             return results
 
         def play_sequences(
@@ -161,10 +175,11 @@ Let's see a minimal example:
             sequences: List[PulseSequence],
             execution_parameters: ExecutionParameters,
         ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-        """This method is used for sequence unrolling sweeps. Here not implemented."""
+            """This method is used for sequence unrolling sweeps. Here not implemented."""
             raise NotImplementedError
 
-As we saw in :doc:`lab`, to instantiate a platform at some point you have to write something like this:
+As we saw in :doc:`lab`, to instantiate a platform at some point you have to
+write something like this:
 
 .. code-block:: python
 
@@ -173,11 +188,14 @@ As we saw in :doc:`lab`, to instantiate a platform at some point you have to wri
     channels |= Channel("ch1out", port=instrument["o1"])
 
 
-The interesting part of this section is the ``port`` parameter that works as an attribute of the controller.
-A :class:`qibolab.instruments.port.Port` object describes the physical conections that a device may have.
-A Controller has, by default, ports characterized just by ``port_name`` (see also :class:`qibolab.instruments.abstract.Controller`), but different devices may need to add attributes and methods to the ports.
-This can be done by defining in the new controller a new port type.
-See, for example, the already implemented ports:
+The interesting part of this section is the ``port`` parameter that works as an
+attribute of the controller. A :class:`qibolab.instruments.port.Port` object
+describes the physical connections that a device may have. A Controller has, by
+default, ports characterized just by ``port_name`` (see also
+:class:`qibolab.instruments.abstract.Controller`), but different devices may
+need to add attributes and methods to the ports. This can be done by defining in
+the new controller a new port type. See, for example, the already implemented
+ports:
 
 * :class:`qibolab.instruments.rfsoc.driver.RFSoCPort`
 * :class:`qibolab.instruments.qm.config.QMPort`
