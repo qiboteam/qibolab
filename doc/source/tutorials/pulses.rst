@@ -9,7 +9,6 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
 .. code-block::  python
 
     from qibolab.pulses import (
-        Pulse,
         DrivePulse,
         ReadoutPulse,
         PulseSequence,
@@ -70,9 +69,9 @@ pulse sequence according to the number of shots ``nshots`` specified.
 
     # Turns on the local oscillators
     platform.start()
-    options = ExecutionParameters(nshots=1000, relaxation_time=100)
 
     # Executes a pulse sequence.
+    options = ExecutionParameters(nshots=1000, relaxation_time=100)
     results = platform.execute(ps, options=options)
 
     # Turn off lab instruments

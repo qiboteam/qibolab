@@ -13,11 +13,11 @@ qubit.
 Resonator spectroscopy
 ----------------------
 
-The first experiment we conduct is a resonator spectroscopy. The experiments is
-as follow:
+The first experiment we conduct is a resonator spectroscopy. The experiment is
+as follows:
 
-1. A measurement pulse is fired at a specific frequency (pulse on the readout
-   line, followed by an acquisition).
+1. A measurement pulse (pulse on the readout line, followed by an acquisition)
+    is fired at a specific frequency.
 2. We repeat point 1 for different frequencies.
 3. We plot the acquired amplitudes, identifying the peak/deep value as the
    resonator frequency.

@@ -7,7 +7,7 @@ Setting up the environment
 To launch experiments on quantum hardware, users have first to define their platform.
 A platform is composed of a python file, with instruments information, and of a runcard file, with calibration parameters.
 
-More information about it is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
+More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 Moreover, in the sext section, a platform template will be provided.
 
 After defining the platform, we must instruct ``qibolab`` of the location of the create file.
@@ -23,7 +23,7 @@ Define the platform
 -------------------
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
-For simplicity, the qubit will be controlled by a RFSoC-based system, althought minimal changes are needed to user other devices.
+For simplicity, the qubit will be controlled by a RFSoC-based system, althought minimal changes are needed to use other devices.
 
 .. code-block:: python
 
@@ -113,7 +113,7 @@ And the we can define the runcard:
                 threshold: 0.0
                 iq_angle: 0.0
                 mean_gnd_states: [0.0, 0.0]
-                mean_exc_states: [0.0, 0.0[
+                mean_exc_states: [0.0, 0.0]
 
 
 Run the experiment

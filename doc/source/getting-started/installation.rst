@@ -73,9 +73,8 @@ Qibolab supports the following control instruments:
 * QBlox
 * Xilinx RFSoCs
 
-In the following sections we provide the specific installation instructions
-to be ready to use Qibolab on the chosen instrument.
-
+In order to use Qibolab on with one of these instruments chosen instrument, 
+additional dependencies need to be installed.
 This can be done with:
 
 .. code-block:: bash
@@ -102,5 +101,5 @@ With the extras being:
 
 .. note::
 
-   Please note that installing all the extras is usually not needed.
+   Installing all the extras is usually not needed.
    It is possible to install qibolab with any number of extras.

@@ -9,15 +9,15 @@ as **controller**:
 * Zurich instruments
 * Xilinx RFSoCs
 
-as **local oscillators**:
+and as **local oscillators**:
 
 * Rhode&Schwartz
 * Erasynth++
 
-If you need to add a new driver, to support a new instruments in your setup, we encourage you to have a look at ``qibolab.instruments`` to have complete examples.
+If you need to add a new driver, to support a new instruments in your setup, we encourage you to have a look at ``qibolab.instruments`` for complete examples.
 In this section, anyway, a basic example will be given.
 
-For clarity, we devide the instruments in two different groups: the **controllers** and the standard **instruments**, where the controller is an instrument that can execute experiments.
+For clarity, we divide the instruments in two different groups: the **controllers** and the standard **instruments**, where the controller is an instrument that can execute pulse sequences.
 For example, a local oscillator is just an instrument, while QBlox is a controller.
 
 Add an instrument
