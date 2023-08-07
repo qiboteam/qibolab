@@ -73,7 +73,7 @@ Qibolab supports the following control instruments:
 * QBlox
 * Xilinx RFSoCs
 
-In order to use Qibolab on with one of these instruments chosen instrument, 
+In order to use Qibolab on with one of these instruments chosen instrument,
 additional dependencies need to be installed.
 This can be done with:
 
