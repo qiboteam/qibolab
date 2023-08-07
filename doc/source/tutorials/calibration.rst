@@ -83,8 +83,10 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
     plt.plot(frequencies, plt.amplitudes)
     plt.show()
 
-.. image:: resonator_spectroscopy.svg
-
+.. image:: resonator_spectroscopy_light.svg
+   :class: only-light
+.. image:: resonator_spectroscopy_dark.svg
+   :class: only-dark
 
 Qubit spectroscopy
 ------------------
@@ -162,7 +164,10 @@ We can now proceed to launch on hardware:
     plt.plot(frequencies, plt.amplitudes)
     plt.show()
 
-.. image:: qubit_spectroscopy.svg
+.. image:: qubit_spectroscopy_light.svg
+   :class: only-light
+.. image:: qubit_spectroscopy_dark.svg
+   :class: only-dark
 
 Single shot classification
 --------------------------
@@ -248,4 +253,7 @@ and its impact on qubit states in the IQ plane.
     )
     plt.show()
 
-.. image:: classification.svg
+.. image:: classification_light.svg
+   :class: only-light
+.. image:: classification_dark.svg
+   :class: only-dark
