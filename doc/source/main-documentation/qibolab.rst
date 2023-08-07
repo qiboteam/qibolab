@@ -5,21 +5,21 @@ Platforms
 
 Qibolab provides support to different quantum laboratories.
 
-Each lab is implemented using a :class:`qibolab.platform.Platform` object which implements basic features and connects instruments, qubits and channels.
+Each lab configuration is implemented using a :class:`qibolab.platform.Platform` object which orchestrates instruments, qubits and channels and provides the basic features for executing pulses.
 Therefore, the ``Platform`` enables the user to interface with all
 the required lab instruments at the same time with minimum effort.
 
-In the API reference section, a description of all the attributes and methods of the ``Platform`` is provided. here, let's focus on the main elements.
+The API reference section provides a description of all the attributes and methods of the ``Platform``. Here, let's focus on the main elements.
 
 In the platform, the main methods can be divided in different sections:
 
-- functions to load qubit parameters, save them and change them (``reload_settings``, ``dump``, ``update``)
-- functions to coordinare the instruments (``connect``, ``setup``, ``start``, ``stop``, ``disconnect``)
+- functions save and change qubit parameters (``dump``, ``update``)
+- functions to coordinate the instruments (``connect``, ``setup``, ``start``, ``stop``, ``disconnect``)
 - functions to execute experiments (``execute_pulse_sequence``, ``execute_pulse_sequences``, ``sweep``)
 - functions to initialize gates (``create_RX90_pulse``, ``create_RX_pulse``, ``create_CZ_pulse``, ``create_MZ_pulse``, ``create_qubit_drive_pulse``, ``create_qubit_readout_pulse``, ``create_RX90_drag_pulse``, ``create_RX_drag_pulse``)
-- setter and getter of channel/qubit parameters (local oscillator parameters, attenuations, gain and biases)
+- setters and getters of channel/qubit parameters (local oscillator parameters, attenuations, gain and biases)
 
-The idea of the ``Platform`` is to serve as the only exposed object to the user so, for example, we can easily write an example of experiment, whithout any need of going into the low-level instrument-dpecific code.
+The idea of the ``Platform`` is to serve as the only object exposed to the user,  so that we can deploy experiments, without any need of going into the low-level instrument-specific code.
 
 For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/tutorials/lab`:
 
@@ -50,7 +50,7 @@ We can easily print some of the parameters of the channels (similarly we can set
     print(f"Qubit bias: {platform.get_bias(0)}")
     print(f"Qubit attenuation: {platform.get_attenuation(0)}")
 
-Now we can create a simple sequence (again, without explicitly give any qubit specific parameter, defined in the runcard):
+Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
 
 .. code-block::  python
 
@@ -90,7 +90,7 @@ They are optional and encompass distinct types, each serving a specific purpose:
 
 - readout (from controller device to the qubits)
 - feedback (from qubits to controller)
-- twpa (pump to the twpa)
+- twpa (pump to the TWPA)
 - drive
 - flux
 - flux_coupler
@@ -237,7 +237,7 @@ Alternatively, you can achieve the same result using the dedicated :class:`qibol
 
 .. code-block:: python
 
-    from qibolab.pulses import *
+    from qibolab.pulses import DrivePulse, Rectangular
 
     pulse = DrivePulse(
         start=0,  # timing, in all qibolab, is expressed in ns
@@ -381,7 +381,7 @@ In this way, we first define a sweeper with an interval of 400 MHz (-200 MHz ---
     - for qubit 1: [4.8 GHz, 5.2 GHz]
     - for qubit 2: [5.8 GHz, 6.2 GHz]
 
-If we had used the SweeperType absolute, we would have probed for all qubits the same frequencies [-200 MHz, 200 MHz].
+If we had used the :class:`qibolab.sweeper.SweeperType` absolute, we would have probed for all qubits the same frequencies [-200 MHz, 200 MHz].
 
 .. note::
 
