@@ -112,3 +112,7 @@ results:
 Returns the following plot:
 
 .. image:: rotation.svg
+
+.. note::
+   Executing circuits using the Qibolab backend results to automatic application of the transpilation and compilation pipelines (:ref:`main_doc_transpiler`) which convert the circuit to a pulse sequence that is executed by the given platform.
+   It is possible to modify these pipelines following the instructions in the :ref:`tutorials_transpiler` example.

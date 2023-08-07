@@ -533,6 +533,15 @@ Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which def
 Native
 ------
 
+Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated and the pulse parameters that implement them are known.
+If this set is universal any circuit can be transpiled and compiled to a pulse sequence which is then deployed in the given platform.
+
+:py:mod:`qibolab.native` provides data containers for holding the pulse parameters required for implementing every native gate.
+Every :class:`qibolab.qubits.Qubit` object contains a :class:`qibolab.native.SingleQubitNatives` object which holds the parameters of its native single-qubit gates,
+while each :class:`qibolab.qubits.QubitPair` objects contains a :class:`qibolab.native.TwoQubitNatives` object which holds the parameters of the native two-qubit gates acting on the pair.
+Each native gate is represented by a :class:`qibolab.native.NativePulse` or :class:`qibolab.native.NativeSequence` which contain all the calibrated parameters and can be converted to an actual :class:`qibolab.pulses.PulseSequence` that is then executed in the platform.
+Finally, the :class:`qibolab.native.NativeType` flag is used for communicating the set of available native gates to the transpiler.
+
 .. _main_doc_instruments:
 
 Instruments
