@@ -1,7 +1,7 @@
 How to connect Qibolab to your lab?
 ===================================
 
-In this section we will show how to let ``Qibolab`` communicate with your lab's
+In this section we will show how to let Qibolab communicate with your lab's
 instruments and run an experiment.
 
 The main required object, in this case, is the `Platform`. A Platform is defined

@@ -1,7 +1,7 @@
 How to add a new instrument in Qibolab?
 =======================================
 
-Currently, ``Qibolab`` support various instruments:
+Currently, Qibolab support various instruments:
 as **controller**:
 
 * Quantum Machines

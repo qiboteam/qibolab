@@ -633,13 +633,13 @@ The most important instruments are the controller, the following is a table of t
 Zurich Instruments
 ^^^^^^^^^^^^^^^^^^
 
-``Qibolab`` has been tested with the following `instrument cluster <https://www.zhinst.com/others/en/instruments/product-finder/type/quantum_computing_systems>`_:
+Qibolab has been tested with the following `instrument cluster <https://www.zhinst.com/others/en/instruments/product-finder/type/quantum_computing_systems>`_:
 
 - 1 `SHFQC` (Superconducting Hybrid Frequency Converter)
 - 2 `HDAWGs` (High-Density Arbitrary Waveform Generators)
 - 1 `PQSC` (Programmable Quantum System Controller)
 
-The integration of ``Qibolab`` with the instrument cluster is facilitated through the `LabOneQ <https://github.com/zhinst/laboneq>`_ Python library that handles communication and coordination with the instruments.
+The integration of Qibolab with the instrument cluster is facilitated through the `LabOneQ <https://github.com/zhinst/laboneq>`_ Python library that handles communication and coordination with the instruments.
 
 Quantum Machines
 ^^^^^^^^^^^^^^^^
