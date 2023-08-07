@@ -111,7 +111,10 @@ results:
 
 Returns the following plot:
 
-.. image:: rotation.svg
+.. image:: rotation_light.svg
+   :class: only-light
+.. image:: rotation_dark.svg
+   :class: only-dark
 
 .. note::
    Executing circuits using the Qibolab backend results to automatic application of the transpilation and compilation pipelines (:ref:`main_doc_transpiler`) which convert the circuit to a pulse sequence that is executed by the given platform.

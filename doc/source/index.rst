@@ -19,6 +19,13 @@ circuits on quantum hardware. Qibolab includes:
 5. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on
    quantum hardware.
 
+Components
+----------
+
+The main components of ``Qibolab`` are presented in :doc:`main-documentation/index`
+
+.. image:: /main-documentation/platform.svg
+
 Key features
 ------------
 
