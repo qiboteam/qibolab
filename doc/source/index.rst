@@ -12,17 +12,12 @@ Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ backend for
 quantum hardware control. This module automates the implementation of quantum
 circuits on quantum hardware. Qibolab includes:
 
-1. *Platform API*: support custom allocation of quantum hardware platforms / lab setup.
-2. *Drivers*: supports commercial and open-source firmware for hardware control.
-3. *Arbitrary pulse API*: provide a library of custom pulses for execution through instruments.
-4. *Transpiler*: compiles quantum circuits into pulse sequences matching chip topology.
-5. *Quantum Circuit Deployment*: seamlessly deploys quantum circuit models on
+1. :ref:`Platform API <main_doc_platform>`: support custom allocation of quantum hardware platforms / lab setup.
+2. :ref:`Drivers <main_doc_instruments>`: supports commercial and open-source firmware for hardware control.
+3. :ref:`Arbitrary pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
+4. :ref:`Transpiler <main_doc_transpiler>`: compiles quantum circuits into pulse sequences matching chip topology.
+5. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on
    quantum hardware.
-
-Components
-----------
-
-.. image:: platform_object.svg
 
 Key features
 ------------
@@ -41,7 +36,7 @@ Welcome to the comprehensive documentation for ``Qibolab``! This guide will help
 
 2. **Tutorials**: Explore the :doc:`/tutorials/index` section for a range of tutorials that cater to different levels of expertise. These tutorials cover basic examples, real experiments, and guides for extending the library with new instruments.
 
-3. **Main Documentation**: Dive into the :doc:`/main-documentation/qibolab` section, which offers a detailed overview of the main components that constitute the ``Qibolab`` framework. This section provides a comprehensive understanding of the key elements, helping you build a holistic view of the API's capabilities.
+3. **Main Documentation**: Dive into the :doc:`/main-documentation/index` section, which offers a detailed overview of the main components that constitute the ``Qibolab`` framework. This section provides a comprehensive understanding of the key elements, helping you build a holistic view of the API's capabilities.
 
 4. **API Reference**: For an in-depth exploration, visit the :doc:`/api-reference/qibolab` section. Here, you'll find automatically compiled documentation generated from present docstrings. This reference offers comprehensive insights into the various classes, methods, and attributes available within the library.
 

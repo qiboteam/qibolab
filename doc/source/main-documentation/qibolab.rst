@@ -1,3 +1,5 @@
+.. _main_doc_platform:
+
 Platforms
 ---------
 
@@ -41,10 +43,9 @@ We can easily print some of the parameters of the channels (similarly we can set
 
 .. code-block::  python
 
-    print(f"Drive LO frequency: {platform.get_lo_drive_frequency(0)}")
-    print(f"Readout LO frequency: {platform.get_lo_readout_frequency(0)}")
-    print(f"TWPA LO frequency: {platform.get_lo_twpa_frequency(0)}")
-    print(f"TWPA LO power: {platform.get_lo_twpa_power(0)}")
+    print(f"Drive LO frequency: {platform.qubits[0].drive.lo_frequency}")
+    print(f"Readout LO frequency: {platform.qubits[0].readout.lo_frequency}")
+    print(f"TWPA LO frequency: {platform.qubits[0].twpa.lo_frequency}")
 
     print(f"Qubit bias: {platform.get_bias(0)}")
     print(f"Qubit attenuation: {platform.get_attenuation(0)}")
@@ -185,6 +186,8 @@ To assign local oscillators, the procedure is simple:
     local_oscillator.frequency = 6e9  # Hz
     local_oscillator.power = 5  # dB
     channel2.local_oscillator = local_oscillator
+
+.. _main_doc_pulses:
 
 Pulses
 ------
@@ -516,11 +519,15 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 
+.. _main_doc_transpiler:
+
 Transpiler
 ----------
 
 Native
 ------
+
+.. _main_doc_instruments:
 
 Instruments
 -----------

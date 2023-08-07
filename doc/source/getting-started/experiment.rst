@@ -1,26 +1,12 @@
 Performing the first experiment
 ===============================
 
-Setting up the environment
---------------------------
+Define the platform
+-------------------
 
 To launch experiments on quantum hardware, users have first to define their platform.
 A platform is composed of a python file, with instruments information, and of a runcard file, with calibration parameters.
-
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
-Moreover, in the sext section, a platform template will be provided.
-
-After defining the platform, we must instruct ``qibolab`` of the location of the create file.
-This can be done using an environment variable:
-
-.. code-block:: bash
-
-    export QIBOLAB_PLATFORMS=<path-to-create-file>
-
-To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
-
-Define the platform
--------------------
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
 For simplicity, the qubit will be controlled by a RFSoC-based system, althought minimal changes are needed to use other devices.
@@ -116,6 +102,19 @@ And the we can define the runcard:
                 mean_exc_states: [0.0, 0.0]
 
 
+Setting up the environment
+--------------------------
+
+After defining the platform, we must instruct ``qibolab`` of the location of the create file.
+This can be done using an environment variable:
+
+.. code-block:: bash
+
+    export QIBOLAB_PLATFORMS=<path-to-create-file>
+
+To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
+
+
 Run the experiment
 ------------------
 
@@ -138,11 +137,15 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         AcquisitionType,
     )
 
-    platform = create_platform("single_qubit")
+    # load the platform from ``my_platform.py`` and ``my_platform.yml``
+    platform = create_platform("my_platform")
+
+    # define the pulse sequence
     sequence = PulseSequence()
     ro_pulse = platform.create_MZ_pulse(qubit=0, start=0)
     sequence.add(ro_pulse)
 
+    # define a sweeper for a frequency scan
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-2e8, +2e8, 1e6),
@@ -150,6 +153,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         type=SweeperType.OFFSET,
     )
 
+    # perform the experiment using specific options
     options = ExecutionParameters(
         nshots=1000,
         relaxation_time=50,
@@ -159,7 +163,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     results = platform.sweep(sequence, options, sweeper)
 
-
+    # plot the results
     amplitudes = results[ro_pulse.serial].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + ro_pulse.frequency
 
