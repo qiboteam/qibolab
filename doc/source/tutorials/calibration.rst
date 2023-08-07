@@ -248,4 +248,7 @@ and its impact on qubit states in the IQ plane.
     )
     plt.show()
 
-.. image:: classification.svg
+.. image:: classification_light.svg
+   :class: only-light
+.. image:: classification_dark.svg
+   :class: only-dark
