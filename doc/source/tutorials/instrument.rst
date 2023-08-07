@@ -163,7 +163,7 @@ Let's see a minimal example:
             # usually, some modification on the qubit objects, sequences or
             # parameters is needed so that the qibolab interface comply with the one
             # of the device here these are equal
-            results = self.device.run_sca(qubits, sequence, sweepers, execution_parameters)
+            results = self.device.run_scan(qubits, sequence, sweepers, execution_parameters)
 
             # also the results are, in qibolab, specific objects that need some kind
             # of conversion. Refer to the results section in the documentation.
