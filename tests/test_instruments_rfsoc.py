@@ -560,11 +560,13 @@ def test_call_executepulsesequence(connected_platform, instrument):
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
+    instrument.cfg.average = False
     i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(
-        sequence, platform.qubits, False, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+        sequence, platform.qubits, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
     )
+    instrument.cfg.average = True
     i_vals_av, q_vals_av = instrument._execute_pulse_sequence(
-        sequence, platform.qubits, True, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+        sequence, platform.qubits, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
     )
 
     assert np.shape(i_vals_nav) == (1, 1, 1000)
@@ -589,8 +591,10 @@ def test_call_execute_sweeps(connected_platform, instrument):
     expts = len(sweep.values)
 
     sweep = [convert(sweep, sequence, platform.qubits)]
-    i_vals_nav, q_vals_nav = instrument._execute_sweeps(sequence, platform.qubits, sweep, False)
-    i_vals_av, q_vals_av = instrument._execute_sweeps(sequence, platform.qubits, sweep, True)
+    instrument.cfg.average = False
+    i_vals_nav, q_vals_nav = instrument._execute_sweeps(sequence, platform.qubits, sweep)
+    instrument.cfg.average = True
+    i_vals_av, q_vals_av = instrument._execute_sweeps(sequence, platform.qubits, sweep)
 
     assert np.shape(i_vals_nav) == (1, 1, expts, 1000)
     assert np.shape(q_vals_nav) == (1, 1, expts, 1000)
