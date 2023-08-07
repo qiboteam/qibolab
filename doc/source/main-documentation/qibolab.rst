@@ -81,9 +81,9 @@ Qubits
 The :class:`qibolab.qubits.Qubit` class serves as a comprehensive representation of a physical qubit within the Qibolab framework.
 It encapsulates three fundamental elements crucial to qubit control and operation:
 
-- Channels: Physical Connections
-- Parameters: Configurable Properties
-- Native Gates: Quantum Operations
+- :ref:`Channels <main_doc_channels>`: Physical Connections
+- :class:`Parameters <qibolab.qubits.Qubit>`: Configurable Properties
+- :ref:`Native Gates <main_doc_native>`: Quantum Operations
 
 Channels play a pivotal role in connecting the quantum system to the control infrastructure.
 They are optional and encompass distinct types, each serving a specific purpose:
@@ -97,28 +97,8 @@ They are optional and encompass distinct types, each serving a specific purpose:
 
 The Qubit class allows you to set and manage several key parameters that influence qubit behavior.
 These parameters are typically extracted from the runcard during platform initialization.
-Notable settable parameters include:
 
-- bare_resonator_frequency
-- readout_frequency
-- drive_frequency
-- anharmonicity
-- Ec
-- Ej
-- g
-- assigment_fidelity
-- sweetspot
-- peak_vol`tage
-- pi_pulse_amplitude
-- T1
-- T2
-- T2_spin_echo
-- state0_voltage
-- state1_voltage
-- mean_gnd_states
-- mean_exc_states
-- threshold
-- iq_angle
+.. _main_doc_channels:
 
 Channels
 --------
@@ -310,9 +290,9 @@ Consider a scenario where a resonator spectroscopy experiment is performed. This
 1. Define a pulse sequence.
 2. Define a readout pulse with frequency A.
 3. Execute the sequence.
-4. Define a new readout pulse with frequency A + :math:`\epsilon`.
+4. Define a new readout pulse with frequency :math:`A + \epsilon`.
 5. Execute the sequence again.
-6. Repeat for increasing frequencies A + 2 :math:`\epsilon`, A + 3 :math:`\epsilon`, and so on.
+6. Repeat for increasing frequencies :math:`A + 2 \epsilon`, :math:`A + 3 \epsilon`, and so on.
 
 This approach is suboptimal and time-consuming, mainly due to the frequent communication between the control device and the Qibolab user after each execution. Such communication overhead significantly extends experiment duration.
 
@@ -385,7 +365,7 @@ If we had used the :class:`qibolab.sweeper.SweeperType` absolute, we would have 
 
 .. note::
 
-   The default SweeperType is absolute!
+   The default :class:`qibolab.sweeper.SweeperType` is absolute!
 
 For factor sweepers, usually useful when dealing with amplitudes, the base value is multipled by the values set.
 
@@ -451,7 +431,6 @@ Supported acquisition types, accessible via the :class:`qibolab.execution_parame
 - Discrimination: Distinguishes states based on acquired voltages.
 - Integration: Returns demodulated and integrated waveforms.
 - Raw: Offers demodulated, yet unintegrated waveforms.
-- Spectroscopy: Designed specifically for spectroscopy applications, primarily supported by Zurich Instruments devices.
 
 Supported averaging modes, available through the :class:`qibolab.execution_parameters.AveragingMode` enumeration, consist of:
 
@@ -523,6 +502,8 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
 Transpiler
 ----------
+
+.. _main_doc_native:
 
 Native
 ------
