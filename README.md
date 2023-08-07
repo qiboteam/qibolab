@@ -21,18 +21,17 @@ The qibolab backend documentation is available at [https://qibo.science/qibolab/
 
 ## Minimum working example
 
-A simple example on how to connect to the TIIq platform and use it execute a pulse sequence:
+A simple example on how to connect to a platform and use it execute a pulse sequence:
 
 ```python
-from qibolab import Platform
-from qibolab.paths import qibolab_folder
-from qibolab.pulses import Pulse, ReadoutPulse, PulseSequence
+from qibolab import create_platform, ExecutionParameters
+from qibolab.pulses import DrivePulse, ReadoutPulse, PulseSequence
 
 # Define PulseSequence
 sequence = PulseSequence()
 # Add some pulses to the pulse sequence
 sequence.add(
-    Pulse(
+    DrivePulse(
         start=0,
         amplitude=0.3,
         duration=4000,
@@ -56,8 +55,7 @@ sequence.add(
 )
 
 # Define platform and load specific runcard
-runcard = qibolab_folder / "runcards" / "tii1q.yml"
-platform = Platform("tii1q", runcard)
+platform = create_platform("my_platform")
 
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
@@ -65,9 +63,14 @@ platform.connect()
 platform.setup()
 # Turns on the local oscillators
 platform.start()
-# Executes a pulse sequence.
-results = platform.execute_pulse_sequence(sequence, nshots=3000)
-print(f"results (amplitude, phase, i, q): {results}")
+
+# Execute a pulse sequence
+options = ExecutionParameters(nshots=1000)
+results = platform.execute_pulse_sequence(sequence, options)
+
+# Print the acquired shots
+print(results.samples)
+
 # Turn off lab instruments
 platform.stop()
 # Disconnect from the instruments
@@ -96,8 +99,7 @@ for _ in range(5):
     print(result.probabilities())
 
 # Execute the circuit on hardware
-qibo.set_backend("qibolab", platform="tii1q")
-
+qibo.set_backend("qibolab", platform="my_platform")
 for _ in range(5):
     result = c(nshots=1024)
     print(result.probabilities())
