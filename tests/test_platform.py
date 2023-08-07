@@ -15,7 +15,7 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.platform import Platform
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, Rectangular
 
 from .conftest import find_instrument
 
@@ -108,13 +108,14 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     # Long duration
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
+    pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200)
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200))
+    sequence.add(pulse)
     options = ExecutionParameters(nshots=nshots)
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
             platform.execute_pulse_sequence(sequence, options)
-    elif find_instrument(platform, RFSoC) is not None:
+    elif find_instrument(platform, RFSoC) is not None and not isinstance(pulse.shape, Rectangular):
         with pytest.raises(RuntimeError):
             platform.execute_pulse_sequence(sequence, options)
     else:
@@ -126,13 +127,14 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     # Extra Long duration
     platform = qpu_platform
     qubit = next(iter(platform.qubits))
+    pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200)
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200))
+    sequence.add(pulse)
     options = ExecutionParameters(nshots=nshots)
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
             platform.execute_pulse_sequence(sequence, options)
-    elif find_instrument(platform, RFSoC) is not None:
+    elif find_instrument(platform, RFSoC) is not None and not isinstance(pulse.shape, Rectangular):
         with pytest.raises(RuntimeError):
             platform.execute_pulse_sequence(sequence, options)
     else:
