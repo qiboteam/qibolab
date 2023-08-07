@@ -261,7 +261,7 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
    result = my_platform.execute_pulse_sequence(sequence)
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
-Usual pulses, such as pi-pulses or measurements are already defined in the platform runcard and can be easily initialized with platform methods.
+Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
 These are relying on parameters held in the :ref:`main_doc_native` data structures.
 Typical experiments may include both pre-defined pulses and new ones:
 
