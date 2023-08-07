@@ -64,7 +64,16 @@ class NativePulse:
         """
         kwargs = pulse.copy()
         kwargs["pulse_type"] = PulseType(kwargs.pop("type"))
-        return cls(name, **kwargs, qubit=qubit)
+        kwargs["qubit"] = qubit
+        return cls(name, **kwargs)
+
+    @property
+    def raw(self):
+        data = {fld.name: getattr(self, fld.name) for fld in fields(self) if getattr(self, fld.name) is not None}
+        del data["name"]
+        data["qubit"] = self.qubit.name
+        data["type"] = data.pop("pulse_type").value
+        return data
 
     def pulse(self, start, relative_phase=0.0):
         """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
@@ -108,6 +117,10 @@ class VirtualZPulse:
     phase: float
     qubit: "qubits.Qubit"
 
+    @property
+    def raw(self):
+        return {"type": "virtual_z", "phase": self.phase, "qubit": self.qubit.name}
+
 
 @dataclass
 class NativeSequence:
@@ -148,6 +161,10 @@ class NativeSequence:
                 pulses.append(NativePulse(f"{name}{i}", **pulse, pulse_type=PulseType(pulse_type), qubit=qubit))
         return cls(name, pulses)
 
+    @property
+    def raw(self):
+        return [pulse.raw for pulse in self.pulses]
+
     def sequence(self, start=0):
         """Creates a :class:`qibolab.pulses.PulseSequence` object implementing the sequence."""
         sequence = PulseSequence()
@@ -167,8 +184,8 @@ class NativeSequence:
 class SingleQubitNatives:
     """Container with the native single-qubit gates acting on a specific qubit."""
 
-    MZ: Optional[NativePulse] = None
     RX: Optional[NativePulse] = None
+    MZ: Optional[NativePulse] = None
 
     @property
     def RX90(self) -> NativePulse:
@@ -188,6 +205,10 @@ class SingleQubitNatives:
         pulses = {n: NativePulse.from_dict(n, pulse, qubit=qubit) for n, pulse in native_gates.items()}
         return cls(**pulses)
 
+    @property
+    def raw(self):
+        return {fld.name: getattr(self, fld.name).raw for fld in fields(self)}
+
 
 @dataclass
 class TwoQubitNatives:
@@ -200,6 +221,15 @@ class TwoQubitNatives:
     def from_dict(cls, qubits, native_gates):
         sequences = {n: NativeSequence.from_dict(n, seq, qubits) for n, seq in native_gates.items()}
         return cls(**sequences)
+
+    @property
+    def raw(self):
+        data = {}
+        for fld in fields(self):
+            gate = getattr(self, fld.name)
+            if gate is not None:
+                data[fld.name] = gate.raw
+        return data
 
     @property
     def types(self):

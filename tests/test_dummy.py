@@ -10,7 +10,6 @@ SWEPT_POINTS = 5
 
 def test_dummy_initialization():
     platform = create_platform("dummy")
-    platform.reload_settings()
     platform.connect()
     platform.setup()
     platform.start()
@@ -63,7 +62,7 @@ def test_dummy_single_sweep_RAW():
     results = platform.sweep(sequence, options, sweeper)
     assert pulse.serial and pulse.qubit in results
     shape = results[pulse.qubit].magnitude.shape
-    samples = platform.sampling_rate * 1e-9 * pulse.duration
+    samples = platform.settings.sampling_rate * 1e-9 * pulse.duration
 
     assert shape == (samples * SWEPT_POINTS,)
 

@@ -6,6 +6,7 @@ from qibo.config import raise_error
 
 from qibolab.compilers.default import (
     cz_rule,
+    gpi2_rule,
     identity_rule,
     measurement_rule,
     rz_rule,
@@ -47,6 +48,7 @@ class Compiler:
                 gates.RZ: rz_rule,
                 gates.U3: u3_rule,
                 gates.CZ: cz_rule,
+                gates.GPI2: gpi2_rule,
                 gates.M: measurement_rule,
             }
         )

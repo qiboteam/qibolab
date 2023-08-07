@@ -2,21 +2,37 @@
 
 import math
 import re
-from dataclasses import replace
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional
 
 import networkx as nx
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.channels import Channel, ChannelMap
+from qibolab.channels import ChannelMap
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument
 from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
-from qibolab.qubits import Qubit, QubitId, QubitPair
+from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
+
+
+@dataclass
+class PlatformSettings:
+    """Default execution settings read from the runcard."""
+
+    nshots: int = 1024
+    """Default number of repetitions when executing a pulse sequence."""
+    sampling_rate: int = int(1e9)
+    """Number of waveform samples supported by the instruments per second."""
+    relaxation_time: int = int(1e5)
+    """Time in ns to wait for the qubit to relax to its ground state between shots."""
+    time_of_flight: int = 280
+    """Time in ns for the signal to reach the qubit from the instruments."""
+    smearing: int = 0
+    """Readout pulse window to be excluded during the signal integration."""
 
 
 class Platform:
@@ -35,30 +51,51 @@ class Platform:
         log.info("Loading platform %s", name)
 
         self.name = name
-        self.runcard = runcard
+        self.is_connected = False
         self.instruments: List[Instrument] = instruments
         self.channels: ChannelMap = channels
 
-        self.qubits: Dict[QubitId, Qubit] = {}
-        self.pairs: Dict[Tuple[QubitId, QubitId], QubitPair] = {}
+        # Load initial configuration
+        if isinstance(runcard, dict):
+            settings = runcard
+        else:
+            settings = yaml.safe_load(runcard.read_text())
 
-        # Values for the following are set from the runcard in ``reload_settings``
-        self.settings = None
-        self.is_connected = False
+        self.nqubits: int = settings["nqubits"]
+        self.description: Optional[str] = settings.get("description")
+        self.resonator_type: str = settings.get("resonator_type", "3D" if self.nqubits == 1 else "2D")
+        self.settings: PlatformSettings = PlatformSettings(**settings["settings"])
 
-        self.nqubits = None
-        self.resonator_type = None
-        self.topology = None
+        # create qubit objects
+        self.qubits: Dict[QubitId, Qubit] = {
+            q: Qubit(q, **char) for q, char in settings["characterization"]["single_qubit"].items()
+        }
 
-        self.nshots = None
-        self.relaxation_time = None
-        self.sampling_rate = None
+        # create ``QubitPair`` objects
+        self.pairs: Dict[QubitPairId, QubitPair] = {}
+        for pair in settings["topology"]:
+            pair = tuple(sorted(pair))
+            self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
 
-        # TODO: Remove this (needed for the multiqubit platform)
-        self.native_gates = {}
+        # register single qubit native gates to ``Qubit`` objects
+        native_gates = settings["native_gates"]
+        for q, gates in native_gates["single_qubit"].items():
+            self.qubits[q].native_gates = SingleQubitNatives.from_dict(self.qubits[q], gates)
+
+        # register two qubit native gates to ``QubitPair`` objects
         self.two_qubit_native_types = NativeType(0)
-        # Load platform settings
-        self.reload_settings()
+        if "two_qubit" in native_gates:
+            for pair, gatedict in native_gates["two_qubit"].items():
+                pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
+                self.pairs[pair].native_gates = TwoQubitNatives.from_dict(self.qubits, gatedict)
+                self.two_qubit_native_types |= self.pairs[pair].native_gates.types
+        else:
+            # dummy value to avoid transpiler failure for single qubit devices
+            self.two_qubit_native_types = NativeType.CZ
+
+        self.topology: nx.Graph = nx.Graph()
+        self.topology.add_nodes_from(self.qubits.keys())
+        self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
 
     def __repr__(self):
         return self.name
@@ -67,73 +104,30 @@ class Platform:
         if not self.is_connected:  # pragma: no cover
             raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
 
-    def reload_settings(self):
-        # TODO: Remove ``self.settings``
-        if self.settings is None:
-            # Load initial configuration
-            if isinstance(self.runcard, dict):
-                settings = self.settings = self.runcard
-            else:
-                with open(self.runcard) as file:
-                    settings = self.settings = yaml.safe_load(file)
-        else:
-            # Load current configuration
-            settings = self.settings
-
-        self.nqubits = settings["nqubits"]
-        if "resonator_type" in self.settings:
-            self.resonator_type = self.settings["resonator_type"]
-        else:
-            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
-
-        self.relaxation_time = settings["settings"]["relaxation_time"]
-        self.nshots = settings["settings"]["nshots"]
-        self.sampling_rate = settings["settings"]["sampling_rate"]
-        self.native_gates = settings["native_gates"]
-
-        # Load characterization settings and create ``Qubit`` and ``Channel`` objects
-        for q in settings["qubits"]:
-            if q in self.qubits:
-                for name, value in settings["characterization"]["single_qubit"][q].items():
-                    setattr(self.qubits[q], name, value)
-            else:
-                self.qubits[q] = qubit = Qubit(q, **settings["characterization"]["single_qubit"][q])
-                # register channels to qubits when we are using the old format
-                # needed for ``NativeGates`` to work
-                if "qubit_channel_map" in self.settings:
-                    readout, drive, flux, _ = self.settings["qubit_channel_map"][q]
-                    if readout is not None:
-                        qubit.readout = Channel(readout)
-                    if drive is not None:
-                        qubit.drive = Channel(drive)
-                    if flux is not None:
-                        qubit.flux = Channel(flux)
-                # register single qubit native gates to Qubit objects
-                if q in self.native_gates["single_qubit"]:
-                    qubit.native_gates = SingleQubitNatives.from_dict(qubit, self.native_gates["single_qubit"][q])
-
-        for pair in settings["topology"]:
-            pair = tuple(sorted(pair))
-            if pair not in self.pairs:
-                self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
-        # Load native two-qubit gates
-        if "two_qubit" in self.native_gates:
-            for pair, gatedict in self.native_gates["two_qubit"].items():
-                pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
-                self.pairs[pair].native_gates = TwoQubitNatives.from_dict(self.qubits, gatedict)
-                self.two_qubit_native_types |= self.pairs[pair].native_gates.types
-        else:
-            # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = NativeType.CZ
-
-        if self.topology is None:
-            self.topology = nx.Graph()
-            self.topology.add_nodes_from(self.qubits.keys())
-            self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
-
     def dump(self, path: Path):
-        with open(path, "w") as file:
-            yaml.dump(self.settings, file, sort_keys=False, indent=4, default_flow_style=None)
+        settings = {
+            "nqubits": self.nqubits,
+            "description": self.description,
+            "qubits": list(self.qubits),
+            "settings": asdict(self.settings),
+            "resonator_type": self.resonator_type,
+            "topology": [list(pair) for pair in self.pairs],
+            "native_gates": {},
+            "characterization": {},
+        }
+        # add single qubit native gates
+        settings["native_gates"] = {
+            "single_qubit": {q: qubit.native_gates.raw for q, qubit in self.qubits.items()},
+            "two_qubit": {},
+        }
+        # add two-qubit native gates
+        for p, pair in self.pairs.items():
+            natives = pair.native_gates.raw
+            if len(natives) > 0:
+                settings["native_gates"]["two_qubit"][f"{p[0]}-{p[1]}"] = natives
+        # add qubit characterization section
+        settings["characterization"] = {"single_qubit": {q: qubit.characterization for q, qubit in self.qubits.items()}}
+        path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
 
     def update(self, updates: dict):
         r"""Updates platform common runcard parameters after calibration actions.
@@ -169,16 +163,11 @@ class Platform:
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
                 if par == "readout_frequency":
                     freq = int(value * 1e9)
-                    self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["frequency"] = freq
-
                     mz = self.qubits[qubit].native_gates.MZ
                     mz.frequency = freq
                     if mz.if_frequency is not None:
                         mz.if_frequency = freq - self.get_lo_readout_frequency(qubit)
-                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["if_frequency"] = mz.if_frequency
-
                     self.qubits[qubit].readout_frequency = freq
-                    self.settings["characterization"]["single_qubit"][qubit]["readout_frequency"] = freq
 
                 # resonator_punchout_attenuation
                 elif par == "readout_attenuation":
@@ -188,13 +177,11 @@ class Platform:
                 elif par == "bare_resonator_frequency":
                     freq = int(value * 1e9)
                     self.qubits[qubit].bare_resonator_frequency = freq
-                    self.settings["characterization"]["single_qubit"][qubit]["bare_resonator_frequency"] = freq
 
                 # resonator_spectroscopy_flux / qubit_spectroscopy_flux
                 elif par == "sweetspot":
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
-                    self.settings["characterization"]["single_qubit"][qubit]["sweetspot"] = sweetspot
                     if self.qubits[qubit].flux is not None:
                         # set sweetspot as the flux offset (IS THIS NEEDED?)
                         self.qubits[qubit].flux.offset = sweetspot
@@ -202,72 +189,50 @@ class Platform:
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
                     freq = int(value * 1e9)
-                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["frequency"] = freq
-
                     self.qubits[qubit].native_gates.RX.frequency = freq
                     self.qubits[qubit].drive_frequency = freq
-                    self.settings["characterization"]["single_qubit"][qubit]["drive_frequency"] = freq
 
                 elif "amplitude" in par:
                     amplitude = float(value)
                     # resonator_spectroscopy
                     if par == "readout_amplitude" and not math.isnan(amplitude):
                         self.qubits[qubit].native_gates.MZ.amplitude = amplitude
-                        self.settings["native_gates"]["single_qubit"][qubit]["MZ"]["amplitude"] = amplitude
 
                     # rabi_amplitude / flipping
                     if par == "drive_amplitude" or par == "amplitudes":
                         self.qubits[qubit].native_gates.RX.amplitude = amplitude
-                        self.settings["native_gates"]["single_qubit"][qubit]["RX"]["amplitude"] = amplitude
-                        self.settings["characterization"]["single_qubit"][qubit]["pi_pulse_amplitude"] = amplitude
 
                 # rabi_duration
                 elif par == "drive_length":
-                    duration = int(value)
-                    self.qubits[qubit].native_gates.RX.duration = duration
-                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["duration"] = duration
+                    self.qubits[qubit].native_gates.RX.duration = int(value)
 
                 # ramsey
                 elif par == "t2":
-                    t2 = float(value)
-                    self.qubits[qubit].T2 = t2
-                    self.settings["characterization"]["single_qubit"][qubit]["T2"] = t2
+                    self.qubits[qubit].T2 = float(value)
 
                 # spin_echo
                 elif par == "t2_spin_echo":
-                    t2_spin_echo = float(value)
-                    self.qubits[qubit].T2_spin_echo = t2_spin_echo
-                    self.settings["characterization"]["single_qubit"][qubit]["T2_spin_echo"] = t2_spin_echo
+                    self.qubits[qubit].T2_spin_echo = float(value)
 
                 # t1
                 elif par == "t1":
-                    t1 = float(value)
-                    self.qubits[qubit].T1 = t1
-                    self.settings["characterization"]["single_qubit"][qubit]["T1"] = t1
+                    self.qubits[qubit].T1 = float(value)
 
                 # classification
                 elif par == "threshold":
-                    threshold = float(value)
-                    self.qubits[qubit].thresold = threshold
-                    self.settings["characterization"]["single_qubit"][qubit]["threshold"] = threshold
+                    self.qubits[qubit].threshold = float(value)
 
                 # classification
                 elif par == "iq_angle":
-                    iq_angle = float(value)
-                    self.qubits[qubit].iq_angle = iq_angle
-                    self.settings["characterization"]["single_qubit"][qubit]["iq_angle"] = iq_angle
+                    self.qubits[qubit].iq_angle = float(value)
 
                 # classification
                 elif par == "mean_gnd_states":
-                    gnd_state = [float(voltage) for voltage in value]
-                    self.qubits[qubit].mean_gnd_states = gnd_state
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_gnd_states"] = gnd_state
+                    self.qubits[qubit].mean_gnd_states = [float(voltage) for voltage in value]
 
                 # classification
                 elif par == "mean_exc_states":
-                    exc_state = [float(voltage) for voltage in value]
-                    self.qubits[qubit].mean_exc_states = exc_state
-                    self.settings["characterization"]["single_qubit"][qubit]["mean_exc_states"] = exc_state
+                    self.qubits[qubit].mean_exc_states = [float(voltage) for voltage in value]
 
                 # drag pulse tunning
                 elif "beta" in par:
@@ -275,20 +240,15 @@ class Platform:
                     shape = rx.shape
                     rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
                     rx.shape = f"Drag({rel_sigma}, {float(value)})"
-                    self.settings["native_gates"]["single_qubit"][qubit]["RX"]["shape"] = rx.shape
 
                 elif "length" in par:  # assume only drive length
                     self.qubits[qubit].native_gates.RX.duration = int(value)
 
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
-                    self.settings["characterization"]["single_qubit"][qubit]["classifiers_hpars"] = value
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
-
-        # reload_settings after execute any calibration routine keeping fitted parameters
-        self.reload_settings()
 
     def connect(self):
         """Connect to all instruments."""
@@ -337,10 +297,10 @@ class Platform:
     def _execute(self, method, sequences, options, **kwargs):
         """Executes the sequences on the controllers"""
         if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
+            options = replace(options, nshots=self.settings.nshots)
 
         if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
+            options = replace(options, relaxation_time=self.settings.relaxation_time)
 
         duration = sum(seq.duration for seq in sequences) if isinstance(sequences, list) else sequences.duration
         time = (duration + options.relaxation_time) * options.nshots * 1e-9
@@ -410,10 +370,10 @@ class Platform:
             Readout results acquired by after execution.
         """
         if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
+            options = replace(options, nshots=self.settings.nshots)
 
         if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
+            options = replace(options, relaxation_time=self.settings.relaxation_time)
 
         time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
         for sweep in sweepers:
