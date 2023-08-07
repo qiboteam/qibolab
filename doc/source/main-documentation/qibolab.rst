@@ -298,8 +298,6 @@ Typical experiments may include both pre-defined pulses and new ones:
 
    options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
 
-Symbolic expressions
---------------------
 
 Sweepers
 --------
