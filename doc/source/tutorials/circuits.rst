@@ -13,37 +13,30 @@ circuits definition that we leave to the `Qibo
     import qibo
     from qibo import Circuit, gates
 
+    # create a single qubit circuit
+    circuit = Circuit(1)
 
-    def execute_H():
-        # create a single qubit circuit
-        circuit = Circuit(1)
-
-        # attach Hadamard gate
-        circuit.add(gates.H(0))
-        circuit.add(gates.M(0))
-
-        # execute circuit
-        state = circuit.execute(nshots=5000)
-
-        # retrieve measured probabilities
-        p0, p1 = state.probabilities(qubits=(0,))
-        return p0, p1
-
+    # attach Hadamard gate and a measurement
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
 
     # execute on quantum hardware
     qibo.set_backend("qibolab", "tii1q_b1")
-    hardware = execute_H()
+    hardware_result = circuit(nshots=5000)
 
     # execute with classical quantum simulation
     qibo.set_backend("numpy")
-    simulation = execute_H()
+    simulation_result = circuit(nshots=5000)
 
-In this snippet, we first define a function to facilitate the circuit
-definition, in this case of a simple Hadamard gate. We then proceed to define
-the qibo backend as ``qibolab`` and, in particular, using the ``tii1q_b1``
-platform. Finally, we change the backend to ``numpy``, a simulation one, to
-compare the results with ideality. After executing the script we can print our
-results that will appear more or less as:
+    # retrieve measured probabilities
+    hardware = hardware_result.probabilities(qubits=(0,))
+    simulation = simulation_result.probabilities(qubits=(0,))
+
+
+In this snippet, we first define a single-qubit circuit containing a single Hadamard gate and a measurement.
+We then proceed to define the qibo backend as ``qibolab`` using the ``tii1q_b1`` platform.
+Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
+After executing the script we can print our results that will appear more or less as:
 
 .. code-block:: python
 
@@ -59,6 +52,9 @@ Returns:
 
 Clearly, we do not expect the results to be exactly equal due to the non
 ideality of current NISQ devices.
+
+.. note::
+   Qibo circuits and gates are backend agnostic. The same circuit can be executed on multiple backends, including simulation and quantum platforms.
 
 A slightly more complex circuit, a variable rotation, will produce similar
 results:
@@ -119,3 +115,7 @@ Returns the following plot:
    :class: only-light
 .. image:: rotation_dark.svg
    :class: only-dark
+
+.. note::
+   Executing circuits using the Qibolab backend results to automatic application of the transpilation and compilation pipelines (:ref:`main_doc_transpiler`) which convert the circuit to a pulse sequence that is executed by the given platform.
+   It is possible to modify these pipelines following the instructions in the :ref:`tutorials_transpiler` example.
