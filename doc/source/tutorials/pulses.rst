@@ -72,7 +72,7 @@ pulse sequence according to the number of shots ``nshots`` specified.
 
     # Executes a pulse sequence.
     options = ExecutionParameters(nshots=1000, relaxation_time=100)
-    results = platform.execute(ps, options=options)
+    results = platform.execute_pulse_sequence(ps, options=options)
 
     # Turn off lab instruments
     platform.stop()
