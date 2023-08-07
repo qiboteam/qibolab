@@ -534,7 +534,7 @@ Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which def
 Native
 ------
 
-Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated and the pulse parameters that implement them are known.
+Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated.
 If this set is universal any circuit can be transpiled and compiled to a pulse sequence which is then deployed in the given platform.
 
 :py:mod:`qibolab.native` provides data containers for holding the pulse parameters required for implementing every native gate.
