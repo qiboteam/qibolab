@@ -115,4 +115,7 @@ results:
 
 Returns the following plot:
 
-.. image:: rotation.svg
+.. image:: rotation_light.svg
+   :class: only-light
+.. image:: rotation_dark.svg
+   :class: only-dark
