@@ -149,4 +149,4 @@ Therefore the previous manipulations can be done as follows:
     GlobalBackend().transpiler = None
 
     # execute circuit
-    result = backend.execute_circuit(circuit, nshots=1000)
+    result = circuit(nshots=1000)
