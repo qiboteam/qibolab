@@ -7,8 +7,6 @@ settings:
     relaxation_time: 300_000
     time_of_flight: 280
     smearing: 0
-    Fast_reset: False
-    chip: iqm5q
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
@@ -168,8 +166,8 @@ characterization:
             T1: 0.0
             T2: 0.0
             sweetspot: 0.05 #Use this as an amplitude of the flux_bias
-            mean_gnd_states: 1.5420+0.1813j
-            mean_exc_states: 2.4499-0.5629j
+            mean_gnd_states: [1.5420, 0.1813]
+            mean_exc_states: [2.4499,-0.5629]
             # parameters for single shot classification
             threshold: 0.8836
             iq_angle: -1.551
@@ -187,8 +185,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: [0, 0]
+            mean_exc_states: [0, 0]
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
@@ -196,8 +194,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0 #0.5 #0.62 0.00
-            mean_gnd_states: -1.8243+1.5926j
-            mean_exc_states: -0.8083+2.3929j
+            mean_gnd_states: [-1.8243, 1.5926]
+            mean_exc_states: [-0.8083, 2.3929]
             # parameters for single shot classification
             threshold: -0.0593
             iq_angle: -0.667
@@ -209,8 +207,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: [0, 0]
+            mean_exc_states: [0, 0]
         4:
             readout_frequency: 5_515_000_000
             resonator_polycoef_flux: []
@@ -218,8 +216,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: [0, 0]
+            mean_exc_states: [0, 0]
             # parameters for single shot classification
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
