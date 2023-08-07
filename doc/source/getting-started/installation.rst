@@ -64,7 +64,7 @@ _______________________
 Supported instruments
 ^^^^^^^^^^^^^^^^^^^^^
 
-.. image:: qibolab_instruments.png
+.. image:: qibolab_instruments.svg
 
 Qibolab supports the following control instruments:
 

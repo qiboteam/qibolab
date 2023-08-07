@@ -7,7 +7,7 @@ complete overview of the code, for that we suggest to refer to the api-reference
 section, but rather to help a new user to gain a basic understanding of all the
 elements.
 
-.. image:: platform_object.svg
+.. image:: platform.svg
 
 .. toctree::
     :caption: Main elements
