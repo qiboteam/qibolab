@@ -16,7 +16,7 @@ Creating an instance of the backend provides access to these objects:
 
     from qibolab.backends import QibolabBackend
 
-    backend = QibolabBackend(platform="single_qubit")
+    backend = QibolabBackend(platform="my_platform")
     print(backend.transpiler)
     print(backend.compiler)
 
@@ -36,7 +36,7 @@ For example:
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
     circuit.add(gates.M(0))
 
-    backend = QibolabBackend(platform="single_qubit")
+    backend = QibolabBackend(platform="my_platform")
     # disable the transpiler
     backend.transpiler = None
 
@@ -52,13 +52,17 @@ Instead of completely disabling, custom transpilation steps can be given:
     from qibolab.native import NativeType
     from qibolab.transpilers.gate_decompositions import NativeGates
 
-    backend = QibolabBackend(platform="single_qubit")
+    backend = QibolabBackend(platform="my_platform")
     backend.transpiler = NativeGates(two_qubit_natives=NativeType.CZ)
 
 
 Now circuits will only be transpiled to native gates, without any connectivity matching steps.
-The :class:`qibolab.transpilers.gate_decompositions.NativeGates` transpiler used in this example assumes Z, RZ, GPI2 or U3 as the single-qubit native gate, and supports CZ and iSWAP as two-qubit natives.
+The :class:`qibolab.transpilers.gate_decompositions.NativeGates` transpiler used in this example assumes Z, RZ, GPI2 or U3 as the single-qubit native gates, and supports CZ and iSWAP as two-qubit natives.
 In this case we restricted the two-qubit gate set to CZ only.
+If the circuit to be executed contains gates that are not included in this gate set, they will be transformed to multiple gates from the gate set.
+Arbitrary single-qubit gates are typically transformed to U3.
+Arbitrary two-qubit gates are transformed to two or three CZ gates following their `universal CNOT decomposition <https://arxiv.org/abs/quant-ph/0307177>`_.
+The decomposition of some common gates such as the SWAP and CNOT is hard-coded for efficiency.
 
 Multiple transpilation steps can be implemented using the :class:`qibolab.transpilers.pipeline.Pipeline`:
 
@@ -69,7 +73,7 @@ Multiple transpilation steps can be implemented using the :class:`qibolab.transp
     from qibolab.transpilers.star_connectivity import StarConnectivity
     from qibolab.transpilers.gate_decompositions import NativeGates
 
-    backend = QibolabBackend(platform="single_qubit")
+    backend = QibolabBackend(platform="my_platform")
     backend.transpiler = Pipeline(
         [
             StarConnectivity(middle_qubit=2),
@@ -107,7 +111,7 @@ The following example shows how to modify the transpiler and compiler in order t
 
     # the empty dictionary is needed because the X gate does not require any virtual Z-phases
 
-    backend = QibolabBackend(platform="single_qubit")
+    backend = QibolabBackend(platform="my_platform")
     # disable the transpiler (the default transpiler will attempt to convert X to U3)
     backend.transpiler = None
     # register the new X rule in the compiler
@@ -144,7 +148,7 @@ Therefore the previous manipulations can be done as follows:
     circuit.add(gates.M(0))
 
     # set backend to qibolab
-    qibo.set_backend("qibolab", platform="single_qubit")
+    qibo.set_backend("qibolab", platform="my_platform")
     # disable the transpiler
     GlobalBackend().transpiler = None
 
