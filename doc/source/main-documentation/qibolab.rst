@@ -25,8 +25,9 @@ For example, let's first define a platform (that we consider to be a single qubi
 
 .. code-block::  python
 
-    from qibolab import Platform
-    platform = Platform("my_platform")
+    from qibolab import create_platform
+
+    platform = create_platform("my_platform")
 
 Now we connect and start the instruments (note that we, the user, do not need to know which instruments are connected).
 
@@ -73,6 +74,25 @@ Finally, we can stop instruments and close connections.
 
     platform.stop()
     platform.disconnect()
+
+
+.. _main_doc_dummy:
+
+Dummy platform
+^^^^^^^^^^^^^^
+
+In addition to the real instruments presented in the :ref:`main_doc_instruments` section, Qibolab provides the :class:`qibolab.instruments.dummy.DummyInstrument`.
+This instrument represents a controller that returns random numbers of the proper shape when executing any pulse sequence.
+This instrument is also part of the dummy platform which is defined in :py:mod:`qibolab.dummy` and can be initialized as
+
+.. code-block::  python
+
+    from qibolab import create_platform
+
+    platform = create_platform("dummy")
+
+This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
+It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
 
 
 Qubits
