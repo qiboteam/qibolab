@@ -500,8 +500,33 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
 .. _main_doc_transpiler:
 
-Transpiler
-----------
+Transpiler and Compiler
+-----------------------
+
+While pulse sequences can be directly deployed using a platform, circuits need to first be transpiled and compiled to the equivalent pulse sequence.
+This procedure typically involves the following steps:
+
+1. The circuit needs to respect the chip topology, that is, two-qubit gates can only target qubits that share a physical connection. To satisfy this constraint SWAP gates may need to be added to rearrange the logical qubits.
+2. All gates are transpiled to native gates, which represent the universal set of gates that can be implemented (via pulses) in the chip.
+3. Native gates are compiled to a pulse sequence.
+
+The transpilation and compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend` when a circuit is executed, using :class:`qibolab.transpilers.abstract.Transpiler` and :class:`qibolab.compilers.compiler.Compiler`.
+The transpiler is responsible for steps 1 and 2, while the compiler for step 3 of the list above. In order to accomplish this, several transpilers are provided, some of which are listed below:
+
+- :class:`qibolab.transpilers.gate_decompositions.NativeGates`: Transpiles single-qubit qibo gates to Z, RZ, GPI2 or U3 and two-qubit gates to CZ and/or iSWAP (depending on platform support).
+- :class:`qibolab.transpilers.star_connectivity.StarConnectivity`: Transforms a circuit to respect a 5-qubit star chip topology, with one middle qubit connected to each of the remaining four qubits.
+- :class:`qibolab.transpilers.routing.ShortestPaths`: Transforms a circuit to respect a general chip topology given as a networkx graph, using a greedy algorithm.
+- :class:`qibolab.transpilers.pipeline.Pipeline`: Applies a list of other transpilers sequentially.
+
+Custom transpilers can be added by inheriting the abstract :class:`qibolab.transpilers.abstract.Transpiler` class.
+
+Once a circuit has been transpiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
+This is a container of rules which define how each native gate can be translated to pulses.
+A rule is a Python function that accepts a qibo gate and a platform object and returns the :class:`qibolab.pulses.PulseSequence` implementing this gate and a dictionary with potential virtual-Z phases that need to be applied in later pulses.
+Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which defines the default rules used by Qibolab.
+
+.. note::
+   Rules return a :class:`qibolab.pulses.PulseSequence` for each gate, instead of a single pulse, because some gates such as the U3 or two-qubit gates, require more than one pulses to be implemented.
 
 .. _main_doc_native:
 
