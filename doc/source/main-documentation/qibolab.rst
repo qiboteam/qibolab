@@ -281,7 +281,8 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
    result = my_platform.execute_pulse_sequence(sequence)
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
-Usual pulses, as pi-pulses or measurements are already defined in the platform runcard and can be easily initialized with platform methods.
+Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
+These are relying on parameters held in the :ref:`main_doc_native` data structures.
 Typical experiments may include both pre-defined pulses and new ones:
 
 .. code-block:: python
@@ -467,7 +468,7 @@ Supported averaging modes, available through the :class:`qibolab.execution_param
 Results
 -------
 
-Within the qibolab API, a variety of result types are available, contingent upon the chosen acquisition options. These results can be broadly classified into three main categories, based on the AcquisitionType:
+Within the Qibolab API, a variety of result types are available, contingent upon the chosen acquisition options. These results can be broadly classified into three main categories, based on the AcquisitionType:
 
 - Integrated Results (:class:`qibolab.result.IntegratedResults`)
 - Raw Waveform Results (:class:`qibolab.result.RawWaveformResults`)
@@ -520,13 +521,55 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
 .. _main_doc_transpiler:
 
-Transpiler
-----------
+Transpiler and Compiler
+-----------------------
+
+While pulse sequences can be directly deployed using a platform, circuits need to first be transpiled and compiled to the equivalent pulse sequence.
+This procedure typically involves the following steps:
+
+1. The circuit needs to respect the chip topology, that is, two-qubit gates can only target qubits that share a physical connection. To satisfy this constraint SWAP gates may need to be added to rearrange the logical qubits.
+2. All gates are transpiled to native gates, which represent the universal set of gates that can be implemented (via pulses) in the chip.
+3. Native gates are compiled to a pulse sequence.
+
+The transpilation and compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend` when a circuit is executed, using :class:`qibolab.transpilers.abstract.Transpiler` and :class:`qibolab.compilers.compiler.Compiler`.
+The transpiler is responsible for steps 1 and 2, while the compiler for step 3 of the list above. In order to accomplish this, several transpilers are provided, some of which are listed below:
+
+- :class:`qibolab.transpilers.gate_decompositions.NativeGates`: Transpiles single-qubit Qibo gates to Z, RZ, GPI2 or U3 and two-qubit gates to CZ and/or iSWAP (depending on platform support).
+- :class:`qibolab.transpilers.star_connectivity.StarConnectivity`: Transforms a circuit to respect a 5-qubit star chip topology, with one middle qubit connected to each of the remaining four qubits.
+- :class:`qibolab.transpilers.routing.ShortestPaths`: Transforms a circuit to respect a general chip topology given as a networkx graph, using a greedy algorithm.
+- :class:`qibolab.transpilers.pipeline.Pipeline`: Applies a list of other transpilers sequentially.
+
+Custom transpilers can be added by inheriting the abstract :class:`qibolab.transpilers.abstract.Transpiler` class.
+
+Once a circuit has been transpiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
+This is a container of rules which define how each native gate can be translated to pulses.
+A rule is a Python function that accepts a Qibo gate and a platform object and returns the :class:`qibolab.pulses.PulseSequence` implementing this gate and a dictionary with potential virtual-Z phases that need to be applied in later pulses.
+Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which defines the default rules used by Qibolab.
+
+.. note::
+   Rules return a :class:`qibolab.pulses.PulseSequence` for each gate, instead of a single pulse, because some gates such as the U3 or two-qubit gates, require more than one pulses to be implemented.
 
 .. _main_doc_native:
 
 Native
 ------
+
+Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated.
+If this set is universal any circuit can be transpiled and compiled to a pulse sequence which is then deployed in the given platform.
+
+:py:mod:`qibolab.native` provides data containers for holding the pulse parameters required for implementing every native gate.
+Every :class:`qibolab.qubits.Qubit` object contains a :class:`qibolab.native.SingleQubitNatives` object which holds the parameters of its native single-qubit gates,
+while each :class:`qibolab.qubits.QubitPair` objects contains a :class:`qibolab.native.TwoQubitNatives` object which holds the parameters of the native two-qubit gates acting on the pair.
+
+Each native gate is represented by a :class:`qibolab.native.NativePulse` or :class:`qibolab.native.NativeSequence` which contain all the calibrated parameters and can be converted to an actual :class:`qibolab.pulses.PulseSequence` that is then executed in the platform.
+Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate, implemented via a pulse sent in the readout line followed by an acquisition.
+For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required, which is implemented by halving the amplitude of the calibrated pi-pulse.
+U3, the most general single-qubit gate can be implemented using two RX90 pi-pulses and some virtual Z-phases which are included in the phase of later pulses.
+
+Typical two-qubit native gates are the CZ and iSWAP, with their availability being platform dependent.
+These are implemented with a sequence of flux pulses, potentially to multiple qubits, and virtual Z-phases.
+Depending on the platform and the quantum chip architecture, two-qubit gates may require pulses acting on qubits that are not targeted by the gate.
+The :class:`qibolab.native.NativeType` flag is used for communicating the set of available native two-qubit gates to the transpiler.
 
 .. _main_doc_instruments:
 
@@ -589,11 +632,15 @@ The most important instruments are the controller, the following is a table of t
     "Raw waveform acquisition",     "yes","yes","yes","yes"
 
 
-Zurich Instrument
-^^^^^^^^^^^^^^^^^
+Zurich Instruments
+^^^^^^^^^^^^^^^^^^
 
 Quantum Machines
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
+
+Tested with a cluster of nine `OPX+ <https://www.quantum-machines.co/products/opx/>`_ controllers, using QOP213 and QOP220.
+
+Qibolab is communicating with the instruments using the `QUA <https://docs.quantum-machines.co/0.1/>`_ language, via the ``qm-qua`` and ``qualang-tools`` Python libraries.
 
 Qblox
 ^^^^^
