@@ -603,11 +603,15 @@ The most important instruments are the controller, the following is a table of t
     "Raw waveform acquisition",     "yes","yes","yes","yes"
 
 
-Zurich Instrument
-^^^^^^^^^^^^^^^^^
+Zurich Instruments
+^^^^^^^^^^^^^^^^^^
 
 Quantum Machines
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
+
+Tested with a cluster of nine `OPX+ <https://www.quantum-machines.co/products/opx/>`_ controllers, using QOP213 and QOP220.
+
+Qibolab is communicating with the instruments using the `QUA <https://docs.quantum-machines.co/0.1/>`_ language, via the ``qm-qua`` and ``qualang-tools`` Python libraries.
 
 Qblox
 ^^^^^
