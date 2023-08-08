@@ -21,12 +21,13 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
             **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
         )
         return new_pulse
-    new_pulse = getattr(rfsoc_pulses, shape.name)(**asdict(rfsoc_pulse))
-    if shape.name in {"Gaussian", "Drag"}:
-        new_pulse.rel_sigma = shape.rel_sigma
-        if shape.name == "Drag":
-            new_pulse.beta = shape.beta
-    return new_pulse
+    new_pulse_cls = getattr(rfsoc_pulses, shape.name)
+    if shape.name == "Rectangular":
+        return new_pulse_cls(**asdict(rfsoc_pulse))
+    if shape.name == "Gaussian":
+        return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma)
+    if shape.name == "Drag":
+        return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta)
 
 
 def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
@@ -46,12 +47,11 @@ def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubit
         if parameter is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
             lo_frequency = pulse_lo_frequency(pulse, qubits)
-
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
         elif parameter is rfsoc.Parameter.DELAY:
-            sweeper.starts[idx] = sweeper.starts[idx] * NS_TO_US
-            sweeper.stops[idx] = sweeper.stops[idx] * NS_TO_US
+            sweeper.starts[idx] *= NS_TO_US
+            sweeper.stops[idx] *= NS_TO_US
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
             sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
@@ -74,16 +74,14 @@ def _(qubit: Qubit) -> rfsoc.Qubit:
 @convert.register
 def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
-
-    abs_time = 0
+    last_pulse_start = 0
     list_sequence = []
-    for pulse in sequence:
-        abs_start = pulse.start * NS_TO_US
-        start_delay = abs_start - abs_time
+    for pulse in sorted(sequence.pulses, key=lambda item: item.start):
+        start_delay = (pulse.start - last_pulse_start) * NS_TO_US
         pulse_dict = asdict(convert(pulse, qubits, start_delay))
         list_sequence.append(pulse_dict)
 
-        abs_time += start_delay
+        last_pulse_start = pulse.start
     return list_sequence
 
 

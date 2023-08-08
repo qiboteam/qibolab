@@ -3910,13 +3910,13 @@ tabulate = ">=0.9.0,<0.10.0"
 
 [[package]]
 name = "qibosoq"
-version = "0.0.3"
+version = "0.0.4"
 description = "QIBO Server On Qick (qibosoq) is the server component of qibolab to be run on RFSoC boards"
 optional = false
 python-versions = ">=3.8,<3.12"
 files = [
-    {file = "qibosoq-0.0.3-py3-none-any.whl", hash = "sha256:f6ffa3942bd1eea3f87ed2f6f43481981b6a8c9d370a5b1616d43389be31bf87"},
-    {file = "qibosoq-0.0.3.tar.gz", hash = "sha256:0dd2f5cbce2346bb391dca5a47a9534280d941e116ff99263225aade14d6e097"},
+    {file = "qibosoq-0.0.4-py3-none-any.whl", hash = "sha256:99d50587ff4ee6976d59466eac7704dacb73ce20528cc6d95ecd77de95991a0f"},
+    {file = "qibosoq-0.0.4.tar.gz", hash = "sha256:531f0a0046dc717514a64215780100c07827080e1f295f79141a1e0af5e0b68b"},
 ]
 
 [package.dependencies]
@@ -5286,4 +5286,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "8827a5faba5dea34d46b51dd44ab39b86a932a0da13d498ac6fc2ffc7ab9f8d6"
+content-hash = "4d81fe41131551f98b465df677234907a81958063184f26e789bb67f96bb53cc"

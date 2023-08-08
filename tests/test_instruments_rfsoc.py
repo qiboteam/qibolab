@@ -43,7 +43,7 @@ def test_convert_default(dummy_qrc):
 
     with pytest.raises(TypeError):
         # functools understand that is a convert_parameter and raises an error for the int
-        res = convert(parameter, integer)
+        _ = convert(parameter, integer)
 
 
 def test_convert_qubit(dummy_qrc):
@@ -159,8 +159,8 @@ def test_convert_units_sweeper(dummy_qrc):
         expts=100,
     )
     convert_units_sweeper(sweeper, seq, platform.qubits)
-    assert sweeper.starts == [0, 0.04]
-    assert sweeper.stops == [0.1, 0.14]
+    assert (sweeper.starts == [0, 0.04]).all()
+    assert (sweeper.stops == [0.1, 0.14]).all()
 
     # phase sweeper
     sweeper = rfsoc.Sweeper(
@@ -227,7 +227,11 @@ def test_convert_sweep(dummy_qrc):
         stops=[99, 99],
         indexes=[0, 1],
     )
-    assert rfsoc_sweeper == targ
+    assert (rfsoc_sweeper.starts == targ.starts).all()
+    assert (rfsoc_sweeper.stops == targ.stops).all()
+    assert rfsoc_sweeper.expts == targ.expts
+    assert rfsoc_sweeper.parameters == targ.parameters
+    assert rfsoc_sweeper.indexes == targ.indexes
 
     sweeper = Sweeper(parameter=Parameter.start, values=np.arange(0, 10, 1), pulses=[pulse0])
     rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
@@ -338,12 +342,6 @@ def test_validate_input_command(dummy_qrc):
     with pytest.raises(NotImplementedError):
         results = instrument.play(platform.qubits, seq, parameters)
 
-    seq2 = seq.copy()
-    seq2[0].duration = 5
-    parameters = ExecutionParameters()
-    with pytest.raises(ValueError):
-        results = instrument.play(platform.qubits, seq2, parameters)
-
 
 def test_update_cfg(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
@@ -387,7 +385,8 @@ def test_classify_shots(dummy_qrc):
     target_shots = np.array([1, 1, 0, 0, 0, 0, 0])
 
     assert (target_shots == shots).all()
-    assert instrument.classify_shots(i_val, q_val, qubit1) is None
+    with pytest.raises(ValueError):
+        instrument.classify_shots(i_val, q_val, qubit1)
 
 
 def test_merge_sweep_results(dummy_qrc):
@@ -561,8 +560,14 @@ def test_call_executepulsesequence(connected_platform, instrument):
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
-    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, False)
-    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, True)
+    instrument.cfg.average = False
+    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(
+        sequence, platform.qubits, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+    )
+    instrument.cfg.average = True
+    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(
+        sequence, platform.qubits, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+    )
 
     assert np.shape(i_vals_nav) == (1, 1, 1000)
     assert np.shape(q_vals_nav) == (1, 1, 1000)
@@ -572,7 +577,8 @@ def test_call_executepulsesequence(connected_platform, instrument):
 
 @pytest.mark.qpu
 def test_call_execute_sweeps(connected_platform, instrument):
-    """Executes a firmware sweep and check if result shape is as expected.
+    """Execute a firmware sweep and check if result shape is as expected.
+
     Both for averaged results and not averaged results.
     """
     platform = connected_platform
@@ -585,8 +591,10 @@ def test_call_execute_sweeps(connected_platform, instrument):
     expts = len(sweep.values)
 
     sweep = [convert(sweep, sequence, platform.qubits)]
-    i_vals_nav, q_vals_nav = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, False)
-    i_vals_av, q_vals_av = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
+    instrument.cfg.average = False
+    i_vals_nav, q_vals_nav = instrument._execute_sweeps(sequence, platform.qubits, sweep)
+    instrument.cfg.average = True
+    i_vals_av, q_vals_av = instrument._execute_sweeps(sequence, platform.qubits, sweep)
 
     assert np.shape(i_vals_nav) == (1, 1, expts, 1000)
     assert np.shape(q_vals_nav) == (1, 1, expts, 1000)

@@ -50,6 +50,13 @@ def dummy_qrc():
     set_platform_profile()
 
 
+def find_instrument(platform, instrument_type):
+    for instrument in platform.instruments:
+        if isinstance(instrument, instrument_type):
+            return instrument
+    return None
+
+
 def get_instrument(platform, instrument_type):
     """Finds if an instrument of a given type exists in the given platform.
 
@@ -57,10 +64,10 @@ def get_instrument(platform, instrument_type):
     that asked for this instrument is skipped.
     This ensures that QPU tests are executed only on the available instruments.
     """
-    for instrument in platform.instruments:
-        if isinstance(instrument, instrument_type):
-            return instrument
-    pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
+    instrument = find_instrument(platform, instrument_type)
+    if instrument is None:
+        pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
+    return instrument
 
 
 @pytest.fixture(scope="module", params=DUMMY_PLATFORM_NAMES)
