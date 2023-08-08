@@ -63,7 +63,7 @@ class QibolabBackend(NumpyBackend):
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to execute.
             initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
-                If ``None`` the default |00...0> state is used.
+                If ``None`` the default ``|00...0>`` state is used.
             nshots (int): Number of shots to sample from the experiment.
                 If ``None`` the default value provided as hardware_avg in the
                 calibration yml will be used.
@@ -127,7 +127,7 @@ class QibolabBackend(NumpyBackend):
         return str(result.execution_result)
 
     def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
-        """Returns the probability of the qubit being in state |0>"""
+        """Returns the probability of the qubit being in state ``|0>``."""
         if qubits is None:  # pragma: no cover
             qubits = [self.platform.get_qubit(q) for q in result.measurement_gate.qubits]
 

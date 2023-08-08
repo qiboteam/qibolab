@@ -48,6 +48,13 @@ sphinx-markdown-tables = "^0.0.17"
 nbsphinx = "^0.9.1"
 ipython = "^8.12.0"
 sphinx-copybutton = "^0.5.1"
+# extras
+qblox-instruments = "0.9.0"
+qcodes = "^0.37.0"
+qcodes_contrib_drivers = "0.18.0"
+qibosoq = "^0.0.3"
+qualang-tools = "==0.14.0"
+laboneq = "==2.7.0"
 
 [tool.poetry.group.tests]
 optional = true
