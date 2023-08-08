@@ -4,7 +4,6 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
-from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
 from qibolab.transpilers import Pipeline
@@ -56,8 +55,7 @@ def compile_circuit(circuit, platform):
         (gates.U3, 0.1, 0.2, 0.3),
     ],
 )
-def test_transpile(platform_name, gateargs):
-    platform = create_platform(platform_name)
+def test_compile(platform, gateargs):
     nqubits = platform.nqubits
     if gateargs[0] in (gates.I, gates.Z, gates.RZ):
         nseq = 0
@@ -68,8 +66,7 @@ def test_transpile(platform_name, gateargs):
     assert len(sequence) == (nseq + 1) * nqubits
 
 
-def test_transpile_two_gates(platform_name):
-    platform = create_platform(platform_name)
+def test_compile_two_gates(platform):
     circuit = Circuit(1)
     circuit.add(gates.RX(0, theta=0.1))
     circuit.add(gates.RY(0, theta=0.2))
@@ -82,8 +79,7 @@ def test_transpile_two_gates(platform_name):
     assert len(sequence.ro_pulses) == 1
 
 
-def test_measurement(platform_name):
-    platform = create_platform(platform_name)
+def test_measurement(platform):
     nqubits = platform.nqubits
     circuit = Circuit(nqubits)
     qubits = [qubit for qubit in range(nqubits)]
@@ -96,8 +92,7 @@ def test_measurement(platform_name):
     assert len(sequence.ro_pulses) == 1 * nqubits
 
 
-def test_rz_to_sequence(platform_name):
-    platform = create_platform(platform_name)
+def test_rz_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.RZ(0, theta=0.2))
     circuit.add(gates.Z(0))
@@ -105,8 +100,21 @@ def test_rz_to_sequence(platform_name):
     assert len(sequence) == 0
 
 
-def test_u3_to_sequence(platform_name):
-    platform = create_platform(platform_name)
+def test_GPI2_to_sequence(platform):
+    circuit = Circuit(1)
+    circuit.add(gates.GPI2(0, phi=0.2))
+    sequence = compile_circuit(circuit, platform)
+    assert len(sequence.pulses) == 1
+    assert len(sequence.qd_pulses) == 1
+
+    RX90_pulse = platform.create_RX90_pulse(0, start=0, relative_phase=0.2)
+    s = PulseSequence(RX90_pulse)
+
+    np.testing.assert_allclose(sequence.duration, RX90_pulse.duration)
+    assert sequence.serial == s.serial
+
+
+def test_u3_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
 
@@ -122,8 +130,7 @@ def test_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-def test_two_u3_to_sequence(platform_name):
-    platform = create_platform(platform_name)
+def test_two_u3_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
     circuit.add(gates.U3(0, 0.4, 0.6, 0.5))
@@ -144,20 +151,20 @@ def test_two_u3_to_sequence(platform_name):
     assert sequence.serial == s.serial
 
 
-def test_CZ_to_sequence(platform_name):
-    platform = create_platform(platform_name)
-    if platform.nqubits > 1:
-        circuit = Circuit(2)
-        circuit.add(gates.X(0))
-        circuit.add(gates.CZ(0, 1))
+def test_cz_to_sequence(platform):
+    if (1, 2) not in platform.pairs:
+        pytest.skip(f"Skipping CZ test for {platform} because pair (1, 2) is not available.")
 
-        sequence = compile_circuit(circuit, platform)
-        test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
-        assert len(sequence.pulses) == len(test_sequence) + 2
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.CZ(0, 1))
+
+    sequence = compile_circuit(circuit, platform)
+    test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
+    assert len(sequence.pulses) == len(test_sequence) + 2
 
 
-def test_add_measurement_to_sequence(platform_name):
-    platform = create_platform(platform_name)
+def test_add_measurement_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
     circuit.add(gates.M(0))

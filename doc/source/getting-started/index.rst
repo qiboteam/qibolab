@@ -1,9 +1,10 @@
 Getting started
 ===============
-In this section we present the basic aspects of Qibolab design and provide installation instructions.
+
+In this section we provide installation instruction, along with a full example of a first experiment.
 
 .. toctree::
     :maxdepth: 1
 
     installation
-    lab
+    experiment

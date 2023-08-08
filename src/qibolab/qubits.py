@@ -1,11 +1,18 @@
-from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from dataclasses import dataclass, field, fields
+from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
 """Type for qubit names."""
+
+CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
+"""Names of channels that belong to a qubit.
+Not all channels are required to operate a qubit.
+"""
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+"""Qubit dataclass fields that are excluded by the ``characterization`` property."""
 
 
 @dataclass
@@ -46,8 +53,8 @@ class Qubit:
     T2_spin_echo: int = 0
     state0_voltage: int = 0
     state1_voltage: int = 0
-    mean_gnd_states: complex = 0 + 0.0j
-    mean_exc_states: complex = 0 + 0.0j
+    mean_gnd_states: List[float] = field(default_factory=lambda: [0, 0])
+    mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
     resonator_polycoef_flux: List[float] = field(default_factory=list)
 
     # parameters for single shot classification
@@ -77,9 +84,19 @@ class Qubit:
 
     @property
     def channels(self):
-        for channel in [self.readout, self.feedback, self.drive, self.flux, self.twpa]:
+        for name in CHANNEL_NAMES:
+            channel = getattr(self, name)
             if channel is not None:
                 yield channel
+
+    @property
+    def characterization(self):
+        """Dictionary containing characterization parameters."""
+        return {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in EXCLUDED_FIELDS}
+
+
+QubitPairId = Tuple[QubitId, QubitId]
+"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
 @dataclass

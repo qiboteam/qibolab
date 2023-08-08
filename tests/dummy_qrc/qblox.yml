@@ -1,121 +1,260 @@
-nqubits: 1
-description: 1-qubit device OS2 in XLD fridge, controlled with qblox cluster rf.
+nqubits: 5
+description: QuantWare 5-qubit device at XLD fridge.
 
 settings:
     nshots: 1024
-    relaxation_time: 200_000
     sampling_rate: 1_000_000_000
+    relaxation_time: 20_000
 
-qubits: [0]
+qubits: [0, 1, 2, 3, 4, 5]
 
-resonator_type: 3D
-
-topology: []
-
-channels: ['L3-17_qd', 'L3-17_ro', 'L2-4', null]
-
-qubit_channel_map: # [ReadOut, QubitDrive, QubitFlux, QubitBias]
-    0: ['L3-17_ro', 'L3-17_qd', null, null]
-
-instruments:
-    cluster:
-        lib: qblox
-        class: Cluster
-        address: 192.168.0.6
-        roles: [other]
-        settings:
-            reference_clock_source      : internal                      # external or internal
-
-    qrm_rf:
-        lib: qblox
-        class: ClusterQRM_RF
-        address: 192.168.0.6:10 #:7 for loopback
-        roles: [readout]
-        settings:
-            ports:
-                o1:
-                    attenuation                 : 44
-                    lo_enabled                  : true
-                    lo_frequency                : 7_805_100_000                    # (Hz) from 2e9 to 18e9
-                    gain                        : 0.6                           # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en             : false
-                i1:
-                    hardware_demod_en           : true
-
-
-            acquisition_hold_off        : 200                           # minimum 4ns
-            acquisition_duration        : 1000
-
-            classification_parameters:
-
-                0:                      # qubit id
-
-                    rotation_angle: 176.045  # in degrees 0.0<=v<=360.0
-
-                    threshold: -0.001283       # in V
-
-            channel_port_map:  # Refrigerator Channel : Instrument port
-                'L3-17_ro': o1 # IQ Port = out0 & out1
-                'L2-4': i1
-
-    qcm_rf:
-        lib: qblox
-        class: ClusterQCM_RF
-        address: 192.168.0.6:8
-        roles: [control]
-        settings:
-            ports:
-                o1:
-                    attenuation                  : 12 # (dB)
-                    lo_enabled                   : true
-                    lo_frequency                 : 5_179_856_329 # (Hz) from 2e9 to 18e9
-                    gain                         : 0.35 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
-                o2:
-                    attenuation                  : 60 # (dB)
-                    lo_enabled                   : true
-                    lo_frequency                 : 6_000_000_000 # (Hz) from 2e9 to 18e9
-                    gain                         : 0 # for path0 and path1 -1.0<=v<=1.0
-                    hardware_mod_en              : false
-
-            channel_port_map:
-                'L3-17_qd': o1 # IQ Port = out0 & out1
-                99: o2
-    twpa_pump:
-        lib: erasynth
-        class: ERA
-        address: /dev/ttyERA
-        roles: [other]
-        settings:
-            frequency: 6.816e+9 # Hz
-            power: 2.3 # dBm
+topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 native_gates:
     single_qubit:
-        0: # qubit number
+        0: # qubit id
             RX:
-                duration: 80                    # should be multiple of 4
-                amplitude: 0.457
-                frequency: 5_079_856_329
-                if_frequency: -100_000_000          # difference in qubit frequency
-                shape: Drag(5, -0.1)
-                type: qd # qubit drive
+                duration: 40                   # should be multiple of 4
+                amplitude: 0.5028
+                frequency: 5_050_304_836    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+                start: 0
+                phase: 0
             MZ:
-                duration: 1000
-                amplitude: 0.7
-                frequency: 7_825_100_000
-                if_frequency: 20_000_000           # Difference in resonator frequency
+                duration: 2000
+                amplitude: 0.1
+                frequency: 7_213_299_307 # 7_212_299_307     # resonator frequency
+                # if_frequency: -42_700_693    # difference in resonator frequency
                 shape: Rectangular()
-                type: ro # readout
+                type: ro                    # readout
+                start: 0
+                phase: 0
+        1: # qubit id
+            RX:
+                duration: 40                  # should be multiple of 4
+                amplitude: 0.5078
+                frequency: 4_852_833_073    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.2
+                frequency: 7_452_990_931    # resonator frequency
+                # if_frequency: 197_990_931    # difference in resonator frequency
+                shape: Rectangular()
+                type: ro                    # readout
+        2: # qubit id
+            RX:
+                duration: 40                   # should be multiple of 4
+                amplitude: 0.5016
+                frequency: 5_795_371_914   # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.25
+                frequency: 7_655_083_068    # resonator frequency
+                # if_frequency: -194_916_932    # difference in resonator frequency
+                shape: Rectangular()
+                type: ro                    # readout
+        3: # qubit id
+            RX:
+                duration: 40                   # should be multiple of 4
+                amplitude: 0.5026
+                frequency: 6_761_018_001    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.2
+                frequency: 7_803_441_221    # resonator frequency
+                # if_frequency: -46_558_779    # difference in resonator frequency
+                shape: Rectangular()
+                type: ro                    # readout
+        4: # qubit id
+            RX:
+                duration: 40                # should be multiple of 4
+                amplitude: 0.5172
+                frequency: 6_586_543_060    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.4
+                frequency: 8_058_947_261      # resonator frequency
+                # if_frequency: 208_947_261    # difference in resonator frequency
+                shape: Rectangular()
+                type: ro                    # readout
+        5: # qubit id
+            RX:
+                duration: 40                # should be multiple of 4
+                amplitude: 0.5
+                frequency: 4_700_000_000    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+            MZ:
+                duration: 2000
+                amplitude: 0.2
+                frequency: 7_118_627_658      # resonator frequency
+                # if_frequency: -136_372_342    # difference in resonator frequency
+                shape: Rectangular()
+                type: ro                    # readout
+
+    two_qubit:
+        3-2:
+            CZ:
+            - duration: 32
+              amplitude: -0.6025
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 3
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 3
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -3.630
+              qubit: 3
+
+            - duration: 32
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -0.041
+              qubit: 2
+
+        2-0:
+            CZ:
+            - duration: 28
+              amplitude: -0.142
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 2
+              relative_start: 0
+              type: qf
+        2-1:
+            CZ:
+            - duration: 32
+              amplitude: -0.6025
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 3
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 3
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -3.630
+              qubit: 3
+
+            - duration: 32
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -0.041
+              qubit: 2
+
 
 characterization:
     single_qubit:
         0:
-            readout_frequency: 7_825_100_000
-            drive_frequency: 5_079_856_329
-            T1: 16832
-            T2: 12405
-            state0_voltage: 2000
-            state1_voltage: 1000
-            mean_gnd_states: (0.002704-0.000786j)
-            mean_exc_states: (-0.000596-0.000932j)
+            readout_frequency: 7_213_299_307 # 7_212_299_307
+            drive_frequency: 5_050_304_836
+            anharmonicity: 291_463_266
+            T1: 5_857
+            T2: 0
+            sweetspot: 0.5507
+
+            # parameters for single shot classification
+            # iq_angle: 99.758
+            # threshold: 0.003933
+
+            # state0_voltage: 0.0
+            # state1_voltage: 0.0
+            # mean_gnd_states: (-0.0+0.0j)
+            # mean_exc_states: (0.0+0.0j)
+        1:
+            readout_frequency: 7_452_990_931
+            drive_frequency: 4_852_833_073
+            anharmonicity: 292_584_018
+            T1: 1_253
+            T2: 0
+            sweetspot: 0.2227
+
+            # parameters for single shot classification
+            iq_angle: 146.297
+            threshold: 0.003488
+        2:
+            readout_frequency: 7_655_083_068
+            drive_frequency: 5_795_371_914
+            anharmonicity: 276_187_576
+            T1: 4_563
+            T2: 0
+            sweetspot: -0.3780
+
+            # parameters for single shot classification
+            iq_angle: 97.821
+            threshold: 0.002904
+        3:
+            readout_frequency: 7_803_441_221
+            drive_frequency: 6_761_018_001
+            anharmonicity: 262_310_994
+            T1: 4_232
+            T2: 0
+            sweetspot: -0.8899
+
+            # parameters for single shot classification
+            iq_angle: 91.209
+            threshold: 0.004318
+        4:
+            readout_frequency: 8_058_947_261
+            drive_frequency: 6_586_543_060
+            anharmonicity: 261_390_626
+            T1: 492
+            T2: 0
+            sweetspot: 0.5890
+
+            # parameters for single shot classification
+            iq_angle: 7.997
+            threshold: 0.002323
+        5:
+            readout_frequency: 7_118_627_658
+            drive_frequency: 4_700_000_000
+            anharmonicity: 300_000_000
+            T1: 0
+            T2: 0
+            sweetspot: 0
+
+            # parameters for single shot classification
+            iq_angle: 0
+            threshold: 0.002

@@ -63,6 +63,11 @@ def test_u3_to_native():
     assert_matrices_allclose(gate, two_qubit_natives=NativeType.CZ)
 
 
+def test_gpi2_to_native():
+    gate = gates.GPI2(0, phi=0.123)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeType.CZ)
+
+
 @pytest.mark.parametrize("gatename", ["CNOT", "CZ", "SWAP", "iSWAP", "FSWAP"])
 @pytest.mark.parametrize(
     "natives",
