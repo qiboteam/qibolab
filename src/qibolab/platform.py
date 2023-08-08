@@ -2,12 +2,10 @@
 
 import math
 import re
-from dataclasses import asdict, dataclass, field, replace
-from pathlib import Path
+from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional
 
 import networkx as nx
-import yaml
 from qibo.config import log, raise_error
 
 from qibolab.execution_parameters import ExecutionParameters
@@ -83,24 +81,6 @@ class Platform:
         """Total number of usable qubits in the QPU.."""
         # TODO: Seperate couplers from qubits (PR #508)
         return len([qubit for qubit in self.qubits if not (isinstance(qubit, str) and "c" in qubit)])
-
-    def dump(self, path: Path):
-        """Serializes the platform and saves it as a yaml file.
-
-        This follows the format explained in :ref:`Using runcards <using_runcards>`.
-
-        Args:
-            path (pathlib.Path): Path that the yaml file will be saved.
-        """
-        from qibolab.utils import dump_qubits
-
-        settings = {
-            "nqubits": self.nqubits,
-            "qubits": list(self.qubits),
-            "settings": asdict(self.settings),
-        }
-        settings.update(dump_qubits(self.qubits, self.pairs))
-        path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
 
     def update(self, updates: dict):
         r"""Updates platform common runcard parameters after calibration actions.

@@ -21,7 +21,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     from qibolab.instruments.rfsoc import RFSoC
     from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
     from qibolab.platform import Platform
-    from qibolab.utils import load_qubits, load_runcard, load_settings
+    from qibolab.serialize import load_qubits, load_runcard, load_settings
 
     NAME = "my_platform"  # name of the platform
     ADDRESS = "192.168.0.1"  # ip adress of the controller

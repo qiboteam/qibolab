@@ -208,7 +208,7 @@ since ``create()`` is part of a Python module, is is possible to load parameters
 from an external file or database.
 
 Qibolab provides some utility functions, accessible through
-:py:mod:`qibolab.utils`, for loading calibration parameters stored in a YAML
+:py:mod:`qibolab.serialize`, for loading calibration parameters stored in a YAML
 file with a specific format. We call such file a runcard. Here is a runcard for
 a two-qubit system:
 
@@ -313,7 +313,7 @@ should be a subset of :class:`qibolab.qubits.Qubit` attributes.
 Providing the above runcard is not sufficient to instantiate a
 :class:`qibolab.platform.Platform`. This should still be done using a
 ``create()`` method, however this is significantly simplified by
-``qibolab.utils``. Here is the ``create()`` method that loads the parameters of
+``qibolab.serialize``. Here is the ``create()`` method that loads the parameters of
 the above runcard:
 
 .. code-block::  python
@@ -321,7 +321,7 @@ the above runcard:
     from pathlib import Path
     from qibolab import Platform
     from qibolab.channels import ChannelMap, Channel
-    from qibolab.utils import load_runcard, load_qubits, load_settings
+    from qibolab.serialize import load_runcard, load_qubits, load_settings
     from qibolab.instruments.dummy import DummyInstrument
 
 
