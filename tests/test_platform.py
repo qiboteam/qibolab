@@ -1,6 +1,8 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`.
 """
+import os
+import pathlib
 import pickle
 import warnings
 
@@ -16,6 +18,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, Rectangular
+from qibolab.serialize import dump_runcard
 
 from .conftest import find_instrument
 
@@ -69,6 +72,12 @@ def test_update(platform, par):
             assert value == getattr(qubit, par)
         else:
             assert value == float(getattr(qubit, par))
+
+
+def test_dump_runcard(platform):
+    path = pathlib.Path(__file__).parent / "test.yml"
+    dump_runcard(platform, path)
+    os.remove(path)
 
 
 @pytest.fixture(scope="module")

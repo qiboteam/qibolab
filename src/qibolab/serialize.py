@@ -4,6 +4,7 @@ The format of runcards in the ``qiboteam/qibolab_platforms_qrc``
 repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
+from dataclasses import asdict
 from pathlib import Path
 from typing import Tuple
 
@@ -54,9 +55,13 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
     native_gates = {
         "topology": [list(pair) for pair in pairs],
-        "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()},
+        "single_qubit": {},
         "two_qubit": {},
     }
+    # add single-qubit native gates
+    for q, qubit in qubits.items():
+        if qubit.native_gates.MZ is not None and qubit.native_gates.RX is not None:
+            native_gates["single_qubit"][q] = qubit.native_gates.raw
     # add two-qubit native gates
     for p, pair in pairs.items():
         natives = pair.native_gates.raw
