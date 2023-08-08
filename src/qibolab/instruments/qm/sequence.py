@@ -189,9 +189,6 @@ def find_duration_sweeper_pulses(sweepers):
 
         if sweeper.parameter is Parameter.duration and step % 4 != 0:
             for pulse in sweeper.pulses:
-                # TODO: This is changing the original pulse.
-                # Maybe use the QMPulse instead
-                pulse.duration = sweeper.values[0]
                 duration_sweep_pulses.add(pulse.serial)
 
     return duration_sweep_pulses
