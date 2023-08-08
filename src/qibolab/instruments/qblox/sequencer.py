@@ -170,14 +170,16 @@ class Sequencer:
 
     This class extends the sequencer functionality by holding additional data required when
     processing a pulse sequence:
-        the sequencer number,
-        the sequence of pulses to be played,
-        a buffer of unique waveforms, and
-        the four components of the sequence file:
-            waveforms dictionary
-            acquisition dictionary
-            weights dictionary
-            program
+
+    - the sequencer number,
+    - the sequence of pulses to be played,
+    - a buffer of unique waveforms, and
+    - the four components of the sequence file:
+
+        - waveforms dictionary
+        - acquisition dictionary
+        - weights dictionary
+        - program
 
     Attributes:
         device (QbloxSequencer): A reference to the underlying `qblox_instruments.qcodes_drivers.sequencer.Sequencer`

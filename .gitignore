@@ -71,6 +71,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+doc/source/api-reference/qibolab*
 
 # PyBuilder
 target/
