@@ -207,7 +207,13 @@ class SingleQubitNatives:
 
     @property
     def raw(self):
-        return {fld.name: getattr(self, fld.name).raw for fld in fields(self)}
+        """Serialize native gate pulses. ``None`` gates are not included."""
+        data = {}
+        for fld in fields(self):
+            attr = getattr(self, fld.name)
+            if attr is not None:
+                data[fld.name] = attr.raw
+        return data
 
 
 @dataclass
