@@ -55,7 +55,7 @@ def compile_circuit(circuit, platform):
         (gates.U3, 0.1, 0.2, 0.3),
     ],
 )
-def test_transpile(platform, gateargs):
+def test_compile(platform, gateargs):
     nqubits = platform.nqubits
     if gateargs[0] in (gates.I, gates.Z, gates.RZ):
         nseq = 0
@@ -66,7 +66,7 @@ def test_transpile(platform, gateargs):
     assert len(sequence) == (nseq + 1) * nqubits
 
 
-def test_transpile_two_gates(platform):
+def test_compile_two_gates(platform):
     circuit = Circuit(1)
     circuit.add(gates.RX(0, theta=0.1))
     circuit.add(gates.RY(0, theta=0.2))

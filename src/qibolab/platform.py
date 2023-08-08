@@ -2,7 +2,7 @@
 
 import math
 import re
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -10,17 +10,20 @@ import networkx as nx
 import yaml
 from qibo.config import log, raise_error
 
-from qibolab.channels import ChannelMap
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.instruments.abstract import Controller, Instrument
-from qibolab.native import NativeType, SingleQubitNatives, TwoQubitNatives
+from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
+from qibolab.native import NativeType
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
+InstrumentMap = Dict[InstrumentId, Instrument]
+QubitMap = Dict[QubitId, Qubit]
+QubitPairMap = Dict[QubitPairId, QubitPair]
+
 
 @dataclass
-class PlatformSettings:
+class Settings:
     """Default execution settings read from the runcard."""
 
     nshots: int = 1024
@@ -29,111 +32,80 @@ class PlatformSettings:
     """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
-    time_of_flight: int = 280
-    """Time in ns for the signal to reach the qubit from the instruments."""
-    smearing: int = 0
-    """Readout pulse window to be excluded during the signal integration."""
 
 
+@dataclass
 class Platform:
-    """A platform for executing quantum algorithms.
+    """Platform for controlling quantum devices."""
 
-    It consists of a quantum processor QPU and a set of controlling instruments.
+    name: str
+    """Name of the platform."""
+    qubits: QubitMap
+    """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
+    pairs: QubitPairMap
+    """Dictionary mapping sorted tuples of qubit names to :class:`qibolab.qubits.QubitPair` objects."""
+    instruments: InstrumentMap
+    """Dictionary mapping instrument names to :class:`qibolab.instruments.abstract.Instrument` objects."""
 
-    Args:
-        name (str): name of the platform.
-        runcard (str): path to the yaml file containing the platform setup.
-        instruments:
-        channels:
+    settings: Settings = field(default_factory=Settings)
+    """Container with default execution settings."""
+    resonator_type: Optional[str] = None
+    """Type of resonator (2D or 3D) in the used QPU.
+    Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
 
-    def __init__(self, name, runcard, instruments, channels):
-        log.info("Loading platform %s", name)
+    is_connected: bool = False
+    """Flag for whether we are connected to the physical instruments."""
+    two_qubit_native_types: NativeType = field(default_factory=lambda: NativeType(0))
+    """Types of two qubit native gates. Used by the transpiler."""
+    topology: nx.Graph = field(default_factory=nx.Graph)
+    """Graph representing the qubit connectivity in the quantum chip."""
 
-        self.name = name
-        self.is_connected = False
-        self.instruments: List[Instrument] = instruments
-        self.channels: ChannelMap = channels
+    def __post_init__(self):
+        log.info("Loading platform %s", self.name)
+        if self.resonator_type is None:
+            self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
-        # Load initial configuration
-        if isinstance(runcard, dict):
-            settings = runcard
-        else:
-            settings = yaml.safe_load(runcard.read_text())
-
-        self.nqubits: int = settings["nqubits"]
-        self.description: Optional[str] = settings.get("description")
-        self.resonator_type: str = settings.get("resonator_type", "3D" if self.nqubits == 1 else "2D")
-        self.settings: PlatformSettings = PlatformSettings(**settings["settings"])
-
-        # create qubit objects
-        self.qubits: Dict[QubitId, Qubit] = {
-            q: Qubit(q, **char) for q, char in settings["characterization"]["single_qubit"].items()
-        }
-
-        # create ``QubitPair`` objects
-        self.pairs: Dict[QubitPairId, QubitPair] = {}
-        for pair in settings["topology"]:
-            pair = tuple(sorted(pair))
-            self.pairs[pair] = QubitPair(self.qubits[pair[0]], self.qubits[pair[1]])
-
-        # register single qubit native gates to ``Qubit`` objects
-        native_gates = settings["native_gates"]
-        for q, gates in native_gates["single_qubit"].items():
-            self.qubits[q].native_gates = SingleQubitNatives.from_dict(self.qubits[q], gates)
-
-        # register two qubit native gates to ``QubitPair`` objects
-        self.two_qubit_native_types = NativeType(0)
-        if "two_qubit" in native_gates:
-            for pair, gatedict in native_gates["two_qubit"].items():
-                pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
-                self.pairs[pair].native_gates = TwoQubitNatives.from_dict(self.qubits, gatedict)
-                self.two_qubit_native_types |= self.pairs[pair].native_gates.types
-        else:
+        for pair in self.pairs.values():
+            self.two_qubit_native_types |= pair.native_gates.types
+        if self.two_qubit_native_types is NativeType(0):
             # dummy value to avoid transpiler failure for single qubit devices
             self.two_qubit_native_types = NativeType.CZ
 
-        self.topology: nx.Graph = nx.Graph()
         self.topology.add_nodes_from(self.qubits.keys())
         self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
-    def _check_connected(self):
-        if not self.is_connected:  # pragma: no cover
-            raise_error(RuntimeError, "Cannot access instrument because it is not connected.")
+    @property
+    def nqubits(self) -> int:
+        """Total number of usable qubits in the QPU.."""
+        # TODO: Seperate couplers from qubits (PR #508)
+        return len([qubit for qubit in self.qubits if not (isinstance(qubit, str) and "c" in qubit)])
 
     def dump(self, path: Path):
+        """Serializes the platform and saves it as a yaml file.
+
+        This follows the format explained in :ref:`Using runcards <using_runcards>`.
+
+        Args:
+            path (pathlib.Path): Path that the yaml file will be saved.
+        """
+        from qibolab.utils import dump_qubits
+
         settings = {
             "nqubits": self.nqubits,
-            "description": self.description,
             "qubits": list(self.qubits),
             "settings": asdict(self.settings),
-            "resonator_type": self.resonator_type,
-            "topology": [list(pair) for pair in self.pairs],
-            "native_gates": {},
-            "characterization": {},
         }
-        # add single qubit native gates
-        settings["native_gates"] = {
-            "single_qubit": {q: qubit.native_gates.raw for q, qubit in self.qubits.items()},
-            "two_qubit": {},
-        }
-        # add two-qubit native gates
-        for p, pair in self.pairs.items():
-            natives = pair.native_gates.raw
-            if len(natives) > 0:
-                settings["native_gates"]["two_qubit"][f"{p[0]}-{p[1]}"] = natives
-        # add qubit characterization section
-        settings["characterization"] = {"single_qubit": {q: qubit.characterization for q, qubit in self.qubits.items()}}
+        settings.update(dump_qubits(self.qubits, self.pairs))
         path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
 
     def update(self, updates: dict):
         r"""Updates platform common runcard parameters after calibration actions.
 
         Args:
-
             updates (dict): Dictionary containing the parameters to update the runcard.
                             A typical dictionary should be of the following form
                             {`parameter_to_update_in_runcard`: {`qubit0`:`par_value_qubit0`, ..., `qubit_i`:`par_value_qubit_i`, ...}}.
@@ -157,7 +129,6 @@ class Platform:
                             - beta(dimensionless)
 
         """
-
         for par, values in updates.items():
             for qubit, value in values.items():
                 # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
@@ -253,7 +224,7 @@ class Platform:
     def connect(self):
         """Connect to all instruments."""
         if not self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 try:
                     log.info(f"Connecting to instrument {instrument}.")
                     instrument.connect()
@@ -269,7 +240,7 @@ class Platform:
 
         Sets flux port offsets to the qubit sweetspots.
         """
-        for instrument in self.instruments:
+        for instrument in self.instruments.values():
             instrument.setup()
         for qubit in self.qubits.values():
             if qubit.flux is not None and qubit.sweetspot != 0:
@@ -278,19 +249,19 @@ class Platform:
     def start(self):
         """Starts all the instruments."""
         if self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 instrument.start()
 
     def stop(self):
         """Starts all the instruments."""
         if self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 instrument.stop()
 
     def disconnect(self):
         """Disconnects from instruments."""
         if self.is_connected:
-            for instrument in self.instruments:
+            for instrument in self.instruments.values():
                 instrument.disconnect()
         self.is_connected = False
 
@@ -307,7 +278,7 @@ class Platform:
         log.info(f"Minimal execution time (seq): {time}")
 
         result = {}
-        for instrument in self.instruments:
+        for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = getattr(instrument, method)(self.qubits, sequences, options)
                 if isinstance(new_result, dict):
@@ -381,7 +352,7 @@ class Platform:
         log.info(f"Minimal execution time (sweep): {time}")
 
         result = {}
-        for instrument in self.instruments:
+        for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
                 if isinstance(new_result, dict):

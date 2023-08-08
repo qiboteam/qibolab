@@ -1,7 +1,5 @@
 import pathlib
 
-import networkx as nx
-
 from qibolab.channels import Channel
 from qibolab.instruments.qblox.cluster import (
     Cluster,
@@ -28,6 +26,7 @@ from qibolab.instruments.qblox.port import (
 )
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
+from qibolab.utils import load_qubits, load_runcard, load_settings
 
 NAME = "qblox"
 ADDRESS = "192.168.0.6"
@@ -123,7 +122,7 @@ instruments_settings = {
 }
 
 
-def create(runcard=RUNCARD):
+def create(runcard_path=RUNCARD):
     """QuantWare 5q-chip controlled using qblox cluster.
 
     Args:
@@ -177,8 +176,6 @@ def create(runcard=RUNCARD):
     twpa_pump.frequency = instruments_settings["twpa_pump"]["frequency"]
     twpa_pump.power = instruments_settings["twpa_pump"]["power"]
 
-    instruments = [controller, twpa_pump]
-
     # Create channel objects
     channels = {}
     # readout
@@ -206,16 +203,14 @@ def create(runcard=RUNCARD):
     # TWPA
     channels["L4-26"] = Channel(name="L4-4", port=None)
 
-    platform = Platform(
-        name="dummy_qrc_qblox",
-        runcard=runcard,
-        instruments=instruments,
-        channels=channels,
-    )
+    # create qubit objects
+    runcard = load_runcard(runcard_path)
+    qubits, pairs = load_qubits(runcard)
+    # remove witness qubit
+    del qubits[5]
 
     # assign channels to qubits
-    qubits = platform.qubits
-    for q in [0, 1, 5]:
+    for q in [0, 1]:
         qubits[q].readout = channels["L3-25_a"]
         qubits[q].feedback = channels["L2-5_a"]
         qubits[q].twpa = channels["L4-26"]
@@ -234,19 +229,8 @@ def create(runcard=RUNCARD):
 
     # set maximum allowed bias
     for q in range(5):
-        platform.qubits[q].flux.max_bias = 2.5
-    # Platfom topology
+        qubits[q].flux.max_bias = 2.5
 
-    Q = [f"q{i}" for i in range(5)]
-    chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list = [
-        (Q[0], Q[2]),
-        (Q[1], Q[2]),
-        (Q[3], Q[2]),
-        (Q[4], Q[2]),
-    ]
-    chip.add_edges_from(graph_list)
-    platform.topology = chip
-
-    return platform
+    instruments = {controller.name: controller, twpa_pump.name: twpa_pump}
+    settings = load_settings(runcard)
+    return Platform("dummy_qrc_qblox", qubits, pairs, instruments, settings, resonator_type="2D")

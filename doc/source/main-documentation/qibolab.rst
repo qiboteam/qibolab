@@ -163,16 +163,20 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
 
 .. code-block:: python
 
+    from qibolab.utils import load_qubits
+
     ch_map = ChannelMap()
     ch_map |= channel1
     ch_map |= channel2
     ch_map |= channel3
 
-    platform = Platform(Name, runcard, instruments, ch_map)
+    qubits, pairs = load_qubits, load_runcard
+    runcard = load_runcard(runcard_path)
+    qubits, pairs = load_qubits(runcard)
 
-    platform.qubits[0].drive = channel1
-    platform.qubits[0].readout = channel2
-    platform.qubits[0].feedback = channel3
+    qubits[0].drive = channel1
+    qubits[0].readout = channel2
+    qubits[0].feedback = channel3
 
 Where, in the last lines, we assign the channels to the qubits.
 

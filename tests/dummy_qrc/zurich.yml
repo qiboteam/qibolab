@@ -1,12 +1,9 @@
 nqubits: 5
-description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
     nshots: 4096
     sampling_rate: 2.e+9
     relaxation_time: 300_000
-    time_of_flight: 280
-    smearing: 0
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
