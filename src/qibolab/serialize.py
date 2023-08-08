@@ -4,13 +4,14 @@ The format of runcards in the ``qiboteam/qibolab_platforms_qrc``
 repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
+from dataclasses import asdict
 from pathlib import Path
 from typing import Tuple
 
 import yaml
 
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import QubitMap, QubitPairMap, Settings
+from qibolab.platform import Platform, QubitMap, QubitPairMap, Settings
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -67,3 +68,21 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
         "native_gates": native_gates,
         "characterization": {"single_qubit": {q: qubit.characterization for q, qubit in qubits.items()}},
     }
+
+
+def dump_runcard(platform: Platform, path: Path):
+    """Serializes the platform and saves it as a yaml runcard file.
+
+    The file saved follows the format explained in :ref:`Using runcards <using_runcards>`.
+
+    Args:
+        platform (qibolab.platform.Platform): The platform to be serialized.
+        path (pathlib.Path): Path that the yaml file will be saved.
+    """
+    settings = {
+        "nqubits": platform.nqubits,
+        "qubits": list(platform.qubits),
+        "settings": asdict(platform.settings),
+    }
+    settings.update(dump_qubits(platform.qubits, platform.pairs))
+    path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
