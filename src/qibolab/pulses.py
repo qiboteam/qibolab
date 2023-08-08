@@ -105,16 +105,14 @@ class PulseShape(ABC):
     """Abstract class for pulse shapes.
 
     A PulseShape object is responsible for generating envelope and modulated waveforms from a set
-    of pulse parameters, its type and a predefined `SAMPLING_RATE`. PulsShape generates both i (in-phase)
+    of pulse parameters, its type and a predefined SAMPLING_RATE. PulsShape generates both i (in-phase)
     and q (quadrature) components.
-
-    Attributes:
-        SAMPLING_RATE (int): sampling rate in samples per second (SaPS)
-        pulse (Pulse): the pulse associated with it. Its parameters are used to generate pulse waveforms.
     """
 
     SAMPLING_RATE = 1e9  # 1GSaPS
+    """SAMPLING_RATE (int): sampling rate in samples per second (SaPS)"""
     pulse = None
+    """pulse (Pulse): the pulse associated with it. Its parameters are used to generate pulse waveforms."""
 
     @property
     @abstractmethod
@@ -230,7 +228,7 @@ class Exponential(PulseShape):
 
     .. math::
 
-        A\\frac{\\exp\\left(-\\frac{x}{\\text{upsilon}}\\right) + g \\exp\\left(-\\frac{x}{\\text{tau}}\\right)}{1 + g}
+        A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
 
     """
 
@@ -281,7 +279,7 @@ class Gaussian(PulseShape):
 
     .. math::
 
-        A\\exp^{-\\frac{1}{2}\\frac{(t-\\mu)^2}{\\sigma^2}}
+        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
     """
 
     def __init__(self, rel_sigma: float):
@@ -534,8 +532,8 @@ class eCap(PulseShape):
 
     .. math::
 
-        e_\\cap(t,\\alpha) &=& A[1 + \\tanh(\\alpha t/t_\\theta)][1 + \\tanh(\\alpha (1 - t/t_\\theta))]\\\\
-        &\\times& [1 + \\tanh(\\alpha/2)]^{-2}
+        e_{\cap(t,\alpha)} &=& A[1 + \tanh(\alpha t/t_\theta)][1 + \tanh(\alpha (1 - t/t_\theta))]\\
+        &\times& [1 + \tanh(\alpha/2)]^{-2}
 
     """
 
@@ -1614,14 +1612,11 @@ class PulseSequence:
     This class contains many supporting fuctions to facilitate the creation and manipulation of
     these collections of pulses.
     None of the methods of PulseSequence modify any of the properties of its pulses.
-
-    Attributes:
-        pulses (list): a list containing the pulses, ordered by their channel and start times.
-
     """
 
     def __init__(self, *pulses):
         self.pulses = []  #: list[Pulse] = []
+        """pulses (list): a list containing the pulses, ordered by their channel and start times."""
         self.add(*pulses)
 
     def __len__(self):
