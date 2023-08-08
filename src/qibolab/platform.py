@@ -92,7 +92,7 @@ class Platform:
         Args:
             path (pathlib.Path): Path that the yaml file will be saved.
         """
-        from qibolab.utils import dump_qubits
+        from qibolab.serialize import dump_qubits
 
         settings = {
             "nqubits": self.nqubits,

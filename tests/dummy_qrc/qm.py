@@ -4,7 +4,7 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qm import QMSim
 from qibolab.platform import Platform
-from qibolab.utils import load_qubits, load_runcard, load_settings
+from qibolab.serialize import load_qubits, load_runcard, load_settings
 
 RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
 
