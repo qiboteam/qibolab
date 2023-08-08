@@ -10,7 +10,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import PlatformSettings, QubitMapType, QubitPairMapType
+from qibolab.platform import QubitMap, QubitPairMap, Settings
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -19,12 +19,12 @@ def load_runcard(path: Path) -> dict:
     return yaml.safe_load(path.read_text())
 
 
-def load_settings(runcard: dict) -> PlatformSettings:
+def load_settings(runcard: dict) -> Settings:
     """Load platform settings section from the runcard."""
-    return PlatformSettings(**runcard["settings"])
+    return Settings(**runcard["settings"])
 
 
-def load_qubits(runcard: dict) -> Tuple[QubitMapType, QubitPairMapType]:
+def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard
@@ -50,7 +50,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMapType, QubitPairMapType]:
     return qubits, pairs
 
 
-def dump_qubits(qubits: QubitMapType, pairs: QubitPairMapType) -> dict:
+def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
     native_gates = {
         "topology": [list(pair) for pair in pairs],

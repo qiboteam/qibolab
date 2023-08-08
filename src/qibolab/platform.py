@@ -17,13 +17,13 @@ from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
-InstrumentMapType = Dict[InstrumentId, Instrument]
-QubitMapType = Dict[QubitId, Qubit]
-QubitPairMapType = Dict[QubitPairId, QubitPair]
+InstrumentMap = Dict[InstrumentId, Instrument]
+QubitMap = Dict[QubitId, Qubit]
+QubitPairMap = Dict[QubitPairId, QubitPair]
 
 
 @dataclass
-class PlatformSettings:
+class Settings:
     """Default execution settings read from the runcard."""
 
     nshots: int = 1024
@@ -40,14 +40,14 @@ class Platform:
 
     name: str
     """Name of the platform."""
-    qubits: QubitMapType
+    qubits: QubitMap
     """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-    pairs: QubitPairMapType
+    pairs: QubitPairMap
     """Dictionary mapping sorted tuples of qubit names to :class:`qibolab.qubits.QubitPair` objects."""
-    instruments: InstrumentMapType
+    instruments: InstrumentMap
     """Dictionary mapping instrument names to :class:`qibolab.instruments.abstract.Instrument` objects."""
 
-    settings: PlatformSettings = field(default_factory=PlatformSettings)
+    settings: Settings = field(default_factory=Settings)
     """Container with default execution settings."""
     resonator_type: Optional[str] = None
     """Type of resonator (2D or 3D) in the used QPU.
