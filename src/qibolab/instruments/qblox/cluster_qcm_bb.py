@@ -1,34 +1,4 @@
-""" Qblox instruments driver.
-
-Supports the following Instruments:
-    Cluster
-    Cluster QRM-RF
-    Cluster QCM-RF
-    Cluster QCM
-Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
-It supports:
-    - multiplexed readout of up to 6 qubits
-    - hardware modulation, demodulation, and classification
-    - software modulation, with support for arbitrary pulses
-    - software demodulation
-    - binned acquisition
-    - real-time sweepers of
-        - pulse frequency (requires hardware modulation)
-        - pulse relative phase (requires hardware modulation)
-        - pulse amplitude
-        - pulse start
-        - pulse duration
-        - port gain
-        - port offset
-    - multiple readouts for the same qubit (sequence unrolling)
-    - max iq pulse length 8_192ns
-    - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
-    - instrument parameters cache
-    - safe disconnection of offsets on termination
-
-The operation of multiple clusters simultaneously is not supported yet.
-https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
-"""
+""" Qblox Cluster QCM driver."""
 
 import json
 
@@ -86,6 +56,8 @@ class ClusterQCM_BB(Instrument):
     the communication with the instrument only happens when the parameters change.
     This caching is done with the method `_set_device_parameter(target, *parameters, value)`.
 
+    .. code-block:: text
+
             ports:
                 o1:
                     channel                      : L4-1
@@ -104,14 +76,6 @@ class ClusterQCM_BB(Instrument):
                     gain                         : 0.2 # -1.0<=v<=1.0
                     offset                       : 0   # -2.5<=v<=2.5
 
-    The class inherits from Instrument and implements its interface methods:
-        __init__()
-        connect()
-        setup()
-        start()
-        stop()
-        disconnect()
-
     Attributes:
         name (str): A unique name given to the instrument.
         address (str): IP_address:module_number (the IP address of the cluster and
@@ -120,33 +84,32 @@ class ClusterQCM_BB(Instrument):
             `qblox_instruments.qcodes_drivers.qcm_qrm.QcmQrm` object. It can be used to access other
             features not directly exposed by this wrapper.
             https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/qcm_qrm.html
-
         ports = A dictionary giving access to the output ports objects.
-            ports['o1']
-            ports['o2']
-            ports['o3']
-            ports['o4']
 
-            ports['oX'].channel (int | str): the id of the refrigerator channel the port is connected to.
-            ports['oX'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
+            - ports['o1']
+            - ports['o2']
+            - ports['o3']
+            - ports['o4']
+
+            - ports['oX'].channel (int | str): the id of the refrigerator channel the port is connected to.
+            - ports['oX'].gain (float): (mapped to qrm.sequencers[0].gain_awg_path0 and qrm.sequencers[0].gain_awg_path1)
                 Sets the gain on both paths of the output port.
-            ports['oX'].offset (float): (mapped to qrm.outX_offset)
+            - ports['oX'].offset (float): (mapped to qrm.outX_offset)
                 Sets the offset on the output port.
-            ports['oX'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
+            - ports['oX'].hardware_mod_en (bool): (mapped to qrm.sequencers[0].mod_en_awg) Enables pulse
                 modulation in hardware. When set to False, pulse modulation is done at the host computer
                 and a modulated pulse waveform should be uploaded to the instrument. When set to True,
                 the envelope of the pulse should be uploaded to the instrument and it modulates it in
                 real time by its FPGA using the sequencer nco (numerically controlled oscillator).
-            ports['oX'].nco_freq (int): (mapped to qrm.sequencers[0].nco_freq)        # TODO mapped, but not configurable from the runcard
-            ports['oX'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs) # TODO mapped, but not configurable from the runcard
+            - ports['oX'].nco_freq (int): (mapped to qrm.sequencers[0].nco_freq)        # TODO mapped, but not configurable from the runcard
+            - ports['oX'].nco_phase_offs = (mapped to qrm.sequencers[0].nco_phase_offs) # TODO mapped, but not configurable from the runcard
 
-        Sequencer 0 is always the first sequencer used to synthesise pulses on port o1.
-        Sequencer 1 is always the first sequencer used to synthesise pulses on port o2.
-        Sequencer 2 is always the first sequencer used to synthesise pulses on port o3.
-        Sequencer 3 is always the first sequencer used to synthesise pulses on port o4.
-        Sequencer 4 to 6 are used as needed to sinthesise simultaneous pulses on the same channel
-        or when the memory of the default sequencers rans out.
-
+                - Sequencer 0 is always the first sequencer used to synthesise pulses on port o1.
+                - Sequencer 1 is always the first sequencer used to synthesise pulses on port o2.
+                - Sequencer 2 is always the first sequencer used to synthesise pulses on port o3.
+                - Sequencer 3 is always the first sequencer used to synthesise pulses on port o4.
+                - Sequencer 4 to 6 are used as needed to sinthesise simultaneous pulses on the same channel
+                  or when the memory of the default sequencers rans out.
     """
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1, "o3": 2, "o4": 3}
@@ -322,14 +285,15 @@ class ClusterQCM_BB(Instrument):
         A connection to the instrument needs to be established beforehand.
         Args:
             **kwargs: dict = A dictionary of settings loaded from the runcard:
-                oX: ['o1', 'o2', 'o3', 'o4']
-                kwargs['ports']['oX']['channel'] (int | str): the id of the refrigerator channel the port is connected to.
-                kwargs['ports'][oX]['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                    `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                    applied at the output.
-                kwargs['ports'][oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
-                kwargs['ports'][oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
-                    using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
+
+                - oX: ['o1', 'o2', 'o3', 'o4']
+                - kwargs['ports']['oX']['channel'] (int | str): the id of the refrigerator channel the port is connected to.
+                - kwargs['ports'][oX]['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
+                  `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
+                  applied at the output.
+                - kwargs['ports'][oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
+                - kwargs['ports'][oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                  using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
 
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
@@ -444,21 +408,24 @@ class ClusterQCM_BB(Instrument):
         The output of the process is a list of sequencers used for each port, configured with the information
         required to play the sequence.
         The following features are supported:
-            - overlapping pulses
-            - hardware modulation
-            - software modulation, with support for arbitrary pulses
-            - real-time sweepers of
-                - pulse frequency (requires hardware modulation)
-                - pulse relative phase (requires hardware modulation)
-                - pulse amplitude
-                - pulse start
-                - pulse duration
-                - port gain
-                - port offset
-            - sequencer memory optimisation (waveforms cache)
-            - extended waveform memory with the use of multiple sequencers
-            - pulses of up to 8192 pairs of i, q samples
-            - intrument parameters cache
+
+        - overlapping pulses
+        - hardware modulation
+        - software modulation, with support for arbitrary pulses
+        - real-time sweepers of
+
+            - pulse frequency (requires hardware modulation)
+            - pulse relative phase (requires hardware modulation)
+            - pulse amplitude
+            - pulse start
+            - pulse duration
+            - port gain
+            - port offset
+
+        - sequencer memory optimisation (waveforms cache)
+        - extended waveform memory with the use of multiple sequencers
+        - pulses of up to 8192 pairs of i, q samples
+        - intrument parameters cache
 
         Args:
             instrument_pulses (PulseSequence): A collection of Pulse objects to be played by the instrument.

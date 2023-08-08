@@ -1,30 +1,34 @@
 """ Qblox instruments driver.
 
 Supports the following Instruments:
-    Cluster
-    Cluster QRM-RF
-    Cluster QCM-RF
-    Cluster QCM
+
+-Cluster
+-Cluster QRM-RF
+-Cluster QCM-RF
+-Cluster QCM
+
 Compatible with qblox-instruments driver 0.9.0 (28/2/2023).
 It supports:
-    - multiplexed readout of up to 6 qubits
-    - hardware modulation, demodulation, and classification
-    - software modulation, with support for arbitrary pulses
-    - software demodulation
-    - binned acquisition
-    - real-time sweepers of
-        - pulse frequency (requires hardware modulation)
-        - pulse relative phase (requires hardware modulation)
-        - pulse amplitude
-        - pulse start
-        - pulse duration
-        - port gain
-        - port offset
-    - multiple readouts for the same qubit (sequence unrolling)
-    - max iq pulse length 8_192ns
-    - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
-    - instrument parameters cache
-    - safe disconnection of offsets on termination
+
+- multiplexed readout of up to 6 qubits
+- hardware modulation, demodulation, and classification
+- software modulation, with support for arbitrary pulses
+- software demodulation
+- binned acquisition
+- real-time sweepers of
+    - pulse frequency (requires hardware modulation)
+    - pulse relative phase (requires hardware modulation)
+    - pulse amplitude
+    - pulse start
+    - pulse duration
+    - port gain
+    - port offset
+
+- multiple readouts for the same qubit (sequence unrolling)
+- max iq pulse length 8_192ns
+- waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
+- instrument parameters cache
+- safe disconnection of offsets on termination
 
 The operation of multiple clusters simultaneously is not supported yet.
 https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/
@@ -46,15 +50,10 @@ class ReferenceClockSource(Enum):
 
 @dataclass
 class Cluster_Settings:
-    """Settings of the Cluster instrument.
-
-    Attributes:
-        reference_clock_source (:class:`qibolab.instruments.qblox.cluster.ReferenceClockSource`):
-            (ReferenceClockSource.INTERNAL, ReferenceClockSource.EXTERNAL) Instructs the cluster to use the internal
-            clock source or an external source.
-    """
+    """Settings of the Cluster instrument."""
 
     reference_clock_source: ReferenceClockSource = ReferenceClockSource.INTERNAL
+    """Instruct the cluster to use the internal clock source or an external source."""
 
 
 class Cluster(Instrument):
@@ -70,22 +69,15 @@ class Cluster(Instrument):
         start()
         stop()
         disconnect()
-
-    Attributes:
-        device (QbloxCluster): A reference to the underlying `qblox_instruments.qcodes_drivers.cluster.Cluster` object.
-            It can be used to access other features not directly exposed by this wrapper.
-            https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/cluster.html
-        settings (:class:`qibolab.instruments.qblox.cluster.ClusterSettings`): The instrument settings.
-        reference_clock_source (:class:`qibolab.instruments.qblox.cluster.ReferenceClockSource`):
-            (ReferenceClockSource.INTERNAL, ReferenceClockSource.EXTERNAL) Instructs the cluster to use the internal
-            clock source or an external source.
     """
 
     def __init__(self, name: str, address: str, settings: Cluster_Settings = Cluster_Settings()):
         """Initialises the instrument storing its name, address and settings."""
         super().__init__(name, address)
         self.device: QbloxCluster = None
+        """Reference to the underlying `qblox_instruments.qcodes_drivers.cluster.Cluster` object."""
         self.settings: Cluster_Settings = settings
+        """Instrument settings."""
 
     @property
     def reference_clock_source(self) -> ReferenceClockSource:

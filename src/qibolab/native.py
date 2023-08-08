@@ -40,7 +40,7 @@ class NativePulse:
     amplitude: float
     shape: str
     pulse_type: PulseType
-    qubit: "Qubit"
+    qubit: "qubits.Qubit"
     frequency: int = 0
     relative_start: int = 0
     """Relative start is relevant for two-qubit gate operations which correspond to a pulse sequence."""
@@ -115,7 +115,7 @@ class VirtualZPulse:
     """Container with parameters required to add a virtual Z phase in a pulse sequence."""
 
     phase: float
-    qubit: "Qubit"
+    qubit: "qubits.Qubit"
 
     @property
     def raw(self):
