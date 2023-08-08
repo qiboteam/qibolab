@@ -51,7 +51,7 @@ def dummy_qrc():
 
 
 def find_instrument(platform, instrument_type):
-    for instrument in platform.instruments:
+    for instrument in platform.instruments.values():
         if isinstance(instrument, instrument_type):
             return instrument
     return None
