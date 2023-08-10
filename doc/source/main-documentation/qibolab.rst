@@ -163,7 +163,7 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
 
 .. code-block:: python
 
-    from qibolab.utils import load_qubits
+    from qibolab.serialize import load_qubits
 
     ch_map = ChannelMap()
     ch_map |= channel1
