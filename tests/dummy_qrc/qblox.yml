@@ -1,12 +1,11 @@
 nqubits: 5
-description: QuantWare 5-qubit device at XLD fridge.
 
 settings:
     nshots: 1024
     sampling_rate: 1_000_000_000
     relaxation_time: 20_000
 
-qubits: [0, 1, 2, 3, 4, 5]
+qubits: [0, 1, 2, 3, 4]
 
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
@@ -20,7 +19,7 @@ native_gates:
                 # if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000
@@ -29,7 +28,7 @@ native_gates:
                 # if_frequency: -42_700_693    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
-                start: 0
+                relative_start: 0
                 phase: 0
         1: # qubit id
             RX:
@@ -38,7 +37,9 @@ native_gates:
                 frequency: 4_852_833_073    # qubit frequency
                 # if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
-                type: qd                    # qubit drive
+                type: qd
+                relative_start: 0
+                phase: 0                    # qubit drive
             MZ:
                 duration: 2000
                 amplitude: 0.2
@@ -46,6 +47,8 @@ native_gates:
                 # if_frequency: 197_990_931    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
+                relative_start: 0
+                phase: 0
         2: # qubit id
             RX:
                 duration: 40                   # should be multiple of 4
@@ -54,6 +57,8 @@ native_gates:
                 # if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: 0.25
@@ -61,6 +66,8 @@ native_gates:
                 # if_frequency: -194_916_932    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
+                relative_start: 0
+                phase: 0
         3: # qubit id
             RX:
                 duration: 40                   # should be multiple of 4
@@ -69,6 +76,8 @@ native_gates:
                 # if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: 0.2
@@ -76,6 +85,8 @@ native_gates:
                 # if_frequency: -46_558_779    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
+                relative_start: 0
+                phase: 0
         4: # qubit id
             RX:
                 duration: 40                # should be multiple of 4
@@ -84,6 +95,8 @@ native_gates:
                 # if_frequency: -200_000_000    # difference in qubit frequency
                 shape: Gaussian(5)
                 type: qd                    # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: 0.4
@@ -91,24 +104,11 @@ native_gates:
                 # if_frequency: 208_947_261    # difference in resonator frequency
                 shape: Rectangular()
                 type: ro                    # readout
-        5: # qubit id
-            RX:
-                duration: 40                # should be multiple of 4
-                amplitude: 0.5
-                frequency: 4_700_000_000    # qubit frequency
-                # if_frequency: -200_000_000    # difference in qubit frequency
-                shape: Gaussian(5)
-                type: qd                    # qubit drive
-            MZ:
-                duration: 2000
-                amplitude: 0.2
-                frequency: 7_118_627_658      # resonator frequency
-                # if_frequency: -136_372_342    # difference in resonator frequency
-                shape: Rectangular()
-                type: ro                    # readout
+                relative_start: 0
+                phase: 0
 
     two_qubit:
-        3-2:
+        2-3:
             CZ:
             - duration: 32
               amplitude: -0.6025
@@ -142,7 +142,7 @@ native_gates:
               phase: -0.041
               qubit: 2
 
-        2-0:
+        0-2:
             CZ:
             - duration: 28
               amplitude: -0.142
@@ -150,7 +150,7 @@ native_gates:
               qubit: 2
               relative_start: 0
               type: qf
-        2-1:
+        1-2:
             CZ:
             - duration: 32
               amplitude: -0.6025
@@ -247,14 +247,3 @@ characterization:
             # parameters for single shot classification
             iq_angle: 7.997
             threshold: 0.002323
-        5:
-            readout_frequency: 7_118_627_658
-            drive_frequency: 4_700_000_000
-            anharmonicity: 300_000_000
-            T1: 0
-            T2: 0
-            sweetspot: 0
-
-            # parameters for single shot classification
-            iq_angle: 0
-            threshold: 0.002

@@ -19,7 +19,7 @@ native_gates:
                 # shape: Gaussian(5)
                 shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000 #2000.e-9
@@ -27,11 +27,8 @@ native_gates:
                 frequency: 5_229_200_000 #5_233_200_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
 
         1: # qubit number
             RX:
@@ -41,7 +38,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 1000
@@ -49,11 +46,8 @@ native_gates:
                 frequency: 4_931_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
 
         2: # qubit number
             RX:
@@ -63,7 +57,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000
@@ -71,11 +65,9 @@ native_gates:
                 frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
+
         3: # qubit number
             RX:
                 duration: 90 #80
@@ -84,7 +76,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000
@@ -92,11 +84,9 @@ native_gates:
                 frequency: 5_783_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
+
         4: # qubit number
             RX:
                 duration: 53 #110 #80
@@ -105,7 +95,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 1000
@@ -113,14 +103,15 @@ native_gates:
                 frequency: 5_515_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .1
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
+        c0: {}
+        c1: {}
+        c3: {}
+        c4: {}
 
     two_qubit:
-        2-1:
+        1-2:
             CZ:
             - duration: 32
               amplitude: -0.6025

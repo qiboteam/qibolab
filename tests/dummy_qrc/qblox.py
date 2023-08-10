@@ -206,8 +206,6 @@ def create(runcard_path=RUNCARD):
     # create qubit objects
     runcard = load_runcard(runcard_path)
     qubits, pairs = load_qubits(runcard)
-    # remove witness qubit
-    del qubits[5]
 
     # assign channels to qubits
     for q in [0, 1]:
@@ -233,4 +231,4 @@ def create(runcard_path=RUNCARD):
 
     instruments = {controller.name: controller, twpa_pump.name: twpa_pump}
     settings = load_settings(runcard)
-    return Platform("dummy_qrc_qblox", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform("qblox", qubits, pairs, instruments, settings, resonator_type="2D")

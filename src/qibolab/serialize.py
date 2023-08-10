@@ -54,7 +54,6 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
     native_gates = {
-        "topology": [list(pair) for pair in pairs],
         "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()},
         "two_qubit": {},
     }
@@ -83,6 +82,7 @@ def dump_runcard(platform: Platform, path: Path):
         "nqubits": platform.nqubits,
         "qubits": list(platform.qubits),
         "settings": asdict(platform.settings),
+        "topology": [list(pair) for pair in platform.pairs],
     }
     settings.update(dump_qubits(platform.qubits, platform.pairs))
     path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))

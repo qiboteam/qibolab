@@ -9,10 +9,10 @@ native_gates:
     single_qubit:
         0:
             RX: {duration: 30, amplitude: 0.05284168507293318, frequency: 5542341844,
-                shape: Rectangular(), type: qd, start: 0, phase: 0}
+                shape: Rectangular(), type: qd, relative_start: 0, phase: 0}
             MZ: {duration: 600, amplitude: 0.03, frequency: 7371258599, shape: Rectangular(),
-                type: ro, start: 0, phase: 0}
-    two_qubits: {}
+                type: ro, relative_start: 0, phase: 0}
+    two_qubit: {}
 characterization:
     single_qubit:
         0: {readout_frequency: 7371258599, drive_frequency: 5542341844, pi_pulse_amplitude: 0.05284168507293318,

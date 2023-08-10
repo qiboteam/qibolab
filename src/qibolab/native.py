@@ -71,6 +71,10 @@ class NativePulse:
     def raw(self):
         data = {fld.name: getattr(self, fld.name) for fld in fields(self) if getattr(self, fld.name) is not None}
         del data["name"]
+        del data["start"]
+        if self.pulse_type is PulseType.FLUX:
+            del data["frequency"]
+            del data["phase"]
         data["qubit"] = self.qubit.name
         data["type"] = data.pop("pulse_type").value
         return data
@@ -213,6 +217,7 @@ class SingleQubitNatives:
             attr = getattr(self, fld.name)
             if attr is not None:
                 data[fld.name] = attr.raw
+                del data[fld.name]["qubit"]
         return data
 
 
