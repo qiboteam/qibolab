@@ -43,4 +43,4 @@ def create(runcard_path=RUNCARD):
 
     instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
-    return Platform("tii_rfsoc4x2", qubits, pairs, instruments, settings, resonator_type="3D")
+    return Platform("rfsoc", qubits, pairs, instruments, settings, resonator_type="3D")

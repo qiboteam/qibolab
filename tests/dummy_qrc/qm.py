@@ -69,8 +69,6 @@ def create(runcard_path=RUNCARD):
     # create qubit objects
     runcard = load_runcard(runcard_path)
     qubits, pairs = load_qubits(runcard)
-    # remove witness qubit
-    del qubits[5]
 
     # assign channels to qubits
     for q in [0, 1]:
