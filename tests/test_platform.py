@@ -18,7 +18,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, Rectangular
-from qibolab.serialize import dump_runcard
+from qibolab.serialize import dump_runcard, load_runcard
 
 from .conftest import find_instrument
 
@@ -39,6 +39,23 @@ def test_platform_pickle(platform):
     new_platform = pickle.loads(serial)
     assert new_platform.name == platform.name
     assert new_platform.is_connected == platform.is_connected
+
+
+def test_dump_runcard(platform):
+    path = pathlib.Path(__file__).parent / "test.yml"
+    dump_runcard(platform, path)
+    final_runcard = load_runcard(path)
+    target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}.yml"
+    target_runcard = load_runcard(target_path)
+    # for the characterization section the dumped runcard may contain
+    # some default ``Qubit`` parameters
+    target_char = target_runcard.pop("characterization")["single_qubit"]
+    final_char = final_runcard.pop("characterization")["single_qubit"]
+    assert final_runcard == target_runcard
+    for qubit, values in target_char.items():
+        for name, value in values.items():
+            assert final_char[qubit][name] == value
+    os.remove(path)
 
 
 # TODO: this test should be improved
@@ -72,12 +89,6 @@ def test_update(platform, par):
             assert value == getattr(qubit, par)
         else:
             assert value == float(getattr(qubit, par))
-
-
-def test_dump_runcard(platform):
-    path = pathlib.Path(__file__).parent / "test.yml"
-    dump_runcard(platform, path)
-    os.remove(path)
 
 
 @pytest.fixture(scope="module")
