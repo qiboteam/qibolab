@@ -187,7 +187,6 @@ class ShotsAcquisition(Acquisition):
             qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
         )
         qua.assign(self.shot, qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > self.threshold))
-        # qua.assign(self.shot, qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > -1.0))
 
     def save(self):
         qua.save(self.shot, self.shots)
