@@ -65,12 +65,12 @@ def assert_single_qubits(psi, ua, ub):
 def test_u3_decomposition():
     backend = NumpyBackend()
     theta, phi, lam = 0.1, 0.2, 0.3
-    u3_matrix = gates.U3(0, theta, phi, lam).asmatrix(backend)
-    rz1 = gates.RZ(0, phi).asmatrix(backend)
-    rz2 = gates.RZ(0, theta).asmatrix(backend)
-    rz3 = gates.RZ(0, lam).asmatrix(backend)
-    rx1 = gates.RX(0, -np.pi / 2).asmatrix(backend)
-    rx2 = gates.RX(0, np.pi / 2).asmatrix(backend)
+    u3_matrix = gates.U3(0, theta, phi, lam).matrix(backend)
+    rz1 = gates.RZ(0, phi).matrix(backend)
+    rz2 = gates.RZ(0, theta).matrix(backend)
+    rz3 = gates.RZ(0, lam).matrix(backend)
+    rx1 = gates.RX(0, -np.pi / 2).matrix(backend)
+    rx2 = gates.RX(0, np.pi / 2).matrix(backend)
     target_matrix = rz1 @ rx1 @ rz2 @ rx2 @ rz3
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
@@ -168,7 +168,7 @@ def test_two_qubit_decomposition_common_gates(gatename):
         gate = gates.fSim(0, 1, theta=0.1, phi=0.2)
     else:
         gate = getattr(gates, gatename)(0, 1)
-    matrix = gate.asmatrix(backend)
+    matrix = gate.matrix(backend)
     c = Circuit(2)
     c.add(two_qubit_decomposition(0, 1, matrix))
     final_matrix = c.unitary(backend)
