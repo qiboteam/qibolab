@@ -166,7 +166,7 @@ class ShotsAcquisition(Acquisition):
     I: _Variable = field(default_factory=lambda: declare(fixed))
     Q: _Variable = field(default_factory=lambda: declare(fixed))
     """Variables to save the (I, Q) values acquired from a single shot."""
-    shot: _Variable = field(default_factory=lambda: declare(bool))
+    shot: _Variable = field(default_factory=lambda: declare(int))
     """Variable for calculating an individual shots."""
     shots: _ResultSource = field(default_factory=lambda: declare_stream())
     """Stream to collect multiple shots."""
@@ -186,7 +186,8 @@ class ShotsAcquisition(Acquisition):
             qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
             qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
         )
-        qua.assign(self.shot, self.I * self.cos - self.Q * self.sin > self.threshold)
+        qua.assign(self.shot, qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > self.threshold))
+        # qua.assign(self.shot, qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > -1.0))
 
     def save(self):
         qua.save(self.shot, self.shots)
@@ -200,8 +201,8 @@ class ShotsAcquisition(Acquisition):
         shots.save(f"{self.serial}_shots")
 
     def fetch(self, handles):
-        shots = handles.get(f"{self.serial}_shots").fetch_all().astype(int)
+        shots = handles.get(f"{self.serial}_shots").fetch_all()
         if self.average:
             # TODO: calculate std
             return AveragedSampleResults(shots)
-        return SampleResults(shots)
+        return SampleResults(shots.astype(int))

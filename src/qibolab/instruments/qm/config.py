@@ -308,20 +308,20 @@ class QMConfig:
                 object that the integration weights will be used for.
             readout_len (int): Duration of the readout pulse in ns.
         """
-        iq_angle = qubit.iq_angle
+        angle = 0
         self.integration_weights.update(
             {
                 f"cosine_weights{qubit.name}": {
-                    "cosine": [(np.cos(iq_angle), readout_len)],
-                    "sine": [(-np.sin(iq_angle), readout_len)],
+                    "cosine": [(np.cos(angle), readout_len)],
+                    "sine": [(-np.sin(angle), readout_len)],
                 },
                 f"sine_weights{qubit.name}": {
-                    "cosine": [(np.sin(iq_angle), readout_len)],
-                    "sine": [(np.cos(iq_angle), readout_len)],
+                    "cosine": [(np.sin(angle), readout_len)],
+                    "sine": [(np.cos(angle), readout_len)],
                 },
                 f"minus_sine_weights{qubit.name}": {
-                    "cosine": [(-np.sin(iq_angle), readout_len)],
-                    "sine": [(-np.cos(iq_angle), readout_len)],
+                    "cosine": [(-np.sin(angle), readout_len)],
+                    "sine": [(-np.cos(angle), readout_len)],
                 },
             }
         )
