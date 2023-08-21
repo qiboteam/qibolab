@@ -7,6 +7,7 @@ from qibo.config import raise_error
 from qibolab.compilers.default import (
     align_rule,
     cz_rule,
+    gpi2_rule,
     identity_rule,
     measurement_rule,
     rz_rule,
@@ -24,15 +25,16 @@ class Compiler:
     pulse sequence and some virtual Z-phases.
 
     A rule is a function that takes two argumens:
-        gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
-        platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
+        - gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
+        - platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
             native gate pulses from.
-    and returns
-        sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
-            the given gate.
-        virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
 
-    See ``qibolab.compilers.default`` for an example of a compiler implementation.
+    and returns:
+        - sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
+            the given gate.
+        - virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
+
+    See :class:`qibolab.compilers.default` for an example of a compiler implementation.
     """
 
     rules: dict = field(default_factory=dict)
@@ -47,6 +49,7 @@ class Compiler:
                 gates.RZ: rz_rule,
                 gates.U3: u3_rule,
                 gates.CZ: cz_rule,
+                gates.GPI2: gpi2_rule,
                 gates.M: measurement_rule,
                 gates.Align: align_rule,
             }
@@ -77,7 +80,7 @@ class Compiler:
         """Decorator for registering a function as a rule in the compiler.
 
         Using this decorator is optional. Alternatively the user can set the rules directly
-        via ``__setitem__`.
+        via ``__setitem__``.
 
         Args:
             gate_cls: Qibo gate object that the rule will be assigned to.
@@ -113,14 +116,13 @@ class Compiler:
 
         Args:
             circuit (qibo.models.Circuit): Qibo circuit that respects the platform's
-                connectivity and native gates.
+                                           connectivity and native gates.
             platform (qibolab.platforms.abstract.AbstractPlatform): Platform used
                 to load the native pulse representations.
 
         Returns:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
-            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulses
-                implementing it.
+            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names

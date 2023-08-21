@@ -1,14 +1,9 @@
 nqubits: 5
-description: IQM 5-qubit device, controlled with Zurich Instruments.
 
 settings:
     nshots: 4096
     sampling_rate: 2.e+9
     relaxation_time: 300_000
-    time_of_flight: 280
-    smearing: 0
-    Fast_reset: False
-    chip: iqm5q
 
 qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
@@ -24,7 +19,7 @@ native_gates:
                 # shape: Gaussian(5)
                 shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000 #2000.e-9
@@ -32,11 +27,8 @@ native_gates:
                 frequency: 5_229_200_000 #5_233_200_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
 
         1: # qubit number
             RX:
@@ -46,7 +38,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 1000
@@ -54,11 +46,8 @@ native_gates:
                 frequency: 4_931_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
 
         2: # qubit number
             RX:
@@ -68,7 +57,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000
@@ -76,11 +65,9 @@ native_gates:
                 frequency: 6.109e+9 #6_086_000_000  #6_112_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
+
         3: # qubit number
             RX:
                 duration: 90 #80
@@ -89,7 +76,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 2000
@@ -97,11 +84,9 @@ native_gates:
                 frequency: 5_783_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .0
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
+
         4: # qubit number
             RX:
                 duration: 53 #110 #80
@@ -110,7 +95,7 @@ native_gates:
                 shape: Gaussian(5)
                 # shape: Drag(5, 0.04)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 1000
@@ -118,32 +103,48 @@ native_gates:
                 frequency: 5_515_000_000 #doesnt do anything requiered for qibolab to work
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-    #             phase: 0
-            # Flux_bias:
-            #     amplitude: .1
-            #     shape: Rectangular()
+                relative_start: 0
+                phase: 0
+        c0: {}
+        c1: {}
+        c3: {}
+        c4: {}
 
-    # two_qubit:
-    #     0-2: # qubit numbers
-    #         CZ:
-    #             pulse_sequence:
-    #                 -   start: 0
-    #                     duration: 20
-    #                     amplitude: 0.5
-    #                     frequency: 0
-    #                     shape: RTZ()
-    #                     phase: null
-    #                     channel: 2
-    #                     type: qf # qubit flux
-    #                 -   start: 0
-    #                     duration: 4
-    #                     amplitude: 0.01
-    #                     frequency: 0
-    #                     shape: RTZ()
-    #                     phase: null
-    #                     channel: 2
-    #                     type: qf # qubit flux
+    two_qubit:
+        1-2:
+            CZ:
+            - duration: 32
+              amplitude: -0.6025
+              shape: Exponential(12, 5000, 0.1)
+              qubit: 3
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 3
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -3.630
+              qubit: 3
+
+            - duration: 32
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 0
+              type: qf
+            - duration: 20
+              amplitude: 0
+              shape: Rectangular())
+              qubit: 2
+              relative_start: 32
+              type: qf
+            - type: virtual_z
+              phase: -0.041
+              qubit: 2
+
 characterization:
     single_qubit:
         0:
@@ -153,8 +154,8 @@ characterization:
             T1: 0.0
             T2: 0.0
             sweetspot: 0.05 #Use this as an amplitude of the flux_bias
-            mean_gnd_states: 1.5420+0.1813j
-            mean_exc_states: 2.4499-0.5629j
+            mean_gnd_states: [1.5420, 0.1813]
+            mean_exc_states: [2.4499,-0.5629]
             # parameters for single shot classification
             threshold: 0.8836
             iq_angle: -1.551
@@ -172,8 +173,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: [0, 0]
+            mean_exc_states: [0, 0]
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             resonator_polycoef_flux: []
@@ -181,8 +182,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0 #0.5 #0.62 0.00
-            mean_gnd_states: -1.8243+1.5926j
-            mean_exc_states: -0.8083+2.3929j
+            mean_gnd_states: [-1.8243, 1.5926]
+            mean_exc_states: [-0.8083, 2.3929]
             # parameters for single shot classification
             threshold: -0.0593
             iq_angle: -0.667
@@ -194,8 +195,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: [0, 0]
+            mean_exc_states: [0, 0]
         4:
             readout_frequency: 5_515_000_000
             resonator_polycoef_flux: []
@@ -203,8 +204,8 @@ characterization:
             T1: 0.
             T2: 0.
             sweetspot: 0.0
-            mean_gnd_states: (0+0j)
-            mean_exc_states: (0+0j)
+            mean_gnd_states: [0, 0]
+            mean_exc_states: [0, 0]
             # parameters for single shot classification
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016

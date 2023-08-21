@@ -32,15 +32,20 @@ from .conftest import set_platform_profile
 def simulator(request):
     """Platform using the QM cloud simulator.
 
-    Args:
-        address (str): Address for connecting to the simulator. Provided via command line.
+    Requires the address for connecting to the simulator, which is
+    provided via command line. If an address is not provided these
+    tests are skipped.
     """
     set_platform_profile()
-    address, duration = request.param
+    address = request.config.getoption("--address")
+    if address is None:
+        pytest.skip("Skipping QM simulator tests because address was not provided.")
+
     platform = create_platform("qm")
+    duration = request.config.getoption("--simulation-duration")
     controller = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
     controller.time_of_flight = 280
-    platform.instruments[0] = controller
+    platform.instruments["qmopx"] = controller
     platform.connect()
     platform.setup()
     yield platform
@@ -49,7 +54,7 @@ def simulator(request):
 
 @pytest.fixture(scope="module")
 def folder(request):
-    return request.param
+    return request.config.getoption("--folder")
 
 
 def assert_regression(samples, folder=None, filename=None):
@@ -226,7 +231,9 @@ def test_qmsim_sweep_start_two_pulses(simulator, folder):
 
 
 def test_qmsim_sweep_duration(simulator, folder):
-    simulator.instruments[0].simulation_duration = 1250
+    controller = simulator.instruments["qmopx"]
+    original_duration = controller.simulation_duration
+    controller.simulation_duration = 1250
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses = {}
@@ -245,10 +252,13 @@ def test_qmsim_sweep_duration(simulator, folder):
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_duration")
+    controller.simulation_duration = original_duration
 
 
 def test_qmsim_sweep_duration_two_pulses(simulator, folder):
-    simulator.instruments[0].simulation_duration = 1250
+    controller = simulator.instruments["qmopx"]
+    original_duration = controller.simulation_duration
+    controller.simulation_duration = 1250
     qubits = list(range(simulator.nqubits))
     sequence = PulseSequence()
     qd_pulses1 = {}
@@ -270,6 +280,7 @@ def test_qmsim_sweep_duration_two_pulses(simulator, folder):
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "sweep_duration_two_pulses")
+    controller.simulation_duration = original_duration
 
 
 gatelist = [

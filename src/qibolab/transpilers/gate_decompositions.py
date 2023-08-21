@@ -119,6 +119,8 @@ onequbit_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
 # apply virtually by changing ``phase`` instead of using pulses
 onequbit_dec.add(gates.RZ, lambda gate: [gates.RZ(0, gate.parameters[0])])
 # apply virtually by changing ``phase`` instead of using pulses
+onequbit_dec.add(gates.GPI2, lambda gate: [gates.GPI2(0, gate.parameters[0])])
+# implemented as single RX90 pulse
 onequbit_dec.add(gates.U1, lambda gate: [gates.RZ(0, gate.parameters[0])])
 onequbit_dec.add(gates.U2, lambda gate: [gates.U3(0, np.pi / 2, gate.parameters[0], gate.parameters[1])])
 onequbit_dec.add(gates.U3, lambda gate: [gates.U3(0, gate.parameters[0], gate.parameters[1], gate.parameters[2])])
@@ -128,7 +130,7 @@ onequbit_dec.add(
 )
 onequbit_dec.add(
     gates.FusedGate,
-    lambda gate: [gates.U3(0, *u3_decomposition(gate.asmatrix(backend)))],
+    lambda gate: [gates.U3(0, *u3_decomposition(gate.matrix(backend)))],
 )
 
 # register the iSWAP decompositions
@@ -340,8 +342,8 @@ cz_dec.add(
     ],
 )
 cz_dec.add(gates.Unitary, lambda gate: two_qubit_decomposition(0, 1, gate.parameters[0]))
-cz_dec.add(gates.fSim, lambda gate: two_qubit_decomposition(0, 1, gate.asmatrix(backend)))
-cz_dec.add(gates.GeneralizedfSim, lambda gate: two_qubit_decomposition(0, 1, gate.asmatrix(backend)))
+cz_dec.add(gates.fSim, lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend)))
+cz_dec.add(gates.GeneralizedfSim, lambda gate: two_qubit_decomposition(0, 1, gate.matrix(backend)))
 
 
 # register other optimized gate decompositions

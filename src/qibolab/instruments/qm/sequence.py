@@ -18,6 +18,7 @@ from qibolab.instruments.qm.acquisition import (
     ShotsAcquisition,
 )
 from qibolab.pulses import Pulse, PulseType
+from qibolab.sweeper import Parameter
 
 from .config import QMConfig
 
@@ -131,19 +132,31 @@ class BakedPulse(QMPulse):
     def duration(self):
         return self.segments[-1].get_op_length()
 
+    @staticmethod
+    def calculate_waveform(original_waveform, t):
+        if t == 0:  # Otherwise, the baking will be empty and will not be created
+            return [0.0] * 16
+
+        expanded_waveform = list(original_waveform)
+        for i in range(t // len(original_waveform)):
+            expanded_waveform.extend(original_waveform)
+        return expanded_waveform[:t]
+
     def bake(self, config: QMConfig, durations: DurationsType):
         self.segments = []
         self.durations = durations
         for t in durations:
             with baking(config.__dict__, padding_method="right") as segment:
-                if t == 0:  # Otherwise, the baking will be empty and will not be created
-                    waveform = [0.0] * 16
+                if self.pulse.type is PulseType.FLUX:
+                    waveform = self.pulse.envelope_waveform_i.data.tolist()
+                    waveform = self.calculate_waveform(waveform, t)
                 else:
-                    original_waveform = self.pulse.envelope_waveform_i.data.tolist()
-                    expanded_waveform = list(original_waveform)
-                    for i in range(t // len(original_waveform)):
-                        expanded_waveform.extend(original_waveform)
-                    waveform = expanded_waveform[:t]
+                    waveform_i = self.pulse.envelope_waveform_i.data.tolist()
+                    waveform_q = self.pulse.envelope_waveform_q.data.tolist()
+                    waveform = [
+                        self.calculate_waveform(waveform_i, t),
+                        self.calculate_waveform(waveform_q, t),
+                    ]
                 segment.add_op(self.pulse.serial, self.element, waveform)
                 segment.play(self.pulse.serial, self.element)
             self.segments.append(segment)
@@ -163,6 +176,22 @@ class BakedPulse(QMPulse):
         else:
             segment = self.segments[0]
             segment.run(amp_array=self.amplitude_array)
+
+
+def find_duration_sweeper_pulses(sweepers):
+    """Find all pulses that require baking because we are sweeping their duration."""
+    duration_sweep_pulses = set()
+    for sweeper in sweepers:
+        try:
+            step = sweeper.values[1] - sweeper.values[0]
+        except IndexError:
+            step = sweeper.values[0]
+
+        if sweeper.parameter is Parameter.duration and step % 4 != 0:
+            for pulse in sweeper.pulses:
+                duration_sweep_pulses.add(pulse.serial)
+
+    return duration_sweep_pulses
 
 
 @dataclass
@@ -185,7 +214,7 @@ class Sequence:
     """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
 
     @classmethod
-    def create(cls, qubits, sequence, config, time_of_flight, smearing):
+    def create(cls, qubits, sequence, sweepers, config, time_of_flight, smearing):
         """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.sequence.Sequence`.
 
         Args:
@@ -198,18 +227,16 @@ class Sequence:
         # Current driver cannot play overlapping pulses on drive and flux channels
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
+        duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
         qmsequence = cls()
         for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
-            if pulse.type is PulseType.FLUX:
-                # register flux element (if it does not already exist)
-                config.register_flux_element(qubits[pulse.qubit], pulse.frequency)
+            config.register_element(qubits[pulse.qubit], pulse, time_of_flight, smearing)
+            if pulse.duration % 4 != 0 or pulse.duration < 16 or pulse.serial in duration_sweep_pulses:
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(config, durations=[pulse.duration])
             else:
-                if pulse.duration % 4 != 0 or pulse.duration < 16:
-                    raise_error(NotImplementedError, "1ns resolution is available for flux pulses only.")
                 qmpulse = QMPulse(pulse)
-                config.register_pulse(qubits[pulse.qubit], pulse, time_of_flight, smearing)
+                config.register_pulse(qubits[pulse.qubit], pulse)
             qmsequence.add(qmpulse)
 
         qmsequence.shift()

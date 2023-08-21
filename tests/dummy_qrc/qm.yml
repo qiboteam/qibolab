@@ -1,14 +1,11 @@
 nqubits: 5
-description: QuantWare 5-qubit device.
 
-qubits: [0, 1, 2, 3, 4, 5]
+qubits: [0, 1, 2, 3, 4]
 
 settings:
     nshots: 1024
     sampling_rate: 1000000000
     relaxation_time: 50_000
-
-resonator_type: 2D
 
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
@@ -21,7 +18,7 @@ native_gates:
                 frequency: 4_700_000_000
                 shape: Gaussian(5)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 1000
@@ -29,7 +26,7 @@ native_gates:
                 frequency: 7_226_500_000
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
+                relative_start: 0
                 phase: 0
         1: # qubit number
             RX:
@@ -39,7 +36,7 @@ native_gates:
                 #frequency: 4_718_515_000 # 02 transition (more likely)
                 shape: Drag(5, -0.02)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 620
@@ -47,7 +44,7 @@ native_gates:
                 frequency: 7_453_265_000
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
+                relative_start: 0
                 phase: 0
         2: # qubit number
             RX:
@@ -57,7 +54,7 @@ native_gates:
                 #frequency: 5_661_400_000 # 02 transition
                 shape: Drag(5, -0.04) #Gaussian(5)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 960
@@ -65,7 +62,7 @@ native_gates:
                 frequency: 7_655_107_000
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
+                relative_start: 0
                 phase: 0
         3: # qubit number
             RX:
@@ -75,7 +72,7 @@ native_gates:
                 #frequency: 6_628_822_000 # 02 transition
                 shape: Gaussian(5)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 960
@@ -83,7 +80,7 @@ native_gates:
                 frequency: 7_802_191_000
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
+                relative_start: 0
                 phase: 0
         4: # qubit number
             RX:
@@ -92,7 +89,7 @@ native_gates:
                 frequency: 6_585_053_000
                 shape: Drag(5, 0.0) #Gaussian(5)
                 type: qd # qubit drive
-                start: 0
+                relative_start: 0
                 phase: 0
             MZ:
                 duration: 640
@@ -100,28 +97,11 @@ native_gates:
                 frequency: 8_057_668_000
                 shape: Rectangular()
                 type: ro # readout
-                start: 0
-                phase: 0
-        5: # qubit number
-            RX:
-                duration: 40
-                amplitude: 0.001
-                frequency: 6.3925e+9
-                shape: Gaussian(5)
-                type: qd # qubit drive
-                start: 0
-                phase: 0
-            MZ:
-                duration: 1000
-                amplitude: 0.0025
-                frequency: 7_008_300_000
-                shape: Rectangular()
-                type: ro # readout
-                start: 0
+                relative_start: 0
                 phase: 0
 
     two_qubit:
-        2-1:
+        1-2:
             CZ:
             - duration: 30
               amplitude: 0.055
@@ -135,7 +115,7 @@ native_gates:
             - type: virtual_z
               phase: -1.5707963267948966
               qubit: 2
-        3-2:
+        2-3:
             CZ:
             - duration: 32
               amplitude: -0.0513
@@ -234,20 +214,6 @@ characterization:
             # classifier:
             #     type: "scikit"
             #     model: "qw5q_gold/RBF_SVM_4.pkl"
-            # required for mixers (not sure if it should be here)
-            mixer_drive_g: 0.0
-            mixer_drive_phi: 0.0
-            mixer_readout_g: 0.0
-            mixer_readout_phi: 0.0
-        5:
-            readout_frequency: 0.0
-            drive_frequency: 0.0
-            T1: 0.0
-            T2: 0.0
-            sweetspot: 0.0
-            # parameters for single shot classification
-            threshold: 0.0
-            iq_angle: 0.0
             # required for mixers (not sure if it should be here)
             mixer_drive_g: 0.0
             mixer_drive_phi: 0.0
