@@ -1,6 +1,6 @@
 """Implementation of the default compiler.
 
-Uses I, Z, RZ, U3, CZ, M, and Align as the set of native gates.
+Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
 import math
 
@@ -76,16 +76,4 @@ def measurement_rule(gate, platform):
     for qubit in gate.target_qubits:
         MZ_pulse = platform.create_MZ_pulse(qubit, start=0)
         sequence.add(MZ_pulse)
-    return sequence, {}
-
-
-def align_rule(gate, platform):
-    """Align gate to hold/delay execution of the circuit on the specified qubits."""
-    sequence = PulseSequence()
-    if gate.delay == 0:
-        return sequence, {}
-    for qubit in gate.target_qubits:
-        delay_pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=gate.delay)
-        delay_pulse.amplitude = delay_pulse.frequency = 0
-        sequence.add(delay_pulse)
     return sequence, {}

@@ -5,7 +5,6 @@ from qibo import gates
 from qibo.config import raise_error
 
 from qibolab.compilers.default import (
-    align_rule,
     cz_rule,
     gpi2_rule,
     identity_rule,
@@ -51,7 +50,6 @@ class Compiler:
                 gates.CZ: cz_rule,
                 gates.GPI2: gpi2_rule,
                 gates.M: measurement_rule,
-                gates.Align: align_rule,
             }
         )
 
