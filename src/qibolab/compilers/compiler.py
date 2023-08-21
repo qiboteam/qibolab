@@ -92,7 +92,7 @@ class Compiler:
 
         return inner
 
-    def _compile_gate(self, gate, platform, sequence, virtual_z_phases, moment_start):
+    def _compile_gate(self, gate, platform, sequence, virtual_z_phases, moment_start, delays):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
         # get local sequence and phases for the current gate
@@ -101,7 +101,7 @@ class Compiler:
         # update global pulse sequence
         # determine the right start time based on the availability of the qubits involved
         all_qubits = {*gate_sequence.qubits, *gate.qubits}
-        start = max(sequence.get_qubit_pulses(*all_qubits).finish, moment_start)
+        start = max(*[sequence.get_qubit_pulses(qubit).finish + delays[qubit] for qubit in all_qubits], moment_start)
         # shift start time and phase according to the global sequence
         for pulse in gate_sequence:
             pulse.start += start
@@ -131,12 +131,19 @@ class Compiler:
 
         measurement_map = {}
         # process circuit gates
+        delays = [0] * circuit.nqubits
         for moment in circuit.queue.moments:
             moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
+                if isinstance(gate, gates.Align):
+                    for qubit in gate.qubits:
+                        delays[qubit] += gate.delay
+                    continue
                 gate_sequence, gate_phases = self._compile_gate(
-                    gate, platform, sequence, virtual_z_phases, moment_start
+                    gate, platform, sequence, virtual_z_phases, moment_start, delays
                 )
+                for qubit in gate.qubits:
+                    delays[qubit] = 0
 
                 # update virtual Z phases
                 for qubit, phase in gate_phases.items():
