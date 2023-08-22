@@ -31,7 +31,7 @@ repos:
           - --config=pyproject.toml
           - --all
   - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.15.0
+    rev: 1.16.0
     hooks:
       - id: blacken-docs
   - repo: https://github.com/pycqa/pydocstyle
