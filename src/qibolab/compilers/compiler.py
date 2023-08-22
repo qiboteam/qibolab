@@ -129,7 +129,7 @@ class Compiler:
 
         measurement_map = {}
         # process circuit gates
-        delays = [0] * circuit.nqubits
+        delays = {qubit: 0 for qubit in platform.qubits.keys()}
         for moment in circuit.queue.moments:
             moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
