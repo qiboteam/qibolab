@@ -2,7 +2,6 @@
 
 ![Tests](https://github.com/qiboteam/qibolab/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/qiboteam/qibolab/branch/main/graph/badge.svg?token=11UENAPBPH)](https://codecov.io/gh/qiboteam/qibolab)
-[![Documentation Status](https://readthedocs.org/projects/qibolab/badge/?version=latest)](https://qibolab.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
 Qibolab is the dedicated [Qibo](https://github.com/qiboteam/qibo) backend for
