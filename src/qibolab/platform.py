@@ -268,7 +268,7 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = getattr(instrument, method)(self.qubits, sequences, options)
+                new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -363,6 +363,18 @@ class Platform:
             return self.qubits[qubit].name
         except KeyError:
             return list(self.qubits.keys())[qubit]
+
+    # TODO: Similar for couplers (I think this won't be needed)
+    def get_coupler(self, coupler):
+        """Return the name of the physical coupler corresponding to a logical coupler.
+
+        Temporary fix for the compiler to work for platforms where the couplers
+        are not named as 0, 1, 2, ...
+        """
+        try:
+            return self.couplers[coupler].name
+        except KeyError:
+            return list(self.couplers.keys())[coupler]
 
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         qubit = self.get_qubit(qubit)

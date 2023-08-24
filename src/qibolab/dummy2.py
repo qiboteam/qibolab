@@ -154,6 +154,14 @@ RUNCARD = {
                     },
                     {"type": "virtual_z", "phase": 0.0, "qubit": 1},
                     {"type": "virtual_z", "phase": 0.0, "qubit": 2},
+                    {
+                        "type": "coupler",
+                        "duration": 30,
+                        "amplitude": 0.05,
+                        "shape": "Rectangular()",
+                        "coupler": 1,
+                        "relative_start": 0,
+                    },
                 ]
             },
             "3-2": {

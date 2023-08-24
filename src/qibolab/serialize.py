@@ -41,6 +41,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     objects.
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
+    couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
 
     pairs = {}
     for pair in runcard["topology"]:
@@ -54,7 +55,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
-        pairs[pair].native_gates = TwoQubitNatives.from_dict(qubits, gatedict)
+        pairs[pair].native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
 
     return qubits, pairs
 

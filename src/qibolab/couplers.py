@@ -26,7 +26,9 @@ class Coupler:
 
     name: CouplerId
 
+    # TODO: I think is not needed
     frequency: int = 0
+
     sweetspot: float = 0
 
     flux: Optional[Channel] = None
