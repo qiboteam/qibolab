@@ -6,9 +6,10 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.couplers import CouplerId
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.platform import Qubit
+from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
@@ -109,6 +110,7 @@ class DummyInstrument(Controller):
     def sweep(
         self,
         qubits: Dict[QubitId, Qubit],
+        couplers: Dict[CouplerId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
         *sweepers: List[Sweeper],

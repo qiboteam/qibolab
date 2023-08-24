@@ -300,4 +300,6 @@ def create_dummy2():
     instruments = {instrument.name: instrument}
     instrument.sampling_rate = settings.sampling_rate * 1e-9
 
-    return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        NAME, qubits, pairs, instruments, settings, resonator_type="2D", couplers=couplers, coupler_pairs=coupler_pairs
+    )

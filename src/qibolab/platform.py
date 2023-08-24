@@ -43,8 +43,6 @@ class Platform:
     """Name of the platform."""
     qubits: QubitMap
     """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-    couplers: CouplerMap
-    """Dictionary mapping qubit names to :class:`qibolab.couplers.Coupler` objects."""
     pairs: QubitPairMap
     """Dictionary mapping sorted tuples of qubit names to :class:`qibolab.qubits.QubitPair` objects."""
     instruments: InstrumentMap
@@ -56,6 +54,11 @@ class Platform:
     """Type of resonator (2D or 3D) in the used QPU.
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
+
+    couplers: Optional[CouplerMap] = None
+    """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
+    coupler_pairs: Optional[CouplerPairMap] = None
+    """Dictionary mapping sorted tuples of coupler names to :class:`qibolab.qubits.QubitPair` objects."""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
