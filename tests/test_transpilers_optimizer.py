@@ -3,7 +3,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab.transpilers.optimizer import Preprocessing
+from qibolab.transpilers.optimizer import Preprocessing, Rearrange
 
 
 def star_connectivity():
@@ -37,3 +37,13 @@ def test_preprocessing_add():
     new_circuit = preprocesser(circuit=circ)
     assert new_circuit.ngates == 1
     assert new_circuit.nqubits == 5
+
+
+def test_fusion():
+    circuit = Circuit(2)
+    circuit.add(gates.X(0))
+    circuit.add(gates.Z(0))
+    circuit.add(gates.Y(0))
+    fusion = Rearrange(max_qubits=1)
+    fused_circ = fusion(circuit)
+    assert isinstance(fused_circ.queue[0], gates.Unitary)

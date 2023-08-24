@@ -28,16 +28,6 @@ class Preprocessing(Optimizer):
         return new_circuit
 
 
-class Fusion(Optimizer):
-    """Apply gate fusion up to the given ``max_qubits``."""
-
-    def __init__(self, max_qubits: int = 1):
-        self.max_qubits = max_qubits
-
-    def __call__(self, circuit: Circuit):
-        return circuit.fuse(max_qubits=self.max_qubits), list(range(circuit.nqubits))
-
-
 class Rearrange(Optimizer):
     """Rearranges gates using qibo's fusion algorithm.
     May reduce number of SWAPs when fixing for connectivity
@@ -52,7 +42,7 @@ class Rearrange(Optimizer):
         new = circuit.__class__(circuit.nqubits)
         for fgate in fcircuit.queue:
             if isinstance(fgate, gates.FusedGate):
-                new.add(fgate.gates)
+                new.add(gates.Unitary(fgate.matrix(), *fgate.qubits))
             else:
                 new.add(fgate)
         return new
