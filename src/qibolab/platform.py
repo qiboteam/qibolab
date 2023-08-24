@@ -198,6 +198,9 @@ class Platform:
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
 
+                elif par == "resonator_polycoef_flux":
+                    self.qubits[qubit].resonator_polycoef_flux = value
+
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
