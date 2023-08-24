@@ -75,7 +75,11 @@ def assert_decomposition(
             if not isinstance(gate, single_qubit_natives):
                 raise DecompositionError(f"{gate.name} is not a single qubit native gate.")
         elif len(gate.qubits) == 2:
-            if not (NativeType.from_gate(gate) in two_qubit_natives):
+            try:
+                native_type_gate = NativeType.from_gate(gate)
+                if not (native_type_gate in two_qubit_natives):
+                    raise DecompositionError(f"{gate.name} is not a two qubit native gate.")
+            except ValueError:
                 raise DecompositionError(f"{gate.name} is not a two qubit native gate.")
         else:
             raise DecompositionError(f"{gate.name} acts on more than two qubits.")
