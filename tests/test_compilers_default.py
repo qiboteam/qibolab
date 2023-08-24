@@ -151,9 +151,9 @@ def test_cz_to_sequence(platform):
     if (1, 2) not in platform.pairs:
         pytest.skip(f"Skipping CZ test for {platform} because pair (1, 2) is not available.")
 
-    circuit = Circuit(2)
+    circuit = Circuit(3)
     circuit.add(gates.X(0))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CZ(1, 2))
 
     sequence = compile_circuit(circuit, platform)
     test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
