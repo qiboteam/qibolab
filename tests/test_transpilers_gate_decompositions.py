@@ -10,7 +10,7 @@ from qibolab.transpilers.gate_decompositions import NativeType, translate_gate
 def assert_matrices_allclose(gate, two_qubit_natives):
     backend = NumpyBackend()
     native_gates = translate_gate(gate, two_qubit_natives)
-    target_matrix = gate.asmatrix(backend)
+    target_matrix = gate.matrix(backend)
     # Remove global phase from target matrix
     target_unitary = target_matrix / np.power(
         np.linalg.det(target_matrix), 1 / float(target_matrix.shape[0]), dtype=complex
@@ -60,6 +60,11 @@ def test_u2_to_native():
 
 def test_u3_to_native():
     gate = gates.U3(0, theta=0.2, phi=0.1, lam=0.3)
+    assert_matrices_allclose(gate, two_qubit_natives=NativeType.CZ)
+
+
+def test_gpi2_to_native():
+    gate = gates.GPI2(0, phi=0.123)
     assert_matrices_allclose(gate, two_qubit_natives=NativeType.CZ)
 
 

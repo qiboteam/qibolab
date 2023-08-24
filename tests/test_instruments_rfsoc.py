@@ -8,6 +8,7 @@ import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rfsoc.convert import (
     convert,
     convert_units_sweeper,
@@ -21,6 +22,8 @@ from qibolab.result import (
     IntegratedResults,
 )
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .conftest import get_instrument
 
 
 def test_convert_default(dummy_qrc):
@@ -40,7 +43,7 @@ def test_convert_default(dummy_qrc):
 
     with pytest.raises(TypeError):
         # functools understand that is a convert_parameter and raises an error for the int
-        res = convert(parameter, integer)
+        _ = convert(parameter, integer)
 
 
 def test_convert_qubit(dummy_qrc):
@@ -50,7 +53,7 @@ def test_convert_qubit(dummy_qrc):
     """
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
-    qubit.flux.port = platform.instruments[0][4]
+    qubit.flux.port = platform.instruments["tii_rfsoc4x2"][4]
     qubit.flux.offset = 0.05
     qubit = convert(qubit)
     targ = rfsoc.Qubit(0.05, 4)
@@ -96,7 +99,7 @@ def test_convert_pulse(dummy_qrc):
     Test drive pulse (gaussian and drag), and readout with LO.
     """
     platform = create_platform("rfsoc")
-    controller = platform.instruments[0]
+    controller = platform.instruments["tii_rfsoc4x2"]
     qubit = platform.qubits[0]
     qubit.drive.port = controller[4]
     qubit.readout.port = controller[2]
@@ -156,8 +159,8 @@ def test_convert_units_sweeper(dummy_qrc):
         expts=100,
     )
     convert_units_sweeper(sweeper, seq, platform.qubits)
-    assert sweeper.starts == [0, 0.04]
-    assert sweeper.stops == [0.1, 0.14]
+    assert (sweeper.starts == [0, 0.04]).all()
+    assert (sweeper.stops == [0.1, 0.14]).all()
 
     # phase sweeper
     sweeper = rfsoc.Sweeper(
@@ -224,7 +227,11 @@ def test_convert_sweep(dummy_qrc):
         stops=[99, 99],
         indexes=[0, 1],
     )
-    assert rfsoc_sweeper == targ
+    assert (rfsoc_sweeper.starts == targ.starts).all()
+    assert (rfsoc_sweeper.stops == targ.stops).all()
+    assert rfsoc_sweeper.expts == targ.expts
+    assert rfsoc_sweeper.parameters == targ.parameters
+    assert rfsoc_sweeper.indexes == targ.indexes
 
     sweeper = Sweeper(parameter=Parameter.start, values=np.arange(0, 10, 1), pulses=[pulse0])
     rfsoc_sweeper = convert(sweeper, seq, platform.qubits)
@@ -241,7 +248,7 @@ def test_convert_sweep(dummy_qrc):
 def test_rfsoc_init(dummy_qrc):
     """Tests instrument can initilize and its attribute are assigned"""
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     assert instrument.host == "0.0.0.0"
     assert instrument.port == 0
@@ -250,7 +257,7 @@ def test_rfsoc_init(dummy_qrc):
 
 def test_play(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     seq = PulseSequence()
     pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
@@ -282,7 +289,7 @@ def test_play(mocker, dummy_qrc):
 
 def test_sweep(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
     qubit = platform.qubits[0]
     qubit.flux.offset = 0.05
     qubit.flux.ports = [("name", 4)]
@@ -319,7 +326,7 @@ def test_sweep(mocker, dummy_qrc):
 
 def test_validate_input_command(dummy_qrc):
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     seq = PulseSequence()
     pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
@@ -335,16 +342,10 @@ def test_validate_input_command(dummy_qrc):
     with pytest.raises(NotImplementedError):
         results = instrument.play(platform.qubits, seq, parameters)
 
-    seq2 = seq.copy()
-    seq2[0].duration = 5
-    parameters = ExecutionParameters()
-    with pytest.raises(ValueError):
-        results = instrument.play(platform.qubits, seq2, parameters)
-
 
 def test_update_cfg(mocker, dummy_qrc):
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     seq = PulseSequence()
     pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
@@ -378,13 +379,14 @@ def test_classify_shots(dummy_qrc):
     q_val = [-5, -1.5, -0.5, 0, 0.5, 1.5, 5]
 
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     shots = instrument.classify_shots(i_val, q_val, qubit0)
     target_shots = np.array([1, 1, 0, 0, 0, 0, 0])
 
     assert (target_shots == shots).all()
-    assert instrument.classify_shots(i_val, q_val, qubit1) is None
+    with pytest.raises(ValueError):
+        instrument.classify_shots(i_val, q_val, qubit1)
 
 
 def test_merge_sweep_results(dummy_qrc):
@@ -401,7 +403,7 @@ def test_merge_sweep_results(dummy_qrc):
     }
 
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     out_dict1 = instrument.merge_sweep_results(dict_a, dict_b)
     out_dict2 = instrument.merge_sweep_results(dict_c, dict_a)
@@ -424,7 +426,7 @@ def test_get_if_python_sweep(dummy_qrc):
     """
 
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence_1 = PulseSequence()
     sequence_1.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -454,7 +456,7 @@ def test_get_if_python_sweep(dummy_qrc):
 
     # TODO repetition
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence_1 = PulseSequence()
     sequence_1.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -478,7 +480,7 @@ def test_convert_av_sweep_results(dummy_qrc):
     """
 
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -512,7 +514,7 @@ def test_convert_nav_sweep_results(dummy_qrc):
     to dictionary of ExecutionResults, for not averaged sweep, works as expected
     """
     platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -541,20 +543,31 @@ def test_convert_nav_sweep_results(dummy_qrc):
     assert (out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]).all()
 
 
+@pytest.fixture(scope="module")
+def instrument(connected_platform):
+    return get_instrument(connected_platform, RFSoC)
+
+
 @pytest.mark.qpu
-def test_call_executepulsesequence():
+def test_call_executepulsesequence(connected_platform, instrument):
     """Executes a PulseSequence and check if result shape is as expected.
     Both for averaged results and not averaged results.
     """
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
     sequence.add(platform.create_MZ_pulse(qubit=0, start=100))
 
-    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, False)
-    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(instrument.cfg, sequence, platform.qubits, 1, True)
+    instrument.cfg.average = False
+    i_vals_nav, q_vals_nav = instrument._execute_pulse_sequence(
+        sequence, platform.qubits, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+    )
+    instrument.cfg.average = True
+    i_vals_av, q_vals_av = instrument._execute_pulse_sequence(
+        sequence, platform.qubits, rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+    )
 
     assert np.shape(i_vals_nav) == (1, 1, 1000)
     assert np.shape(q_vals_nav) == (1, 1, 1000)
@@ -563,12 +576,13 @@ def test_call_executepulsesequence():
 
 
 @pytest.mark.qpu
-def test_call_execute_sweeps():
-    """Executes a firmware sweep and check if result shape is as expected.
+def test_call_execute_sweeps(connected_platform, instrument):
+    """Execute a firmware sweep and check if result shape is as expected.
+
     Both for averaged results and not averaged results.
     """
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -577,8 +591,10 @@ def test_call_execute_sweeps():
     expts = len(sweep.values)
 
     sweep = [convert(sweep, sequence, platform.qubits)]
-    i_vals_nav, q_vals_nav = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, False)
-    i_vals_av, q_vals_av = instrument._execute_sweeps(instrument.cfg, sequence, platform.qubits, sweep, 1, True)
+    instrument.cfg.average = False
+    i_vals_nav, q_vals_nav = instrument._execute_sweeps(sequence, platform.qubits, sweep)
+    instrument.cfg.average = True
+    i_vals_av, q_vals_av = instrument._execute_sweeps(sequence, platform.qubits, sweep)
 
     assert np.shape(i_vals_nav) == (1, 1, expts, 1000)
     assert np.shape(q_vals_nav) == (1, 1, expts, 1000)
@@ -587,10 +603,10 @@ def test_call_execute_sweeps():
 
 
 @pytest.mark.qpu
-def test_play_qpu():
+def test_play_qpu(connected_platform, instrument):
     """Sends a PulseSequence using `play` and check results are what expected"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -606,10 +622,10 @@ def test_play_qpu():
 
 
 @pytest.mark.qpu
-def test_sweep_qpu():
+def test_sweep_qpu(connected_platform, instrument):
     """Sends a PulseSequence using `sweep` and check results are what expected"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))
@@ -642,10 +658,10 @@ def test_sweep_qpu():
 
 
 @pytest.mark.qpu
-def test_python_reqursive_sweep():
+def test_python_reqursive_sweep(connected_platform, instrument):
     """Sends a PulseSequence directly to `python_reqursive_sweep` and check results are what expected"""
-    platform = create_platform("rfsoc")
-    instrument = platform.instruments[0]
+    platform = connected_platform
+    instrument = platform.instruments["tii_rfsoc4x2"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(qubit=0, start=0))

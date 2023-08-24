@@ -152,7 +152,7 @@ class StarConnectivity(Transpiler):
                 from qibo.backends import NumpyBackend
 
                 backend = NumpyBackend()
-                matrix = gate.asmatrix(backend)
+                matrix = gate.matrix(backend)
                 new.add(gate.__class__(matrix, *qubits, **gate.init_kwargs))
             else:
                 new.add(gate.__class__(*qubits, **gate.init_kwargs))

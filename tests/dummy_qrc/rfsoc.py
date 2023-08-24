@@ -5,11 +5,12 @@ from qibolab.instruments.erasynth import ERA
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
+from qibolab.serialize import load_qubits, load_runcard, load_settings
 
 RUNCARD = pathlib.Path(__file__).parent / "rfsoc.yml"
 
 
-def create(runcard=RUNCARD):
+def create(runcard_path=RUNCARD):
     """Dummy platform using QICK project on the RFSoC4x2 board.
 
     Used in ``test_instruments_rfsoc.py``.
@@ -24,25 +25,22 @@ def create(runcard=RUNCARD):
     channels |= Channel("L3-18_qd", port=controller[1])  # drive
     channels |= Channel("L2-22_qf", port=controller[2])  # flux
 
-    local_oscillators = [
-        SGS100A("twpa_a", "192.168.0.32"),
-        ERA("ErasynthLO", "192.168.0.212", ethernet=True),
-    ]
-    local_oscillators[0].frequency = 6_200_000_000
-    local_oscillators[0].power = -1
+    lo_twpa = SGS100A("twpa_a", "192.168.0.32")
+    lo_era = ERA("ErasynthLO", "192.168.0.212", ethernet=True)
+    lo_twpa.frequency = 6_200_000_000
+    lo_twpa.power = -1
+    lo_era.frequency = 0
+    channels["L3-18_ro"].local_oscillator = lo_era
 
-    local_oscillators[1].frequency = 0
-    channels["L3-18_ro"].local_oscillator = local_oscillators[1]
-
-    instruments = [controller] + local_oscillators
-
-    platform = Platform("tii_rfsoc4x2", RUNCARD, instruments, channels)
+    runcard = load_runcard(runcard_path)
+    qubits, pairs = load_qubits(runcard)
 
     # assign channels to qubits
-    qubits = platform.qubits
     qubits[0].readout = channels["L3-18_ro"]
     qubits[0].feedback = channels["L2-RO"]
     qubits[0].drive = channels["L3-18_qd"]
     qubits[0].flux = channels["L2-22_qf"]
 
-    return platform
+    instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
+    settings = load_settings(runcard)
+    return Platform("rfsoc", qubits, pairs, instruments, settings, resonator_type="3D")

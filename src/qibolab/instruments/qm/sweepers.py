@@ -145,12 +145,15 @@ def _sweep_bias(sweepers, qubits, qmsequence, relaxation_time):
 
 def _sweep_start(sweepers, qubits, qmsequence, relaxation_time):
     sweeper = sweepers[0]
-    if min(sweeper.values) < 16:
-        raise_error(ValueError, "Cannot sweep start less than 16ns.")
-
     start = declare(int)
-    values = np.array(sweeper.values) // 4
-    with for_(*from_array(start, values.astype(int))):
+    values = (np.array(sweeper.values) // 4).astype(int)
+
+    if len(np.unique(values[1:] - values[:-1])) > 1:
+        loop = qua.for_each_(start, values)
+    else:
+        loop = for_(*from_array(start, values))
+
+    with loop:
         for pulse in sweeper.pulses:
             qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
             # find all pulses that are connected to ``qmpulse`` and update their starts

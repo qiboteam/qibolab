@@ -24,6 +24,17 @@ def rz_rule(gate, platform):
     return PulseSequence(), {qubit: gate.parameters[0]}
 
 
+def gpi2_rule(gate, platform):
+    """Rule for GPI2."""
+    qubit = gate.target_qubits[0]
+    theta = gate.parameters[0]
+
+    sequence = PulseSequence()
+    pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
+    sequence.add(pulse)
+    return sequence, {}
+
+
 def u3_rule(gate, platform):
     """U3 applied as RZ-RX90-RZ-RX90-RZ."""
     qubit = gate.target_qubits[0]
