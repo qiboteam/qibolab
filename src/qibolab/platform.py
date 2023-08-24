@@ -107,6 +107,7 @@ class Platform:
                             - mean_gnd_states(V)
                             - mean_exc_states(V)
                             - beta(dimensionless)
+                            - resonator_polycoef_flux(List[float])
 
         """
         for par, values in updates.items():
