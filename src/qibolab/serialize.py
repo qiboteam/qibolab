@@ -10,8 +10,16 @@ from typing import Tuple
 
 import yaml
 
+from qibolab.couplers import Coupler, CouplerPair
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import Platform, QubitMap, QubitPairMap, Settings
+from qibolab.platform import (
+    CouplerMap,
+    CouplerPairMap,
+    Platform,
+    QubitMap,
+    QubitPairMap,
+    Settings,
+)
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -51,6 +59,27 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     return qubits, pairs
 
 
+def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
+    """Load couplers and pairs from the runcard.
+
+    Uses the native gate and characterization sections of the runcard
+    to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
+    objects.
+    """
+    qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
+    couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
+
+    print(couplers)
+
+    coupler_pairs = {}
+    for pair, coupler in zip(runcard["topology"], runcard["couplers"]):
+        pair = tuple(sorted(pair))
+        # Fancier ordering for couplers
+        coupler_pairs[pair] = CouplerPair(couplers[coupler], qubits[pair[0]], qubits[pair[1]])
+
+    return couplers, coupler_pairs
+
+
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
     native_gates = {
@@ -67,6 +96,13 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
         "native_gates": native_gates,
         "characterization": {"single_qubit": {q: qubit.characterization for q, qubit in qubits.items()}},
     }
+
+
+# TODO: Couplers would need to be associated to qubits in the runcard
+def dump_couplers(couplers: CouplerMap, coupler_pairs: CouplerPairMap) -> dict:
+    """Dump coupler and coupler_pair objects to a dictionary following the runcard format."""
+    # TODO:
+    return {"couplers": couplers, "coupler_qubits": coupler_pairs}
 
 
 def dump_runcard(platform: Platform, path: Path):

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import networkx as nx
 from qibo.config import log, raise_error
 
-from qibolab.couplers import Coupler, CouplerId
+from qibolab.couplers import Coupler, CouplerId, CouplerPair, CouplerPairId
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.native import NativeType
@@ -20,6 +20,7 @@ InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
 CouplerMap = Dict[CouplerId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
+CouplerPairMap = Dict[CouplerPairId, CouplerPair]
 
 
 @dataclass

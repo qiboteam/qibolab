@@ -3,6 +3,7 @@ import itertools
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.platform import Platform
+from qibolab.serialize import load_couplers, load_qubits, load_settings
 
 NAME = "dummy2"
 RUNCARD = {
@@ -16,13 +17,12 @@ RUNCARD = {
         4,
     ],
     "couplers": [
-        "c0",
-        "c1",
-        "c3",
-        "c4",
+        0,
+        1,
+        3,
+        4,
     ],
     "settings": {"sampling_rate": 1000000000, "relaxation_time": 0, "nshots": 1024},
-    "resonator_type": "2D",
     "topology": [[0, 2], [1, 2], [2, 3], [2, 4]],
     "native_gates": {
         "single_qubit": {
@@ -243,11 +243,13 @@ RUNCARD = {
                 "threshold": 0.0,
                 "iq_angle": 0.0,
             },
-            "c0": {"sweetspot": 0.0},
-            "c1": {"sweetspot": 0.0},
-            "c3": {"sweetspot": 0.0},
-            "c4": {"sweetspot": 0.0},
-        }
+        },
+        "coupler": {
+            0: {"sweetspot": 0.0},
+            1: {"sweetspot": 0.0},
+            3: {"sweetspot": 0.0},
+            4: {"sweetspot": 0.0},
+        },
     },
 }
 
@@ -262,36 +264,40 @@ def create_dummy2():
     channels |= Channel("readout", port=instrument["readout"])
     channels |= (Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits))
     channels |= (Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits))
+    # FIXME: Issues with the names if they are strings maybe
     channels |= (
-        Channel(f"flux_coupler-c{c}", port=instrument[f"flux_coupler-c{c}"])
+        Channel(f"flux_coupler-{c}", port=instrument[f"flux_coupler-{c}"])
         for c in itertools.chain(range(0, 2), range(3, 5))
     )
+    channels["readout"].attenuation = 0
 
-    # Create platform
-    platform = Platform(NAME, RUNCARD, [instrument], channels)
-
-    instrument.sampling_rate = platform.sampling_rate * 1e-9
+    qubits, pairs = load_qubits(RUNCARD)
+    couplers, coupler_pairs = load_couplers(RUNCARD)
+    settings = load_settings(RUNCARD)
 
     # map channels to qubits
-    for qubit in platform.qubits:
-        platform.qubits[qubit].readout = channels["readout"]
-        platform.qubits[qubit].drive = channels[f"drive-{qubit}"]
-        platform.qubits[qubit].flux = channels[f"flux-{qubit}"]
-        channels["readout"].attenuation = 0
+    for q, qubit in qubits.items():
+        qubit.readout = channels["readout"]
+        qubit.drive = channels[f"drive-{q}"]
+        qubit.flux = channels[f"flux-{q}"]
 
-    for coupler in platform.couplers:
-        platform.couplers[coupler].flux = channels[f"flux_coupler-{coupler}"]
+    # map channels to couplers
+    for c, coupler in couplers.items():
+        coupler.flux = channels[f"flux_coupler-{c}"]
 
-    # FIXME: This could be a way of getting qubits to coupler or we could get couplers to qubits
-    # FIXME: Nicer way of getting this range
+    # FIXME: Call couplers by its name
     # assign couplers to qubits
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        platform.qubits[c].flux_coupler[f"c{c}"] = platform.couplers[f"c{c}"]
-        platform.qubits[2].flux_coupler[f"c{c}"] = platform.couplers[f"c{c}"]
+        qubits[c].flux_coupler[c] = couplers[c]
+        qubits[2].flux_coupler[c] = couplers[c]
 
+    # FIXME: Call couplers by its name
     # assign qubits to couplers
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        platform.couplers[f"c{c}"].qubits[c] = [platform.qubits[c]]
-        platform.couplers[f"c{c}"].qubits[c].append(platform.qubits[2])
+        couplers[c].qubits[c] = [qubits[c]]
+        couplers[c].qubits[c].append(qubits[2])
 
-    return platform
+    instruments = {instrument.name: instrument}
+    instrument.sampling_rate = settings.sampling_rate * 1e-9
+
+    return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="2D")
