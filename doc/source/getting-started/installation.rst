@@ -8,90 +8,98 @@ Qibolab
 Installing with pip
 """""""""""""""""""
 
+The installation using ``pip`` is the recommended approach to use Qibolab.
+After updating ``pip``, if needed, install Qibolab with:
+
+.. code-block:: bash
+
+   pip install qibolab
+
+.. note::
+
+    Remember that Qibolab is compatible with Pyhon >= 3.9 and < 3.12.
+
 Installing with conda
 """""""""""""""""""""
+
+We provide conda packages for ``qibolab`` through the `conda-forge
+<https://anaconda.org/conda-forge>`_ channel.
+
+To install the package with conda run:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibolab
 
 Installing from source
 """"""""""""""""""""""
 
-The installation procedure presented in this section is useful when you have to
-develop the code from source.
+It is possible to install Qibolab from source, althought it is not recommended if not strictly required.
 
-In order to install ``qibolab`` from source, you can simply clone the GitHub repository
-with:
 
-.. code-block::
+In order to install ``qibolab`` from source, you have to clone the GitHub repository with:
+
+.. code-block:: bash
 
       git clone https://github.com/qiboteam/qibolab.git
       cd qibolab
+
+Then, to install the package in standard mode (recommended if no changes on the source code are needed) one can still use ``pip``:
+
+.. code-block:: bash
+
       pip install . # or pip install -e .
+
+For developers, in order to modify the source code, it is possible to install using ``poetry`` or ``pip``:
+
+.. code-block:: bash
+
+      poetry install    # recommended
+      pip install -e .  # not recommended
 
 _______________________
 
-.. _Platform:
+.. _Instruments:
 
-Platforms supported
-^^^^^^^^^^^^^^^^^^^
+Supported instruments
+^^^^^^^^^^^^^^^^^^^^^
+
+.. image:: qibolab_instruments.svg
+
+Qibolab supports the following control instruments:
+
+* Quantum Machines
+* Zurich Instruments
+* QBlox
+* Xilinx RFSoCs
+
+In order to use Qibolab on with one of these instruments chosen instrument,
+additional dependencies need to be installed.
+This can be done with:
+
+.. code-block:: bash
+
+      # for installation from releases
+      pip install qibolab[qm,zh,qblox,rfsoc]
+
+      # or for installation from source
+      poetry install -E qm -E zh -E qblox -E rfsoc
+
+Or with conda
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibolab[qm,zh,qblox,rfsoc]
 
 
-Qibolab already supports the following platforms:
+With the extras being:
 
-* Tiiq
-* IcarusQ
-
-In the following sections we provide the specific installation instructions
-to be ready to use Qibolab on the platform chosen.
-
-Tiiq
-""""
-
-In order to install the dependencies for the ``Tiiq`` platform
-use the following command:
-
-
-.. code-block::
-
-      pip install .[tiiq] # or pip install -e .[tiiq]
+* Quantum Machines -> ``qm``
+* Zurich Instruments -> ``zh``
+* QBlox -> ``qblox``
+* Xilinx RFSoCs -> ``rfsoc``
 
 .. note::
 
-      If you are working with the latest versions of MacOS, where the default shell is now ``zsh``,
-      you will need to put ``.[tiiq]`` in quotes:
-
-      .. code-block::
-
-            pip install ".[tiiq]" # or pip install -e ".[tiiq]"
-
-
-After that all you need to do to start using the ``Tiiq`` platform
-is the following:
-
-.. code-block:: python
-
-      from qibolab import Platform
-
-      platform = Platform("tii1q")
-
-For more detailed applications see the :ref:`Code example <examples>` section.
-
-IcarusQ
-"""""""
-
-In order to install the dependencies for the ``IcarusQ`` platform
-use the following command:
-
-
-.. code-block::
-
-      pip install .[tiiq] # or pip install -e .[tiiq]
-
-After that all you need to do to start using the ``IcarusQ`` platform
-is the following:
-
-.. code-block:: python
-
-      from qibolab import Platform
-
-      platform = Platform("icarusq")
-
-For more detailed applications see the :ref:`Code example <examples>` section.
+   Installing all the extras is usually not needed.
+   It is possible to install qibolab with any number of extras.
