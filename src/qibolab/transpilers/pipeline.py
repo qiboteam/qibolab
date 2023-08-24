@@ -61,7 +61,8 @@ class Passes:
         connectivity (nx.Graph): hardware qubit connectivity.
     """
 
-    def __init__(self, passes: list = None, connectivity: nx.Graph = None):
+    def __init__(self, passes: list = None, connectivity: nx.Graph = None, native_gates: NativeType = NativeType.CZ):
+        self.native_gates = native_gates
         if passes is None:
             self.passes = self.default(connectivity)
         else:
@@ -80,7 +81,7 @@ class Passes:
         # default router pass
         default_passes.append(ShortestPaths(connectivity=connectivity))
         # default unroller pass
-        default_passes.append(NativeGates(two_qubit_natives=NativeType.CZ))
+        default_passes.append(NativeGates(two_qubit_natives=self.native_gates))
         return default_passes
 
     def __call__(self, circuit):
@@ -102,10 +103,10 @@ class Passes:
             elif isinstance(transpiler_pass, Unroller):
                 circuit = transpiler_pass(circuit)
             else:
-                TranspilerPipelineError("Unrecognised transpiler pass: ", transpiler_pass)
+                raise TranspilerPipelineError("Unrecognised transpiler pass: ", transpiler_pass)
         return circuit, final_layout
 
-    def is_satisfied(self, circuit, native_gates=NativeType.CZ):
+    def is_satisfied(self, circuit):
         """Return True if the circuit respects the hardware connectivity and native gates, False otherwise.
 
         Args:
@@ -114,9 +115,11 @@ class Passes:
         """
         try:
             assert_connectivity(circuit=circuit, connectivity=self.connectivity)
-            assert_decomposition(circuit=circuit, two_qubit_natives=native_gates)
+            assert_decomposition(circuit=circuit, two_qubit_natives=self.native_gates)
             return True
-        except ConnectivityError or DecompositionError:
+        except ConnectivityError:
+            return False
+        except DecompositionError:
             return False
 
     def get_initial_layout(self):
