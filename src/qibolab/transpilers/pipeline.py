@@ -7,8 +7,16 @@ from qibolab.native import NativeType
 from qibolab.transpilers.abstract import Optimizer, Placer, Router, Unroller
 from qibolab.transpilers.optimizer import Preprocessing
 from qibolab.transpilers.placer import Trivial, assert_placement
-from qibolab.transpilers.router import ShortestPaths, assert_connectivity
-from qibolab.transpilers.unroller import NativeGates, assert_decomposition
+from qibolab.transpilers.router import (
+    ConnectivityError,
+    ShortestPaths,
+    assert_connectivity,
+)
+from qibolab.transpilers.unroller import (
+    DecompositionError,
+    NativeGates,
+    assert_decomposition,
+)
 
 
 class TranspilerPipelineError(Exception):
@@ -31,7 +39,11 @@ def assert_cirucuit_equivalence(original_circuit: Circuit, transpiled_circuit: C
 
 
 def assert_transpiling(
-    circuit: Circuit, connectivity: nx.Graph, initial_layout: dict, final_layout: dict, native_gates: NativeType
+    circuit: Circuit,
+    connectivity: nx.Graph,
+    initial_layout: dict,
+    final_layout: dict,
+    native_gates: NativeType = NativeType.CZ,
 ):
     """Check that all transpiler passes have been executed correctly"""
     assert_connectivity(circuit=circuit, connectivity=connectivity)
@@ -54,6 +66,7 @@ class Passes:
             self.passes = self.default(connectivity)
         else:
             self.passes = passes
+        self.connectivity = connectivity
 
     def default(self, connectivity: nx.Graph):
         """Return the default transpiler pipeline for the required hardware connectivity."""
@@ -91,6 +104,20 @@ class Passes:
             else:
                 TranspilerPipelineError("Unrecognised transpiler pass: ", transpiler_pass)
         return circuit, final_layout
+
+    def is_satisfied(self, circuit, native_gates=NativeType.CZ):
+        """Return True if the circuit respects the hardware connectivity and native gates, False otherwise.
+
+        Args:
+            circuit (qibo.models.Circuit): circuit to be checked.
+            native_gates (NativeType): two qubit native gates.
+        """
+        try:
+            assert_connectivity(circuit=circuit, connectivity=self.connectivity)
+            assert_decomposition(circuit=circuit, two_qubit_natives=native_gates)
+            return True
+        except ConnectivityError or DecompositionError:
+            return False
 
     def get_initial_layout(self):
         """Return initial qubit layout"""

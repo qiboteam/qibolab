@@ -11,7 +11,7 @@ from qibolab import __version__ as qibolab_version
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.transpilers.pipeline import Passes
+from qibolab.transpilers.pipeline import Passes, assert_transpiling
 
 
 class QibolabBackend(NumpyBackend):
@@ -95,7 +95,9 @@ class QibolabBackend(NumpyBackend):
             native_circuit, qubit_map = self.transpiler(circuit)
             # TODO: Use the qubit map to properly map measurements
             if check_transpiled:
-                self.transpiler.check_execution(circuit, native_circuit)
+                assert_transpiling(
+                    native_circuit, self.transpiler.connectivity, self.transpiler.get_initial_layout, qubit_map
+                )
 
         # Transpile the native circuit into a sequence of pulses ``PulseSequence``
         sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)
