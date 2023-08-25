@@ -1457,29 +1457,6 @@ class CouplerFluxPulse(Pulse):
         return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.coupler})"
 
 
-# class CouplerFluxPulse(FluxPulse):
-#     """Describes a coupler flux pulse.
-
-#     Flux pulses have frequency and relative_phase equal to 0. Their i and q components are equal.
-#     See :class:`qibolab.pulses.Pulse` for argument desciption.
-#     """
-
-#     def __init__(self, start, duration, amplitude, shape, channel, coupler=0):
-#         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-#         #                    channel: int | str, qubit: int | str = 0):
-#         super().__init__(
-#             start,
-#             duration,
-#             amplitude,
-#             0,
-#             0,
-#             shape,
-#             channel,
-#             type=PulseType.FLUX,
-#             coupler=coupler,
-#         )
-
-
 class SplitPulse(Pulse):
     """A supporting class to represent sections or slices of a pulse."""
 
@@ -1884,6 +1861,16 @@ class PulseSequence:
         for pulse in self.pulses:
             if not isinstance(pulse, CouplerFluxPulse):
                 if pulse.qubit in qubits:
+                    new_pc.add(pulse)
+        return new_pc
+
+    def get_coupler_pulses(self, *couplers):
+        """Returns a new PulseSequence containing only the pulses on a specific set of couplers."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if isinstance(pulse, CouplerFluxPulse):
+                if pulse.coupler in couplers:
                     new_pc.add(pulse)
         return new_pc
 
