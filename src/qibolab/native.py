@@ -6,7 +6,13 @@ from typing import List, Optional, Union
 from qibo import gates
 from qibo.config import raise_error
 
-from qibolab.pulses import FluxPulse, PulseConstructor, PulseSequence, PulseType
+from qibolab.pulses import (
+    CouplerFluxPulse,
+    FluxPulse,
+    PulseConstructor,
+    PulseSequence,
+    PulseType,
+)
 
 
 class NativeType(Flag):
@@ -173,13 +179,13 @@ class CouplerPulse:
         Returns:
             A :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
         """
-        return FluxPulse(
+        return CouplerFluxPulse(
             start + self.relative_start,
             self.duration,
             self.amplitude,
             self.shape,
             channel=self.coupler.flux.name,
-            qubit=self.coupler.name,
+            coupler=self.coupler.name,
         )
 
 
@@ -211,10 +217,6 @@ class NativeSequence:
         """
         pulses = []
         coupler_pulses = []
-
-        import pdb
-
-        pdb.set_trace()
 
         # If sequence contains only one pulse dictionary, convert it into a list that can be iterated below
         if isinstance(sequence, dict):

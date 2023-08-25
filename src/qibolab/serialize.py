@@ -41,21 +41,11 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     objects.
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
-    couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
 
     pairs = {}
     for pair in runcard["topology"]:
         pair = tuple(sorted(pair))
         pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]])
-
-    # register single qubit native gates to ``Qubit`` objects
-    native_gates = runcard.get("native_gates", {})
-    for q, gates in native_gates.get("single_qubit", {}).items():
-        qubits[q].native_gates = SingleQubitNatives.from_dict(qubits[q], gates)
-    # register two-qubit native gates to ``QubitPair`` objects
-    for pair, gatedict in native_gates.get("two_qubit", {}).items():
-        pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
-        pairs[pair].native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
 
     return qubits, pairs
 
@@ -70,8 +60,6 @@ def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
     couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
 
-    print(couplers)
-
     coupler_pairs = {}
     for pair, coupler in zip(runcard["topology"], runcard["couplers"]):
         pair = tuple(sorted(pair))
@@ -79,6 +67,22 @@ def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
         coupler_pairs[pair] = CouplerPair(couplers[coupler], qubits[pair[0]], qubits[pair[1]])
 
     return couplers, coupler_pairs
+
+
+# TODO: I may be written to much stuff on the couplers now
+def register_gates(
+    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap
+) -> Tuple[QubitMap, QubitPairMap]:
+    # register single qubit native gates to ``Qubit`` objects
+    native_gates = runcard.get("native_gates", {})
+    for q, gates in native_gates.get("single_qubit", {}).items():
+        qubits[q].native_gates = SingleQubitNatives.from_dict(qubits[q], gates)
+    # register two-qubit native gates to ``QubitPair`` objects
+    for pair, gatedict in native_gates.get("two_qubit", {}).items():
+        pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
+        pairs[pair].native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
+
+    return qubits, pairs
 
 
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:

@@ -3,7 +3,7 @@ import itertools
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.platform import Platform
-from qibolab.serialize import load_couplers, load_qubits, load_settings
+from qibolab.serialize import load_couplers, load_qubits, load_settings, register_gates
 
 NAME = "dummy2"
 RUNCARD = {
@@ -148,7 +148,7 @@ RUNCARD = {
                         "duration": 30,
                         "amplitude": 0.05,
                         "shape": "Rectangular()",
-                        "qubit": 0,
+                        "qubit": 2,
                         "relative_start": 0,
                         "type": "qf",
                     },
@@ -156,11 +156,11 @@ RUNCARD = {
                     {"type": "virtual_z", "phase": 0.0, "qubit": 2},
                     {
                         "type": "coupler",
-                        "duration": 30,
-                        "amplitude": 0.05,
+                        "duration": 40,
+                        "amplitude": 0.1,
                         "shape": "Rectangular()",
                         "coupler": 1,
-                        "relative_start": 0,
+                        "relative_start": -5,
                     },
                 ]
             },
@@ -304,6 +304,8 @@ def create_dummy2():
     for c in itertools.chain(range(0, 2), range(3, 5)):
         couplers[c].qubits[c] = [qubits[c]]
         couplers[c].qubits[c].append(qubits[2])
+
+    qubits, pairs = register_gates(RUNCARD, qubits, pairs, couplers)
 
     instruments = {instrument.name: instrument}
     instrument.sampling_rate = settings.sampling_rate * 1e-9
