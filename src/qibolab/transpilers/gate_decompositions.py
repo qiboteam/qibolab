@@ -60,7 +60,7 @@ def translate_gate(gate, native_gates: NativeType):
     Returns:
         Shortest list of native gates
     """
-    if isinstance(gate, gates.M):
+    if isinstance(gate, (gates.M, gates.I, gates.Align)):
         return gate
 
     if len(gate.qubits) == 1:
@@ -114,8 +114,6 @@ onequbit_dec.add(gates.S, [gates.RZ(0, np.pi / 2)])
 onequbit_dec.add(gates.SDG, [gates.RZ(0, -np.pi / 2)])
 onequbit_dec.add(gates.T, [gates.RZ(0, np.pi / 4)])
 onequbit_dec.add(gates.TDG, [gates.RZ(0, -np.pi / 4)])
-onequbit_dec.add(gates.I, [gates.I(0)])
-onequbit_dec.add(gates.Align, [gates.Align(0)])
 onequbit_dec.add(gates.RX, lambda gate: [gates.U3(0, gate.parameters[0], -np.pi / 2, np.pi / 2)])
 onequbit_dec.add(gates.RY, lambda gate: [gates.U3(0, gate.parameters[0], 0, 0)])
 # apply virtually by changing ``phase`` instead of using pulses
