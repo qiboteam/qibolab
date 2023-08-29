@@ -9,15 +9,6 @@ SWEPT_POINTS = 5
 
 
 def test_dummy_initialization():
-    platform = create_platform("dummy")
-    platform.connect()
-    platform.setup()
-    platform.start()
-    platform.stop()
-    platform.disconnect()
-
-
-def test_dummy_initialization():
     platform = create_platform("dummy2")
     platform.connect()
     platform.setup()
@@ -28,15 +19,34 @@ def test_dummy_initialization():
 
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.RAW])
 def test_dummy_execute_pulse_sequence(acquisition):
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
 
 
+def test_dummy_execute_pulse_sequence_couplers():
+    platform = create_platform("dummy2")
+    ordered_pair = (1, 2)
+    sequence = PulseSequence()
+
+    cz, _ = platform.create_CZ_pulse_sequence(
+        qubits=(ordered_pair[1], ordered_pair[0]),
+        start=0,
+    )
+    sequence.add(cz.get_qubit_pulses(ordered_pair[0]))
+    sequence.add(cz.get_qubit_pulses(ordered_pair[1]))
+    sequence.add(cz.get_coupler_pulses(platform.get_coupler_pair(ordered_pair)))
+    sequence.add(platform.create_qubit_readout_pulse(0, 40))
+    sequence.add(platform.create_qubit_readout_pulse(2, 40))
+    options = ExecutionParameters(nshots=None)
+    result = platform.execute_pulse_sequence(sequence, options)
+    assert len(sequence.get_coupler_pulses(1)) == 1
+
+
 def test_dummy_execute_pulse_sequence_fast_reset():
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(nshots=None, fast_reset=True)
@@ -45,7 +55,7 @@ def test_dummy_execute_pulse_sequence_fast_reset():
 
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 def test_dummy_execute_pulse_sequence_unrolling(acquisition):
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequences = []
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
@@ -56,7 +66,7 @@ def test_dummy_execute_pulse_sequence_unrolling(acquisition):
 
 
 def test_dummy_single_sweep_RAW():
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
 
@@ -82,7 +92,7 @@ def test_dummy_single_sweep_RAW():
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
 def test_dummy_single_sweep(fast_reset, parameter, average, acquisition, nshots):
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
     if parameter is Parameter.amplitude:
@@ -125,7 +135,7 @@ def test_dummy_single_sweep(fast_reset, parameter, average, acquisition, nshots)
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
 def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots):
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequence = PulseSequence()
     pulse = platform.create_qubit_drive_pulse(qubit=0, start=0, duration=1000)
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=pulse.finish)
@@ -182,7 +192,7 @@ def test_dummy_double_sweep(parameter1, parameter2, average, acquisition, nshots
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
 def test_dummy_single_sweep_multiplex(parameter, average, acquisition, nshots):
-    platform = create_platform("dummy")
+    platform = create_platform("dummy2")
     sequence = PulseSequence()
     ro_pulses = {}
     for qubit in platform.qubits:

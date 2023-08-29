@@ -1,7 +1,7 @@
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_settings
+from qibolab.serialize import load_qubits, load_settings, register_gates
 
 NAME = "dummy"
 RUNCARD = {
@@ -222,6 +222,8 @@ def create_dummy():
         qubit.readout = channels["readout"]
         qubit.drive = channels[f"drive-{q}"]
         qubit.flux = channels[f"flux-{q}"]
+
+    qubits, pairs = register_gates(RUNCARD, qubits, pairs)
 
     instruments = {instrument.name: instrument}
     instrument.sampling_rate = settings.sampling_rate * 1e-9

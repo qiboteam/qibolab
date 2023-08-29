@@ -69,9 +69,8 @@ def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
     return couplers, coupler_pairs
 
 
-# TODO: I may be written to much stuff on the couplers now
 def register_gates(
-    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap
+    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> Tuple[QubitMap, QubitPairMap]:
     # register single qubit native gates to ``Qubit`` objects
     native_gates = runcard.get("native_gates", {})

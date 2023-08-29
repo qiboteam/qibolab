@@ -76,6 +76,7 @@ class DummyInstrument(Controller):
     def play(
         self,
         qubits: Dict[QubitId, Qubit],
+        couplers: Dict[CouplerId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
@@ -92,6 +93,7 @@ class DummyInstrument(Controller):
     def play_sequences(
         self,
         qubits: Dict[QubitId, Qubit],
+        couplers: Dict[CouplerId, Coupler],
         sequences: List[PulseSequence],
         options: ExecutionParameters,
     ):

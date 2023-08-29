@@ -1454,7 +1454,7 @@ class CouplerFluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.coupler})"
+        return f"CouplerFluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.coupler})"
 
 
 class SplitPulse(Pulse):

@@ -376,6 +376,12 @@ class Platform:
         except KeyError:
             return list(self.couplers.keys())[coupler]
 
+    def get_coupler_pair(self, qubits):
+        for coupler in self.couplers.values():
+            # I add this as a subset as it may appear on the future
+            if set(qubits).issubset(coupler.qubits):
+                return coupler.name
+
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)

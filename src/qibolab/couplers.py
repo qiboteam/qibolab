@@ -51,6 +51,7 @@ CouplerPairId = Tuple[CouplerId, QubitId, QubitId]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
+# Maybe this one is not needed
 @dataclass
 class CouplerPair:
     """Data structure for holding a coupler and its two-qubits on a pair of qubits.

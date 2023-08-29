@@ -258,7 +258,6 @@ class NativeSequence:
 
         for coupler_pulse in self.coupler_pulses:
             sequence.add(coupler_pulse.pulse(start=start))
-
         # TODO: Maybe ``virtual_z_phases`` should be an attribute of ``PulseSequence``
         return sequence, virtual_z_phases
 

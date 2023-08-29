@@ -146,7 +146,7 @@ RUNCARD = {
                         "amplitude": 0.1,
                         "shape": "Rectangular()",
                         "coupler": 0,
-                        "relative_start": -5,
+                        "relative_start": 0,
                     },
                 ]
             },
@@ -168,7 +168,7 @@ RUNCARD = {
                         "amplitude": 0.1,
                         "shape": "Rectangular()",
                         "coupler": 1,
-                        "relative_start": -5,
+                        "relative_start": 0,
                     },
                 ]
             },
@@ -190,7 +190,7 @@ RUNCARD = {
                         "amplitude": 0.1,
                         "shape": "Rectangular()",
                         "coupler": 3,
-                        "relative_start": -5,
+                        "relative_start": 0,
                     },
                 ]
             },
@@ -212,7 +212,7 @@ RUNCARD = {
                         "amplitude": 0.1,
                         "shape": "Rectangular()",
                         "coupler": 4,
-                        "relative_start": -5,
+                        "relative_start": 0,
                     },
                 ]
             },
@@ -320,14 +320,14 @@ def create_dummy2():
     # FIXME: Call couplers by its name
     # assign couplers to qubits
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        qubits[c].flux_coupler[c] = couplers[c]
-        qubits[2].flux_coupler[c] = couplers[c]
+        qubits[c].flux_coupler[c] = couplers[c].name
+        qubits[2].flux_coupler[c] = couplers[c].name
 
     # FIXME: Call couplers by its name
     # assign qubits to couplers
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        couplers[c].qubits[c] = [qubits[c]]
-        couplers[c].qubits[c].append(qubits[2])
+        couplers[c].qubits = [qubits[c].name]
+        couplers[c].qubits.append(qubits[2].name)
 
     qubits, pairs = register_gates(RUNCARD, qubits, pairs, couplers)
 
