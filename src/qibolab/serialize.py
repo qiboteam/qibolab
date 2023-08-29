@@ -55,6 +55,7 @@ def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
 
     Uses the native gate and characterization sections of the runcard
     to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
+    and the the :class:`qibolab.coupler.Coupler` and :class:`qibolab.coupler.CouplerPair`
     objects.
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
@@ -72,7 +73,13 @@ def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
 def register_gates(
     runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> Tuple[QubitMap, QubitPairMap]:
-    # register single qubit native gates to ``Qubit`` objects
+    """Register single qubit native gates to ``Qubit`` objects from the runcard.
+
+    Uses the native gate and characterization sections of the runcard
+    to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
+    objects.
+    """
+
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
         qubits[q].native_gates = SingleQubitNatives.from_dict(qubits[q], gates)
