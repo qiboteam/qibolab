@@ -7,7 +7,13 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import (
+    load_couplers,
+    load_qubits,
+    load_runcard,
+    load_settings,
+    register_gates,
+)
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
 
@@ -133,6 +139,8 @@ def create(runcard_path=RUNCARD):
     # create qubit objects from runcard
     runcard = load_runcard(runcard_path)
     qubits, pairs = load_qubits(runcard)
+    couplers, coupler_pairs = load_couplers(runcard)
+    settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
     for q in range(0, 5):
@@ -152,11 +160,19 @@ def create(runcard_path=RUNCARD):
         qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
         channels[f"L4-{10 + c}"].qubit = qubits[f"c{c}"]
 
+    # FIXME: Call couplers by its name
+    # assign couplers to qubits
+    for c in itertools.chain(range(0, 2), range(3, 5)):
+        qubits[c].flux_coupler[c] = couplers[c].name
+        qubits[2].flux_coupler[c] = couplers[c].name
+
+    # FIXME: Call couplers by its name
     # assign qubits to couplers
     for c in itertools.chain(range(0, 2), range(3, 5)):
-        qubits[f"c{c}"].flux_coupler = [qubits[c]]
-        qubits[f"c{c}"].flux_coupler.append(qubits[2])
+        couplers[c].qubits = [qubits[c].name]
+        couplers[c].qubits.append(qubits[2].name)
 
+    qubits, pairs = register_gates(runcard, qubits, pairs, couplers)
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)

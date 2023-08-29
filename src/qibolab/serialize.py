@@ -70,6 +70,7 @@ def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
     return couplers, coupler_pairs
 
 
+# This creates the compiler error
 def register_gates(
     runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> Tuple[QubitMap, QubitPairMap]:

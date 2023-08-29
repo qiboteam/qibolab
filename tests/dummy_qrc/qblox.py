@@ -26,7 +26,7 @@ from qibolab.instruments.qblox.port import (
 )
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import load_qubits, load_runcard, load_settings, register_gates
 
 NAME = "qblox"
 ADDRESS = "192.168.0.6"
@@ -229,6 +229,7 @@ def create(runcard_path=RUNCARD):
     for q in range(5):
         qubits[q].flux.max_bias = 2.5
 
+    qubits, pairs = register_gates(runcard, qubits, pairs)
     instruments = {controller.name: controller, twpa_pump.name: twpa_pump}
     settings = load_settings(runcard)
     return Platform("qblox", qubits, pairs, instruments, settings, resonator_type="2D")

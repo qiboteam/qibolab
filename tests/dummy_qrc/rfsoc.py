@@ -5,7 +5,7 @@ from qibolab.instruments.erasynth import ERA
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import load_qubits, load_runcard, load_settings, register_gates
 
 RUNCARD = pathlib.Path(__file__).parent / "rfsoc.yml"
 
@@ -41,6 +41,7 @@ def create(runcard_path=RUNCARD):
     qubits[0].drive = channels["L3-18_qd"]
     qubits[0].flux = channels["L2-22_qf"]
 
+    qubits, pairs = register_gates(runcard, qubits, pairs)
     instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
     return Platform("rfsoc", qubits, pairs, instruments, settings, resonator_type="3D")
