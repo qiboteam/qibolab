@@ -17,15 +17,6 @@ def test_dummy_initialization():
     platform.disconnect()
 
 
-def test_dummy_initialization():
-    platform = create_platform("dummy2")
-    platform.connect()
-    platform.setup()
-    platform.start()
-    platform.stop()
-    platform.disconnect()
-
-
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.RAW])
 def test_dummy_execute_pulse_sequence(acquisition):
     platform = create_platform("dummy")
