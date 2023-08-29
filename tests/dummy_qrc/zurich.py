@@ -164,12 +164,6 @@ def create(runcard_path=RUNCARD):
         qubits[c].flux_coupler[c] = couplers[c].name
         qubits[2].flux_coupler[c] = couplers[c].name
 
-    # FIXME: Call couplers by its name
-    # assign qubits to couplers
-    for c in itertools.chain(range(0, 2), range(3, 5)):
-        couplers[c].qubits = [qubits[c].name]
-        couplers[c].qubits.append(qubits[2].name)
-
     qubits, pairs = register_gates(runcard, qubits, pairs, couplers)
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
