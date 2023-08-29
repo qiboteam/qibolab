@@ -168,4 +168,13 @@ def create(runcard_path=RUNCARD):
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
-    return Platform("zurich", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        "zurich",
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
+        coupler_pairs=coupler_pairs,
+    )
