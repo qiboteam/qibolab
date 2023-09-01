@@ -44,6 +44,7 @@ def test_fusion():
     circuit.add(gates.X(0))
     circuit.add(gates.Z(0))
     circuit.add(gates.Y(0))
+    circuit.add(gates.X(1))
     fusion = Rearrange(max_qubits=1)
     fused_circ = fusion(circuit)
     assert isinstance(fused_circ.queue[0], gates.Unitary)
