@@ -30,11 +30,9 @@ def find_gates_qubits_pairs(circuit: Circuit):
 
 
 class Placer(ABC):
-    """A placer implements the initial logical-physical qubit mapping"""
-
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        self.connectivity = connectivity
+        """A placer implements the initial logical-physical qubit mapping"""
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> dict:
@@ -49,11 +47,9 @@ class Placer(ABC):
 
 
 class Router(ABC):
-    """A router implements the mapping of a circuit on a specific hardware."""
-
     @abstractmethod
     def __init__(self, connectivity: nx.Graph, *args):
-        self.connectivity = connectivity
+        """A router implements the mapping of a circuit on a specific hardware."""
 
     @abstractmethod
     def __call__(self, circuit: Circuit, initial_layout: dict, *args) -> Tuple[Circuit, dict]:
@@ -85,11 +81,9 @@ class Optimizer(ABC):
 
 
 class Unroller(ABC):
-    """An unroller decomposes gates into native gates."""
-
     @abstractmethod
     def __init__(self, native_gates: NativeType, *args):
-        self.native_gates = native_gates
+        """An unroller decomposes gates into native gates."""
 
     @abstractmethod
     def __call__(self, circuit: Circuit, *args) -> Circuit:
