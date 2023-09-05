@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -71,16 +71,10 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[List["Qubit"]] = field(default_factory=dict)
+    flux_coupler: Optional[Dict["Qubit"]] = field(default_factory=dict)
 
     classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    def __post_init__(self):
-        # register qubit in ``flux`` channel so that we can access
-        # ``sweetspot`` and ``filters`` at the channel level
-        if self.flux:
-            self.flux.qubit = self
 
     @property
     def channels(self):
