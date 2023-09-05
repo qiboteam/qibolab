@@ -10,16 +10,9 @@ from typing import Tuple
 
 import yaml
 
-from qibolab.couplers import Coupler, CouplerPair
+from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import (
-    CouplerMap,
-    CouplerPairMap,
-    Platform,
-    QubitMap,
-    QubitPairMap,
-    Settings,
-)
+from qibolab.platform import CouplerMap, Platform, QubitMap, QubitPairMap, Settings
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -50,24 +43,17 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     return qubits, pairs
 
 
-def load_couplers(runcard: dict) -> Tuple[CouplerMap, CouplerPairMap]:
+def load_couplers(runcard: dict) -> CouplerMap:
     """Load couplers and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard
     to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
-    and the the :class:`qibolab.coupler.Coupler` and :class:`qibolab.coupler.CouplerPair`
+    and the the :class:`qibolab.coupler.Coupler`
     objects.
     """
-    qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
     couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
 
-    coupler_pairs = {}
-    for pair, coupler in zip(runcard["topology"], runcard["couplers"]):
-        pair = tuple(sorted(pair))
-        # Fancier ordering for couplers
-        coupler_pairs[pair] = CouplerPair(couplers[coupler], qubits[pair[0]], qubits[pair[1]])
-
-    return couplers, coupler_pairs
+    return couplers
 
 
 # This creates the compiler error
@@ -92,7 +78,7 @@ def register_gates(
     return qubits, pairs
 
 
-def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
+def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
     native_gates = {
         "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()},
@@ -104,17 +90,25 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap) -> dict:
         if len(natives) > 0:
             native_gates["two_qubit"][f"{p[0]}-{p[1]}"] = natives
     # add qubit characterization section
+    characterization = {
+        "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
+        "coupler": {},
+    }
+    if couplers:
+        for coupler in couplers.values():
+            characterization["coupler"][coupler.name] = 1
+
     return {
         "native_gates": native_gates,
-        "characterization": {"single_qubit": {q: qubit.characterization for q, qubit in qubits.items()}},
+        "characterization": characterization,
     }
 
 
-# TODO: Couplers would need to be associated to qubits in the runcard
-def dump_couplers(couplers: CouplerMap, coupler_pairs: CouplerPairMap) -> dict:
-    """Dump coupler and coupler_pair objects to a dictionary following the runcard format."""
-    # TODO:
-    return {"couplers": couplers, "coupler_qubits": coupler_pairs}
+# # TODO: Couplers would need to be associated to qubits in the runcard
+# def dump_couplers(couplers: CouplerMap) -> dict:
+#     """Dump coupler and coupler_pair objects to a dictionary following the runcard format."""
+
+#     return {"couplers": couplers}
 
 
 def dump_runcard(platform: Platform, path: Path):
@@ -132,5 +126,8 @@ def dump_runcard(platform: Platform, path: Path):
         "settings": asdict(platform.settings),
         "topology": [list(pair) for pair in platform.pairs],
     }
-    settings.update(dump_qubits(platform.qubits, platform.pairs))
+    if platform.couplers:
+        settings["couplers"] = list(platform.couplers)
+
+    settings.update(dump_qubits(platform.qubits, platform.pairs, platform.couplers))
     path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))

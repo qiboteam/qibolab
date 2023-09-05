@@ -26,6 +26,25 @@ def test_dummy_execute_pulse_sequence(acquisition):
     result = platform.execute_pulse_sequence(sequence, options)
 
 
+def test_dummy_execute_pulse_sequence_couplers():
+    platform = create_platform("dummy")
+    ordered_pair = (1, 2)
+    sequence = PulseSequence()
+
+    cz, _ = platform.create_CZ_pulse_sequence(
+        qubits=(ordered_pair[1], ordered_pair[0]),
+        start=0,
+    )
+    sequence.add(cz.get_qubit_pulses(ordered_pair[0]))
+    sequence.add(cz.get_qubit_pulses(ordered_pair[1]))
+    sequence.add(cz.get_coupler_pulses(platform.get_coupler_pair(ordered_pair)))
+    sequence.add(platform.create_qubit_readout_pulse(0, 40))
+    sequence.add(platform.create_qubit_readout_pulse(2, 40))
+    options = ExecutionParameters(nshots=None)
+    result = platform.execute_pulse_sequence(sequence, options)
+    assert len(sequence.get_coupler_pulses(1)) == 1
+
+
 def test_dummy_execute_pulse_sequence_fast_reset():
     platform = create_platform("dummy")
     sequence = PulseSequence()

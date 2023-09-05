@@ -1,9 +1,8 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 from qibolab.channels import Channel
-from qibolab.native import TwoQubitNatives
-from qibolab.qubits import Qubit, QubitId
+from qibolab.qubits import Qubit
 
 CouplerId = Union[str, int]
 """Type for Coupler names."""
@@ -45,22 +44,3 @@ class Coupler:
         for channel in [self.flux]:
             if channel is not None:
                 yield channel
-
-
-CouplerPairId = Tuple[CouplerId, QubitId, QubitId]
-"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
-
-
-# Maybe this one is not needed
-@dataclass
-class CouplerPair:
-    """Data structure for holding a coupler and its two-qubits on a pair of qubits.
-
-    Qubits are sorted according to ``qubit.name`` such that
-    ``qubit1.name < qubit2.name``.
-    """
-
-    coupler: Coupler
-    qubit1: Qubit
-    qubit2: Qubit
-    native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
