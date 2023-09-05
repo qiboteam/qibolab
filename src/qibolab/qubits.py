@@ -71,7 +71,7 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[Dict["Qubit"]] = field(default_factory=dict)
+    flux_coupler: Optional[Dict[QubitId, "Qubit"]] = field(default_factory=dict)
 
     classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
