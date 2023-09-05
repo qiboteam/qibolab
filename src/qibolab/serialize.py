@@ -103,6 +103,7 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
         "characterization": characterization,
     }
 
+
 def dump_runcard(platform: Platform, path: Path):
     """Serializes the platform and saves it as a yaml runcard file.
 
