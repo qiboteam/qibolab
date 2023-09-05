@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from typing import Dict, Optional, Union
 
 from qibolab.channels import Channel
-from qibolab.qubits import Qubit
+from qibolab.qubits import Qubit, QubitId
 
 CouplerId = Union[str, int]
 """Type for Coupler names."""
@@ -31,7 +31,7 @@ class Coupler:
     sweetspot: float = 0
 
     flux: Optional[Channel] = None
-    qubits: Optional[List["Qubit"]] = field(default_factory=dict)
+    qubits: Optional[Dict[QubitId, Qubit]] = field(default_factory=dict)
 
     @property
     def channels(self):
