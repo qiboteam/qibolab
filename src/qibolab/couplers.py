@@ -33,14 +33,7 @@ class Coupler:
     flux: Optional[Channel] = None
     qubits: Optional[List["Qubit"]] = field(default_factory=dict)
 
-    def __post_init__(self):
-        # register qubit in ``flux`` channel so that we can access
-        # ``sweetspot`` and ``filters`` at the channel level
-        if self.flux:
-            self.flux.coupler = self
-
     @property
     def channels(self):
-        for channel in [self.flux]:
-            if channel is not None:
-                yield channel
+        if self.flux is not None:
+            yield self.flux
