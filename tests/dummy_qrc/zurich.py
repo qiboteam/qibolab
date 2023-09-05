@@ -139,7 +139,7 @@ def create(runcard_path=RUNCARD):
     # create qubit objects from runcard
     runcard = load_runcard(runcard_path)
     qubits, pairs = load_qubits(runcard)
-    couplers, coupler_pairs = load_couplers(runcard)
+    couplers = load_couplers(runcard)
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
@@ -176,5 +176,4 @@ def create(runcard_path=RUNCARD):
         settings,
         resonator_type="2D",
         couplers=couplers,
-        coupler_pairs=coupler_pairs,
     )

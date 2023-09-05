@@ -25,6 +25,7 @@ def test_sweeper_pulses(parameter):
 def test_sweeper_qubits(parameter):
     qubit = Qubit(0)
     parameter_range = np.random.randint(10, size=10)
+    print(parameter)
     if parameter in QubitParameter:
         sweeper = Sweeper(parameter, parameter_range, qubits=[qubit])
         assert sweeper.parameter is parameter

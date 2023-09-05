@@ -93,7 +93,7 @@ class Sweeper:
             raise ValueError("Cannot use a sweeper on both pulses and qubits.")
         if self.pulses is not None and self.parameter in QubitParameter:
             raise ValueError(f"Cannot sweep {self.parameter} without specifying qubits or couplers.")
-        if self.qubits and self.couplers is not None and self.parameter not in QubitParameter:
+        if self.parameter not in QubitParameter and self.qubits is not None or self.couplers is not None:
             raise ValueError(f"Cannot sweep {self.parameter} without specifying pulses.")
         if self.pulses is None and self.qubits is None and self.couplers is None:
             raise ValueError("Cannot use a sweeper without specifying pulses, qubits or couplers.")
