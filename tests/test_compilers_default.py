@@ -179,3 +179,18 @@ def test_add_measurement_to_sequence(platform):
     MZ_pulse = platform.create_MZ_pulse(0, start=RX90_pulse2.finish)
     s = PulseSequence(RX90_pulse1, RX90_pulse2, MZ_pulse)
     assert sequence.serial == s.serial
+
+
+@pytest.mark.parametrize("delay", [0, 100])
+def test_align_delay_measurement(platform, delay):
+    circuit = Circuit(1)
+    circuit.add(gates.Align(0, delay=delay))
+    circuit.add(gates.M(0))
+
+    sequence = compile_circuit(circuit, platform)
+    assert len(sequence.pulses) == 1
+    assert len(sequence.ro_pulses) == 1
+
+    MZ_pulse = platform.create_MZ_pulse(0, start=delay)
+    s = PulseSequence(MZ_pulse)
+    assert sequence.serial == s.serial

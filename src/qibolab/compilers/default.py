@@ -1,6 +1,6 @@
 """Implementation of the default compiler.
 
-Uses I, Z, RZ, U3, CZ and M as the set of native gates.
+Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
 import math
 
