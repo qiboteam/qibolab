@@ -2,6 +2,7 @@
 
 import math
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional
 
@@ -11,7 +12,7 @@ from qibo.config import log, raise_error
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.native import NativeType
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
@@ -21,15 +22,25 @@ QubitPairMap = Dict[QubitPairId, QubitPair]
 
 
 def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> PulseSequence:
+    """Unrolls a list of pulse sequences to a single pulse sequence with multiple measurements.
+    
+    Args:
+        sequences (list): List of pulse sequences to unroll.
+        relaxation_time (int): Time in ns to wait for the qubit to relax between 
+            playing different sequences.
+    """
     total_sequence = PulseSequence()
+    readout_map = defaultdict(list)
     start = 0
     for sequence in sequences:
         for pulse in sequence:
             new_pulse = pulse.copy()
             new_pulse.start += start
             total_sequence.add(new_pulse)
+            if isinstance(pulse, ReadoutPulse):
+                readout_map[pulse.serial].append(new_pulse.serial)
         start = total_sequence.finish + relaxation_time
-    return total_sequence
+    return total_sequence, readout_map
 
 
 @dataclass
@@ -303,8 +314,15 @@ class Platform:
         try:
             return self._execute("play_sequences", sequences, options, **kwargs)
         except NotImplementedError:
-            sequence = unroll_sequences(sequences, options.relaxation_time)
-            return self._execute("play", sequence, options, **kwargs)
+            sequence, readouts = unroll_sequences(sequences, options.relaxation_time)
+            result = self._execute("play", sequence, options, **kwargs)
+            results = {}
+            for sequence in sequences:
+                for ro_pulse in sequence.ro_pulses:
+                    serial = ro_pulse.serial
+                    if serial not in results:
+                        results[ro_pulse.qubit] = results[serial] = [result[s] for s in readouts[serial]]
+            return results
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.

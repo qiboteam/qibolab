@@ -28,12 +28,16 @@ nshots = 1024
 def test_unroll_sequences(platform):
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
-    sequence.add(platform.create_RX_pulse(qubit, start=0))
-    sequence.add(platform.create_MZ_pulse(qubit, start=sequence.finish))
-    total_sequence = unroll_sequences(10 * [sequence], relaxation_time=10000)
+    qd_pulse = platform.create_RX_pulse(qubit, start=0)
+    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.finish)
+    sequence.add(qd_pulse)
+    sequence.add(ro_pulse)
+    total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence) == 20
     assert len(total_sequence.ro_pulses) == 10
     assert total_sequence.finish == 10 * sequence.finish + 90000
+    assert len(readouts) == 1
+    assert len(readouts[ro_pulse.serial]) == 10
 
 
 def test_create_platform(platform):
