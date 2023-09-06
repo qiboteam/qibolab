@@ -20,6 +20,18 @@ QubitMap = Dict[QubitId, Qubit]
 QubitPairMap = Dict[QubitPairId, QubitPair]
 
 
+def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> PulseSequence:
+    total_sequence = PulseSequence()
+    start = 0
+    for sequence in sequences:
+        for pulse in sequence:
+            new_pulse = pulse.copy()
+            new_pulse.start += start
+            total_sequence.add(new_pulse)
+        start = total_sequence.finish + relaxation_time
+    return total_sequence
+
+
 @dataclass
 class Settings:
     """Default execution settings read from the runcard."""
@@ -268,7 +280,7 @@ class Platform:
                     result = new_result
         return result
 
-    def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
         """
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
@@ -276,10 +288,8 @@ class Platform:
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
-
         """
-
-        return self._execute("play", sequences, options, **kwargs)
+        return self._execute("play", sequence, options, **kwargs)
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
         """
@@ -289,9 +299,12 @@ class Platform:
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
-
         """
-        return self._execute("play_sequences", sequences, options, **kwargs)
+        try:
+            return self._execute("play_sequences", sequences, options, **kwargs)
+        except NotImplementedError:
+            sequence = unroll_sequences(sequences, options.relaxation_time)
+            return self._execute("play", sequence, options, **kwargs)
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.
