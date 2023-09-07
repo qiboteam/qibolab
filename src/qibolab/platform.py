@@ -198,27 +198,27 @@ class Platform:
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
                 
-                # Flux resonatos spectroscopy 
+                # Flux resonator spectroscopy 
                 elif par == "flux_to_bias":
-                    self.qubits[qubit].flux_to_bias = value
+                    self.qubits[qubit].flux_to_bias = float(value)
                 
                 elif par == "asymmetry":
-                    self.qubits[qubit].asymmetry = value
+                    self.qubits[qubit].asymmetry = float(value)
 
                 elif par == "readout_coupling":
-                    self.qubits[qubit].g = value
+                    self.qubits[qubit].g = int(value)
 
                 elif par == "brf":
-                    self.qubits[qubit].brf = value
+                    self.qubits[qubit].brf = float(value)
                 
                 elif par == "ssf_brf":
-                    self.qubits[qubit].ssf_brf = value                
+                    self.qubits[qubit].ssf_brf = float(value)
 
                 elif par == "Ec":
-                    self.qubits[qubit].Ec = value
+                    self.qubits[qubit].Ec = int(value)
 
                 elif par == "Ej":
-                    self.qubits[qubit].Ej = value
+                    self.qubits[qubit].Ej = int(value)
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
