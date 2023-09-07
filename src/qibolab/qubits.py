@@ -55,6 +55,8 @@ class Qubit:
     state1_voltage: int = 0
     mean_gnd_states: List[float] = field(default_factory=lambda: [0, 0])
     mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
+
+    #TODO: add each popt value as single qubit attribute
     resonator_polycoef_flux: List[float] = field(default_factory=list)
 
     # parameters for single shot classification
