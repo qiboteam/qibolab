@@ -41,11 +41,17 @@ class Qubit:
     readout_frequency: int = 0  # this is the dressed frequency
     drive_frequency: int = 0
     anharmonicity: int = 0
+    
+    sweetspot: float = 0
+    flux_to_bias: float = 0.0
+    asymmetry:  float = 0.0
+    brf: float = 0.0
+    ssf_brf: float = 0.0
     Ec: int = 0
     Ej: int = 0
     g: int = 0
+
     assigment_fidelity: float = 0.0
-    sweetspot: float = 0
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0
@@ -55,7 +61,6 @@ class Qubit:
     state1_voltage: int = 0
     mean_gnd_states: List[float] = field(default_factory=lambda: [0, 0])
     mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
-    resonator_polycoef_flux: List[float] = field(default_factory=list)
 
     # parameters for single shot classification
     threshold: Optional[float] = None
