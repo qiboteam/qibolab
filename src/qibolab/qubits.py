@@ -42,14 +42,14 @@ class Qubit:
     drive_frequency: int = 0
     anharmonicity: int = 0
     
-    sweetspot: float = 0
-    flux_to_bias: float = 0
-    asymmetry:  float = 0
-    brf: float = 0
-    ssf_brf: float = 0
-    Ec: int = 0
-    Ej: int = 0
-    g: int = 0
+    sweetspot: float = 0.0
+    flux_to_bias: float = 0.0
+    asymmetry:  float = 0.0
+    brf: float = 0.0
+    ssf_brf: float = 0.0
+    Ec: float = 0.0
+    Ej: float = 0.0
+    g: float = 0.0
 
     assigment_fidelity: float = 0.0
     peak_voltage: float = 0

@@ -133,9 +133,6 @@ class Platform:
                 elif par == "sweetspot":
                     sweetspot = float(value)
                     self.qubits[qubit].sweetspot = sweetspot
-                    if self.qubits[qubit].flux is not None:
-                        # set sweetspot as the flux offset (IS THIS NEEDED?)
-                        self.qubits[qubit].flux.offset = sweetspot
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
@@ -206,7 +203,7 @@ class Platform:
                     self.qubits[qubit].asymmetry = float(value)
 
                 elif par == "readout_coupling":
-                    self.qubits[qubit].g = int(value)
+                    self.qubits[qubit].g = float(value)
 
                 elif par == "brf":
                     self.qubits[qubit].brf = float(value)
@@ -215,10 +212,10 @@ class Platform:
                     self.qubits[qubit].ssf_brf = float(value)
 
                 elif par == "Ec":
-                    self.qubits[qubit].Ec = int(value)
+                    self.qubits[qubit].Ec = float(value)
 
                 elif par == "Ej":
-                    self.qubits[qubit].Ej = int(value)
+                    self.qubits[qubit].Ej = float(value)
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
