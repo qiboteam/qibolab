@@ -23,10 +23,10 @@ QubitPairMap = Dict[QubitPairId, QubitPair]
 
 def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> PulseSequence:
     """Unrolls a list of pulse sequences to a single pulse sequence with multiple measurements.
-    
+
     Args:
         sequences (list): List of pulse sequences to unroll.
-        relaxation_time (int): Time in ns to wait for the qubit to relax between 
+        relaxation_time (int): Time in ns to wait for the qubit to relax between
             playing different sequences.
     """
     total_sequence = PulseSequence()
@@ -53,6 +53,16 @@ class Settings:
     """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
+
+    def default(self, options: ExecutionParameters):
+        """Use default values for missing execution options."""
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
+
+        return options
 
 
 @dataclass
@@ -270,16 +280,6 @@ class Platform:
 
     def _execute(self, method, sequences, options, **kwargs):
         """Executes the sequences on the controllers"""
-        if options.nshots is None:
-            options = replace(options, nshots=self.settings.nshots)
-
-        if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.settings.relaxation_time)
-
-        duration = sum(seq.duration for seq in sequences) if isinstance(sequences, list) else sequences.duration
-        time = (duration + options.relaxation_time) * options.nshots * 1e-9
-        log.info(f"Minimal execution time (seq): {time}")
-
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
@@ -300,6 +300,11 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
+        options = self.settings.default(options)
+
+        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
+        log.info(f"Minimal execution time (seq): {time}")
+
         return self._execute("play", sequence, options, **kwargs)
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
@@ -311,6 +316,12 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
+        options = self.settings.default(options)
+
+        duration = sum(seq.duration for seq in sequences)
+        time = (duration + options.relaxation_time) * options.nshots * 1e-9
+        log.info(f"Minimal execution time (seq): {time}")
+
         try:
             return self._execute("play_sequences", sequences, options, **kwargs)
         except NotImplementedError:
