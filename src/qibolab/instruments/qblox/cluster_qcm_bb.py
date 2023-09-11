@@ -206,48 +206,40 @@ class ClusterQCM_BB(Instrument):
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
                 ]:
-                    self._set_device_parameter(
-                        target, "channel_map_path0_out0_en", value=False
-                    )  # Default after reboot = True
-                    self._set_device_parameter(
-                        target, "channel_map_path1_out1_en", value=False
-                    )  # Default after reboot = True
-                    self._set_device_parameter(
-                        target, "channel_map_path0_out2_en", value=False
-                    )  # Default after reboot = True
-                    self._set_device_parameter(
-                        target, "channel_map_path1_out3_en", value=False
-                    )  # Default after reboot = True
+                    self._set_device_parameter(target, "connect_out0", value="off")  # Default after reboot = True
+                    self._set_device_parameter(target, "connect_out1", value="off")  # Default after reboot = True
+                    self._set_device_parameter(target, "connect_out2", value="off")  # Default after reboot = True
+                    self._set_device_parameter(target, "connect_out3", value="off")  # Default after reboot = True
 
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                    "channel_map_path0_out0_en",
-                    value=True,
+                    "connect_out0",
+                    value="I",
                 )
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                    "channel_map_path1_out1_en",
-                    value=True,
+                    "connect_out1",
+                    value="Q",  # TODO: check if order of I and Q is right
                 )
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
-                    "channel_map_path0_out2_en",
-                    value=True,
+                    "connect_out2",
+                    value="I",
                 )
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
-                    "channel_map_path1_out3_en",
-                    value=True,
+                    "connect_out3",
+                    value="Q",
                 )
 
                 # on initialisation, disconnect all other sequencers from the ports
                 self._device_num_sequencers = len(self.device.sequencers)
                 for sequencer in range(4, self._device_num_sequencers):
                     target = self.device.sequencers[sequencer]
-                    self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
-                    self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
+                    self._set_device_parameter(target, "connect_out0", value="off")
+                    self._set_device_parameter(target, "connect_out1", value="off")
+                    self._set_device_parameter(target, "connect_out2", value="off")
+                    self._set_device_parameter(target, "connect_out3", value="off")
 
     def _set_device_parameter(self, target, *parameters, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -746,10 +738,10 @@ class ClusterQCM_BB(Instrument):
             self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
             self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
             if sequencer_number >= 4:  # Never disconnect default sequencers
-                self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
-                self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
-                self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
-                self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
+                self._set_device_parameter(target, "connect_out0", value="off")
+                self._set_device_parameter(target, "connect_out1", value="off")
+                self._set_device_parameter(target, "connect_out2", value="off")
+                self._set_device_parameter(target, "connect_out3", value="off")
 
         # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
         # the general offset goes to 0 (eventhough the parameter will still show the right value).
