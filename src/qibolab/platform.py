@@ -29,6 +29,12 @@ def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> Pu
         sequences (list): List of pulse sequences to unroll.
         relaxation_time (int): Time in ns to wait for the qubit to relax between
             playing different sequences.
+
+    Returns:
+        total_sequence (:class:`qibolab.pulses.PulseSequence`): Unrolled pulse sequence containing
+            multiple measurements.
+        readout_map (dict): Map from original readout pulse serials to the unrolled readout pulse
+            serials. Required to construct the results dictionary that is returned after execution.
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
