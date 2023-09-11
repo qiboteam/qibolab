@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional
 
 import networkx as nx
+from more_itertools import chunked
 from qibo.config import log, raise_error
 
 from qibolab.execution_parameters import ExecutionParameters
@@ -54,7 +55,7 @@ class Settings:
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
 
-    def default(self, options: ExecutionParameters):
+    def apply(self, options: ExecutionParameters):
         """Use default values for missing execution options."""
         if options.nshots is None:
             options = replace(options, nshots=self.nshots)
@@ -300,7 +301,7 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
-        options = self.settings.default(options)
+        options = self.settings.apply(options)
 
         time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
         log.info(f"Minimal execution time (seq): {time}")
@@ -316,7 +317,7 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
-        options = self.settings.default(options)
+        options = self.settings.apply(options)
 
         duration = sum(seq.duration for seq in sequences)
         time = (duration + options.relaxation_time) * options.nshots * 1e-9
@@ -325,14 +326,24 @@ class Platform:
         try:
             return self._execute("play_sequences", sequences, options, **kwargs)
         except NotImplementedError:
-            sequence, readouts = unroll_sequences(sequences, options.relaxation_time)
-            result = self._execute("play", sequence, options, **kwargs)
-            results = {}
-            for sequence in sequences:
-                for ro_pulse in sequence.ro_pulses:
-                    serial = ro_pulse.serial
-                    if serial not in results:
-                        results[ro_pulse.qubit] = results[serial] = [result[s] for s in readouts[serial]]
+            # find maximum batch size supported by controller
+            for instrument in self.instruments.values():
+                if isinstance(instrument, Controller):
+                    batch_size = instrument.UNROLLING_BATCH_SIZE
+
+            # find readout pulses
+            ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
+
+            results = defaultdict(list)
+            for batch in chunked(sequences, batch_size):
+                sequence, readouts = unroll_sequences(batch, options.relaxation_time)
+                result = self._execute("play", sequence, options, **kwargs)
+                for serial, new_serials in readouts.items():
+                    results[serial].extend(result[s] for s in new_serials)
+
+            for serial, qubit in ro_pulses.items():
+                results[qubit] = results[serial]
+
             return results
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):

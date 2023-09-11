@@ -59,6 +59,10 @@ class Controller(Instrument):
 
     PortType = Port
     """Class used by the instrument to instantiate ports."""
+    UNROLLING_BATCH_SIZE = None
+    """Maximum number of sequences that can be unrolled and played as a single sequence.
+    If ``None`` it is assumed that an infinite number of sequences can be unrolled in a single sequence.
+    """
 
     def __init__(self, name, address):
         super().__init__(name, address)
