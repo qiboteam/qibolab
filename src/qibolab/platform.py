@@ -144,7 +144,10 @@ class Platform:
 
                 # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
                 elif par == "drive_frequency":
-                    freq = int(value * 1e9)
+                    if isinstance(value, tuple):  # TODO: remove this branching after error bars propagation
+                        freq = int(value[0] * 1e9)
+                    else:
+                        freq = int(value * 1e9)
                     self.qubits[qubit].native_gates.RX.frequency = freq
                     self.qubits[qubit].drive_frequency = freq
 
