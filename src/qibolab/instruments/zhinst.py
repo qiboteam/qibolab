@@ -322,7 +322,7 @@ class Zurich(Controller):
         self.create_device_setup()
         # To fully remove logging #configure_logging=False
         # I strongly advise to set it to 20 to have time estimates of the experiment duration!
-        self.session = lo.Session(self.device_setup, log_level=30)
+        self.session = lo.Session(self.device_setup, log_level=20)
         self.device = self.session.connect(do_emulation=self.emulation)
         self.is_connected = True
 
@@ -503,7 +503,7 @@ class Zurich(Controller):
         self.create_exp(qubits, couplers, options)
 
     # pylint: disable=W0221
-    def play(self, qubits, sequence, options):
+    def play(self, qubits, couplers, sequence, options):
         """Play pulse sequence"""
         self.signal_map = {}
         dimensions = []
@@ -512,7 +512,7 @@ class Zurich(Controller):
 
         self.frequency_from_pulses(qubits, sequence)
 
-        self.experiment_flow(qubits, sequence, options)
+        self.experiment_flow(qubits, couplers, sequence, options)
         self.run_exp()
 
         # Get the results back
