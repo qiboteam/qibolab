@@ -194,11 +194,11 @@ class Platform:
 
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
-                
-                # Flux resonator spectroscopy 
+
+                # Flux resonator spectroscopy
                 elif par == "flux_to_bias":
                     self.qubits[qubit].flux_to_bias = float(value)
-                
+
                 elif par == "asymmetry":
                     self.qubits[qubit].asymmetry = float(value)
 
@@ -207,7 +207,7 @@ class Platform:
 
                 elif par == "brf":
                     self.qubits[qubit].brf = float(value)
-                
+
                 elif par == "ssf_brf":
                     self.qubits[qubit].ssf_brf = float(value)
 
