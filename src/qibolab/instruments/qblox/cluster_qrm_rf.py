@@ -209,7 +209,7 @@ class ClusterQRM_RF(Instrument):
                 # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
                 # fails, providing a misleading error message
 
-                # save reference to cluster
+                # save reference to cluster         CICLO WHILE PER ATTENDERE CONNESSIONE?
                 self._cluster = cluster
                 self.is_connected = True
 
@@ -236,7 +236,8 @@ class ClusterQRM_RF(Instrument):
                 # with the same parameters as the default in process_pulse_sequence()
                 target = self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]]
 
-                self._set_device_parameter(target, "channel_map_path0_out0_en", "channel_map_path1_out1_en", value=True)
+                self._set_device_parameter(target, "connect_out0", value="IQ")
+                self._set_device_parameter(target, "connect_acq", value="in0")
                 self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
                 self._set_device_parameter(
                     target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
@@ -255,9 +256,8 @@ class ClusterQRM_RF(Instrument):
                 for sequencer in range(1, self._device_num_sequencers):
                     self._set_device_parameter(
                         self.device.sequencers[sequencer],
-                        "channel_map_path0_out0_en",
-                        "channel_map_path1_out1_en",
-                        value=False,
+                        "connect_out0",
+                        value="off",
                     )  # Default after reboot = True
 
     def _set_device_parameter(self, target, *parameters, value):
@@ -868,8 +868,8 @@ class ClusterQRM_RF(Instrument):
             self._set_device_parameter(target, "marker_ovr_en", value=False)  # Default after reboot = False
             self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
             if sequencer_number >= 1:  # Never disconnect default sequencers
-                self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
-                self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
+                self._set_device_parameter(target, "connect_out0", value="off")
+                self._set_device_parameter(target, "connect_acq", value="in0")
 
         # Upload waveforms and program
         qblox_dict = {}

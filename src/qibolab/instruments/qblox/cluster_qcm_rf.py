@@ -222,27 +222,23 @@ class ClusterQCM_RF(Instrument):
 
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                    "channel_map_path0_out0_en",
-                    "channel_map_path1_out1_en",
-                    value=True,
+                    "connect_out0",
+                    value="IQ",
                 )
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                    "channel_map_path0_out2_en",
-                    "channel_map_path1_out3_en",
-                    value=False,
+                    "connect_out1",
+                    value="off",
                 )
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                    "channel_map_path0_out0_en",
-                    "channel_map_path1_out1_en",
-                    value=False,
+                    "connect_out1",
+                    value="IQ",
                 )
                 self._set_device_parameter(
                     self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                    "channel_map_path0_out2_en",
-                    "channel_map_path1_out3_en",
-                    value=True,
+                    "connect_out0",
+                    value="off",
                 )
 
                 # on initialisation, disconnect all other sequencers from the ports
@@ -250,15 +246,13 @@ class ClusterQCM_RF(Instrument):
                 for sequencer in range(2, self._device_num_sequencers):
                     self._set_device_parameter(
                         self.device.sequencers[sequencer],
-                        "channel_map_path0_out0_en",
-                        "channel_map_path1_out1_en",
-                        value=False,
+                        "connect_out0",
+                        value="off",
                     )  # Default after reboot = True
                     self._set_device_parameter(
                         self.device.sequencers[sequencer],
-                        "channel_map_path0_out2_en",
-                        "channel_map_path1_out3_en",
-                        value=False,
+                        "connect_out1",
+                        value="off",
                     )  # Default after reboot = True
 
     def _set_device_parameter(self, target, *parameters, value):
@@ -762,10 +756,8 @@ class ClusterQCM_RF(Instrument):
             self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
             self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
             if sequencer_number >= 2:  # Never disconnect default sequencers
-                self._set_device_parameter(target, "channel_map_path0_out0_en", value=False)
-                self._set_device_parameter(target, "channel_map_path0_out2_en", value=False)
-                self._set_device_parameter(target, "channel_map_path1_out1_en", value=False)
-                self._set_device_parameter(target, "channel_map_path1_out3_en", value=False)
+                self._set_device_parameter(target, "connect_out0", value="off")
+                self._set_device_parameter(target, "connect_out1", value="off")
 
         # Upload waveforms and program
         qblox_dict = {}
