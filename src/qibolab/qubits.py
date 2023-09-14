@@ -41,10 +41,10 @@ class Qubit:
     readout_frequency: int = 0  # this is the dressed frequency
     drive_frequency: int = 0
     anharmonicity: int = 0
-    
+
     sweetspot: float = 0.0
     flux_to_bias: float = 0.0
-    asymmetry:  float = 0.0
+    asymmetry: float = 0.0
     brf: float = 0.0
     ssf_brf: float = 0.0
     Ec: float = 0.0
