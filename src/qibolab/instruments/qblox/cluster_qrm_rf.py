@@ -209,7 +209,7 @@ class ClusterQRM_RF(Instrument):
                 # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
                 # fails, providing a misleading error message
 
-                # save reference to cluster         CICLO WHILE PER ATTENDERE CONNESSIONE?
+                # save reference to cluster
                 self._cluster = cluster
                 self.is_connected = True
 
