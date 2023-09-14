@@ -21,7 +21,7 @@ packages = [{ include = "qibolab", from = "src" }]
 include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
-python = ">=3.9.18,<3.12"
+python = ">=3.9,<3.12"
 qibo = ">=0.1.16,<0.3"
 networkx = "^3.0"
 more-itertools = "^9.1.0"
