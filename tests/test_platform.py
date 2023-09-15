@@ -22,7 +22,7 @@ from qibolab.serialize import dump_runcard, load_runcard
 
 from .conftest import find_instrument
 
-nshots = 1024
+NSHOTS = 1024
 
 
 def test_create_platform(platform):
@@ -123,7 +123,7 @@ def test_platform_execute_empty(qpu_platform):
     # an empty pulse sequence
     platform = qpu_platform
     sequence = PulseSequence()
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
@@ -133,7 +133,7 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
@@ -144,7 +144,7 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=8192 + 200)
     sequence = PulseSequence()
     sequence.add(pulse)
-    options = ExecutionParameters(nshots=nshots)
+    options = ExecutionParameters(nshots=NSHOTS)
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
             platform.execute_pulse_sequence(sequence, options)
@@ -163,7 +163,7 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     pulse = platform.create_qubit_drive_pulse(qubit, start=0, duration=2 * 8192 + 200)
     sequence = PulseSequence()
     sequence.add(pulse)
-    options = ExecutionParameters(nshots=nshots)
+    options = ExecutionParameters(nshots=NSHOTS)
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
             platform.execute_pulse_sequence(sequence, options)
@@ -182,7 +182,7 @@ def test_platform_execute_one_drive_one_readout(qpu_platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=200))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
@@ -195,7 +195,7 @@ def test_platform_execute_multiple_drive_pulses_one_readout(qpu_platform):
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=204, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=408, duration=400))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=808))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
@@ -210,7 +210,7 @@ def test_platform_execute_multiple_drive_pulses_one_readout_no_spacing(
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=400, duration=400))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
@@ -225,7 +225,7 @@ def test_platform_execute_multiple_overlaping_drive_pulses_one_readout(
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=200, duration=200))
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=50, duration=400))
     sequence.add(platform.create_qubit_readout_pulse(qubit, start=800))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
@@ -242,7 +242,7 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
     sequence.add(ro_pulse1)
     sequence.add(qd_pulse2)
     sequence.add(ro_pulse2)
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=NSHOTS))
 
 
 @pytest.mark.qpu
