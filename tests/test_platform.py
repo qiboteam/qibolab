@@ -91,6 +91,19 @@ def test_update(platform, par):
             assert value == float(getattr(qubit, par))
 
 
+@pytest.mark.parametrize("parameter, value", [("CZ_flux_amplitude", 0.5), ("CZ_flux_duration", 10)])
+def test_update_pairs(platform, parameter, value):
+    pairs = {q: pair for q, pair in platform.pairs.items() if pair.native_gates.CZ is not None}
+    updates = {parameter: {q: value for q in pairs}}
+    platform.update(updates)
+
+    for name, pair in pairs.items():
+        value = updates[parameter][name]
+        for pulse in pair.native_gates.CZ.pulses:
+            if pulse.qubit.name == name[1]:
+                assert value == value
+
+
 @pytest.fixture(scope="module")
 def qpu_platform(connected_platform):
     connected_platform.connect()
