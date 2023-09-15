@@ -107,6 +107,8 @@ class Platform:
                             - mean_gnd_states(V)
                             - mean_exc_states(V)
                             - beta(dimensionless)
+                            - CZ_flux_amplitude (dimensionless)
+                            - CZ_flux_duration (ns)
 
         """
         for par, values in updates.items():
@@ -156,9 +158,19 @@ class Platform:
                     if par == "drive_amplitude" or par == "amplitudes":
                         self.qubits[qubit].native_gates.RX.amplitude = amplitude
 
+                    if par == "CZ_flux_amplitude":
+                        for pulse in self.pairs[qubit].native_gates.CZ.pulses:
+                            if pulse.qubit.name == qubit[1]:
+                                pulse.amplitude = float(value)
+
                 # rabi_duration
                 elif par == "drive_length":
                     self.qubits[qubit].native_gates.RX.duration = int(value)
+
+                elif par == "CZ_flux_duration":
+                    for pulse in self.pairs[qubit].native_gates.CZ.pulses:
+                        if pulse.qubit.name == qubit[1]:
+                            pulse.duration = int(value)
 
                 # ramsey
                 elif par == "t2":
@@ -200,7 +212,6 @@ class Platform:
 
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
-
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
