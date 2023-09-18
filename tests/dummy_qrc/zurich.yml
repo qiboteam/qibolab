@@ -127,7 +127,7 @@ native_gates:
               type: qf
             - type: virtual_z
               phase: -3.630
-              qubit: 3
+              qubit: 1
 
             - duration: 32
               amplitude: 0

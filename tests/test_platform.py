@@ -16,6 +16,7 @@ from qibolab.backends import QibolabBackend
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
+from qibolab.native import VirtualZPulse
 from qibolab.platform import Platform
 from qibolab.pulses import PulseSequence, Rectangular
 from qibolab.serialize import dump_runcard, load_runcard
@@ -92,7 +93,7 @@ def test_update(platform, par):
 
 
 @pytest.mark.parametrize("parameter, value", [("CZ_flux_amplitude", 0.5), ("CZ_flux_duration", 10)])
-def test_update_pairs(platform, parameter, value):
+def test_update_cz(platform, parameter, value):
     pairs = {q: pair for q, pair in platform.pairs.items() if pair.native_gates.CZ is not None}
     updates = {parameter: {q: value for q in pairs}}
     platform.update(updates)
@@ -102,6 +103,17 @@ def test_update_pairs(platform, parameter, value):
         for pulse in pair.native_gates.CZ.pulses:
             if pulse.qubit.name == name[1]:
                 assert value == value
+
+
+def test_update_virtual_phases(platform):
+    pairs = {q: pair for q, pair in platform.pairs.items() if pair.native_gates.CZ is not None}
+    updates = {"virtual_z_phase": {q: {qubit_id: 0.01 for qubit_id in q} for q in pairs}}
+    platform.update(updates)
+
+    for name, pair in pairs.items():
+        for pulse in pair.native_gates.CZ.pulses:
+            if isinstance(pulse, VirtualZPulse):
+                assert pulse == VirtualZPulse(qubit=pulse.qubit, phase=0.01)
 
 
 @pytest.fixture(scope="module")

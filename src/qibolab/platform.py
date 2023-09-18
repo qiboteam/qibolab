@@ -10,7 +10,7 @@ from qibo.config import log, raise_error
 
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.native import NativeType
+from qibolab.native import NativeType, VirtualZPulse
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
@@ -212,6 +212,21 @@ class Platform:
 
                 elif par == "classifiers_hpars":
                     self.qubits[qubit].classifiers_hpars = value
+
+                elif par == "virtual_z_phase":
+                    virtual_z_pulses = {
+                        pulse.qubit.name: pulse
+                        for pulse in self.pairs[qubit].native_gates.CZ.pulses
+                        if isinstance(pulse, VirtualZPulse)
+                    }
+
+                    for qubit_id, phase in value.items():
+                        if qubit_id in virtual_z_pulses:
+                            virtual_z_pulses[qubit_id].phase = phase
+                        else:
+                            virtual_z_pulses[qubit_id] = VirtualZPulse(phase=phase, qubit=self.qubits[qubit_id])
+                            self.pairs[qubit].native_gates.CZ.pulses.append(virtual_z_pulses[qubit_id])
+
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
