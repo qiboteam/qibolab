@@ -12,7 +12,7 @@ from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibo.config import log
 
 from qibolab.instruments.abstract import InstrumentException
-from qibolab.instruments.oscillator import LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator, LocalOscillatorSettings
 
 MAX_RECONNECTION_ATTEMPTS = 10
 TIMEOUT = 10
@@ -22,8 +22,7 @@ class ERA(LocalOscillator):
     def __init__(self, name, address, ethernet=True, reference_clock_source="internal"):
         super().__init__(name, address)
         self.device: ERASynthPlusPlus = None
-        self._power: int = None
-        self._frequency: int = None
+        self.settings = LocalOscillatorSettings()
         self.ethernet = ethernet
         self._device_parameters = {}
         self.reference_clock_source = reference_clock_source
@@ -34,11 +33,11 @@ class ERA(LocalOscillator):
             if self.ethernet:
                 return int(self._get("frequency"))
             return self.device.get("frequency")
-        return self._frequency
+        return self.settings.frequency
 
     @frequency.setter
     def frequency(self, x):
-        self._frequency = x
+        self.settings.frequency = x
         if self.is_connected:
             self._set_device_parameter("frequency", x)
 
@@ -48,11 +47,11 @@ class ERA(LocalOscillator):
             if self.ethernet:
                 return float(self._get("amplitude"))
             return self.device.get("power")
-        return self._power
+        return self.settings.power
 
     @power.setter
     def power(self, x):
-        self._power = x
+        self.settings.power = x
         if self.is_connected:
             self._set_device_parameter("power", x)
 
@@ -78,10 +77,10 @@ class ERA(LocalOscillator):
         else:
             raise RuntimeError("There is an open connection to the instrument already")
         # set proper frequency and power if they were changed before connecting
-        if self._frequency is not None:
-            self._set_device_parameter("frequency", self._frequency)
-        if self._power is not None:
-            self._set_device_parameter("power", self._power)
+        if self.settings.frequency is not None:
+            self._set_device_parameter("frequency", self.settings.frequency)
+        if self.settings.power is not None:
+            self._set_device_parameter("power", self.settings.power)
 
     def _set_device_parameter(self, parameter: str, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -128,11 +127,11 @@ class ERA(LocalOscillator):
         if power is None:
             power = self.power
 
-        if self.is_connected:
-            # Load settings
-            self.power = power
-            self.frequency = frequency
+        # Load settings
+        self.power = power
+        self.frequency = frequency
 
+        if self.is_connected:
             if not "reference_clock_source" in kwargs:
                 kwargs["reference_clock_source"] = self.reference_clock_source
             if not self.ethernet:
@@ -151,8 +150,6 @@ class ERA(LocalOscillator):
                     self._post("reference_int_ext", 1)
                 else:
                     raise ValueError(f"Invalid reference clock source {kwargs['reference_clock_source']}")
-        else:
-            raise ConnectionError("There is no connection to the instrument")
 
     def start(self):
         self.on()

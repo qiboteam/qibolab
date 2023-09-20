@@ -9,15 +9,14 @@ import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 from qibo.config import log
 
 from qibolab.instruments.abstract import InstrumentException
-from qibolab.instruments.oscillator import LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator, LocalOscillatorSettings
 
 
 class SGS100A(LocalOscillator):
     def __init__(self, name, address, ref_osc_source="EXT"):
         super().__init__(name, address)
         self.device: LO_SGS100A = None
-        self._power: float = None
-        self._frequency: float = None
+        self.settings = LocalOscillatorSettings()
         self._ref_osc_source: str = None
         self.ref_osc_source = ref_osc_source
         self._device_parameters = {}
@@ -26,11 +25,11 @@ class SGS100A(LocalOscillator):
     def frequency(self):
         if self.is_connected:
             return self.device.get("frequency")
-        return self._frequency
+        return self.settings.frequency
 
     @frequency.setter
     def frequency(self, x):
-        self._frequency = x
+        self.settings.frequency = x
         if self.is_connected:
             self._set_device_parameter("frequency", x)
 
@@ -38,11 +37,11 @@ class SGS100A(LocalOscillator):
     def power(self):
         if self.is_connected:
             return self.device.get("power")
-        return self._power
+        return self.settings.power
 
     @power.setter
     def power(self, x):
-        self._power = x
+        self.settings.power = x
         if self.is_connected:
             self._set_device_parameter("power", x)
 
@@ -76,10 +75,10 @@ class SGS100A(LocalOscillator):
         else:
             raise RuntimeError("There is an open connection to the instrument already")
         # set proper frequency and power if they were changed before connecting
-        if self._frequency is not None:
-            self._set_device_parameter("frequency", self._frequency)
-        if self._power is not None:
-            self._set_device_parameter("power", self._power)
+        if self.settings.frequency is not None:
+            self._set_device_parameter("frequency", self.settings.frequency)
+        if self.settings.power is not None:
+            self._set_device_parameter("power", self.settings.power)
         self.device.ref_osc_source = self._ref_osc_source
 
     def _set_device_parameter(self, parameter: str, value):
@@ -127,13 +126,9 @@ class SGS100A(LocalOscillator):
         if ref_osc_source is None:
             ref_osc_source = self.ref_osc_source
 
-        if self.is_connected:
-            # Load settings
-            self.power = power
-            self.frequency = frequency
-            self.ref_osc_source = ref_osc_source
-        else:
-            raise ConnectionError("There is no connection to the instrument")
+        self.power = power
+        self.frequency = frequency
+        self.ref_osc_source = ref_osc_source
 
     def start(self):
         self.device.on()
