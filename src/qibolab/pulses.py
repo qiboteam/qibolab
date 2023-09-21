@@ -678,7 +678,7 @@ class Pulse:
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=0,
         type=PulseType.DRIVE,
         qubit=0,
     ):
@@ -1273,7 +1273,7 @@ class ReadoutPulse(Pulse):
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=0,
         qubit=0,
     ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
@@ -1330,7 +1330,7 @@ class DrivePulse(Pulse):
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=0,
         qubit=0,
     ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
@@ -1359,7 +1359,7 @@ class FluxPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, shape, channel, qubit=0):
+    def __init__(self, start, duration, amplitude, shape, channel=0, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
