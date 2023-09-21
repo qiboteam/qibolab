@@ -18,3 +18,15 @@ jobs:
       doctests: ${{ matrix.os == 'ubuntu-latest'}}
       poetry-extras: "--with docs,tests,analysis --all-extras"
     secrets: inherit
+  build311:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.11']
+    uses: qiboteam/workflows/.github/workflows/rules-poetry.yml@main
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      doctests: ${{ matrix.os == 'ubuntu-latest'}}
+      poetry-extras: "--with docs,tests,analysis --extras=qblox,rfsoc,zh"
+    secrets: inherit
