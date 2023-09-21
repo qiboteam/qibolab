@@ -38,18 +38,23 @@ class Qubit:
     name: QubitId
 
     bare_resonator_frequency: int = 0
-    readout_frequency: int = 0  # this is the dressed frequency
+    readout_frequency: int = 0
+    """ Readout dressed frequency"""
     drive_frequency: int = 0
     anharmonicity: int = 0
-
     sweetspot: float = 0.0
     flux_to_bias: float = 0.0
     asymmetry: float = 0.0
     brf: float = 0.0
+    """Bare resonator frequency obtained during resonator flux spectrosocopy"""
     ssf_brf: float = 0.0
-    Ec: float = 0.0
-    Ej: float = 0.0
+    """Estimated sweetspot qubit frequency divided by the bare_resonator_frequency"""
+    ec: float = 0.0
+    """Readout Charge Energy"""
+    ej: float = 0.0
+    """Readout Josephson Energy"""
     g: float = 0.0
+    """Readout coupling"""
 
     assigment_fidelity: float = 0.0
     peak_voltage: float = 0

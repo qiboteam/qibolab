@@ -214,11 +214,11 @@ class Platform:
                 elif par == "ssf_brf":
                     self.qubits[qubit].ssf_brf = float(value)
 
-                elif par == "Ec":
-                    self.qubits[qubit].Ec = float(value)
+                elif par == "ec":
+                    self.qubits[qubit].ec = float(value)
 
-                elif par == "Ej":
-                    self.qubits[qubit].Ej = float(value)
+                elif par == "ej":
+                    self.qubits[qubit].ej = float(value)
 
                 else:
                     raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
