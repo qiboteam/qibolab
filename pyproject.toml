@@ -53,7 +53,7 @@ qblox-instruments = "0.11.0"
 qcodes = "^0.37.0"
 qcodes_contrib_drivers = "0.18.0"
 qibosoq = ">=0.0.4,<0.2"
-qualang-tools = "^0.15.0"
+qualang-tools = { version = "^0.15.0", python = "<3.11"}
 laboneq = "==2.7.0"
 
 [tool.poetry.group.tests]
