@@ -46,7 +46,7 @@ class Qubit:
     flux_to_bias: float = 0.0
     asymmetry: float = 0.0
     brf: float = 0.0
-    """Bare resonator frequency obtained during resonator flux spectrosocopy"""
+    """Bare resonator frequency at sweetspot"""
     ssf_brf: float = 0.0
     """Estimated sweetspot qubit frequency divided by the bare_resonator_frequency"""
     Ec: float = 0.0
