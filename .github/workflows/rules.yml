@@ -28,5 +28,5 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       doctests: ${{ matrix.os == 'ubuntu-latest'}}
-      poetry-extras: "--with docs,tests,analysis --extras=qblox,rfsoc,zh"
+      poetry-extras: "--with docs,tests,analysis -E qblox -E rfsoc -E zh"
     secrets: inherit
