@@ -23,8 +23,6 @@ class SGS100A(LocalOscillator):
 
     @property
     def frequency(self):
-        if self.is_connected:
-            return self.device.get("frequency")
         return self.settings.frequency
 
     @frequency.setter
@@ -35,8 +33,6 @@ class SGS100A(LocalOscillator):
 
     @property
     def power(self):
-        if self.is_connected:
-            return self.device.get("power")
         return self.settings.power
 
     @power.setter
@@ -47,8 +43,6 @@ class SGS100A(LocalOscillator):
 
     @property
     def ref_osc_source(self):
-        if self.is_connected:
-            return self.device.ref_osc_source
         return self._ref_osc_source
 
     @ref_osc_source.setter
