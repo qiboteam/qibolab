@@ -49,9 +49,9 @@ class Qubit:
     """Bare resonator frequency obtained during resonator flux spectrosocopy"""
     ssf_brf: float = 0.0
     """Estimated sweetspot qubit frequency divided by the bare_resonator_frequency"""
-    ec: float = 0.0
+    Ec: float = 0.0
     """Readout Charge Energy"""
-    ej: float = 0.0
+    Ej: float = 0.0
     """Readout Josephson Energy"""
     g: float = 0.0
     """Readout coupling"""
