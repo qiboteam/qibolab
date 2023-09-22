@@ -319,12 +319,13 @@ class Zurich(Controller):
         self._ports = {}
 
     def connect(self):
-        self.create_device_setup()
-        # To fully remove logging #configure_logging=False
-        # I strongly advise to set it to 20 to have time estimates of the experiment duration!
-        self.session = lo.Session(self.device_setup, log_level=30)
-        self.device = self.session.connect(do_emulation=self.emulation)
-        self.is_connected = True
+        if self.is_connected is False:
+            self.create_device_setup()
+            # To fully remove logging #configure_logging=False
+            # I strongly advise to set it to 20 to have time estimates of the experiment duration!
+            self.session = lo.Session(self.device_setup, log_level=30)
+            self.device = self.session.connect(do_emulation=self.emulation)
+            self.is_connected = True
 
     def create_device_setup(self):
         """Loads the device setup to address the instruments"""
@@ -869,7 +870,7 @@ class Zurich(Controller):
                                 samples=samples[0],
                             )
                     else:
-                        log.info("I'm using dumb IW")
+                        # log.info("I'm using dumb IW")
                         # We adjust for smearing and remove smearing/2 at the end
                         exp.delay(
                             signal=f"acquire{q}",
