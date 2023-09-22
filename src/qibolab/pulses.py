@@ -21,6 +21,7 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
+    COUPLERFLUX = "cf"
 
 
 class Waveform:
@@ -1424,7 +1425,7 @@ class CouplerFluxPulse(Pulse):
             0,
             shape,
             channel,
-            type=PulseType.FLUX,
+            type=PulseType.COUPLERFLUX,
             coupler=coupler,
         )
 

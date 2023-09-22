@@ -139,7 +139,7 @@ def create(runcard_path=RUNCARD):
     # create qubit objects from runcard
     runcard = load_runcard(runcard_path)
     qubits, pairs = load_qubits(runcard)
-    couplers, coupler_pairs = load_couplers(runcard)
+    couplers = load_couplers(runcard)
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
@@ -168,4 +168,12 @@ def create(runcard_path=RUNCARD):
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
-    return Platform("zurich", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        "zurich",
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
+    )

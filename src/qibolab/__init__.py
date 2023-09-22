@@ -42,10 +42,6 @@ def create_platform(name, runcard=None):
         from qibolab.dummy import create_dummy
 
         return create_dummy()
-    if name == "dummy2":
-        from qibolab.dummy2 import create_dummy2
-
-        return create_dummy2()
 
     platform = get_platforms_path() / f"{name}.py"
     if not platform.exists():

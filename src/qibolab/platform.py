@@ -266,14 +266,19 @@ class Platform:
         log.info(f"Minimal execution time (seq): {time}")
 
         result = {}
+
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
+                if self.couplers:
+                    new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
+                else:
+                    new_result = getattr(instrument, method)(self.qubits, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
+
         return result
 
     def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
@@ -342,12 +347,16 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
+                if self.couplers:
+                    new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
+                else:
+                    new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
+
         return result
 
     def __call__(self, sequence, options):

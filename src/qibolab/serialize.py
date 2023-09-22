@@ -104,13 +104,6 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     }
 
 
-# # TODO: Couplers would need to be associated to qubits in the runcard
-# def dump_couplers(couplers: CouplerMap) -> dict:
-#     """Dump coupler and coupler_pair objects to a dictionary following the runcard format."""
-
-#     return {"couplers": couplers}
-
-
 def dump_runcard(platform: Platform, path: Path):
     """Serializes the platform and saves it as a yaml runcard file.
 
