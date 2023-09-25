@@ -26,7 +26,7 @@ def load_settings(runcard: dict) -> Settings:
     return Settings(**runcard["settings"])
 
 
-def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
+def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard
@@ -35,25 +35,34 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, QubitPairMap]:
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
 
+    couplers = None
+    if "coupler" in runcard["characterization"]:
+        couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
+
+    COUPLER_DISTRIBUTION = list(runcard["topology"].keys())
+    QUBIT_DISTRIBUTION = list(runcard["topology"].values())
+
     pairs = {}
-    for pair in runcard["topology"]:
+    coupler = None
+    for pair in QUBIT_DISTRIBUTION:
+        if couplers:
+            coupler = couplers[COUPLER_DISTRIBUTION[QUBIT_DISTRIBUTION.index(pair)]]
         pair = tuple(sorted(pair))
-        pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]])
+        pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], coupler)
 
-    return qubits, pairs
+    # # assign couplers to qubits_pairs
+    # for c in COUPLER_DISTRIBUTION:
+    #     qubits[c].flux_coupler[c] = couplers[c].name
+    #     qubits[2].flux_coupler[c] = couplers[c].name
 
+    # # assign qubits_pairs to couplers
+    # for c in COUPLER_DISTRIBUTION:
+    #     couplers[c].qubits = [qubits[c].name]
+    #     couplers[c].qubits.append(qubits[2].name)
 
-def load_couplers(runcard: dict) -> CouplerMap:
-    """Load couplers and pairs from the runcard.
+    qubits, pairs = register_gates(runcard, qubits, pairs, couplers)
 
-    Uses the native gate and characterization sections of the runcard
-    to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
-    and the the :class:`qibolab.coupler.Coupler`
-    objects.
-    """
-    couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
-
-    return couplers
+    return qubits, couplers, pairs
 
 
 # This creates the compiler error
@@ -92,11 +101,9 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     # add qubit characterization section
     characterization = {
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
-        "coupler": {},
     }
-    if couplers:
-        for coupler in couplers.values():
-            characterization["coupler"][coupler.name] = 1
+    if couplers is not None:
+        characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
 
     return {
         "native_gates": native_gates,

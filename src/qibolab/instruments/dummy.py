@@ -6,7 +6,6 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import CouplerId
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
@@ -76,7 +75,7 @@ class DummyInstrument(Controller):
     def play(
         self,
         qubits: Dict[QubitId, Qubit],
-        couplers: Dict[CouplerId, Coupler],
+        couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
@@ -93,7 +92,7 @@ class DummyInstrument(Controller):
     def play_sequences(
         self,
         qubits: Dict[QubitId, Qubit],
-        couplers: Dict[CouplerId, Coupler],
+        couplers: Dict[QubitId, Coupler],
         sequences: List[PulseSequence],
         options: ExecutionParameters,
     ):
@@ -112,7 +111,7 @@ class DummyInstrument(Controller):
     def sweep(
         self,
         qubits: Dict[QubitId, Qubit],
-        couplers: Dict[CouplerId, Coupler],
+        couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
         *sweepers: List[Sweeper],

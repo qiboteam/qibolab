@@ -4,7 +4,7 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qm import QMSim
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings, register_gates
+from qibolab.serialize import load_qubits, load_runcard, load_settings
 
 RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
 
@@ -68,7 +68,7 @@ def create(runcard_path=RUNCARD):
 
     # create qubit objects
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
     for q in [0, 1]:
@@ -92,7 +92,6 @@ def create(runcard_path=RUNCARD):
     for q in range(5):
         qubits[q].flux.max_bias = 0.2
 
-    qubits, pairs = register_gates(runcard, qubits, pairs)
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)

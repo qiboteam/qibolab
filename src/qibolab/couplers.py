@@ -2,9 +2,8 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
 
 from qibolab.channels import Channel
-from qibolab.qubits import Qubit, QubitId
 
-CouplerId = Union[str, int]
+QubitId = Union[str, int]
 """Type for Coupler names."""
 
 
@@ -14,24 +13,21 @@ class Coupler:
 
     Coupler objects are instantiated by :class:`qibolab.platforms.platform.Platform`
     but they are passed to instrument designs in order to play pulses.
-
-    Args:
-        name (int, str): Qubit number or name.
-
-        flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
-            send flux pulses to the qubit.
-        Other characterization parameters for the coupler, loaded from the runcard.
     """
 
-    name: CouplerId
-
-    # TODO: I think is not needed
-    frequency: int = 0
+    name: QubitId
+    "Coupler number or name."
 
     sweetspot: float = 0
+    "Coupler sweetspot to turn it on/off or off/on."
 
     flux: Optional[Channel] = None
-    qubits: Optional[Dict[QubitId, Qubit]] = field(default_factory=dict)
+    "flux (:class:`qibolab.platforms.utils.Channel`): Channel used to send flux pulses to the qubit."
+
+    # TODO: With topology or conectivity
+    # qubits: Optional[Dict[QubitId, Qubit]] = field(default_factory=dict)
+    qubits: Dict = field(default_factory=dict)
+    "Qubits the coupler acts on"
 
     @property
     def channels(self):

@@ -4,7 +4,7 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.platform import Platform
-from qibolab.serialize import load_couplers, load_qubits, load_settings, register_gates
+from qibolab.serialize import load_qubits, load_settings
 
 NAME = "dummy"
 RUNCARD = {
@@ -24,7 +24,7 @@ RUNCARD = {
         4,
     ],
     "settings": {"sampling_rate": 1000000000, "relaxation_time": 0, "nshots": 1024},
-    "topology": [[0, 2], [1, 2], [2, 3], [2, 4]],
+    "topology": {0: [0, 2], 1: [1, 2], 3: [2, 3], 4: [2, 4]},
     "native_gates": {
         "single_qubit": {
             0: {
@@ -287,6 +287,9 @@ RUNCARD = {
 }
 
 
+COUPLER_DISTRIBUTION = itertools.chain(range(0, 2), range(3, 5))
+
+
 def create_dummy():
     """Create a dummy platform using the dummy instrument."""
     # Create dummy controller
@@ -312,8 +315,7 @@ def create_dummy():
     channels["readout"].attenuation = 0
     channels["twpa"].local_oscillator = twpa_pump
 
-    qubits, pairs = load_qubits(RUNCARD)
-    couplers = load_couplers(RUNCARD)
+    qubits, couplers, pairs = load_qubits(RUNCARD)
     settings = load_settings(RUNCARD)
 
     # map channels to qubits
@@ -326,20 +328,6 @@ def create_dummy():
     # map channels to couplers
     for c, coupler in couplers.items():
         coupler.flux = channels[f"flux_coupler-{c}"]
-
-    # FIXME: Call couplers by its name
-    # assign couplers to qubits
-    for c in itertools.chain(range(0, 2), range(3, 5)):
-        qubits[c].flux_coupler[c] = couplers[c].name
-        qubits[2].flux_coupler[c] = couplers[c].name
-
-    # FIXME: Call couplers by its name
-    # assign qubits to couplers
-    for c in itertools.chain(range(0, 2), range(3, 5)):
-        couplers[c].qubits = [qubits[c].name]
-        couplers[c].qubits.append(qubits[2].name)
-
-    qubits, pairs = register_gates(RUNCARD, qubits, pairs, couplers)
 
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     instrument.sampling_rate = settings.sampling_rate * 1e-9

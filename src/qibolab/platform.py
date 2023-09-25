@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 import networkx as nx
 from qibo.config import log, raise_error
 
-from qibolab.couplers import Coupler, CouplerId
+from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.native import NativeType
@@ -18,7 +18,7 @@ from qibolab.sweeper import Sweeper
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
-CouplerMap = Dict[CouplerId, Coupler]
+CouplerMap = Dict[QubitId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
 
 
@@ -269,7 +269,7 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                if self.couplers:
+                if self.couplers is not None:
                     new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
                 else:
                     new_result = getattr(instrument, method)(self.qubits, sequences, options)
@@ -347,7 +347,7 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                if self.couplers:
+                if self.couplers is not None:
                     new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
                 else:
                     new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
@@ -385,12 +385,13 @@ class Platform:
         except KeyError:
             return list(self.couplers.keys())[coupler]
 
-    def get_coupler_pair(self, qubits):
+    def get_coupler_pair(self, qubit_pair):
         try:
-            for coupler in self.couplers.values():
-                # I add this as a subset as it may appear on the future
-                if set(qubits).issubset(coupler.qubits):
-                    return coupler.name
+            return qubit_pair.coupler.name
+            # for coupler in self.couplers.values():
+            #     # I add this as a subset as it may appear on the future
+            #     if set(qubits).issubset(coupler.qubits):
+            #         return coupler.name
         except AttributeError:
             return None
 

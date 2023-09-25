@@ -7,6 +7,7 @@ import numpy as np
 from qibo.config import log
 from scipy.signal import lfilter
 
+from qibolab.couplers import Coupler
 from qibolab.symbolic import intSymbolicExpression as se_int
 
 
@@ -21,7 +22,6 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
-    COUPLERFLUX = "cf"
 
 
 class Waveform:
@@ -635,7 +635,7 @@ class Pulse:
             See :py:mod:`qibolab.pulses` for list of available shapes.
         channel (int | str): the channel on which the pulse should be synthesised.
         type (PulseType | str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}
-        qubit (int): qubit associated with the pulse
+        qubit (int): qubit or coupler associated with the pulse
 
     Example:
         .. code-block:: python
@@ -682,7 +682,6 @@ class Pulse:
         channel,
         type=PulseType.DRIVE,
         qubit=0,
-        coupler=None,
     ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, type: PulseType | str  = PulseType.DRIVE, qubit: int | str = 0):
@@ -698,7 +697,6 @@ class Pulse:
         # self._channel: int | str = None
         self._type: PulseType = None
         self._qubit = None
-        self._coupler = None
         # self._qubit: int | str = None
         self._id: int = Pulse.count
         Pulse.count += 1
@@ -712,7 +710,6 @@ class Pulse:
         self.channel = channel
         self.type = type
         self.qubit = qubit
-        self.coupler = coupler
 
         self._if = 0
 
@@ -1404,58 +1401,10 @@ class FluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
-
-
-class CouplerFluxPulse(Pulse):
-    """Describes a coupler flux pulse.
-
-    Flux pulses have frequency and relative_phase equal to 0. Their i and q components are equal.
-    See :class:`qibolab.pulses.Pulse` for argument desciption.
-    """
-
-    def __init__(self, start, duration, amplitude, shape, channel, coupler=0):
-        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-        #                    channel: int | str, coupler: int | str = 0):
-        super().__init__(
-            start,
-            duration,
-            amplitude,
-            0,
-            0,
-            shape,
-            channel,
-            type=PulseType.COUPLERFLUX,
-            coupler=coupler,
-        )
-
-    @property
-    def envelope_waveform_i(self) -> Waveform:
-        return self._shape.envelope_waveform_i
-
-    @property
-    def envelope_waveform_q(self) -> Waveform:
-        return self._shape.envelope_waveform_i
-
-    @property
-    def envelope_waveforms(self):  #  -> tuple[Waveform, Waveform]:
-        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
-
-    @property
-    def modulated_waveform_i(self) -> Waveform:
-        return self._shape.envelope_waveform_i
-
-    @property
-    def modulated_waveform_q(self) -> Waveform:
-        return self._shape.envelope_waveform_i
-
-    @property
-    def modulated_waveforms(self):  #  -> tuple[Waveform, Waveform]:
-        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
-
-    @property
-    def serial(self):
-        return f"CouplerFluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.coupler})"
+        if isinstance(self.qubit, Coupler):
+            return f"Coupler_FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        else:
+            return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
 class SplitPulse(Pulse):
@@ -1860,7 +1809,7 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if not isinstance(pulse, CouplerFluxPulse):
+            if not "coupler" in pulse.channel:
                 if pulse.qubit in qubits:
                     new_pc.add(pulse)
         return new_pc
@@ -1870,8 +1819,8 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if isinstance(pulse, CouplerFluxPulse):
-                if pulse.coupler in couplers:
+            if "coupler" in pulse.channel:
+                if pulse.qubit in couplers:
                     new_pc.add(pulse)
         return new_pc
 

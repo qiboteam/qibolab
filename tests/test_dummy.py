@@ -37,7 +37,7 @@ def test_dummy_execute_pulse_sequence_couplers():
     )
     sequence.add(cz.get_qubit_pulses(ordered_pair[0]))
     sequence.add(cz.get_qubit_pulses(ordered_pair[1]))
-    sequence.add(cz.get_coupler_pulses(platform.get_coupler_pair(ordered_pair)))
+    sequence.add(cz.get_coupler_pulses(platform.get_coupler_pair(platform.pairs[ordered_pair])))
     sequence.add(platform.create_qubit_readout_pulse(0, 40))
     sequence.add(platform.create_qubit_readout_pulse(2, 40))
     options = ExecutionParameters(nshots=None)

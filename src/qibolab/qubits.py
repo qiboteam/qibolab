@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field, fields
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
+from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -11,7 +12,7 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 """Names of channels that belong to a qubit.
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates")
 """Qubit dataclass fields that are excluded by the ``characterization`` property."""
 
 
@@ -71,7 +72,6 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[Dict[QubitId, "Qubit"]] = field(default_factory=dict)
 
     classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
@@ -106,4 +106,7 @@ class QubitPair:
 
     qubit1: Qubit
     qubit2: Qubit
+
+    coupler: Optional[Coupler]
+
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)

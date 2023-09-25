@@ -6,7 +6,6 @@ from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
 from qibolab.pulses import (
     IIR,
     SNZ,
-    CouplerFluxPulse,
     Drag,
     FluxPulse,
     Gaussian,

@@ -6,13 +6,7 @@ from typing import List, Optional, Union
 from qibo import gates
 from qibo.config import raise_error
 
-from qibolab.pulses import (
-    CouplerFluxPulse,
-    FluxPulse,
-    PulseConstructor,
-    PulseSequence,
-    PulseType,
-)
+from qibolab.pulses import FluxPulse, PulseConstructor, PulseSequence, PulseType
 
 
 class NativeType(Flag):
@@ -150,7 +144,7 @@ class CouplerPulse:
             name (str): Name of the native gate (dictionary key).
             pulse (dict): Dictionary containing the parameters of the pulse implementing
                 the gate, as loaded from the runcard.
-            qubits (:class:`qibolab.platforms.abstract.Qubit`): Qubit that the
+            coupler (:class:`qibolab.platforms.abstract.Coupler`): Coupler that the
                 pulse is acting on
         """
         kwargs = pulse.copy()
@@ -179,13 +173,13 @@ class CouplerPulse:
         Returns:
             A :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
         """
-        return CouplerFluxPulse(
+        return FluxPulse(
             start + self.relative_start,
             self.duration,
             self.amplitude,
             self.shape,
             channel=self.coupler.flux.name,
-            coupler=self.coupler.name,
+            qubit=self.coupler.name,
         )
 
 
