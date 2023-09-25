@@ -332,9 +332,11 @@ the above runcard:
         # Create channel objects and assign to them the controller ports
         channels = ChannelMap()
         channels |= Channel("ch1out", port=instrument["o1"])
+        channels |= Channel("ch1in", port=instrument["i1"])
         channels |= Channel("ch2", port=instrument["o2"])
         channels |= Channel("ch3", port=instrument["o3"])
-        channels |= Channel("ch1in", port=instrument["i1"])
+        channels |= Channel("chf1", port=instrument["o4"])
+        channels |= Channel("chf2", port=instrument["o5"])
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
         runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
@@ -345,6 +347,7 @@ the above runcard:
             qubits[q].readout = channels["ch1out"]
             qubits[q].feedback = channels["ch1in"]
             qubits[q].drive = channels[f"ch{q + 2}"]
+            qubits[q].flux = channels[f"chf{q + 1}"]
 
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
