@@ -1181,7 +1181,7 @@ class Pulse:
         import matplotlib.pyplot as plt
         from matplotlib import gridspec
 
-        num_samples = len(self.shape.envelope_waveform_i.data)
+        num_samples = len(self.shape.envelope_waveform_i)
         time = self.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
         fig = plt.figure(figsize=(14, 5), dpi=200)
         gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
@@ -1962,7 +1962,7 @@ class PulseSequence:
                                 c=f"C{str(n)}",
                             )
                         else:
-                            num_samples = len(pulse.shape.modulated_waveform_i.data)
+                            num_samples = len(pulse.shape.modulated_waveform_i)
                             time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
                             ax.plot(
                                 time,
