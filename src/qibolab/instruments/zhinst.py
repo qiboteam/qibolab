@@ -853,7 +853,6 @@ class Zurich(Controller):
                         INSTRUMENTS_DATA_FOLDER / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
                     )
                     if weights_file.is_file():
-                        log.info("I'm using optimized IW")
                         samples = np.load(
                             weights_file,
                             allow_pickle=True,
@@ -870,7 +869,6 @@ class Zurich(Controller):
                                 samples=samples[0],
                             )
                     else:
-                        # log.info("I'm using dumb IW")
                         # We adjust for smearing and remove smearing/2 at the end
                         exp.delay(
                             signal=f"acquire{q}",
