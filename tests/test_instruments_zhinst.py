@@ -6,6 +6,7 @@ from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
 from qibolab.pulses import (
     IIR,
     SNZ,
+    CouplerFluxPulse,
     Drag,
     FluxPulse,
     Gaussian,
@@ -97,7 +98,7 @@ def test_zhsequence(dummy_qrc):
 def test_zhsequence_couplers(dummy_qrc):
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
-    qc_pulse = CouplerFluxPulse(0, 40, 0.05, Rectangular(), "ch_c0", coupler=3)
+    qc_pulse = CouplerFluxPulse(0, 40, 0.05, Rectangular(), "ch_c0", qubit=3)
     sequence = PulseSequence()
     sequence.add(qd_pulse)
     sequence.add(ro_pulse)
@@ -248,7 +249,7 @@ def test_experiment_execute_pulse_sequence_coupler(dummy_qrc):
             amplitude=1,
             shape=Rectangular(),
             channel=platform.couplers[c].flux.name,
-            coupler=c,
+            qubit=c,
         )
         sequence.add(cf_pulses[c])
 
@@ -418,7 +419,7 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
             amplitude=1,
             shape=Rectangular(),
             channel=platform.couplers[c].flux.name,
-            coupler=c,
+            qubit=c,
         )
         sequence.add(cf_pulses[c])
 

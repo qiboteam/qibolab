@@ -22,6 +22,7 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
+    COUPLERFLUX = "cf"
 
 
 class Waveform:
@@ -1407,6 +1408,56 @@ class FluxPulse(Pulse):
             return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
+class CouplerFluxPulse(Pulse):
+    """Describes a coupler flux pulse.
+    Flux pulses have frequency and relative_phase equal to 0. Their i and q components are equal.
+    See :class:`qibolab.pulses.Pulse` for argument desciption.
+    """
+
+    def __init__(self, start, duration, amplitude, shape, channel, qubit=0):
+        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
+        #                    channel: int | str, coupler: int | str = 0):
+        super().__init__(
+            start,
+            duration,
+            amplitude,
+            0,
+            0,
+            shape,
+            channel,
+            type=PulseType.COUPLERFLUX,
+            qubit=qubit,
+        )
+
+    @property
+    def envelope_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def envelope_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def envelope_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
+
+    @property
+    def modulated_waveform_i(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def modulated_waveform_q(self) -> Waveform:
+        return self._shape.envelope_waveform_i
+
+    @property
+    def modulated_waveforms(self):  #  -> tuple[Waveform, Waveform]:
+        return (self._shape.envelope_waveform_i, self._shape.envelope_waveform_i)
+
+    @property
+    def serial(self):
+        return f"CouplerFluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+
+
 class SplitPulse(Pulse):
     """A supporting class to represent sections or slices of a pulse."""
 
@@ -1809,7 +1860,7 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if not "coupler" in pulse.channel:
+            if not isinstance(pulse, CouplerFluxPulse):
                 if pulse.qubit in qubits:
                     new_pc.add(pulse)
         return new_pc
@@ -1819,7 +1870,7 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if "coupler" in pulse.channel:
+            if isinstance(pulse, CouplerFluxPulse):
                 if pulse.qubit in couplers:
                     new_pc.add(pulse)
         return new_pc

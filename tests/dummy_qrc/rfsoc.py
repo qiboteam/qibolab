@@ -33,7 +33,7 @@ def create(runcard_path=RUNCARD):
     channels["L3-18_ro"].local_oscillator = lo_era
 
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
     qubits[0].readout = channels["L3-18_ro"]
@@ -41,7 +41,6 @@ def create(runcard_path=RUNCARD):
     qubits[0].drive = channels["L3-18_qd"]
     qubits[0].flux = channels["L2-22_qf"]
 
-    qubits, pairs = register_gates(runcard, qubits, pairs)
     instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
     return Platform("rfsoc", qubits, pairs, instruments, settings, resonator_type="3D")

@@ -36,29 +36,22 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
 
     couplers = None
+    pairs = {}
     if "coupler" in runcard["characterization"]:
         couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
 
-    COUPLER_DISTRIBUTION = list(runcard["topology"].keys())
-    QUBIT_DISTRIBUTION = list(runcard["topology"].values())
+        COUPLER_DISTRIBUTION = list(runcard["topology"].keys())
+        QUBIT_DISTRIBUTION = list(runcard["topology"].values())
 
-    pairs = {}
-    coupler = None
-    for pair in QUBIT_DISTRIBUTION:
-        if couplers:
+        coupler = None
+        for pair in QUBIT_DISTRIBUTION:
             coupler = couplers[COUPLER_DISTRIBUTION[QUBIT_DISTRIBUTION.index(pair)]]
-        pair = tuple(sorted(pair))
-        pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], coupler)
-
-    # # assign couplers to qubits_pairs
-    # for c in COUPLER_DISTRIBUTION:
-    #     qubits[c].flux_coupler[c] = couplers[c].name
-    #     qubits[2].flux_coupler[c] = couplers[c].name
-
-    # # assign qubits_pairs to couplers
-    # for c in COUPLER_DISTRIBUTION:
-    #     couplers[c].qubits = [qubits[c].name]
-    #     couplers[c].qubits.append(qubits[2].name)
+            pair = tuple(sorted(pair))
+            pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], coupler)
+    else:
+        for pair in runcard["topology"]:
+            pair = tuple(sorted(pair))
+            pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], None)
 
     qubits, pairs = register_gates(runcard, qubits, pairs, couplers)
 
@@ -120,6 +113,7 @@ def dump_runcard(platform: Platform, path: Path):
         platform (qibolab.platform.Platform): The platform to be serialized.
         path (pathlib.Path): Path that the yaml file will be saved.
     """
+
     settings = {
         "nqubits": platform.nqubits,
         "qubits": list(platform.qubits),
@@ -128,6 +122,7 @@ def dump_runcard(platform: Platform, path: Path):
     }
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
+        settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
 
     settings.update(dump_qubits(platform.qubits, platform.pairs, platform.couplers))
     path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))

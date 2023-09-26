@@ -17,11 +17,9 @@ from laboneq.dsl.experiment.pulse_library import (
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
 from qibolab.instruments.port import Port
-from qibolab.pulses import FluxPulse, PulseSequence, PulseType
-from qibolab.qubits import Qubit
+from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter
 
 # this env var just needs to be set
@@ -552,7 +550,7 @@ class Zurich(Controller):
 
         # Fill the sequences with pulses according to their lines in temporal order
         for pulse in sequence:
-            if isinstance(pulse, FluxPulse) and isinstance(pulse.qubit, Coupler):
+            if isinstance(pulse, CouplerFluxPulse):
                 zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
             else:
                 zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
@@ -579,15 +577,15 @@ class Zurich(Controller):
                     for element in aux_list:
                         if pulse == element.pulse:
                             if isinstance(aux_list[aux_list.index(element)], ZhPulse):
-                                if isinstance(pulse.qubit, Qubit):
-                                    aux_list[aux_list.index(element)] = ZhSweeper(pulse, sweeper, qubits[pulse.qubit])
-                                else:
+                                if isinstance(pulse, CouplerFluxPulse):
                                     aux_list[aux_list.index(element)] = ZhSweeper(pulse, sweeper, couplers[pulse.qubit])
-                            elif isinstance(aux_list[aux_list.index(element)], ZhSweeper):
-                                if isinstance(pulse.qubit, Qubit):
-                                    aux_list[aux_list.index(element)].add_sweeper(sweeper, qubits[pulse.qubit])
                                 else:
+                                    aux_list[aux_list.index(element)] = ZhSweeper(pulse, sweeper, qubits[pulse.qubit])
+                            elif isinstance(aux_list[aux_list.index(element)], ZhSweeper):
+                                if isinstance(pulse, CouplerFluxPulse):
                                     aux_list[aux_list.index(element)].add_sweeper(sweeper, couplers[pulse.qubit])
+                                else:
+                                    aux_list[aux_list.index(element)].add_sweeper(sweeper, qubits[pulse.qubit])
 
             if sweeper.parameter.name in SWEEPER_BIAS:
                 for qubit in sweeper.qubits:
