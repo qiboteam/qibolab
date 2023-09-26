@@ -14,7 +14,7 @@ from qibolab.transpilers.pipeline import (
     assert_cirucuit_equivalence,
     assert_transpiling,
 )
-from qibolab.transpilers.placer import Random, Trivial
+from qibolab.transpilers.placer import Random, ReverseTraversal, Trivial
 from qibolab.transpilers.router import ShortestPaths
 from qibolab.transpilers.unroller import NativeGates
 
@@ -123,6 +123,31 @@ def test_custom_passes():
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
     custom_passes.append(Random(connectivity=star_connectivity()))
+    custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
+    custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
+    custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP)
+    circ = generate_random_circuit(nqubits=5, ngates=20)
+    transpiled_circ, final_layout = custom_pipeline(circ)
+    initial_layout = custom_pipeline.get_initial_layout()
+    assert_transpiling(
+        circuit=transpiled_circ,
+        connectivity=star_connectivity(),
+        initial_layout=initial_layout,
+        final_layout=final_layout,
+        native_gates=NativeType.iSWAP,
+    )
+
+
+def test_custom_passes_reverse():
+    custom_passes = []
+    custom_passes.append(Preprocessing(connectivity=star_connectivity()))
+    custom_passes.append(
+        ReverseTraversal(
+            connectivity=star_connectivity(),
+            routing_algorithm=ShortestPaths(connectivity=star_connectivity()),
+            depth=20,
+        )
+    )
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
     custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
     custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP)
