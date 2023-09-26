@@ -28,6 +28,7 @@ class QMSim(QMOPX):
     def __post_init__(self):
         """Convert simulation duration from ns to clock cycles."""
         self.simulation_duration //= 4
+        self.settings = None
 
     def connect(self):
         host, port = self.address.split(":")

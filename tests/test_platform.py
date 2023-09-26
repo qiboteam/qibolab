@@ -55,6 +55,10 @@ def test_dump_runcard(platform):
     for qubit, values in target_char.items():
         for name, value in values.items():
             assert final_char[qubit][name] == value
+    # assert instrument section is dumped properly in the runcard
+    target_instruments = target_runcard.pop("instruments")
+    final_instruments = final_runcard.pop("instruments")
+    assert final_instruments == target_instruments
     os.remove(path)
 
 
