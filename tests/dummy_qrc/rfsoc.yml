@@ -5,6 +5,13 @@ settings:
     nshots: 1024
     relaxation_time: 100000
     sampling_rate: 9830400000
+instruments:
+    twpa_a:
+        frequency: 6_200_000_000
+        power: -1
+    ErasynthLO:
+        frequency: 0
+        power: 0
 native_gates:
     single_qubit:
         0:

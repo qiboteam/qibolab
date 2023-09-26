@@ -9,6 +9,20 @@ qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
 
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
+instruments:
+    lo_readout:
+        frequency: 5_500_000_000
+        power: null
+    lo_drive_0:
+        frequency: 4_200_000_000
+        power: null
+    lo_drive_1:
+        frequency: 4_600_000_000
+        power: null
+    lo_drive_2:
+        frequency: 4_800_000_000
+        power: null
+
 native_gates:
     single_qubit:
         0: # qubit number
