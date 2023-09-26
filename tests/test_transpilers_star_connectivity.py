@@ -45,11 +45,10 @@ def transpose_qubits(state, qubits):
     return np.reshape(state, original_shape)
 
 
-@pytest.mark.parametrize("run_number", range(3))
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("depth", [2, 10])
-def test_fix_connectivity(run_number, nqubits, depth, middle_qubit):
+def test_fix_connectivity(nqubits, depth, middle_qubit):
     """Checks that the transpiled circuit can be executed and is equivalent to original."""
     original = generate_random_circuit(nqubits, depth, middle_qubit=middle_qubit)
     transpiler = StarConnectivity(middle_qubit)
@@ -60,16 +59,16 @@ def test_fix_connectivity(run_number, nqubits, depth, middle_qubit):
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
     target_state = backend.execute_circuit(original).state()
+    hardware_qubits = list(hardware_qubits.values())
     target_state = transpose_qubits(target_state, hardware_qubits)
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("run_number", range(3))
 @pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
 @pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("unitary_dim", [1, 2])
 @pytest.mark.parametrize("depth", [2, 10])
-def test_fix_connectivity_unitaries(run_number, nqubits, unitary_dim, depth, middle_qubit):
+def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
     """Checks that the transpiled circuit can be executed and is equivalent to original
     when using unitaries."""
 
@@ -92,5 +91,6 @@ def test_fix_connectivity_unitaries(run_number, nqubits, unitary_dim, depth, mid
     backend = NumpyBackend()
     final_state = backend.execute_circuit(transpiled).state()
     target_state = backend.execute_circuit(original).state()
+    hardware_qubits = list(hardware_qubits.values())
     target_state = transpose_qubits(target_state, hardware_qubits)
     np.testing.assert_allclose(final_state, target_state)

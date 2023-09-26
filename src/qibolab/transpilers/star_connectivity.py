@@ -78,7 +78,7 @@ class StarConnectivity(Router):
         self.tlog("Circuit respects connectivity.")
         return True
 
-    def __call__(self, circuit, initial_layout):
+    def __call__(self, circuit, initial_layout={}):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -91,8 +91,6 @@ class StarConnectivity(Router):
             hardware_qubits (list): List that maps logical to hardware qubits.
                 This is required for transforming final measurements.
         """
-        # TODO: Change this to a more lightweight form that takes a list of pairs
-        # instead of the whole circuit.
 
         middle_qubit = self.middle_qubit
         # find the number of qubits for hardware circuit
@@ -158,5 +156,5 @@ class StarConnectivity(Router):
                 new.add(gate.__class__(*qubits, **gate.init_kwargs))
             if len(qubits) == 2:
                 add_swap = True
-
-        return new, hardware_qubits
+        hardware_qubits_keys = ["q" + str(i) for i in range(5)]
+        return new, dict(zip(hardware_qubits_keys, hardware_qubits))
