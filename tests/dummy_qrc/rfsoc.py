@@ -5,7 +5,12 @@ from qibolab.instruments.erasynth import ERA
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import (
+    load_instrument_settings,
+    load_qubits,
+    load_runcard,
+    load_settings,
+)
 
 RUNCARD = pathlib.Path(__file__).parent / "rfsoc.yml"
 
@@ -27,9 +32,6 @@ def create(runcard_path=RUNCARD):
 
     lo_twpa = SGS100A("twpa_a", "192.168.0.32")
     lo_era = ERA("ErasynthLO", "192.168.0.212", ethernet=True)
-    lo_twpa.frequency = 6_200_000_000
-    lo_twpa.power = -1
-    lo_era.frequency = 0
     channels["L3-18_ro"].local_oscillator = lo_era
 
     runcard = load_runcard(runcard_path)
@@ -43,4 +45,5 @@ def create(runcard_path=RUNCARD):
 
     instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
+    instruments = load_instrument_settings(runcard, instruments)
     return Platform("rfsoc", qubits, pairs, instruments, settings, resonator_type="3D")

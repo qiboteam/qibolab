@@ -12,7 +12,7 @@ import yaml
 
 from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import CouplerMap, Platform, QubitMap, QubitPairMap, Settings
+from qibolab.platform import CouplerMap, InstrumentMap, Platform, QubitMap, QubitPairMap, Settings
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -80,6 +80,12 @@ def register_gates(
     return qubits, pairs
 
 
+def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> InstrumentMap:
+    """Setup instruments according to the settings given in the runcard."""
+    for name, settings in runcard.get("instruments", {}).items():
+        instruments[name].setup(**settings)
+    return instruments
+
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
     native_gates = {
@@ -104,6 +110,13 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     }
 
 
+def dump_instruments(instruments: InstrumentMap) -> dict:
+    """Dump instrument settings to a dictionary following the runcard format."""
+    return {
+        name: asdict(instrument.settings) for name, instrument in instruments.items() if instrument.settings is not None
+    }
+
+
 def dump_runcard(platform: Platform, path: Path):
     """Serializes the platform and saves it as a yaml runcard file.
 
@@ -116,9 +129,10 @@ def dump_runcard(platform: Platform, path: Path):
 
     settings = {
         "nqubits": platform.nqubits,
-        "qubits": list(platform.qubits),
         "settings": asdict(platform.settings),
+        "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.pairs],
+        "instruments": dump_instruments(platform.instruments),
     }
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)

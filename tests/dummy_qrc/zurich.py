@@ -7,7 +7,12 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import (
+    load_instrument_settings,
+    load_qubits,
+    load_runcard,
+    load_settings,
+)
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
 
@@ -117,13 +122,7 @@ def create(runcard_path=RUNCARD):
         channels[f"L4-{i}"].power_range = 0.8
 
     # Instantiate local oscillators
-    local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
-
-    # Set Dummy LO parameters (Map only the two by two oscillators)
-    local_oscillators[0].frequency = 5_500_000_000  # For SG0 (Readout)
-    local_oscillators[1].frequency = 4_200_000_000  # For SG1 and SG2 (Drive)
-    local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4 (Drive)
-    local_oscillators[3].frequency = 4_800_000_000  # For SG5 and SG6 (Drive)
+    local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(3)]]
 
     # Map LOs to channels
     ch_to_lo = {"L2-7": 0, "L4-15": 1, "L4-16": 1, "L4-17": 2, "L4-18": 2, "L4-19": 3}
@@ -154,6 +153,7 @@ def create(runcard_path=RUNCARD):
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
+    instruments = load_instrument_settings(runcard, instruments)
     return Platform(
         "zurich",
         qubits,
