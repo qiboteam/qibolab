@@ -56,6 +56,13 @@ def generate_random_circuit(nqubits, ngates, seed=None):
     return circuit
 
 
+def small_circuit():
+    circuit = Circuit(2)
+    circuit.add(gates.H(0))
+    circuit.add(gates.CZ(0, 1))
+    return circuit
+
+
 def star_connectivity():
     Q = ["q" + str(i) for i in range(5)]
     chip = nx.Graph()
@@ -119,14 +126,14 @@ def test_is_satisfied_false_connectivity():
     assert not default_transpiler.is_satisfied(circuit)
 
 
-def test_custom_passes():
+@pytest.mark.parametrize("circ", [generate_random_circuit(nqubits=5, ngates=20), small_circuit()])
+def test_custom_passes(circ):
     custom_passes = []
     custom_passes.append(Preprocessing(connectivity=star_connectivity()))
     custom_passes.append(Random(connectivity=star_connectivity()))
     custom_passes.append(ShortestPaths(connectivity=star_connectivity()))
     custom_passes.append(NativeGates(two_qubit_natives=NativeType.iSWAP))
     custom_pipeline = Passes(custom_passes, connectivity=star_connectivity(), native_gates=NativeType.iSWAP)
-    circ = generate_random_circuit(nqubits=5, ngates=20)
     transpiled_circ, final_layout = custom_pipeline(circ)
     initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(

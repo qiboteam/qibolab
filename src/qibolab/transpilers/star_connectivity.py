@@ -78,7 +78,7 @@ class StarConnectivity(Router):
         self.tlog("Circuit respects connectivity.")
         return True
 
-    def __call__(self, circuit, initial_layout={}):
+    def __call__(self, circuit, initial_layout=None):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
