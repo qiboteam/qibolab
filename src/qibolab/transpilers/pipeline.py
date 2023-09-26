@@ -4,19 +4,13 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
 from qibolab.native import NativeType
-from qibolab.transpilers.abstract import Optimizer, Placer, Router, Unroller
-from qibolab.transpilers.optimizer import Preprocessing
-from qibolab.transpilers.placer import Trivial, assert_placement
-from qibolab.transpilers.router import (
-    ConnectivityError,
-    ShortestPaths,
-    assert_connectivity,
-)
-from qibolab.transpilers.unroller import (
-    DecompositionError,
-    NativeGates,
-    assert_decomposition,
-)
+
+from .abstract import Optimizer, Placer, Router, Unroller
+from .optimizer import Preprocessing
+from .placer import Trivial, assert_placement
+from .router import ConnectivityError, assert_connectivity
+from .star_connectivity import StarConnectivity
+from .unroller import DecompositionError, NativeGates, assert_decomposition
 
 
 class TranspilerPipelineError(Exception):
@@ -78,8 +72,10 @@ class Passes:
         default_passes.append(Preprocessing(connectivity=connectivity))
         # default placer pass
         default_passes.append(Trivial(connectivity=connectivity))
+        # default_passes.append(ReverseTraversal(connectivity=connectivity, routing_algorithm=ShortestPaths(connectivity), depth=5))
         # default router pass
-        default_passes.append(ShortestPaths(connectivity=connectivity))
+        default_passes.append(StarConnectivity())
+        # default_passes.append(ShortestPaths(connectivity=connectivity))
         # default unroller pass
         default_passes.append(NativeGates(two_qubit_natives=self.native_gates))
         return default_passes
