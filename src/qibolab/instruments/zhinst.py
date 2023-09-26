@@ -317,6 +317,7 @@ class Zurich(Controller):
         "Storing sweepers"
         # Improve the storing of multiple sweeps
         self._ports = {}
+        self.settings = None
 
     def connect(self):
         self.create_device_setup()
