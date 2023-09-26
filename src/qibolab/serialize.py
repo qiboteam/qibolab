@@ -12,7 +12,14 @@ import yaml
 
 from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import CouplerMap, InstrumentMap, Platform, QubitMap, QubitPairMap, Settings
+from qibolab.platform import (
+    CouplerMap,
+    InstrumentMap,
+    Platform,
+    QubitMap,
+    QubitPairMap,
+    Settings,
+)
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -85,6 +92,7 @@ def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> Instr
     for name, settings in runcard.get("instruments", {}).items():
         instruments[name].setup(**settings)
     return instruments
+
 
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
