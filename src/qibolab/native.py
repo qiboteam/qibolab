@@ -226,12 +226,8 @@ class NativeSequence:
             pulse = pulse.copy()
             pulse_type = pulse.pop("type")
             if pulse_type == "coupler":
-                coupler = couplers[pulse.pop("coupler")]
-                duration = pulse["duration"]
-                amplitude = pulse["amplitude"]
-                shape = pulse["shape"]
-                relative_start = pulse["relative_start"]
-                coupler_pulses.append(CouplerPulse(duration, amplitude, shape, coupler, relative_start))
+                pulse["coupler"] = couplers[pulse.pop("coupler")]
+                coupler_pulses.append(CouplerPulse(**pulse))
             else:
                 qubit = qubits[pulse.pop("qubit")]
                 if pulse_type == "virtual_z":

@@ -12,7 +12,14 @@ import yaml
 
 from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import CouplerMap, InstrumentMap, Platform, QubitMap, QubitPairMap, Settings
+from qibolab.platform import (
+    CouplerMap,
+    InstrumentMap,
+    Platform,
+    QubitMap,
+    QubitPairMap,
+    Settings,
+)
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -40,14 +47,9 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     if "coupler" in runcard["characterization"]:
         couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
 
-        COUPLER_DISTRIBUTION = list(runcard["topology"].keys())
-        QUBIT_DISTRIBUTION = list(runcard["topology"].values())
-
-        coupler = None
-        for pair in QUBIT_DISTRIBUTION:
-            coupler = couplers[COUPLER_DISTRIBUTION[QUBIT_DISTRIBUTION.index(pair)]]
+        for c, pair in runcard["topology"].items():
             pair = tuple(sorted(pair))
-            pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], coupler)
+            pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], couplers[c])
     else:
         for pair in runcard["topology"]:
             pair = tuple(sorted(pair))
@@ -85,6 +87,7 @@ def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> Instr
     for name, settings in runcard.get("instruments", {}).items():
         instruments[name].setup(**settings)
     return instruments
+
 
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""

@@ -107,6 +107,6 @@ class QubitPair:
     qubit1: Qubit
     qubit2: Qubit
 
-    coupler: Optional[Coupler]
+    coupler: Optional[Coupler] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)

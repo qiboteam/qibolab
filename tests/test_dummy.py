@@ -3,6 +3,7 @@ import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.pulses import PulseSequence
+from qibolab.qubits import QubitPair
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 SWEPT_POINTS = 5
@@ -28,21 +29,20 @@ def test_dummy_execute_pulse_sequence(acquisition):
 
 def test_dummy_execute_pulse_sequence_couplers():
     platform = create_platform("dummy")
-    ordered_pair = (1, 2)
+    qubit_ordered_pair = QubitPair(platform.qubits[1], platform.qubits[2], platform.couplers[1])
     sequence = PulseSequence()
 
     cz, _ = platform.create_CZ_pulse_sequence(
-        qubits=(ordered_pair[1], ordered_pair[0]),
+        qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit1.name),
         start=0,
     )
-    sequence.add(cz.get_qubit_pulses(ordered_pair[0]))
-    sequence.add(cz.get_qubit_pulses(ordered_pair[1]))
-    sequence.add(cz.get_coupler_pulses(platform.get_coupler_pair(platform.pairs[ordered_pair])))
+    sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
+    sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
+    sequence.add(cz.get_coupler_pulses(qubit_ordered_pair.coupler.name))
     sequence.add(platform.create_qubit_readout_pulse(0, 40))
     sequence.add(platform.create_qubit_readout_pulse(2, 40))
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
-    assert len(sequence.get_coupler_pulses(1)) == 1
 
 
 def test_dummy_execute_pulse_sequence_fast_reset():

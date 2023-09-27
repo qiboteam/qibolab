@@ -373,28 +373,6 @@ class Platform:
         except KeyError:
             return list(self.qubits.keys())[qubit]
 
-    # TODO: Similar for couplers (I think this won't be needed)
-    def get_coupler(self, coupler):
-        """Return the name of the physical coupler corresponding to a logical coupler.
-
-        Temporary fix for the compiler to work for platforms where the couplers
-        are not named as 0, 1, 2, ...
-        """
-        try:
-            return self.couplers[coupler].name
-        except KeyError:
-            return list(self.couplers.keys())[coupler]
-
-    def get_coupler_pair(self, qubit_pair):
-        try:
-            return qubit_pair.coupler.name
-            # for coupler in self.couplers.values():
-            #     # I add this as a subset as it may appear on the future
-            #     if set(qubits).issubset(coupler.qubits):
-            #         return coupler.name
-        except AttributeError:
-            return None
-
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
