@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from qibo import gates
 from qibo.config import log, raise_error
 
@@ -25,14 +23,9 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
-@dataclass
 class StarConnectivity(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
-
     This transpiler produces a circuit that respects the following connectivity:
-
-
-    .. code-block:: text
 
              q
              |
@@ -40,12 +33,17 @@ class StarConnectivity(Router):
              |
              q
 
-    by adding SWAP gates when needed. It does not translate gates to native.
+    by adding SWAP gates when needed.
+
+    Args:
+        connectivity (networkx.Graph): chip connectivity, not used for this transpiler.
+        middle_qubit (int): qubit id of the qubit that is in the middle of the star.
+        verbose (bool): print info messages.
     """
 
-    middle_qubit: int = 2
-    """Qubit id of the qubit that is in the middle of the star."""
-    verbose: bool = False
+    def __init__(self, connectivity=None, middle_qubit=2, verbose=False):
+        self.middle_qubit = middle_qubit
+        self.verbose = verbose
 
     def tlog(self, message):
         """Print messages only if ``verbose`` was set to ``True``."""

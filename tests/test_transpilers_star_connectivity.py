@@ -45,13 +45,14 @@ def transpose_qubits(state, qubits):
     return np.reshape(state, original_shape)
 
 
+@pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("nqubits", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("middle_qubit", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("depth", [2, 10])
-def test_fix_connectivity(nqubits, depth, middle_qubit):
+def test_fix_connectivity(nqubits, depth, middle_qubit, verbose):
     """Checks that the transpiled circuit can be executed and is equivalent to original."""
     original = generate_random_circuit(nqubits, depth, middle_qubit=middle_qubit)
-    transpiler = StarConnectivity(middle_qubit)
+    transpiler = StarConnectivity(middle_qubit=middle_qubit, verbose=verbose)
     transpiled, hardware_qubits = transpiler(original)
     # check that transpiled circuit can be executed
     assert transpiler.is_satisfied(transpiled)
@@ -83,7 +84,7 @@ def test_fix_connectivity_unitaries(nqubits, unitary_dim, depth, middle_qubit):
         qubits = pairs[int(np.random.randint(len(pairs)))]
         original.add(gates.Unitary(random_unitary(unitary_dim), *qubits))
 
-    transpiler = StarConnectivity(middle_qubit)
+    transpiler = StarConnectivity(middle_qubit=middle_qubit)
     transpiled, hardware_qubits = transpiler(original)
     # check that transpiled circuit can be executed
     assert transpiler.is_satisfied(transpiled)
