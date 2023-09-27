@@ -6,7 +6,7 @@ from qibo.models import Circuit
 
 from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
-from qibolab.transpilers import Pipeline
+from qibolab.transpilers.pipeline import Passes
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
@@ -31,13 +31,9 @@ def test_u3_sim_agreement():
 
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
-    transpiler = Pipeline.default(platform.two_qubit_native_types)
+    transpiler = Passes(connectivity=platform.topology)
     compiler = Compiler.default()
-    if transpiler.is_satisfied(circuit):
-        native_circuit = circuit
-    else:
-        native_circuit, _ = transpiler(circuit)
-
+    native_circuit, _ = transpiler(circuit)
     sequence, _ = compiler.compile(native_circuit, platform)
     return sequence
 
@@ -155,9 +151,9 @@ def test_cz_to_sequence(platform):
     if (1, 2) not in platform.pairs:
         pytest.skip(f"Skipping CZ test for {platform} because pair (1, 2) is not available.")
 
-    circuit = Circuit(2)
+    circuit = Circuit(3)
     circuit.add(gates.X(0))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.CZ(1, 2))
 
     sequence = compile_circuit(circuit, platform)
     test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
