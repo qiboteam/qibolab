@@ -188,6 +188,7 @@ class SingleQubitNatives:
     """Container with the native single-qubit gates acting on a specific qubit."""
 
     RX: Optional[NativePulse] = None
+    RX12: Optional[NativePulse] = None
     MZ: Optional[NativePulse] = None
 
     @property
