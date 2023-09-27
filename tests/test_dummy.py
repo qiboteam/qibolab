@@ -33,7 +33,7 @@ def test_dummy_execute_pulse_sequence_couplers():
     sequence = PulseSequence()
 
     cz, _ = platform.create_CZ_pulse_sequence(
-        qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit1.name),
+        qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
         start=0,
     )
     sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
