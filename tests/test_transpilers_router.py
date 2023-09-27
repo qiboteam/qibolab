@@ -11,7 +11,7 @@ from qibolab.transpilers.placer import (
     Trivial,
     assert_placement,
 )
-from qibolab.transpilers.routing import (
+from qibolab.transpilers.router import (
     ConnectivityError,
     ShortestPaths,
     assert_connectivity,
@@ -137,6 +137,7 @@ def test_random_circuits_5q(gates, qubits):
     assert transpiler.added_swaps >= 0
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
+    assert gates + transpiler.added_swaps == transpiled_circuit.ngates
 
 
 def q21_connectivity():
@@ -180,6 +181,7 @@ def test_random_circuits_21q(gates, qubits, split):
     assert transpiler.added_swaps >= 0
     assert_connectivity(q21_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
+    assert gates + transpiler.added_swaps == transpiled_circuit.ngates
 
 
 def star_circuit():
@@ -209,3 +211,18 @@ def test_star_circuit_custom_map():
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
     assert final_qubit_map == {"q0": 1, "q1": 2, "q2": 0, "q3": 3, "q4": 4}
+
+
+def test_routing_with_measurements():
+    placer = Trivial(connectivity=star_connectivity())
+    circuit = Circuit(5)
+    circuit.add(gates.CNOT(0, 1))
+    circuit.add(gates.M(0, 2, 3))
+    initial_layout = placer(circuit=circuit)
+    transpiler = ShortestPaths(connectivity=star_connectivity())
+    transpiled_circuit, _ = transpiler(circuit, initial_layout)
+    print(transpiled_circuit.draw())
+    print(circuit.draw())
+    assert transpiled_circuit.ngates == 3
+    measured_qubits = transpiled_circuit.queue[2].qubits
+    assert measured_qubits == (0, 1, 3)
