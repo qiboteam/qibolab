@@ -163,7 +163,6 @@ characterization:
     single_qubit:
         0:
             readout_frequency: 5_229_200_000 #5_233_200_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_095_830_788 #4_093_830_788
             T1: 0.0
             T2: 0.0
@@ -182,7 +181,6 @@ characterization:
 
         1:
             readout_frequency: 4_931_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_170_000_000
             T1: 0.
             T2: 0.
@@ -191,7 +189,6 @@ characterization:
             mean_exc_states: [0, 0]
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
             T1: 0.
             T2: 0.
@@ -204,7 +201,6 @@ characterization:
             # alpha: 208 MHz
         3:
             readout_frequency: 5_783_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_100_000_000
             T1: 0.
             T2: 0.
@@ -213,7 +209,6 @@ characterization:
             mean_exc_states: [0, 0]
         4:
             readout_frequency: 5_515_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_196_800_000
             T1: 0.
             T2: 0.
