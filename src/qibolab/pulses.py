@@ -1818,7 +1818,7 @@ class PulseSequence:
                     new_pc.add(pulse)
         return new_pc
 
-    def get_coupler_pulses(self, *couplers):
+    def coupler_pulses(self, *couplers):
         """Returns a new PulseSequence containing only the pulses on a specific set of couplers."""
 
         new_pc = PulseSequence()

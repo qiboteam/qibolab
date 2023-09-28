@@ -9,7 +9,7 @@ from qibolab.serialize import load_qubits, load_settings
 NAME = "dummy"
 RUNCARD = {
     "nqubits": 5,
-    "description": "Dummy2 5-qubits + couplers on star topology platform.",
+    "description": "Dummy 5-qubits + couplers on star topology platform.",
     "qubits": [
         0,
         1,
