@@ -9,6 +9,7 @@ from qibolab.transpilers.blocks import (
     block_decomposition,
     commute,
     count_2q_gates,
+    count_multi_qubit_gates,
     fuse_blocks,
     gates_on_qubit,
     initial_block_decomposition,
@@ -70,6 +71,11 @@ def test_commute_true():
     assert commute(block_1, block_2) == True
 
 
+def test_count_multi_qubit_gates():
+    gatelist = [gates.CZ(0, 1), gates.H(0), gates.TOFFOLI(0, 1, 2)]
+    assert count_multi_qubit_gates(gatelist) == 2
+
+
 def test_gates_on_qubit():
     gatelist = [gates.H(0), gates.H(1), gates.H(2), gates.H(0)]
     assert len(gates_on_qubit(gatelist, 0)) == 2
@@ -98,19 +104,29 @@ def test_find_successive_gates():
 
 
 def test_initial_block_decomposition():
-    circ = Circuit(4)
+    circ = Circuit(5)
     circ.add(gates.H(1))
     circ.add(gates.H(0))
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(0, 1))
     circ.add(gates.CZ(1, 2))
     circ.add(gates.H(3))
+    circ.add(gates.H(4))
     blocks = initial_block_decomposition(circ)
     assert len(blocks) == 4
     assert len(blocks[0].gates) == 3
     assert len(blocks[1].gates) == 1
     assert blocks[2].entangled == True
     assert blocks[3].entangled == False
+    assert len(blocks[3].gates) == 2
+
+
+def test_initial_block_decomposition_error():
+    circ = Circuit(3)
+    circ.add(gates.TOFFOLI(0, 1, 2))
+    print(len(circ.queue[0].qubits))
+    with pytest.raises(BlockingError):
+        blocks = initial_block_decomposition(circ)
 
 
 def test_block_decomposition_error():

@@ -1,7 +1,6 @@
 from copy import copy
 
 from qibo import Circuit
-from qibo.config import raise_error
 from qibo.gates import Gate
 
 
@@ -20,7 +19,7 @@ class Block:
     """
 
     def __init__(self, qubits: tuple, gates: list, name: str = None):
-        self._qubits = qubits
+        self.qubits = qubits
         self.gates = gates
         self.name = name
         if count_2q_gates(gates) > 0:
@@ -63,7 +62,7 @@ class Block:
         This should be done only if the block is entangled and the number of
         two qubit gates is higher than the number after the decomposition.
         """
-        raise_error(NotImplementedError)
+        raise NotImplementedError
 
 
 def fuse_blocks(block_1: Block, block_2: Block, name=None):
@@ -143,9 +142,10 @@ def initial_block_decomposition(circuit: Circuit):
     """
     blocks = []
     all_gates = copy(circuit.queue)
-    two_qubit_gates = count_2q_gates(all_gates)
+    two_qubit_gates = count_multi_qubit_gates(all_gates)
     while two_qubit_gates > 0:
         for idx, gate in enumerate(all_gates):
+            print(gate.qubits)
             if len(gate.qubits) == 2:
                 qubits = gate.qubits
                 block_gates = _find_previous_gates(all_gates[0:idx], qubits)
@@ -156,8 +156,8 @@ def initial_block_decomposition(circuit: Circuit):
                 two_qubit_gates -= 1
                 blocks.append(block)
                 break
-            if len(gate.qubits) >= 3:
-                raise_error(BlockingError, "Gates targeting more than 2 qubits are not supported.")
+            elif len(gate.qubits) > 2:
+                raise BlockingError("Gates targeting more than 2 qubits are not supported.")
     # Now we need to deal with the remaining spare single qubit gates
     while len(all_gates) > 0:
         first_qubit = all_gates[0].qubits[0]
@@ -195,6 +195,11 @@ def remove_gates(gatelist, remove_list):
 def count_2q_gates(gatelist: list):
     """Return the number of two qubit gates in a list of gates."""
     return len([gate for gate in gatelist if len(gate.qubits) == 2])
+
+
+def count_multi_qubit_gates(gatelist: list):
+    """Return the number of multi qubit gates in a list of gates."""
+    return len([gate for gate in gatelist if len(gate.qubits) >= 2])
 
 
 def _find_successive_gates(gates: list, qubits: tuple):
