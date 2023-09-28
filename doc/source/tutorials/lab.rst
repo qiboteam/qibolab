@@ -173,8 +173,8 @@ hold the parameters of the two-qubit gates.
 
 Some architectures may also have coupler qubits that mediate the interactions.
 We can also interact with them defining the :class:`qibolab.couplers.Coupler` objects.
-Then we add them to their corresping :class:`qibolab.qubits.QubitPair` objects according
-to the chip topology. Again we neglected or characterization parameters associated to the
+Then we add them to their corresponding :class:`qibolab.qubits.QubitPair` objects according
+to the chip topology. We neglected characterization parameters associated to the
 coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
 
 
@@ -343,9 +343,7 @@ a two-qubit system:
                 iq_angle: 4.912447775569025
 
 And in the case of having a chip with coupler qubits
-we need to following changes to the previous runcard.
-We note how the topology now maps couplers to
-qubit pairs using a dictionary instead of a list:
+we need the following changes to the previous runcard:
 
 .. code-block::  yaml
 
