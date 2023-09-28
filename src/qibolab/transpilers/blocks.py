@@ -1,4 +1,4 @@
-from copy import copy, deepcopy
+from copy import copy
 
 from qibo import Circuit
 from qibo.config import raise_error
@@ -56,13 +56,6 @@ class Block:
     @qubits.setter
     def qubits(self, qubits):
         self._qubits = qubits
-
-    def info(self):
-        print("Block Name: ", self.name)
-        print("Qubits: ", self.qubits)
-        print("Gates: ", self.gates)
-        print("Number of two qubits gates: ", self.count_2q_gates())
-        print("Entangled: ", self.entangled)
 
     # TODO
     def kak_decompose(self):  # pragma: no cover
@@ -124,17 +117,17 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
     blocks = []
     while len(initial_blocks) > 0:
         first_block = initial_blocks[0]
-        initial_blocks.remove(first_block)
-        if len(initial_blocks) > 0:
-            following_blocks = deepcopy(initial_blocks)
-            for idx, second_block in enumerate(following_blocks):
+        remove_list = [first_block]
+        if len(initial_blocks[1:]) > 0:
+            for second_block in initial_blocks[1:]:
                 try:
                     first_block = fuse_blocks(first_block, second_block)
-                    initial_blocks.remove(initial_blocks[idx])
+                    remove_list.append(second_block)
                 except BlockingError:
                     if not commute(first_block, second_block):
                         break
         blocks.append(first_block)
+        remove_gates(initial_blocks, remove_list)
     return blocks
 
 

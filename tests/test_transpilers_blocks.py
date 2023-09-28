@@ -1,15 +1,17 @@
 import pytest
-from qibo import gates
+from qibo import Circuit, gates
 
 from qibolab.transpilers.blocks import (
     Block,
     BlockingError,
     _find_previous_gates,
     _find_successive_gates,
+    block_decomposition,
     commute,
     count_2q_gates,
     fuse_blocks,
     gates_on_qubit,
+    initial_block_decomposition,
     remove_gates,
 )
 
@@ -95,7 +97,70 @@ def test_find_successive_gates():
     assert count_2q_gates(previous_gates) == 0
 
 
-# circ = Circuit(3)
-# circ.add(gates.CZ(0, 1))
-# circ.add(gates.CZ(0, 1))
-# circ.add(gates.CZ(1, 2))
+def test_initial_block_decomposition():
+    circ = Circuit(4)
+    circ.add(gates.H(1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.H(3))
+    blocks = initial_block_decomposition(circ)
+    assert len(blocks) == 4
+    assert len(blocks[0].gates) == 3
+    assert len(blocks[1].gates) == 1
+    assert blocks[2].entangled == True
+    assert blocks[3].entangled == False
+
+
+def test_block_decomposition_error():
+    circ = Circuit(1)
+    with pytest.raises(BlockingError):
+        block_decomposition(circ)
+
+
+def test_block_decomposition_no_fuse():
+    circ = Circuit(4)
+    circ.add(gates.H(1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.H(1))
+    circ.add(gates.H(3))
+    blocks = block_decomposition(circ, fuse=False)
+    assert len(blocks) == 4
+    assert len(blocks[0].gates) == 4
+    assert len(blocks[1].gates) == 1
+    assert blocks[2].entangled == True
+    assert blocks[3].entangled == False
+
+
+def test_block_decomposition():
+    circ = Circuit(4)
+    circ.add(gates.H(1))  # first block
+    circ.add(gates.H(0))  # first block
+    circ.add(gates.CZ(0, 1))  # first block
+    circ.add(gates.H(0))  # first block
+    circ.add(gates.CZ(0, 1))  # first block
+    circ.add(gates.CZ(1, 2))  # second block
+    circ.add(gates.CZ(1, 2))  # second block
+    circ.add(gates.H(1))  # second block
+    circ.add(gates.H(3))  # 4 block
+    circ.add(gates.CZ(0, 1))  # 3 block
+    circ.add(gates.CZ(0, 1))  # 3 block
+    circ.add(gates.CZ(2, 3))  # 4 block
+    circ.add(gates.CZ(0, 1))  # 3 block
+    blocks = block_decomposition(circ)
+    assert len(blocks) == 4
+    assert blocks[0].count_2q_gates() == 2
+    assert len(blocks[0].gates) == 5
+    assert blocks[0].qubits == (0, 1)
+    assert blocks[1].count_2q_gates() == 2
+    assert len(blocks[1].gates) == 3
+    assert blocks[3].count_2q_gates() == 1
+    assert len(blocks[3].gates) == 2
+    assert blocks[3].qubits == (2, 3)
+    assert blocks[2].count_2q_gates() == 3
+    assert len(blocks[2].gates) == 3
