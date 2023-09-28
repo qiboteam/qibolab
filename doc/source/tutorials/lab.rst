@@ -343,13 +343,16 @@ a two-qubit system:
                 iq_angle: 4.912447775569025
 
 And in the case of having a chip with coupler qubits
-we need to following changes to the previous runcard:
+we need to following changes to the previous runcard.
+We note how the topology now maps couplers to
+qubit pairs using a dictionary instead of a list:
 
 .. code-block::  yaml
 
     qubits: [0, 1]
     couplers: [0]
 
+    # Mapping couplers to qubit pairs
     topology: {0: [0, 1]}
 
     native_gates:
@@ -357,26 +360,25 @@ we need to following changes to the previous runcard:
             0-1:
                 CZ:
                 - duration: 30
-                amplitude: 0.6025
-                shape: Rectangular()
-                qubit: 2
-                relative_start: 0
-                type: qf
+                  amplitude: 0.6025
+                  shape: Rectangular()
+                  qubit: 1
+                  relative_start: 0
+                  type: qf
 
                 - type: virtual_z
-                phase: -1
-                qubit: 1
+                  phase: -1
+                  qubit: 0
                 - type: virtual_z
-                phase: -3
-                qubit: 2
+                  phase: -3
+                  qubit: 1
 
                 - type: coupler
-                phase: -3
-                duration: 40
-                amplitude: 0.1
-                shape: Rectangular()
-                coupler: 1
-                relative_start: 0
+                  duration: 40
+                  amplitude: 0.1
+                  shape: Rectangular()
+                  coupler: 1
+                  relative_start: 0
 
     characterization:
         coupler:
@@ -443,6 +445,7 @@ the above runcard:
 With the following additions for coupler architectures:
 
 .. code-block::  python
+
     def create():
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
@@ -476,7 +479,7 @@ With the following additions for coupler architectures:
         # load ``settings`` from the runcard
         settings = load_settings(runcard)
         return Platform(
-            "my_platform", qubits, pairs, instruments, settings, resonator_type="2D", couplers
+            "my_platform", qubits, pairs, instruments, settings, resonator_type="2D", couplers = couplers
         )
 
 Note that this assumes that the runcard is saved as ``my_platform.yml`` in the
