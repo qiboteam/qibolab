@@ -16,19 +16,24 @@ class Block:
         qubits (tuple): qubits where the block is acting.
         gates (list): list of gates that compose the block.
         name (str): name of the block.
-        entangled (bool): true if there is at least a two qubit gate in the block.
+        entangled (bool): True if the block entangles the qubits (there is at least one qubit gate).
     """
 
-    def __init__(self, qubits: tuple, gates: list, name: str = None, entangled: bool = True):
+    def __init__(self, qubits: tuple, gates: list, name: str = None):
         self._qubits = qubits
         self.gates = gates
         self.name = name
-        self.entangled = entangled
+        if count_2q_gates(gates) > 0:
+            self.entangled = True
+        else:
+            self.entangled = False
 
     def rename(self, name):
+        """Rename block"""
         self.name = name
 
     def add_gate(self, gate: Gate):
+        """Add a new gate to the block."""
         if not gate.qubits == self.qubits:
             raise BlockingError(
                 "Gate acting on qubits {} can't be added to block acting on qubits {}.".format(
@@ -40,10 +45,12 @@ class Block:
             self.entangled = True
 
     def count_2q_gates(self):
+        """Return the number of two qubit gates in the block."""
         return count_2q_gates(self.gates)
 
     @property
     def qubits(self):
+        """Return a sorted tuple with qubits of the block."""
         return tuple(sorted(self._qubits))
 
     @qubits.setter
@@ -79,8 +86,7 @@ def fuse_blocks(block_1: Block, block_2: Block, name=None):
     """
     if not block_1.qubits == block_2.qubits:
         raise BlockingError("In order to fuse two blocks their qubits must coincide.")
-    entangled = block_1.entangled or block_2.entangled
-    return Block(qubits=block_1.qubits, gates=block_1.gates + block_2.gates, name=name, entangled=entangled)
+    return Block(qubits=block_1.qubits, gates=block_1.gates + block_2.gates, name=name)
 
 
 def commute(block_1: Block, block_2: Block):
@@ -149,9 +155,9 @@ def initial_block_decomposition(circuit: Circuit):
         for idx, gate in enumerate(all_gates):
             if len(gate.qubits) == 2:
                 qubits = gate.qubits
-                block_gates = find_previous_gates(all_gates[0:idx], qubits)
+                block_gates = _find_previous_gates(all_gates[0:idx], qubits)
                 block_gates.append(gate)
-                block_gates += find_successive_gates(all_gates[idx + 1 :], qubits)
+                block_gates += _find_successive_gates(all_gates[idx + 1 :], qubits)
                 block = Block(qubits=qubits, gates=block_gates)
                 remove_gates(all_gates, block_gates)
                 two_qubit_gates -= 1
@@ -170,10 +176,10 @@ def initial_block_decomposition(circuit: Circuit):
             second_qubit_block_gates = gates_on_qubit(gatelist=all_gates, qubit=second_qubit)
             block_gates += second_qubit_block_gates
             remove_gates(all_gates, second_qubit_block_gates)
-            block = Block(qubits=(first_qubit, second_qubit), gates=block_gates, entangled=False)
+            block = Block(qubits=(first_qubit, second_qubit), gates=block_gates)
         # In case there are no other spare single qubit gates create a block using a following qubit as placeholder
         else:
-            block = Block(qubits=(first_qubit, (first_qubit + 1) % circuit.nqubits), gates=block_gates, entangled=False)
+            block = Block(qubits=(first_qubit, (first_qubit + 1) % circuit.nqubits), gates=block_gates)
         blocks.append(block)
     return blocks
 
@@ -198,7 +204,7 @@ def count_2q_gates(gatelist: list):
     return len([gate for gate in gatelist if len(gate.qubits) == 2])
 
 
-def find_successive_gates(gates: list, qubits: tuple):
+def _find_successive_gates(gates: list, qubits: tuple):
     """Return a list containing all gates acting on qubits until a new two qubit gate acting on qubits is found."""
     successive_gates = []
     for qubit in qubits:
@@ -210,7 +216,7 @@ def find_successive_gates(gates: list, qubits: tuple):
     return successive_gates
 
 
-def find_previous_gates(gates: list, qubits: tuple):
+def _find_previous_gates(gates: list, qubits: tuple):
     """Return a list containing all gates acting on qubits."""
     previous_gates = []
     for gate in gates:
