@@ -171,7 +171,50 @@ hold the parameters of the two-qubit gates.
         )
     )
 
+Some architectures may also have coupler qubits that mediate the interactions.
+We can also interact with them defining the :class:`qibolab.couplers.Coupler` objects.
+Then we add them to their corresping :class:`qibolab.qubits.QubitPair` objects according
+to the chip topology. Again we neglected or characterization parameters associated to the
+coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
 
+
+.. code-block::  python
+
+    from qibolab.couplers import Coupler
+    from qibolab.qubits import Qubit, QubitPair
+    from qibolab.pulses import PulseType
+    from qibolab.native import (
+        NativePulse,
+        NativeSequence,
+        SingleQubitNatives,
+        TwoQubitNatives,
+    )
+
+    # create the qubit and coupler objects
+    qubit0 = Qubit(0)
+    qubit1 = Qubit(1)
+    coupler_01 = Coupler(0)
+
+    # assign single-qubit native gates to each qubit
+    # Look above example
+
+    # define the pair of qubits
+    pair = QubitPair(qubit0, qubit1, coupler01)
+    pair.native_gates = TwoQubitNatives(
+        CZ=NativeSequence(
+            name="CZ",
+            pulses=[
+                NativePulse(
+                    name="CZ1",
+                    duration=30,
+                    amplitude=0.005,
+                    shape="Rectangular()",
+                    pulse_type=PulseType.FLUX,
+                    qubit=qubit1,
+                )
+            ],
+        )
+    )
 
 The platform automatically creates the connectivity graph of the given chip
 using the dictionary of :class:`qibolab.qubits.QubitPair` objects.
@@ -299,12 +342,52 @@ a two-qubit system:
                 threshold: 0.0002694329123116206
                 iq_angle: 4.912447775569025
 
+And in the case of having a chip with coupler qubits
+we need to following changes to the previous runcard:
+
+.. code-block::  yaml
+
+    qubits: [0, 1]
+    couplers: [0]
+
+    topology: {0: [0, 1]}
+
+    native_gates:
+        two_qubit:
+            0-1:
+                CZ:
+                - duration: 30
+                amplitude: 0.6025
+                shape: Rectangular()
+                qubit: 2
+                relative_start: 0
+                type: qf
+
+                - type: virtual_z
+                phase: -1
+                qubit: 1
+                - type: virtual_z
+                phase: -3
+                qubit: 2
+
+                - type: coupler
+                phase: -3
+                duration: 40
+                amplitude: 0.1
+                shape: Rectangular()
+                coupler: 1
+                relative_start: 0
+
+    characterization:
+        coupler:
+            0:
+                sweetspot: 0.0
 
 This file contains different sections: ``qubits`` is a list with the qubit
-names, ``settings`` defines default execution parameters, ``topology`` defines
+names, ``couplers`` one with the coupler names , ``settings`` defines default execution parameters, ``topology`` defines
 the qubit connectivity (qubit pairs), ``native_gates`` specifies the calibrated
 pulse parameters for implementing single and two-qubit gates and
-``characterization`` provides the physical parameters associated to each qubit.
+``characterization`` provides the physical parameters associated to each qubit and coupler.
 Note that such parameters may slightly differ depending on the QPU architecture,
 however the pulses under ``native_gates`` should comply with the
 :class:`qibolab.pulses.Pulse` API and the parameters under ``characterization``
@@ -340,7 +423,7 @@ the above runcard:
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
         runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
-        qubits, pairs = load_qubits(runcard)
+        qubits, couplers, pairs = load_qubits(runcard)
 
         # assign channels to the qubit
         for q in range(2):
@@ -355,6 +438,45 @@ the above runcard:
         settings = load_settings(runcard)
         return Platform(
             "my_platform", qubits, pairs, instruments, settings, resonator_type="2D"
+        )
+
+With the following additions for coupler architectures:
+
+.. code-block::  python
+    def create():
+        # Create a controller instrument
+        instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
+
+        # Create channel objects and assign to them the controller ports
+        channels = ChannelMap()
+        channels |= Channel("ch1out", port=instrument["o1"])
+        channels |= Channel("ch1in", port=instrument["i1"])
+        channels |= Channel("ch2", port=instrument["o2"])
+        channels |= Channel("ch3", port=instrument["o3"])
+        channels |= Channel("chf1", port=instrument["o4"])
+        channels |= Channel("chf2", port=instrument["o5"])
+        channels |= Channel("chfc0", port=instrument["o6"])
+
+        # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
+        runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
+        qubits, couplers, pairs = load_qubits(runcard)
+
+        # assign channels to the qubit
+        for q in range(2):
+            qubits[q].readout = channels["ch1out"]
+            qubits[q].feedback = channels["ch1in"]
+            qubits[q].drive = channels[f"ch{q + 2}"]
+            qubits[q].flux = channels[f"chf{q + 1}"]
+
+        # assign channels to the coupler
+        couplers[0].flux = channels["chfc0"]
+
+        # create dictionary of instruments
+        instruments = {instrument.name: instrument}
+        # load ``settings`` from the runcard
+        settings = load_settings(runcard)
+        return Platform(
+            "my_platform", qubits, pairs, instruments, settings, resonator_type="2D", couplers
         )
 
 Note that this assumes that the runcard is saved as ``my_platform.yml`` in the

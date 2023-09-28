@@ -147,8 +147,6 @@ def create(runcard_path=RUNCARD):
     # assign channels to couplers and sweetspots(operating points)
     for c, coupler in couplers.items():
         coupler.flux = channels[f"L4-{11 + c}"]
-        # Is this needed ?
-        # channels[f"L4-{11 + c}"].qubit = qubits[f"c{c}"]
 
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
