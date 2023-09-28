@@ -243,6 +243,10 @@ class Platform:
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
 
+    def create_RX12_pulse(self, qubit, start=0, relative_phase=0):
+        qubit = self.get_qubit(qubit)
+        return self.qubits[qubit].native_gates.RX12.pulse(start, relative_phase)
+
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key
         pair = tuple(sorted(self.get_qubit(q) for q in qubits))

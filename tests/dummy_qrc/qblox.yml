@@ -26,6 +26,15 @@ native_gates:
                 type: qd                    # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40
+                amplitude: 0.5028
+                frequency: 5_050_304_836
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: 0.1
@@ -45,6 +54,15 @@ native_gates:
                 type: qd
                 relative_start: 0
                 phase: 0                    # qubit drive
+            RX12:
+                duration: 40                  # should be multiple of 4
+                amplitude: 0.5078
+                frequency: 4_852_833_073    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: 0.2
@@ -56,6 +74,15 @@ native_gates:
                 phase: 0
         2: # qubit id
             RX:
+                duration: 40                   # should be multiple of 4
+                amplitude: 0.5016
+                frequency: 5_795_371_914   # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+                relative_start: 0
+                phase: 0
+            RX12:
                 duration: 40                   # should be multiple of 4
                 amplitude: 0.5016
                 frequency: 5_795_371_914   # qubit frequency
@@ -83,6 +110,15 @@ native_gates:
                 type: qd                    # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40                   # should be multiple of 4
+                amplitude: 0.5026
+                frequency: 6_761_018_001    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: 0.2
@@ -94,6 +130,15 @@ native_gates:
                 phase: 0
         4: # qubit id
             RX:
+                duration: 40                # should be multiple of 4
+                amplitude: 0.5172
+                frequency: 6_586_543_060    # qubit frequency
+                # if_frequency: -200_000_000    # difference in qubit frequency
+                shape: Gaussian(5)
+                type: qd                    # qubit drive
+                relative_start: 0
+                phase: 0
+            RX12:
                 duration: 40                # should be multiple of 4
                 amplitude: 0.5172
                 frequency: 6_586_543_060    # qubit frequency

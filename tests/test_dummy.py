@@ -22,6 +22,7 @@ def test_dummy_execute_pulse_sequence(acquisition):
     platform = create_platform("dummy")
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    sequence.add(platform.create_RX12_pulse(0, 0))
     options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
 
