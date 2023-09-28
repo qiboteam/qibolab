@@ -1,12 +1,8 @@
-from copy import copy
+from copy import copy, deepcopy
 
-import networkx as nx
-from qibo import Circuit, gates
+from qibo import Circuit
 from qibo.config import raise_error
-
-from .abstract import find_gates_qubits_pairs
-
-DEBUG = True
+from qibo.gates import Gate
 
 
 class BlockingError(Exception):
@@ -24,7 +20,7 @@ class Block:
     """
 
     def __init__(self, qubits: tuple, gates: list, name: str = None, entangled: bool = True):
-        self.qubits = qubits
+        self._qubits = qubits
         self.gates = gates
         self.name = name
         self.entangled = entangled
@@ -32,55 +28,111 @@ class Block:
     def rename(self, name):
         self.name = name
 
-    def add_gate(self, gate: gates.Gate):
+    def add_gate(self, gate: Gate):
+        if not gate.qubits == self.qubits:
+            raise BlockingError(
+                "Gate acting on qubits {} can't be added to block acting on qubits {}.".format(
+                    gate.qubits, self._qubits
+                )
+            )
         self.gates.append(gate)
         if len(gate.qubits) == 2:
             self.entangled = True
 
     def count_2q_gates(self):
-        return count_2q_gates(gatelist=self.get_gates())
+        return count_2q_gates(self.gates)
 
-    def get_qubits(self):
-        return tuple(sorted(self.qubits))
+    @property
+    def qubits(self):
+        return tuple(sorted(self._qubits))
 
-    def get_gates(self):
-        return self.gates
-
-    def get_name(self):
-        return self.name
+    @qubits.setter
+    def qubits(self, qubits):
+        self._qubits = qubits
 
     def info(self):
-        print("Block Name: ", self.get_name())
-        print("Qubits: ", self.get_qubits())
-        print("Gates: ", self.get_gates())
+        print("Block Name: ", self.name)
+        print("Qubits: ", self.qubits)
+        print("Gates: ", self.gates)
         print("Number of two qubits gates: ", self.count_2q_gates())
         print("Entangled: ", self.entangled)
 
     # TODO
-    def kak_decompose(self):
+    def kak_decompose(self):  # pragma: no cover
         """Return KAK decomposition of the block.
-        This should be done only if the block is entangled.
+        This should be done only if the block is entangled and the number of
+        two qubit gates is higher than the number after the decomposition.
         """
         raise_error(NotImplementedError)
 
 
-def block_decomposition(circuit: Circuit):
+def fuse_blocks(block_1: Block, block_2: Block, name=None):
+    """Fuse two gate blocks, the qubits they are acting on must coincide.
+
+    Args:
+        block_1 (.transpilers.blocks.Block): first block.
+        block_2 (.transpilers.blocks.Block): second block.
+        name (str): name of the fused block.
+
+    Return:
+        fused_block (.transpilers.blocks.Block): fusion of the two input blocks.
+    """
+    if not block_1.qubits == block_2.qubits:
+        raise BlockingError("In order to fuse two blocks their qubits must coincide.")
+    entangled = block_1.entangled or block_2.entangled
+    return Block(qubits=block_1.qubits, gates=block_1.gates + block_2.gates, name=name, entangled=entangled)
+
+
+def commute(block_1: Block, block_2: Block):
+    """Check if two blocks commute (share qubits).
+
+    Args:
+        block_1 (.transpilers.blocks.Block): first block.
+        block_2 (.transpilers.blocks.Block): second block.
+
+    Return:
+        True if the two blocks don't share any qubit.
+        False otherwise.
+    """
+    for qubit in block_1.qubits:
+        if qubit in block_2.qubits:
+            return False
+    return True
+
+
+def block_decomposition(circuit: Circuit, fuse: bool = True):
     """Decompose a circuit into blocks of gates acting on two qubits.
 
     Args:
         circuit (qibo.models.Circuit): circuit to be decomposed.
+        fuse (bool): fuse adjacent blocks acting on the same qubits.
 
     Return:
         blocks (list): list of blocks that act on two qubits.
     """
     if circuit.nqubits < 2:
-        raise_error(BlockingError, "Only circuits with at least two qubits can be decomposed with this function.")
-    dag = create_dag(circuit)
-    initial_blocks = initial_block_deomposition(circuit)
-    return initial_blocks
+        raise BlockingError("Only circuits with at least two qubits can be decomposed with block_decomposition.")
+    initial_blocks = initial_block_decomposition(circuit)
+    if not fuse:
+        return initial_blocks
+    blocks = []
+    while len(initial_blocks) > 0:
+        first_block = initial_blocks[0]
+        initial_blocks.remove(first_block)
+        if len(initial_blocks) > 0:
+            following_blocks = deepcopy(initial_blocks)
+            for idx, second_block in enumerate(following_blocks):
+                try:
+                    first_block = fuse_blocks(first_block, second_block)
+                    initial_blocks.remove(initial_blocks[idx])
+                except BlockingError:
+                    if not commute(first_block, second_block):
+                        break
+        blocks.append(first_block)
+    return blocks
 
 
-def initial_block_deomposition(circuit: Circuit):
+def initial_block_decomposition(circuit: Circuit):
     """Decompose a circuit into blocks of gates acting on two qubits.
     This decomposition is not minimal.
 
@@ -165,62 +217,3 @@ def find_previous_gates(gates: list, qubits: tuple):
         if gate.qubits[0] in qubits:
             previous_gates.append(gate)
     return previous_gates
-
-
-def create_dag(circuit):
-    """Create direct acyclic graph (dag) of the circuit based on two qubit gates commutativity relations.
-
-    Args:
-        circuit (qibo.models.Circuit): circuit to be transformed into dag.
-
-    Returns:
-        cleaned_dag (nx.DiGraph): dag of the circuit.
-    """
-    circuit = find_gates_qubits_pairs(circuit)
-    dag = nx.DiGraph()
-    dag.add_nodes_from(list(i for i in range(len(circuit))))
-    # Find all successors
-    connectivity_list = []
-    for idx, gate in enumerate(circuit):
-        for next_idx, next_gate in enumerate(circuit[idx + 1 :]):
-            for qubit in gate:
-                if qubit in next_gate:
-                    connectivity_list.append((idx, next_idx + idx + 1))
-    dag.add_edges_from(connectivity_list)
-    for layer, nodes in enumerate(nx.topological_generations(dag)):
-        for node in nodes:
-            dag.nodes[node]["layer"] = layer
-    show_dag(dag)
-    cleaned_dag = remove_redundant_connections(dag)
-    for layer, nodes in enumerate(nx.topological_generations(dag)):
-        for node in nodes:
-            dag.nodes[node]["layer"] = layer
-    show_dag(cleaned_dag)
-    return cleaned_dag
-
-
-def remove_redundant_connections(G):
-    """Remove redundant connection from a DAG"""
-    # Create a copy of the input DAG
-    new_G = G.copy()
-    # Iterate through the nodes in topological order
-    for node in nx.topological_sort(G):
-        # Compute the set of nodes reachable from the current node
-        reachable_nodes = set(nx.descendants(new_G, node)) | {node}
-        # Remove edges that are redundant
-        for neighbor in list(new_G.neighbors(node)):
-            if neighbor in reachable_nodes:
-                new_G.remove_edge(node, neighbor)
-    return new_G
-
-
-def show_dag(dag):
-    """Plot DAG"""
-    import matplotlib.pyplot as plt
-
-    pos = nx.multipartite_layout(dag, subset_key="layer")
-    fig, ax = plt.subplots()
-    nx.draw_networkx(dag, pos=pos, ax=ax)
-    ax.set_title("DAG layout in topological order")
-    fig.tight_layout()
-    plt.show()
