@@ -343,7 +343,7 @@ a two-qubit system:
                 iq_angle: 4.912447775569025
 
 And in the case of having a chip with coupler qubits
-we need to following changes to the previous runcard:
+we need the following changes to the previous runcard:
 
 .. code-block::  yaml
 
