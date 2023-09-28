@@ -188,8 +188,11 @@ class SingleQubitNatives:
     """Container with the native single-qubit gates acting on a specific qubit."""
 
     RX: Optional[NativePulse] = None
+    """Pulse to drive the qubit from state 0 to state 1."""
     RX12: Optional[NativePulse] = None
+    """Pulse to drive to qubit from state 1 to state 2."""
     MZ: Optional[NativePulse] = None
+    """Measurement pulse."""
 
     @property
     def RX90(self) -> NativePulse:
