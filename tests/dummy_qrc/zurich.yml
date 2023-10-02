@@ -35,6 +35,15 @@ native_gates:
                 type: qd # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40
+                amplitude: 0.625 #0.45
+                frequency: 4_095_830_788 #doesnt do anything requiered for qibolab to work
+                # shape: Gaussian(5)
+                shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000 #2000.e-9
                 amplitude: .5 # .1
@@ -46,6 +55,15 @@ native_gates:
 
         1: # qubit number
             RX:
+                duration: 90 #80
+                amplitude: 0.2 #0.2
+                frequency: 4_170_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
+            RX12:
                 duration: 90 #80
                 amplitude: 0.2 #0.2
                 frequency: 4_170_000_000 #doesnt do anything requiered for qibolab to work
@@ -73,6 +91,15 @@ native_gates:
                 type: qd # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40 #200 #60
+                amplitude: 0.59
+                frequency: 4_300_587_281  #4_401_600_000 #4_505_500_000 #4_321_500_000 # 4_541_100_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: .54
@@ -92,6 +119,15 @@ native_gates:
                 type: qd # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 90 #80
+                amplitude: 0.75 #0.8
+                frequency: 4_100_000_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 2000
                 amplitude: .01 # 1
@@ -103,6 +139,15 @@ native_gates:
 
         4: # qubit number
             RX:
+                duration: 53 #110 #80
+                amplitude: 1 #0.398 #0.8
+                frequency: 4_196_800_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
+                shape: Gaussian(5)
+                # shape: Drag(5, 0.04)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
+            RX12:
                 duration: 53 #110 #80
                 amplitude: 1 #0.398 #0.8
                 frequency: 4_196_800_000 #Small detuning increase freq #4_248_775_000 #doesnt do anything requiered for qibolab to work
@@ -163,7 +208,6 @@ characterization:
     single_qubit:
         0:
             readout_frequency: 5_229_200_000 #5_233_200_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_095_830_788 #4_093_830_788
             T1: 0.0
             T2: 0.0
@@ -182,7 +226,6 @@ characterization:
 
         1:
             readout_frequency: 4_931_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_170_000_000
             T1: 0.
             T2: 0.
@@ -191,7 +234,6 @@ characterization:
             mean_exc_states: [0, 0]
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
             T1: 0.
             T2: 0.
@@ -204,7 +246,6 @@ characterization:
             # alpha: 208 MHz
         3:
             readout_frequency: 5_783_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_100_000_000
             T1: 0.
             T2: 0.
@@ -213,7 +254,6 @@ characterization:
             mean_exc_states: [0, 0]
         4:
             readout_frequency: 5_515_000_000
-            resonator_polycoef_flux: []
             drive_frequency: 4_196_800_000
             T1: 0.
             T2: 0.

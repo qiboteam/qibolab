@@ -27,6 +27,15 @@ RUNCARD = {
                     "start": 0,
                     "phase": 0,
                 },
+                "RX12": {
+                    "duration": 40,
+                    "amplitude": 0.005,
+                    "frequency": 4700000000,
+                    "shape": "Gaussian(5)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0,
+                },
                 "MZ": {
                     "duration": 1000,
                     "amplitude": 0.0025,
@@ -39,6 +48,15 @@ RUNCARD = {
             },
             1: {
                 "RX": {
+                    "duration": 40,
+                    "amplitude": 0.0484,
+                    "frequency": 4855663000,
+                    "shape": "Drag(5, -0.02)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0,
+                },
+                "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
                     "frequency": 4855663000,
@@ -67,6 +85,15 @@ RUNCARD = {
                     "start": 0,
                     "phase": 0,
                 },
+                "RX12": {
+                    "duration": 40,
+                    "amplitude": 0.005,
+                    "frequency": 2700000000,
+                    "shape": "Gaussian(5)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0,
+                },
                 "MZ": {
                     "duration": 1000,
                     "amplitude": 0.0025,
@@ -79,6 +106,15 @@ RUNCARD = {
             },
             3: {
                 "RX": {
+                    "duration": 40,
+                    "amplitude": 0.0484,
+                    "frequency": 5855663000,
+                    "shape": "Drag(5, -0.02)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0,
+                },
+                "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
                     "frequency": 5855663000,
