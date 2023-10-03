@@ -307,37 +307,6 @@ class ShortestPaths(Router):
             self._qubit_map[value] = old_mapping[key]
 
 
-def create_dag(circuit):
-    """Create direct acyclic graph (dag) of the circuit based on two qubit gates commutativity relations.
-
-    Args:
-        circuit (qibo.models.Circuit): circuit to be transformed into dag.
-
-    Returns:
-        cleaned_dag (nx.DiGraph): dag of the circuit.
-    """
-    circuit = create_circuit_repr(circuit)
-    dag = nx.DiGraph()
-    dag.add_nodes_from(list(i for i in range(len(circuit))))
-    # Find all successors
-    connectivity_list = []
-    for idx, gate in enumerate(circuit):
-        for next_idx, next_gate in enumerate(circuit[idx + 1 :]):
-            for qubit in gate:
-                if qubit in next_gate:
-                    connectivity_list.append((idx, next_idx + idx + 1))
-    dag.add_edges_from(connectivity_list)
-    return remove_redundant_connections(dag)
-
-
-def remove_redundant_connections(dag):
-    """Remove redundant connection from a DAG unsing transitive reduction."""
-    new_dag = nx.DiGraph()
-    transitive_reduction = nx.transitive_reduction(dag)
-    new_dag.add_edges_from(transitive_reduction.edges)
-    return new_dag
-
-
 class Sabre(Router):
     """
     Routing algorithm proposed in
