@@ -7,10 +7,8 @@ from qibolab.transpilers.blocks import (
     _find_previous_gates,
     _find_successive_gates,
     block_decomposition,
-    commute,
     count_2q_gates,
     count_multi_qubit_gates,
-    fuse_blocks,
     gates_on_qubit,
     initial_block_decomposition,
     remove_gates,
@@ -45,7 +43,7 @@ def test_add_gate_error():
 def test_fuse_blocks():
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=(0, 1), gates=[gates.H(0)])
-    fused = fuse_blocks(block_1, block_2)
+    fused = block_1.fuse(block_2)
     assert fused.qubits == (0, 1)
     assert fused.entangled == True
     assert fused.count_2q_gates() == 1
@@ -55,20 +53,20 @@ def test_fuse_blocks_error():
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=(1, 2), gates=[gates.CZ(1, 2)])
     with pytest.raises(BlockingError):
-        fused = fuse_blocks(block_1, block_2)
+        fused = block_1.fuse(block_2)
 
 
 @pytest.mark.parametrize("qubits", [(0, 1), (2, 1)])
 def test_commute_false(qubits):
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=qubits, gates=[gates.CZ(*qubits)])
-    assert commute(block_1, block_2) == False
+    assert block_1.commute(block_2) == False
 
 
 def test_commute_true():
     block_1 = Block(qubits=(0, 1), gates=[gates.CZ(0, 1)])
     block_2 = Block(qubits=(2, 3), gates=[gates.CZ(2, 3)])
-    assert commute(block_1, block_2) == True
+    assert block_1.commute(block_2) == True
 
 
 def test_count_multi_qubit_gates():

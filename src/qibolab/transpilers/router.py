@@ -308,7 +308,6 @@ class ShortestPaths(Router):
 
 
 class Sabre(Router):
-    # TODO: requires block circuit
     """
     Routing algorithm proposed in
     https://doi.org/10.48550/arXiv.1809.02573
