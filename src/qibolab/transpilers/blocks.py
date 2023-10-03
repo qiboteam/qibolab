@@ -33,7 +33,7 @@ class Block:
 
     def add_gate(self, gate: Gate):
         """Add a new gate to the block."""
-        if not gate.qubits == self.qubits:
+        if not set(gate.qubits).issubset(self.qubits):
             raise BlockingError(
                 "Gate acting on qubits {} can't be added to block acting on qubits {}.".format(
                     gate.qubits, self._qubits
@@ -54,7 +54,7 @@ class Block:
     def qubits(self, qubits):
         self._qubits = qubits
 
-    def fuse(self, block, name: str = None):
+    def fuse(self, block: "Block", name: str = None):
         """Fuse the current block with a new one, the qubits they are acting on must coincide.
 
         Args:
@@ -68,7 +68,7 @@ class Block:
             raise BlockingError("In order to fuse two blocks their qubits must coincide.")
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
-    def commute(self, block):
+    def commute(self, block: "Block"):
         """Check if a block commutes with the current one.
 
         Args:
