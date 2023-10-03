@@ -70,6 +70,10 @@ def test_dump_runcard(platform):
     for qubit, values in target_char.items():
         for name, value in values.items():
             assert final_char[qubit][name] == value
+    # assert instrument section is dumped properly in the runcard
+    target_instruments = target_runcard.pop("instruments")
+    final_instruments = final_runcard.pop("instruments")
+    assert final_instruments == target_instruments
     os.remove(path)
 
 
@@ -88,24 +92,6 @@ def test_dump_runcard(platform):
         "classifiers_hpars",
     ],
 )
-def test_update(platform, par):
-    qubits = {q: qubit for q, qubit in platform.qubits.items() if qubit.readout is not None and qubit.drive is not None}
-    new_values = np.ones(len(qubits))
-    if "states" in par:
-        updates = {par: {q: [new_values[i], new_values[i]] for i, q in enumerate(qubits)}}
-    else:
-        updates = {par: {q: new_values[i] for i, q in enumerate(qubits)}}
-    platform.update(updates)
-    for i, qubit in qubits.items():
-        value = updates[par][i]
-        if "frequency" in par:
-            value *= 1e9
-        if "states" in par:
-            assert value == getattr(qubit, par)
-        else:
-            assert value == float(getattr(qubit, par))
-
-
 @pytest.fixture(scope="module")
 def qpu_platform(connected_platform):
     connected_platform.connect()

@@ -129,7 +129,7 @@ def test_convert_units_sweeper(dummy_qrc):
     qubit.drive.ports = [("name", 4)]
     qubit.readout.ports = [("name", 2)]
     qubit.feedback.ports = [("name", 1)]
-    qubit.readout.local_oscillator._frequency = 1e6
+    qubit.readout.local_oscillator.frequency = 1e6
 
     seq = PulseSequence()
     pulse0 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)

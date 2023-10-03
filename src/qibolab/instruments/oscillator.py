@@ -1,4 +1,13 @@
-from qibolab.instruments.abstract import Instrument
+from dataclasses import dataclass
+from typing import Optional
+
+from qibolab.instruments.abstract import Instrument, InstrumentSettings
+
+
+@dataclass
+class LocalOscillatorSettings(InstrumentSettings):
+    power: Optional[float] = None
+    frequency: Optional[float] = None
 
 
 class LocalOscillator(Instrument):
@@ -12,24 +21,23 @@ class LocalOscillator(Instrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
-        self._power: float
-        self._frequency: float
+        self.settings = LocalOscillatorSettings()
 
     @property
     def frequency(self):
-        return self._frequency
+        return self.settings.frequency
 
     @frequency.setter
     def frequency(self, x):
-        self._frequency = x
+        self.settings.frequency = x
 
     @property
     def power(self):
-        return self._power
+        return self.settings.power
 
     @power.setter
     def power(self, x):
-        self._power = x
+        self.settings.power = x
 
     def connect(self):
         self.is_connected = True

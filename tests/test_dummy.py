@@ -23,8 +23,9 @@ def test_dummy_execute_pulse_sequence(acquisition):
     platform = create_platform("dummy")
     ro_pulse = platform.create_qubit_readout_pulse(0, 0)
     sequence = PulseSequence()
-    sequence.add(ro_pulse)
-    options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    sequence.add(platform.create_RX12_pulse(0, 0))
+    options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
     if acquisition is AcquisitionType.INTEGRATION:
         assert result[0].magnitude.shape == (nshots,)

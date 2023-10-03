@@ -4,7 +4,6 @@ from enum import Flag, auto
 from typing import List, Optional, Union
 
 from qibo import gates
-from qibo.config import raise_error
 
 from qibolab.pulses import FluxPulse, PulseConstructor, PulseSequence, PulseType
 
@@ -27,7 +26,7 @@ class NativeType(Flag):
         try:
             return getattr(cls, gate.__class__.__name__)
         except AttributeError:
-            raise_error(ValueError, f"Gate {gate} cannot be used as native.")
+            raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
 @dataclass
@@ -189,7 +188,11 @@ class SingleQubitNatives:
     """Container with the native single-qubit gates acting on a specific qubit."""
 
     RX: Optional[NativePulse] = None
+    """Pulse to drive the qubit from state 0 to state 1."""
+    RX12: Optional[NativePulse] = None
+    """Pulse to drive to qubit from state 1 to state 2."""
     MZ: Optional[NativePulse] = None
+    """Measurement pulse."""
 
     @property
     def RX90(self) -> NativePulse:

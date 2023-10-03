@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-
 from qibo import gates
 from qibo.config import log, raise_error
 
-from qibolab.transpilers.abstract import Transpiler
+from .abstract import Router
 
 
 def find_connected_qubit(qubits, queue, hardware_qubits):
@@ -25,14 +23,9 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
     return qubits[0]
 
 
-@dataclass
-class StarConnectivity(Transpiler):
+class StarConnectivity(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
-
     This transpiler produces a circuit that respects the following connectivity:
-
-
-    .. code-block:: text
 
              q
              |
@@ -40,19 +33,24 @@ class StarConnectivity(Transpiler):
              |
              q
 
-    by adding SWAP gates when needed. It does not translate gates to native.
+    by adding SWAP gates when needed.
+
+    Args:
+        connectivity (networkx.Graph): chip connectivity, not used for this transpiler.
+        middle_qubit (int): qubit id of the qubit that is in the middle of the star.
+        verbose (bool): print info messages.
     """
 
-    middle_qubit: int
-    """Qubit id of the qubit that is in the middle of the star."""
-    verbose: bool = False
+    def __init__(self, connectivity=None, middle_qubit=2, verbose=False):
+        self.middle_qubit = middle_qubit
+        self.verbose = verbose
 
     def tlog(self, message):
         """Print messages only if ``verbose`` was set to ``True``."""
         if self.verbose:
             log.info(message)
 
-    def is_satisfied(self, circuit, middle_qubit=2, verbose=True):
+    def is_satisfied(self, circuit):
         """Checks if a circuit respects connectivity constraints.
 
         Args:
@@ -78,7 +76,7 @@ class StarConnectivity(Transpiler):
         self.tlog("Circuit respects connectivity.")
         return True
 
-    def __call__(self, circuit):
+    def __call__(self, circuit, initial_layout=None):
         """Apply the transpiler transformation on a given circuit.
 
         Args:
@@ -91,8 +89,6 @@ class StarConnectivity(Transpiler):
             hardware_qubits (list): List that maps logical to hardware qubits.
                 This is required for transforming final measurements.
         """
-        # TODO: Change this to a more lightweight form that takes a list of pairs
-        # instead of the whole circuit.
 
         middle_qubit = self.middle_qubit
         # find the number of qubits for hardware circuit
@@ -158,5 +154,5 @@ class StarConnectivity(Transpiler):
                 new.add(gate.__class__(*qubits, **gate.init_kwargs))
             if len(qubits) == 2:
                 add_swap = True
-
-        return new, hardware_qubits
+        hardware_qubits_keys = ["q" + str(i) for i in range(5)]
+        return new, dict(zip(hardware_qubits_keys, hardware_qubits))
