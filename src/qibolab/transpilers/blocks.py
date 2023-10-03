@@ -1,5 +1,3 @@
-from copy import copy
-
 from qibo import Circuit
 from qibo.gates import Gate
 
@@ -15,17 +13,19 @@ class Block:
         qubits (tuple): qubits where the block is acting.
         gates (list): list of gates that compose the block.
         name (str): name of the block.
-        entangled (bool): True if the block entangles the qubits (there is at least one qubit gate).
+
+    Properties:
+        entangled (bool): True if the block entangles the qubits (there is at least one two qubit gate).
     """
 
     def __init__(self, qubits: tuple, gates: list, name: str = None):
         self.qubits = qubits
         self.gates = gates
         self.name = name
-        if count_2q_gates(gates) > 0:
-            self.entangled = True
-        else:
-            self.entangled = False
+
+    @property
+    def entangled(self):
+        return self.count_2q_gates() > 0
 
     def rename(self, name):
         """Rename block"""
@@ -40,8 +40,6 @@ class Block:
                 )
             )
         self.gates.append(gate)
-        if len(gate.qubits) == 2:
-            self.entangled = True
 
     def count_2q_gates(self):
         """Return the number of two qubit gates in the block."""
@@ -56,6 +54,35 @@ class Block:
     def qubits(self, qubits):
         self._qubits = qubits
 
+    def fuse(self, block, name: str = None):
+        """Fuse the current block with a new one, the qubits they are acting on must coincide.
+
+        Args:
+            block (:class:`qibolab.transpilers.blocks.Block`): block to fuse.
+            name (str): name of the fused block.
+
+        Return:
+            fused_block (:class:`qibolab.transpilers.blocks.Block`): fusion of the two input blocks.
+        """
+        if not self.qubits == block.qubits:
+            raise BlockingError("In order to fuse two blocks their qubits must coincide.")
+        return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
+
+    def commute(self, block):
+        """Check if a block commutes with the current one.
+
+        Args:
+            block (:class:`qibolab.transpilers.blocks.Block`): block to check commutation.
+
+        Return:
+            True if the two blocks don't share any qubit.
+            False otherwise.
+        """
+        for qubit in self.qubits:
+            if qubit in block.qubits:
+                return False
+        return True
+
     # TODO
     def kak_decompose(self):  # pragma: no cover
         """Return KAK decomposition of the block.
@@ -63,39 +90,6 @@ class Block:
         two qubit gates is higher than the number after the decomposition.
         """
         raise NotImplementedError
-
-
-def fuse_blocks(block_1: Block, block_2: Block, name=None):
-    """Fuse two gate blocks, the qubits they are acting on must coincide.
-
-    Args:
-        block_1 (.transpilers.blocks.Block): first block.
-        block_2 (.transpilers.blocks.Block): second block.
-        name (str): name of the fused block.
-
-    Return:
-        fused_block (.transpilers.blocks.Block): fusion of the two input blocks.
-    """
-    if not block_1.qubits == block_2.qubits:
-        raise BlockingError("In order to fuse two blocks their qubits must coincide.")
-    return Block(qubits=block_1.qubits, gates=block_1.gates + block_2.gates, name=name)
-
-
-def commute(block_1: Block, block_2: Block):
-    """Check if two blocks commute (share qubits).
-
-    Args:
-        block_1 (.transpilers.blocks.Block): first block.
-        block_2 (.transpilers.blocks.Block): second block.
-
-    Return:
-        True if the two blocks don't share any qubit.
-        False otherwise.
-    """
-    for qubit in block_1.qubits:
-        if qubit in block_2.qubits:
-            return False
-    return True
 
 
 def block_decomposition(circuit: Circuit, fuse: bool = True):
@@ -120,10 +114,10 @@ def block_decomposition(circuit: Circuit, fuse: bool = True):
         if len(initial_blocks[1:]) > 0:
             for second_block in initial_blocks[1:]:
                 try:
-                    first_block = fuse_blocks(first_block, second_block)
+                    first_block = first_block.fuse(second_block)
                     remove_list.append(second_block)
                 except BlockingError:
-                    if not commute(first_block, second_block):
+                    if not first_block.commute(second_block):
                         break
         blocks.append(first_block)
         remove_gates(initial_blocks, remove_list)
@@ -141,16 +135,15 @@ def initial_block_decomposition(circuit: Circuit):
         blocks (list): list of blocks that act on two qubits.
     """
     blocks = []
-    all_gates = copy(circuit.queue)
+    all_gates = list(circuit.queue)
     two_qubit_gates = count_multi_qubit_gates(all_gates)
     while two_qubit_gates > 0:
         for idx, gate in enumerate(all_gates):
-            print(gate.qubits)
             if len(gate.qubits) == 2:
                 qubits = gate.qubits
                 block_gates = _find_previous_gates(all_gates[0:idx], qubits)
                 block_gates.append(gate)
-                block_gates += _find_successive_gates(all_gates[idx + 1 :], qubits)
+                block_gates.extend(_find_successive_gates(all_gates[idx + 1 :], qubits))
                 block = Block(qubits=qubits, gates=block_gates)
                 remove_gates(all_gates, block_gates)
                 two_qubit_gates -= 1
