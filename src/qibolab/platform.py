@@ -1,7 +1,5 @@
 """A platform for executing quantum algorithms."""
 
-import math
-import re
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional
 
@@ -86,128 +84,6 @@ class Platform:
         """Total number of usable qubits in the QPU.."""
         # TODO: Seperate couplers from qubits (PR #508)
         return len([qubit for qubit in self.qubits if not (isinstance(qubit, str) and "c" in qubit)])
-
-    def update(self, updates: dict):
-        r"""Updates platform common runcard parameters after calibration actions.
-
-        Args:
-            updates (dict): Dictionary containing the parameters to update the runcard.
-                            A typical dictionary should be of the following form
-                            {`parameter_to_update_in_runcard`: {`qubit0`:`par_value_qubit0`, ..., `qubit_i`:`par_value_qubit_i`, ...}}.
-                            The parameters that can be updated by this method are:
-
-                            - readout_frequency (GHz)
-                            - readout_attenuation (dimensionless)
-                            - bare_resonator_frequency (GHz)
-                            - sweetspot(V)
-                            - drive_frequency (GHz)
-                            - readout_amplitude (dimensionless)
-                            - drive_amplitude (dimensionless)
-                            - drive_length
-                            - t2 (ns)
-                            - t2_spin_echo (ns)
-                            - t1 (ns)
-                            - thresold(V)
-                            - iq_angle(deg)
-                            - mean_gnd_states(V)
-                            - mean_exc_states(V)
-                            - beta(dimensionless)
-
-        """
-        for par, values in updates.items():
-            for qubit, value in values.items():
-                # resonator_spectroscopy / resonator_spectroscopy_flux / resonator_punchout_attenuation
-                if par == "readout_frequency":
-                    freq = int(value * 1e9)
-                    mz = self.qubits[qubit].native_gates.MZ
-                    mz.frequency = freq
-                    if mz.if_frequency is not None:
-                        mz.if_frequency = freq - self.get_lo_readout_frequency(qubit)
-                    self.qubits[qubit].readout_frequency = freq
-
-                # resonator_punchout_attenuation
-                elif par == "readout_attenuation":
-                    self.qubits[qubit].readout.attenuation = value
-
-                # resonator_punchout_attenuation
-                elif par == "bare_resonator_frequency":
-                    freq = int(value * 1e9)
-                    self.qubits[qubit].bare_resonator_frequency = freq
-
-                # resonator_spectroscopy_flux / qubit_spectroscopy_flux
-                elif par == "sweetspot":
-                    sweetspot = float(value)
-                    self.qubits[qubit].sweetspot = sweetspot
-                    if self.qubits[qubit].flux is not None:
-                        # set sweetspot as the flux offset (IS THIS NEEDED?)
-                        self.qubits[qubit].flux.offset = sweetspot
-
-                # qubit_spectroscopy / qubit_spectroscopy_flux / ramsey
-                elif par == "drive_frequency":
-                    if isinstance(value, tuple):  # TODO: remove this branching after error bars propagation
-                        freq = int(value[0] * 1e9)
-                    else:
-                        freq = int(value * 1e9)
-                    self.qubits[qubit].native_gates.RX.frequency = freq
-                    self.qubits[qubit].drive_frequency = freq
-
-                elif "amplitude" in par:
-                    amplitude = float(value)
-                    # resonator_spectroscopy
-                    if par == "readout_amplitude" and not math.isnan(amplitude):
-                        self.qubits[qubit].native_gates.MZ.amplitude = amplitude
-
-                    # rabi_amplitude / flipping
-                    if par == "drive_amplitude" or par == "amplitudes":
-                        self.qubits[qubit].native_gates.RX.amplitude = amplitude
-
-                # rabi_duration
-                elif par == "drive_length":
-                    self.qubits[qubit].native_gates.RX.duration = int(value)
-
-                # ramsey
-                elif par == "t2":
-                    self.qubits[qubit].T2 = float(value)
-
-                # spin_echo
-                elif par == "t2_spin_echo":
-                    self.qubits[qubit].T2_spin_echo = float(value)
-
-                # t1
-                elif par == "t1":
-                    self.qubits[qubit].T1 = float(value)
-
-                # classification
-                elif par == "threshold":
-                    self.qubits[qubit].threshold = float(value)
-
-                # classification
-                elif par == "iq_angle":
-                    self.qubits[qubit].iq_angle = float(value)
-
-                # classification
-                elif par == "mean_gnd_states":
-                    self.qubits[qubit].mean_gnd_states = [float(voltage) for voltage in value]
-
-                # classification
-                elif par == "mean_exc_states":
-                    self.qubits[qubit].mean_exc_states = [float(voltage) for voltage in value]
-
-                # drag pulse tunning
-                elif "beta" in par:
-                    rx = self.qubits[qubit].native_gates.RX
-                    shape = rx.shape
-                    rel_sigma = re.findall(r"[\d]+[.\d]+|[\d]*[.][\d]+|[\d]+", shape)[0]
-                    rx.shape = f"Drag({rel_sigma}, {float(value)})"
-
-                elif "length" in par:  # assume only drive length
-                    self.qubits[qubit].native_gates.RX.duration = int(value)
-
-                elif par == "classifiers_hpars":
-                    self.qubits[qubit].classifiers_hpars = value
-
-                else:
-                    raise_error(ValueError, f"Unknown parameter {par} for qubit {qubit}")
 
     def connect(self):
         """Connect to all instruments."""
@@ -380,6 +256,10 @@ class Platform:
     def create_RX_pulse(self, qubit, start=0, relative_phase=0):
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
+
+    def create_RX12_pulse(self, qubit, start=0, relative_phase=0):
+        qubit = self.get_qubit(qubit)
+        return self.qubits[qubit].native_gates.RX12.pulse(start, relative_phase)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
         # Check in the settings if qubits[0]-qubits[1] is a key

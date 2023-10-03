@@ -375,7 +375,7 @@ we need the following changes to the previous runcard:
                   duration: 40
                   amplitude: 0.1
                   shape: Rectangular()
-                  coupler: 1
+                  coupler: 0
                   relative_start: 0
 
     characterization:

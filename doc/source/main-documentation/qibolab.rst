@@ -121,7 +121,7 @@ These parameters are typically extracted from the runcard during platform initia
 .. _main_doc_couplers:
 
 Couplers
-------
+--------
 
 The :class:`qibolab.couplers.Coupler` class serves as a comprehensive representation of a physical coupler qubit within the Qibolab framework.
 It's a simplified :class:`qibolab.qubits.Qubit` to control couplers during 2q gate operation:
@@ -135,7 +135,7 @@ We have a single required Channel for flux coupler control:
 - flux
 
 The Coupler class allows us to handle 2q interactions in coupler based architectures
-in a simple way. They are usually associated with :class:`<qibolab.qubits.QubitPair>`
+in a simple way. They are usually associated with :class:`qibolab.qubits.QubitPair`
 and usually extracted from the runcard during platform initialization.
 
 .. _main_doc_channels:
