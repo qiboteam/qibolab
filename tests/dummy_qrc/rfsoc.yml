@@ -17,6 +17,8 @@ native_gates:
         0:
             RX: {duration: 30, amplitude: 0.05284168507293318, frequency: 5542341844,
                 shape: Rectangular(), type: qd, relative_start: 0, phase: 0}
+            RX12: {duration: 30, amplitude: 0.05284168507293318, frequency: 5542341844,
+                shape: Rectangular(), type: qd, relative_start: 0, phase: 0}
             MZ: {duration: 600, amplitude: 0.03, frequency: 7371258599, shape: Rectangular(),
                 type: ro, relative_start: 0, phase: 0}
     two_qubit: {}

@@ -41,6 +41,14 @@ native_gates:
                 type: qd # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40
+                amplitude: 0.005
+                frequency: 4_700_000_000
+                shape: Gaussian(5)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 1000
                 amplitude: 0.0025
@@ -51,6 +59,15 @@ native_gates:
                 phase: 0
         1: # qubit number
             RX:
+                duration: 40
+                amplitude: 0.0484
+                frequency: 4_855_663_000
+                #frequency: 4_718_515_000 # 02 transition (more likely)
+                shape: Drag(5, -0.02)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
+            RX12:
                 duration: 40
                 amplitude: 0.0484
                 frequency: 4_855_663_000
@@ -77,6 +94,15 @@ native_gates:
                 type: qd # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40
+                amplitude: 0.05682
+                frequency: 5_800_563_000
+                #frequency: 5_661_400_000 # 02 transition
+                shape: Drag(5, -0.04) #Gaussian(5)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 960
                 amplitude: 0.00325
@@ -95,6 +121,15 @@ native_gates:
                 type: qd # qubit drive
                 relative_start: 0
                 phase: 0
+            RX12:
+                duration: 40
+                amplitude: 0.138
+                frequency: 6_760_922_000
+                #frequency: 6_628_822_000 # 02 transition
+                shape: Gaussian(5)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
             MZ:
                 duration: 960
                 amplitude: 0.004225
@@ -105,6 +140,14 @@ native_gates:
                 phase: 0
         4: # qubit number
             RX:
+                duration: 40
+                amplitude: 0.0617
+                frequency: 6_585_053_000
+                shape: Drag(5, 0.0) #Gaussian(5)
+                type: qd # qubit drive
+                relative_start: 0
+                phase: 0
+            RX12:
                 duration: 40
                 amplitude: 0.0617
                 frequency: 6_585_053_000
