@@ -202,7 +202,7 @@ def _find_successive_gates(gates: list, qubits: tuple):
         for gate in gates:
             if (len(gate.qubits) == 1) and (gate.qubits[0] == qubit):
                 successive_gates.append(gate)
-            if (len(gate.qubits) == 2) and (qubit in gate.qubits):
+            elif (len(gate.qubits) == 2) and (qubit in gate.qubits):
                 break
     return successive_gates
 
