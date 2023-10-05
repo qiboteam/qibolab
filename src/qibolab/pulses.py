@@ -21,6 +21,7 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
+    COUPLERFLUX = "cf"
 
 
 class Waveform:
@@ -634,7 +635,7 @@ class Pulse:
             See :py:mod:`qibolab.pulses` for list of available shapes.
         channel (int | str): the channel on which the pulse should be synthesised.
         type (PulseType | str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}
-        qubit (int): qubit associated with the pulse
+        qubit (int): qubit or coupler associated with the pulse
 
     Example:
         .. code-block:: python
@@ -1359,6 +1360,8 @@ class FluxPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
+    PULSE_TYPE = PulseType.FLUX
+
     def __init__(self, start, duration, amplitude, shape, channel=0, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
@@ -1370,7 +1373,7 @@ class FluxPulse(Pulse):
             0,
             shape,
             channel,
-            type=PulseType.FLUX,
+            type=self.PULSE_TYPE,
             qubit=qubit,
         )
 
@@ -1400,7 +1403,15 @@ class FluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        return f"{self.__class__.__name__}({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+
+
+class CouplerFluxPulse(FluxPulse):
+    """Describes a coupler flux pulse.
+    See :class:`qibolab.pulses.FluxPulse` for argument desciption.
+    """
+
+    PULSE_TYPE = PulseType.COUPLERFLUX
 
 
 class SplitPulse(Pulse):
@@ -1802,8 +1813,19 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if pulse.qubit in qubits:
-                new_pc.add(pulse)
+            if not isinstance(pulse, CouplerFluxPulse):
+                if pulse.qubit in qubits:
+                    new_pc.add(pulse)
+        return new_pc
+
+    def coupler_pulses(self, *couplers):
+        """Returns a new PulseSequence containing only the pulses on a specific set of couplers."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if isinstance(pulse, CouplerFluxPulse):
+                if pulse.qubit in couplers:
+                    new_pc.add(pulse)
         return new_pc
 
     @property

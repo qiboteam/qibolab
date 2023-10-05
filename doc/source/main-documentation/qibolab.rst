@@ -94,6 +94,7 @@ This instrument is also part of the dummy platform which is defined in :py:mod:`
 This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
 It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
 
+.. _main_doc_qubits:
 
 Qubits
 ------
@@ -113,10 +114,29 @@ They are optional and encompass distinct types, each serving a specific purpose:
 - twpa (pump to the TWPA)
 - drive
 - flux
-- flux_coupler
 
 The Qubit class allows you to set and manage several key parameters that influence qubit behavior.
 These parameters are typically extracted from the runcard during platform initialization.
+
+.. _main_doc_couplers:
+
+Couplers
+--------
+
+The :class:`qibolab.couplers.Coupler` class serves as a comprehensive representation of a physical coupler qubit within the Qibolab framework.
+It's a simplified :class:`qibolab.qubits.Qubit` to control couplers during 2q gate operation:
+
+- :ref:`Channels <main_doc_channels>`: Physical Connection
+- :class:`Parameters <qibolab.couplers.Coupler>`: Configurable Properties
+- :ref:`Qubits <main_doc_qubits>`: Qubits the coupler acts on
+
+We have a single required Channel for flux coupler control:
+
+- flux
+
+The Coupler class allows us to handle 2q interactions in coupler based architectures
+in a simple way. They are usually associated with :class:`qibolab.qubits.QubitPair`
+and usually extracted from the runcard during platform initialization.
 
 .. _main_doc_channels:
 
