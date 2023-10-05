@@ -57,7 +57,8 @@ class Qubit:
     g: float = 0.0
     """Readout coupling"""
 
-    assigment_fidelity: float = 0.0
+    assignment_fidelity: float = 0.0
+    fidelity: float = 0.0
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0

@@ -91,7 +91,7 @@ characterization:
             Ec: 0.0
             Ej: 0.0
             g: 0.0
-            assigment_fidelity: 0.0
+            assignment_fidelity: 0.0
             peak_voltage: 0
             pi_pulse_amplitude: 0
             T1: 0.0
@@ -121,7 +121,7 @@ characterization:
             Ec: 0.0
             Ej: 0.0
             g: 0.0
-            assigment_fidelity: 0.0
+            assignment_fidelity: 0.0
             peak_voltage: 0
             pi_pulse_amplitude: 0
             T1: 0.0
@@ -151,7 +151,7 @@ characterization:
             Ec: 0.0
             Ej: 0.0
             g: 0.0
-            assigment_fidelity: 0.0
+            assignment_fidelity: 0.0
             peak_voltage: 0
             pi_pulse_amplitude: 0
             T1: 0.0
@@ -181,7 +181,7 @@ characterization:
             Ec: 0.0
             Ej: 0.0
             g: 0.0
-            assigment_fidelity: 0.0
+            assignment_fidelity: 0.0
             peak_voltage: 0
             pi_pulse_amplitude: 0
             T1: 0.0
@@ -211,7 +211,7 @@ characterization:
             Ec: 0.0
             Ej: 0.0
             g: 0.0
-            assigment_fidelity: 0.0
+            assignment_fidelity: 0.0
             peak_voltage: 0
             pi_pulse_amplitude: 0
             T1: 0.0
