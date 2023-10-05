@@ -68,6 +68,7 @@ class Block:
             raise BlockingError("In order to fuse two blocks their qubits must coincide.")
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
+    # TODO: use real QM properties to check commutation
     def commute(self, block: "Block"):
         """Check if a block commutes with the current one.
 
@@ -78,9 +79,8 @@ class Block:
             True if the two blocks don't share any qubit.
             False otherwise.
         """
-        for qubit in self.qubits:
-            if qubit in block.qubits:
-                return False
+        if len(set(self.qubits).intersection(block.qubits)) > 0:
+            return False
         return True
 
     # TODO
@@ -202,7 +202,7 @@ def _find_successive_gates(gates: list, qubits: tuple):
         for gate in gates:
             if (len(gate.qubits) == 1) and (gate.qubits[0] == qubit):
                 successive_gates.append(gate)
-            if (len(gate.qubits) == 2) and (qubit in gate.qubits):
+            elif (len(gate.qubits) == 2) and (qubit in gate.qubits):
                 break
     return successive_gates
 

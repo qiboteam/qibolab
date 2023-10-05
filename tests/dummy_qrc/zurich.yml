@@ -1,13 +1,11 @@
 nqubits: 5
-
+qubits: [0, 1, 2, 3, 4]
+couplers: [0, 1, 3, 4]
+topology: {0: [0, 2], 1: [1, 2], 3: [2, 3], 4: [2, 4]}
 settings:
     nshots: 4096
     sampling_rate: 2.e+9
     relaxation_time: 300_000
-
-qubits: [0, 1, 2, 3, 4, "c0", "c1", "c3", "c4"]
-
-topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 instruments:
     lo_readout:
@@ -164,10 +162,6 @@ native_gates:
                 type: ro # readout
                 relative_start: 0
                 phase: 0
-        c0: {}
-        c1: {}
-        c3: {}
-        c4: {}
 
     two_qubit:
         1-2:
@@ -263,31 +257,12 @@ characterization:
             # parameters for single shot classification
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
-        "c0":
-            sweetspot: 0.
-            # To save power values on the runcard
-            # flux_range: -0
-        "c1":
-            sweetspot: 0.
-            # To save power values on the runcard
-            # flux_range: -0
-        "c3":
-            sweetspot: 0.
-            # To save power values on the runcard
-            # flux_range: -0
-        "c4":
-            sweetspot: 0. #0.8 #0.16
-            # To save power values on the runcard
-            # flux_range: -0
-    # two_qubit:
-
-    # two_qubit_couplers:
-    #     0:
-    #         # frequency: 3_753_000_000 or 3_503_000_000
-    #         sweetspot: 0.1
-    #     1:
-    #         sweetspot: 0.0
-    #     3:
-    #         sweetspot: 0.0
-    #     4:
-    #         sweetspot: 0.0
+    coupler:
+        0:
+            sweetspot: 0.0
+        1:
+            sweetspot: 0.0
+        3:
+            sweetspot: 0.0
+        4:
+            sweetspot: 0.0

@@ -35,7 +35,7 @@ def create(runcard_path=RUNCARD):
     channels["L3-18_ro"].local_oscillator = lo_era
 
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
     qubits[0].readout = channels["L3-18_ro"]
