@@ -12,13 +12,13 @@ class Block:
     Args:
         qubits (tuple): qubits where the block is acting.
         gates (list): list of gates that compose the block.
-        name (str): name of the block.
+        name (str or int): name of the block.
 
     Properties:
         entangled (bool): True if the block entangles the qubits (there is at least one two qubit gate).
     """
 
-    def __init__(self, qubits: tuple, gates: list, name: str = None):
+    def __init__(self, qubits: tuple, gates: list, name: "str or int" = None):
         self.qubits = qubits
         self.gates = gates
         self.name = name
@@ -90,6 +90,56 @@ class Block:
         two qubit gates is higher than the number after the decomposition.
         """
         raise NotImplementedError
+
+
+class CircuitBlocks:
+    """A CircuitBlocks contains a quantum circuit decomposed in two qubits blocks.
+
+    Args:
+        circuit (qibo.models.Circuit): circuit to be decomposed.
+        index_names (bool): assign names to the blocks
+    """
+
+    def __init__(self, circuit: Circuit, index_names: bool = False):
+        self.block_list = block_decomposition(circuit)
+        self._index_names = index_names
+        if index_names:
+            for index, block in enumerate(self.block_list):
+                block.rename(index)
+        self.qubits = circuit.nqubits
+
+    def __call__(self):
+        return self.block_list
+
+    def search_by_index(self, index: int):
+        """Find a block from its index, requires index_names == True"""
+        if self._index_names == False:
+            raise BlockingError("You need to assign index names in order to use search_by_index.")
+        for block in self.block_list:
+            if block.name == index:
+                return block
+        raise BlockingError("No block found with index {}.".format(index))
+
+    def add_block(self, block: "Block"):
+        """Add a two qubits block."""
+        if not set(block.qubits).issubset(range(self.qubits)):
+            raise BlockingError("The block can't be added to the circuit because it acts on different qubits")
+        self.block_list.append(block)
+
+    def circuit(self):
+        """Return the quantum circuit."""
+        circuit = Circuit(self.qubits)
+        for block in self.block_list:
+            for gate in block.gates:
+                circuit.add(gate)
+        return circuit
+
+    def remove_block(self, block: "Block"):
+        """Remove a block from the circuit blocks."""
+        try:
+            self.block_list.remove(block)
+        except ValueError:
+            raise BlockingError("The block you are trying to remove is not present in the circuit blocks.")
 
 
 def block_decomposition(circuit: Circuit, fuse: bool = True):

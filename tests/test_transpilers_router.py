@@ -12,6 +12,7 @@ from qibolab.transpilers.placer import (
     assert_placement,
 )
 from qibolab.transpilers.router import (
+    CircuitMap,
     ConnectivityError,
     ShortestPaths,
     assert_connectivity,
@@ -226,3 +227,16 @@ def test_routing_with_measurements():
     assert transpiled_circuit.ngates == 3
     measured_qubits = transpiled_circuit.queue[2].qubits
     assert measured_qubits == (0, 1, 3)
+
+
+def test_circuit_map():
+    circ = Circuit(3)
+    circ.add(gates.H(1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(0, 1))
+    initial_layout = {"q0": 2, "q1": 0, "q2": 1}
+    circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
+    assert circuit_map.blocks_qubits_pairs() == [(0, 1), (1, 2), (0, 1)]

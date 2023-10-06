@@ -9,7 +9,7 @@ from qibo.config import log, raise_error
 from qibo.models import Circuit
 
 from qibolab.transpilers.abstract import Router, find_gates_qubits_pairs
-from qibolab.transpilers.blocks import block_decomposition
+from qibolab.transpilers.blocks import Block, CircuitBlocks
 from qibolab.transpilers.placer import assert_placement
 
 
@@ -51,6 +51,7 @@ def remap_circuit(circuit: Circuit, qubit_map):
     return new_circuit
 
 
+# TODO: make this class work with CircuitMap
 class ShortestPaths(Router):
     """A class to perform initial qubit mapping and connectivity matching.
 
@@ -311,77 +312,72 @@ class ShortestPaths(Router):
 
 
 class CircuitMap:
-    """Class to keep track of the circuit and physical-logical mapping during routing.
+    """Class to keep track of the circuit and physical-logical mapping during routing,
+    this class also implements the initial two qubit blocks decomposition.
+
+    Args:
+        initial_layout (dict): initial logical-physical qubit mapping.
+        circuit (Circuit): circuit to be routed.
 
     Attributes:
-        circuit_blocks (list): list of two qubit blocks of the circuit.
+        circuit_blocks (CircuitBlocks): list of two qubit blocks of the circuit.
         _physical_logical (dict): current logical to physical qubit mapping.
         _circuit_logical (list): initial circuit to current logical circuit mapping.
-        routed_circuit (qibo.Circuit): current routed circuit.
+        _routed_blocks (CircuitBlocks): current routed circuit blocks.
         _swaps (int): number of added swaps.
     """
 
-    def __init__(self, initial_layout, circuit):
+    def __init__(self, initial_layout: dict, circuit: Circuit):
+        self.circuit_blocks = CircuitBlocks(circuit, index_names=True)
         self._circuit_logical = list(range(len(initial_layout)))
         self._physical_logical = initial_layout
-        self.circuit_blocks = block_decomposition(circuit)
-        self.routed_circuit = None
+        self._routed_blocks = CircuitBlocks(Circuit(circuit.nqubits))
         self._swaps = 0
 
     def blocks_qubits_pairs(self):
         """Return a list containing the qubit pairs of each block."""
-        return [block.qubits for block in self.circuit_blocks]
+        return [block.qubits for block in self.circuit_blocks()]
 
+    # Useful for debug, can be removed later.
     def info(self):
         """Return circuit information"""
         info = {}
         info["circuit_logical"] = self._circuit_logical
         info["physical_logical"] = self._physical_logical
         info["added_swaps"] = self._swaps
-        info["routed_circuit"] = self.routed_circuit
+        info["routed_circuit"] = self.routed_circuit()
         return info
 
-    def execute_gate(self, gate):
-        """Execute a gate by removing it from the circuit representation
+    def execute_block(self, block):
+        """Execute a block by removing it from the circuit representation
         and adding it to the routed circuit.
         """
-        self.routed_circuit[gate] = self.circuit_to_logical(self.circuit_repr[gate])
-        del self.circuit_repr[gate]
+        self._routed_blocks.add_block(self.circuit_to_logical(block))
+        self.circuit_blocks.remove_block(block)
 
-    def qibo_circuit(self):
-        """Return qibo circuit of the routed circuit (using CNOT gates)."""
-        qibo_circuit = Circuit(len(self._circuit_logical))
-        for gate, qubits in self.routed_circuit.items():
-            gate_type = "".join(i for i in gate if not i.isdigit())
-            if gate_type == "swap":
-                qibo_circuit.add(gates.SWAP(*qubits))
-            else:
-                qibo_circuit.add(gates.CNOT(*qubits))
-        return qibo_circuit
+    def routed_circuit(self):
+        """Return qibo circuit of the routed circuit."""
+        return self._routed_blocks.circuit()
 
-    def update(self, swap):
+    def update(self, swap: tuple):
         """Update the logical-physical qubit mapping after applying a SWAP
-        and add the gate to the routed circuit.
+        and add the SWAP gate to the routed blocks.
         """
-        self.routed_circuit["swap" + str(self._swaps)] = swap
+        self._routed_blocks.add_block(Block(qubits=swap, gates=[gates.SWAP(*swap)]))
         self._swaps += 1
         idx_0, idx_1 = self._circuit_logical.index(swap[0]), self._circuit_logical.index(swap[1])
         self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
 
-    def get_logical_qubits(self, gate):
-        """Return the current logical qubits where a gate is acting"""
-        return self.circuit_to_logical(self.circuit_repr[gate])
+    def get_logical_qubits(self, block: Block):
+        """Return the current logical qubits where a block is acting"""
+        return self.circuit_to_logical(block.qubits)
 
-    def get_circuit_qubits(self, gate):
-        """Return the initial circuit qubits where a gate is acting"""
-        return self.circuit_repr[gate]
-
-    def get_physical_qubits(self, gate, string=True):
-        """Return the physical qubits where a gate is acting.
+    def get_physical_qubits(self, block, string=True):
+        """Return the physical qubits where a block is acting.
         If string is True return in the form ("qi", "qj").
         If string is False return them in the form (i, j).
         """
-        physical_qubits = self.logical_to_physical(self.get_logical_qubits(gate))
+        physical_qubits = self.logical_to_physical(self.get_logical_qubits(block))
         if string is True:
             return physical_qubits
         return self.string_to_int(physical_qubits)
@@ -426,24 +422,6 @@ class Sabre(Router):
         self.circuit = None
         self._memory_map = None
 
-    def update_front_layer(self):
-        """Update the front layer of the dag."""
-        self._front_layer = self.get_dag_layer(0)
-
-    def get_dag_layer(self, n_layer):
-        """Return the n topological layer of the dag."""
-        layer_nodes = []
-        for layer, nodes in enumerate(nx.topological_generations(self._dag)):
-            for node in nodes:
-                self._dag.nodes[node]["layer"] = layer
-                if layer == n_layer:
-                    layer_nodes.append(node)
-        return layer_nodes
-
-    def added_swaps(self):
-        """Return the number of SWAP gates added to the circuit during routing"""
-        return self.circuit._swaps
-
     def __call__(self, circuit, initial_layout):
         """Route the circuit.
 
@@ -467,7 +445,36 @@ class Sabre(Router):
                 self.execute_gates(execute_gate_list)
             else:
                 self.find_new_mapping()
-        return self.circuit.routed_circuit, self.circuit.qibo_circuit()
+        return self.circuit.routed_circuit, self.circuit.routed_circuit()
+
+    def preprocessing(self, circuit: Circuit, initial_layout):
+        """The following objects will be initialised:
+        - circuit: class to represent circuit and to perform logical-physical qubit mapping.
+        - _dist_matrix: matrix reporting the shortest path lengh between all node pairs.
+        - _dag: direct acyclic graph of the circuit based on commutativity.
+        """
+        self.circuit = CircuitMap(initial_layout, circuit)
+        self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
+        self._dag = create_dag(self.circuit.blocks_qubits_pairs())
+        self._memory_map = []
+
+    def update_front_layer(self):
+        """Update the front layer of the dag."""
+        self._front_layer = self.get_dag_layer(0)
+
+    def get_dag_layer(self, n_layer):
+        """Return the n topological layer of the dag."""
+        layer_nodes = []
+        for layer, nodes in enumerate(nx.topological_generations(self._dag)):
+            for node in nodes:
+                self._dag.nodes[node]["layer"] = layer
+                if layer == n_layer:
+                    layer_nodes.append(node)
+        return layer_nodes
+
+    def added_swaps(self):
+        """Return the number of SWAP gates added to the circuit during routing"""
+        return self.circuit._swaps
 
     def find_new_mapping(self):
         """Find the new best mapping by adding one swap."""
@@ -522,17 +529,6 @@ class Sabre(Router):
                         candidates.append(candidate)
         return candidates
 
-    def preprocessing(self, circuit: Circuit, initial_layout):
-        """The following objects will be initialised:
-        - circuit: class to represent circuit and to perform logical-physical qubit mapping.
-        - _dist_matrix: matrix reporting the shortest path lengh between all node pairs.
-        - _dag: direct acyclic graph of the circuit based on commutativity.
-        """
-        self.circuit = CircuitMap(initial_layout, circuit)
-        self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
-        self._dag = create_dag(self.circuit.blocks_qubits_pairs())
-        self._memory_map = []
-
     def check_execution(self):
         """Check if some gates in the front layer can be executed in the current configuration.
 
@@ -554,7 +550,7 @@ class Sabre(Router):
         Reset the mapping memory.
         """
         for gate in gatelist:
-            self.circuit.execute_gate(gate)
+            self.circuit.execute_block(gate)
             self._dag.remove_node(gate)
         self.update_front_layer()
         self._memory_map = []
@@ -563,6 +559,7 @@ class Sabre(Router):
         """Return the actual lenght of the dag as the longest path."""
         return nx.dag_longest_path_length(self._dag)
 
+    # Useful for debug, can be removed later.
     def draw_circuit_dag(self, filename=None):
         """Draw the direct acyclic graph of circuit in topological order.
 
