@@ -107,7 +107,7 @@ Setting up the environment
 --------------------------
 
 After defining the platform, we must instruct ``qibolab`` of the location of the create file.
-This can be done using an environment variable.
+This can be done using an environment variable:
 for Unix based systems:
 
 .. code-block:: bash
