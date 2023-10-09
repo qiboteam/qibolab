@@ -56,9 +56,10 @@ class Qubit:
     """Readout Josephson Energy"""
     g: float = 0.0
     """Readout coupling"""
-
     assignment_fidelity: float = 0.0
-    fidelity: float = 0.0
+    """Assignment fidelity."""
+    readout_fidelity: float = 0.0
+    """Readout fidelity."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0
