@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, fields
 from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
+from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -11,7 +12,7 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 """Names of channels that belong to a qubit.
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates")
 """Qubit dataclass fields that are excluded by the ``characterization`` property."""
 
 
@@ -55,8 +56,10 @@ class Qubit:
     """Readout Josephson Energy"""
     g: float = 0.0
     """Readout coupling"""
-
-    assigment_fidelity: float = 0.0
+    assignment_fidelity: float = 0.0
+    """Assignment fidelity."""
+    readout_fidelity: float = 0.0
+    """Readout fidelity."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0
@@ -81,16 +84,10 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[List["Qubit"]] = None
 
     classifiers_hpars: dict = field(default_factory=dict)
+    qutrit_classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    def __post_init__(self):
-        # register qubit in ``flux`` channel so that we can access
-        # ``sweetspot`` and ``filters`` at the channel level
-        if self.flux:
-            self.flux.qubit = self
 
     @property
     def channels(self):
@@ -122,4 +119,7 @@ class QubitPair:
 
     qubit1: Qubit
     qubit2: Qubit
+
+    coupler: Optional[Coupler] = None
+
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)

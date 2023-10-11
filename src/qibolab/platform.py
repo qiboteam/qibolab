@@ -8,6 +8,7 @@ import networkx as nx
 from more_itertools import chunked
 from qibo.config import log, raise_error
 
+from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.native import NativeType
@@ -17,6 +18,7 @@ from qibolab.sweeper import Sweeper
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
+CouplerMap = Dict[QubitId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
 
 
@@ -89,6 +91,9 @@ class Platform:
     """Type of resonator (2D or 3D) in the used QPU.
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
+
+    couplers: Optional[CouplerMap] = None
+    """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
@@ -167,14 +172,19 @@ class Platform:
     def _execute(self, method, sequences, options, **kwargs):
         """Executes the sequences on the controllers"""
         result = {}
+
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = getattr(instrument, method)(self.qubits, sequences, options)
+                if self.couplers is not None:
+                    new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
+                else:
+                    new_result = getattr(instrument, method)(self.qubits, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
+
         return result
 
     def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
@@ -272,12 +282,16 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
+                if self.couplers is not None:
+                    new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
+                else:
+                    new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
                     # currently the result of QMSim is not a dict
                     result = new_result
+
         return result
 
     def __call__(self, sequence, options):

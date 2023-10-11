@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import CouplerFluxPulse, PulseSequence
+from qibolab.qubits import QubitPair
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 SWEPT_POINTS = 5
@@ -31,6 +32,24 @@ def test_dummy_execute_pulse_sequence(acquisition):
         assert result[0].magnitude.shape == (nshots,)
     elif acquisition is AcquisitionType.RAW:
         assert result[0].magnitude.shape == (nshots * ro_pulse.duration,)
+
+
+def test_dummy_execute_pulse_sequence_couplers():
+    platform = create_platform("dummy")
+    qubit_ordered_pair = QubitPair(platform.qubits[1], platform.qubits[2], platform.couplers[1])
+    sequence = PulseSequence()
+
+    cz, _ = platform.create_CZ_pulse_sequence(
+        qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
+        start=0,
+    )
+    sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
+    sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
+    sequence.add(cz.coupler_pulses(qubit_ordered_pair.coupler.name))
+    sequence.add(platform.create_qubit_readout_pulse(0, 40))
+    sequence.add(platform.create_qubit_readout_pulse(2, 40))
+    options = ExecutionParameters(nshots=None)
+    result = platform.execute_pulse_sequence(sequence, options)
 
 
 def test_dummy_execute_pulse_sequence_fast_reset():
@@ -82,6 +101,53 @@ def test_dummy_single_sweep_RAW():
     samples = platform.settings.sampling_rate * 1e-9 * pulse.duration
 
     assert shape == (samples * SWEPT_POINTS,)
+
+
+@pytest.mark.parametrize("fast_reset", [True, False])
+@pytest.mark.parametrize("parameter", [Parameter.amplitude, Parameter.duration, Parameter.bias])
+@pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
+@pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
+@pytest.mark.parametrize("nshots", [10, 20])
+def test_dummy_single_sweep_coupler(fast_reset, parameter, average, acquisition, nshots):
+    platform = create_platform("dummy")
+    sequence = PulseSequence()
+    ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+    coupler_pulse = CouplerFluxPulse(
+        start=0, duration=40, amplitude=0.5, shape="Rectangular()", channel="flux_coupler-0", qubit=0
+    )
+    if parameter is Parameter.amplitude:
+        parameter_range = np.random.rand(SWEPT_POINTS)
+    else:
+        parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
+    sequence.add(ro_pulse)
+    if parameter in QubitParameter:
+        sweeper = Sweeper(parameter, parameter_range, couplers=[platform.couplers[0]])
+    else:
+        sweeper = Sweeper(parameter, parameter_range, pulses=[coupler_pulse])
+    print(sweeper)
+    options = ExecutionParameters(
+        nshots=nshots,
+        averaging_mode=average,
+        acquisition_type=acquisition,
+        fast_reset=fast_reset,
+    )
+    average = not options.averaging_mode is AveragingMode.SINGLESHOT
+    results = platform.sweep(sequence, options, sweeper)
+
+    assert ro_pulse.serial and ro_pulse.qubit in results
+    if average:
+        results_shape = (
+            results[ro_pulse.qubit].magnitude.shape
+            if acquisition is AcquisitionType.INTEGRATION
+            else results[ro_pulse.qubit].statistical_frequency.shape
+        )
+    else:
+        results_shape = (
+            results[ro_pulse.qubit].magnitude.shape
+            if acquisition is AcquisitionType.INTEGRATION
+            else results[ro_pulse.qubit].samples.shape
+        )
+    assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 
 
 @pytest.mark.parametrize("fast_reset", [True, False])

@@ -131,7 +131,8 @@ def create(runcard_path=RUNCARD):
 
     # create qubit objects from runcard
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
+    settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
     for q in range(0, 5):
@@ -144,20 +145,19 @@ def create(runcard_path=RUNCARD):
         channels[f"L4-{6 + q}"].qubit = qubits[q]
 
     # assign channels to couplers and sweetspots(operating points)
-    for c in range(0, 2):
-        qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
-        channels[f"L4-{11 + c}"].qubit = qubits[f"c{c}"]
-    for c in range(3, 5):
-        qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
-        channels[f"L4-{10 + c}"].qubit = qubits[f"c{c}"]
-
-    # assign qubits to couplers
-    for c in itertools.chain(range(0, 2), range(3, 5)):
-        qubits[f"c{c}"].flux_coupler = [qubits[c]]
-        qubits[f"c{c}"].flux_coupler.append(qubits[2])
+    for c, coupler in couplers.items():
+        coupler.flux = channels[f"L4-{11 + c}"]
 
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
     instruments = load_instrument_settings(runcard, instruments)
-    return Platform("zurich", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        "zurich",
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
+    )

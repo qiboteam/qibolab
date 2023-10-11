@@ -5,7 +5,13 @@ from typing import List, Optional, Union
 
 from qibo import gates
 
-from qibolab.pulses import FluxPulse, PulseConstructor, PulseSequence, PulseType
+from qibolab.pulses import (
+    CouplerFluxPulse,
+    FluxPulse,
+    PulseConstructor,
+    PulseSequence,
+    PulseType,
+)
 
 
 class NativeType(Flag):
@@ -126,6 +132,63 @@ class VirtualZPulse:
 
 
 @dataclass
+class CouplerPulse:
+    """Container with parameters required to add a coupler pulse in a pulse sequence."""
+
+    duration: int
+    amplitude: float
+    shape: str
+    coupler: "couplers.Coupler"
+    relative_start: int = 0
+
+    @classmethod
+    def from_dict(cls, pulse, coupler):
+        """Parse the dictionary provided by the runcard.
+
+        Args:
+            name (str): Name of the native gate (dictionary key).
+            pulse (dict): Dictionary containing the parameters of the pulse implementing
+                the gate, as loaded from the runcard.
+            coupler (:class:`qibolab.platforms.abstract.Coupler`): Coupler that the
+                pulse is acting on
+        """
+        kwargs = pulse.copy()
+        kwargs["coupler"] = coupler
+        return cls(**kwargs)
+
+    @property
+    def raw(self):
+        return (
+            {
+                "type": "coupler",
+                "duration": self.duration,
+                "amplitude": self.amplitude,
+                "shape": self.shape,
+                "qubit": self.coupler,
+                "relative_start": self.relative_start,
+            },
+        )
+
+    def pulse(self, start):
+        """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
+
+        Args:
+            start (int): Start time of the pulse in the sequence.
+
+        Returns:
+            A :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
+        """
+        return CouplerFluxPulse(
+            start + self.relative_start,
+            self.duration,
+            self.amplitude,
+            self.shape,
+            channel=self.coupler.flux.name,
+            qubit=self.coupler.name,
+        )
+
+
+@dataclass
 class NativeSequence:
     """List of :class:`qibolab.platforms.native.NativePulse` objects implementing a gate.
 
@@ -135,19 +198,24 @@ class NativeSequence:
 
     name: str
     pulses: List[Union[NativePulse, VirtualZPulse]] = field(default_factory=list)
+    coupler_pulses: List[CouplerPulse] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, name, sequence, qubits):
+    def from_dict(cls, name, sequence, qubits, couplers):
         """Constructs the native sequence from the dictionaries provided in the runcard.
 
         Args:
             name (str): Name of the gate the sequence is applying.
             sequence (dict): Dictionary describing the sequence as provided in the runcard.
-            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` object for all
+            qubits (list): List of :class:`qibolab.qubits.Qubit` object for all
                 qubits in the platform. All qubits are required because the sequence may be
                 acting on qubits that the implemented gate is not targeting.
+            couplres (list): List of :class:`qibolab.couplers.Coupler` object for all
+                couplers in the platform. All couplers are required because the sequence may be
+                acting on couplers that the implemented gate is not targeting.
         """
         pulses = []
+        coupler_pulses = []
 
         # If sequence contains only one pulse dictionary, convert it into a list that can be iterated below
         if isinstance(sequence, dict):
@@ -155,14 +223,18 @@ class NativeSequence:
 
         for i, pulse in enumerate(sequence):
             pulse = pulse.copy()
-            qubit = qubits[pulse.pop("qubit")]
             pulse_type = pulse.pop("type")
-            if pulse_type == "virtual_z":
-                phase = pulse["phase"]
-                pulses.append(VirtualZPulse(phase, qubit))
+            if pulse_type == "coupler":
+                pulse["coupler"] = couplers[pulse.pop("coupler")]
+                coupler_pulses.append(CouplerPulse(**pulse))
             else:
-                pulses.append(NativePulse(f"{name}{i}", **pulse, pulse_type=PulseType(pulse_type), qubit=qubit))
-        return cls(name, pulses)
+                qubit = qubits[pulse.pop("qubit")]
+                if pulse_type == "virtual_z":
+                    phase = pulse["phase"]
+                    pulses.append(VirtualZPulse(phase, qubit))
+                else:
+                    pulses.append(NativePulse(f"{name}{i}", **pulse, pulse_type=PulseType(pulse_type), qubit=qubit))
+        return cls(name, pulses, coupler_pulses)
 
     @property
     def raw(self):
@@ -179,6 +251,8 @@ class NativeSequence:
             else:
                 virtual_z_phases[pulse.qubit.name] += pulse.phase
 
+        for coupler_pulse in self.coupler_pulses:
+            sequence.add(coupler_pulse.pulse(start=start))
         # TODO: Maybe ``virtual_z_phases`` should be an attribute of ``PulseSequence``
         return sequence, virtual_z_phases
 
@@ -232,8 +306,8 @@ class TwoQubitNatives:
     iSWAP: Optional[NativeSequence] = None
 
     @classmethod
-    def from_dict(cls, qubits, native_gates):
-        sequences = {n: NativeSequence.from_dict(n, seq, qubits) for n, seq in native_gates.items()}
+    def from_dict(cls, qubits, couplers, native_gates):
+        sequences = {n: NativeSequence.from_dict(n, seq, qubits, couplers) for n, seq in native_gates.items()}
         return cls(**sequences)
 
     @property
