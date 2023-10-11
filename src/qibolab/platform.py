@@ -199,7 +199,7 @@ class Platform:
         options = self.settings.apply(options)
 
         time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
-        log.info(f"Minimal execution time (seq): {time}")
+        log.info(f"Minimal execution time (sec): {time}")
 
         return self._execute("play", sequence, options, **kwargs)
 
@@ -215,8 +215,8 @@ class Platform:
         options = self.settings.apply(options)
 
         duration = sum(seq.duration for seq in sequences)
-        time = (duration + options.relaxation_time) * options.nshots * 1e-9
-        log.info(f"Minimal execution time (seq): {time}")
+        time = (duration + len(sequences) * options.relaxation_time) * options.nshots * 1e-9
+        log.info(f"Minimal execution time (sec): {time}")
 
         try:
             return self._execute("play_sequences", sequences, options, **kwargs)

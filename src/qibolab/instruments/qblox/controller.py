@@ -21,6 +21,8 @@ class QbloxController(Controller):
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
 
+    UNROLLING_BATCH_SIZE = 30
+
     def __init__(self, name, cluster, modules):
         """Initialises the controller."""
         super().__init__(name=name, address="")
