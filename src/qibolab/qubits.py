@@ -86,6 +86,7 @@ class Qubit:
     flux: Optional[Channel] = None
 
     classifiers_hpars: dict = field(default_factory=dict)
+    qutrit_classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
     @property
