@@ -1098,46 +1098,32 @@ def test_pulse_sequence_add_readout():
     assert len(sequence.qf_pulses) == 1
 
 
-class test_custom:
-    def test_envelope_waveform_i_q():
-        envelope_i = np.cos(np.arange(0, 10, 0.01))
-        envelope_q = np.sin(np.arange(0, 10, 0.01))
-        custom_shape_pulse = Custom(envelope_i, envelope_q)
-        pulse = Pulse(
-            start=0,
-            duration=1000,
-            amplitude=1,
-            frequency=10e6,
-            relative_phase=0,
-            shape="Rectangular()",
-            channel=1,
-        )
+def test_envelope_waveform_i_q():
+    envelope_i = np.cos(np.arange(0, 10, 0.01))
+    envelope_q = np.sin(np.arange(0, 10, 0.01))
+    custom_shape_pulse = Custom(envelope_i, envelope_q)
+    pulse = Pulse(
+        start=0,
+        duration=1000,
+        amplitude=1,
+        frequency=10e6,
+        relative_phase=0,
+        shape="Rectangular()",
+        channel=1,
+    )
 
-        with pytest.raises(ShapeInitError):
-            custom_shape_pulse.envelope_waveform_i()
-        with pytest.raises(ShapeInitError):
-            custom_shape_pulse.envelope_waveform_q()
+    with pytest.raises(ShapeInitError):
+        custom_shape_pulse.envelope_waveform_i
+    with pytest.raises(ShapeInitError):
+        custom_shape_pulse.envelope_waveform_q
 
+    custom_shape_pulse.pulse = pulse
+    assert isinstance(custom_shape_pulse.envelope_waveform_i, Waveform)
+    assert isinstance(custom_shape_pulse.envelope_waveform_q, Waveform)
+    pulse.duration = 2000
+    with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
-        assert isinstance(custom_shape_pulse.envelope_waveform_i, Waveform)
-        assert isinstance(custom_shape_pulse.envelope_waveform_q, Waveform)
-
-    def test_wrong_pulse_duration():
-        envelope_i = np.cos(np.arange(0, 10, 0.01))
-        envelope_q = np.sin(np.arange(0, 10, 0.01))
-        custom_shape_pulse = Custom(envelope_i, envelope_q)
-        pulse = Pulse(
-            start=0,
-            duration=2000,
-            amplitude=1,
-            frequency=10e6,
-            relative_phase=0,
-            shape="Rectangular()",
-            channel=1,
-        )
-        with pytest.raises(ValueError):
-            custom_shape_pulse.pulse = pulse
-            custom_shape_pulse.envelope_waveform_i
+        custom_shape_pulse.envelope_waveform_i
 
 
 @pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
