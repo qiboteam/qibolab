@@ -1169,8 +1169,8 @@ class Zurich(Controller):
             else:
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
 
-    def play_sequences(self, qubits, sequence, options):
-        pass
+    def play_sequences(self, qubits, couplers, sequence, options):
+        raise NotImplementedError
 
     # -----------------------------------------------------------------------------
 
