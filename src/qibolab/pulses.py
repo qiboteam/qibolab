@@ -578,11 +578,14 @@ class eCap(PulseShape):
 class Custom(PulseShape):
     """Arbitrary shape."""
 
-    def __init__(self, envelope_i, envelope_q):
+    def __init__(self, envelope_i, envelope_q=None):
         self.name = "Custom"
         self._pulse: Pulse = None
         self.envelope_i: np.ndarray = np.array(envelope_i)
-        self.envelope_q: np.ndarray = np.array(envelope_q)
+        if envelope_q is not None:
+            self.envelope_q: np.ndarray = np.array(envelope_q)
+        else:
+            self.envelope_q = self.envelope_i
 
     @property
     def pulse(self):
@@ -597,7 +600,8 @@ class Custom(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            assert self.pulse.duration == len(self.envelope_i)
+            if self.pulse.duration != len(self.envelope_i):
+                raise ValueError("Lenght of envelope_i must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
             waveform = Waveform(self.envelope_i * self.pulse.amplitude)
@@ -610,7 +614,8 @@ class Custom(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            assert self.pulse.duration == len(self.envelope_q)
+            if self.pulse.duration != len(self.envelope_q):
+                raise ValueError("Lenght of envelope_q must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
             waveform = Waveform(self.envelope_q * self.pulse.amplitude)
