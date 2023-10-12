@@ -1102,6 +1102,7 @@ def test_envelope_waveform_i_q():
     envelope_i = np.cos(np.arange(0, 10, 0.01))
     envelope_q = np.sin(np.arange(0, 10, 0.01))
     custom_shape_pulse = Custom(envelope_i, envelope_q)
+    custom_shape_pulse_old_behaviour = Custom(envelope_i)
     pulse = Pulse(
         start=0,
         duration=1000,
@@ -1120,10 +1121,14 @@ def test_envelope_waveform_i_q():
     custom_shape_pulse.pulse = pulse
     assert isinstance(custom_shape_pulse.envelope_waveform_i, Waveform)
     assert isinstance(custom_shape_pulse.envelope_waveform_q, Waveform)
+    assert isinstance(custom_shape_pulse_old_behaviour.envelope_waveform_q, Waveform)
     pulse.duration = 2000
     with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
         custom_shape_pulse.envelope_waveform_i
+    with pytest.raises(ValueError):
+        custom_shape_pulse.pulse = pulse
+        custom_shape_pulse.envelope_waveform_q
 
 
 @pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
