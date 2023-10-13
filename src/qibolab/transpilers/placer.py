@@ -9,7 +9,7 @@ from qibolab.transpilers.abstract import Placer, Router, find_gates_qubits_pairs
 
 
 class PlacementError(Exception):
-    """Raise for an error in the qubit placement"""
+    """Raise for an error in the initial qubit placement"""
 
 
 def assert_placement(circuit: Circuit, layout: dict) -> bool:

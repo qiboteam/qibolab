@@ -8,7 +8,7 @@ from qibo.config import log
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.platform import Qubit
+from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
@@ -43,19 +43,19 @@ class DummyInstrument(Controller):
     sampling_rate = 1
 
     def connect(self):
-        log.info("Connecting to dummy instrument.")
+        log.info(f"Connecting to {self.name} instrument.")
 
     def setup(self, *args, **kwargs):
-        log.info("Setting up dummy instrument.")
+        log.info(f"Setting up {self.name} instrument.")
 
     def start(self):
-        log.info("Starting dummy instrument.")
+        log.info(f"Starting {self.name} instrument.")
 
     def stop(self):
-        log.info("Stopping dummy instrument.")
+        log.info(f"Stopping {self.name} instrument.")
 
     def disconnect(self):
-        log.info("Disconnecting dummy instrument.")
+        log.info(f"Disconnecting {self.name} instrument.")
 
     def get_values(self, options, sequence, shape):
         for ro_pulse in sequence.ro_pulses:
@@ -75,6 +75,7 @@ class DummyInstrument(Controller):
     def play(
         self,
         qubits: Dict[QubitId, Qubit],
+        couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
@@ -91,6 +92,7 @@ class DummyInstrument(Controller):
     def play_sequences(
         self,
         qubits: Dict[QubitId, Qubit],
+        couplers: Dict[QubitId, Coupler],
         sequences: List[PulseSequence],
         options: ExecutionParameters,
     ):
@@ -109,6 +111,7 @@ class DummyInstrument(Controller):
     def sweep(
         self,
         qubits: Dict[QubitId, Qubit],
+        couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
         *sweepers: List[Sweeper],

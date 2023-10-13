@@ -36,7 +36,7 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     """Return local_oscillator frequency (HZ) of a pulse."""
     pulse_type = pulse.type.name.lower()
     try:
-        lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator._frequency
+        lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator.frequency
     except AttributeError:
         lo_frequency = 0
     return lo_frequency

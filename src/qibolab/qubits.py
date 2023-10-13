@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, fields
 from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
+from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -11,7 +12,7 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 """Names of channels that belong to a qubit.
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "flux_coupler", "native_gates")
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates")
 """Qubit dataclass fields that are excluded by the ``characterization`` property."""
 
 
@@ -38,14 +39,27 @@ class Qubit:
     name: QubitId
 
     bare_resonator_frequency: int = 0
-    readout_frequency: int = 0  # this is the dressed frequency
+    readout_frequency: int = 0
+    """ Readout dressed frequency"""
     drive_frequency: int = 0
     anharmonicity: int = 0
-    Ec: int = 0
-    Ej: int = 0
-    g: int = 0
-    assigment_fidelity: float = 0.0
-    sweetspot: float = 0
+    sweetspot: float = 0.0
+    flux_to_bias: float = 0.0
+    asymmetry: float = 0.0
+    bare_resonator_frequency_sweetspot: float = 0.0
+    """Bare resonator frequency at sweetspot"""
+    ssf_brf: float = 0.0
+    """Estimated sweetspot qubit frequency divided by the bare_resonator_frequency"""
+    Ec: float = 0.0
+    """Readout Charge Energy"""
+    Ej: float = 0.0
+    """Readout Josephson Energy"""
+    g: float = 0.0
+    """Readout coupling"""
+    assignment_fidelity: float = 0.0
+    """Assignment fidelity."""
+    readout_fidelity: float = 0.0
+    """Readout fidelity."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0
@@ -55,7 +69,6 @@ class Qubit:
     state1_voltage: int = 0
     mean_gnd_states: List[float] = field(default_factory=lambda: [0, 0])
     mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
-    resonator_polycoef_flux: List[float] = field(default_factory=list)
 
     # parameters for single shot classification
     threshold: Optional[float] = None
@@ -71,16 +84,10 @@ class Qubit:
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
     flux: Optional[Channel] = None
-    flux_coupler: Optional[List["Qubit"]] = None
 
     classifiers_hpars: dict = field(default_factory=dict)
+    qutrit_classifiers_hpars: dict = field(default_factory=dict)
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    def __post_init__(self):
-        # register qubit in ``flux`` channel so that we can access
-        # ``sweetspot`` and ``filters`` at the channel level
-        if self.flux:
-            self.flux.qubit = self
 
     @property
     def channels(self):
@@ -112,4 +119,7 @@ class QubitPair:
 
     qubit1: Qubit
     qubit2: Qubit
+
+    coupler: Optional[Coupler] = None
+
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
