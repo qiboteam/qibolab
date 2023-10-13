@@ -1119,6 +1119,7 @@ def test_envelope_waveform_i_q():
         custom_shape_pulse.envelope_waveform_q
 
     custom_shape_pulse.pulse = pulse
+    custom_shape_pulse_old_behaviour.pulse = pulse
     assert isinstance(custom_shape_pulse.envelope_waveform_i, Waveform)
     assert isinstance(custom_shape_pulse.envelope_waveform_q, Waveform)
     assert isinstance(custom_shape_pulse_old_behaviour.envelope_waveform_q, Waveform)
