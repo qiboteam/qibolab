@@ -268,7 +268,7 @@ def test_search_by_index_error_no_indexes():
         circuit_blocks.search_by_index(0)
 
 
-def search_by_index_error_no_index_found():
+def test_search_by_index_error_no_index_found():
     circ = Circuit(2)
     circ.add(gates.CZ(0, 1))
     circuit_blocks = CircuitBlocks(circ, index_names=True)
