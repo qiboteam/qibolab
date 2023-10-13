@@ -108,10 +108,17 @@ Setting up the environment
 
 After defining the platform, we must instruct ``qibolab`` of the location of the create file.
 This can be done using an environment variable:
+for Unix based systems:
 
 .. code-block:: bash
 
     export QIBOLAB_PLATFORMS=<path-to-create-file>
+
+for Windows:
+
+.. code-block:: bash
+
+    $env:QIBOLAB_PLATFORMS="<path-to-create-file>"
 
 To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
 
