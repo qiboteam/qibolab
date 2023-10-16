@@ -618,7 +618,7 @@ class Custom(PulseShape):
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({self.envelope_i[:3]}, ...)"
+        return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
 
 
 class Pulse:
