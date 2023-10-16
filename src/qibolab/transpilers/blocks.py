@@ -68,6 +68,16 @@ class Block:
             raise BlockingError("In order to fuse two blocks their qubits must coincide.")
         return Block(qubits=self.qubits, gates=self.gates + block.gates, name=name)
 
+    def on_qubits(self, new_qubits):
+        """Return a new block acting on the new qubits.
+
+        Args:
+            new_qubits (tuple): new qubits where the block is acting.
+        """
+        qubits_dict = dict(zip(self.qubits, new_qubits))
+        new_gates = [gate.on_qubits(qubits_dict) for gate in self.gates]
+        return Block(qubits=new_qubits, gates=new_gates, name=self.name)
+
     # TODO: use real QM properties to check commutation
     def commute(self, block: "Block"):
         """Check if a block commutes with the current one.

@@ -230,13 +230,44 @@ def test_routing_with_measurements():
 
 
 def test_circuit_map():
-    circ = Circuit(3)
+    circ = Circuit(4)
     circ.add(gates.H(1))
     circ.add(gates.H(0))
     circ.add(gates.CZ(0, 1))
     circ.add(gates.H(0))
     circ.add(gates.CZ(1, 2))
     circ.add(gates.CZ(0, 1))
-    initial_layout = {"q0": 2, "q1": 0, "q2": 1}
+    circ.add(gates.CZ(2, 3))
+    initial_layout = {"q0": 2, "q1": 0, "q2": 1, "q3": 3}
     circuit_map = CircuitMap(initial_layout=initial_layout, circuit=circ)
-    assert circuit_map.blocks_qubits_pairs() == [(0, 1), (1, 2), (0, 1)]
+    block_list = circuit_map.circuit_blocks
+    # test blocks_qubits_pairs
+    assert circuit_map.blocks_qubits_pairs() == [(0, 1), (1, 2), (0, 1), (2, 3)]
+    # test execute_block and routed_circuit
+    circuit_map.execute_block(block_list.search_by_index(0))
+    routed_circuit = circuit_map.routed_circuit()
+    assert isinstance(routed_circuit.queue[0], gates.H)
+    assert len(routed_circuit.queue) == 4
+    assert routed_circuit.queue[2].qubits == (1, 2)
+    # test update
+    circuit_map.update((0, 2))
+    routed_circuit = circuit_map.routed_circuit()
+    assert isinstance(routed_circuit.queue[4], gates.SWAP)
+    assert routed_circuit.queue[4].qubits == (1, 0)
+    assert circuit_map._swaps == 1
+    assert circuit_map._circuit_logical == [2, 1, 0, 3]
+    circuit_map.update((1, 2))
+    routed_circuit = circuit_map.routed_circuit()
+    assert routed_circuit.queue[5].qubits == (2, 0)
+    assert circuit_map._circuit_logical == [1, 2, 0, 3]
+    # test execute_block after multiple swaps
+    circuit_map.execute_block(block_list.search_by_index(1))
+    circuit_map.execute_block(block_list.search_by_index(2))
+    circuit_map.execute_block(block_list.search_by_index(3))
+    routed_circuit = circuit_map.routed_circuit()
+    assert isinstance(routed_circuit.queue[6], gates.CZ)
+    # circuit to logical map: [1,2,0,3]. initial map: {"q0": 2, "q1": 0, "q2": 1, "q3": 3}.
+    assert routed_circuit.queue[6].qubits == (0, 1)  # initial circuit qubits (1,2)
+    assert routed_circuit.queue[7].qubits == (2, 0)  # (0,1)
+    assert routed_circuit.queue[8].qubits == (1, 3)  # (2,3)
+    assert len(circuit_map.circuit_blocks()) == 0

@@ -274,3 +274,12 @@ def test_search_by_index_error_no_index_found():
     circuit_blocks = CircuitBlocks(circ, index_names=True)
     with pytest.raises(BlockingError):
         circuit_blocks.search_by_index(1)
+
+
+def test_block_on_qubits():
+    block = Block(qubits=(0, 1), gates=[gates.H(0), gates.CZ(0, 1), gates.H(1), gates.CZ(1, 0)])
+    new_block = block.on_qubits(new_qubits=(2, 3))
+    assert new_block.gates[0].qubits == (2,)
+    assert new_block.gates[1].qubits == (2, 3)
+    assert new_block.gates[2].qubits == (3,)
+    assert new_block.gates[3].qubits == (3, 2)
