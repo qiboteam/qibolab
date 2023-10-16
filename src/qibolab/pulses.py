@@ -1,4 +1,5 @@
 """Pulse and PulseSequence classes."""
+import copy
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -594,7 +595,7 @@ class Custom(PulseShape):
 
         if self.pulse:
             if self.pulse.duration != len(self.envelope_i):
-                raise ValueError("Lenght of envelope_i must be equal to pulse duration")
+                raise ValueError("Length of envelope_i must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
             waveform = Waveform(self.envelope_i * self.pulse.amplitude)
@@ -608,7 +609,7 @@ class Custom(PulseShape):
 
         if self.pulse:
             if self.pulse.duration != len(self.envelope_q):
-                raise ValueError("Lenght of envelope_q must be equal to pulse duration")
+                raise ValueError("Length of envelope_q must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
             waveform = Waveform(self.envelope_q * self.pulse.amplitude)
@@ -1302,9 +1303,6 @@ class ReadoutPulse(Pulse):
     def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         """Returns a new Pulse object with the same attributes."""
 
-        import copy
-
-        # return eval(self.serial)
         return ReadoutPulse(
             self.start,
             self.duration,
