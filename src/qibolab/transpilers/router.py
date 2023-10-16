@@ -364,12 +364,16 @@ class CircuitMap:
         idx_0, idx_1 = self._circuit_logical.index(swap[0]), self._circuit_logical.index(swap[1])
         self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
 
-    def get_logical_qubits(self, block: Block):
+    def get_logical_qubits(self, block: Block or int):
         """Return the current logical qubits where a block is acting"""
+        if isinstance(block, int):
+            block = self.circuit_blocks.search_by_index(block)
         return self.circuit_to_logical(block.qubits)
 
-    def get_physical_qubits(self, block):
+    def get_physical_qubits(self, block: Block or int):
         """Return the physical qubits where a block is acting."""
+        if isinstance(block, int):
+            block = self.circuit_blocks.search_by_index(block)
         return self.logical_to_physical(self.get_logical_qubits(block))
 
     def logical_to_physical(self, logical_qubits):
@@ -422,22 +426,27 @@ class Sabre(Router):
             initial_layout (dict): initial physical to logical qubit mapping.
 
         Returns:
-            routed circuit representation.
+            (qibo.models.Circuit): routed circuit.
         """
         self.preprocessing(circuit=circuit, initial_layout=initial_layout)
         self.update_front_layer()
         i = 0
         while self._dag.number_of_nodes() != 0:
+            print("iter: ", i)
+            print(self.circuit.info())
+            self.draw_circuit_dag()
             i += 1
             if i == MAX_ITER:
                 print("Transpiling exit because reched max iter")
                 break
-            execute_gate_list = self.check_execution()
-            if execute_gate_list is not None:
-                self.execute_gates(execute_gate_list)
+            execute_block_list = self.check_execution()
+            print(execute_block_list)
+            if execute_block_list is not None:
+                self.execute_blocks(execute_block_list)
             else:
                 self.find_new_mapping()
-        return self.circuit.routed_circuit, self.circuit.routed_circuit()
+        # TODO: add final mapping
+        return self.circuit.routed_circuit()
 
     def preprocessing(self, circuit: Circuit, initial_layout):
         """The following objects will be initialised:
@@ -448,6 +457,7 @@ class Sabre(Router):
         """
         self.circuit = CircuitMap(initial_layout, circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
+        print(self.circuit.blocks_qubits_pairs())
         self._dag = create_dag(self.circuit.blocks_qubits_pairs())
         self._memory_map = []
 
@@ -537,14 +547,15 @@ class Sabre(Router):
             return None
         return executable_blocks
 
-    def execute_gates(self, gatelist: list):
+    def execute_blocks(self, blocklist: list):
         """Execute blocks: remove the correspondent nodes from the dag and circuit representation.
         The executed blocks will be added to the routed circuit. Then update the front layer of the dag.
         Reset the mapping memory.
         """
-        for gate in gatelist:
-            self.circuit.execute_block(gate)
-            self._dag.remove_node(gate)
+        for block_id in blocklist:
+            block = self.circuit.circuit_blocks.search_by_index(block_id)
+            self.circuit.execute_block(block)
+            self._dag.remove_node(block_id)
         self.update_front_layer()
         self._memory_map = []
 
@@ -577,7 +588,7 @@ def create_dag(gates_qubits_pairs):
         circuit (qibo.models.Circuit): circuit to be transformed into dag.
 
     Returns:
-        cleaned_dag (nx.DiGraph): dag of the circuit.
+        (nx.DiGraph): dag of the circuit.
     """
     dag = nx.DiGraph()
     dag.add_nodes_from(list(i for i in range(len(gates_qubits_pairs))))
@@ -592,6 +603,7 @@ def create_dag(gates_qubits_pairs):
     return remove_redundant_connections(dag)
 
 
+# TODO: fix the problem that unconnected edges are removed
 def remove_redundant_connections(dag: nx.Graph):
     """Remove redundant connection from a DAG unsing transitive reduction."""
     new_dag = nx.DiGraph()

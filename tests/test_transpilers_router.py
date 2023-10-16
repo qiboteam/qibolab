@@ -29,6 +29,34 @@ def star_connectivity():
     return chip
 
 
+def q21_connectivity():
+    """Returns connectivity map for the TII 21 qubit chip"""
+    Q = ["q" + str(i) for i in range(21)]
+    chip = nx.Graph()
+    chip.add_nodes_from(Q)
+    graph_list_h = [(Q[i], Q[i + 1]) for i in range(20) if i % 5 != 2]
+    graph_list_v = [
+        (Q[3], Q[8]),
+        (Q[8], Q[13]),
+        (Q[0], Q[4]),
+        (Q[4], Q[9]),
+        (Q[9], Q[14]),
+        (Q[14], Q[18]),
+        (Q[1], Q[5]),
+        (Q[5], Q[10]),
+        (Q[10], Q[15]),
+        (Q[15], Q[19]),
+        (Q[2], Q[6]),
+        (Q[6], Q[11]),
+        (Q[11], Q[16]),
+        (Q[16], Q[20]),
+        (Q[7], Q[12]),
+        (Q[12], Q[17]),
+    ]
+    chip.add_edges_from(graph_list_h + graph_list_v)
+    return chip
+
+
 def generate_random_circuit(nqubits, ngates, seed=42):
     """Generate a random circuit with RX and CZ gates."""
     np.random.seed(seed)
@@ -52,6 +80,13 @@ def generate_random_circuit(nqubits, ngates, seed=42):
             circuit.add(gate(*q, theta=theta, trainable=False))
         else:
             circuit.add(gate(*q))
+    return circuit
+
+
+def star_circuit():
+    circuit = Circuit(5)
+    for i in range(1, 5):
+        circuit.add(gates.CNOT(i, 0))
     return circuit
 
 
@@ -141,34 +176,6 @@ def test_random_circuits_5q(gates, qubits):
     assert gates + transpiler.added_swaps == transpiled_circuit.ngates
 
 
-def q21_connectivity():
-    """Returns connectivity map for the TII 21 qubit chip"""
-    Q = ["q" + str(i) for i in range(21)]
-    chip = nx.Graph()
-    chip.add_nodes_from(Q)
-    graph_list_h = [(Q[i], Q[i + 1]) for i in range(20) if i % 5 != 2]
-    graph_list_v = [
-        (Q[3], Q[8]),
-        (Q[8], Q[13]),
-        (Q[0], Q[4]),
-        (Q[4], Q[9]),
-        (Q[9], Q[14]),
-        (Q[14], Q[18]),
-        (Q[1], Q[5]),
-        (Q[5], Q[10]),
-        (Q[10], Q[15]),
-        (Q[15], Q[19]),
-        (Q[2], Q[6]),
-        (Q[6], Q[11]),
-        (Q[11], Q[16]),
-        (Q[16], Q[20]),
-        (Q[7], Q[12]),
-        (Q[12], Q[17]),
-    ]
-    chip.add_edges_from(graph_list_h + graph_list_v)
-    return chip
-
-
 @pytest.mark.parametrize("gates", [5, 30])
 @pytest.mark.parametrize("qubits", [10, 21])
 @pytest.mark.parametrize("split", [1.0, 0.5, 0.1])
@@ -183,13 +190,6 @@ def test_random_circuits_21q(gates, qubits, split):
     assert_connectivity(q21_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
     assert gates + transpiler.added_swaps == transpiled_circuit.ngates
-
-
-def star_circuit():
-    circuit = Circuit(5)
-    for i in range(1, 5):
-        circuit.add(gates.CNOT(i, 0))
-    return circuit
 
 
 def test_star_circuit():
@@ -271,3 +271,13 @@ def test_circuit_map():
     assert routed_circuit.queue[7].qubits == (2, 0)  # (0,1)
     assert routed_circuit.queue[8].qubits == (1, 3)  # (2,3)
     assert len(circuit_map.circuit_blocks()) == 0
+
+
+# def test_sabre_matched():
+#     placer = Trivial()
+#     layout_circ = Circuit(5)
+#     initial_layout = placer(layout_circ)
+#     router = Sabre(connectivity=star_connectivity())
+#     routed_circuit = router(circuit=matched_circuit(), initial_layout=initial_layout)
+#     assert router.added_swaps() == 0
+#     assert_connectivity(routed_circuit, star_connectivity())
