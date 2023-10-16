@@ -581,20 +581,12 @@ class Custom(PulseShape):
 
     def __init__(self, envelope_i, envelope_q=None):
         self.name = "Custom"
-        self._pulse: Pulse = None
+        self.pulse: Pulse = None
         self.envelope_i: np.ndarray = np.array(envelope_i)
         if envelope_q is not None:
             self.envelope_q: np.ndarray = np.array(envelope_q)
         else:
             self.envelope_q = self.envelope_i
-
-    @property
-    def pulse(self):
-        return self._pulse
-
-    @pulse.setter
-    def pulse(self, value):
-        self._pulse = value
 
     @property
     def envelope_waveform_i(self) -> Waveform:
