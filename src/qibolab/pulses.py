@@ -1,4 +1,5 @@
 """Pulse and PulseSequence classes."""
+import copy
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -579,28 +580,25 @@ class eCap(PulseShape):
 class Custom(PulseShape):
     """Arbitrary shape."""
 
-    def __init__(self, envelope):
+    def __init__(self, envelope_i, envelope_q=None):
         self.name = "Custom"
-        self._pulse: Pulse = None
-        self.envelope: np.ndarray = np.array(envelope)
-
-    @property
-    def pulse(self):
-        return self._pulse
-
-    @pulse.setter
-    def pulse(self, value):
-        self._pulse = value
+        self.pulse: Pulse = None
+        self.envelope_i: np.ndarray = np.array(envelope_i)
+        if envelope_q is not None:
+            self.envelope_q: np.ndarray = np.array(envelope_q)
+        else:
+            self.envelope_q = self.envelope_i
 
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            assert self.pulse.duration == len(self.envelope)
+            if self.pulse.duration != len(self.envelope_i):
+                raise ValueError("Length of envelope_i must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
-            waveform = Waveform(self.envelope * self.pulse.amplitude)
+            waveform = Waveform(self.envelope_i * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
@@ -610,16 +608,17 @@ class Custom(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            assert self.pulse.duration == len(self.envelope)
+            if self.pulse.duration != len(self.envelope_q):
+                raise ValueError("Length of envelope_q must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
-            waveform = Waveform(self.envelope * self.pulse.amplitude)
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform = Waveform(self.envelope_q * self.pulse.amplitude)
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({self.envelope[:3]}, ...)"
+        return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
 
 
 class Pulse:
@@ -1304,14 +1303,13 @@ class ReadoutPulse(Pulse):
     def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         """Returns a new Pulse object with the same attributes."""
 
-        # return eval(self.serial)
         return ReadoutPulse(
             self.start,
             self.duration,
             self.amplitude,
             self.frequency,
             self.relative_phase,
-            repr(self._shape),  # self._shape,
+            copy.deepcopy(self._shape),  # self._shape,
             self.channel,
             self.qubit,
         )
