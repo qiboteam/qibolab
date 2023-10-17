@@ -1,4 +1,5 @@
 import itertools
+import os
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -36,7 +37,7 @@ class QibolabBackend(NumpyBackend):
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
-    def transpile(self, circuit, check_transpiled=False):
+    def transpile(self, circuit):
         """Applies the transpiler to a single circuit."""
         # TODO: Move this method to transpilers
         if self.transpiler is None or self.transpiler.is_satisfied(circuit):
@@ -46,7 +47,7 @@ class QibolabBackend(NumpyBackend):
             # Transform a circuit into proper connectivity and native gates
             native_circuit, qubit_map = self.transpiler(circuit)
             # TODO: Use the qubit map to properly map measurements
-            if check_transpiled:
+            if os.environ.get("CHECK_TRANSPILED", False):
                 assert_transpiling(
                     native_circuit, self.transpiler.connectivity, self.transpiler.get_initial_layout, qubit_map
                 )
@@ -71,7 +72,7 @@ class QibolabBackend(NumpyBackend):
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=1000, check_transpiled=False):
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         """Executes a quantum circuit.
 
         Args:
@@ -81,8 +82,6 @@ class QibolabBackend(NumpyBackend):
             nshots (int): Number of shots to sample from the experiment.
                 If ``None`` the default value provided as hardware_avg in the
                 calibration yml will be used.
-            check_transpiled (bool): If ``True`` it checks that the transpiled
-                circuit is equivalent to the original using simulation.
 
         Returns:
             CircuitResult object containing the results acquired from the execution.
@@ -91,7 +90,6 @@ class QibolabBackend(NumpyBackend):
             return self.execute_circuit(
                 circuit=initial_state + circuit,
                 nshots=nshots,
-                check_transpiled=check_transpiled,
             )
         if initial_state is not None:
             raise_error(
