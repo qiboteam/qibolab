@@ -361,10 +361,8 @@ class CircuitMap:
         idx_0, idx_1 = self._circuit_logical.index(swap[0]), self._circuit_logical.index(swap[1])
         self._circuit_logical[idx_0], self._circuit_logical[idx_1] = swap[1], swap[0]
 
-    def get_logical_qubits(self, block: Block or int):
+    def get_logical_qubits(self, block: Block):
         """Return the current logical qubits where a block is acting"""
-        if isinstance(block, int):
-            block = self.circuit_blocks.search_by_index(block)
         return self.circuit_to_logical(block.qubits)
 
     def get_physical_qubits(self, block: Block or int):

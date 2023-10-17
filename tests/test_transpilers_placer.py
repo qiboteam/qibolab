@@ -73,6 +73,14 @@ def test_trivial():
     assert_placement(circuit, layout)
 
 
+def test_trivial_error():
+    circuit = Circuit(4)
+    connectivity = star_connectivity()
+    placer = Trivial(connectivity=connectivity)
+    with pytest.raises(PlacementError):
+        layout = placer(circuit)
+
+
 @pytest.mark.parametrize("custom_layout", [[4, 3, 2, 1, 0], {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}])
 @pytest.mark.parametrize("give_circuit", [True, False])
 def test_custom(custom_layout, give_circuit):
@@ -154,6 +162,15 @@ def test_random(reps):
     connectivity = star_connectivity()
     placer = Random(connectivity=connectivity, samples=reps)
     layout = placer(star_circuit())
+    assert_placement(star_circuit(), layout)
+
+
+def test_random_perfect():
+    circ = Circuit(5)
+    circ.add(gates.CZ(0, 2))
+    connectivity = star_connectivity()
+    placer = Random(connectivity=connectivity, samples=10)
+    layout = placer(circ)
     assert_placement(star_circuit(), layout)
 
 
