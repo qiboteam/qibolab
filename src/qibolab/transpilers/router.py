@@ -345,9 +345,10 @@ class CircuitMap:
         """Return qibo circuit of the routed circuit."""
         return self._routed_blocks.circuit()
 
-    # TODO
     def final_layout(self):
         """Return the final physical-circuit qubits mapping."""
+        unsorted_dict = {"q" + str(self.circuit_to_physical(i)): i for i in range(len(self._circuit_logical))}
+        return dict(sorted(unsorted_dict.items()))
 
     def update(self, swap: tuple):
         """Update the logical-physical qubit mapping after applying a SWAP
@@ -372,23 +373,17 @@ class CircuitMap:
             block = self.circuit_blocks.search_by_index(block)
         return self.logical_to_physical(self.get_logical_qubits(block))
 
-    def logical_to_physical(self, logical_qubits):
+    def logical_to_physical(self, logical_qubits: tuple):
         """Return the physical qubits associated to the logical qubits."""
         return tuple(self._physical_logical.index(logical_qubits[i]) for i in range(2))
 
-    def circuit_to_logical(self, circuit_qubits):
+    def circuit_to_logical(self, circuit_qubits: tuple):
         """Return the current logical qubits associated to the initial circuit qubits."""
         return tuple(self._circuit_logical[circuit_qubits[i]] for i in range(2))
 
-    # Useful for debug, can be removed later.
-    def info(self):
-        """Return circuit information"""
-        info = {}
-        info["circuit_logical"] = self._circuit_logical
-        info["physical_logical"] = self._physical_logical
-        info["added_swaps"] = self._swaps
-        info["routed_circuit"] = self.routed_circuit()
-        return info
+    def circuit_to_physical(self, circuit_qubit: int):
+        """Return the current physical qubit associated to an initial circuit qubit."""
+        return self._physical_logical.index(self._circuit_logical[circuit_qubit])
 
 
 MAX_ITER = 10000
@@ -426,19 +421,13 @@ class Sabre(Router):
         """
         self.preprocessing(circuit=circuit, initial_layout=initial_layout)
         self.update_front_layer()
-        i = 0
         while self._dag.number_of_nodes() != 0:
-            i += 1
-            if i == MAX_ITER:
-                print("Transpiling exit because reached max iter")
-                break
             execute_block_list = self.check_execution()
             if execute_block_list is not None:
                 self.execute_blocks(execute_block_list)
             else:
                 self.find_new_mapping()
-        # TODO: add final mapping
-        return self.circuit.routed_circuit()
+        return self.circuit.routed_circuit(), self.circuit.final_layout()
 
     def preprocessing(self, circuit: Circuit, initial_layout):
         """The following objects will be initialised:
@@ -549,10 +538,6 @@ class Sabre(Router):
             self._dag.remove_node(block_id)
         self.update_front_layer()
         self._memory_map = []
-
-    def dag_depth(self):
-        """Return the actual lenght of the dag as the longest path."""
-        return nx.dag_longest_path_length(self._dag)
 
 
 def draw_dag(dag: nx.DiGraph, filename=None):  # pragma: no cover

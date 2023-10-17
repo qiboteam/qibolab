@@ -274,6 +274,8 @@ def test_circuit_map():
     assert routed_circuit.queue[7].qubits == (2, 0)  # (0,1)
     assert routed_circuit.queue[8].qubits == (1, 3)  # (2,3)
     assert len(circuit_map.circuit_blocks()) == 0
+    # test final layout
+    assert circuit_map.final_layout() == {"q0": 1, "q1": 2, "q2": 0, "q3": 3}
 
 
 def test_sabre_matched():
@@ -281,6 +283,38 @@ def test_sabre_matched():
     layout_circ = Circuit(5)
     initial_layout = placer(layout_circ)
     router = Sabre(connectivity=star_connectivity())
-    routed_circuit = router(circuit=matched_circuit(), initial_layout=initial_layout)
+    routed_circuit, final_map = router(circuit=matched_circuit(), initial_layout=initial_layout)
     assert router.added_swaps() == 0
+    assert final_map == {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
     assert_connectivity(circuit=routed_circuit, connectivity=star_connectivity())
+
+
+def test_sabre_simple():
+    placer = Trivial()
+    circ = Circuit(5)
+    circ.add(gates.CZ(0, 1))
+    initial_layout = placer(circ)
+    router = Sabre(connectivity=star_connectivity())
+    routed_circuit, final_map = router(circuit=circ, initial_layout=initial_layout)
+    assert router.added_swaps() == 1
+    assert final_map == {"q0": 2, "q1": 1, "q2": 0, "q3": 3, "q4": 4}
+    assert routed_circuit.queue[0].qubits == (0, 2)
+    assert isinstance(routed_circuit.queue[0], gates.SWAP)
+    assert isinstance(routed_circuit.queue[1], gates.CZ)
+    assert_connectivity(circuit=routed_circuit, connectivity=star_connectivity())
+
+
+@pytest.mark.parametrize("gates", [1, 10, 50])
+@pytest.mark.parametrize("look", [0, 5])
+@pytest.mark.parametrize("decay", [0.5, 1.0])
+def test_sabre_random_circuits(gates, look, decay):
+    placer = Trivial()
+    layout_circ = Circuit(5)
+    initial_layout = placer(layout_circ)
+    router = Sabre(connectivity=star_connectivity(), lookahead=look, decay=decay)
+    circuit = generate_random_circuit(nqubits=5, ngates=gates)
+    transpiled_circuit, final_qubit_map = router(circuit, initial_layout)
+    assert router.added_swaps() >= 0
+    assert_connectivity(star_connectivity(), transpiled_circuit)
+    assert_placement(transpiled_circuit, final_qubit_map)
+    assert gates + router.added_swaps() == transpiled_circuit.ngates
