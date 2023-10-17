@@ -14,14 +14,18 @@ from qibolab.transpilers.placer import (
 from qibolab.transpilers.router import (
     CircuitMap,
     ConnectivityError,
+    Sabre,
     ShortestPaths,
     assert_connectivity,
     remap_circuit,
 )
 
 
-def star_connectivity():
-    Q = ["q" + str(i) for i in range(5)]
+def star_connectivity(string=False):
+    if string:
+        Q = ["q" + str(i) for i in range(5)]
+    else:
+        Q = [i for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
@@ -31,7 +35,7 @@ def star_connectivity():
 
 def q21_connectivity():
     """Returns connectivity map for the TII 21 qubit chip"""
-    Q = ["q" + str(i) for i in range(21)]
+    Q = [i for i in range(21)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list_h = [(Q[i], Q[i + 1]) for i in range(20) if i % 5 != 2]
@@ -193,10 +197,12 @@ def test_random_circuits_21q(gates, qubits, split):
 
 
 def test_star_circuit():
-    placer = Subgraph(star_connectivity())
+    placer = Subgraph(star_connectivity(string=True))
     initial_layout = placer(star_circuit())
+    print(initial_layout)
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
+    print(final_qubit_map)
     assert transpiler.added_swaps == 0
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
@@ -273,11 +279,11 @@ def test_circuit_map():
     assert len(circuit_map.circuit_blocks()) == 0
 
 
-# def test_sabre_matched():
-#     placer = Trivial()
-#     layout_circ = Circuit(5)
-#     initial_layout = placer(layout_circ)
-#     router = Sabre(connectivity=star_connectivity())
-#     routed_circuit = router(circuit=matched_circuit(), initial_layout=initial_layout)
-#     assert router.added_swaps() == 0
-#     assert_connectivity(routed_circuit, star_connectivity())
+def test_sabre_matched():
+    placer = Trivial()
+    layout_circ = Circuit(5)
+    initial_layout = placer(layout_circ)
+    router = Sabre(connectivity=star_connectivity())
+    routed_circuit = router(circuit=matched_circuit(), initial_layout=initial_layout)
+    assert router.added_swaps() == 0
+    assert_connectivity(circuit=routed_circuit, connectivity=star_connectivity())

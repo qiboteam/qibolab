@@ -31,7 +31,7 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
         if len(gate.qubits) > 2 and not isinstance(gate, gates.M):
             raise ConnectivityError(f"{gate.name} acts on more than two qubits.")
         if len(gate.qubits) == 2:
-            if ("q" + str(gate.qubits[0]), "q" + str(gate.qubits[1])) not in connectivity.edges:
+            if (gate.qubits[0], gate.qubits[1]) not in connectivity.edges:
                 raise ConnectivityError("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
 
 
@@ -100,13 +100,15 @@ class ShortestPaths(Router):
         init_qubit_map = np.asarray(list(initial_layout.values()))
         self.initial_checks(circuit.nqubits)
         self._gates_qubits_pairs = find_gates_qubits_pairs(circuit)
+        self._mapping = dict(zip([i for i in range(len(initial_layout))], initial_layout.values()))
         self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         self._qubit_map = np.sort(init_qubit_map)
         self.first_transpiler_step(circuit)
         while len(self._gates_qubits_pairs) != 0:
             self.transpiler_step(circuit)
         final_mapping = {
-            key: self._qubit_map[init_qubit_map[i]] for i, key in enumerate(list(self.connectivity.nodes()))
+            key: self._qubit_map[init_qubit_map[i]]
+            for i, key in enumerate(list("q" + str(node) for node in self.connectivity.nodes()))
         }
         hardware_mapped_circuit = remap_circuit(self._transpiled_circuit, np.argsort(init_qubit_map))
         return hardware_mapped_circuit, final_mapping
@@ -151,12 +153,6 @@ class ShortestPaths(Router):
             self._sampling_split = sampling_split
         else:
             raise_error(ValueError, "Sampling_split must be in (0:1].")
-
-    def draw_connectivity(self):  # pragma: no cover
-        """Draw connectivity graph."""
-        position = nx.spectral_layout(self.connectivity)
-        nx.draw(self.connectivity, pos=position, with_labels=True)
-        plt.show()
 
     def reduce(self, graph):
         """Reduce the circuit, delete a 2-qubit gate if it can be applied on the current configuration.
@@ -432,15 +428,11 @@ class Sabre(Router):
         self.update_front_layer()
         i = 0
         while self._dag.number_of_nodes() != 0:
-            print("iter: ", i)
-            print(self.circuit.info())
-            self.draw_circuit_dag()
             i += 1
             if i == MAX_ITER:
-                print("Transpiling exit because reched max iter")
+                print("Transpiling exit because reached max iter")
                 break
             execute_block_list = self.check_execution()
-            print(execute_block_list)
             if execute_block_list is not None:
                 self.execute_blocks(execute_block_list)
             else:
@@ -457,7 +449,6 @@ class Sabre(Router):
         """
         self.circuit = CircuitMap(initial_layout, circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
-        print(self.circuit.blocks_qubits_pairs())
         self._dag = create_dag(self.circuit.blocks_qubits_pairs())
         self._memory_map = []
 
@@ -501,7 +492,7 @@ class Sabre(Router):
             layer_gates = self.get_dag_layer(layer)
             avg_layer_distance = 0.0
             for gate in layer_gates:
-                qubits = temporary_circuit.get_physical_qubits(gate, string=False)
+                qubits = temporary_circuit.get_physical_qubits(gate)
                 avg_layer_distance += (self._dist_matrix[qubits[0], qubits[1]] - 1.0) / len(layer_gates)
             # tot_distance += (decay^n_layer)*average_layer_distance
             tot_distance += weight * avg_layer_distance
@@ -563,22 +554,26 @@ class Sabre(Router):
         """Return the actual lenght of the dag as the longest path."""
         return nx.dag_longest_path_length(self._dag)
 
-    # Useful for debug, can be removed later.
-    def draw_circuit_dag(self, filename=None):
-        """Draw the direct acyclic graph of circuit in topological order.
 
-        Args:
-            filename (str): name of the saved image, if None the image will be showed.
-        """
-        pos = nx.multipartite_layout(self._dag, subset_key="layer")
-        fig, ax = plt.subplots()
-        nx.draw_networkx(self._dag, pos=pos, ax=ax)
-        ax.set_title("DAG layout in topological order")
-        fig.tight_layout()
-        if filename is None:
-            plt.show()
-        else:
-            plt.savefig(filename)
+def draw_dag(dag: nx.DiGraph, filename=None):
+    """Draw a direct acyclic graph in topological order.
+
+    Args:
+        dag (nx.DiGraph): dag to be shown
+        filename (str): name of the saved image, if None the image will be showed.
+    """
+    for layer, nodes in enumerate(nx.topological_generations(dag)):
+        for node in nodes:
+            dag.nodes[node]["layer"] = layer
+    pos = nx.multipartite_layout(dag, subset_key="layer")
+    fig, ax = plt.subplots()
+    nx.draw_networkx(dag, pos=pos, ax=ax)
+    ax.set_title("DAG layout in topological order")
+    fig.tight_layout()
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
 
 
 def create_dag(gates_qubits_pairs):
@@ -603,11 +598,10 @@ def create_dag(gates_qubits_pairs):
     return remove_redundant_connections(dag)
 
 
-# TODO: fix the problem that unconnected edges are removed
 def remove_redundant_connections(dag: nx.Graph):
     """Remove redundant connection from a DAG unsing transitive reduction."""
     new_dag = nx.DiGraph()
-    dag.add_nodes_from(list(i for i in range(dag.number_of_nodes())))
+    new_dag.add_nodes_from(list(i for i in range(dag.number_of_nodes())))
     transitive_reduction = nx.transitive_reduction(dag)
     new_dag.add_edges_from(transitive_reduction.edges)
     return new_dag
