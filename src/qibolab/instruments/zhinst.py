@@ -20,8 +20,8 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
-from qibolab.sweeper import Parameter
 from qibolab.qubits import Qubit
+from qibolab.sweeper import Parameter
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -237,14 +237,14 @@ class ZhSweeperLine:
                 )
             else:
                 pulse = CouplerFluxPulse(
-                    start=0, #TODO: Set start
-                    duration=sequence.duration,  #TODO: Set duration
+                    start=0,  # TODO: Set start
+                    duration=sequence.duration,  # TODO: Set duration
                     amplitude=1,
                     shape="Rectangular",
                     channel=qubit.flux.name,
                     qubit=qubit.name,
                 )
-            
+
             self.pulse = pulse
             self.signal = f"flux{qubit.name}"
 
@@ -602,7 +602,7 @@ class Zurich(Controller):
                                     aux_list[aux_list.index(element)].add_sweeper(sweeper, qubits[pulse.qubit])
 
             if sweeper.parameter.name in SWEEPER_BIAS:
-                #TODO: This should be joined
+                # TODO: This should be joined
                 if sweeper.qubits:
                     for qubit in sweeper.qubits:
                         zhsequence[f"flux{qubit.name}"] = [ZhSweeperLine(sweeper, qubit, sequence)]
@@ -610,7 +610,6 @@ class Zurich(Controller):
                     for coupler in sweeper.couplers:
                         zhsequence[f"couplerflux{coupler.name}"] = [ZhSweeperLine(sweeper, coupler, sequence)]
 
-                
             # FIXME: This may not place the Zhsweeper when the start occurs among different sections or lines
             if sweeper.parameter.name in SWEEPER_START:
                 pulse = sweeper.pulses[0]
@@ -625,7 +624,7 @@ class Zurich(Controller):
                             break
 
         self.sequence = zhsequence
-        
+
     def create_exp(self, qubits, couplers, options):
         """Zurich experiment initialization usig their Experiment class"""
 
@@ -1123,7 +1122,6 @@ class Zurich(Controller):
                 for qubit in sweeper.couplers:
                     parameter = ZhSweeperLine(sweeper, qubit, self.sequence_qibo).zhsweeper
 
-            
         elif sweeper.parameter is Parameter.start:
             parameter = ZhSweeperLine(sweeper).zhsweeper
 
