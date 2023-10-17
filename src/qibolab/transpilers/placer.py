@@ -211,7 +211,7 @@ class Random(Placer):
         for allowed, gate in enumerate(gates_qubits_pairs):
             if gate not in graph.edges():
                 break
-        return len(gates_qubits_pairs) - allowed
+        return len(gates_qubits_pairs) - allowed - 1
 
 
 class ReverseTraversal(Placer):
