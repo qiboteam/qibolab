@@ -167,9 +167,9 @@ def test_random(reps):
 
 def test_random_perfect():
     circ = Circuit(5)
-    circ.add(gates.CZ(0, 2))
+    circ.add(gates.CZ(0, 1))
     connectivity = star_connectivity()
-    placer = Random(connectivity=connectivity, samples=10)
+    placer = Random(connectivity=connectivity, samples=1000)
     layout = placer(circ)
     assert_placement(star_circuit(), layout)
 
