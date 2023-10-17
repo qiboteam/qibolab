@@ -21,11 +21,8 @@ from qibolab.transpilers.router import (
 )
 
 
-def star_connectivity(string=False):
-    if string:
-        Q = ["q" + str(i) for i in range(5)]
-    else:
-        Q = [i for i in range(5)]
+def star_connectivity():
+    Q = [i for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [(Q[i], Q[2]) for i in range(5) if i != 2]
@@ -197,7 +194,7 @@ def test_random_circuits_21q(gates, qubits, split):
 
 
 def test_star_circuit():
-    placer = Subgraph(star_connectivity(string=True))
+    placer = Subgraph(star_connectivity())
     initial_layout = placer(star_circuit())
     print(initial_layout)
     transpiler = ShortestPaths(connectivity=star_connectivity())

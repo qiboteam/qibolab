@@ -555,7 +555,7 @@ class Sabre(Router):
         return nx.dag_longest_path_length(self._dag)
 
 
-def draw_dag(dag: nx.DiGraph, filename=None):
+def draw_dag(dag: nx.DiGraph, filename=None):  # pragma: no cover
     """Draw a direct acyclic graph in topological order.
 
     Args:

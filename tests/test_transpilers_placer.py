@@ -17,7 +17,7 @@ from qibolab.transpilers.router import ShortestPaths
 
 
 def star_connectivity():
-    Q = ["q" + str(i) for i in range(5)]
+    Q = [i for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [
