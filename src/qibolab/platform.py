@@ -10,7 +10,7 @@ from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.native import NativeType
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, CouplerFluxPulse
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
@@ -285,6 +285,19 @@ class Platform:
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
 
+    def create_coupler_pulse(self, coupler, start, duration, amplitude):
+
+        pulse = CouplerFluxPulse(
+            start, #+ self.relative_start,
+            duration,
+            amplitude,
+            "Rectangular()",
+            channel=coupler.flux.name,
+            qubit=coupler.name,
+        )
+        
+        return pulse
+    
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
