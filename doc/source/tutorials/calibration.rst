@@ -39,7 +39,7 @@ around the pre-defined frequency.
     )
 
     # allocate platform
-    platform = create_platform("single_qubit")
+    platform = create_platform("dummy")
 
     # create pulse sequence and add pulse
     sequence = PulseSequence()
@@ -119,7 +119,7 @@ complex pulse sequence. Therefore with start with that:
     )
 
     # allocate platform
-    platform = create_platform("single_qubit")
+    platform = create_platform("dummy")
 
     # create pulse sequence and add pulses
     sequence = PulseSequence()
@@ -214,7 +214,7 @@ and its impact on qubit states in the IQ plane.
     )
 
     # allocate platform
-    platform = create_platform("single_qubit")
+    platform = create_platform("dummy")
 
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()

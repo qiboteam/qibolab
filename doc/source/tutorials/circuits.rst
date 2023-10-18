@@ -21,7 +21,7 @@ circuits definition that we leave to the `Qibo
     circuit.add(gates.M(0))
 
     # execute on quantum hardware
-    qibo.set_backend("qibolab", "tii1q_b1")
+    qibo.set_backend("qibolab", "dummy")
     hardware_result = circuit(nshots=5000)
 
     # execute with classical quantum simulation
@@ -92,7 +92,7 @@ results:
 
 
     # execute on quantum hardware
-    qibo.set_backend("qibolab", "tii1q_b1")
+    qibo.set_backend("qibolab", "dummy")
     hardware = execute_rotation()
 
     # execute with classical quantum simulation
