@@ -236,9 +236,10 @@ class ZhSweeperLine:
                     qubit=qubit.name,
                 )
             else:
+                # TODO: For the couplers specs is enough, may need changing for 2q coupler routines ?
                 pulse = CouplerFluxPulse(
-                    start=0,  # TODO: Set start
-                    duration=sequence.duration,  # TODO: Set duration
+                    start=sequence.start,
+                    duration=sequence.duration,
                     amplitude=1,
                     shape="Rectangular",
                     channel=qubit.flux.name,

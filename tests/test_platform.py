@@ -110,6 +110,16 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
 
 
 @pytest.mark.qpu
+def test_platform_execute_one_coupler_pulse(qpu_platform):
+    # One drive pulse
+    platform = qpu_platform
+    coupler = next(iter(platform.couplers))
+    sequence = PulseSequence()
+    sequence.add(platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
 def test_platform_execute_one_long_drive_pulse(qpu_platform):
     # Long duration
     platform = qpu_platform
