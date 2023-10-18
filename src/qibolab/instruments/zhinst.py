@@ -890,7 +890,7 @@ class Zurich(Controller):
         #     - 1.5 * self.smearing * NANO_TO_SECONDS,
         #     amplitude=1,
         # )
-        
+
         for i, (pulses, qubits, iq_angles) in enumerate(
             zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values())
         ):
@@ -933,7 +933,7 @@ class Zurich(Controller):
                                 * np.exp(1j * iq_angle)
                             )
                         else:
-                            #TODO: Patch for multiple readouts: Remove different uids
+                            # TODO: Patch for multiple readouts: Remove different uids
                             weight = lo.pulse_library.const(
                                 uid="weight",
                                 length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
