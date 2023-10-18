@@ -80,7 +80,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
     plt.xlabel("Frequencies [Hz]")
     plt.ylabel("Amplitudes [a.u.]")
 
-    plt.plot(frequencies, plt.amplitudes)
+    plt.plot(frequencies, amplitudes)
     plt.show()
 
 .. image:: resonator_spectroscopy_light.svg
@@ -161,7 +161,7 @@ We can now proceed to launch on hardware:
     plt.xlabel("Frequencies [Hz]")
     plt.ylabel("Amplitudes [a.u.]")
 
-    plt.plot(frequencies, plt.amplitudes)
+    plt.plot(frequencies, amplitudes)
     plt.show()
 
 .. image:: qubit_spectroscopy_light.svg

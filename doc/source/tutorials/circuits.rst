@@ -38,7 +38,7 @@ We then proceed to define the qibo backend as ``qibolab`` using the ``tii1q_b1``
 Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
 After executing the script we can print our results that will appear more or less as:
 
-.. testcode:: python
+.. code-block:: python
 
     print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
     print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
@@ -61,6 +61,7 @@ results:
 
 .. testcode:: python
 
+    import matplotlib.pyplot as plt
     import numpy as np
     from qibo import Circuit, gates
 
