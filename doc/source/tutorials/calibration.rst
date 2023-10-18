@@ -26,7 +26,7 @@ We start by initializing the platform, that reads the information written in the
 respective runcard, a sequence composed of only a measurement and a sweeper
 around the pre-defined frequency.
 
-.. code-block:: python
+.. testcode:: python
 
     import numpy as np
     from qibolab import create_platform
@@ -56,7 +56,7 @@ around the pre-defined frequency.
 
 We then define the execution parameters and launch the experiment.
 
-.. code-block:: python
+.. testcode:: python
 
     options = ExecutionParameters(
         nshots=1000,
@@ -69,7 +69,7 @@ We then define the execution parameters and launch the experiment.
 
 In few seconds, the experiment will be finished and we can proceed to plot it.
 
-.. code-block:: python
+.. testcode:: python
 
     import matplotlib.pyplot as plt
 
@@ -105,7 +105,7 @@ typical qubit spectroscopy experiment is as follows:
 So, mainly, the difference that this experiment introduces is a slightly more
 complex pulse sequence. Therefore with start with that:
 
-.. code-block:: python
+.. testcode:: python
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -143,7 +143,7 @@ for the experiment.
 
 We can now proceed to launch on hardware:
 
-.. code-block:: python
+.. testcode:: python
 
     options = ExecutionParameters(
         nshots=1000,
@@ -200,7 +200,7 @@ two states.
 This experiment serves to assess the effectiveness of single-qubit calibration
 and its impact on qubit states in the IQ plane.
 
-.. code-block:: python
+.. testcode:: python
 
     import numpy as np
     import matplotlib.pyplot as plt

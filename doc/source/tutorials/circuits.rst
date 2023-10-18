@@ -8,7 +8,7 @@ of this section is to show how to do it, without entering into the details of
 circuits definition that we leave to the `Qibo
 <https://qibo.science/qibo/stable/>`_ documentation.
 
-.. code-block:: python
+.. testcode:: python
 
     import qibo
     from qibo import Circuit, gates
@@ -38,7 +38,7 @@ We then proceed to define the qibo backend as ``qibolab`` using the ``tii1q_b1``
 Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
 After executing the script we can print our results that will appear more or less as:
 
-.. code-block:: python
+.. testcode:: python
 
     print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
     print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
@@ -59,7 +59,7 @@ ideality of current NISQ devices.
 A slightly more complex circuit, a variable rotation, will produce similar
 results:
 
-.. code-block:: python
+.. testcode:: python
 
     import numpy as np
     from qibo import Circuit, gates

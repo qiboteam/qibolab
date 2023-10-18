@@ -48,7 +48,7 @@ A good example of a instrument driver is the
 
 Here, let's write a basic example of instrument whose job is to deliver a fixed bias for the duration of the experiment:
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab.instruments.abstract import Instrument
 
@@ -110,7 +110,7 @@ complex than the local oscillator ones.
 
 Let's see a minimal example:
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab.instruments.abstract import Controller
     from proprietary_instruments import controller_driver
@@ -181,7 +181,7 @@ Let's see a minimal example:
 As we saw in :doc:`lab`, to instantiate a platform at some point you have to
 write something like this:
 
-.. code-block:: python
+.. testcode:: python
 
     instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
     channels = ChannelMap()
