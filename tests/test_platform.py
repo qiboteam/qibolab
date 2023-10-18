@@ -117,6 +117,7 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
     sequence = PulseSequence()
     sequence.add(platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    assert len(sequence.cf_pulses) > 0
 
 
 @pytest.mark.qpu

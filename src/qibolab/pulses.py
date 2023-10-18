@@ -1797,6 +1797,16 @@ class PulseSequence:
                 new_pc.add(pulse)
         return new_pc
 
+    @property
+    def cf_pulses(self):
+        """Returns a new PulseSequence containing only its coupler flux pulses."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if pulse.type == PulseType.COUPLERFLUX:
+                new_pc.add(pulse)
+        return new_pc
+
     def get_channel_pulses(self, *channels):
         """Returns a new PulseSequence containing only the pulses on a specific set of channels."""
 

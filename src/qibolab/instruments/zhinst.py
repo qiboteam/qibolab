@@ -878,16 +878,40 @@ class Zurich(Controller):
     def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         play_after = None
+
+        # TODO: This need to be simplified !!!
         if len(self.sequence_qibo.qf_pulses) != 0 and len(self.sequence_qibo.qd_pulses) != 0:
             play_after = (
                 self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
                 if self.sequence_qibo.qf_pulses.finish > self.sequence_qibo.qd_pulses.finish
                 else self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
             )
+        if len(self.sequence_qibo.cf_pulses) != 0 and len(self.sequence_qibo.qd_pulses) != 0:
+            play_after = (
+                self.play_after_set(self.sequence_qibo.cf_pulses, "bias_coupler")
+                if self.sequence_qibo.cf_pulses.finish > self.sequence_qibo.qd_pulses.finish
+                else self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
+            )
+
         elif len(self.sequence_qibo.qf_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
         elif len(self.sequence_qibo.qd_pulses) != 0:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
+        elif (
+            len(self.sequence_qibo.qf_pulses) != 0
+            and len(self.sequence_qibo.qd_pulses) != 0
+            and len(self.sequence_qibo.cf_pulses) != 0
+        ):
+            seq_qf = self.sequence_qibo.qf_pulses.finish
+            seq_qd = self.sequence_qibo.qd_pulses.finish
+            seq_cf = self.sequence_qibo.cf_pulses.finish
+            # add here for flux coupler pulses
+            if seq_qf > seq_qd and seq_qf > seq_cf:
+                play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
+            elif seq_qd > seq_qf and seq_qd > seq_cf:
+                play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
+            elif seq_cf > seq_qd and seq_cf > seq_qd:
+                play_after = self.play_after_set(self.sequence_qibo.cf_pulse, "bias_coupler")
 
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
