@@ -33,6 +33,8 @@ COMPILER_SETTINGS = {
     "SHFSG_FORCE_COMMAND_TABLE": True,
     "SHFSG_MIN_PLAYWAVE_HINT": 32,
     "SHFSG_MIN_PLAYZERO_HINT": 32,
+    "HDAWG_MIN_PLAYWAVE_HINT": 64,
+    "HDAWG_MIN_PLAYZERO_HINT": 64,
 }
 
 """Translating to Zurich ExecutionParameters"""
@@ -782,15 +784,16 @@ class Zurich(Controller):
                 i = 0
                 time = 0
                 for pulse in self.sequence[f"couplerflux{c}"]:
-                    if not isinstance(pulse, ZhSweeperLine):
-                        pulse.zhpulse.uid += str(i)
-                        exp.delay(
-                            signal=f"couplerflux{c}",
-                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                        )
-                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                            pulse.pulse.start * NANO_TO_SECONDS, 9
-                        )
+                    # TODO: Needed ?
+                    # if not isinstance(pulse, ZhSweeperLine):
+                    pulse.zhpulse.uid += str(i)
+                    exp.delay(
+                        signal=f"couplerflux{c}",
+                        time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                    )
+                    time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                        pulse.pulse.start * NANO_TO_SECONDS, 9
+                    )
                     # TODO: Check of play sweep doesnt need changes
                     if isinstance(pulse, ZhSweeperLine):
                         self.play_sweep(exp, coupler, pulse, section="couplerflux")
