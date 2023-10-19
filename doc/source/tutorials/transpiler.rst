@@ -12,20 +12,23 @@ In this tutorial we will demonstrate how the user can modify this process for cu
 The ``transpiler`` and ``compiler`` objects used when executing a circuit are attributes of :class:`qibolab.backends.QibolabBackend`.
 Creating an instance of the backend provides access to these objects:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.backends import QibolabBackend
 
-    backend = QibolabBackend(platform="my_platform")
+    backend = QibolabBackend(platform="dummy")
+
+.. code-blck:: python
+
     print(backend.transpiler)
     print(backend.compiler)
-
+    
 The transpiler is responsible for transforming the circuit to respect the chip connectivity and native gates,
 while the compiler transforms the circuit to the equivalent pulse sequence.
 The user can modify these attributes before executing a circuit.
 For example:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibo import gates
     from qibo.models import Circuit
@@ -36,7 +39,7 @@ For example:
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
     circuit.add(gates.M(0))
 
-    backend = QibolabBackend(platform="my_platform")
+    backend = QibolabBackend(platform="dummy")
     # disable the transpiler
     backend.transpiler = None
 
@@ -46,13 +49,13 @@ For example:
 completely disables the transpilation steps. In this case the circuit will be sent directly to the compiler, to be compiled to a pulse sequence.
 Instead of completely disabling, custom transpilation steps can be given:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.backends import QibolabBackend
     from qibolab.native import NativeType
-    from qibolab.transpilers.gate_decompositions import NativeGates
+    from qibolab.transpilers.unroller import NativeGates
 
-    backend = QibolabBackend(platform="my_platform")
+    backend = QibolabBackend(platform="dummy")
     backend.transpiler = NativeGates(two_qubit_natives=NativeType.CZ)
 
 
@@ -66,14 +69,14 @@ The decomposition of some common gates such as the SWAP and CNOT is hard-coded f
 
 Multiple transpilation steps can be implemented using the :class:`qibolab.transpilers.pipeline.Pipeline`:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.native import NativeType
     from qibolab.transpilers.pipeline import Pipeline
     from qibolab.transpilers.star_connectivity import StarConnectivity
     from qibolab.transpilers.gate_decompositions import NativeGates
 
-    backend = QibolabBackend(platform="my_platform")
+    backend = QibolabBackend(platform="dummy")
     backend.transpiler = Pipeline(
         [
             StarConnectivity(middle_qubit=2),
@@ -88,11 +91,12 @@ As explained in :ref:`main_doc_transpiler` section, a rule is a function that ac
 
 The following example shows how to modify the transpiler and compiler in order to execute a circuit containing a Pauli X gate using a single pi-pulse:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibo import gates
     from qibo.models import Circuit
     from qibolab.backends import QibolabBackend
+    from qibolab.pulses import PulseSequence
 
     # define the circuit
     circuit = Circuit(1)
@@ -111,7 +115,7 @@ The following example shows how to modify the transpiler and compiler in order t
 
     # the empty dictionary is needed because the X gate does not require any virtual Z-phases
 
-    backend = QibolabBackend(platform="my_platform")
+    backend = QibolabBackend(platform="dummy")
     # disable the transpiler (the default transpiler will attempt to convert X to U3)
     backend.transpiler = None
     # register the new X rule in the compiler
@@ -135,7 +139,7 @@ It is possible to perform transpiler and compiler manipulation in both approache
 When using ``circuit(nshots=1000)``, Qibo is automatically initializing a ``GlobalBackend()`` singleton that is used to execute the circuit.
 Therefore the previous manipulations can be done as follows:
 
-.. code-block:: python
+.. testcode:: python
 
     import qibo
     from qibo import gates
@@ -148,7 +152,7 @@ Therefore the previous manipulations can be done as follows:
     circuit.add(gates.M(0))
 
     # set backend to qibolab
-    qibo.set_backend("qibolab", platform="my_platform")
+    qibo.set_backend("qibolab", platform="dummy")
     # disable the transpiler
     GlobalBackend().transpiler = None
 

@@ -11,7 +11,7 @@ More information about defining platforms is provided in :doc:`../tutorials/lab`
 For a first experiment, let's define a single qubit platform at the path previously specified.
 For simplicity, the qubit will be controlled by a RFSoC-based system, althought minimal changes are needed to use other devices.
 
-.. code-block:: python
+.. testcode:: python
 
     # my_platform.py
 
@@ -28,7 +28,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     PORT = 6000  # port of the controller
 
     # path to runcard file with calibration parameter
-    RUNCARD = pathlib.Path(__file__).parent / "my_platform.yml"
+    RUNCARD = pathlib.Path.cwd() / "my_platform.yml"
 
 
     def create(runcard_path=RUNCARD):
@@ -131,7 +131,7 @@ Since it is a rather simple experiment, it can be used to perform a fast sanity-
 
 We leave to the dedicated tutorial a full explanation of the experiment, but here it is the required code:
 
-.. code-block:: python
+.. testcode:: python
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -145,8 +145,8 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         AcquisitionType,
     )
 
-    # load the platform from ``my_platform.py`` and ``my_platform.yml``
-    platform = create_platform("my_platform")
+    # load the platform from ``dummy.py`` and ``dummy.yml``
+    platform = create_platform("dummy")
 
     # define the pulse sequence
     sequence = PulseSequence()
@@ -179,7 +179,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     plt.xlabel("Frequencies [Hz]")
     plt.ylabel("Amplitudes [a.u.]")
 
-    plt.plot(frequencies, plt.amplitudes)
+    plt.plot(frequencies, amplitudes)
 
 .. image:: ../tutorials/resonator_spectroscopy_light.svg
    :class: only-light
