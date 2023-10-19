@@ -52,7 +52,7 @@ using different Qibolab primitives.
                 shape="Gaussian(5)",
                 pulse_type=PulseType.DRIVE,
                 qubit=qubit,
-                frequency=int(4.5e9)
+                frequency=int(4.5e9),
             ),
             MZ=NativePulse(
                 name="MZ",
@@ -61,8 +61,8 @@ using different Qibolab primitives.
                 shape="Rectangular()",
                 pulse_type=PulseType.READOUT,
                 qubit=qubit,
-                frequency=int(7e9)
-            )
+                frequency=int(7e9),
+            ),
         )
 
         # assign channels to the qubit
@@ -72,7 +72,7 @@ using different Qibolab primitives.
 
         # create dictionaries of the different objects
         qubits = {qubit.name: qubit}
-        pairs = {} # empty as for single qubit we have no qubit pairs
+        pairs = {}  # empty as for single qubit we have no qubit pairs
         instruments = {instrument.name: instrument}
 
         # allocate and return Platform object
@@ -477,7 +477,13 @@ With the following additions for coupler architectures:
         # load ``settings`` from the runcard
         settings = load_settings(runcard)
         return Platform(
-            "my_platform", qubits, pairs, instruments, settings, resonator_type="2D", couplers = couplers
+            "my_platform",
+            qubits,
+            pairs,
+            instruments,
+            settings,
+            resonator_type="2D",
+            couplers=couplers,
         )
 
 Note that this assumes that the runcard is saved as ``my_platform.yml`` in the
@@ -596,7 +602,12 @@ in this case ``"twpa_pump"``.
     from pathlib import Path
     from qibolab import Platform
     from qibolab.channels import ChannelMap, Channel
-    from qibolab.serialize import load_runcard, load_qubits, load_settings, load_instrument_settings
+    from qibolab.serialize import (
+        load_runcard,
+        load_qubits,
+        load_settings,
+        load_instrument_settings,
+    )
     from qibolab.instruments.dummy import DummyInstrument
     from qibolab.instruments.oscillator import LocalOscillator
 

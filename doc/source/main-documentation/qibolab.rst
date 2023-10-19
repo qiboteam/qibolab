@@ -48,7 +48,7 @@ We can easily print some of the parameters of the channels (similarly we can set
     print(f"Readout LO frequency: {platform.qubits[0].readout.lo_frequency}")
     print(f"TWPA LO frequency: {platform.qubits[0].twpa.lo_frequency}")
 
-    #print(f"Qubit bias: {platform.get_bias(0)}")
+    # print(f"Qubit bias: {platform.get_bias(0)}")
     print(f"Qubit attenuation: {platform.get_attenuation(0)}")
 
 .. testoutput:: python
@@ -65,7 +65,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
    from qibolab.pulses import PulseSequence
 
    ps = PulseSequence()
-   ps.add(platform.create_RX_pulse(qubit=0, start=0))   # start time is in ns
+   ps.add(platform.create_RX_pulse(qubit=0, start=0))  # start time is in ns
    ps.add(platform.create_RX_pulse(qubit=0, start=100))
    ps.add(platform.create_MZ_pulse(qubit=0, start=200))
 
@@ -355,7 +355,11 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
 
 .. testcode:: python
 
-    from qibolab.execution_parameters import AcquisitionType, AveragingMode, ExecutionParameters
+    from qibolab.execution_parameters import (
+        AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+    )
 
     options = ExecutionParameters(
         nshots=1000,
@@ -377,7 +381,17 @@ Typical experiments may include both pre-defined pulses and new ones:
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0))
-    sequence.add(DrivePulse(start=0, duration=10, amplitude=0.5, frequency=2500000000, relative_phase=0, shape=Rectangular(), channel="0"))
+    sequence.add(
+        DrivePulse(
+            start=0,
+            duration=10,
+            amplitude=0.5,
+            frequency=2500000000,
+            relative_phase=0,
+            shape=Rectangular(),
+            channel="0",
+        )
+    )
     sequence.add(platform.create_MZ_pulse(0, start=0))
 
     results = platform.execute_pulse_sequence(sequence, options=options)

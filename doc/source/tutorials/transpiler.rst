@@ -22,7 +22,7 @@ Creating an instance of the backend provides access to these objects:
 
     print(backend.transpiler)
     print(backend.compiler)
-    
+
 The transpiler is responsible for transforming the circuit to respect the chip connectivity and native gates,
 while the compiler transforms the circuit to the equivalent pulse sequence.
 The user can modify these attributes before executing a circuit.
