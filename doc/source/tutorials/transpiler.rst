@@ -18,8 +18,13 @@ Creating an instance of the backend provides access to these objects:
 
     backend = QibolabBackend(platform="dummy")
 
-    print(backend.transpiler)
-    print(backend.compiler)
+    print(type(backend.transpiler))
+    print(type(backend.compiler))
+
+.. testoutput:: python
+
+    <class 'qibolab.transpilers.pipeline.Passes'>
+    <class 'qibolab.compilers.compiler.Compiler'>
 
 The transpiler is responsible for transforming the circuit to respect the chip connectivity and native gates,
 while the compiler transforms the circuit to the equivalent pulse sequence.
