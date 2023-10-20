@@ -75,7 +75,20 @@ Now we can execute the sequence on hardware:
 
 .. testcode::  python
 
-   results = platform.execute_pulse_sequence(ps)
+    from qibolab.execution_parameters import (
+        AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+    )
+
+    options = ExecutionParameters(
+        nshots=1000,
+        relaxation_time=10,
+        fast_reset=False,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+    results = platform.execute_pulse_sequence(ps, options=options)
 
 Finally, we can stop instruments and close connections.
 
@@ -358,19 +371,6 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
 
 .. testcode:: python
 
-    from qibolab.execution_parameters import (
-        AcquisitionType,
-        AveragingMode,
-        ExecutionParameters,
-    )
-
-    options = ExecutionParameters(
-        nshots=1000,
-        relaxation_time=10,
-        fast_reset=False,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
     result = platform.execute_pulse_sequence(sequence, options=options)
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
