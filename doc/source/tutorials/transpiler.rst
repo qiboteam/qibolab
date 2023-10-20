@@ -76,12 +76,12 @@ Multiple transpilation steps can be implemented using the :class:`qibolab.transp
 .. testcode:: python
 
     from qibolab.native import NativeType
-    from qibolab.transpilers.pipeline import Pipeline
+    from qibolab.transpilers.pipeline import Passes
     from qibolab.transpilers.star_connectivity import StarConnectivity
-    from qibolab.transpilers.gate_decompositions import NativeGates
+    from qibolab.transpilers.unroller import NativeGates
 
     backend = QibolabBackend(platform="dummy")
-    backend.transpiler = Pipeline(
+    backend.transpiler = Passes(
         [
             StarConnectivity(middle_qubit=2),
             NativeGates(two_qubit_natives=NativeType.CZ),

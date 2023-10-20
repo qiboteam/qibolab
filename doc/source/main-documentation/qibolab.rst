@@ -47,17 +47,16 @@ We can easily print some of the parameters of the channels (similarly we can set
     print(f"Drive LO frequency: {platform.qubits[0].drive.lo_frequency}")
     print(f"Readout LO frequency: {platform.qubits[0].readout.lo_frequency}")
     print(f"TWPA LO frequency: {platform.qubits[0].twpa.lo_frequency}")
-
-    print(f"Qubit bias: {platform.get_bias(0)}")
-    print(f"Qubit attenuation: {platform.get_attenuation(0)}")
+    print(f"Qubit bias: {platform.qubits[0].flux.offset}")
+    print(f"Qubit attenuation: {platform.qubits[0].readout.attenuation}")
 
 .. testoutput:: python
     :hide:
 
     Drive LO frequency: 0
     Readout LO frequency: 0
-    Qubit bias: 0
     TWPA LO frequency: 1000000000.0
+    Qubit bias: 0.0
     Qubit attenuation: 0
 
 Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
@@ -205,16 +204,19 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
 
 .. testcode:: python
 
+    import os
+    from pathlib import Path
     from qibolab.serialize import load_qubits, load_runcard
+
+    runcard_path = Path(os.getcwd()).parent / "src" / "qibolab" / "dummy.yml"
 
     ch_map = ChannelMap()
     ch_map |= channel1
     ch_map |= channel2
     ch_map |= channel3
 
-    qubits, pairs = load_qubits, load_runcard
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
 
     qubits[0].drive = channel1
     qubits[0].readout = channel2

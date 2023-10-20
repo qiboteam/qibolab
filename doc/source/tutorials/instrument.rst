@@ -48,7 +48,7 @@ A good example of a instrument driver is the
 
 Here, let's write a basic example of instrument whose job is to deliver a fixed bias for the duration of the experiment:
 
-.. testcode::  python
+.. code-block::  python
 
     from qibolab.instruments.abstract import Instrument
 
@@ -92,6 +92,7 @@ Here, let's write a basic example of instrument whose job is to deliver a fixed 
             """Stop biasing."""
             self.device.off(bias)
 
+
 Add a controller
 ----------------
 
@@ -110,13 +111,13 @@ complex than the local oscillator ones.
 
 Let's see a minimal example:
 
-.. testcode::  python
+.. code-block::  python
 
     from qibolab.instruments.abstract import Controller
     from proprietary_instruments import controller_driver
 
 
-    class myController(Controller):
+    class MyController(Controller):
         def __init__(self, name, address):
             self.device = controller_driver(address)
             super().__init__(name, address)
