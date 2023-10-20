@@ -204,11 +204,10 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
 
 .. testcode:: python
 
-    import os
     from pathlib import Path
     from qibolab.serialize import load_qubits, load_runcard
 
-    runcard_path = Path(os.getcwd()).parent / "src" / "qibolab" / "dummy.yml"
+    runcard_path = Path.cwd().parent / "src" / "qibolab" / "dummy.yml"
 
     ch_map = ChannelMap()
     ch_map |= channel1
