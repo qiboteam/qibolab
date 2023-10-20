@@ -52,6 +52,7 @@ We can easily print some of the parameters of the channels (similarly we can set
     print(f"Qubit attenuation: {platform.get_attenuation(0)}")
 
 .. testoutput:: python
+    :hide:
 
     Drive LO frequency: 0
     Readout LO frequency: 0
@@ -344,6 +345,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
     print(f"We have {sequence_ch1.count} pulses on channel 1.")
 
 .. testoutput:: python
+    :hide:
 
     Total duration: 40
     We have 0 pulses on channel 1.

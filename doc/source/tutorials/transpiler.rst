@@ -22,6 +22,7 @@ Creating an instance of the backend provides access to these objects:
     print(type(backend.compiler))
 
 .. testoutput:: python
+    :hide:
 
     <class 'qibolab.transpilers.pipeline.Passes'>
     <class 'qibolab.compilers.compiler.Compiler'>

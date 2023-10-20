@@ -10,8 +10,11 @@ circuits definition that we leave to the `Qibo
 
 .. testcode:: python
 
+    import numpy as np
     import qibo
     from qibo import Circuit, gates
+
+    np.random.seed(0)
 
     # create a single qubit circuit
     circuit = Circuit(1)
@@ -43,17 +46,13 @@ After executing the script we can print our results that will appear more or les
     print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
     print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
 
-.. testoutput:: text
-
-    Qibolab: P(0) = 0.54 P(1) = 0.46
-    Numpy:   P(0) = 0.50 P(1) = 0.40
-
 Returns:
 
-.. code-block:: text
+.. testoutput:: python
+    :options: +NORMALIZE_WHITESPACE
 
-    > Qibolab: P(0) = 0.54 P(1) = 0.46
-    > Numpy:   P(0) = 0.50 P(1) = 0.40
+    Qibolab: P(0) = 0.49    P(1) = 0.51
+    Numpy:   P(0) = 0.50    P(1) = 0.50
 
 Clearly, we do not expect the results to be exactly equal due to the non
 ideality of current NISQ devices.
