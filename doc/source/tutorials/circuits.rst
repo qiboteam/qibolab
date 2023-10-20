@@ -38,10 +38,15 @@ We then proceed to define the qibo backend as ``qibolab`` using the ``tii1q_b1``
 Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
 After executing the script we can print our results that will appear more or less as:
 
-.. code-block:: python
+.. testcode:: python
 
     print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
     print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
+
+.. testoutput:: text
+
+    Qibolab: P(0) = 0.54 P(1) = 0.46
+    Numpy:   P(0) = 0.50 P(1) = 0.40
 
 Returns:
 

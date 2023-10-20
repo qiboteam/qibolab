@@ -18,8 +18,6 @@ Creating an instance of the backend provides access to these objects:
 
     backend = QibolabBackend(platform="dummy")
 
-.. code-blck:: python
-
     print(backend.transpiler)
     print(backend.compiler)
 

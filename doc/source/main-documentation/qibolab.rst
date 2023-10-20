@@ -48,13 +48,14 @@ We can easily print some of the parameters of the channels (similarly we can set
     print(f"Readout LO frequency: {platform.qubits[0].readout.lo_frequency}")
     print(f"TWPA LO frequency: {platform.qubits[0].twpa.lo_frequency}")
 
-    # print(f"Qubit bias: {platform.get_bias(0)}")
+    print(f"Qubit bias: {platform.get_bias(0)}")
     print(f"Qubit attenuation: {platform.get_attenuation(0)}")
 
 .. testoutput:: python
 
     Drive LO frequency: 0
     Readout LO frequency: 0
+    Qubit bias: 0
     TWPA LO frequency: 1000000000.0
     Qubit attenuation: 0
 
@@ -71,7 +72,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
 Now we can execute the sequence on hardware:
 
-.. code-block::  python
+.. tetstcode::  python
 
    results = platform.execute_pulse_sequence(ps)
 
@@ -188,7 +189,7 @@ Note that while channels are defined in a device-independent manner, the port pa
 Channels are then organized in :class:`qibolab.channels.ChannelMap` to be passed as a single argument to the platform.
 Following the tutorial in :doc:`/tutorials/lab`, we can continue the initialization:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.serialize import load_qubits, load_runcard
 
