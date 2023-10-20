@@ -73,7 +73,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
 Now we can execute the sequence on hardware:
 
-.. tetstcode::  python
+.. testcode::  python
 
    results = platform.execute_pulse_sequence(ps)
 
