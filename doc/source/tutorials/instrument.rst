@@ -92,6 +92,7 @@ Here, let's write a basic example of instrument whose job is to deliver a fixed 
             """Stop biasing."""
             self.device.off(bias)
 
+
 Add a controller
 ----------------
 
@@ -116,7 +117,7 @@ Let's see a minimal example:
     from proprietary_instruments import controller_driver
 
 
-    class myController(Controller):
+    class MyController(Controller):
         def __init__(self, name, address):
             self.device = controller_driver(address)
             super().__init__(name, address)
@@ -181,7 +182,10 @@ Let's see a minimal example:
 As we saw in :doc:`lab`, to instantiate a platform at some point you have to
 write something like this:
 
-.. code-block:: python
+.. testcode:: python
+
+    from qibolab.channels import Channel, ChannelMap
+    from qibolab.instruments.dummy import DummyInstrument
 
     instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
     channels = ChannelMap()
