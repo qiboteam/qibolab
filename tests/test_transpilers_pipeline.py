@@ -11,7 +11,7 @@ from qibolab.transpilers.optimizer import Preprocessing
 from qibolab.transpilers.pipeline import (
     Passes,
     TranspilerPipelineError,
-    assert_cirucuit_equivalence,
+    assert_circuit_equivalence,
     assert_transpiling,
 )
 from qibolab.transpilers.placer import Random, ReverseTraversal, Trivial
@@ -94,7 +94,7 @@ def test_asser_circuit_equivalence():
     circ1.add(gates.CZ(0, 1))
     circ2.add(gates.X(0))
     circ2.add(gates.CZ(0, 1))
-    assert_cirucuit_equivalence(circ1, circ2)
+    assert_circuit_equivalence(circ1, circ2)
 
 
 def test_error_connectivity():
