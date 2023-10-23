@@ -150,7 +150,7 @@ class Subgraph(Placer):
                 self.connectivity.number_of_edges() == circuit_subgraph.number_of_edges()
                 or i == len(gates_qubits_pairs) - 1
             ):
-                return {"q" + str(i): result.mapping[i] for i in range(len(result.mapping))}
+                break
         return {"q" + str(i): result.mapping[i] for i in range(len(result.mapping))}
 
 

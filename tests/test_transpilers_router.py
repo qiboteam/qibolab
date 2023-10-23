@@ -196,10 +196,8 @@ def test_random_circuits_21q(gates, qubits, split):
 def test_star_circuit():
     placer = Subgraph(star_connectivity())
     initial_layout = placer(star_circuit())
-    print(initial_layout)
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
-    print(final_qubit_map)
     assert transpiler.added_swaps == 0
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
@@ -225,8 +223,6 @@ def test_routing_with_measurements():
     initial_layout = placer(circuit=circuit)
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, _ = transpiler(circuit, initial_layout)
-    print(transpiled_circuit.draw())
-    print(circuit.draw())
     assert transpiled_circuit.ngates == 3
     measured_qubits = transpiled_circuit.queue[2].qubits
     assert measured_qubits == (0, 1, 3)

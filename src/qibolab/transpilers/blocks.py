@@ -18,7 +18,7 @@ class Block:
         entangled (bool): True if the block entangles the qubits (there is at least one two qubit gate).
     """
 
-    def __init__(self, qubits: tuple, gates: list, name: "str or int" = None):
+    def __init__(self, qubits: tuple, gates: list, name: str | int | None = None):
         self.qubits = qubits
         self.gates = gates
         self.name = name
@@ -123,7 +123,7 @@ class CircuitBlocks:
 
     def search_by_index(self, index: int):
         """Find a block from its index, requires index_names == True"""
-        if self._index_names == False:
+        if not self._index_names:
             raise BlockingError("You need to assign index names in order to use search_by_index.")
         for block in self.block_list:
             if block.name == index:
