@@ -18,7 +18,7 @@ class TranspilerPipelineError(Exception):
 
 
 # TODO: rearrange qubits based on the final qubit map (or it will not work for routed circuit)
-def assert_cirucuit_equivalence(original_circuit: Circuit, transpiled_circuit: Circuit):
+def assert_circuit_equivalence(original_circuit: Circuit, transpiled_circuit: Circuit):
     """Checks that the transpiled circuit agrees with the original using simulation.
 
     Args:
