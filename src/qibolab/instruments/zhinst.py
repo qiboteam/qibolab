@@ -248,14 +248,14 @@ class ZhSweeperLine:
                     qubit=qubit.name,
                 )
 
-            self.pulse = pulse
-            self.signal = f"flux{qubit.name}"
+        self.pulse = pulse
+        self.signal = f"flux{qubit.name}"
 
-            self.zhpulse = lo.pulse_library.const(
-                uid=(f"{pulse.type.name.lower()}_{pulse.qubit}_"),
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-            )
+        self.zhpulse = lo.pulse_library.const(
+            uid=(f"{pulse.type.name.lower()}_{pulse.qubit}_"),
+            length=round(pulse.duration * NANO_TO_SECONDS, 9),
+            amplitude=pulse.amplitude,
+        )
 
         # Need something better to store multiple sweeps on the same pulse
         self.zhsweeper = self.select_sweeper(sweeper)
