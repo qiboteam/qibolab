@@ -17,6 +17,7 @@ from laboneq.dsl.experiment.pulse_library import (
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
@@ -223,10 +224,11 @@ class ZhSweeperLine:
     Near Time sweeps
     """
 
-    def __init__(self, sweeper, qubit=None, sequence=None):
+    def __init__(self, sweeper, qubit=None, sequence=None, pulse=None):
         self.sweeper = sweeper
         """Qibolab sweeper"""
 
+        # TODO: Do something with the pulse coming here
         if sweeper.parameter is Parameter.bias:
             if isinstance(qubit, Qubit):
                 pulse = FluxPulse(
@@ -237,7 +239,8 @@ class ZhSweeperLine:
                     channel=qubit.flux.name,
                     qubit=qubit.name,
                 )
-            else:
+                self.signal = f"flux{qubit.name}"
+            if isinstance(qubit, Coupler):
                 # TODO: For the couplers specs is enough, may need changing for 2q coupler routines ?
                 pulse = CouplerFluxPulse(
                     start=sequence.start,
@@ -247,15 +250,22 @@ class ZhSweeperLine:
                     channel=qubit.flux.name,
                     qubit=qubit.name,
                 )
+                self.signal = f"couplerflux{qubit.name}"
 
-        self.pulse = pulse
-        self.signal = f"flux{qubit.name}"
+            self.pulse = pulse
 
-        self.zhpulse = lo.pulse_library.const(
-            uid=(f"{pulse.type.name.lower()}_{pulse.qubit}_"),
-            length=round(pulse.duration * NANO_TO_SECONDS, 9),
-            amplitude=pulse.amplitude,
-        )
+            self.zhpulse = lo.pulse_library.const(
+                uid=(f"{pulse.type.name.lower()}_{pulse.qubit}_"),
+                length=round(pulse.duration * NANO_TO_SECONDS, 9),
+                amplitude=pulse.amplitude,
+            )
+
+        elif sweeper.parameter is Parameter.start:
+            if pulse:
+                self.pulse = pulse
+                self.signal = f"flux{qubit}"
+
+                self.zhpulse = ZhPulse(pulse).zhpulse
 
         # Need something better to store multiple sweeps on the same pulse
         self.zhsweeper = self.select_sweeper(sweeper)
@@ -622,7 +632,7 @@ class Zurich(Controller):
                         if isinstance(aux_list[aux_list.index(element)], ZhPulse):
                             aux_list.insert(
                                 aux_list.index(element),
-                                ZhSweeperLine(sweeper, pulse.qubit, sequence),
+                                ZhSweeperLine(sweeper, pulse.qubit, sequence, pulse),
                             )
                             break
 
