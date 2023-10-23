@@ -531,7 +531,6 @@ class Zurich(Controller):
                         data = (
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
-                        data = np.ones(data.shape) - data.real  # FIXME: Probability inversion
                         results[ropulse.pulse.serial] = options.results_type(data)
                         results[ropulse.pulse.qubit] = options.results_type(data)
                     else:
@@ -900,10 +899,6 @@ class Zurich(Controller):
                     # Integration weights definition or load from the chip folder
                     weights_file = KERNELS_FOLDER / f"{self.chip}/weights/kernels.npz"
                     if weights_file.is_file():
-                        # samples = np.load(
-                        #     weights_file,
-                        #     allow_pickle=True,
-                        # )
                         from qibocal.auto.serialize import load
 
                         raw_data_dict = dict(np.load(weights_file))
@@ -915,8 +910,6 @@ class Zurich(Controller):
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
                                 uid="weight" + pulse.zhpulse.uid,
-                                # samples=samples[0] * np.exp(1j * qubit.iq_angle),
-                                # samples=samples[0] * np.exp(1j * iq_angle),
                                 samples=samples[q],
                             )
                         else:
@@ -1054,7 +1047,6 @@ class Zurich(Controller):
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
                         data = data.real
-                        data = np.ones(data.shape) - data  # FIXME: Probability inversion
                         results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
                         results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
                     else:
