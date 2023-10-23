@@ -1,4 +1,5 @@
 """Pulse and PulseSequence classes."""
+import copy
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -21,6 +22,7 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
+    COUPLERFLUX = "cf"
 
 
 class Waveform:
@@ -578,28 +580,25 @@ class eCap(PulseShape):
 class Custom(PulseShape):
     """Arbitrary shape."""
 
-    def __init__(self, envelope):
+    def __init__(self, envelope_i, envelope_q=None):
         self.name = "Custom"
-        self._pulse: Pulse = None
-        self.envelope: np.ndarray = np.array(envelope)
-
-    @property
-    def pulse(self):
-        return self._pulse
-
-    @pulse.setter
-    def pulse(self, value):
-        self._pulse = value
+        self.pulse: Pulse = None
+        self.envelope_i: np.ndarray = np.array(envelope_i)
+        if envelope_q is not None:
+            self.envelope_q: np.ndarray = np.array(envelope_q)
+        else:
+            self.envelope_q = self.envelope_i
 
     @property
     def envelope_waveform_i(self) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            assert self.pulse.duration == len(self.envelope)
+            if self.pulse.duration != len(self.envelope_i):
+                raise ValueError("Length of envelope_i must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
-            waveform = Waveform(self.envelope * self.pulse.amplitude)
+            waveform = Waveform(self.envelope_i * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
@@ -609,16 +608,17 @@ class Custom(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            assert self.pulse.duration == len(self.envelope)
+            if self.pulse.duration != len(self.envelope_q):
+                raise ValueError("Length of envelope_q must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
 
-            waveform = Waveform(self.envelope * self.pulse.amplitude)
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            waveform = Waveform(self.envelope_q * self.pulse.amplitude)
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({self.envelope[:3]}, ...)"
+        return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
 
 
 class Pulse:
@@ -634,7 +634,7 @@ class Pulse:
             See :py:mod:`qibolab.pulses` for list of available shapes.
         channel (int | str): the channel on which the pulse should be synthesised.
         type (PulseType | str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}
-        qubit (int): qubit associated with the pulse
+        qubit (int): qubit or coupler associated with the pulse
 
     Example:
         .. code-block:: python
@@ -678,7 +678,7 @@ class Pulse:
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=0,
         type=PulseType.DRIVE,
         qubit=0,
     ):
@@ -1181,7 +1181,7 @@ class Pulse:
         import matplotlib.pyplot as plt
         from matplotlib import gridspec
 
-        num_samples = int(np.rint(self.duration / 1e9 * PulseShape.SAMPLING_RATE))
+        num_samples = len(self.shape.envelope_waveform_i)
         time = self.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
         fig = plt.figure(figsize=(14, 5), dpi=200)
         gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
@@ -1273,7 +1273,7 @@ class ReadoutPulse(Pulse):
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=0,
         qubit=0,
     ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
@@ -1303,14 +1303,13 @@ class ReadoutPulse(Pulse):
     def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
         """Returns a new Pulse object with the same attributes."""
 
-        # return eval(self.serial)
         return ReadoutPulse(
             self.start,
             self.duration,
             self.amplitude,
             self.frequency,
             self.relative_phase,
-            repr(self._shape),  # self._shape,
+            copy.deepcopy(self._shape),  # self._shape,
             self.channel,
             self.qubit,
         )
@@ -1330,7 +1329,7 @@ class DrivePulse(Pulse):
         frequency,
         relative_phase,
         shape,
-        channel,
+        channel=0,
         qubit=0,
     ):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
@@ -1359,7 +1358,9 @@ class FluxPulse(Pulse):
     See :class:`qibolab.pulses.Pulse` for argument desciption.
     """
 
-    def __init__(self, start, duration, amplitude, shape, channel, qubit=0):
+    PULSE_TYPE = PulseType.FLUX
+
+    def __init__(self, start, duration, amplitude, shape, channel=0, qubit=0):
         # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
         #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
@@ -1370,7 +1371,7 @@ class FluxPulse(Pulse):
             0,
             shape,
             channel,
-            type=PulseType.FLUX,
+            type=self.PULSE_TYPE,
             qubit=qubit,
         )
 
@@ -1400,7 +1401,15 @@ class FluxPulse(Pulse):
 
     @property
     def serial(self):
-        return f"FluxPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+        return f"{self.__class__.__name__}({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
+
+
+class CouplerFluxPulse(FluxPulse):
+    """Describes a coupler flux pulse.
+    See :class:`qibolab.pulses.FluxPulse` for argument desciption.
+    """
+
+    PULSE_TYPE = PulseType.COUPLERFLUX
 
 
 class SplitPulse(Pulse):
@@ -1516,45 +1525,42 @@ class SplitPulse(Pulse):
         import matplotlib.pyplot as plt
         from matplotlib import gridspec
 
-        time = (
-            self.window_start
-            + np.arange(int(np.rint(self.window_duration / 1e9 * PulseShape.SAMPLING_RATE)))
-            / PulseShape.SAMPLING_RATE
-            * 1e9
-        )
+        idx = slice(self._window_start - self.start, self._window_finish - self.start)
+        num_samples = len(self.shape.envelope_waveform_i.data[idx])
+        time = self.window_start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
 
         fig = plt.figure(figsize=(14, 5), dpi=200)
         gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
         ax1 = plt.subplot(gs[0])
         ax1.plot(
             time,
-            self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.envelope_waveform_i.data[idx],
             label="envelope i",
             c="C0",
             linestyle="dashed",
         )
         ax1.plot(
             time,
-            self.shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.envelope_waveform_q.data[idx],
             label="envelope q",
             c="C1",
             linestyle="dashed",
         )
         ax1.plot(
             time,
-            self.shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.modulated_waveform_i.data[idx],
             label="modulated i",
             c="C0",
         )
         ax1.plot(
             time,
-            self.shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.modulated_waveform_q.data[idx],
             label="modulated q",
             c="C1",
         )
         ax1.plot(
             time,
-            -self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
+            -self.shape.envelope_waveform_i.data[idx],
             c="silver",
             linestyle="dashed",
         )
@@ -1567,14 +1573,14 @@ class SplitPulse(Pulse):
 
         ax2 = plt.subplot(gs[1])
         ax2.plot(
-            self.shape.modulated_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
-            self.shape.modulated_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.modulated_waveform_i.data[idx],
+            self.shape.modulated_waveform_q.data[idx],
             label="modulated",
             c="C3",
         )
         ax2.plot(
-            self.shape.envelope_waveform_i.data[self._window_start - self.start : self._window_finish - self.start],
-            self.shape.envelope_waveform_q.data[self._window_start - self.start : self._window_finish - self.start],
+            self.shape.envelope_waveform_i.data[idx],
+            self.shape.envelope_waveform_q.data[idx],
             label="envelope",
             c="C2",
         )
@@ -1805,8 +1811,19 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if pulse.qubit in qubits:
-                new_pc.add(pulse)
+            if not isinstance(pulse, CouplerFluxPulse):
+                if pulse.qubit in qubits:
+                    new_pc.add(pulse)
+        return new_pc
+
+    def coupler_pulses(self, *couplers):
+        """Returns a new PulseSequence containing only the pulses on a specific set of couplers."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if isinstance(pulse, CouplerFluxPulse):
+                if pulse.qubit in couplers:
+                    new_pc.add(pulse)
         return new_pc
 
     @property
@@ -1945,38 +1962,27 @@ class PulseSequence:
                     ax.axis([0, self.finish, -1, 1])
                     for pulse in channel_pulses:
                         if isinstance(pulse, SplitPulse):
-                            num_samples = int(pulse.window_duration / 1e9 * PulseShape.SAMPLING_RATE)
+                            idx = slice(pulse.window_start - pulse.start, pulse.window_finish - pulse.start)
+                            num_samples = len(pulse.shape.modulated_waveform_i.data[idx])
                             time = pulse.window_start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
+                            ax.plot(time, pulse.shape.modulated_waveform_q.data[idx], c="lightgrey")
                             ax.plot(
                                 time,
-                                pulse.shape.modulated_waveform_q.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
-                                c="lightgrey",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_i.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
+                                pulse.shape.modulated_waveform_i.data[idx],
                                 c=f"C{str(n)}",
                             )
                             ax.plot(
                                 time,
-                                pulse.shape.envelope_waveform_i.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
+                                pulse.shape.envelope_waveform_i.data[idx],
                                 c=f"C{str(n)}",
                             )
                             ax.plot(
                                 time,
-                                -pulse.shape.envelope_waveform_i.data[
-                                    pulse.window_start - pulse.start : pulse.window_finish - pulse.start
-                                ],
+                                -pulse.shape.envelope_waveform_i.data[idx],
                                 c=f"C{str(n)}",
                             )
                         else:
-                            num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+                            num_samples = len(pulse.shape.modulated_waveform_i)
                             time = pulse.start + np.arange(num_samples) / PulseShape.SAMPLING_RATE * 1e9
                             ax.plot(
                                 time,

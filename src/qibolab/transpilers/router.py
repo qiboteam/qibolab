@@ -249,7 +249,7 @@ class ShortestPaths(Router):
         assert_placement(new_circuit, self._mapping)
         self._transpiled_circuit = new_circuit
 
-    def add_gates(self, qibo_circuit, matched_gates):
+    def add_gates(self, qibo_circuit: Circuit, matched_gates):
         """Add one and two qubit gates to transpiled circuit until connectivity is matched.
 
         Args:
@@ -259,7 +259,15 @@ class ShortestPaths(Router):
         index = 0
         while self._circuit_position < len(qibo_circuit.queue):
             gate = qibo_circuit.queue[self._circuit_position]
-            if len(gate.qubits) == 1:
+            if isinstance(gate, gates.M):
+                measured_qubits = gate.qubits
+                self._transpiled_circuit.add(
+                    gate.on_qubits(
+                        {measured_qubits[i]: self._qubit_map[measured_qubits[i]] for i in range(len(measured_qubits))}
+                    )
+                )
+                self._circuit_position += 1
+            elif len(gate.qubits) == 1:
                 self._transpiled_circuit.add(gate.on_qubits({gate.qubits[0]: self._qubit_map[gate.qubits[0]]}))
                 self._circuit_position += 1
             else:
@@ -300,7 +308,6 @@ class ShortestPaths(Router):
 
 
 class Sabre(Router):
-    # TODO: requires block circuit
     """
     Routing algorithm proposed in
     https://doi.org/10.48550/arXiv.1809.02573

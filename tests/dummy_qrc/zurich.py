@@ -7,7 +7,12 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import (
+    load_instrument_settings,
+    load_qubits,
+    load_runcard,
+    load_settings,
+)
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
 
@@ -117,13 +122,7 @@ def create(runcard_path=RUNCARD):
         channels[f"L4-{i}"].power_range = 0.8
 
     # Instantiate local oscillators
-    local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(4)]]
-
-    # Set Dummy LO parameters (Map only the two by two oscillators)
-    local_oscillators[0].frequency = 5_500_000_000  # For SG0 (Readout)
-    local_oscillators[1].frequency = 4_200_000_000  # For SG1 and SG2 (Drive)
-    local_oscillators[2].frequency = 4_600_000_000  # For SG3 and SG4 (Drive)
-    local_oscillators[3].frequency = 4_800_000_000  # For SG5 and SG6 (Drive)
+    local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(3)]]
 
     # Map LOs to channels
     ch_to_lo = {"L2-7": 0, "L4-15": 1, "L4-16": 1, "L4-17": 2, "L4-18": 2, "L4-19": 3}
@@ -132,7 +131,8 @@ def create(runcard_path=RUNCARD):
 
     # create qubit objects from runcard
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
+    settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
     for q in range(0, 5):
@@ -145,19 +145,19 @@ def create(runcard_path=RUNCARD):
         channels[f"L4-{6 + q}"].qubit = qubits[q]
 
     # assign channels to couplers and sweetspots(operating points)
-    for c in range(0, 2):
-        qubits[f"c{c}"].flux = channels[f"L4-{11 + c}"]
-        channels[f"L4-{11 + c}"].qubit = qubits[f"c{c}"]
-    for c in range(3, 5):
-        qubits[f"c{c}"].flux = channels[f"L4-{10 + c}"]
-        channels[f"L4-{10 + c}"].qubit = qubits[f"c{c}"]
-
-    # assign qubits to couplers
-    for c in itertools.chain(range(0, 2), range(3, 5)):
-        qubits[f"c{c}"].flux_coupler = [qubits[c]]
-        qubits[f"c{c}"].flux_coupler.append(qubits[2])
+    for c, coupler in couplers.items():
+        coupler.flux = channels[f"L4-{11 + c}"]
 
     instruments = {controller.name: controller}
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
-    return Platform("zurich", qubits, pairs, instruments, settings, resonator_type="2D")
+    instruments = load_instrument_settings(runcard, instruments)
+    return Platform(
+        "zurich",
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
+    )
