@@ -528,6 +528,7 @@ class Zurich(Controller):
                         data = (
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
+                        data = np.ones(data.shape) - data.real  # FIXME: Probability inversion
                         results[ropulse.pulse.serial] = options.results_type(data)
                         results[ropulse.pulse.qubit] = options.results_type(data)
                     else:
@@ -1043,6 +1044,7 @@ class Zurich(Controller):
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
                         data = data.real
+                        data = np.ones(data.shape) - data  # FIXME: Probability inversion
                         results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
                         results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
                     else:
