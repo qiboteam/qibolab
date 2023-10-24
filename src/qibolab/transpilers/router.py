@@ -439,19 +439,18 @@ class Sabre(Router):
         self._dag = create_dag(self.circuit.blocks_qubits_pairs())
         self._memory_map = []
 
+    def update_dag_layers(self):
+        for layer, nodes in enumerate(nx.topological_generations(self._dag)):
+            for node in nodes:
+                self._dag.nodes[node]["layer"] = layer
+
     def update_front_layer(self):
         """Update the front layer of the dag."""
         self._front_layer = self.get_dag_layer(0)
 
     def get_dag_layer(self, n_layer):
         """Return the n topological layer of the dag."""
-        layer_nodes = []
-        for layer, nodes in enumerate(nx.topological_generations(self._dag)):
-            for node in nodes:
-                self._dag.nodes[node]["layer"] = layer
-                if layer == n_layer:
-                    layer_nodes.append(node)
-        return layer_nodes
+        return [node for node in self._dag.nodes if node["layer"] == n_layer]
 
     def added_swaps(self):
         """Return the number of SWAP gates added to the circuit during routing"""
@@ -526,14 +525,17 @@ class Sabre(Router):
         return executable_blocks
 
     def execute_blocks(self, blocklist: list):
-        """Execute blocks: remove the correspondent nodes from the dag and circuit representation.
-        The executed blocks will be added to the routed circuit. Then update the front layer of the dag.
-        Reset the mapping memory.
+        """Execute a list of blocks:
+        -Remove the correspondent nodes from the dag and circuit representation.
+        -Add the executed blocks to the routed circuit.
+        -Update the dag layers and front layer.
+        -Reset the mapping memory.
         """
         for block_id in blocklist:
             block = self.circuit.circuit_blocks.search_by_index(block_id)
             self.circuit.execute_block(block)
             self._dag.remove_node(block_id)
+        self.update_dag_layers()
         self.update_front_layer()
         self._memory_map = []
 
