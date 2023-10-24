@@ -100,7 +100,7 @@ class ShortestPaths(Router):
         init_qubit_map = np.asarray(list(initial_layout.values()))
         self.initial_checks(circuit.nqubits)
         self._gates_qubits_pairs = find_gates_qubits_pairs(circuit)
-        self._mapping = dict(zip([i for i in range(len(initial_layout))], initial_layout.values()))
+        self._mapping = dict(zip(range(len(initial_layout)), initial_layout.values()))
         self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         self._qubit_map = np.sort(init_qubit_map)
         self.first_transpiler_step(circuit)
@@ -464,8 +464,7 @@ class Sabre(Router):
         self._memory_map.append(deepcopy(self.circuit._circuit_logical))
         for candidate in self.swap_candidates():
             candidates_evaluation[candidate] = self.compute_cost(candidate)
-        best_cost = min(candidates_evaluation.values())
-        best_candidate = list(candidates_evaluation.keys())[list(candidates_evaluation.values()).index(best_cost)]
+        best_candidate = min(candidates_evaluation, key=candidates_evaluation.get)
         self.circuit.update(best_candidate)
 
     def compute_cost(self, candidate):
@@ -482,7 +481,6 @@ class Sabre(Router):
             for gate in layer_gates:
                 qubits = temporary_circuit.get_physical_qubits(gate)
                 avg_layer_distance += (self._dist_matrix[qubits[0], qubits[1]] - 1.0) / len(layer_gates)
-            # tot_distance += (decay^n_layer)*average_layer_distance
             tot_distance += weight * avg_layer_distance
             weight *= self.decay
         return tot_distance
@@ -502,8 +500,7 @@ class Sabre(Router):
         for block in self._front_layer:
             qubits = self.circuit.get_physical_qubits(block)
             for qubit in qubits:
-                connected_qubits = self.connectivity.neighbors(qubit)
-                for connected in connected_qubits:
+                for connected in self.connectivity.neighbors(qubit):
                     candidate = tuple(
                         sorted((self.circuit._physical_logical[qubit], self.circuit._physical_logical[connected]))
                     )
@@ -567,13 +564,13 @@ def create_dag(gates_qubits_pairs):
     """Create direct acyclic graph (dag) of the circuit based on two qubit gates commutativity relations.
 
     Args:
-        circuit (qibo.models.Circuit): circuit to be transformed into dag.
+        gates_qubits_pairs (list): list of qubits tuples where gates/blocks acts.
 
     Returns:
         (nx.DiGraph): dag of the circuit.
     """
     dag = nx.DiGraph()
-    dag.add_nodes_from(list(i for i in range(len(gates_qubits_pairs))))
+    dag.add_nodes_from(range(len(gates_qubits_pairs)))
     # Find all successors
     connectivity_list = []
     for idx, gate in enumerate(gates_qubits_pairs):
@@ -592,7 +589,7 @@ def create_dag(gates_qubits_pairs):
 def remove_redundant_connections(dag: nx.Graph):
     """Remove redundant connection from a DAG unsing transitive reduction."""
     new_dag = nx.DiGraph()
-    new_dag.add_nodes_from(list(i for i in range(dag.number_of_nodes())))
+    new_dag.add_nodes_from(range(dag.number_of_nodes()))
     transitive_reduction = nx.transitive_reduction(dag)
     new_dag.add_edges_from(transitive_reduction.edges)
     return new_dag
