@@ -517,7 +517,7 @@ class Sabre(Router):
         executable_blocks = []
         for block in self._front_layer:
             qubits = self.circuit.get_physical_qubits(block)
-            if qubits in self.connectivity.edges:
+            if qubits in self.connectivity.edges or not self.circuit.circuit_blocks.search_by_index(block).entangled:
                 executable_blocks.append(block)
         if len(executable_blocks) == 0:
             return None
