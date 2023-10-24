@@ -418,7 +418,6 @@ class Sabre(Router):
             (qibo.models.Circuit): routed circuit.
         """
         self.preprocessing(circuit=circuit, initial_layout=initial_layout)
-        self.update_front_layer()
         while self._dag.number_of_nodes() != 0:
             execute_block_list = self.check_execution()
             if execute_block_list is not None:
@@ -433,11 +432,14 @@ class Sabre(Router):
         - _dist_matrix: matrix reporting the shortest path lengh between all node pairs.
         - _dag: direct acyclic graph of the circuit based on commutativity.
         - _memory_map: list to remember previous SWAP moves.
+        - _front_layer: list containing the blocks to be executed.
         """
         self.circuit = CircuitMap(initial_layout, circuit)
         self._dist_matrix = nx.floyd_warshall_numpy(self.connectivity)
         self._dag = create_dag(self.circuit.blocks_qubits_pairs())
         self._memory_map = []
+        self.update_dag_layers()
+        self.update_front_layer()
 
     def update_dag_layers(self):
         for layer, nodes in enumerate(nx.topological_generations(self._dag)):
@@ -450,7 +452,7 @@ class Sabre(Router):
 
     def get_dag_layer(self, n_layer):
         """Return the n topological layer of the dag."""
-        return [node for node in self._dag.nodes if node["layer"] == n_layer]
+        return [node[0] for node in self._dag.nodes(data="layer") if node[1] == n_layer]
 
     def added_swaps(self):
         """Return the number of SWAP gates added to the circuit during routing"""
