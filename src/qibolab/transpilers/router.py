@@ -577,10 +577,14 @@ def create_dag(gates_qubits_pairs):
     # Find all successors
     connectivity_list = []
     for idx, gate in enumerate(gates_qubits_pairs):
+        saturated_qubits = []
         for next_idx, next_gate in enumerate(gates_qubits_pairs[idx + 1 :]):
             for qubit in gate:
-                if qubit in next_gate:
+                if (qubit in next_gate) and (not qubit in saturated_qubits):
+                    saturated_qubits.append(qubit)
                     connectivity_list.append((idx, next_idx + idx + 1))
+            if len(saturated_qubits) >= 2:
+                break
     dag.add_edges_from(connectivity_list)
     return remove_redundant_connections(dag)
 
