@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 from qibo import Circuit
 from qibo.gates import Gate
 
@@ -18,7 +20,7 @@ class Block:
         entangled (bool): True if the block entangles the qubits (there is at least one two qubit gate).
     """
 
-    def __init__(self, qubits: tuple, gates: list, name: str | int | None = None):
+    def __init__(self, qubits: tuple, gates: list, name: Optional[Union[str, int]] = None):
         self.qubits = qubits
         self.gates = gates
         self.name = name
