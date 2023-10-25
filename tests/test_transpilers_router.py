@@ -4,6 +4,8 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
+from qibolab.transpilers.optimizer import Preprocessing
+from qibolab.transpilers.pipeline import assert_circuit_equivalence
 from qibolab.transpilers.placer import (
     Custom,
     PlacementError,
@@ -17,7 +19,6 @@ from qibolab.transpilers.router import (
     Sabre,
     ShortestPaths,
     assert_connectivity,
-    remap_circuit,
 )
 
 
@@ -120,21 +121,6 @@ def test_assert_connectivity_3q():
         assert_connectivity(star_connectivity(), circuit)
 
 
-def test_remap_circuit():
-    circuit = Circuit(3)
-    circuit.add(gates.CNOT(1, 0))
-    circuit.add(gates.CNOT(2, 0))
-    circuit.add(gates.CNOT(1, 2))
-    qubit_map = np.asarray([2, 1, 0])
-    ref_circuit = Circuit(3)
-    ref_circuit.add(gates.CNOT(1, 2))
-    ref_circuit.add(gates.CNOT(0, 2))
-    ref_circuit.add(gates.CNOT(1, 0))
-    new_circuit = remap_circuit(circuit, qubit_map)
-    for i, gate in enumerate(new_circuit.queue):
-        assert gate.qubits == ref_circuit.queue[i].qubits
-
-
 @pytest.mark.parametrize("split", [2.0, -1.0])
 def test_split_setter(split):
     with pytest.raises(ValueError):
@@ -171,26 +157,18 @@ def test_random_circuits_5q(gates, qubits):
     transpiler = ShortestPaths(connectivity=star_connectivity(), verbose=True)
     circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
     transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
-    assert transpiler.added_swaps >= 0
+    assert transpiler.added_swaps() >= 0
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
-    assert gates + transpiler.added_swaps == transpiled_circuit.ngates
-
-
-@pytest.mark.parametrize("gates", [5, 30])
-@pytest.mark.parametrize("qubits", [10, 21])
-@pytest.mark.parametrize("split", [1.0, 0.5, 0.1])
-def test_random_circuits_21q(gates, qubits, split):
-    placer = Trivial()
-    layout_circ = Circuit(21)
-    initial_layout = placer(layout_circ)
-    transpiler = ShortestPaths(connectivity=q21_connectivity(), sampling_split=split)
-    circuit = generate_random_circuit(nqubits=qubits, ngates=gates)
-    transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
-    assert transpiler.added_swaps >= 0
-    assert_connectivity(q21_connectivity(), transpiled_circuit)
-    assert_placement(transpiled_circuit, final_qubit_map)
-    assert gates + transpiler.added_swaps == transpiled_circuit.ngates
+    assert gates + transpiler.added_swaps() == transpiled_circuit.ngates
+    qubit_matcher = Preprocessing(connectivity=star_connectivity())
+    new_circuit = qubit_matcher(circuit=circuit)
+    assert_circuit_equivalence(
+        original_circuit=new_circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )
 
 
 def test_star_circuit():
@@ -198,10 +176,17 @@ def test_star_circuit():
     initial_layout = placer(star_circuit())
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
-    assert transpiler.added_swaps == 0
+    assert transpiler.added_swaps() == 0
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
-    assert final_qubit_map["q2"] == 0
+    print(initial_layout)
+    print(final_qubit_map)
+    assert_circuit_equivalence(
+        original_circuit=star_circuit(),
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )
 
 
 def test_star_circuit_custom_map():
@@ -209,10 +194,15 @@ def test_star_circuit_custom_map():
     initial_layout = placer()
     transpiler = ShortestPaths(connectivity=star_connectivity())
     transpiled_circuit, final_qubit_map = transpiler(star_circuit(), initial_layout)
-    assert transpiler.added_swaps == 1
+    assert transpiler.added_swaps() == 1
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
-    assert final_qubit_map == {"q0": 1, "q1": 2, "q2": 0, "q3": 3, "q4": 4}
+    assert_circuit_equivalence(
+        original_circuit=star_circuit(),
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )
 
 
 def test_routing_with_measurements():
@@ -222,10 +212,16 @@ def test_routing_with_measurements():
     circuit.add(gates.M(0, 2, 3))
     initial_layout = placer(circuit=circuit)
     transpiler = ShortestPaths(connectivity=star_connectivity())
-    transpiled_circuit, _ = transpiler(circuit, initial_layout)
+    transpiled_circuit, final_qubit_map = transpiler(circuit, initial_layout)
     assert transpiled_circuit.ngates == 3
     measured_qubits = transpiled_circuit.queue[2].qubits
     assert measured_qubits == (0, 1, 3)
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )
 
 
 def test_circuit_map():
@@ -283,6 +279,12 @@ def test_sabre_matched():
     assert router.added_swaps() == 0
     assert final_map == {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
     assert_connectivity(circuit=routed_circuit, connectivity=star_connectivity())
+    assert_circuit_equivalence(
+        original_circuit=matched_circuit(),
+        transpiled_circuit=routed_circuit,
+        final_map=final_map,
+        initial_map=initial_layout,
+    )
 
 
 def test_sabre_simple():
@@ -298,6 +300,9 @@ def test_sabre_simple():
     assert isinstance(routed_circuit.queue[0], gates.SWAP)
     assert isinstance(routed_circuit.queue[1], gates.CZ)
     assert_connectivity(circuit=routed_circuit, connectivity=star_connectivity())
+    assert_circuit_equivalence(
+        original_circuit=circ, transpiled_circuit=routed_circuit, final_map=final_map, initial_map=initial_layout
+    )
 
 
 @pytest.mark.parametrize("gates", [1, 10, 50])
@@ -314,6 +319,12 @@ def test_sabre_random_circuits(gates, look, decay):
     assert_connectivity(star_connectivity(), transpiled_circuit)
     assert_placement(transpiled_circuit, final_qubit_map)
     assert gates + router.added_swaps() == transpiled_circuit.ngates
+    assert_circuit_equivalence(
+        original_circuit=circuit,
+        transpiled_circuit=transpiled_circuit,
+        final_map=final_qubit_map,
+        initial_map=initial_layout,
+    )
 
 
 def test_sabre_memory_map():

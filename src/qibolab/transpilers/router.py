@@ -35,22 +35,6 @@ def assert_connectivity(connectivity: nx.Graph, circuit: Circuit):
                 raise ConnectivityError("Circuit does not respect connectivity. " f"{gate.name} acts on {gate.qubits}.")
 
 
-def remap_circuit(circuit: Circuit, qubit_map):
-    """Map logical to physical qubits in a circuit.
-
-    Args:
-        circuit (qibo.models.Circuit): qibo circuit to be remapped.
-        qubit_map (np.array): new qubit mapping.
-
-    Returns:
-        new_circuit (qibo.models.Circuit): transpiled circuit mapped with initial qubit mapping.
-    """
-    new_circuit = Circuit(circuit.nqubits)
-    for gate in circuit.queue:
-        new_circuit.add(gate.on_qubits({q: qubit_map[q] for q in gate.qubits}))
-    return new_circuit
-
-
 # TODO: make this class work with CircuitMap
 class ShortestPaths(Router):
     """A class to perform initial qubit mapping and connectivity matching.
@@ -76,16 +60,18 @@ class ShortestPaths(Router):
         self.sampling_split = sampling_split
         self.verbose = verbose
         self.initial_layout = None
-        self.added_swaps = 0
+        self._added_swaps = 0
         self.final_map = None
         self._gates_qubits_pairs = None
         self._mapping = None
+        self._swap_map = None
+        self._added_swaps_list = []
         self._graph = None
         self._qubit_map = None
         self._transpiled_circuit = None
         self._circuit_position = 0
 
-    def __call__(self, circuit, initial_layout):
+    def __call__(self, circuit: Circuit, initial_layout):
         """Circuit connectivity matching.
 
         Args:
@@ -103,14 +89,12 @@ class ShortestPaths(Router):
         self._mapping = dict(zip(range(len(initial_layout)), initial_layout.values()))
         self._graph = nx.relabel_nodes(self.connectivity, self._mapping)
         self._qubit_map = np.sort(init_qubit_map)
+        self._swap_map = deepcopy(init_qubit_map)
         self.first_transpiler_step(circuit)
         while len(self._gates_qubits_pairs) != 0:
             self.transpiler_step(circuit)
-        final_mapping = {
-            key: self._qubit_map[init_qubit_map[i]]
-            for i, key in enumerate(list("q" + str(node) for node in self.connectivity.nodes()))
-        }
-        hardware_mapped_circuit = remap_circuit(self._transpiled_circuit, np.argsort(init_qubit_map))
+        hardware_mapped_circuit = self.remap_circuit(np.argsort(init_qubit_map), original_circuit=circuit)
+        final_mapping = {"q" + str(j): self._swap_map[j] for j in range(self._graph.number_of_nodes())}
         return hardware_mapped_circuit, final_mapping
 
     def transpiler_step(self, qibo_circuit):
@@ -132,7 +116,8 @@ class ShortestPaths(Router):
             qibo_circuit (qibo.models.Circuit): circuit to be transpiled.
         """
         self._circuit_position = 0
-        self.added_swaps = 0
+        self._added_swaps = 0
+        self._added_swaps_list = []
         len_2q_circuit = len(self._gates_qubits_pairs)
         self._gates_qubits_pairs = self.reduce(self._graph)
         self.add_gates(qibo_circuit, len_2q_circuit - len(self._gates_qubits_pairs))
@@ -209,7 +194,7 @@ class ShortestPaths(Router):
         final_mapping = dict(zip(keys, keys))
         # Consider all shortest paths
         path_list = [p for p in nx.all_shortest_paths(self._graph, source=circuit[0][0], target=circuit[0][1])]
-        self.added_swaps += len(path_list[0]) - 2
+        self._added_swaps += len(path_list[0]) - 2
         # Here test all paths
         for path in path_list:
             # map_list uses self.sampling_split
@@ -295,16 +280,48 @@ class ShortestPaths(Router):
         backward = list(reversed(path[meeting_point + 1 :]))
         if len(forward) > 1:
             for f1, f2 in pairwise(forward):
-                self._transpiled_circuit.add(gates.SWAP(self._qubit_map[f1], self._qubit_map[f2]))
+                gate = gates.SWAP(self._qubit_map[f1], self._qubit_map[f2])
+                self._transpiled_circuit.add(gate)
+                self._added_swaps_list.append(gate)
+
         if len(backward) > 1:
             for b1, b2 in pairwise(backward):
-                self._transpiled_circuit.add(gates.SWAP(self._qubit_map[b1], self._qubit_map[b2]))
+                gate = gates.SWAP(self._qubit_map[b1], self._qubit_map[b2])
+                self._transpiled_circuit.add(gate)
+                self._added_swaps_list.append(gate)
+
+    def update_swap_map(self, swap: tuple):
+        """Update the qubit swap map."""
+        temp = self._swap_map[swap[0]]
+        self._swap_map[swap[0]] = self._swap_map[swap[1]]
+        self._swap_map[swap[1]] = temp
 
     def update_qubit_map(self):
         """Update the qubit mapping after adding swaps."""
         old_mapping = self._qubit_map.copy()
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]
+
+    def added_swaps(self):
+        """Return the number of added swaps during transpiling."""
+        return self._added_swaps
+
+    def remap_circuit(self, qubit_map, original_circuit: Circuit):
+        """Map logical to physical qubits in a circuit.
+
+        Args:
+            circuit (qibo.models.Circuit): qibo circuit to be remapped.
+            qubit_map (np.array): new qubit mapping.
+
+        Returns:
+            new_circuit (qibo.models.Circuit): transpiled circuit mapped with initial qubit mapping.
+        """
+        new_circuit = Circuit(self._transpiled_circuit.nqubits)
+        for gate in self._transpiled_circuit.queue:
+            new_circuit.add(gate.on_qubits({q: qubit_map[q] for q in gate.qubits}))
+            if gate in self._added_swaps_list:
+                self.update_swap_map(tuple(qubit_map[gate.qubits[i]] for i in range(2)))
+        return new_circuit
 
 
 class CircuitMap:

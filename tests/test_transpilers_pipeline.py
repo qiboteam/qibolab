@@ -79,11 +79,13 @@ def test_pipeline_default(ngates):
     transpiled_circ, final_layout = default_transpiler(circ)
     initial_layout = default_transpiler.get_initial_layout()
     assert_transpiling(
-        circuit=transpiled_circ,
+        original_circuit=circ,
+        transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
         native_gates=NativeType.CZ,
+        check_circuit_equivalence=False,
     )
 
 
@@ -106,6 +108,25 @@ def test_assert_circuit_equivalence_swap():
     circ2.add(gates.X(1))
     final_map = {"q0": 1, "q1": 0}
     assert_circuit_equivalence(circ1, circ2, final_map=final_map)
+
+
+def test_assert_circuit_equivalence_false():
+    circ1 = Circuit(2)
+    circ2 = Circuit(2)
+    circ1.add(gates.X(0))
+    circ2.add(gates.SWAP(0, 1))
+    circ2.add(gates.X(1))
+    final_map = {"q0": 0, "q1": 1}
+    with pytest.raises(TranspilerPipelineError):
+        assert_circuit_equivalence(circ1, circ2, final_map=final_map)
+
+
+def test_assert_circuit_equivalence_wrong_nqubits():
+    circ1 = Circuit(1)
+    circ2 = Circuit(2)
+    final_map = {"q0": 0, "q1": 1}
+    with pytest.raises(ValueError):
+        assert_circuit_equivalence(circ1, circ2, final_map=final_map)
 
 
 def test_error_connectivity():
@@ -148,7 +169,8 @@ def test_custom_passes(circ):
     transpiled_circ, final_layout = custom_pipeline(circ)
     initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(
-        circuit=transpiled_circ,
+        original_circuit=circ,
+        transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
@@ -173,7 +195,8 @@ def test_custom_passes_reverse(circ):
     transpiled_circ, final_layout = custom_pipeline(circ)
     initial_layout = custom_pipeline.get_initial_layout()
     assert_transpiling(
-        circuit=transpiled_circ,
+        original_circuit=circ,
+        transpiled_circuit=transpiled_circ,
         connectivity=star_connectivity(),
         initial_layout=initial_layout,
         final_layout=final_layout,
