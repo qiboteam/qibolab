@@ -59,6 +59,8 @@ native_gates:
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 0}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 0, relative_start: 0,
+                type: coupler}
             iSWAP:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}
@@ -72,6 +74,8 @@ native_gates:
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 1}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 1, relative_start: 0,
+                type: coupler}
             iSWAP:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}
@@ -85,6 +89,8 @@ native_gates:
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 3}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 3, relative_start: 0,
+                type: coupler}
             iSWAP:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}
@@ -98,6 +104,8 @@ native_gates:
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 4}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 4, relative_start: 0,
+                type: coupler}
             iSWAP:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}

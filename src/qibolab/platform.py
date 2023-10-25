@@ -52,7 +52,7 @@ class Platform:
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
 
-    couplers: Optional[CouplerMap] = None
+    couplers: Optional[CouplerMap] = field(default_factory=dict)
     """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
 
     is_connected: bool = False
