@@ -62,20 +62,6 @@ def test_dump_runcard(platform):
     os.remove(path)
 
 
-# TODO: this test should be improved
-@pytest.mark.parametrize(
-    "par",
-    [
-        "readout_frequency",
-        "sweetspot",
-        "threshold",
-        "bare_resonator_frequency",
-        "drive_frequency",
-        "iq_angle",
-        "mean_gnd_states",
-        "mean_exc_states",
-    ],
-)
 @pytest.fixture(scope="module")
 def qpu_platform(connected_platform):
     connected_platform.connect()
