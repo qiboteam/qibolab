@@ -2,7 +2,7 @@ import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
-from qibo.measurements import MeasurementOutcomes
+from qibo.result import MeasurementOutcomes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
