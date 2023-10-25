@@ -4,6 +4,7 @@ import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Tuple
 
 import laboneq._token
@@ -17,10 +18,12 @@ from laboneq.dsl.experiment.pulse_library import (
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
+from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter
+
+KERNELS_FOLDER = Path.home() / "qibolab" / "src" / "qibolab" / "instruments" / "data"
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -895,19 +898,26 @@ class Zurich(Controller):
                     pulse.zhpulse.uid += str(i)
 
                     # Integration weights definition or load from the chip folder
-                    weights_file = (
-                        INSTRUMENTS_DATA_FOLDER / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
-                    )
+                    weights_file = KERNELS_FOLDER / f"{self.chip}/weights/kernels.npz"
                     if weights_file.is_file():
-                        samples = np.load(
-                            weights_file,
-                            allow_pickle=True,
-                        )
+                        # samples = np.load(
+                        #     weights_file,
+                        #     allow_pickle=True,
+                        # )
+                        from qibocal.auto.serialize import load
+
+                        raw_data_dict = dict(np.load(weights_file))
+                        samples = {}
+
+                        for data_key, array in raw_data_dict.items():
+                            samples[load(data_key)] = np.rec.array(array)
+
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
                                 uid="weight" + pulse.zhpulse.uid,
                                 # samples=samples[0] * np.exp(1j * qubit.iq_angle),
-                                samples=samples[0] * np.exp(1j * iq_angle),
+                                # samples=samples[0] * np.exp(1j * iq_angle),
+                                samples=samples[q],
                             )
                         else:
                             weight = lo.pulse_library.sampled_pulse_complex(
