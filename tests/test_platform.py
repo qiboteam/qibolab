@@ -74,7 +74,6 @@ def test_dump_runcard(platform):
         "iq_angle",
         "mean_gnd_states",
         "mean_exc_states",
-        "classifiers_hpars",
     ],
 )
 @pytest.fixture(scope="module")
