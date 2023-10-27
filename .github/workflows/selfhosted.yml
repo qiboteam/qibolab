@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  prepare:
     if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
     runs-on: ubuntu-latest
     outputs:
