@@ -36,14 +36,6 @@ jobs:
           platforms+="]"
           echo ${platforms}
           echo matrix="${platforms}" >> $GITHUB_OUTPUT
-    with:
-      used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-      python-version: "3.10"
-      artifact-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      poetry-extras: "--with tests --all-extras"
-
-    secrets:
-      repo_token: ${{ secrets.GITHUB_TOKEN }}
 
   tests:
     needs: prepare
