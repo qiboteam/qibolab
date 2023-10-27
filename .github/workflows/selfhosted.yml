@@ -36,7 +36,6 @@ jobs:
           platforms+="]"
           echo ${platforms}
           echo matrix="${platforms}" >> $GITHUB_OUTPUT
-    uses: qiboteam/workflows/.github/workflows/selfhosted.yml@main
     with:
       used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
       python-version: "3.10"
