@@ -24,6 +24,7 @@ def assert_circuit_equivalence(
     final_map: dict,
     initial_map: dict = None,
     test_states: list = None,
+    ntests: int = 3,
 ):
     """Checks that the transpiled circuit agrees with the original using simulation.
 
@@ -32,8 +33,8 @@ def assert_circuit_equivalence(
         transpiled_circuit (qibo.models.Circuit): Transpiled circuit.
         final_map (dict): logical-physical qubit mapping after routing.
         initial_map (dict): logical_physical qubit mapping before routing, if None trivial initial map is used.
-        test_states (list): states on which the test is performed, if None a single random state will be tested.
-
+        test_states (list): states on which the test is performed, if None 'ntests' random states will be tested.
+        ntests (int): number of random states tested.
     """
     backend = NumpyBackend()
     ordering = np.argsort(np.array(list(final_map.values())))
@@ -41,14 +42,11 @@ def assert_circuit_equivalence(
         raise ValueError("Transpiled and original circuit do not have the same number of qubits.")
 
     if test_states is None:
-        test_states = []
-        for i in range(3):
-            test_states.append(random_statevector(dims=2**original_circuit.nqubits, backend=backend))
+        test_states = [random_statevector(dims=2**original_circuit.nqubits, backend=backend) for _ in range(ntests)]
     if initial_map is not None:
         reordered_test_states = []
         initial_map = np.array(list(initial_map.values()))
-        for initial_state in test_states:
-            reordered_test_states.append(transpose_qubits(initial_state, initial_map))
+        reordered_test_states = [transpose_qubits(initial_state, initial_map) for initial_state in test_states]
     else:
         reordered_test_states = test_states
 

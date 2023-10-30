@@ -302,8 +302,9 @@ class ShortestPaths(Router):
         for key, value in self._mapping.items():
             self._qubit_map[value] = old_mapping[key]
 
+    @property
     def added_swaps(self):
-        """Return the number of added swaps during transpiling."""
+        """Number of added swaps during transpiling."""
         return self._added_swaps
 
     def remap_circuit(self, qubit_map, original_circuit: Circuit):
@@ -471,8 +472,9 @@ class Sabre(Router):
         """Return the n topological layer of the dag."""
         return [node[0] for node in self._dag.nodes(data="layer") if node[1] == n_layer]
 
+    @property
     def added_swaps(self):
-        """Return the number of SWAP gates added to the circuit during routing"""
+        """Number of SWAP gates added to the circuit during routing"""
         return self.circuit._swaps
 
     def find_new_mapping(self):
