@@ -5,11 +5,11 @@ from typing import Dict, List, Optional
 
 import networkx as nx
 from qibo.config import log, raise_error
+from qibo.transpiler.unroller import NativeType
 
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.native import NativeType
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper

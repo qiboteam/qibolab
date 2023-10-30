@@ -1,9 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
-from enum import Flag, auto
 from typing import List, Optional, Union
-
-from qibo import gates
 
 from qibolab.pulses import (
     CouplerFluxPulse,
@@ -12,27 +9,6 @@ from qibolab.pulses import (
     PulseSequence,
     PulseType,
 )
-
-
-class NativeType(Flag):
-    """Define available types of native gates.
-
-    Should have the same names with qibo gates.
-    """
-
-    M = auto()
-    Z = auto()
-    RZ = auto()
-    GPI2 = auto()
-    CZ = auto()
-    iSWAP = auto()
-
-    @classmethod
-    def from_gate(cls, gate: gates.Gate):
-        try:
-            return getattr(cls, gate.__class__.__name__)
-        except AttributeError:
-            raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
 @dataclass
