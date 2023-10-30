@@ -3,10 +3,10 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.transpiler.pipeline import Passes
 
 from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
-from qibolab.transpilers.pipeline import Passes
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
