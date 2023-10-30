@@ -1081,10 +1081,23 @@ class Zurich(Controller):
                 line = "drive" if pulse.type is PulseType.DRIVE else "measure"
                 zhsweeper = ZhSweeper(pulse, sweeper, qubits[sweeper.pulses[0].qubit]).zhsweeper
                 zhsweeper.uid = "frequency"  # TODO: Changing the name from "frequency" breaks it f"frequency_{i}
+                # TODO: Check more and a proper threshold with the number of sweep points and number of qubits and pulse duration
+                """
+                Regarding these frequency sweep
+                HARDWARE: Allows big scans for one qubit at a time
+                SOFTWARE: Allows to scan several qubits at the same by uploading the waveforms, limited memory
+                """
+                threshold = pulse_duration * n_qubits * len(sweeper.values)
+                threshold = 1000
+                if len(zhsweeper.values) > threshold:
+                    mod_type = lo.ModulationType.HARDWARE
+                else:
+                    mod_type = lo.ModulationType.SOFTWARE
+
                 exp_calib[f"{line}{pulse.qubit}"] = lo.SignalCalibration(
                     oscillator=lo.Oscillator(
                         frequency=zhsweeper,
-                        modulation_type=lo.ModulationType.HARDWARE,
+                        modulation_type=mod_type,
                     )
                 )
         if sweeper.parameter is Parameter.amplitude:
