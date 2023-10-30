@@ -109,7 +109,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            classifiers_hpars: {}
         1:
             bare_resonator_frequency: 0
             readout_frequency: 4900000000.0
@@ -139,7 +138,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            classifiers_hpars: {}
         2:
             bare_resonator_frequency: 0
             readout_frequency: 6100000000.0
@@ -169,7 +167,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            classifiers_hpars: {}
         3:
             bare_resonator_frequency: 0
             readout_frequency: 5800000000.0
@@ -199,7 +196,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            classifiers_hpars: {}
         4:
             bare_resonator_frequency: 0
             readout_frequency: 5500000000.0
@@ -229,7 +225,6 @@ characterization:
             mixer_drive_phi: 0.0
             mixer_readout_g: 0.0
             mixer_readout_phi: 0.0
-            classifiers_hpars: {}
     coupler:
         0: {sweetspot: 0.0}
         1: {sweetspot: 0.0}
