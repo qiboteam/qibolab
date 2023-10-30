@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 
 import networkx as nx
 from qibo.config import log, raise_error
-from qibo.transpiler.unroller import NativeType
+from qibo.transpiler.abstract import NativeType
 
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
