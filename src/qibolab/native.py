@@ -2,6 +2,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
 from typing import List, Optional, Union
 
+from qibo.transpiler.unroller import NativeType
+
 from qibolab.pulses import (
     CouplerFluxPulse,
     FluxPulse,
