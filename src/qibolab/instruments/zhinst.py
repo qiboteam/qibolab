@@ -894,45 +894,49 @@ class Zurich(Controller):
                 for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
-                    # Integration weights definition or load from the chip folder
-                    weights_file = (
-                        INSTRUMENTS_DATA_FOLDER / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
+                    # We adjust for smearing and remove smearing/2 at the end
+                    exp.delay(
+                        signal=f"acquire{q}",
+                        time=self.smearing * NANO_TO_SECONDS,
                     )
-                    if weights_file.is_file():
-                        samples = np.load(
-                            weights_file,
-                            allow_pickle=True,
+
+                    if i == 0:
+                        # Integration weights definition or load from the chip folder
+                        weights_file = (
+                            INSTRUMENTS_DATA_FOLDER
+                            / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
                         )
-                        if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                            weight = lo.pulse_library.sampled_pulse_complex(
-                                uid="weight" + pulse.zhpulse.uid,
-                                # samples=samples[0] * np.exp(1j * qubit.iq_angle),
-                                samples=samples[0] * np.exp(1j * iq_angle),
+                        if weights_file.is_file():
+                            samples = np.load(
+                                weights_file,
+                                allow_pickle=True,
                             )
+                            if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                                weight = lo.pulse_library.sampled_pulse_complex(
+                                    uid="weight" + pulse.zhpulse.uid,
+                                    # samples=samples[0] * np.exp(1j * qubit.iq_angle),
+                                    samples=samples[0] * np.exp(1j * iq_angle),
+                                )
+                            else:
+                                weight = lo.pulse_library.sampled_pulse_complex(
+                                    uid="weight" + pulse.zhpulse.uid,
+                                    samples=samples[0],
+                                )
                         else:
-                            weight = lo.pulse_library.sampled_pulse_complex(
-                                uid="weight" + pulse.zhpulse.uid,
-                                samples=samples[0],
-                            )
-                    else:
-                        # We adjust for smearing and remove smearing/2 at the end
-                        exp.delay(
-                            signal=f"acquire{q}",
-                            time=self.smearing * NANO_TO_SECONDS,
-                        )
-                        if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                            weight = lo.pulse_library.sampled_pulse_complex(
-                                np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-                                * np.exp(1j * iq_angle)
-                            )
-                        else:
-                            # TODO: Patch for multiple readouts: Remove different uids
-                            weight = lo.pulse_library.const(
-                                uid="weight",
-                                length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
-                                - 1.5 * self.smearing * NANO_TO_SECONDS,
-                                amplitude=1,
-                            )
+                            # We adjust for smearing and remove smearing/2 at the end
+                            if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                                weight = lo.pulse_library.sampled_pulse_complex(
+                                    np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
+                                    * np.exp(1j * iq_angle)
+                                )
+                            else:
+                                # TODO: Patch for multiple readouts: Remove different uids
+                                weight = lo.pulse_library.const(
+                                    uid="weight",
+                                    length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
+                                    - 1.5 * self.smearing * NANO_TO_SECONDS,
+                                    amplitude=1,
+                                )
 
                     measure_pulse_parameters = {"phase": 0}
 
