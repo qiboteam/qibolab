@@ -52,7 +52,7 @@ class QibolabBackend(NumpyBackend):
             gate.result.register_samples(np.array(samples).T)
 
     def execute_circuit(
-        self, circuit, initial_state=None, nshots=None, fuse_one_qubit=False, check_transpiled=False
+        self, circuit, initial_state=None, nshots=1000, fuse_one_qubit=False, check_transpiled=False
     ):  # pragma: no cover
         """Executes a quantum circuit.
 
