@@ -913,21 +913,24 @@ class Zurich(Controller):
                             )
                             if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                                 weight = lo.pulse_library.sampled_pulse_complex(
-                                    uid="weight" + pulse.zhpulse.uid,
+                                    uid="weight",
                                     # samples=samples[0] * np.exp(1j * qubit.iq_angle),
                                     samples=samples[0] * np.exp(1j * iq_angle),
                                 )
                             else:
                                 weight = lo.pulse_library.sampled_pulse_complex(
-                                    uid="weight" + pulse.zhpulse.uid,
+                                    uid="weight",
                                     samples=samples[0],
                                 )
                         else:
                             # We adjust for smearing and remove smearing/2 at the end
                             if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                                 weight = lo.pulse_library.sampled_pulse_complex(
-                                    np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-                                    * np.exp(1j * iq_angle)
+                                    samples=np.ones(
+                                        [int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)]
+                                    )
+                                    * np.exp(1j * iq_angle),
+                                    uid="weight",
                                 )
                             else:
                                 # TODO: Patch for multiple readouts: Remove different uids
