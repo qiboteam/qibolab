@@ -2,14 +2,12 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
+from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import (
-    ClusterRF_OutputPort,
-    ClusterRF_OutputPort_Settings,
-)
+from qibolab.instruments.qblox.cluster import Cluster
+from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -21,16 +19,6 @@ from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
-
-
-class ClusterQCM_RF_Settings:
-    def __init__(self, ports=None):
-        if not ports:
-            ports: dict = {
-                "o1": ClusterRF_OutputPort_Settings(),
-                "o2": ClusterRF_OutputPort_Settings(),
-            }
-        self.ports = ports
 
 
 class ClusterQCM_RF(Instrument):
@@ -147,26 +135,20 @@ class ClusterQCM_RF(Instrument):
     parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str, settings: ClusterQCM_RF_Settings):
+    def __init__(self, name: str, address: str, cluster: Cluster):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
         """
         super().__init__(name, address)
-        self.settings: ClusterQCM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        for n in range(2):
-            port = "o" + str(n + 1)
-            self.ports[port] = ClusterRF_OutputPort(
-                module=self, sequencer_number=self.DEFAULT_SEQUENCERS[port], number=n + 1
-            )
+
         self.channels: list = []
 
         self._debug_folder: str = ""
-        self._cluster: QbloxCluster = None
-        self._output_ports_keys = ["o1", "o2"]
-        self._sequencers: dict[Sequencer] = {"o1": [], "o2": []}
+        self._cluster: Cluster = cluster
+        self._sequencers: dict[Sequencer] = {}
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
         self._device_parameters = {}
@@ -176,84 +158,83 @@ class ClusterQCM_RF(Instrument):
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
 
-    def connect(self, cluster: QbloxCluster):
+    def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
 
         Once connected, it creates port classes with properties mapped to various instrument
         parameters, and initialises the the underlying device parameters.
         """
+        self._cluster.connect()
+        self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
         if not self.is_connected:
-            if cluster:
-                # save a reference to the underlying object
-                self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
-                # TODO: test connection with the module before continuing
-
-                # save reference to cluster
-                self._cluster = cluster
-                self.is_connected = True
-
-                # once connected, initialise the parameters of the device to the default values
-                self._set_device_parameter(
-                    self.device, "out0_offset_path0", "out0_offset_path1", value=0
-                )  # Default after reboot = 7.625
-                self._set_device_parameter(
-                    self.device, "out1_offset_path0", "out1_offset_path1", value=0
-                )  # Default after reboot = 7.625
-
-                # initialise the parameters of the default sequencers to the default values,
-                # the rest of the sequencers are not configured here, but will be configured
-                # with the same parameters as the default in process_pulse_sequence()
-                for target in [
-                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                ]:
-                    self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
-                    self._set_device_parameter(
-                        target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
-                    )
-                    self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                    self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
-                    self._set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
-                    self._set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
-                    self._set_device_parameter(target, "offset_awg_path0", value=0)
-                    self._set_device_parameter(target, "offset_awg_path1", value=0)
-                    self._set_device_parameter(target, "sync_en", value=False)  # Default after reboot = False
-                    self._set_device_parameter(target, "upsample_rate_awg_path0", "upsample_rate_awg_path1", value=0)
-
-                self._set_device_parameter(
-                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                    "connect_out0",
-                    value="IQ",
+            if not self.device.present():
+                raise ConnectionError(
+                    f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}"
                 )
+
+            self.is_connected = True
+            # once connected, initialise the parameters of the device to the default values
+            self._set_device_parameter(
+                self.device, "out0_offset_path0", "out0_offset_path1", value=0
+            )  # Default after reboot = 7.625
+            self._set_device_parameter(
+                self.device, "out1_offset_path0", "out1_offset_path1", value=0
+            )  # Default after reboot = 7.625
+
+            # initialise the parameters of the default sequencers to the default values,
+            # the rest of the sequencers are not configured here, but will be configured
+            # with the same parameters as the default in process_pulse_sequence()
+            for target in [
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+            ]:
+                self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
                 self._set_device_parameter(
-                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                    target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
+                )
+                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+                self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+                self._set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
+                self._set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
+                self._set_device_parameter(target, "offset_awg_path0", value=0)
+                self._set_device_parameter(target, "offset_awg_path1", value=0)
+                self._set_device_parameter(target, "sync_en", value=False)  # Default after reboot = False
+                self._set_device_parameter(target, "upsample_rate_awg_path0", "upsample_rate_awg_path1", value=0)
+
+            self._set_device_parameter(
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                "connect_out0",
+                value="IQ",
+            )
+            self._set_device_parameter(
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                "connect_out1",
+                value="off",
+            )
+            self._set_device_parameter(
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+                "connect_out1",
+                value="IQ",
+            )
+            self._set_device_parameter(
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+                "connect_out0",
+                value="off",
+            )
+
+            # on initialisation, disconnect all other sequencers from the ports
+            self._device_num_sequencers = len(self.device.sequencers)
+            for sequencer in range(2, self._device_num_sequencers):
+                self._set_device_parameter(
+                    self.device.sequencers[sequencer],
+                    "connect_out0",
+                    value="off",
+                )  # Default after reboot = True
+                self._set_device_parameter(
+                    self.device.sequencers[sequencer],
                     "connect_out1",
                     value="off",
-                )
-                self._set_device_parameter(
-                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                    "connect_out1",
-                    value="IQ",
-                )
-                self._set_device_parameter(
-                    self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                    "connect_out0",
-                    value="off",
-                )
-
-                # on initialisation, disconnect all other sequencers from the ports
-                self._device_num_sequencers = len(self.device.sequencers)
-                for sequencer in range(2, self._device_num_sequencers):
-                    self._set_device_parameter(
-                        self.device.sequencers[sequencer],
-                        "connect_out0",
-                        value="off",
-                    )  # Default after reboot = True
-                    self._set_device_parameter(
-                        self.device.sequencers[sequencer],
-                        "connect_out1",
-                        value="off",
-                    )  # Default after reboot = True
+                )  # Default after reboot = True
 
     def _set_device_parameter(self, target, *parameters, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -266,26 +247,26 @@ class ClusterQCM_RF(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        if self.is_connected:
-            key = target.name + "." + parameters[0]
-            if not key in self._device_parameters:
-                for parameter in parameters:
-                    if not hasattr(target, parameter):
-                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
-                    target.set(parameter, value)
-                self._device_parameters[key] = value
-            elif self._device_parameters[key] != value:
-                for parameter in parameters:
-                    target.set(parameter, value)
-                self._device_parameters[key] = value
-        else:
-            raise Exception("There is no connection to the instrument {self.name}")
+        if not self.is_connected:
+            raise ConnectionError("There is no connection to the instrument {self.name}")
+        key = f"{target.name}.{parameters[0]}"
+        if key not in self._device_parameters:
+            for parameter in parameters:
+                if not hasattr(target, parameter):
+                    raise ValueError(f"The instrument {self.name} does not have parameters {parameter}")
+                target.set(parameter, value)
+            self._device_parameters[key] = value
+        elif self._device_parameters[key] != value:
+            for parameter in parameters:
+                target.set(parameter, value)
+            self._device_parameters[key] = value
 
     def _erase_device_parameters_cache(self):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self):
+    def setup(self, **settings):
+        self.connect()
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -315,39 +296,29 @@ class ClusterQCM_RF(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        settings: ClusterQCM_RF_Settings = self.settings
-        if self.is_connected:
-            # Load settings
-            for port in ["o1", "o2"]:
-                if port in settings.ports:
-                    port_settings: ClusterRF_OutputPort_Settings = settings.ports[port]
-                    self.ports[port].channel = port_settings.channel
-                    self._port_channel_map[port] = self.ports[port].channel
-                    self.ports[port].attenuation = port_settings.attenuation
-                    self.ports[port].lo_enabled = port_settings.lo_enabled
-                    self.ports[port].lo_frequency = port_settings.lo_frequency
-                    self.ports[port].gain = port_settings.gain
-                    self.ports[port].hardware_mod_en = port_settings.hardware_mod_en
+        # if not settings:
+        #     log.warning(f'Called setup() without passing parameters for module {self.name}')
+        #     return
 
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
-                else:
-                    if port in self.ports:
-                        self.ports[port].attenuation = 60
-                        self.ports[port].lo_enabled = False
-                        self.ports[port].lo_frequency = 2_000_000_000
-                        self.ports[port].gain = 0
-                        self.ports[port].hardware_mod_en = False
-                        self.ports[port].nco_freq = 0
-                        self.ports[port].nco_phase_offs = 0
-                        self.ports.pop(port)
-                        self._output_ports_keys.remove(port)
-                        self._sequencers.pop(port)
+        for port_num, port in enumerate(settings):
+            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
+            self._sequencers[port] = []
+            port_settings = settings[port]
+            selected_port = self.ports[port]
+            if port_settings["lo_frequency"]:
+                selected_port.lo_enabled = True
+                selected_port.lo_frequency = port_settings["lo_frequency"]
+            selected_port.channel = port_settings["channel"]
+            self._port_channel_map[port] = selected_port.channel
+            selected_port.attenuation = port_settings["attenuation"]
+            selected_port.gain = port_settings["gain"]
+            # selected_port.hardware_mod_en = port_settings["hardware_mod_en"]
+            selected_port.hardware_mod_en = True
+            selected_port.nco_freq = 0
+            selected_port.nco_phase_offs = 0
 
-            self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
-            self.channels = list(self._channel_port_map.keys())
-        else:
-            raise Exception("The instrument cannot be set up, there is no connection")
+        self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
+        self.channels = list(self._channel_port_map.keys())
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -367,7 +338,7 @@ class ClusterQCM_RF(Instrument):
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
             for parameter in self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].parameters:
                 # exclude read-only parameter `sequence`
-                if not parameter in ["sequence"]:
+                if parameter not in ["sequence"]:
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
                         target = self.device.sequencers[next_sequencer_number]
@@ -514,7 +485,7 @@ class ClusterQCM_RF(Instrument):
 
         # update the lists of used and unused sequencers that will be needed later on
         self._used_sequencers_numbers = []
-        for port in self._output_ports_keys:
+        for port in self.ports:
             for sequencer in self._sequencers[port]:
                 self._used_sequencers_numbers.append(sequencer.number)
         self._unused_sequencers_numbers = []
@@ -523,7 +494,7 @@ class ClusterQCM_RF(Instrument):
                 self._unused_sequencers_numbers.append(n)
 
         # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
-        for port in self._output_ports_keys:
+        for port in self.ports:
             for sequencer in self._sequencers[port]:
                 pulses = sequencer.pulses
                 program = sequencer.program
@@ -551,11 +522,8 @@ class ClusterQCM_RF(Instrument):
                         if sweeper.pulses and set(sequencer.pulses) & set(sweeper.pulses):
                             # plays an active role
                             reference_value = None
-                            if sweeper.parameter == Parameter.frequency:
-                                if sequencer.pulses:
-                                    reference_value = self.get_if(
-                                        sequencer.pulses[0]
-                                    )  # uses the frequency of the first pulse (assuming all same freq)
+                            if sweeper.parameter == Parameter.frequency and sequencer.pulses:
+                                reference_value = self.get_if(sequencer.pulses[0])
                             if sweeper.parameter == Parameter.amplitude:
                                 for pulse in pulses:
                                     if pulse in sweeper.pulses:
@@ -762,7 +730,7 @@ class ClusterQCM_RF(Instrument):
         # Upload waveforms and program
         qblox_dict = {}
         sequencer: Sequencer
-        for port in self._output_ports_keys:
+        for port in self.ports:
             for sequencer in self._sequencers[port]:
                 # Add sequence program and waveforms to single dictionary
                 qblox_dict[sequencer] = {
