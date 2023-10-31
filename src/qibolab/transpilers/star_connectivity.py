@@ -25,14 +25,8 @@ def find_connected_qubit(qubits, queue, hardware_qubits):
 
 class StarConnectivity(Router):
     """Transforms an arbitrary circuit to one that can be executed on hardware.
-    This transpiler produces a circuit that respects the following connectivity:
 
-             q
-             |
-        q -- q -- q
-             |
-             q
-
+    This transpiler produces a circuit that respects the five-qubit star connectivitiy
     by adding SWAP gates when needed.
 
     Args:

@@ -23,15 +23,15 @@ The idea of the ``Platform`` is to serve as the only object exposed to the user,
 
 For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/tutorials/lab`:
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab import create_platform
 
-    platform = create_platform("my_platform")
+    platform = create_platform("dummy")
 
 Now we connect and start the instruments (note that we, the user, do not need to know which instruments are connected).
 
-.. code-block::  python
+.. testcode::  python
 
     platform.connect()
     platform.setup()
@@ -42,35 +42,56 @@ We can easily print some of the parameters of the channels (similarly we can set
 .. note::
    If the get_method does not apply to the platform (for example there is no local oscillator, to TWPA or no flux tunability...) a ``NotImplementedError`` will be raised.
 
-.. code-block::  python
+.. testcode::  python
 
     print(f"Drive LO frequency: {platform.qubits[0].drive.lo_frequency}")
     print(f"Readout LO frequency: {platform.qubits[0].readout.lo_frequency}")
     print(f"TWPA LO frequency: {platform.qubits[0].twpa.lo_frequency}")
+    print(f"Qubit bias: {platform.qubits[0].flux.offset}")
+    print(f"Qubit attenuation: {platform.qubits[0].readout.attenuation}")
 
-    print(f"Qubit bias: {platform.get_bias(0)}")
-    print(f"Qubit attenuation: {platform.get_attenuation(0)}")
+.. testoutput:: python
+    :hide:
+
+    Drive LO frequency: 0
+    Readout LO frequency: 0
+    TWPA LO frequency: 1000000000.0
+    Qubit bias: 0.0
+    Qubit attenuation: 0
 
 Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
 
-.. code-block::  python
+.. testcode::  python
 
    from qibolab.pulses import PulseSequence
 
    ps = PulseSequence()
-   ps.add(platform.create_RX_pulse(qubit=0, start=0))   # start time is in ns
+   ps.add(platform.create_RX_pulse(qubit=0, start=0))  # start time is in ns
    ps.add(platform.create_RX_pulse(qubit=0, start=100))
    ps.add(platform.create_MZ_pulse(qubit=0, start=200))
 
 Now we can execute the sequence on hardware:
 
-.. code-block::  python
+.. testcode::  python
 
-   results = platform.execute_pulse_sequence(ps)
+    from qibolab.execution_parameters import (
+        AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+    )
+
+    options = ExecutionParameters(
+        nshots=1000,
+        relaxation_time=10,
+        fast_reset=False,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+    results = platform.execute_pulse_sequence(ps, options=options)
 
 Finally, we can stop instruments and close connections.
 
-.. code-block::  python
+.. testcode::  python
 
     platform.stop()
     platform.disconnect()
@@ -85,7 +106,7 @@ In addition to the real instruments presented in the :ref:`main_doc_instruments`
 This instrument represents a controller that returns random numbers of the proper shape when executing any pulse sequence.
 This instrument is also part of the dummy platform which is defined in :py:mod:`qibolab.dummy` and can be initialized as
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab import create_platform
 
@@ -168,12 +189,12 @@ The controller's driver ensures the correct pulse frequency is set based on the 
 Let's explore an example using an RFSoC controller.
 Note that while channels are defined in a device-independent manner, the port parameter varies based on the specific instrument.
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.channels import Channel, ChannelMap
     from qibolab.instruments.rfsoc import RFSoC
 
-    controller = RFSoC()
+    controller = RFSoC(name="dummy", address="192.168.0.10", port="6000")
     channel1 = Channel("my_channel_name_1", port=controller[1])
     channel2 = Channel("my_channel_name_2", port=controller[2])
     channel3 = Channel("my_channel_name_3", port=controller[3])
@@ -181,18 +202,20 @@ Note that while channels are defined in a device-independent manner, the port pa
 Channels are then organized in :class:`qibolab.channels.ChannelMap` to be passed as a single argument to the platform.
 Following the tutorial in :doc:`/tutorials/lab`, we can continue the initialization:
 
-.. code-block:: python
+.. testcode:: python
 
-    from qibolab.serialize import load_qubits
+    from pathlib import Path
+    from qibolab.serialize import load_qubits, load_runcard
+
+    runcard_path = Path.cwd().parent / "src" / "qibolab" / "dummy.yml"
 
     ch_map = ChannelMap()
     ch_map |= channel1
     ch_map |= channel2
     ch_map |= channel3
 
-    qubits, pairs = load_qubits, load_runcard
     runcard = load_runcard(runcard_path)
-    qubits, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard)
 
     qubits[0].drive = channel1
     qubits[0].readout = channel2
@@ -202,10 +225,11 @@ Where, in the last lines, we assign the channels to the qubits.
 
 To assign local oscillators, the procedure is simple:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.instruments.erasynth import ERA as LocalOscillator
 
+    LO_ADDRESS = "192.168.0.10"
     local_oscillator = LocalOscillator("NameLO", LO_ADDRESS)
     local_oscillator.frequency = 6e9  # Hz
     local_oscillator.power = 5  # dB
@@ -240,7 +264,7 @@ Qibolab offers a range of pre-defined pulse shapes:
 
 To illustrate, here are some examples of single pulses using the Qibolab API:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.pulses import Pulse, Rectangular
 
@@ -259,7 +283,7 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
 In this way, we defined a rectangular drive pulse using the generic Pulse object.
 Alternatively, you can achieve the same result using the dedicated :class:`qibolab.pulses.DrivePulse` object:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.pulses import DrivePulse, Rectangular
 
@@ -278,12 +302,52 @@ Both the Pulses objects and the PulseShape object have useful plot functions and
 
 To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab.pulses import PulseSequence
 
     sequence = PulseSequence()
 
+    pulse1 = DrivePulse(
+        start=0,  # timing, in all qibolab, is expressed in ns
+        duration=40,
+        amplitude=0.5,  # this amplitude is relative to the range of the instrument
+        frequency=1e8,  # frequency are in Hz
+        relative_phase=0,  # phases are in radians
+        shape=Rectangular(),
+        channel="channel",
+        qubit=0,
+    )
+    pulse2 = DrivePulse(
+        start=0,  # timing, in all qibolab, is expressed in ns
+        duration=40,
+        amplitude=0.5,  # this amplitude is relative to the range of the instrument
+        frequency=1e8,  # frequency are in Hz
+        relative_phase=0,  # phases are in radians
+        shape=Rectangular(),
+        channel="channel",
+        qubit=0,
+    )
+    pulse3 = DrivePulse(
+        start=0,  # timing, in all qibolab, is expressed in ns
+        duration=40,
+        amplitude=0.5,  # this amplitude is relative to the range of the instrument
+        frequency=1e8,  # frequency are in Hz
+        relative_phase=0,  # phases are in radians
+        shape=Rectangular(),
+        channel="channel",
+        qubit=0,
+    )
+    pulse4 = DrivePulse(
+        start=0,  # timing, in all qibolab, is expressed in ns
+        duration=40,
+        amplitude=0.5,  # this amplitude is relative to the range of the instrument
+        frequency=1e8,  # frequency are in Hz
+        relative_phase=0,  # phases are in radians
+        shape=Rectangular(),
+        channel="channel",
+        qubit=0,
+    )
     sequence.add(pulse1)
     sequence.add(pulse2)
     sequence.add(pulse3)
@@ -294,29 +358,47 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
     sequence_ch1 = sequence.get_channel_pulses("channel1")  # Selecting pulses on channel 1
     print(f"We have {sequence_ch1.count} pulses on channel 1.")
 
+.. testoutput:: python
+    :hide:
+
+    Total duration: 40
+    We have 0 pulses on channel 1.
+
 .. warning::
 
     Pulses in PulseSequences are ordered automatically following the start time (and the channel if needed). Not by the definition order.
 
 When conducting experiments on quantum hardware, pulse sequences are vital. Assuming you have already initialized a platform, executing an experiment is as simple as:
 
-.. code-block:: python
+.. testcode:: python
 
-   result = my_platform.execute_pulse_sequence(sequence)
+    result = platform.execute_pulse_sequence(sequence, options=options)
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
 Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
 These are relying on parameters held in the :ref:`main_doc_native` data structures.
 Typical experiments may include both pre-defined pulses and new ones:
 
-.. code-block:: python
+.. testcode:: python
+
+    from qibolab.pulses import Rectangular
 
     sequence = PulseSequence()
-    sequence.add(my_platform.create_RX_pulse())
-    sequence.add(DrivePulse(...))
-    sequence.add(my_platform.create_MZ_pulse())
+    sequence.add(platform.create_RX_pulse(0))
+    sequence.add(
+        DrivePulse(
+            start=0,
+            duration=10,
+            amplitude=0.5,
+            frequency=2500000000,
+            relative_phase=0,
+            shape=Rectangular(),
+            channel="0",
+        )
+    )
+    sequence.add(platform.create_MZ_pulse(0, start=0))
 
-    results = my_platform.execute_pulse_sequence(sequence, options=options)
+    results = platform.execute_pulse_sequence(sequence, options=options)
 
 .. note::
 
@@ -379,12 +461,16 @@ Let's see some examples.
 Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
 A tipical resonator spectroscopy experiment could be defined with:
 
-.. code-block:: python
+.. testcode:: python
+
+    import numpy as np
+
+    from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
     sequence = PulseSequence()
-    sequence.add(my_platform.create_MZ_pulse(0))  # readout pulse for qubit 0 at 4 GHz
-    sequence.add(my_platform.create_MZ_pulse(1))  # readout pulse for qubit 1 at 5 GHz
-    sequence.add(my_platform.create_MZ_pulse(2))  # readout pulse for qubit 2 at 6 GHz
+    sequence.add(platform.create_MZ_pulse(0, start=0))  # readout pulse for qubit 0 at 4 GHz
+    sequence.add(platform.create_MZ_pulse(1, start=0))  # readout pulse for qubit 1 at 5 GHz
+    sequence.add(platform.create_MZ_pulse(2, start=0))  # readout pulse for qubit 2 at 6 GHz
 
     sweeper = Sweeper(
         parameter=Parameter.frequency,
@@ -393,7 +479,7 @@ A tipical resonator spectroscopy experiment could be defined with:
         type=SweeperType.OFFSET,
     )
 
-    results = my_platform.sweep(sequence, options, sweeper)
+    results = platform.sweep(sequence, options, sweeper)
 
 .. note::
 
@@ -415,12 +501,12 @@ For factor sweepers, usually useful when dealing with amplitudes, the base value
 It is possible to define and executes multiple sweepers at the same time.
 For example:
 
-.. code-block:: python
+.. testcode:: python
 
     sequence = PulseSequence()
 
-    sequence.add(my_platform.create_RX_pulse())
-    sequence.add(my_platform.create_MZ_pulse(start=sequence[0].finish))
+    sequence.add(platform.create_RX_pulse(0))
+    sequence.add(platform.create_MZ_pulse(0, start=sequence[0].finish))
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
@@ -435,7 +521,7 @@ For example:
         type=SweeperType.FACTOR,
     )
 
-    results = my_platform.sweep(sequence, options, sweeper_freq, sweeper_amp)
+    results = platform.sweep(sequence, options, sweeper_freq, sweeper_amp)
 
 Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an amplitude of 0.3, the parameter space probed will be:
 
@@ -452,10 +538,10 @@ Execution Parameters
 
 In the course of several examples, you've encountered the ``options`` argument in function calls like:
 
-.. code-block:: python
+.. testcode:: python
 
-   res = my_platform.execute_pulse_sequence(..., options=options)
-   res = my_platform.sweep(..., options=options)
+   res = platform.execute_pulse_sequence(sequence, options=options)
+   res = platform.sweep(sequence, options=options)
 
 Let's now delve into the details of the ``options`` parameter and understand its components.
 
@@ -511,11 +597,13 @@ The result categories align as follows:
 
 Let's now delve into a typical use case for result objects within the qibolab framework:
 
-.. code-block:: python
+.. testcode:: python
+
+    drive_pulse_1 = platform.create_MZ_pulse(0, start=0)
+    measurement_pulse = platform.create_qubit_readout_pulse(0, start=0)
 
     sequence = PulseSequence()
     sequence.add(drive_pulse_1)
-    sequence.add(...)
     sequence.add(measurement_pulse)
 
     options = ExecutionParameters(
@@ -526,7 +614,7 @@ Let's now delve into a typical use case for result objects within the qibolab fr
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    res = my_platform.execute_pulse_sequence(sequence, options=options)
+    res = platform.execute_pulse_sequence(sequence, options=options)
 
 The ``res`` object will manifest as a dictionary, mapping the measurement pulse serial to its corresponding results.
 
@@ -537,9 +625,21 @@ the results will be upgraded: from values to arrays and from arrays to matrices.
 
 The shape of the values of an integreted acquisition with 2 sweepers will be:
 
-.. code-block:: python
+.. testcode:: python
 
-   shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
+    sweeper1 = Sweeper(
+        parameter=Parameter.frequency,
+        values=np.arange(-100_000, +100_000, 1),  # define an interval of swept values
+        pulses=[sequence[0]],
+        type=SweeperType.OFFSET,
+    )
+    sweeper2 = Sweeper(
+        parameter=Parameter.frequency,
+        values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
+        pulses=[sequence[0]],
+        type=SweeperType.OFFSET,
+    )
+    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 
 .. _main_doc_transpiler:
 

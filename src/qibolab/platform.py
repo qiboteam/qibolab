@@ -395,8 +395,8 @@ class Platform:
         """
         if self.qubits[qubit].flux is None:
             raise_error(NotImplementedError, f"{self.name} does not have flux.")
-        self.qubits[qubit].flux.bias = bias
+        self.qubits[qubit].flux.offset = bias
 
     def get_bias(self, qubit):
         """Get bias value. Usefeul for calibration routines involving flux."""
-        return self.qubits[qubit].flux.bias
+        return self.qubits[qubit].flux.offset
