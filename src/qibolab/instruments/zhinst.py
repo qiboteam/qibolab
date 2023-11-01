@@ -905,7 +905,9 @@ class Zurich(Controller):
                         # Integration weights definition or load from the chip folder
                         weights_file = (
                             INSTRUMENTS_DATA_FOLDER
-                            / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"
+                            / self.chip
+                            / "weights"
+                            / f"integration_weights_optimization_qubit_{q}.npy"
                         )
                         if weights_file.is_file():
                             samples = np.load(
