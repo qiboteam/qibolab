@@ -925,7 +925,7 @@ class Zurich(Controller):
                 play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
             elif seq_qd > seq_qf and seq_qd > seq_cf:
                 play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
-            elif seq_cf > seq_qd and seq_cf > seq_qd:
+            elif seq_cf > seq_qf and seq_cf > seq_qd:
                 play_after = self.play_after_set(self.sequence_qibo.cf_pulse, "bias_coupler")
 
         readout_schedule = defaultdict(list)
