@@ -109,6 +109,6 @@ class QibolabBackend(NumpyBackend):
             ExecutionParameters(nshots=nshots),
         )
         self.platform.stop()
-        result = MeasurementOutcomes(circuit.measurements, self, samples=samples, nshots=nshots)
+        result = MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
         self.assign_measurements(measurement_map, readout)
         return result
