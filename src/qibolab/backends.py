@@ -109,7 +109,6 @@ class QibolabBackend(NumpyBackend):
             ExecutionParameters(nshots=nshots),
         )
         self.platform.stop()
-        self.assign_measurements(measurement_map, readout)
-        samples = np.vstack([M.result.samples() for M in measurement_map.keys()])
         result = MeasurementOutcomes(circuit.measurements, self, samples=samples, nshots=nshots)
+        self.assign_measurements(measurement_map, readout)
         return result
