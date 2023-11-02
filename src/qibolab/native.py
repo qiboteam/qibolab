@@ -159,16 +159,14 @@ class CouplerPulse:
 
     @property
     def raw(self):
-        return (
-            {
-                "type": "coupler",
-                "duration": self.duration,
-                "amplitude": self.amplitude,
-                "shape": self.shape,
-                "qubit": self.coupler,
-                "relative_start": self.relative_start,
-            },
-        )
+        return {
+            "type": "coupler",
+            "duration": self.duration,
+            "amplitude": self.amplitude,
+            "shape": self.shape,
+            "coupler": self.coupler.name,
+            "relative_start": self.relative_start,
+        }
 
     def pulse(self, start):
         """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
@@ -239,7 +237,9 @@ class NativeSequence:
 
     @property
     def raw(self):
-        return [pulse.raw for pulse in self.pulses]
+        pulses = [pulse.raw for pulse in self.pulses]
+        coupler_pulses = [pulse.raw for pulse in self.coupler_pulses]
+        return pulses + coupler_pulses
 
     def sequence(self, start=0):
         """Creates a :class:`qibolab.pulses.PulseSequence` object implementing the sequence."""
@@ -327,7 +327,6 @@ class CouplerNatives:
             attr = getattr(self, fld.name)
             if attr is not None:
                 data[fld.name] = attr.raw
-                del data[fld.name]["coupler"]
         return data
 
 

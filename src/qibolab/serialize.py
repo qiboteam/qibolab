@@ -93,8 +93,10 @@ def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> Instr
 
 def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
+
     native_gates = {
         "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()},
+        "coupler": {c: coupler.native_pulse.raw for c, coupler in couplers.items()},
         "two_qubit": {},
     }
     # add two-qubit native gates
