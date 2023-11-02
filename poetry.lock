@@ -38,6 +38,21 @@ docs = ["Sphinx", "setuptools-scm", "sphinx-rtd-theme"]
 test = ["pytest", "pytest-cov"]
 
 [[package]]
+name = "ansi2html"
+version = "1.8.0"
+description = ""
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "ansi2html-1.8.0-py3-none-any.whl", hash = "sha256:ef9cc9682539dbe524fbf8edad9c9462a308e04bce1170c32daa8fdfd0001785"},
+    {file = "ansi2html-1.8.0.tar.gz", hash = "sha256:38b82a298482a1fa2613f0f9c9beb3db72a8f832eeac58eb2e47bf32cd37f6d5"},
+]
+
+[package.extras]
+docs = ["Sphinx", "setuptools-scm", "sphinx-rtd-theme"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "antlr4-python3-runtime"
 version = "4.11.1"
 description = "ANTLR 4.11.1 runtime for Python 3"
@@ -1048,22 +1063,21 @@ devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benc
 
 [[package]]
 name = "flask"
-version = "3.0.0"
+version = "2.2.5"
 description = "A simple framework for building complex web applications."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "flask-3.0.0-py3-none-any.whl", hash = "sha256:21128f47e4e3b9d597a3e8521a329bf56909b690fcc3fa3e477725aa81367638"},
-    {file = "flask-3.0.0.tar.gz", hash = "sha256:cfadcdb638b609361d29ec22360d6070a77d7463dcb3ab08d2c2f2f168845f58"},
+    {file = "Flask-2.2.5-py3-none-any.whl", hash = "sha256:58107ed83443e86067e41eff4631b058178191a355886f8e479e347fa1285fdf"},
+    {file = "Flask-2.2.5.tar.gz", hash = "sha256:edee9b0a7ff26621bd5a8c10ff484ae28737a2410d99b0bb9a6850c7fb977aa0"},
 ]
 
 [package.dependencies]
-blinker = ">=1.6.2"
-click = ">=8.1.3"
+click = ">=8.0"
 importlib-metadata = {version = ">=3.6.0", markers = "python_version < \"3.10\""}
-itsdangerous = ">=2.1.2"
-Jinja2 = ">=3.1.2"
-Werkzeug = ">=3.0.0"
+itsdangerous = ">=2.0"
+Jinja2 = ">=3.0"
+Werkzeug = ">=2.2.2"
 
 [package.extras]
 async = ["asgiref (>=3.2)"]
@@ -2476,7 +2490,7 @@ name = "numpy"
 version = "1.26.1"
 description = "Fundamental package for array computing in Python"
 optional = false
-python-versions = "<3.13,>=3.9"
+python-versions = ">=3.8"
 files = [
     {file = "numpy-1.26.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:82e871307a6331b5f09efda3c22e03c095d957f04bf6bc1804f30048d0e5e7af"},
     {file = "numpy-1.26.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:cdd9ec98f0063d93baeb01aad472a1a0840dee302842a2746a7a8e92968f9575"},
@@ -5122,7 +5136,7 @@ name = "werkzeug"
 version = "3.0.1"
 description = "The comprehensive WSGI web application library."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
     {file = "werkzeug-3.0.1-py3-none-any.whl", hash = "sha256:90a285dc0e42ad56b34e696398b8122ee4c681833fb35b8334a095d82c56da10"},
     {file = "werkzeug-3.0.1.tar.gz", hash = "sha256:507e811ecea72b18a404947aded4b3390e1db8f826b494d76550ef45bb3b1dcc"},
@@ -5132,7 +5146,7 @@ files = [
 MarkupSafe = ">=2.1.1"
 
 [package.extras]
-watchdog = ["watchdog (>=2.3)"]
+watchdog = ["watchdog"]
 
 [[package]]
 name = "widgetsnbextension"

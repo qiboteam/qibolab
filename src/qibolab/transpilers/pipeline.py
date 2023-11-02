@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
+from qibo.quantum_info.random_ensembles import random_statevector
 
 from qibolab.native import NativeType
 
@@ -17,33 +18,95 @@ class TranspilerPipelineError(Exception):
     """Raise when an error occurs in the transpiler pipeline"""
 
 
-# TODO: rearrange qubits based on the final qubit map (or it will not work for routed circuit)
-def assert_circuit_equivalence(original_circuit: Circuit, transpiled_circuit: Circuit):
+def assert_circuit_equivalence(
+    original_circuit: Circuit,
+    transpiled_circuit: Circuit,
+    final_map: dict,
+    initial_map: dict = None,
+    test_states: list = None,
+    ntests: int = 3,
+):
     """Checks that the transpiled circuit agrees with the original using simulation.
 
     Args:
         original_circuit (qibo.models.Circuit): Original circuit.
         transpiled_circuit (qibo.models.Circuit): Transpiled circuit.
+        final_map (dict): logical-physical qubit mapping after routing.
+        initial_map (dict): logical_physical qubit mapping before routing, if None trivial initial map is used.
+        test_states (list): states on which the test is performed, if None 'ntests' random states will be tested.
+        ntests (int): number of random states tested.
     """
     backend = NumpyBackend()
-    target_state = backend.execute_circuit(original_circuit).state()
-    final_state = backend.execute_circuit(transpiled_circuit).state()
-    fidelity = np.abs(np.dot(np.conj(target_state), final_state))
-    np.testing.assert_allclose(fidelity, 1.0)
+    ordering = np.argsort(np.array(list(final_map.values())))
+    if transpiled_circuit.nqubits != original_circuit.nqubits:
+        raise ValueError("Transpiled and original circuit do not have the same number of qubits.")
+
+    if test_states is None:
+        test_states = [random_statevector(dims=2**original_circuit.nqubits, backend=backend) for _ in range(ntests)]
+    if initial_map is not None:
+        reordered_test_states = []
+        initial_map = np.array(list(initial_map.values()))
+        reordered_test_states = [transpose_qubits(initial_state, initial_map) for initial_state in test_states]
+    else:
+        reordered_test_states = test_states
+
+    for i in range(len(test_states)):
+        target_state = backend.execute_circuit(original_circuit, initial_state=test_states[i]).state()
+        final_state = backend.execute_circuit(transpiled_circuit, initial_state=reordered_test_states[i]).state()
+        final_state = transpose_qubits(final_state, ordering)
+        fidelity = np.abs(np.dot(np.conj(target_state), final_state))
+        try:
+            np.testing.assert_allclose(fidelity, 1.0)
+        except AssertionError:
+            raise TranspilerPipelineError("Circuit equivalence not satisfied.")
+
+
+def transpose_qubits(state: np.ndarray, qubits_ordering: np.ndarray):
+    """Reorders qubits of a given state vector.
+
+    Args:
+        state (np.ndarray): final state of the circuit.
+        qubits_ordering (np.ndarray): final qubit ordering.
+    """
+    original_shape = state.shape
+    state = np.reshape(state, len(qubits_ordering) * (2,))
+    state = np.transpose(state, qubits_ordering)
+    return np.reshape(state, original_shape)
 
 
 def assert_transpiling(
-    circuit: Circuit,
+    original_circuit: Circuit,
+    transpiled_circuit: Circuit,
     connectivity: nx.Graph,
     initial_layout: dict,
     final_layout: dict,
     native_gates: NativeType = NativeType.CZ,
+    check_circuit_equivalence=True,
 ):
-    """Check that all transpiler passes have been executed correctly"""
-    assert_connectivity(circuit=circuit, connectivity=connectivity)
-    assert_decomposition(circuit=circuit, two_qubit_natives=native_gates)
-    assert_placement(circuit=circuit, layout=initial_layout)
-    assert_placement(circuit=circuit, layout=final_layout)
+    """Check that all transpiler passes have been executed correctly.
+
+    Args:
+        original_circuit (qibo.models.Circuit): circuit before transpiling.
+        transpiled_circuit (qibo.models.Circuit): circuit after transpiling.
+        connectivity (nx.Graph): chip qubits connectivity.
+        initial_layout (dict): initial physical-logical qubit mapping.
+        final_layout (dict): final physical-logical qubit mapping.
+        native_gates: (NativeType): native gates supported by the hardware.
+    """
+    assert_connectivity(circuit=transpiled_circuit, connectivity=connectivity)
+    assert_decomposition(circuit=transpiled_circuit, two_qubit_natives=native_gates)
+    if original_circuit.nqubits != transpiled_circuit.nqubits:
+        qubit_matcher = Preprocessing(connectivity=connectivity)
+        original_circuit = qubit_matcher(circuit=original_circuit)
+    assert_placement(circuit=original_circuit, layout=initial_layout)
+    assert_placement(circuit=transpiled_circuit, layout=final_layout)
+    if check_circuit_equivalence:
+        assert_circuit_equivalence(
+            original_circuit=original_circuit,
+            transpiled_circuit=transpiled_circuit,
+            initial_map=initial_layout,
+            final_map=final_layout,
+        )
 
 
 class Passes:

@@ -1,9 +1,11 @@
+import numpy as np
 import pytest
 from qibo import Circuit, gates
 
 from qibolab.transpilers.blocks import (
     Block,
     BlockingError,
+    CircuitBlocks,
     _find_previous_gates,
     _find_successive_gates,
     block_decomposition,
@@ -185,3 +187,99 @@ def test_block_decomposition():
     assert blocks[3].qubits == (2, 3)
     assert blocks[2].count_2q_gates() == 3
     assert len(blocks[2].gates) == 3
+
+
+def test_circuit_blocks():
+    circ = Circuit(4)
+    circ.add(gates.H(1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.CZ(1, 2))
+    circ.add(gates.H(1))
+    circ.add(gates.H(3))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(2, 3))
+    circ.add(gates.CZ(0, 1))
+    circuit_blocks = CircuitBlocks(circ, index_names=True)
+    for index, block in enumerate(circuit_blocks()):
+        assert block.name == index
+    reconstructed_circ = circuit_blocks.circuit()
+    # Here we can't use assert gates_equality because the order of the gates is changed
+    np.testing.assert_allclose(circ(), reconstructed_circ())
+    first_block = circuit_blocks.search_by_index(0)
+    assert_gates_equality(first_block.gates, [gates.H(1), gates.H(0), gates.CZ(0, 1), gates.H(0), gates.CZ(0, 1)])
+
+
+def test_add_block():
+    circ = Circuit(4)
+    circ.add(gates.H(1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.H(0))
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circuit_blocks = CircuitBlocks(circ)
+    new_block = Block(qubits=(2, 3), gates=[gates.CZ(2, 3)])
+    circ.add(gates.CZ(2, 3))
+    circuit_blocks.add_block(new_block)
+    reconstructed_circ = circuit_blocks.circuit()
+    assert_gates_equality(reconstructed_circ.queue, circ.queue)
+
+
+def test_add_block_error():
+    circ = Circuit(2)
+    circ.add(gates.CZ(0, 1))
+    circuit_blocks = CircuitBlocks(circ)
+    new_block = Block(qubits=(2, 3), gates=[gates.CZ(2, 3)])
+    with pytest.raises(BlockingError):
+        circuit_blocks.add_block(new_block)
+
+
+def test_remove_block():
+    circ = Circuit(3)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circuit_blocks = CircuitBlocks(circ)
+    blocks = circuit_blocks()
+    circuit_blocks.remove_block(blocks[0])
+    remaining_block = circuit_blocks()
+    assert_gates_equality(remaining_block[0].gates, [gates.CZ(1, 2)])
+
+
+def test_remove_block_error():
+    circ = Circuit(3)
+    circ.add(gates.CZ(0, 1))
+    circ.add(gates.CZ(1, 2))
+    circuit_blocks = CircuitBlocks(circ)
+    new_block = Block(qubits=(2, 3), gates=[gates.CZ(2, 3)])
+    with pytest.raises(BlockingError):
+        circuit_blocks.remove_block(new_block)
+
+
+def test_search_by_index_error_no_indexes():
+    circ = Circuit(2)
+    circ.add(gates.CZ(0, 1))
+    circuit_blocks = CircuitBlocks(circ)
+    with pytest.raises(BlockingError):
+        circuit_blocks.search_by_index(0)
+
+
+def test_search_by_index_error_no_index_found():
+    circ = Circuit(2)
+    circ.add(gates.CZ(0, 1))
+    circuit_blocks = CircuitBlocks(circ, index_names=True)
+    with pytest.raises(BlockingError):
+        circuit_blocks.search_by_index(1)
+
+
+def test_block_on_qubits():
+    block = Block(qubits=(0, 1), gates=[gates.H(0), gates.CZ(0, 1), gates.H(1), gates.CZ(1, 0)])
+    new_block = block.on_qubits(new_qubits=(2, 3))
+    assert new_block.gates[0].qubits == (2,)
+    assert new_block.gates[1].qubits == (2, 3)
+    assert new_block.gates[2].qubits == (3,)
+    assert new_block.gates[3].qubits == (3, 2)
