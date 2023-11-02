@@ -96,7 +96,7 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
 
     native_gates = {"single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}}
     if couplers is not None:
-            native_gates["coupler"] = {c: coupler.native_pulse.raw for c, coupler in couplers.items()}
+        native_gates["coupler"] = {c: coupler.native_pulse.raw for c, coupler in couplers.items()}
     native_gates["two_qubit"] = {}
 
     # add two-qubit native gates
