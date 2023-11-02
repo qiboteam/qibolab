@@ -22,7 +22,7 @@ include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-qibo = {git='https://github.com/qiboteam/qibo.git', branch='circuit_output_bugfix'}
+qibo = ">=0.2.2"
 networkx = "^3.0"
 more-itertools = "^9.1.0"
 pyyaml = "^6.0"
