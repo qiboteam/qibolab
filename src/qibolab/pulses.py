@@ -1803,7 +1803,7 @@ class PulseSequence:
 
         new_pc = PulseSequence()
         for pulse in self.pulses:
-            if pulse.type == PulseType.COUPLERFLUX:
+            if pulse.type is PulseType.COUPLERFLUX:
                 new_pc.add(pulse)
         return new_pc
 

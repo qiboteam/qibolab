@@ -10,7 +10,7 @@ from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.native import NativeType
-from qibolab.pulses import CouplerFluxPulse, PulseSequence
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
@@ -52,7 +52,7 @@ class Platform:
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
 
-    couplers: Optional[CouplerMap] = field(default_factory=dict)
+    couplers: CouplerMap = field(default_factory=dict)
     """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
 
     is_connected: bool = False
@@ -252,6 +252,17 @@ class Platform:
         except KeyError:
             return list(self.qubits.keys())[qubit]
 
+    def get_coupler(self, coupler):
+        """Return the name of the physical coupler corresponding to a logical coupler.
+
+        Temporary fix for the compiler to work for platforms where the couplers
+        are not named as 0, 1, 2, ...
+        """
+        try:
+            return self.couplers[coupler].name
+        except KeyError:
+            return list(self.couplers.keys())[coupler]
+
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
@@ -298,17 +309,25 @@ class Platform:
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
 
-    def create_coupler_pulse(self, coupler, start, duration, amplitude):
-        pulse = CouplerFluxPulse(
-            start,  # + self.relative_start,
-            duration,
-            amplitude,
-            "Rectangular()",
-            channel=coupler.flux.name,
-            qubit=coupler.name,
-        )
-
+    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
+        coupler = self.get_coupler(coupler)
+        pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
+        if duration:
+            pulse.duration = duration
+        if amplitude:
+            pulse.amplitude = amplitude
         return pulse
+
+        # pulse = CouplerFluxPulse(
+        #     start,  # + self.relative_start,
+        #     duration,
+        #     amplitude,
+        #     "Rectangular()",
+        #     channel=coupler.flux.name,
+        #     qubit=coupler.name,
+        # )
+
+        # return pulse
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses

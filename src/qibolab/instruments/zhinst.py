@@ -233,7 +233,7 @@ class ZhSweeperLine:
             if isinstance(qubit, Qubit):
                 pulse = FluxPulse(
                     start=0,
-                    duration=sequence.duration+sequence.start,
+                    duration=sequence.duration + sequence.start,
                     amplitude=1,
                     shape="Rectangular",
                     channel=qubit.flux.name,
@@ -241,12 +241,9 @@ class ZhSweeperLine:
                 )
                 self.signal = f"flux{qubit.name}"
             if isinstance(qubit, Coupler):
-                # TODO: For the couplers specs is enough, may need changing for 2q coupler routines ?
-                
-                print(sequence.duration+sequence.start)
                 pulse = CouplerFluxPulse(
                     start=0,
-                    duration=sequence.duration+sequence.start,
+                    duration=sequence.duration + sequence.start,
                     amplitude=1,
                     shape="Rectangular",
                     channel=qubit.flux.name,
@@ -952,15 +949,14 @@ class Zurich(Controller):
 
                     if play_after is None:
                         exp.delay(
-                                    signal=f"measure{q}",
-                                    time=self.sequence_qibo.start * NANO_TO_SECONDS,
-                                )
+                            signal=f"measure{q}",
+                            time=self.sequence_qibo.start * NANO_TO_SECONDS,
+                        )
                         exp.delay(
-                                    signal=f"acquire{q}",
-                                    time=self.sequence_qibo.start * NANO_TO_SECONDS,
-                                )
-                
-                    
+                            signal=f"acquire{q}",
+                            time=self.sequence_qibo.start * NANO_TO_SECONDS,
+                        )
+
                     # Integration weights definition or load from the chip folder
                     weights_file = (
                         INSTRUMENTS_DATA_FOLDER / f"{self.chip}/weights/integration_weights_optimization_qubit_{q}.npy"

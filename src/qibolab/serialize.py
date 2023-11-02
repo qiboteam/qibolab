@@ -11,7 +11,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.couplers import Coupler
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
     InstrumentMap,
@@ -55,7 +55,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
             pair = tuple(sorted(pair))
             pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], None)
 
-    qubits, pairs = register_gates(runcard, qubits, pairs, couplers)
+    qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
 
     return qubits, couplers, pairs
 
@@ -74,12 +74,14 @@ def register_gates(
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
         qubits[q].native_gates = SingleQubitNatives.from_dict(qubits[q], gates)
+    for c, gates in native_gates.get("coupler", {}).items():
+        couplers[c].native_pulse = CouplerNatives.from_dict(couplers[c], gates)
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
         pairs[pair].native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
 
-    return qubits, pairs
+    return qubits, pairs, couplers
 
 
 def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> InstrumentMap:

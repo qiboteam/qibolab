@@ -52,6 +52,15 @@ native_gates:
                 relative_start: 0, phase: 0, type: qd}
             MZ: {duration: 2000, amplitude: 0.1, shape: Rectangular(), frequency: 5500000000.0,
                 relative_start: 0, phase: 0, type: ro}
+    coupler:
+        0:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 0}
+        1:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 1}
+        3:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 3}
+        4:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 4}
     two_qubit:
         0-2:
             CZ:
