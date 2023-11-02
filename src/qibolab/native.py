@@ -210,7 +210,7 @@ class NativeSequence:
                 qubits in the platform. All qubits are required because the sequence may be
                 acting on qubits that the implemented gate is not targeting.
             couplers (list): List of :class:`qibolab.couplers.Coupler` object for all
-                cruplers in the platform. All couplers are required because the sequence may be
+                couplers in the platform. All couplers are required because the sequence may be
                 acting on couplers that the implemented gate is not targeting.
         """
         pulses = []
