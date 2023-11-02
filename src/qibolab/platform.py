@@ -312,9 +312,9 @@ class Platform:
     def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
         coupler = self.get_coupler(coupler)
         pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
-        if duration:
+        if duration is not None:
             pulse.duration = duration
-        if amplitude:
+        if amplitude is not None:
             pulse.amplitude = amplitude
         return pulse
 
