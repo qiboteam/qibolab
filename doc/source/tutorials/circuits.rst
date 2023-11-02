@@ -27,15 +27,16 @@ circuits definition that we leave to the `Qibo
     qibo.set_backend("qibolab", "dummy")
     hardware_result = circuit(nshots=5000)
 
-    # execute with classical quantum simulation
-    qibo.set_backend("numpy")
-    simulation_result = circuit(nshots=5000)
-
     # retrieve measured probabilities
     freq = hardware_result.frequencies()
     p0 = freq["0"] / 5000 if "0" in freq else 0
     p1 = freq["1"] / 5000 if "1" in freq else 0
     hardware = [p0, p1]
+
+    # execute with classical quantum simulation
+    qibo.set_backend("numpy")
+    simulation_result = circuit(nshots=5000)
+
     simulation = simulation_result.probabilities(qubits=(0,))
 
 
