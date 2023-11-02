@@ -318,17 +318,6 @@ class Platform:
             pulse.amplitude = amplitude
         return pulse
 
-        # pulse = CouplerFluxPulse(
-        #     start,  # + self.relative_start,
-        #     duration,
-        #     amplitude,
-        #     "Rectangular()",
-        #     channel=coupler.flux.name,
-        #     qubit=coupler.name,
-        # )
-
-        # return pulse
-
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
