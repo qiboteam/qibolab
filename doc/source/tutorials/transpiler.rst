@@ -24,7 +24,7 @@ Creating an instance of the backend provides access to these objects:
 .. testoutput:: python
     :hide:
 
-    <class 'qibolab.transpilers.pipeline.Passes'>
+    <class 'qibo.transpiler.pipeline.Passes'>
     <class 'qibolab.compilers.compiler.Compiler'>
 
 The transpiler is responsible for transforming the circuit to respect the chip connectivity and native gates,
