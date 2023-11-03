@@ -22,7 +22,7 @@ from qibolab.serialize import (
 NAME = "qblox"
 ADDRESS = "192.168.0.20"
 TIME_OF_FLIGHT = 500
-RUNCARD = pathlib.Path(__file__).parent / "qw5q_gold.yml"
+RUNCARD = pathlib.Path(__file__).parent / "qblox.yml"
 
 
 def create(runcard_path=RUNCARD):
