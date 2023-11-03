@@ -109,7 +109,7 @@ class ClusterQCM_BB(Instrument):
         lambda self, x: parent._set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
     )
 
-    def __init__(self, name: str, address: str, cluster: Cluster):
+    def __init__(self, name: str, address: str, cluster: Cluster = None):
         """Initialises the instance.
 
         All class attributes are defined and initialised.
