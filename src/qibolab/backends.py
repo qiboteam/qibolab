@@ -1,11 +1,10 @@
-import itertools
 import os
 
 import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
-from qibo.states import CircuitResult
+from qibo.result import MeasurementOutcomes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
@@ -53,19 +52,17 @@ class QibolabBackend(NumpyBackend):
                 )
         return native_circuit, qubit_map
 
-    def assign_measurements(self, measurement_map, circuit_result):
+    def assign_measurements(self, measurement_map, readout):
         """Assigning measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
 
-        This allows properly obtaining the measured shots from the :class:`qibo.states.CircuitResult`
-        object returned by the circuit execution.
+        This allows properly obtaining the measured shots from the :class:`qibolab.pulses.ReadoutPulse` object obtaned after pulse sequence execution.
 
         Args:
             measurement_map (dict): Map from each measurement gate to the sequence of
                 readout pulses implementing it.
-            circuit_result (:class:`qibo.states.CircuitResult`): Circuit result object
+            readout (:class:`qibolab.pulses.ReadoutPulse`): Readout result object
                 containing the readout measurement shots. This is created in ``execute_circuit``.
         """
-        readout = circuit_result.execution_result
         for gate, sequence in measurement_map.items():
             _samples = (readout[pulse.serial].samples for pulse in sequence.pulses)
             samples = list(filter(lambda x: x is not None, _samples))
@@ -84,7 +81,7 @@ class QibolabBackend(NumpyBackend):
                 calibration yml will be used.
 
         Returns:
-            CircuitResult object containing the results acquired from the execution.
+            MeasurementOutcomes object containing the results acquired from the execution.
         """
         if isinstance(initial_state, type(circuit)):
             return self.execute_circuit(
@@ -109,8 +106,8 @@ class QibolabBackend(NumpyBackend):
             ExecutionParameters(nshots=nshots),
         )
         self.platform.stop()
-        result = CircuitResult(self, circuit, readout, nshots)
-        self.assign_measurements(measurement_map, result)
+        result = MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
+        self.assign_measurements(measurement_map, readout)
         return result
 
     def execute_circuits(self, circuits, initial_state=None, nshots=1000):
@@ -149,47 +146,3 @@ class QibolabBackend(NumpyBackend):
                 gate.result.backend = self
                 gate.result.register_samples(np.array(samples).T)
         return results
-
-    def circuit_result_tensor(self, result):
-        raise_error(
-            NotImplementedError,
-            "Qibolab cannot return state vector in tensor representation.",
-        )
-
-    def circuit_result_representation(self, result: CircuitResult):
-        # TODO: Consider changing this to a more readable format.
-        # this must return a ``str`` because it is used in ``CircuitResult.__repr__``.
-        return str(result.execution_result)
-
-    def circuit_result_probabilities(self, result: CircuitResult, qubits=None):
-        """Returns the probability of the qubit being in state ``|0>``."""
-        if qubits is None:  # pragma: no cover
-            qubits = [self.platform.get_qubit(q) for q in result.measurement_gate.qubits]
-
-        # basic classification
-        probabilities = []
-        for qubit in qubits:
-            # execution_result[qubit] provides the latest acquisition data for the corresponding qubit
-            qubit_result = result.execution_result[qubit]
-            if qubit_result.samples is None:
-                mean_state0 = complex(self.platform.qubits[qubit].mean_gnd_states)
-                mean_state1 = complex(self.platform.qubits[qubit].mean_exc_states)
-                measurement = complex(qubit_result.I, qubit_result.Q)
-                d0 = abs(measurement - mean_state0)
-                d1 = abs(measurement - mean_state1)
-                d01 = abs(mean_state0 - mean_state1)
-                p = (d1**2 + d01**2 - d0**2) / 2 / d01**2
-                probabilities.append([p, 1 - p])
-            else:
-                outcomes, counts = np.unique(qubit_result.samples, return_counts=True)
-                probabilities.append([0, 0])
-                for i, c in zip(outcomes.astype(int), counts):
-                    probabilities[-1][i] = c / result.nshots
-
-        # bring probabilities to the format returned by simulation
-        return np.array(
-            [
-                np.prod([p[b] for p, b in zip(probabilities, bitstring)])
-                for bitstring in itertools.product([0, 1], repeat=len(qubits))
-            ]
-        )

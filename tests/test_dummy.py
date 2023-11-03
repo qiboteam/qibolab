@@ -34,12 +34,27 @@ def test_dummy_execute_pulse_sequence(acquisition):
         assert result[0].magnitude.shape == (nshots * ro_pulse.duration,)
 
 
+def test_dummy_execute_coupler_pulse():
+    platform = create_platform("dummy")
+    sequence = PulseSequence()
+
+    pulse = platform.create_coupler_pulse(coupler=0, start=0)
+    sequence.add(pulse)
+
+    options = ExecutionParameters(nshots=None)
+    result = platform.execute_pulse_sequence(sequence, options)
+
+    test_pulse = "CouplerFluxPulse(0, 30, 0.05, Rectangular(), flux_coupler-0, 0)"
+
+    assert test_pulse == pulse.serial
+
+
 def test_dummy_execute_pulse_sequence_couplers():
     platform = create_platform("dummy")
     qubit_ordered_pair = QubitPair(platform.qubits[1], platform.qubits[2], platform.couplers[1])
     sequence = PulseSequence()
 
-    cz, _ = platform.create_CZ_pulse_sequence(
+    cz, cz_phases = platform.create_CZ_pulse_sequence(
         qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
         start=0,
     )
@@ -50,6 +65,12 @@ def test_dummy_execute_pulse_sequence_couplers():
     sequence.add(platform.create_qubit_readout_pulse(2, 40))
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
+
+    test_pulses = "PulseSequence\nFluxPulse(0, 30, 0.05, Rectangular(), flux-2, 2)\nCouplerFluxPulse(0, 30, 0.05, Rectangular(), flux_coupler-1, 1)"
+    test_phases = {1: 0.0, 2: 0.0}
+
+    assert test_pulses == cz.serial
+    assert test_phases == cz_phases
 
 
 def test_dummy_execute_pulse_sequence_fast_reset():

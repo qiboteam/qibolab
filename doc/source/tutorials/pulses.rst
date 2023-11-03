@@ -6,7 +6,7 @@ defining a :class:`qibolab.pulses.PulseSequence` object and adding different
 pulses (:class:`qibolab.pulses.Pulse`) through the
 :func:`qibolab.pulses.PulseSequence.add()` method:
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab.pulses import (
         DrivePulse,
@@ -55,13 +55,13 @@ After connecting and setting up the platform's instruments using the
 local oscillators and the ``execute`` method will execute the previous defined
 pulse sequence according to the number of shots ``nshots`` specified.
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab import create_platform
     from qibolab.execution_parameters import ExecutionParameters
 
     # Define platform and load specific runcard
-    platform = create_platform("tii1q")
+    platform = create_platform("dummy")
 
     # Connects to lab instruments using the details specified in the calibration settings.
     platform.connect()

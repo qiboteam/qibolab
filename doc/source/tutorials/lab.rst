@@ -20,7 +20,7 @@ instrumentation.
 The following cell shows how to define a single qubit platform from scratch,
 using different Qibolab primitives.
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab import Platform
     from qibolab.qubits import Qubit
@@ -52,7 +52,7 @@ using different Qibolab primitives.
                 shape="Gaussian(5)",
                 pulse_type=PulseType.DRIVE,
                 qubit=qubit,
-                frequency=int(4.5e9)
+                frequency=int(4.5e9),
             ),
             MZ=NativePulse(
                 name="MZ",
@@ -61,8 +61,8 @@ using different Qibolab primitives.
                 shape="Rectangular()",
                 pulse_type=PulseType.READOUT,
                 qubit=qubit,
-                frequency=int(7e9)
-            )
+                frequency=int(7e9),
+            ),
         )
 
         # assign channels to the qubit
@@ -72,7 +72,7 @@ using different Qibolab primitives.
 
         # create dictionaries of the different objects
         qubits = {qubit.name: qubit}
-        pairs = {} # empty as for single qubit we have no qubit pairs
+        pairs = {}  # empty as for single qubit we have no qubit pairs
         instruments = {instrument.name: instrument}
 
         # allocate and return Platform object
@@ -96,7 +96,7 @@ that two-qubit gates can be applied. For such connected pairs of qubits one
 needs to additionally define :class:`qibolab.qubits.QubitPair` objects, which
 hold the parameters of the two-qubit gates.
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab.qubits import Qubit, QubitPair
     from qibolab.pulses import PulseType
@@ -178,7 +178,7 @@ to the chip topology. We neglected characterization parameters associated to the
 coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
 
 
-.. code-block::  python
+.. testcode::  python
 
     from qibolab.couplers import Coupler
     from qibolab.qubits import Qubit, QubitPair
@@ -199,7 +199,7 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # Look above example
 
     # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1, coupler01)
+    pair = QubitPair(qubit0, qubit1, coupler_01)
     pair.native_gates = TwoQubitNatives(
         CZ=NativeSequence(
             name="CZ",
@@ -399,7 +399,7 @@ Providing the above runcard is not sufficient to instantiate a
 ``qibolab.serialize``. Here is the ``create()`` method that loads the parameters of
 the above runcard:
 
-.. code-block::  python
+.. testcode::  python
 
     from pathlib import Path
     from qibolab import Platform
@@ -442,7 +442,7 @@ the above runcard:
 
 With the following additions for coupler architectures:
 
-.. code-block::  python
+.. testcode::  python
 
     def create():
         # Create a controller instrument
@@ -477,7 +477,13 @@ With the following additions for coupler architectures:
         # load ``settings`` from the runcard
         settings = load_settings(runcard)
         return Platform(
-            "my_platform", qubits, pairs, instruments, settings, resonator_type="2D", couplers = couplers
+            "my_platform",
+            qubits,
+            pairs,
+            instruments,
+            settings,
+            resonator_type="2D",
+            couplers=couplers,
         )
 
 Note that this assumes that the runcard is saved as ``my_platform.yml`` in the
@@ -591,12 +597,17 @@ These settings are loaded when creating the platform using :meth:`qibolab.serial
 Note that the key used in the runcard should be the same with the name used when instantiating the instrument,
 in this case ``"twpa_pump"``.
 
-.. code-block::  python
+.. testcode::  python
 
     from pathlib import Path
     from qibolab import Platform
     from qibolab.channels import ChannelMap, Channel
-    from qibolab.serialize import load_runcard, load_qubits, load_settings, load_instrument_settings
+    from qibolab.serialize import (
+        load_runcard,
+        load_qubits,
+        load_settings,
+        load_instrument_settings,
+    )
     from qibolab.instruments.dummy import DummyInstrument
     from qibolab.instruments.oscillator import LocalOscillator
 

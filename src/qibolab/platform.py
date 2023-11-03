@@ -92,7 +92,7 @@ class Platform:
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
 
-    couplers: Optional[CouplerMap] = None
+    couplers: CouplerMap = field(default_factory=dict)
     """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
 
     is_connected: bool = False
@@ -149,6 +149,9 @@ class Platform:
         for qubit in self.qubits.values():
             if qubit.flux is not None and qubit.sweetspot != 0:
                 qubit.flux.offset = qubit.sweetspot
+        for coupler in self.couplers.values():
+            if coupler.flux is not None and coupler.sweetspot != 0:
+                coupler.flux.offset = coupler.sweetspot
 
     def start(self):
         """Starts all the instruments."""
@@ -308,6 +311,17 @@ class Platform:
         except KeyError:
             return list(self.qubits.keys())[qubit]
 
+    def get_coupler(self, coupler):
+        """Return the name of the physical coupler corresponding to a logical coupler.
+
+        Temporary fix for the compiler to work for platforms where the couplers
+        are not named as 0, 1, 2, ...
+        """
+        try:
+            return self.couplers[coupler].name
+        except KeyError:
+            return list(self.couplers.keys())[coupler]
+
     def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
@@ -330,6 +344,16 @@ class Platform:
             )
         return self.pairs[pair].native_gates.CZ.sequence(start)
 
+    def create_iSWAP_pulse_sequence(self, qubits, start=0):
+        # Check in the settings if qubits[0]-qubits[1] is a key
+        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
+        if pair not in self.pairs or self.pairs[pair].native_gates.iSWAP is None:
+            raise_error(
+                ValueError,
+                f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
+            )
+        return self.pairs[pair].native_gates.iSWAP.sequence(start)
+
     def create_MZ_pulse(self, qubit, start):
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.MZ.pulse(start)
@@ -343,6 +367,15 @@ class Platform:
     def create_qubit_readout_pulse(self, qubit, start):
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
+
+    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
+        coupler = self.get_coupler(coupler)
+        pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
+        if duration is not None:
+            pulse.duration = duration
+        if amplitude is not None:
+            pulse.amplitude = amplitude
+        return pulse
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
@@ -454,8 +487,8 @@ class Platform:
         """
         if self.qubits[qubit].flux is None:
             raise_error(NotImplementedError, f"{self.name} does not have flux.")
-        self.qubits[qubit].flux.bias = bias
+        self.qubits[qubit].flux.offset = bias
 
     def get_bias(self, qubit):
         """Get bias value. Usefeul for calibration routines involving flux."""
-        return self.qubits[qubit].flux.bias
+        return self.qubits[qubit].flux.offset

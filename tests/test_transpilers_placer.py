@@ -17,7 +17,7 @@ from qibolab.transpilers.router import ShortestPaths
 
 
 def star_connectivity():
-    Q = ["q" + str(i) for i in range(5)]
+    Q = [i for i in range(5)]
     chip = nx.Graph()
     chip.add_nodes_from(Q)
     graph_list = [
@@ -71,6 +71,14 @@ def test_trivial():
     layout = placer(circuit)
     assert layout == {"q0": 0, "q1": 1, "q2": 2, "q3": 3, "q4": 4}
     assert_placement(circuit, layout)
+
+
+def test_trivial_error():
+    circuit = Circuit(4)
+    connectivity = star_connectivity()
+    placer = Trivial(connectivity=connectivity)
+    with pytest.raises(PlacementError):
+        layout = placer(circuit)
 
 
 @pytest.mark.parametrize("custom_layout", [[4, 3, 2, 1, 0], {"q0": 4, "q1": 3, "q2": 2, "q3": 1, "q4": 0}])
@@ -154,6 +162,15 @@ def test_random(reps):
     connectivity = star_connectivity()
     placer = Random(connectivity=connectivity, samples=reps)
     layout = placer(star_circuit())
+    assert_placement(star_circuit(), layout)
+
+
+def test_random_perfect():
+    circ = Circuit(5)
+    circ.add(gates.CZ(0, 1))
+    connectivity = star_connectivity()
+    placer = Random(connectivity=connectivity, samples=1000)
+    layout = placer(circ)
     assert_placement(star_circuit(), layout)
 
 
