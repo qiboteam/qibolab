@@ -964,13 +964,13 @@ class Zurich(Controller):
                         )
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
-                                uid="weight" + pulse.zhpulse.uid,
+                                uid="weight"  + str(q),
                                 # samples=samples[0] * np.exp(1j * qubit.iq_angle),
                                 samples=samples[0] * np.exp(1j * iq_angle),
                             )
                         else:
                             weight = lo.pulse_library.sampled_pulse_complex(
-                                uid="weight" + pulse.zhpulse.uid,
+                                uid="weight"  + str(q),
                                 samples=samples[0],
                             )
                     else:
@@ -981,13 +981,14 @@ class Zurich(Controller):
                         )
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
-                                np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
-                                * np.exp(1j * iq_angle)
+                                samples = np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
+                                * np.exp(1j * iq_angle),
+                                uid = "weights" + str(q)
                             )
                         else:
                             # TODO: Patch for multiple readouts: Remove different uids
                             weight = lo.pulse_library.const(
-                                uid="weight",
+                                uid="weight" + str(q),
                                 length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
                                 - 1.5 * self.smearing * NANO_TO_SECONDS,
                                 amplitude=1,
