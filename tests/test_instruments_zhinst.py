@@ -15,7 +15,7 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
 )
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument
 
@@ -116,6 +116,34 @@ def test_zhsequence_couplers(dummy_qrc):
     assert len(zhsequence) == 3
     assert len(zhsequence["readout0"]) == 1
     assert len(zhsequence["couplerflux3"]) == 1
+
+
+def test_zhsequence_couplers_sweeper(dummy_qrc):
+    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    sequence = PulseSequence()
+    sequence.add(ro_pulse)
+    IQM5q = create_platform("zurich")
+    controller = IQM5q.instruments["EL_ZURO"]
+
+    delta_bias_range = np.arange(-1, 1, 0.5)
+
+    sweeper = Sweeper(
+        Parameter.bias,
+        delta_bias_range,
+        couplers=[IQM5q.couplers[0]],
+        type=SweeperType.ABSOLUTE,
+    )
+
+    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers, sweepers=[sweeper])
+    zhsequence = controller.sequence
+
+    with pytest.raises(AttributeError):
+        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers, sweepers=[sweeper])
+        zhsequence = controller.sequence
+
+    assert len(zhsequence) == 2
+    assert len(zhsequence["readout0"]) == 1
+    assert len(zhsequence["couplerflux0"]) == 1
 
 
 def test_zhsequence_multiple_ro(dummy_qrc):
