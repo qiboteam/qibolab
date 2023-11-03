@@ -9,7 +9,6 @@ import warnings
 import numpy as np
 import pytest
 from qibo.models import Circuit
-from qibo.states import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
@@ -92,6 +91,17 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_platform_execute_one_coupler_pulse(qpu_platform):
+    # One drive pulse
+    platform = qpu_platform
+    coupler = next(iter(platform.couplers))
+    sequence = PulseSequence()
+    sequence.add(platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    assert len(sequence.cf_pulses) > 0
 
 
 @pytest.mark.qpu
@@ -203,6 +213,7 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
 def test_excited_state_probabilities_pulses(qpu_platform):
@@ -226,6 +237,7 @@ def test_excited_state_probabilities_pulses(qpu_platform):
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
