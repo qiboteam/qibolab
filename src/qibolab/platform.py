@@ -1,6 +1,6 @@
 """A platform for executing quantum algorithms."""
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional
 
@@ -229,7 +229,7 @@ class Platform:
             # find readout pulses
             ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
 
-            results = defaultdict(list)
+            results = defaultdict(deque)
             for batch in chunked(sequences, batch_size):
                 sequence, readouts = unroll_sequences(batch, options.relaxation_time)
                 result = self._execute("play", sequence, options, **kwargs)
