@@ -121,13 +121,12 @@ class ClusterQCM_BB(Instrument):
         """
         super().__init__(name, address)
         self.ports: dict = {}
-        self.channels: list = []
-
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self.device = None
 
         self._sequencers: dict[Sequencer] = {}
+        self.channels: list = []
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
         self._device_parameters = {}
@@ -282,21 +281,15 @@ class ClusterQCM_BB(Instrument):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
             self._sequencers[port] = []
 
-            self.ports[port].channel = settings[port]["channel"]
-            self._port_channel_map[port] = self.ports[port].channel
             self.ports[port].gain = settings[port]["gain"]
             self.ports[port].offset = settings[port]["offset"]
+            self.ports[port].qubit = settings[port]["qubit"]
             # self.ports[port].hardware_mod_en = settings.hardware_mod_en
             self.ports[port].hardware_mod_en = True
-            self.ports[port].qubit = settings[port]["qubit"]
             self.ports[port].nco_freq = 0
-            self.ports[
-                port
-            ].nco_phase_offs = 0  # TODO: this are muted since it will be passed the default value in theory
+            self.ports[port].nco_phase_offs = 0
 
-        self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
-        self.channels = list(self._channel_port_map.keys())
-        self._settings = settings
+        self._settings = settings if settings else self._settings
 
     def _get_next_sequencer(self, port, frequency, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -773,10 +766,9 @@ class ClusterQCM_BB(Instrument):
         """Empty method to comply with Instrument interface."""
         if self.is_connected:
             try:
-                for port in ["o1", "o2", "o3", "o4"]:
-                    if port in self.ports:
-                        port_settings = self._settings[port]
-                        self.ports[port].offset = port_settings["offset"]
+                for port in self.ports:
+                    port_settings = self._settings[port]
+                    self.ports[port].offset = port_settings["offset"]
             except:
                 log.warning("Unable to set offsets")
 

@@ -157,13 +157,13 @@ class ClusterQRM_RF(Instrument):
         self.ports: dict = {}
 
         self.classification_parameters: dict = {}
-        self.channels: list = []
 
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
         self._sequencers: dict[Sequencer] = {"o1": []}
+        self.channels: list = []
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
         self._device_parameters = {}
@@ -173,7 +173,6 @@ class ClusterQRM_RF(Instrument):
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
         self._execution_time: float = 0
-        self.modified_module = True
 
     def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
@@ -323,8 +322,6 @@ class ClusterQRM_RF(Instrument):
                 module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=1
             )
 
-            self.ports["o1"].channel = port_settings_out["channel"]
-            self._port_channel_map["o1"] = self.ports["o1"].channel
             self.ports["o1"].attenuation = port_settings_out["attenuation"]
             if port_settings_out["lo_frequency"]:
                 self.ports["o1"].lo_enabled = True
@@ -344,14 +341,9 @@ class ClusterQRM_RF(Instrument):
                 number=1,
             )
 
-            self.ports["i1"].channel = port_settings_in["channel"]
-            self._port_channel_map["i1"] = self.ports["i1"].channel
             self.ports["i1"].hardware_demod_en = self.ports["i1"]._settings.hardware_demod_en
             self.ports["i1"].acquisition_hold_off = port_settings_in["acquisition_hold_off"]
             self.ports["i1"].acquisition_duration = port_settings_in["acquisition_duration"]
-
-            self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
-            self.channels = list(self._channel_port_map.keys())
 
     # else:
     #     raise Exception("The instrument cannot be set up, there is no connection")

@@ -144,11 +144,10 @@ class ClusterQCM_RF(Instrument):
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
 
-        self.channels: list = []
-
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
+        self.channels: list = []
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
         self._device_parameters = {}
@@ -308,17 +307,12 @@ class ClusterQCM_RF(Instrument):
             if port_settings["lo_frequency"]:
                 selected_port.lo_enabled = True
                 selected_port.lo_frequency = port_settings["lo_frequency"]
-            selected_port.channel = port_settings["channel"]
-            self._port_channel_map[port] = selected_port.channel
             selected_port.attenuation = port_settings["attenuation"]
             selected_port.gain = port_settings["gain"]
             # selected_port.hardware_mod_en = port_settings["hardware_mod_en"]
             selected_port.hardware_mod_en = True
             selected_port.nco_freq = 0
             selected_port.nco_phase_offs = 0
-
-        self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
-        self.channels = list(self._channel_port_map.keys())
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.

@@ -5,18 +5,11 @@ import pytest
 
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.cluster_qcm_bb import (
-    ClusterQCM_BB,
-    ClusterQCM_BB_Settings,
-)
-from qibolab.instruments.qblox.port import (
-    ClusterBB_OutputPort,
-    ClusterBB_OutputPort_Settings,
-)
+from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
+from .qblox_fixtures import cluster, connected_cluster
 
 O1_OUTPUT_CHANNEL = "L4-1"
 O1_GAIN = 0.5
@@ -39,62 +32,62 @@ O4_OFFSET = 0.5890
 O4_QUBIT = 4
 
 
-def get_qcm_bb(controller):
-    settings = ClusterQCM_BB_Settings(
-        {
-            "o1": ClusterBB_OutputPort_Settings(
-                channel=O1_OUTPUT_CHANNEL,
-                gain=O1_GAIN,
-                offset=O1_OFFSET,
-                qubit=O1_QUBIT,
-            ),
-            "o2": ClusterBB_OutputPort_Settings(
-                channel=O2_OUTPUT_CHANNEL,
-                gain=O2_GAIN,
-                offset=O2_OFFSET,
-                qubit=O2_QUBIT,
-            ),
-            "o3": ClusterBB_OutputPort_Settings(
-                channel=O3_OUTPUT_CHANNEL,
-                gain=O3_GAIN,
-                offset=O3_OFFSET,
-                qubit=O3_QUBIT,
-            ),
-            "o4": ClusterBB_OutputPort_Settings(
-                channel=O4_OUTPUT_CHANNEL,
-                gain=O4_GAIN,
-                offset=O4_OFFSET,
-                qubit=O4_QUBIT,
-            ),
-        }
-    )
-    for module in controller.modules.values():
-        if isinstance(module, ClusterQCM_BB):
-            return ClusterQCM_BB(module.name, module.address, settings)
-    pytest.skip(f"Skipping qblox ClusterQCM_BB test for {controller.name}.")
+# def get_qcm_bb(controller):
+#     settings =
+#         {
+#             "o1": {
+#                 "channel": O1_OUTPUT_CHANNEL,
+#                 "gain": O1_GAIN,
+#                 "offset": O1_OFFSET,
+#                 "qubit": O1_QUBIT
+#             },
+#             "o2": {
+#                 "channel": O2_OUTPUT_CHANNEL,
+#                 "gain": O2_GAIN,
+#                 "offset": O2_OFFSET,
+#                 "qubit": O2_QUBIT
+#             },
+#             "o3": {
+#                 "channel": O3_OUTPUT_CHANNEL,
+#                 "gain": O3_GAIN,
+#                 "offset": O3_OFFSET,
+#                 "qubit": O3_QUBIT
+#             },
+#             "o4": {
+#                 "channel": O4_OUTPUT_CHANNEL,
+#                 "gain": O4_GAIN,
+#                 "offset": O4_OFFSET,
+#                 "qubit": O4_QUBIT
+#             }
+#         }
+
+#     for module in controller.modules.values():
+#         if isinstance(module, ClusterQCM_BB):
+#             return ClusterQCM_BB(module.name, module.address, settings)
+#     pytest.skip(f"Skipping qblox ClusterQCM_BB test for {controller.name}.")
 
 
-@pytest.fixture(scope="module")
-def qcm_bb(controller):
-    return get_qcm_bb(controller)
+# @pytest.fixture(scope="module")
+# def qcm_bb(controller):
+#     return get_qcm_bb(controller)
 
 
-@pytest.fixture(scope="module")
-def connected_qcm_bb(connected_cluster, connected_controller):
-    qcm_bb = get_qcm_bb(connected_controller)
-    connected_cluster.connect()
-    qcm_bb.connect(connected_cluster.device)
-    qcm_bb.setup()
-    yield qcm_bb
-    qcm_bb.disconnect()
-    connected_cluster.disconnect()
+# @pytest.fixture(scope="module")
+# def connected_qcm_bb(connected_cluster, connected_controller):
+#     qcm_bb = get_qcm_bb(connected_controller)
+#     connected_cluster.connect()
+#     qcm_bb.connect(connected_cluster.device)
+#     qcm_bb.setup()
+#     yield qcm_bb
+#     qcm_bb.disconnect()
+#     connected_cluster.disconnect()
 
 
-def test_ClusterQCM_BB_Settings():
-    # Test default value
-    qcm_bb_settings = ClusterQCM_BB_Settings()
-    for port in ["o1", "o2", "o3", "o4"]:
-        assert port in qcm_bb_settings.ports
+# def test_ClusterQCM_BB_Settings():
+#     # Test default value
+#     qcm_bb_settings = ClusterQCM_BB_Settings()
+#     for port in ["o1", "o2", "o3", "o4"]:
+#         assert port in qcm_bb_settings.ports
 
 
 def test_instrument_interface(qcm_bb: ClusterQCM_BB):
