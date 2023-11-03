@@ -58,12 +58,6 @@ jobs:
       uses: snok/install-poetry@v1
       with:
         virtualenvs-create: false
-    - name: Install qibo stable
-      if: ${{ matrix.version == 'stable' }}
-      run: |
-        python -m venv testenv
-        source testenv/bin/activate
-        python -m pip install qibolab qibocal
     - name: Install qibo main
       if: ${{ matrix.version == 'main' }}
       run: |
