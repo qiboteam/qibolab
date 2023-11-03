@@ -964,13 +964,13 @@ class Zurich(Controller):
                         )
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
-                                uid="weight"  + str(q),
+                                uid="weight" + str(q),
                                 # samples=samples[0] * np.exp(1j * qubit.iq_angle),
                                 samples=samples[0] * np.exp(1j * iq_angle),
                             )
                         else:
                             weight = lo.pulse_library.sampled_pulse_complex(
-                                uid="weight"  + str(q),
+                                uid="weight" + str(q),
                                 samples=samples[0],
                             )
                     else:
@@ -981,9 +981,9 @@ class Zurich(Controller):
                         )
                         if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                             weight = lo.pulse_library.sampled_pulse_complex(
-                                samples = np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
+                                samples=np.ones([int(pulse.pulse.duration * 2 - 3 * self.smearing * NANO_TO_SECONDS)])
                                 * np.exp(1j * iq_angle),
-                                uid = "weights" + str(q)
+                                uid="weights" + str(q),
                             )
                         else:
                             # TODO: Patch for multiple readouts: Remove different uids
