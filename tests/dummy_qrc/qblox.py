@@ -20,7 +20,7 @@ from qibolab.serialize import (
 )
 
 NAME = "qblox"
-ADDRESS = "192.168.0.20"
+ADDRESS = "192.168.0.6"
 TIME_OF_FLIGHT = 500
 RUNCARD = pathlib.Path(__file__).parent / "qblox.yml"
 
@@ -141,4 +141,4 @@ def create(runcard_path=RUNCARD):
 
     settings = load_settings(runcard)
 
-    return Platform("qw5q_gold_qblox", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform("qblox", qubits, pairs, instruments, settings, resonator_type="2D")

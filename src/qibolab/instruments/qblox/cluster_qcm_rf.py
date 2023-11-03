@@ -265,7 +265,7 @@ class ClusterQCM_RF(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
-        self.connect()
+        # self.connect()
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.

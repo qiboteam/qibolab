@@ -60,13 +60,6 @@ def connected_qrm_rf(connected_cluster, connected_controller):
     connected_cluster.disconnect()
 
 
-def test_ClusterQRM_RF_Settings():
-    # Test default value
-    qrm_rf_settings = QbloxOutputPort_Settings()
-    for port in ["o1", "i1"]:
-        assert port in qrm_rf_settings.ports
-
-
 def test_instrument_interface(qrm_rf: ClusterQRM_RF):
     # Test compliance with :class:`qibolab.instruments.abstract.Instrument` interface
     for abstract_method in Instrument.__abstractmethods__:

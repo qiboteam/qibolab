@@ -271,7 +271,7 @@ class ClusterQCM_BB(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        self.connect()
+        # self.connect()
         # if not settings:
         #     log.warning(f'Called setup() without passing parameters for module {self.name}')
         #     return
