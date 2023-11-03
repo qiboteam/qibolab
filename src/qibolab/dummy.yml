@@ -52,6 +52,15 @@ native_gates:
                 relative_start: 0, phase: 0, type: qd}
             MZ: {duration: 2000, amplitude: 0.1, shape: Rectangular(), frequency: 5500000000.0,
                 relative_start: 0, phase: 0, type: ro}
+    coupler:
+        0:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 0}
+        1:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 1}
+        3:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 3}
+        4:
+            CP: {duration: 30, amplitude: 0.05, shape: Rectangular(), relative_start: 0, type: coupler, coupler: 4}
     two_qubit:
         0-2:
             CZ:
@@ -59,24 +68,60 @@ native_gates:
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 0}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 0, relative_start: 0,
+                type: coupler}
+            iSWAP:
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
+                type: qf}
+            - {type: virtual_z, phase: 0.0, qubit: 1}
+            - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 0, relative_start: 0,
+                type: coupler}
         1-2:
             CZ:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 1}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 1, relative_start: 0,
+                type: coupler}
+            iSWAP:
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
+                type: qf}
+            - {type: virtual_z, phase: 0.0, qubit: 1}
+            - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 1, relative_start: 0,
+                type: coupler}
         2-3:
             CZ:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 3}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 3, relative_start: 0,
+                type: coupler}
+            iSWAP:
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
+                type: qf}
+            - {type: virtual_z, phase: 0.0, qubit: 1}
+            - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 3, relative_start: 0,
+                type: coupler}
         2-4:
             CZ:
             - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
                 type: qf}
             - {type: virtual_z, phase: 0.0, qubit: 4}
             - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 4, relative_start: 0,
+                type: coupler}
+            iSWAP:
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), qubit: 2, relative_start: 0,
+                type: qf}
+            - {type: virtual_z, phase: 0.0, qubit: 1}
+            - {type: virtual_z, phase: 0.0, qubit: 2}
+            - {duration: 30, amplitude: 0.05, shape: Rectangular(), coupler: 4, relative_start: 0,
+                type: coupler}
 
 characterization:
     single_qubit:
