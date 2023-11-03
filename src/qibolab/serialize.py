@@ -95,7 +95,7 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     """Dump qubit and pair objects to a dictionary following the runcard format."""
 
     native_gates = {"single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}}
-    if couplers is not None:
+    if couplers:
         native_gates["coupler"] = {c: coupler.native_pulse.raw for c, coupler in couplers.items()}
     native_gates["two_qubit"] = {}
 
@@ -108,7 +108,7 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     characterization = {
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
-    if couplers is not None:
+    if couplers:
         characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
 
     return {
