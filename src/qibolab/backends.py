@@ -84,7 +84,7 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
+        if self.transpiler is None:
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates
