@@ -1,4 +1,5 @@
 import os
+from collections import deque
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -139,8 +140,9 @@ class QibolabBackend(NumpyBackend):
         self.platform.stop()
 
         results = []
+        readout = {k: deque(v) for k, v in readout.items()}
         for circuit, measurement_map in zip(circuits, measurement_maps):
-            results.append(CircuitResult(self, circuit, readout, nshots))
+            results.append(MeasurementOutcomes(circuit.measurements, self, nshots=nshots))
             for gate, sequence in measurement_map.items():
                 samples = [readout[pulse.serial].popleft().samples for pulse in sequence.pulses]
                 gate.result.backend = self
