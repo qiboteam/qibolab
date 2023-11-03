@@ -5315,11 +5315,11 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [extras]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
-qm = ["qm-qua", "qualang-tools", "setuptools"]
+qm = ["qm-qua", "qualang-tools"]
 rfsoc = ["qcodes", "qcodes_contrib_drivers", "qibosoq"]
 zh = ["laboneq"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "41cf4957ffff3cad8fdc7315877613b64e4e7d3041a5b853c057a4158cba4630"
+content-hash = "4fa613af8ad9107dcebc62568c3510ae5368f1427dbd84853beeb449cade7a81"
