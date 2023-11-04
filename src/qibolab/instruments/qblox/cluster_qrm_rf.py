@@ -1,6 +1,7 @@
 """ Qblox Cluster QRM-RF driver."""
 
 import json
+import time
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
@@ -23,7 +24,7 @@ from qibolab.instruments.qblox.q1asm import (
 )
 from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
-from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
@@ -923,91 +924,15 @@ class ClusterQRM_RF(Instrument):
     def acquire(self):
         """Retrieves the readout results.
 
-        Returns:
-            The results returned vary depending on whether demodulation is performed in software or hardware:
-            - Software Demodulation:
-              Every readout pulse triggers an acquisition, where the 16384 i and q samples of the waveform
-              acquired by the ADC are saved into a dedicated memory within the FPGA. This is what qblox calls
-              *scoped acquisition*. The results of multiple shots are averaged in this memory, and cannot be
-              retrieved independently. The resulting waveforms averages (i and q) are then demodulated and
-              integrated in software (and finally divided by the number of samples).
-              Since Software Demodulation relies on the data of the scoped acquisition and that data is the
-              average of all acquisitions, **only one readout pulse per qubit is supported**, so that
-              the averages all correspond to reading the same quantum state.
-              Multiple symultaneous readout pulses on different qubits are supported.
-              The results returned are:
-
-                - acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
-                  the i and q waveforms for every readout pulse:
-                  ([i samples], [q samples])
-                  The data for a specific reaout pulse can be obtained either with:
-
-                    - `acquisition_results["averaged_raw"][ro_pulse.serial]`
-                    - `acquisition_results["averaged_raw"][ro_pulse.qubit]`
-
-                - acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
-                  with the results of demodulating and integrating (averaging over time) the average of the
-                  waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
-
-              The data for a specific readout pulse can be obtained either with:
-
-                - `acquisition_results["averaged_demodulated_integrated"][ro_pulse.serial]`
-                - `acquisition_results["averaged_demodulated_integrated"][ro_pulse.qubit]`
-
-              Or directly with:
-
-                - `acquisition_results[ro_pulse.serial]`
-                - `acquisition_results[ro_pulse.qubit]`
-
-            - Hardware Demodulation:
-              With hardware demodulation activated, the FPGA can demodulate, integrate (average over time), and classify
-              each shot individually, saving the results on separate bins. The raw data of each acquisition continues to
-              be averaged as with software modulation, so there is no way to access the raw data of each shot (unless
-              executed one shot at a time). The FPGA uses fixed point arithmetic for the demodulation and integration;
-              if the power level of the signal at the input port is low (the minimum resolution of the ADC is 240uV)
-              rounding precission errors can accumulate and render wrong results. It is advisable to have a power level
-              at least higher than 5mV.
-              The results returned are:
-
-                - acquisition_results["demodulated_integrated_averaged"] (dict): a dictionary containing tuples
-                  with the results of demodulating and integrating (averaging over time) each shot waveform and then
-                  averaging of the many shots: ``(amplitude[V], phase[rad], i[V], q[V])``
-                - acquisition_results["demodulated_integrated_binned"] (dict): a dictionary containing tuples of lists
-                  with the results of demodulating and integrating every shot waveform: ``([amplitudes[V]], [phases[rad]], [is[V]], [qs[V]])``
-                - acquisition_results["demodulated_integrated_classified_binned"] (dict): a dictionary containing lists
-                  with the results of demodulating, integrating and classifying every shot: ``([states[0 or 1]])``
-                - acquisition_results["probability"] (dict): a dictionary containing the frequency of state 1 measurements:
-                      total number of shots classified as 1 / number of shots
-
-              If the number of readout pulses per qubit is only one, then the following is also provided:
-
-                - acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
-                  the i and q waveforms for every readout pulse: ``([i samples], [q samples])``
-                - acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
-                  with the results of demodulating and integrating (averaging over time) the average of the
-                  waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
-
-              The data within each of the above dictionaries, for a specific readout pulse or for the last readout
-              pulse of a qubit can be retrieved either with:
-
-                - `acquisition_results[dictionary_name][ro_pulse.serial]`
-                - `acquisition_results[dictionary_name][ro_pulse.qubit]`
-
-              And acquisition_results["averaged_demodulated_integrated"] directly with:
-
-                - `acquisition_results[ro_pulse.serial]`
-                - `acquisition_results[ro_pulse.qubit]`
-
+        The results returned vary depending on whether demodulation is performed in software or hardware.
+        See :class:`qibolab.instruments.qblox.acquisition.AveragedAcquisition` and
+        :class:`qibolab.instruments.qblox.acquisition.DemodulatedAcquisition` for
+        more details
         """
-
         # wait until all sequencers stop
         time_out = int(self._execution_time) + 60
-        import time
-
-        from qibo.config import log
 
         t = time.time()
-
         for sequencer_number in self._used_sequencers_numbers:
             while True:
                 try:
@@ -1025,8 +950,6 @@ class ClusterQRM_RF(Instrument):
                         break
                 time.sleep(1)
 
-        acquisition_results = {}
-
         # Qblox qrm modules only have one memory for scope acquisition.
         # Only one sequencer can save data to that memory.
         # Several acquisitions at different points in the circuit will result in the undesired averaging
@@ -1041,13 +964,7 @@ class ClusterQRM_RF(Instrument):
         # The data is retrieved by storing it first in one of the acquisitions of one of the sequencers.
         # Any could be used, but we always use 'scope_acquisition' acquisition of the default sequencer to store it.
 
-        # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
-        for port in self._output_ports_keys:
-            for sequencer in self._sequencers[port]:
-                if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
-                    self.device.store_scope_acquisition(sequencer.number, "scope_acquisition")
-                    scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
-
+        acquisition_results = {}
         acquisition_results["demodulated_integrated_averaged"] = {}
         acquisition_results["averaged_raw"] = {}
         acquisition_results["averaged_demodulated_integrated"] = {}
@@ -1055,153 +972,43 @@ class ClusterQRM_RF(Instrument):
         acquisition_results["demodulated_integrated_classified_binned"] = {}
         acquisition_results["probability"] = {}
         data = {}
+
+        acquisition = AveragedAcquisition()
+        duration = self.ports["i1"].acquisition_duration
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
+                # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
+                if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
+                    self.device.store_scope_acquisition(sequencer.number, "scope_acquisition")
+                    scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
+
                 if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
+                        frequency = self.get_if(pulse)
 
-                        acquisition_results["averaged_raw"][pulse.serial] = (
-                            scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
-                                0 : self.ports["i1"].acquisition_duration
-                            ],
-                            scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
-                                0 : self.ports["i1"].acquisition_duration
-                            ],
-                        )
-                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
-                            pulse.serial
-                        ]
-
-                        i, q = self._process_acquisition_results(scope_acquisition_raw_results, pulse, demodulate=True)
-                        acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
-                            np.sqrt(i**2 + q**2),
-                            np.arctan2(q, i),
-                            i,
-                            q,
-                        )
-                        acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
-                            "averaged_demodulated_integrated"
-                        ][pulse.serial]
-
-                        # Default Results = Averaged Demodulated Integrated
-                        acquisition_results[pulse.serial] = acquisition_results["averaged_demodulated_integrated"][
-                            pulse.serial
-                        ]
-                        acquisition_results[pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][
-                            pulse.qubit
-                        ]
-
-                        # ignores the data available in acquisition results and returns only i and q voltages
-                        # TODO: to be updated once the functionality of ExecutionResults is extended
-                        data[pulse.serial] = (i, q)
-
+                        scope = scope_acquisition_raw_results["acquisition"]["scope"]
+                        acquisition.register(scope, pulse, duration)
+                        acquisition.demodulate(scope, frequency, duration)
                     else:
-                        raise Exception(
-                            """Software Demodulation only supports one acquisition per channel.
-                        Multiple readout pulses are supported as long as they are symultaneous (requiring one acquisition)"""
+                        raise RuntimeError(
+                            "Software Demodulation only supports one acquisition per channel. "
+                            "Multiple readout pulses are supported as long as they are symultaneous (requiring one acquisition)."
                         )
-
                 else:  # Hardware Demodulation
-                    binned_raw_results = self.device.get_acquisitions(sequencer.number)
+                    results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
-                        acquisition_name = pulse.serial
-                        i, q = self._process_acquisition_results(
-                            binned_raw_results[acquisition_name], pulse, demodulate=False
-                        )
-                        acquisition_results["demodulated_integrated_averaged"][pulse.serial] = (
-                            np.sqrt(i**2 + q**2),
-                            np.arctan2(q, i),
-                            i,
-                            q,
-                        )
-                        acquisition_results["demodulated_integrated_averaged"][pulse.qubit] = acquisition_results[
-                            "demodulated_integrated_averaged"
-                        ][pulse.serial]
-
-                        # Default Results = Demodulated Integrated Averaged
-                        acquisition_results[pulse.serial] = acquisition_results["demodulated_integrated_averaged"][
-                            pulse.serial
-                        ]
-                        acquisition_results[pulse.qubit] = acquisition_results["demodulated_integrated_averaged"][
-                            pulse.qubit
-                        ]
-
-                        # Save individual shots
-                        shots_i = (
-                            np.array(
-                                binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
-                            )
-                            / self.ports["i1"].acquisition_duration
-                        )
-                        shots_q = (
-                            np.array(
-                                binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
-                            )
-                            / self.ports["i1"].acquisition_duration
-                        )
-
-                        acquisition_results["demodulated_integrated_binned"][pulse.serial] = (
-                            np.sqrt(shots_i**2 + shots_q**2),
-                            np.arctan2(shots_q, shots_i),
-                            shots_i,
-                            shots_q,
-                        )
-                        acquisition_results["demodulated_integrated_binned"][pulse.qubit] = acquisition_results[
-                            "demodulated_integrated_binned"
-                        ][pulse.serial]
-
-                        acquisition_results["demodulated_integrated_classified_binned"][
-                            pulse.serial
-                        ] = binned_raw_results[acquisition_name]["acquisition"]["bins"]["threshold"]
-                        acquisition_results["demodulated_integrated_classified_binned"][
-                            pulse.qubit
-                        ] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
-
-                        acquisition_results["probability"][pulse.serial] = np.mean(
-                            acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
-                        )
-                        acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][
-                            pulse.serial
-                        ]
+                        bins = results[pulse.serial]["acquisition"]["bins"]
+                        acquisition.register(bins, pulse, duration)
 
                         # Provide Scope Data for verification (assuming memory reseet is being done)
                         if len(sequencer.pulses.ro_pulses) == 1:
                             pulse = sequencer.pulses.ro_pulses[0]
+                            frequency = self.get_if(pulse)
 
-                            acquisition_results["averaged_raw"][pulse.serial] = (
-                                scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
-                                    0 : self.ports["i1"].acquisition_duration
-                                ],
-                                scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
-                                    0 : self.ports["i1"].acquisition_duration
-                                ],
-                            )
-                            acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
-                                pulse.serial
-                            ]
-
-                            i, q = self._process_acquisition_results(
-                                scope_acquisition_raw_results, pulse, demodulate=True
-                            )
-
-                            acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
-                                np.sqrt(i**2 + q**2),
-                                np.arctan2(q, i),
-                                i,
-                                q,
-                            )
-                            acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
-                                "averaged_demodulated_integrated"
-                            ][pulse.serial]
-
-                        # ignores the data available in acquisition results and returns only i and q voltages
-                        # TODO: to be updated once the functionality of ExecutionResults is extended
-                        data[acquisition_name] = (
-                            shots_i,
-                            shots_q,
-                            np.array(acquisition_results["demodulated_integrated_classified_binned"][acquisition_name]),
-                        )
+                            scope = scope_acquisition_raw_results["acquisition"]["scope"]
+                            acquisition.averaged.register(scope, pulse, duration)
+                            acquisition.averaged.demodulate(scope, frequency, duration)
 
                     # DEBUG: QRM RF Plot Incomming Pulses
                     # import qibolab.instruments.debug.incomming_pulse_plotting as pp
@@ -1210,55 +1017,6 @@ class ClusterQRM_RF(Instrument):
                     # from qibolab.debug.debug import plot_acquisition_results
                     # plot_acquisition_results(acquisition_results, pulse, savefig_filename="acquisition_results.png")
         return data
-
-    def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
-        """Processes the results of the acquisition.
-
-        If hardware demodulation is disabled, it demodulates and integrates the acquired pulse. If enabled,
-        if processes the results as required by qblox (calculating the average by dividing the integrated results by
-        the number of smaples acquired).
-        """
-        if demodulate:
-            acquisition_frequency = self.get_if(readout_pulse)
-
-            # DOWN Conversion
-            n0 = 0
-            n1 = self.ports["i1"].acquisition_duration
-            input_vec_I = np.array(acquisition_results["acquisition"]["scope"]["path0"]["data"][n0:n1])
-            input_vec_Q = np.array(acquisition_results["acquisition"]["scope"]["path1"]["data"][n0:n1])
-            input_vec_I -= np.mean(input_vec_I)  # qblox does not remove the offsets in hardware
-            input_vec_Q -= np.mean(input_vec_Q)
-
-            modulated_i = input_vec_I
-            modulated_q = input_vec_Q
-
-            num_samples = modulated_i.shape[0]
-            time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-
-            cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
-            sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
-            demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-            result = []
-            for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
-                result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
-            demodulated_signal = np.array(result)
-            integrated_signal = np.mean(demodulated_signal, axis=0)
-
-            # import matplotlib.pyplot as plt
-            # plt.plot(input_vec_I[:400])
-            # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
-            # plt.show()
-        else:
-            i = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"])
-                / self.ports["i1"].acquisition_duration
-            )
-            q = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"])
-                / self.ports["i1"].acquisition_duration
-            )
-            integrated_signal = i, q
-        return integrated_signal
 
     def start(self):
         """Empty method to comply with Instrument interface."""
