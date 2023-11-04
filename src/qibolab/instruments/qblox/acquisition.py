@@ -1,6 +1,25 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import numpy as np
+
+
+def demodulate(input_i, input_q, frequency):
+    """Demodulates and integrates the acquired pulse."""
+    # DOWN Conversion
+    # qblox does not remove the offsets in hardware
+    modulated_i = input_i - np.mean(input_i)
+    modulated_q = input_q - np.mean(input_q)
+
+    num_samples = modulated_i.shape[0]
+    time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
+    cosalpha = np.cos(2 * np.pi * frequency * time)
+    sinalpha = np.sin(2 * np.pi * frequency * time)
+    demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
+    result = []
+    for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
+        result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
+    return np.mean(np.array(result), axis=0)
 
 
 @dataclass
@@ -17,26 +36,12 @@ class AveragedAcquisition:
     the averages all correspond to reading the same quantum state.
     """
 
-    raw: field(default_factory=dict)
-    """Tuples with the averages of the i and q waveforms for every readout pulse ([i samples], [q samples])
-    demodulated_integrated: field(default_factory=dict)
+    raw: Tuple[List[float], List[float]]
+    """Tuples with the averages of the i and q waveforms for every readout pulse ([i samples], [q samples])."""
 
-    The data for a specific reaout pulse can be obtained either with:
-    - `raw[ro_pulse.serial]`
-    - `raw[ro_pulse.qubit]`
-    """
-
-    demodulated_integrated: dict = field(default_factory=dict)
+    demodulated_integrated: Tuple[float, float, float, float]
     """Tuples with the results of demodulating and integrating (averaging over time) the average of the
-    waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
-
-    The data for a specific readout pulse can be obtained either with:
-    - `averaged_demodulated_integrated[ro_pulse.serial]`
-    - `averaged_demodulated_integrated[ro_pulse.qubit]`
-    Or directly with (see __getitem__):
-    - `self[ro_pulse.serial]`
-    - `self[ro_pulse.qubit]`
-    """
+    waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``."""
 
     @property
     def data(self):
@@ -45,45 +50,23 @@ class AveragedAcquisition:
         Ignores the data available in acquisition results and returns only i and q voltages.
         """
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        # (i, q)
-        return {serial: value[2:] for serial, value in self.demodulated_integrated.items()}
+        return self.demodulated_integrated[2:]  # (i, q)
 
-    def __getitem__(self, key):
+    @property
+    def default(self):
         """Default Results: Averaged Demodulated Integrated"""
-        return self.demodulated_integrated[key]
+        return self.demodulated_integrated
 
-    def register(self, scope, pulse, duration):
-        self.raw[pulse.qubit] = self.raw[pulse.serial] = (
-            raw["path0"]["data"][0:duration],
-            raw["path1"]["data"][0:duration],
+    @classmethod
+    def create(cls, data, duration, frequency):
+        scope = data["acquisition"]["scope"]
+        raw = (
+            scope["path0"]["data"][0:duration],
+            scope["path1"]["data"][0:duration],
         )
-
-    def demodulate(self, scope, frequency, duration):
-        """Demodulates and integrates the acquired pulse."""
-        # input_vec_i = np.array(acquisition_results["acquisition"]["scope"]["path0"]["data"][0: duration])
-
-        # DOWN Conversion
-        input_vec_i = np.array(scope["path0"]["data"][0:duration])
-        input_vec_q = np.array(scope["path1"]["data"][0:duration])
-        # qblox does not remove the offsets in hardware
-        input_vec_i -= np.mean(input_vec_i)
-        input_vec_q -= np.mean(input_vec_q)
-
-        modulated_i = input_vec_i
-        modulated_q = input_vec_q
-
-        num_samples = modulated_i.shape[0]
-        time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-        cosalpha = np.cos(2 * np.pi * frequency * time)
-        sinalpha = np.sin(2 * np.pi * frequency * time)
-        demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-        result = []
-        for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
-            result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
-        i, q = np.mean(np.array(result), axis=0)
-
-        data = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
-        self.demodulated_integrated[pulse.qubit] = self.demodulated_integrated[pulse.serial] = data
+        i, q = demodulate(*raw, frequency)
+        demod = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
+        return cls(raw, demod)
 
 
 @dataclass
@@ -108,20 +91,20 @@ class DemodulatedAcquisition:
     - `self[ro_pulse.qubit]`
     """
 
-    integrated_averaged: dict = field(default_factory=dict)
-    """a dictionary containing tuples with the results of demodulating and integrating (averaging over time)
+    integrated_averaged: Tuple[float, float, float, float]
+    """Tuple with the results of demodulating and integrating (averaging over time)
     each shot waveform and then averaging of the many shots: ``(amplitude[V], phase[rad], i[V], q[V])``
     """
-    integrated_binned: dict = field(default_factory=dict)
-    """a dictionary containing tuples of lists with the results of demodulating and integrating
+    integrated_binned: Tuple[List[float], List[float], List[float], List[float]]
+    """Tuple of lists with the results of demodulating and integrating
     every shot waveform: ``([amplitudes[V]], [phases[rad]], [is[V]], [qs[V]])``
     """
-    integrated_classified_binned: dict = field(default_factory=dict)
-    """a dictionary containing lists with the results of demodulating, integrating and
+    integrated_classified_binned: List[int]
+    """Lists with the results of demodulating, integrating and
     classifying every shot: ``([states[0 or 1]])``
     """
 
-    averaged: AveragedAcquisition = field(default_factory=lambda: AveragedAcquisition())
+    averaged: Optional[AveragedAcquisition] = None
     """If the number of readout pulses per qubit is only one, then the
     :class:`qibolab.instruments.qblox.AveragedAcquisition` data are also provided.
     """
@@ -133,13 +116,15 @@ class DemodulatedAcquisition:
         Ignores the data available in acquisition results and returns only i and q voltages.
         """
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        _data = {}
-        for serial, value in self.integrated_binned.items():
-            _data[serial] = (value[2], value[3], np.array(self.integrated_classified_binned[serial]))
-        return _data
+        return (
+            self.integrated_binned[2],
+            self.integrated_binned[3],
+            np.array(self.integrated_classified_binned[serial]),
+        )
 
-    def __getitem__(self, key):
-        return self.integrated_averaged[key]
+    @property
+    def default(self):
+        return self.integrated_averaged
 
     @property
     def probability(self):
@@ -147,22 +132,22 @@ class DemodulatedAcquisition:
 
         Calculated as number of shots classified as 1 / total number of shots.
         """
-        return {serial: np.mean(value) for serial, value in self.integrated_binned.items()}
+        return np.mean(self.integrated_binned)
 
-    def register(self, bins, pulse, duration):
+    @classmethod
+    def create(self, data, pulse, duration):
         """Calculates average by dividing the integrated results by the number of samples acquired."""
+        bins = data[pulse.serial]["acquisition"]["bins"]
         i = np.mean(np.array(bins["integration"]["path0"])) / duration
         q = np.mean(np.array(bins["integration"]["path1"])) / duration
-        data = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
-        self.integrated_averaged[pulse.qubit] = self.integrated_averaged[pulse.serial] = data
+        averaged = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
 
         # Save individual shots
         integration = bins["integration"]
         shots_i = np.array(integration["path0"]) / duration
         shots_q = np.array(integration["path1"]) / duration
-        data = (np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q)
-        self.integrated_binned[pulse.qubit] = self.integrated_binned[pulse.serial] = data
+        integrated = (np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q)
 
-        self.integrated_classified_binned[pulse.qubit] = self.integrated_classified_binned[pulse.serial] = bins[
-            "threshold"
-        ]
+        classified = bins["threshold"]
+
+        return cls(averaged, binned, classified)

@@ -964,24 +964,23 @@ class ClusterQRM_RF(Instrument):
         # The data is retrieved by storing it first in one of the acquisitions of one of the sequencers.
         # Any could be used, but we always use 'scope_acquisition' acquisition of the default sequencer to store it.
 
-        data = {}
-        acquisition = AveragedAcquisition()
+        acquisitions = {}
         duration = self.ports["i1"].acquisition_duration
+        hardware_demod_enabled = self.ports["i1"].hardware_demod_en
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
                 if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
                     self.device.store_scope_acquisition(sequencer.number, "scope_acquisition")
-                    scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
+                    scope = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
 
-                if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
+                if not hardware_demod_enabled:  # Software Demodulation
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-
-                        scope = scope_acquisition_raw_results["acquisition"]["scope"]
-                        acquisition.register(scope, pulse, duration)
-                        acquisition.demodulate(scope, frequency, duration)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = AveragedAcquisition.create(
+                            scope, duration, frequency
+                        )
                     else:
                         raise RuntimeError(
                             "Software Demodulation only supports one acquisition per channel. "
@@ -990,19 +989,19 @@ class ClusterQRM_RF(Instrument):
                 else:  # Hardware Demodulation
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
-                        bins = results[pulse.serial]["acquisition"]["bins"]
-                        acquisition.register(bins, pulse, duration)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = DemodulatedAcquisition.create(
+                            results, pulse, duration
+                        )
 
-                        # Provide Scope Data for verification (assuming memory reseet is being done)
-                        if len(sequencer.pulses.ro_pulses) == 1:
-                            pulse = sequencer.pulses.ro_pulses[0]
-                            frequency = self.get_if(pulse)
+                    # Provide Scope Data for verification (assuming memory reseet is being done)
+                    if len(sequencer.pulses.ro_pulses) == 1:
+                        pulse = sequencer.pulses.ro_pulses[0]
+                        frequency = self.get_if(pulse)
+                        acquisitions[pulse.serial].averaged = AveragedAcquisition.create(scope, duration, frequency)
 
-                            scope = scope_acquisition_raw_results["acquisition"]["scope"]
-                            acquisition.averaged.register(scope, pulse, duration)
-                            acquisition.averaged.demodulate(scope, frequency, duration)
-
-        return data
+        # grab only the data required by the platform
+        # TODO: to be updated once the functionality of ExecutionResults is extended
+        return {key: acquisition.data for key, acquisition in acquisitions.items()}
 
     def start(self):
         """Empty method to comply with Instrument interface."""
