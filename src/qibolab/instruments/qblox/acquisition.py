@@ -80,15 +80,6 @@ class DemodulatedAcquisition:
     if the power level of the signal at the input port is low (the minimum resolution of the ADC is 240uV)
     rounding precission errors can accumulate and render wrong results. It is advisable to have a power level
     at least higher than 5mV.
-
-    The data within each of the above dictionaries, for a specific readout pulse or for the last readout
-    pulse of a qubit can be retrieved either with:
-    - `self.data_type_name[ro_pulse.serial]`
-    - `self.data_type_name[ro_pulse.qubit]`
-
-    And "averaged_demodulated_integrated" directly with:
-    - `self[ro_pulse.serial]`
-    - `self[ro_pulse.qubit]`
     """
 
     integrated_averaged: Tuple[float, float, float, float]
