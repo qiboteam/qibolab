@@ -964,15 +964,7 @@ class ClusterQRM_RF(Instrument):
         # The data is retrieved by storing it first in one of the acquisitions of one of the sequencers.
         # Any could be used, but we always use 'scope_acquisition' acquisition of the default sequencer to store it.
 
-        acquisition_results = {}
-        acquisition_results["demodulated_integrated_averaged"] = {}
-        acquisition_results["averaged_raw"] = {}
-        acquisition_results["averaged_demodulated_integrated"] = {}
-        acquisition_results["demodulated_integrated_binned"] = {}
-        acquisition_results["demodulated_integrated_classified_binned"] = {}
-        acquisition_results["probability"] = {}
         data = {}
-
         acquisition = AveragedAcquisition()
         duration = self.ports["i1"].acquisition_duration
         for port in self._output_ports_keys:
@@ -1010,12 +1002,6 @@ class ClusterQRM_RF(Instrument):
                             acquisition.averaged.register(scope, pulse, duration)
                             acquisition.averaged.demodulate(scope, frequency, duration)
 
-                    # DEBUG: QRM RF Plot Incomming Pulses
-                    # import qibolab.instruments.debug.incomming_pulse_plotting as pp
-                    # pp.plot(raw_results)
-                    # DEBUG: QRM RF Plot Acquisition_results
-                    # from qibolab.debug.debug import plot_acquisition_results
-                    # plot_acquisition_results(acquisition_results, pulse, savefig_filename="acquisition_results.png")
         return data
 
     def start(self):

@@ -85,11 +85,6 @@ class AveragedAcquisition:
         data = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
         self.demodulated_integrated[pulse.qubit] = self.demodulated_integrated[pulse.serial] = data
 
-        # import matplotlib.pyplot as plt
-        # plt.plot(input_vec_i[:400])
-        # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
-        # plt.show()
-
 
 @dataclass
 class DemodulatedAcquisition:
