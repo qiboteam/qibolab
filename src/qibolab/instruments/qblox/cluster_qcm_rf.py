@@ -143,7 +143,7 @@ class ClusterQCM_RF(Instrument):
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-
+        self._settings = {}
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
@@ -265,7 +265,6 @@ class ClusterQCM_RF(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
-        # self.connect()
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -302,17 +301,7 @@ class ClusterQCM_RF(Instrument):
         for port_num, port in enumerate(settings):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
             self._sequencers[port] = []
-            port_settings = settings[port]
-            selected_port = self.ports[port]
-            if port_settings["lo_frequency"]:
-                selected_port.lo_enabled = True
-                selected_port.lo_frequency = port_settings["lo_frequency"]
-            selected_port.attenuation = port_settings["attenuation"]
-            selected_port.gain = port_settings["gain"]
-            # selected_port.hardware_mod_en = port_settings["hardware_mod_en"]
-            selected_port.hardware_mod_en = True
-            selected_port.nco_freq = 0
-            selected_port.nco_phase_offs = 0
+        self._settings = settings if settings else self._settings
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -771,7 +760,22 @@ class ClusterQCM_RF(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
-        pass
+        if self.is_connected:
+            try:
+                for port in self._settings:
+                    if self._settings[port]["lo_frequency"]:
+                        self.ports[port].lo_enabled = True
+                        self.ports[port].lo_frequency = self._settings[port]["lo_frequency"]
+                    self.ports[port].attenuation = self._settings[port]["attenuation"]
+                    self.ports[port].gain = self._settings[port]["gain"]
+                    # selected_port.hardware_mod_en = port_settings["hardware_mod_en"]
+                    self.ports[port].hardware_mod_en = True
+                    self.ports[port].nco_freq = 0
+                    self.ports[port].nco_phase_offs = 0
+            except:
+                log.warning("Unable to initialize port parameters")
+        else:
+            raise ConnectionError(f"Module {self.name} is not connected")
 
     def stop(self):
         """Stops all sequencers"""

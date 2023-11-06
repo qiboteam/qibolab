@@ -281,14 +281,6 @@ class ClusterQCM_BB(Instrument):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
             self._sequencers[port] = []
 
-            self.ports[port].gain = settings[port]["gain"]
-            self.ports[port].offset = settings[port]["offset"]
-            self.ports[port].qubit = settings[port]["qubit"]
-            # self.ports[port].hardware_mod_en = settings.hardware_mod_en
-            self.ports[port].hardware_mod_en = True
-            self.ports[port].nco_freq = 0
-            self.ports[port].nco_phase_offs = 0
-
         self._settings = settings if settings else self._settings
 
     def _get_next_sequencer(self, port, frequency, qubits: dict, qubit: None):
@@ -766,11 +758,16 @@ class ClusterQCM_BB(Instrument):
         """Empty method to comply with Instrument interface."""
         if self.is_connected:
             try:
-                for port in self.ports:
-                    port_settings = self._settings[port]
-                    self.ports[port].offset = port_settings["offset"]
+                for port in self._settings:
+                    self.ports[port].gain = self._settings[port]["gain"]
+                    self.ports[port].offset = self._settings[port]["offset"]
+                    self.ports[port].qubit = self._settings[port]["qubit"]
+                    # self.ports[port].hardware_mod_en = settings.hardware_mod_en
+                    self.ports[port].hardware_mod_en = True
+                    self.ports[port].nco_freq = 0
+                    self.ports[port].nco_phase_offs = 0
             except:
-                log.warning("Unable to set offsets")
+                log.warning("Unable to initialize port parameters")
 
     def stop(self):
         """Stops all sequencers"""

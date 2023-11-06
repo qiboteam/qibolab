@@ -155,9 +155,9 @@ class ClusterQRM_RF(Instrument):
         # self.settings: ClusterQRM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-
         self.classification_parameters: dict = {}
 
+        self._settings: dict = {}
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._input_ports_keys = ["i1"]
@@ -317,23 +317,10 @@ class ClusterQRM_RF(Instrument):
 
         # Load settings
         if "o1" in settings:
-            port_settings_out = settings["o1"]
             self.ports["o1"] = QbloxOutputPort(
                 module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=1
             )
-
-            self.ports["o1"].attenuation = port_settings_out["attenuation"]
-            if port_settings_out["lo_frequency"]:
-                self.ports["o1"].lo_enabled = True
-                self.ports["o1"].lo_frequency = port_settings_out["lo_frequency"]
-            self.ports["o1"].gain = port_settings_out["gain"]
-            # self.ports["o1"].hardware_mod_en = port_settings.hardware_mod_en
-            self.ports["o1"].hardware_mod_en = True
-            self.ports["o1"].nco_freq = 0
-            self.ports["o1"].nco_phase_offs = 0
-
         if "i1" in settings:
-            port_settings_in = settings["i1"]
             self.ports["i1"] = QbloxInputPort(
                 module=self,
                 output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
@@ -341,9 +328,7 @@ class ClusterQRM_RF(Instrument):
                 number=1,
             )
 
-            self.ports["i1"].hardware_demod_en = self.ports["i1"]._settings.hardware_demod_en
-            self.ports["i1"].acquisition_hold_off = port_settings_in["acquisition_hold_off"]
-            self.ports["i1"].acquisition_duration = port_settings_in["acquisition_duration"]
+        self._settings = settings if settings else self._settings
 
     # else:
     #     raise Exception("The instrument cannot be set up, there is no connection")
@@ -1252,7 +1237,27 @@ class ClusterQRM_RF(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
-        pass
+        if self.is_connected:
+            try:
+                if "o1" in self._settings:
+                    self.ports["o1"].attenuation = self._settings["o1"]["attenuation"]
+                    if self._settings["o1"]["lo_frequency"]:
+                        self.ports["o1"].lo_enabled = True
+                        self.ports["o1"].lo_frequency = self._settings["o1"]["lo_frequency"]
+                    self.ports["o1"].gain = self._settings["o1"]["gain"]
+                    # self.ports["o1"].hardware_mod_en = port_settings.hardware_mod_en
+                    self.ports["o1"].hardware_mod_en = True
+                    self.ports["o1"].nco_freq = 0
+                    self.ports["o1"].nco_phase_offs = 0
+
+                if "i1" in self._settings:
+                    self.ports["i1"].hardware_demod_en = True
+                    self.ports["i1"].acquisition_hold_off = self._settings["i1"]["acquisition_hold_off"]
+                    self.ports["i1"].acquisition_duration = self._settings["i1"]["acquisition_duration"]
+            except:
+                log.warning("Unable to initialize port parameters")
+        else:
+            raise ConnectionError(f"Module {self.name} is not connected")
 
     def stop(self):
         """Stops all sequencers"""
