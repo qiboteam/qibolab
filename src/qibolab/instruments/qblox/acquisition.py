@@ -3,6 +3,8 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+SAMPLING_RATE = 1e9
+
 
 def demodulate(input_i, input_q, frequency):
     """Demodulates and integrates the acquired pulse."""
@@ -12,7 +14,7 @@ def demodulate(input_i, input_q, frequency):
     modulated_q = input_q - np.mean(input_q)
 
     num_samples = modulated_i.shape[0]
-    time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
+    time = np.arange(num_samples) / SAMPLING_RATE
     cosalpha = np.cos(2 * np.pi * frequency * time)
     sinalpha = np.sin(2 * np.pi * frequency * time)
     demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
@@ -110,7 +112,7 @@ class DemodulatedAcquisition:
         return (
             self.integrated_binned[2],
             self.integrated_binned[3],
-            np.array(self.integrated_classified_binned[serial]),
+            np.array(self.integrated_classified_binned),
         )
 
     @property
@@ -126,7 +128,7 @@ class DemodulatedAcquisition:
         return np.mean(self.integrated_binned)
 
     @classmethod
-    def create(self, data, pulse, duration):
+    def create(cls, data, pulse, duration):
         """Calculates average by dividing the integrated results by the number of samples acquired."""
         bins = data[pulse.serial]["acquisition"]["bins"]
         i = np.mean(np.array(bins["integration"]["path0"])) / duration
@@ -141,4 +143,4 @@ class DemodulatedAcquisition:
 
         classified = bins["threshold"]
 
-        return cls(averaged, binned, classified)
+        return cls(averaged, integrated, classified)

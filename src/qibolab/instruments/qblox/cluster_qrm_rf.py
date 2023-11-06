@@ -9,23 +9,19 @@ from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import (
+from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .acquisition import AveragedAcquisition, DemodulatedAcquisition
+from .port import (
     ClusterRF_OutputPort,
     ClusterRF_OutputPort_Settings,
     QbloxInputPort,
     QbloxInputPort_Settings,
 )
-from qibolab.instruments.qblox.q1asm import (
-    Block,
-    Register,
-    convert_phase,
-    loop_block,
-    wait_block,
-)
-from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
-from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
-from qibolab.pulses import Pulse, PulseSequence, PulseType
-from qibolab.sweeper import Parameter, Sweeper, SweeperType
+from .q1asm import Block, Register, convert_phase, loop_block, wait_block
+from .sequencer import Sequencer, WaveformsBuffer
+from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
 class ClusterQRM_RF_Settings:
