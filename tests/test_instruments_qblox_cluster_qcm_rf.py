@@ -34,7 +34,7 @@ def qcm_rf(cluster):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_cluster, connected_controller):
+def connected_qcm_rf(connected_cluster):
     settings = {
         "o1": {
             # "channel": O1_OUTPUT_CHANNEL,

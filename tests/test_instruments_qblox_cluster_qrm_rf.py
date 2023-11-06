@@ -37,7 +37,7 @@ def qrm_rf(cluster):
 
 
 @pytest.fixture(scope="module")
-def connected_qrm_rf(connected_cluster, connected_controller):
+def connected_qrm_rf(connected_cluster):
     settings = {
         "o1": {
             # channel=OUTPUT_CHANNEL,
