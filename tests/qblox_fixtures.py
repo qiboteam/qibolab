@@ -8,6 +8,7 @@ def get_controller(platform):
     for instrument in platform.instruments:
         if isinstance(instrument, QbloxController):
             return instrument
+    pytest.skip(f"Skipping qblox test for {platform.name}.")
 
 
 @pytest.fixture(scope="module")

@@ -8,7 +8,7 @@ from qibolab.instruments.qblox.port import QbloxOutputPort, QbloxOutputPort_Sett
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, connected_cluster
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
 O1_OUTPUT_CHANNEL = "L3-11"
 O1_ATTENUATION = 20
@@ -20,8 +20,11 @@ O2_ATTENUATION = 20
 O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
 
+connected_controller
+controller
 
-def get_qcm_rf(cluster):
+
+def get_qcm_rf(cluster, controller):
     for module in cluster.modules.values():  # MAYBE ERROR NOT CLUSTER BUT CONTROLLER
         if isinstance(module, ClusterQCM_RF):
             return ClusterQCM_RF(module.name, module.address, cluster)
@@ -34,7 +37,7 @@ def qcm_rf(cluster):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_cluster):
+def connected_qcm_rf(connected_cluster, connected_controller):
     settings = {
         "o1": {
             # "channel": O1_OUTPUT_CHANNEL,
