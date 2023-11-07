@@ -121,12 +121,13 @@ class ClusterQCM_BB(Instrument):
         """
         super().__init__(name, address)
         self.ports: dict = {}
+        self.settings: dict = {}
+        self.device = None
+        self.channels: list = []
+
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
-        self.device = None
-
         self._sequencers: dict[Sequencer] = {}
-        self.channels: list = []
         self._port_channel_map: dict = {}
         self._channel_port_map: dict = {}
         self._device_parameters = {}
@@ -137,7 +138,6 @@ class ClusterQCM_BB(Instrument):
         ] = []  # TODO: we can create only list and put three flags: free, used, unused
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
-        self.settings: dict = {}
 
     def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
@@ -253,6 +253,7 @@ class ClusterQCM_BB(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
+        # TODO: update documentation.
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -271,14 +272,9 @@ class ClusterQCM_BB(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # self.connect()
-        # if not settings:
-        #     log.warning(f'Called setup() without passing parameters for module {self.name}')
-        #     return
-
         # Load settings
-        for port_num, port in enumerate(settings):  # TODO: do same as in qcm_rf
-            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
+        for port_num, port in enumerate(settings):
+            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
             self._sequencers[port] = []
 
         self.settings = settings if settings else self.settings
@@ -756,13 +752,13 @@ class ClusterQCM_BB(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
+        # TODO: update documentation. See setup()
         if self.is_connected:
             try:
                 for port in self.settings:
                     self.ports[port].gain = self.settings[port]["gain"]
                     self.ports[port].offset = self.settings[port]["offset"]
                     self.ports[port].qubit = self.settings[port]["qubit"]
-                    # self.ports[port].hardware_mod_en = settings.hardware_mod_en
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0

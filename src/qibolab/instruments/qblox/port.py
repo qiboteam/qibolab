@@ -6,6 +6,8 @@ from qibo.config import log, raise_error
 from qibolab.instruments.port import Port
 
 FREQUENCY_LIMIT = 500e6
+MAX_GAIN = 1.0
+MAX_OFFSET = 2.5
 
 
 @dataclass
@@ -36,7 +38,7 @@ class QbloxOutputPort(Port):
     def __init__(self, module, sequencer_number: int, port_number: int):
         self.module = module
         self.sequencer_number: int = sequencer_number
-        self.port_number: int = port_number - 1
+        self.port_number: int = port_number
         self.channel = None  # To be discontinued
         self.qubit = None  # To be discontinued
         self._settings = QbloxOutputPort_Settings()
@@ -53,13 +55,13 @@ class QbloxOutputPort(Port):
         if isinstance(value, (int, np.integer)):
             value = float(value)
         if isinstance(value, (float, np.floating)):
-            if value > 1.0:
+            if value > MAX_GAIN:
                 log.warning(f"Qblox offset needs to be between -1 and 1. Adjusting {value} to 1")
-                value = 1.0
+                value = MAX_GAIN
 
-            elif value < -1.0:
+            elif value < -MAX_GAIN:
                 log.warning(f"Qblox offset needs to be between -1 and 1. Adjusting {value} to -1")
-                value = -1.0
+                value = -MAX_GAIN
         else:
             raise_error(ValueError, f"Invalid offset {value}")
 
@@ -75,7 +77,7 @@ class QbloxOutputPort(Port):
     def attenuation(self) -> str:
         """Attenuation that is applied to this port."""
         if self.module.device:
-            self._settings.attenuation = self.module.device.get(f"out{self.port_number}_att")
+            self._settings.attenuation = self.module.device.get(f"out{self.port_number+1}_att")
         return self._settings.attenuation
 
     @attenuation.setter
@@ -101,13 +103,13 @@ class QbloxOutputPort(Port):
 
         self._settings.attenuation = value
         if self.module.device:
-            self.module._set_device_parameter(self.module.device, f"out{self.port_number}_att", value=value)
+            self.module._set_device_parameter(self.module.device, f"out{self.port_number+1}_att", value=value)
 
     @property
     def offset(self):
         """DC offset that is applied to this port."""
         if self.module.device:
-            self._settings.offset = self.module.device.get(f"out{self.port_number}_offset")
+            self._settings.offset = self.module.device.get(f"out{self.port_number+1}_offset")
         return self._settings.offset
 
     @offset.setter
@@ -115,19 +117,19 @@ class QbloxOutputPort(Port):
         if isinstance(value, (int, np.integer)):
             value = float(value)
         if isinstance(value, (float, np.floating)):
-            if value > 2.5:
+            if value > MAX_OFFSET:
                 log.warning(f"Qblox offset needs to be between -2.5 and 2.5 V. Adjusting {value} to 2.5 V")
-                value = 2.5
+                value = MAX_OFFSET
 
-            elif value < -2.5:
+            elif value < -MAX_OFFSET:
                 log.warning(f"Qblox offset needs to be between -2.5 and 2.5 V. Adjusting {value} to -2.5 V")
-                value = -2.5
+                value = -MAX_OFFSET
         else:
             raise_error(ValueError, f"Invalid offset {value}")
 
         self._settings.offset = value
         if self.module.device:
-            self.module._set_device_parameter(self.module.device, f"out{self.port_number}_offset", value=value)
+            self.module._set_device_parameter(self.module.device, f"out{self.port_number+1}_offset", value=value)
 
     # Additional attributes needed by the driver
     @property
@@ -211,9 +213,11 @@ class QbloxOutputPort(Port):
 
         if self.module.device:
             if self.module.device.is_qrm_type:
-                self._settings.lo_enabled = self.module.device.get(f"out{self.port_number}_in{self.port_number}_lo_en")
+                self._settings.lo_enabled = self.module.device.get(
+                    f"out{self.port_number+1}_in{self.port_number+1}_lo_en"
+                )
             elif self.module.device.is_qcm_type:
-                self._settings.lo_enabled = self.module.device.get(f"out{self.port_number}_lo_en")
+                self._settings.lo_enabled = self.module.device.get(f"out{self.port_number+1}_lo_en")
         return self._settings.lo_enabled
 
     @lo_enabled.setter
@@ -225,10 +229,10 @@ class QbloxOutputPort(Port):
         if self.module.device:
             if self.module.device.is_qrm_type:
                 self.module._set_device_parameter(
-                    self.module.device, f"out{self.port_number}_in{self.port_number}_lo_en", value=value
+                    self.module.device, f"out{self.port_number+1}_in{self.port_number+1}_lo_en", value=value
                 )
             elif self.module.device.is_qcm_type:
-                self.module._set_device_parameter(self.module.device, f"out{self.port_number}_lo_en", value=value)
+                self.module._set_device_parameter(self.module.device, f"out{self.port_number+1}_lo_en", value=value)
 
     @property
     def lo_frequency(self):
@@ -236,10 +240,10 @@ class QbloxOutputPort(Port):
         if self.module.device:
             if self.module.device.is_qrm_type:
                 self._settings.lo_frequency = self.module.device.get(
-                    f"out{self.port_number}_in{self.port_number}_lo_freq"
+                    f"out{self.port_number+1}_in{self.port_number+1}_lo_freq"
                 )
             elif self.module.device.is_qcm_type:
-                self._settings.lo_frequency = self.module.device.get(f"out{self.port_number}_lo_freq")
+                self._settings.lo_frequency = self.module.device.get(f"out{self.port_number+1}_lo_freq")
         return self._settings.lo_frequency
 
     @lo_frequency.setter
@@ -261,21 +265,21 @@ class QbloxOutputPort(Port):
         if self.module.device:
             if self.module.device.is_qrm_type:
                 self.module._set_device_parameter(
-                    self.module.device, f"out{self.port_number}_in{self.port_number}_lo_freq", value=value
+                    self.module.device, f"out{self.port_number+1}_in{self.port_number+1}_lo_freq", value=value
                 )
             elif self.module.device.is_qcm_type:
-                self.module._set_device_parameter(self.module.device, f"out{self.port_number}_lo_freq", value=value)
+                self.module._set_device_parameter(self.module.device, f"out{self.port_number+1}_lo_freq", value=value)
         else:
             pass
             # TODO: This case regards a connection error of the module
 
 
 class QbloxInputPort:
-    def __init__(self, module, output_sequencer_number: int, input_sequencer_number: int, number: int):
+    def __init__(self, module, output_sequencer_number: int, input_sequencer_number: int, port_number: int):
         self.module = module
         self.output_sequencer_number: int = output_sequencer_number
         self.input_sequencer_number: int = input_sequencer_number
-        self.port_number: int = number - 1
+        self.port_number: int = port_number
         self.channel = None  # To be discontinued
         self.qubit = None  # To be discontinued
 

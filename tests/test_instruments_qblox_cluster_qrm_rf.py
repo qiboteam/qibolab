@@ -13,7 +13,12 @@ from qibolab.instruments.qblox.port import (
 from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
+from .qblox_fixtures import (  # no-remove
+    cluster,
+    connected_cluster,
+    connected_controller,
+    controller,
+)
 
 OUTPUT_CHANNEL = "L3-25_a"
 INPUT_CHANNEL = "L2-5_a"
@@ -23,8 +28,7 @@ GAIN = 0.6
 TIME_OF_FLIGHT = 500
 ACQUISITION_DURATION = 900
 
-connected_controller
-controller
+controller, connected_controller
 
 
 def get_qrm_rf(cluster):
@@ -43,13 +47,11 @@ def qrm_rf(cluster):
 def connected_qrm_rf(connected_cluster):
     settings = {
         "o1": {
-            # channel=OUTPUT_CHANNEL,
             "attenuation": ATTENUATION,
             "lo_frequency": LO_FREQUENCY,
             "gain": GAIN,
         },
         "i1": {
-            # channel=INPUT_CHANNEL,
             "acquisition_hold_off": TIME_OF_FLIGHT,
             "acquisition_duration": ACQUISITION_DURATION,
         },

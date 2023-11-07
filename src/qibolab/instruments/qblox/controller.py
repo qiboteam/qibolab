@@ -12,6 +12,8 @@ from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+SEQUENCER_MEMORY = 2**17
+
 
 class QbloxController(Controller):
     """A controller to manage qblox devices.
@@ -435,7 +437,7 @@ class QbloxController(Controller):
                     num_bins *= len(sweeper.values)
 
                     # split the sweep if the number of bins is larget than the memory of the sequencer (2**17)
-                if num_bins < 2**17:
+                if num_bins < SEQUENCER_MEMORY:
                     # for sweeper in sweepers:
                     #     if sweeper.parameter is Parameter.amplitude:
                     #         # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
@@ -463,9 +465,9 @@ class QbloxController(Controller):
                     sweepers_repetitions = 1
                     for sweeper in sweepers:
                         sweepers_repetitions *= len(sweeper.values)
-                    if sweepers_repetitions < 2**17:
+                    if sweepers_repetitions < SEQUENCER_MEMORY:
                         # split nshots
-                        max_rt_nshots = (2**17) // sweepers_repetitions
+                        max_rt_nshots = (SEQUENCER_MEMORY) // sweepers_repetitions
                         num_full_sft_iterations = nshots // max_rt_nshots
                         num_bins = max_rt_nshots * sweepers_repetitions
 
@@ -484,7 +486,7 @@ class QbloxController(Controller):
                             for sweeper in sweepers[1:]:
                                 num_bins *= len(sweeper.values)
                             sweeper = sweepers[0]
-                            max_rt_iterations = (2**17) // num_bins
+                            max_rt_iterations = (SEQUENCER_MEMORY) // num_bins
                             num_full_sft_iterations = len(sweeper.values) // max_rt_iterations
                             num_bins = nshots * max_rt_iterations
                             for sft_iteration in range(num_full_sft_iterations + 1):

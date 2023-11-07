@@ -20,12 +20,11 @@ O2_ATTENUATION = 20
 O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
 
-connected_controller
-controller
+controller, connected_controller
 
 
 def get_qcm_rf(cluster):
-    for module in cluster.modules.values():  # MAYBE ERROR NOT CLUSTER BUT CONTROLLER
+    for module in cluster.modules.values():
         if isinstance(module, ClusterQCM_RF):
             return ClusterQCM_RF(module.name, module.address, cluster)
     pytest.skip(f"Skipping qblox ClusterQCM_RF test for {cluster.name}.")
@@ -40,13 +39,11 @@ def qcm_rf(cluster):
 def connected_qcm_rf(connected_cluster):
     settings = {
         "o1": {
-            # "channel": O1_OUTPUT_CHANNEL,
             "attenuation": O1_ATTENUATION,
             "lo_frequency": O1_LO_FREQUENCY,
             "gain": O1_GAIN,
         },
         "o2": {
-            # "channel": O2_OUTPUT_CHANNEL,
             "attenuation": O2_ATTENUATION,
             "lo_frequency": O2_LO_FREQUENCY,
             "gain": O2_GAIN,

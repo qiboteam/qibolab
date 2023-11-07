@@ -265,6 +265,7 @@ class ClusterQCM_RF(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
+        # TODO: update documentation
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
@@ -294,12 +295,8 @@ class ClusterQCM_RF(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # if not settings:
-        #     log.warning(f'Called setup() without passing parameters for module {self.name}')
-        #     return
-
         for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
+            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
             self._sequencers[port] = []
         self.settings = settings if settings else self.settings
 
@@ -760,6 +757,7 @@ class ClusterQCM_RF(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
+        # TODO: update documentation. See setup()
         if self.is_connected:
             try:
                 for port in self.settings:
@@ -768,7 +766,6 @@ class ClusterQCM_RF(Instrument):
                         self.ports[port].lo_frequency = self.settings[port]["lo_frequency"]
                     self.ports[port].attenuation = self.settings[port]["attenuation"]
                     self.ports[port].gain = self.settings[port]["gain"]
-                    # selected_port.hardware_mod_en = port_settings["hardware_mod_en"]
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0

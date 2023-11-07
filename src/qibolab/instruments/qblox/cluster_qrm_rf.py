@@ -152,7 +152,6 @@ class ClusterQRM_RF(Instrument):
         """
 
         super().__init__(name, address)
-        # self.settings: ClusterQRM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.classification_parameters: dict = {}
@@ -183,16 +182,12 @@ class ClusterQRM_RF(Instrument):
         self._cluster.connect()
         self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
         if not self.is_connected:
+            # test connection with module
             if not self.device.present():
                 raise ConnectionError(
                     f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}"
                 )
-                # save a reference to the underlying object
-                # TODO: test connection with the module before continuing. Currently if there is no
-                # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
-                # fails, providing a misleading error message
 
-                # save reference to cluster
             self.is_connected = True
 
             # once connected, initialise the parameters of the device to the default values
@@ -271,11 +266,12 @@ class ClusterQRM_RF(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
+        # TODO: update doc string
         """Configures the instrument with the settings of the runcard.
 
         A connection to the instrument needs to be established beforehand.
         Args:
-            **kwargs: dict = A dictionary of settings loaded from the runcard:
+            **settings: dict = A dictionary of settings loaded from the runcard:
 
                 - kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is
                   connected to.
@@ -310,28 +306,20 @@ class ClusterQRM_RF(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # self.connect()
-        # if not settings:
-        #     log.warning(f'Called setup() without passing parameters for module {self.name}')
-        #     return
-
         # Load settings
         if "o1" in settings:
             self.ports["o1"] = QbloxOutputPort(
-                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=1
+                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0
             )
         if "i1" in settings:
             self.ports["i1"] = QbloxInputPort(
                 module=self,
                 output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
                 input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
-                number=1,
+                port_number=0,
             )
 
         self.settings = settings if settings else self.settings
-
-    # else:
-    #     raise Exception("The instrument cannot be set up, there is no connection")
 
     def _get_next_sequencer(self, port: str, frequency: int, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -1237,6 +1225,7 @@ class ClusterQRM_RF(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
+        # TODO: update documentation. See setup()
         if self.is_connected:
             try:
                 if "o1" in self.settings:
@@ -1245,7 +1234,6 @@ class ClusterQRM_RF(Instrument):
                         self.ports["o1"].lo_enabled = True
                         self.ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
                     self.ports["o1"].gain = self.settings["o1"]["gain"]
-                    # self.ports["o1"].hardware_mod_en = port_settings.hardware_mod_en
                     self.ports["o1"].hardware_mod_en = True
                     self.ports["o1"].nco_freq = 0
                     self.ports["o1"].nco_phase_offs = 0

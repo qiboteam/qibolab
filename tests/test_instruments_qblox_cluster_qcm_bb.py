@@ -32,8 +32,7 @@ O4_GAIN = 0.5
 O4_OFFSET = 0.5890
 O4_QUBIT = 4
 
-connected_controller
-controller
+controller, connected_controller
 
 
 def get_qcm_bb(cluster):
@@ -52,25 +51,21 @@ def qcm_bb(cluster):
 def connected_qcm_bb(connected_cluster):
     settings = {
         "o1": {
-            # "channel": O1_OUTPUT_CHANNEL,
             "gain": O1_GAIN,
             "offset": O1_OFFSET,
             "qubit": O1_QUBIT,
         },
         "o2": {
-            # "channel": O2_OUTPUT_CHANNEL,
             "gain": O2_GAIN,
             "offset": O2_OFFSET,
             "qubit": O2_QUBIT,
         },
         "o3": {
-            # "channel": O3_OUTPUT_CHANNEL,
             "gain": O3_GAIN,
             "offset": O3_OFFSET,
             "qubit": O3_QUBIT,
         },
         "o4": {
-            # "channel": O4_OUTPUT_CHANNEL,
             "gain": O4_GAIN,
             "offset": O4_OFFSET,
             "qubit": O4_QUBIT,
