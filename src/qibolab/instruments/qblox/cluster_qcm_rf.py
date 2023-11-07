@@ -143,7 +143,7 @@ class ClusterQCM_RF(Instrument):
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        self._settings = {}
+        self.settings = {}
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
@@ -301,7 +301,7 @@ class ClusterQCM_RF(Instrument):
         for port_num, port in enumerate(settings):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
             self._sequencers[port] = []
-        self._settings = settings if settings else self._settings
+        self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -762,12 +762,12 @@ class ClusterQCM_RF(Instrument):
         """Empty method to comply with Instrument interface."""
         if self.is_connected:
             try:
-                for port in self._settings:
-                    if self._settings[port]["lo_frequency"]:
+                for port in self.settings:
+                    if self.settings[port]["lo_frequency"]:
                         self.ports[port].lo_enabled = True
-                        self.ports[port].lo_frequency = self._settings[port]["lo_frequency"]
-                    self.ports[port].attenuation = self._settings[port]["attenuation"]
-                    self.ports[port].gain = self._settings[port]["gain"]
+                        self.ports[port].lo_frequency = self.settings[port]["lo_frequency"]
+                    self.ports[port].attenuation = self.settings[port]["attenuation"]
+                    self.ports[port].gain = self.settings[port]["gain"]
                     # selected_port.hardware_mod_en = port_settings["hardware_mod_en"]
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0

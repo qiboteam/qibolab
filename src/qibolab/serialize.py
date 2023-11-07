@@ -115,8 +115,11 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
 
 def dump_instruments(instruments: InstrumentMap) -> dict:
     """Dump instrument settings to a dictionary following the runcard format."""
+    # Qblox modules settings are dictionaries and not dataclasses
     return {
-        name: asdict(instrument.settings) for name, instrument in instruments.items() if instrument.settings is not None
+        name: instrument.settings if isinstance(instrument.settings, dict) else asdict(instrument.settings)
+        for name, instrument in instruments.items()
+        if instrument.settings is not None
     }
 
 

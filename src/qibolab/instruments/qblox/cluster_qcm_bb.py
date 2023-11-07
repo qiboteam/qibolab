@@ -137,7 +137,7 @@ class ClusterQCM_BB(Instrument):
         ] = []  # TODO: we can create only list and put three flags: free, used, unused
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
-        self._settings: dict = {}
+        self.settings: dict = {}
 
     def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
@@ -281,7 +281,7 @@ class ClusterQCM_BB(Instrument):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num + 1)
             self._sequencers[port] = []
 
-        self._settings = settings if settings else self._settings
+        self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port, frequency, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -758,10 +758,10 @@ class ClusterQCM_BB(Instrument):
         """Empty method to comply with Instrument interface."""
         if self.is_connected:
             try:
-                for port in self._settings:
-                    self.ports[port].gain = self._settings[port]["gain"]
-                    self.ports[port].offset = self._settings[port]["offset"]
-                    self.ports[port].qubit = self._settings[port]["qubit"]
+                for port in self.settings:
+                    self.ports[port].gain = self.settings[port]["gain"]
+                    self.ports[port].offset = self.settings[port]["offset"]
+                    self.ports[port].qubit = self.settings[port]["qubit"]
                     # self.ports[port].hardware_mod_en = settings.hardware_mod_en
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0

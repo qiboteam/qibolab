@@ -27,7 +27,7 @@ connected_controller
 controller
 
 
-def get_qrm_rf(cluster, controller):
+def get_qrm_rf(cluster):
     for module in cluster.modules.values():
         if isinstance(module, ClusterQRM_RF):
             return ClusterQRM_RF(module.name, module.address, cluster)
@@ -40,7 +40,7 @@ def qrm_rf(cluster):
 
 
 @pytest.fixture(scope="module")
-def connected_qrm_rf(connected_cluster, connected_controller):
+def connected_qrm_rf(connected_cluster):
     settings = {
         "o1": {
             # channel=OUTPUT_CHANNEL,

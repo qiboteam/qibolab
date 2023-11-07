@@ -24,7 +24,7 @@ connected_controller
 controller
 
 
-def get_qcm_rf(cluster, controller):
+def get_qcm_rf(cluster):
     for module in cluster.modules.values():  # MAYBE ERROR NOT CLUSTER BUT CONTROLLER
         if isinstance(module, ClusterQCM_RF):
             return ClusterQCM_RF(module.name, module.address, cluster)
@@ -37,7 +37,7 @@ def qcm_rf(cluster):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_cluster, connected_controller):
+def connected_qcm_rf(connected_cluster):
     settings = {
         "o1": {
             # "channel": O1_OUTPUT_CHANNEL,
