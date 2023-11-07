@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
 
 from qibolab.channels import Channel
+from qibolab.native import CouplerNatives
 
 QubitId = Union[str, int]
 """Type for Coupler names."""
@@ -19,7 +20,9 @@ class Coupler:
     "Coupler number or name."
 
     sweetspot: float = 0
-    "Coupler sweetspot to turn it on/off or off/on."
+    "Coupler sweetspot to center it's flux dependence if needed."
+    native_pulse: CouplerNatives = field(default_factory=CouplerNatives)
+    "For now this only contains the calibrated pulse to activate the coupler."
 
     flux: Optional[Channel] = None
     "flux (:class:`qibolab.platforms.utils.Channel`): Channel used to send flux pulses to the qubit."

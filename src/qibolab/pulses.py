@@ -777,9 +777,9 @@ class Pulse:
             value (se_int | int | np.integer): the time in ns.
         """
 
-        if not isinstance(value, (se_int, int, np.integer)):
+        if not isinstance(value, (se_int, int, np.integer, float)):
             raise TypeError(
-                f"duration argument type should be intSymbolicExpression or int, got {type(value).__name__}"
+                f"duration argument type should be float, intSymbolicExpression or int, got {type(value).__name__}"
             )
         if not value >= 0:
             raise ValueError(f"duration argument must be >= 0, got {value}")
@@ -1794,6 +1794,16 @@ class PulseSequence:
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.FLUX:
+                new_pc.add(pulse)
+        return new_pc
+
+    @property
+    def cf_pulses(self):
+        """Returns a new PulseSequence containing only its coupler flux pulses."""
+
+        new_pc = PulseSequence()
+        for pulse in self.pulses:
+            if pulse.type is PulseType.COUPLERFLUX:
                 new_pc.add(pulse)
         return new_pc
 
