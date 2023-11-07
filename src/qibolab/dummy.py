@@ -60,7 +60,6 @@ def create_dummy(with_couplers: bool = True):
     channels["twpa"].local_oscillator = twpa_pump
 
     qubits, couplers, pairs = load_qubits(runcard)
-    print(couplers)
     settings = load_settings(runcard)
 
     # map channels to qubits
