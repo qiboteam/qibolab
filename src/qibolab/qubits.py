@@ -60,6 +60,8 @@ class Qubit:
     """Assignment fidelity."""
     readout_fidelity: float = 0.0
     """Readout fidelity."""
+    effective_temperature: float = 0.0
+    """Effective temperature."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0
