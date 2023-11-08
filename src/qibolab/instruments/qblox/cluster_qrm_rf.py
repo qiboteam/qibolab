@@ -1233,7 +1233,6 @@ class ClusterQRM_RF(Instrument):
                     if self.settings["o1"]["lo_frequency"]:
                         self.ports["o1"].lo_enabled = True
                         self.ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
-                    self.ports["o1"].gain = self.settings["o1"]["gain"]
                     self.ports["o1"].hardware_mod_en = True
                     self.ports["o1"].nco_freq = 0
                     self.ports["o1"].nco_phase_offs = 0

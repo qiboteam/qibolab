@@ -6,8 +6,8 @@ from qibo.config import log, raise_error
 from qibolab.instruments.port import Port
 
 FREQUENCY_LIMIT = 500e6
-MAX_GAIN = 1.0
 MAX_OFFSET = 2.5
+MIN_PULSE_DURATION = 4
 
 
 @dataclass
@@ -42,36 +42,6 @@ class QbloxOutputPort(Port):
         self.channel = None  # To be discontinued
         self.qubit = None  # To be discontinued
         self._settings = QbloxOutputPort_Settings()
-
-    @property
-    def gain(self):
-        """Gain that is applied to this port."""
-        if self.module.device:
-            self._settings.gain = self.module.device.sequencers[self.sequencer_number].get("gain_awg_path0")
-        return self._settings.gain
-
-    @gain.setter
-    def gain(self, value):
-        if isinstance(value, (int, np.integer)):
-            value = float(value)
-        if isinstance(value, (float, np.floating)):
-            if value > MAX_GAIN:
-                log.warning(f"Qblox offset needs to be between -1 and 1. Adjusting {value} to 1")
-                value = MAX_GAIN
-
-            elif value < -MAX_GAIN:
-                log.warning(f"Qblox offset needs to be between -1 and 1. Adjusting {value} to -1")
-                value = -MAX_GAIN
-        else:
-            raise_error(ValueError, f"Invalid offset {value}")
-
-        self._settings.gain = value
-        if self.module.device:
-            for gain_avg_path in ["gain_awg_path0", "gain_awg_path1"]:
-                if hasattr(self.module.device.sequencers[self.sequencer_number], gain_avg_path):
-                    self.module._set_device_parameter(
-                        self.module.device.sequencers[self.sequencer_number], gain_avg_path, value=value
-                    )
 
     @property
     def attenuation(self) -> str:
@@ -323,14 +293,14 @@ class QbloxInputPort:
         if isinstance(value, (float, np.floating)):
             value = int(value)
         if isinstance(value, (int, np.integer)):
-            if value < 4:
-                log.warning(f"Qblox hardware_demod_en needs to be > 4ns. Adjusting {value} to 4 ns")
-                value = 4
-            if (value % 4) != 0:
+            if value < MIN_PULSE_DURATION:
+                log.warning(f"Qblox hardware_demod_en needs to be > 4ns. Adjusting {value} to {MIN_PULSE_DURATION} ns")
+                value = MIN_PULSE_DURATION
+            if (value % MIN_PULSE_DURATION) != 0:
                 log.warning(
-                    f"Qblox hardware_demod_en needs to be a multiple of 4 ns. Adjusting {value} to {round(value/4) * 4}"
+                    f"Qblox hardware_demod_en needs to be a multiple of 4 ns. Adjusting {value} to {round(value/MIN_PULSE_DURATION) * MIN_PULSE_DURATION}"
                 )
-                value = round(value / 4) * 4
+                value = round(value / MIN_PULSE_DURATION) * MIN_PULSE_DURATION
 
         else:
             raise_error(ValueError, f"Invalid acquisition_duration {value}")

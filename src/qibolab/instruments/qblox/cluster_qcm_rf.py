@@ -765,7 +765,6 @@ class ClusterQCM_RF(Instrument):
                         self.ports[port].lo_enabled = True
                         self.ports[port].lo_frequency = self.settings[port]["lo_frequency"]
                     self.ports[port].attenuation = self.settings[port]["attenuation"]
-                    self.ports[port].gain = self.settings[port]["gain"]
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0

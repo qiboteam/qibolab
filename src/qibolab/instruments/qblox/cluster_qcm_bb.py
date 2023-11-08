@@ -756,7 +756,6 @@ class ClusterQCM_BB(Instrument):
         if self.is_connected:
             try:
                 for port in self.settings:
-                    self.ports[port].gain = self.settings[port]["gain"]
                     self.ports[port].offset = self.settings[port]["offset"]
                     self.ports[port].qubit = self.settings[port]["qubit"]
                     self.ports[port].hardware_mod_en = True
