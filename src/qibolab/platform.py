@@ -148,7 +148,7 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                if self.couplers is not None:
+                if len(self.couplers) > 0:
                     new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
                 else:
                     new_result = getattr(instrument, method)(self.qubits, sequences, options)
@@ -226,7 +226,7 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                if self.couplers is not None:
+                if len(self.couplers) > 0:
                     new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
                 else:
                     new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)

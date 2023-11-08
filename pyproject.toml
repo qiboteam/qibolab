@@ -74,7 +74,7 @@ pylint = ">=2.16.0"
 
 [tool.poetry.extras]
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
-qm = ["qm-qua", "qualang-tools", "setuptools"]
+qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq", "qcodes", "qcodes_contrib_drivers"]
 
