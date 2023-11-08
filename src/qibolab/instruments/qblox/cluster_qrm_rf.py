@@ -665,11 +665,12 @@ class ClusterQRM_RF(Instrument):
                     sequencer.waveforms[waveform.serial] = {"data": waveform.data.tolist(), "index": index}
 
                 # Acquisitions
+                pulse = None
                 for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
                     sequencer.acquisitions[pulse.serial] = {"num_bins": num_bins, "index": acquisition_index}
 
                 # Add scope_acquisition to default sequencer
-                if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
+                if sequencer.number == self.DEFAULT_SEQUENCERS[port] and not pulse == None:
                     sequencer.acquisitions["scope_acquisition"] = {"num_bins": 1, "index": acquisition_index + 1}
 
                 # Program
