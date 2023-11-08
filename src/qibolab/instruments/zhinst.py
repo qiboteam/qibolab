@@ -298,7 +298,7 @@ class Zurich(Controller):
         Port and device mapping in yaml text (str)
 
         It should be used as a template by adding extra lines for each of the different
-        frequency pulses played thought the same port after parsing the sequence.
+        frequency pulses played through the same port after parsing the sequence.
         """
 
         self.emulation = use_emulation
@@ -639,7 +639,7 @@ class Zurich(Controller):
         self.sequence = zhsequence
 
     def create_exp(self, qubits, couplers, options):
-        """Zurich experiment initialization usig their Experiment class"""
+        """Zurich experiment initialization using their Experiment class"""
 
         # Setting experiment signal lines
         signals = []
@@ -748,7 +748,7 @@ class Zurich(Controller):
     # FIXME: Now hardcoded for the flux pulse for 2q gates
     @staticmethod
     def play_sweep_select_dual(exp, qubit, pulse, section, parameters):
-        """Play Zurich pulse when a two sweepers are involved on the same pulse"""
+        """Play Zurich pulse when two sweepers are involved on the same pulse"""
         if "amplitude" in parameters and "duration" in parameters:
             for sweeper in pulse.zhsweepers:
                 if sweeper.uid == "amplitude":
