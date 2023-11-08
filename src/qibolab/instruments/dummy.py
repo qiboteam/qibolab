@@ -57,19 +57,18 @@ class DummyInstrument(Controller):
     def disconnect(self):
         log.info(f"Disconnecting {self.name} instrument.")
 
-    def get_values(self, options, sequence, shape):
-        for ro_pulse in sequence.ro_pulses:
-            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                if options.averaging_mode is AveragingMode.SINGLESHOT:
-                    values = np.random.randint(2, size=shape)
-                elif options.averaging_mode is AveragingMode.CYCLIC:
-                    values = np.random.rand(*shape)
-            elif options.acquisition_type is AcquisitionType.RAW:
-                samples = int(ro_pulse.duration * self.sampling_rate)
-                waveform_shape = tuple(samples * dim for dim in shape)
-                values = np.random.rand(*waveform_shape) * 100 + 1j * np.random.rand(*waveform_shape) * 100
-            elif options.acquisition_type is AcquisitionType.INTEGRATION:
-                values = np.random.rand(*shape) * 100 + 1j * np.random.rand(*shape) * 100
+    def get_values(self, options, ro_pulse, shape):
+        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+            if options.averaging_mode is AveragingMode.SINGLESHOT:
+                values = np.random.randint(2, size=shape)
+            elif options.averaging_mode is AveragingMode.CYCLIC:
+                values = np.random.rand(*shape)
+        elif options.acquisition_type is AcquisitionType.RAW:
+            samples = int(ro_pulse.duration * self.sampling_rate)
+            waveform_shape = tuple(samples * dim for dim in shape)
+            values = np.random.rand(*waveform_shape) * 100 + 1j * np.random.rand(*waveform_shape) * 100
+        elif options.acquisition_type is AcquisitionType.INTEGRATION:
+            values = np.random.rand(*shape) * 100 + 1j * np.random.rand(*shape) * 100
         return values
 
     def play(
@@ -84,7 +83,7 @@ class DummyInstrument(Controller):
         results = {}
 
         for ro_pulse in sequence.ro_pulses:
-            values = self.get_values(options, sequence, shape)
+            values = self.get_values(options, ro_pulse, shape)
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
         return results
@@ -102,7 +101,7 @@ class DummyInstrument(Controller):
         results = defaultdict(list)
         for sequence in sequences:
             for ro_pulse in sequence.ro_pulses:
-                values = self.get_values(options, sequence, shape)
+                values = self.get_values(options, ro_pulse, shape)
                 results[ro_pulse.serial].append(options.results_type(values))
                 results[ro_pulse.qubit].append(options.results_type(values))
 
@@ -124,7 +123,7 @@ class DummyInstrument(Controller):
             shape = tuple(len(sweeper.values) for sweeper in sweepers)
 
         for ro_pulse in sequence.ro_pulses:
-            values = self.get_values(options, sequence, shape)
+            values = self.get_values(options, ro_pulse, shape)
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
         return results
