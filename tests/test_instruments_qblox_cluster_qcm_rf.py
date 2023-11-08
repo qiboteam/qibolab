@@ -8,7 +8,12 @@ from qibolab.instruments.qblox.port import QbloxOutputPort, QbloxOutputPort_Sett
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
+from .qblox_fixtures import (  # noqa
+    cluster,
+    connected_cluster,
+    connected_controller,
+    controller,
+)
 
 O1_OUTPUT_CHANNEL = "L3-11"
 O1_ATTENUATION = 20
@@ -19,8 +24,6 @@ O2_OUTPUT_CHANNEL = "L3-12"
 O2_ATTENUATION = 20
 O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
-
-controller, connected_controller
 
 
 def get_qcm_rf(cluster):

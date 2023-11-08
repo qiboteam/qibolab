@@ -13,7 +13,7 @@ from qibolab.instruments.qblox.port import (
 from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import (  # no-remove
+from .qblox_fixtures import (  # noqa
     cluster,
     connected_cluster,
     connected_controller,
@@ -27,8 +27,6 @@ LO_FREQUENCY = 7_000_000_000
 GAIN = 0.6
 TIME_OF_FLIGHT = 500
 ACQUISITION_DURATION = 900
-
-controller, connected_controller
 
 
 def get_qrm_rf(cluster):

@@ -10,7 +10,12 @@ from qibolab.instruments.qblox.port import QbloxOutputPort_Settings
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
+from .qblox_fixtures import (  # noqa
+    cluster,
+    connected_cluster,
+    connected_controller,
+    controller,
+)
 
 O1_OUTPUT_CHANNEL = "L4-1"
 O1_GAIN = 0.5
@@ -31,8 +36,6 @@ O4_OUTPUT_CHANNEL = "L4-4"
 O4_GAIN = 0.5
 O4_OFFSET = 0.5890
 O4_QUBIT = 4
-
-controller, connected_controller
 
 
 def get_qcm_bb(cluster):
