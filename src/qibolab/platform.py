@@ -178,10 +178,7 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                if len(self.couplers) > 0:
-                    new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
-                else:
-                    new_result = getattr(instrument, method)(self.qubits, sequences, options)
+                new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -285,10 +282,7 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                if len(self.couplers) > 0:
-                    new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
-                else:
-                    new_result = instrument.sweep(self.qubits, sequence, options, *sweepers)
+                new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
