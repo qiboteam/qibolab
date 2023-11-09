@@ -73,7 +73,7 @@ jobs:
         git clone https://github.com/qiboteam/qibolab_platforms_qrc
         export QIBOLAB_PLATFORMS=./qibolab_platforms_qrc
         partition="$(jq -r -n --argjson data "$queues" '$data.'$platform)"
-        srun -p $partition python selfhosted/calibration.py ${{ matrix.platform }}
+        srun -p $partition pytest -m qpu --platform ${{ matrix.platform }} --no-cov
     - name: Notify the Pull Request
       uses: thollander/actions-comment-pull-request@v2
       env:
