@@ -5,21 +5,28 @@ Supports the following Instruments:
 
 https://qcodes.github.io/Qcodes/api/generated/qcodes.instrument_drivers.rohde_schwarz.html#module-qcodes.instrument_drivers.rohde_schwarz.SGS100A
 """
+from dataclasses import dataclass
+from typing import Optional
+
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 from qibo.config import log
 
-from qibolab.instruments.abstract import InstrumentException
-from qibolab.instruments.oscillator import LocalOscillator, LocalOscillatorSettings
+from qibolab.instruments.abstract import InstrumentException, InstrumentSettings
+from qibolab.instruments.oscillator import LocalOscillator
+
+
+@dataclass
+class SGS100ASettings(InstrumentSettings):
+    power: Optional[float] = None
+    frequency: Optional[float] = None
+    reference_clock_source: Optional[str] = None
 
 
 class SGS100A(LocalOscillator):
-    def __init__(self, name, address, ref_osc_source="EXT"):
+    def __init__(self, name, address, reference_clock_source="EXT"):
         super().__init__(name, address)
         self.device: LO_SGS100A = None
-        self.settings = LocalOscillatorSettings()
-        self._ref_osc_source: str = None
-        self.ref_osc_source = ref_osc_source
-        self._device_parameters = {}
+        self.settings = SGS100ASettings(reference_clock_source=reference_clock_source)
 
     @property
     def frequency(self):
@@ -27,9 +34,10 @@ class SGS100A(LocalOscillator):
 
     @frequency.setter
     def frequency(self, x):
-        self.settings.frequency = x
-        if self.is_connected:
-            self._set_device_parameter("frequency", x)
+        if self.frequency != x:
+            self.settings.frequency = x
+            if self.is_connected:
+                self.device.set("frequency", x)
 
     @property
     def power(self):
@@ -37,19 +45,21 @@ class SGS100A(LocalOscillator):
 
     @power.setter
     def power(self, x):
-        self.settings.power = x
-        if self.is_connected:
-            self._set_device_parameter("power", x)
+        if self.power != x:
+            self.settings.power = x
+            if self.is_connected:
+                self.device.set("power", x)
 
     @property
-    def ref_osc_source(self):
-        return self._ref_osc_source
+    def reference_clock_source(self):
+        return self.settings.reference_clock_source
 
-    @ref_osc_source.setter
-    def ref_osc_source(self, x):
-        self._ref_osc_source = x
-        if self.is_connected:
-            self.device.ref_osc_source = x
+    @reference_clock_source.setter
+    def reference_clock_source(self, x):
+        if self.settings.reference_clock_source != x:
+            self.settings.reference_clock_source = x
+            if self.is_connected:
+                self.device.ref_osc_source = x
 
     def connect(self):
         """Connects to the instrument using the IP address set in the runcard."""
@@ -68,61 +78,24 @@ class SGS100A(LocalOscillator):
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
             raise RuntimeError("There is an open connection to the instrument already")
-        # set proper frequency and power if they were changed before connecting
+        # set instrument frequency and power if they were changed before connecting
         if self.settings.frequency is not None:
-            self._set_device_parameter("frequency", self.settings.frequency)
+            self.device.set("frequency", self.settings.frequency)
         if self.settings.power is not None:
-            self._set_device_parameter("power", self.settings.power)
-        self.device.ref_osc_source = self._ref_osc_source
+            self.device.set("power", self.settings.power)
+        self.device.ref_osc_source = self.settings.reference_clock_source
 
-    def _set_device_parameter(self, parameter: str, value):
-        """Sets a parameter of the instrument, if it changed from the last stored in the cache.
+    def setup(self, **kwargs):
+        """Sets instrument parameters.
 
-        Args:
-            parameter: str = The parameter to be cached and set.
-            value = The value to set the paramter.
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
-        """
-        if not (parameter in self._device_parameters and self._device_parameters[parameter] == value):
-            if self.is_connected:
-                if not parameter in self._device_parameters:
-                    if not hasattr(self.device, parameter):
-                        raise ValueError(f"The instrument {self.name} does not have parameter {parameter}")
-                    self.device.set(parameter, value)
-                    self._device_parameters[parameter] = value
-                elif self._device_parameters[parameter] != value:
-                    self.device.set(parameter, value)
-                    self._device_parameters[parameter] = value
-            else:
-                raise ConnectionError("There is no connection to the instrument {self.name}")
-
-    def _erase_device_parameters_cache(self):
-        """Erases the cache of instrument parameters."""
-        self._device_parameters = {}
-
-    def setup(self, frequency=None, power=None, ref_osc_source=None, **kwargs):
-        """Configures the instrument.
-
-        A connection to the instrument needs to be established beforehand.
+        If the instrument is connected the value is automatically uploaded to the instrument.
+        Otherwise the value is cached and will be uploaded when connection is established.
 
         Args:
-            **kwargs: dict = A dictionary of settings loaded from the runcard:
-                kwargs["power"]
-                kwargs["frequency"]
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
+            **kwargs: Instrument settings loaded from the runcard.
         """
-        if frequency is None:
-            frequency = self.frequency
-        if power is None:
-            power = self.power
-        if ref_osc_source is None:
-            ref_osc_source = self.ref_osc_source
-
-        self.power = power
-        self.frequency = frequency
-        self.ref_osc_source = ref_osc_source
+        for name, value in kwargs.items():
+            setattr(self, name, value)
 
     def start(self):
         self.device.on()
