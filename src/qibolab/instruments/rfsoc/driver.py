@@ -218,6 +218,7 @@ class RFSoC(Controller):
     def play_sequence_in_sweep_recursion(
         self,
         qubits: dict[int, Qubit],
+        couplers: dict[int, Coupler],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
@@ -230,7 +231,7 @@ class RFSoC(Controller):
         Odd indexes correspond to readout pulses serials and are convert
         to match the original sequence (of the sweep) and not the one just executed.
         """
-        res = self.play(qubits, sequence, execution_parameters)
+        res = self.play(qubits, couplers, sequence, execution_parameters)
         newres = {}
         serials = [pulse.serial for pulse in or_sequence.ro_pulses]
         for idx, key in enumerate(res):
@@ -244,6 +245,7 @@ class RFSoC(Controller):
     def recursive_python_sweep(
         self,
         qubits: dict[int, Qubit],
+        couplers: dict[int, Coupler],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         *sweepers: rfsoc.Sweeper,
@@ -273,7 +275,7 @@ class RFSoC(Controller):
         # Last layer for recursion.
 
         if len(sweepers) == 0:
-            return self.play_sequence_in_sweep_recursion(qubits, sequence, or_sequence, execution_parameters)
+            return self.play_sequence_in_sweep_recursion(qubits, couplers, sequence, or_sequence, execution_parameters)
 
         if not self.get_if_python_sweep(sequence, *sweepers):
             toti, totq = self._execute_sweeps(sequence, qubits, sweepers)
@@ -309,7 +311,7 @@ class RFSoC(Controller):
                     sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
-                qubits, sequence, or_sequence, *sweepers[1:], execution_parameters=execution_parameters
+                qubits, couplers, sequence, or_sequence, *sweepers[1:], execution_parameters=execution_parameters
             )
             results = self.merge_sweep_results(results, res)
         return results  # already in the right format
@@ -474,6 +476,7 @@ class RFSoC(Controller):
 
         results = self.recursive_python_sweep(
             qubits,
+            couplers,
             sweepsequence,
             sequence.ro_pulses,
             *rfsoc_sweepers,
