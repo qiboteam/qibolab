@@ -58,7 +58,6 @@ jobs:
       with:
         virtualenvs-create: false
     - name: Install qibo main
-      if: ${{ matrix.version == 'main' }}
       run: |
         python -m venv testenv
         source testenv/bin/activate
