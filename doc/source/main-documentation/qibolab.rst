@@ -115,6 +115,15 @@ This instrument is also part of the dummy platform which is defined in :py:mod:`
 This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
 It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
 
+.. testcode::  python
+
+    from qibolab import create_platform
+
+    platform = create_platform("dummy_couplers")
+
+will create a dummy platform that also has coupler qubits.
+
+
 .. _main_doc_qubits:
 
 Qubits

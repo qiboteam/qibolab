@@ -11,7 +11,7 @@ from qibosoq import client
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.platform import Qubit
+from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import BIAS, Sweeper
@@ -122,6 +122,7 @@ class RFSoC(Controller):
     def play(
         self,
         qubits: dict[int, Qubit],
+        couplers: dict[int, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, Union[IntegratedResults, SampleResults]]:
@@ -176,7 +177,7 @@ class RFSoC(Controller):
 
         return results
 
-    def play_sequences(self, qubits, sequence, options):
+    def play_sequences(self, qubits, couplers, sequence, options):
         raise NotImplementedError
 
     @staticmethod
@@ -431,6 +432,7 @@ class RFSoC(Controller):
     def sweep(
         self,
         qubits: dict[int, Qubit],
+        couplers: dict[int, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,

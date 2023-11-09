@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibolab"
-version = "0.1.3"
+version = "0.1.4"
 description = "Quantum hardware module and drivers for Qibo"
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -22,7 +22,7 @@ include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-qibo = ">=0.2.0,<0.3"
+qibo = ">=0.2.2"
 networkx = "^3.0"
 numpy = "==1.24.4"
 more-itertools = "^9.1.0"
@@ -74,7 +74,7 @@ pylint = ">=2.16.0"
 
 [tool.poetry.extras]
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
-qm = ["qm-qua", "qualang-tools", "setuptools"]
+qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq", "qcodes", "qcodes_contrib_drivers"]
 
