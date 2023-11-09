@@ -76,7 +76,8 @@ pylint = ">=2.16.0"
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
-rfsoc = ["qibosoq", "qcodes", "qcodes_contrib_drivers"]
+rfsoc = ["qibosoq"]
+los = ["qcodes", "qcodes_contrib_drivers"]
 
 
 [tool.poe.tasks]
