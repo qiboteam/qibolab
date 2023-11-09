@@ -63,7 +63,7 @@ jobs:
         source testenv/bin/activate
         git clone https://github.com/qiboteam/qibolab
         cd qibolab
-        poetry install --no-interaction --all-extras
+        poetry install --no-interaction --all-extras --with tests
         cd ..
     - name: Execute on ${{ matrix.platform }}
       run: |
