@@ -5328,12 +5328,13 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
+los = ["qcodes", "qcodes_contrib_drivers"]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
-qm = ["qcodes", "qm-qua", "qualang-tools"]
-rfsoc = ["qcodes", "qcodes_contrib_drivers", "qibosoq"]
-zh = ["laboneq", "qcodes"]
+qm = ["qm-qua", "qualang-tools"]
+rfsoc = ["qibosoq"]
+zh = ["laboneq"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "428adeffe13b85fcec5c879e6d7757e092c47ea6654f5e95952a1d4ccbf154ac"
+content-hash = "9288ce51611372eee8afde45b359945e90b9b6fa4d250ba6041e6c94211e164f"
