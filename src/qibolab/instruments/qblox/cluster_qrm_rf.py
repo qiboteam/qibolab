@@ -234,6 +234,22 @@ class ClusterQRM_RF(Instrument):
                     "connect_out0",
                     value="off",
                 )  # Default after reboot = True
+            try:
+                if "o1" in self.settings:
+                    self.ports["o1"].attenuation = self.settings["o1"]["attenuation"]
+                    if self.settings["o1"]["lo_frequency"]:
+                        self.ports["o1"].lo_enabled = True
+                        self.ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
+                    self.ports["o1"].hardware_mod_en = True
+                    self.ports["o1"].nco_freq = 0
+                    self.ports["o1"].nco_phase_offs = 0
+
+                if "i1" in self.settings:
+                    self.ports["i1"].hardware_demod_en = True
+                    self.ports["i1"].acquisition_hold_off = self.settings["i1"]["acquisition_hold_off"]
+                    self.ports["i1"].acquisition_duration = self.settings["i1"]["acquisition_duration"]
+            except:
+                raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
 
     def _set_device_parameter(self, target, *parameters, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -1225,26 +1241,7 @@ class ClusterQRM_RF(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
-        # TODO: update documentation. See setup()
-        if self.is_connected:
-            try:
-                if "o1" in self.settings:
-                    self.ports["o1"].attenuation = self.settings["o1"]["attenuation"]
-                    if self.settings["o1"]["lo_frequency"]:
-                        self.ports["o1"].lo_enabled = True
-                        self.ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
-                    self.ports["o1"].hardware_mod_en = True
-                    self.ports["o1"].nco_freq = 0
-                    self.ports["o1"].nco_phase_offs = 0
-
-                if "i1" in self.settings:
-                    self.ports["i1"].hardware_demod_en = True
-                    self.ports["i1"].acquisition_hold_off = self.settings["i1"]["acquisition_hold_off"]
-                    self.ports["i1"].acquisition_duration = self.settings["i1"]["acquisition_duration"]
-            except:
-                log.warning("Unable to initialize port parameters")
-        else:
-            raise ConnectionError(f"Module {self.name} is not connected")
+        pass
 
     def stop(self):
         """Stops all sequencers"""

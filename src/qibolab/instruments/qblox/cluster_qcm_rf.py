@@ -234,6 +234,18 @@ class ClusterQCM_RF(Instrument):
                     "connect_out1",
                     value="off",
                 )  # Default after reboot = True
+            try:
+                for port in self.settings:
+                    self._sequencers[port] = []
+                    if self.settings[port]["lo_frequency"]:
+                        self.ports[port].lo_enabled = True
+                        self.ports[port].lo_frequency = self.settings[port]["lo_frequency"]
+                    self.ports[port].attenuation = self.settings[port]["attenuation"]
+                    self.ports[port].hardware_mod_en = True
+                    self.ports[port].nco_freq = 0
+                    self.ports[port].nco_phase_offs = 0
+            except:
+                raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
 
     def _set_device_parameter(self, target, *parameters, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -757,21 +769,7 @@ class ClusterQCM_RF(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
-        # TODO: update documentation. See setup()
-        if self.is_connected:
-            try:
-                for port in self.settings:
-                    if self.settings[port]["lo_frequency"]:
-                        self.ports[port].lo_enabled = True
-                        self.ports[port].lo_frequency = self.settings[port]["lo_frequency"]
-                    self.ports[port].attenuation = self.settings[port]["attenuation"]
-                    self.ports[port].hardware_mod_en = True
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
-            except:
-                log.warning("Unable to initialize port parameters")
-        else:
-            raise ConnectionError(f"Module {self.name} is not connected")
+        pass
 
     def stop(self):
         """Stops all sequencers"""

@@ -222,6 +222,16 @@ class ClusterQCM_BB(Instrument):
                 self._set_device_parameter(target, "connect_out1", value="off")
                 self._set_device_parameter(target, "connect_out2", value="off")
                 self._set_device_parameter(target, "connect_out3", value="off")
+            try:
+                for port in self.settings:
+                    self._sequencers[port] = []
+                    self.ports[port].offset = self.settings[port]["offset"]
+                    self.ports[port].qubit = self.settings[port]["qubit"]
+                    self.ports[port].hardware_mod_en = True
+                    self.ports[port].nco_freq = 0
+                    self.ports[port].nco_phase_offs = 0
+            except:
+                raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
 
     def _set_device_parameter(self, target, *parameters, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -275,7 +285,6 @@ class ClusterQCM_BB(Instrument):
         # Load settings
         for port_num, port in enumerate(settings):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
-            self._sequencers[port] = []
 
         self.settings = settings if settings else self.settings
 
@@ -752,17 +761,7 @@ class ClusterQCM_BB(Instrument):
 
     def start(self):
         """Empty method to comply with Instrument interface."""
-        # TODO: update documentation. See setup()
-        if self.is_connected:
-            try:
-                for port in self.settings:
-                    self.ports[port].offset = self.settings[port]["offset"]
-                    self.ports[port].qubit = self.settings[port]["qubit"]
-                    self.ports[port].hardware_mod_en = True
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
-            except:
-                log.warning("Unable to initialize port parameters")
+        pass
 
     def stop(self):
         """Stops all sequencers"""
