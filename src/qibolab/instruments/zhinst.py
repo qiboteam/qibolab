@@ -504,9 +504,9 @@ class Zurich(Controller):
 
     def run_exp(self):
         """Compilation settings, compilation step, execution step and data retrival"""
-        self.experiment.save("saved_exp")
-
+        # self.experiment.save("saved_exp")
         self.exp = self.session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
+        # self.exp.save_compiled_experiment("saved_exp")
         self.results = self.session.run(self.exp)
 
     @staticmethod
@@ -1138,7 +1138,7 @@ class Zurich(Controller):
         self.offsets_off()
 
         # html containing the pulse sequence schedule
-        lo.show_pulse_sheet("pulses", self.exp)
+        # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
     def sweep_recursion(self, qubits, couplers, exp, exp_calib, exp_options):
