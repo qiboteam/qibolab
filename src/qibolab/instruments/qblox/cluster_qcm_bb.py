@@ -144,6 +144,7 @@ class ClusterQCM_BB(Instrument):
 
         Once connected, it creates port classes with properties mapped to various instrument
         parameters, and initialises the the underlying device parameters.
+        It uploads to the module the port settings loaded from the runcard.
         """
         self._cluster.connect()
         self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
@@ -263,26 +264,16 @@ class ClusterQCM_BB(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
-        # TODO: update documentation.
-        """Configures the instrument with the settings of the runcard.
+        """Cache the settings of the runcard and instantiate the ports of the module.
 
-        A connection to the instrument needs to be established beforehand.
         Args:
-            **kwargs: dict = A dictionary of settings loaded from the runcard:
+            **settings: dict = A dictionary of settings loaded from the runcard:
 
-                - oX: ['o1', 'o2', 'o3', 'o4']
-                - kwargs['ports']['oX']['channel'] (int | str): the id of the refrigerator channel the port is connected to.
-                - kwargs['ports'][oX]['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                  `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                  applied at the output.
-                - kwargs['ports'][oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
-                - kwargs['ports'][oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                - settings[oX]['offset'] (float): [-2.5 - 2.5 V] offset in volts applied to the output port.
+                - settings[oX]['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
+                  At the moment this param is not loaded but is always set to True.
         """
-        # Load settings
         for port_num, port in enumerate(settings):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
 

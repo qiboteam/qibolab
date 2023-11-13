@@ -178,6 +178,7 @@ class ClusterQRM_RF(Instrument):
 
         Once connected, it creates port classes with properties mapped to various instrument
         parameters, and initialises the the underlying device parameters.
+        It uploads to the module the port settings loaded from the runcard.
         """
         self._cluster.connect()
         self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
@@ -282,47 +283,33 @@ class ClusterQRM_RF(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
-        # TODO: update doc string
-        """Configures the instrument with the settings of the runcard.
+        """Cache the settings of the runcard and instantiate the ports of the module.
 
-        A connection to the instrument needs to be established beforehand.
         Args:
             **settings: dict = A dictionary of settings loaded from the runcard:
 
-                - kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is
-                  connected to.
-                - kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                - kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                - kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator
+                - settings['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - settings['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
+                - settings['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator
                   frequency.
-                - kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox
-                  recommends to keep `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their
-                  linear regime, if necessary, lowering the attenuation applied at the output.
-                - kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are
+                - settings['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are
                   modulated to the intermediate frequency using the numerically controlled oscillator within the
                   fpga. It only requires the upload of the pulse envelope waveform.
-                - kwargs['ports']['i1']['channel'] (int | str): the id of the refrigerator channel the input port i1 is
-                  connected to.
-                - kwargs['ports']['i1']['hardware_demod_en'] (bool): enables Hardware Demodulation. In this mode, the
+                  At the moment this param is not loaded but is always set to True.
+
+                - settings['i1']['hardware_demod_en'] (bool): enables Hardware Demodulation. In this mode, the
                   sequencers of the fpga demodulate, integrate and classify the results for every shot. Once
                   integrated, the i and q values and the result of the classification requires much less memory,
                   so they can be stored for every shot in separate `bins` and retrieved later. Hardware Demodulation
                   also allows making multiple readouts on the same qubit at different points in the circuit, which is
-                  not possible with Software Demodulation.
-                - kwargs['acquisition_hold_off'] (int): [0 to 16834 ns, in multiples of 4] the time between the moment
+                  not possible with Software Demodulation. At the moment this param is not loaded but is always set to True.
+                - settings['i1']['acquisition_hold_off'] (int): [0 to 16834 ns, in multiples of 4] the time between the moment
                   the start of the readout pulse begins to be played, and the start of the acquisition. This is used
                   to account for the time of flight of the pulses from the output port to the input port.
-                - kwargs['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
+                - settings['i1']['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
                   the amount of memory available in the fpga to store i q samples.
-                - kwargs['classification_parameters'][qubit_id][rotation_angle] (float): [0.0 to 359.999 deg] the angle
-                  to rotate the results so that the projection on the real axis renders the maximum fidelity.
-                - kwargs['classification_parameters'][qubit_id][threshold] (float): [-1.0 to 1.0 Volt] the voltage to be
-                  used as threshold to classify the state of each shot.
 
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # Load settings
         if "o1" in settings:
             self.ports["o1"] = QbloxOutputPort(
                 module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0

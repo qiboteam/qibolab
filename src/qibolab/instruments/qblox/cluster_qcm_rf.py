@@ -162,6 +162,7 @@ class ClusterQCM_RF(Instrument):
 
         Once connected, it creates port classes with properties mapped to various instrument
         parameters, and initialises the the underlying device parameters.
+        It uploads to the module the port settings loaded from the runcard.
         """
         self._cluster.connect()
         self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
@@ -277,35 +278,22 @@ class ClusterQCM_RF(Instrument):
         self._device_parameters = {}
 
     def setup(self, **settings):
-        # TODO: update documentation
-        """Configures the instrument with the settings of the runcard.
+        """Cache the settings of the runcard and instantiate the ports of the module.
 
-        A connection to the instrument needs to be established beforehand.
         Args:
-            **kwargs: dict = A dictionary of settings loaded from the runcard:
+            **settings: dict = A dictionary of settings loaded from the runcard:
 
-                - kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is connected to.
-                - kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                - kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                - kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
-                - kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                  `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                  applied at the output.
-                - kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                - settings['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - settings['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
+                - settings['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
+                  At the moment this param is not loaded but is always set to True.
 
-                - kwargs['ports']['o2']['channel'] (int | str): the id of the refrigerator channel the output port o2 is connected to.
-                - kwargs['ports']['o2']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                - kwargs['ports']['o2']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                - kwargs['ports']['o2']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
-                - kwargs['ports']['o2']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox recommends to keep
-                  `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their linear regime, if necessary, lowering the attenuation
-                  applied at the output.
-                - kwargs['ports']['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
+                - settings['o2']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - settings['o2']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator frequency.
+                - settings['o2']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are modulated to the intermediate frequency
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
-
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
+                  At the moment this param is not loaded but is always set to True.
         """
         for port_num, port in enumerate(settings):
             self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
