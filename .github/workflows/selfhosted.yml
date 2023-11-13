@@ -57,7 +57,7 @@ jobs:
       uses: snok/install-poetry@v1
       with:
         virtualenvs-create: false
-    - name: Install qibo main
+    - name: Install qibolab main
       run: |
         python -m venv testenv
         source testenv/bin/activate
@@ -74,7 +74,8 @@ jobs:
         mkdir coverage
         mv coverage.xml coverage/
         mv htmlcov coverage/
-    - uses: actions/upload-artifact@v3
+    - name: Upload coverage report as artifact
+      uses: actions/upload-artifact@v3
       with:
         name: coverage-from-self-hosted
         path: coverage/
