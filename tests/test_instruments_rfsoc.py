@@ -271,19 +271,19 @@ def test_play(mocker, dummy_qrc):
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.SINGLESHOT
     )
-    results = instrument.play(platform.qubits, seq, parameters)
+    results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
     assert pulse1.serial in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.SINGLESHOT
     )
-    results = instrument.play(platform.qubits, seq, parameters)
+    results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
     assert pulse1.serial in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.CYCLIC
     )
-    results = instrument.play(platform.qubits, seq, parameters)
+    results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
     assert pulse1.serial in results.keys()
 
 
@@ -308,19 +308,19 @@ def test_sweep(mocker, dummy_qrc):
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.SINGLESHOT
     )
-    results = instrument.sweep(platform.qubits, seq, parameters, sweeper0, sweeper1)
+    results = instrument.sweep(platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1)
     assert pulse1.serial in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.SINGLESHOT
     )
-    results = instrument.sweep(platform.qubits, seq, parameters, sweeper0, sweeper1)
+    results = instrument.sweep(platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1)
     assert pulse1.serial in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots, acquisition_type=AcquisitionType.DISCRIMINATION, averaging_mode=AveragingMode.CYCLIC
     )
-    results = instrument.sweep(platform.qubits, seq, parameters, sweeper0, sweeper1)
+    results = instrument.sweep(platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1)
     assert pulse1.serial in results.keys()
 
 
@@ -336,11 +336,11 @@ def test_validate_input_command(dummy_qrc):
 
     parameters = ExecutionParameters(acquisition_type=AcquisitionType.RAW)
     with pytest.raises(NotImplementedError):
-        results = instrument.play(platform.qubits, seq, parameters)
+        results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
 
     parameters = ExecutionParameters(fast_reset=True)
     with pytest.raises(NotImplementedError):
-        results = instrument.play(platform.qubits, seq, parameters)
+        results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
 
 
 def test_update_cfg(mocker, dummy_qrc):
@@ -363,7 +363,7 @@ def test_update_cfg(mocker, dummy_qrc):
         averaging_mode=AveragingMode.SINGLESHOT,
         relaxation_time=relax_time,
     )
-    results = instrument.play(platform.qubits, seq, parameters)
+    results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
     assert instrument.cfg.reps == nshots
     relax_time = relax_time * 1e-3
     assert instrument.cfg.repetition_duration == relax_time
@@ -634,12 +634,14 @@ def test_sweep_qpu(connected_platform, instrument):
 
     out_dict1 = instrument.sweep(
         platform.qubits,
+        platform.couplers,
         sequence,
         ExecutionParameters(relaxation_time=100_000, averaging_mode=AveragingMode.CYCLIC),
         sweep,
     )
     out_dict2 = instrument.sweep(
         platform.qubits,
+        platform.couplers,
         sequence,
         ExecutionParameters(
             relaxation_time=100_000,
@@ -671,6 +673,7 @@ def test_python_reqursive_sweep(connected_platform, instrument):
 
     out_dict = instrument.sweep(
         platform.qubits,
+        platform.couplers,
         sequence,
         ExecutionParameters(relaxation_time=100_000, averaging_mode=AveragingMode.CYCLIC),
         sweep1,

@@ -42,7 +42,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
 
-    couplers = None
+    couplers = {}
     pairs = {}
     if "coupler" in runcard["characterization"]:
         couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
