@@ -13,6 +13,9 @@ from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+MAX_BATCH_SIZE = 30
+"""Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
+
 
 class QbloxController(Controller):
     """A controller to manage qblox devices.
@@ -236,7 +239,7 @@ class QbloxController(Controller):
         return self._execute_pulse_sequence(qubits, sequence, options)
 
     def split_batches(self, sequences):
-        return chunked(sequences, 30)
+        return chunked(sequences, MAX_BATCH_SIZE)
 
     def play_sequences(self, *args, **kwargs):
         raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")

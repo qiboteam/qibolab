@@ -54,6 +54,9 @@ SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
 SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
+MAX_MEASUREMENTS = 32
+"""Maximum number of readout pulses in a single sequence."""
+
 
 def select_pulse(pulse, pulse_type):
     """Pulse translation"""
@@ -1250,7 +1253,6 @@ class Zurich(Controller):
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
 
     def split_batches(self, sequences):
-        MAX_MEASUREMENTS = 34
         batch_measurements, batch = 0, []
         for sequence in sequences:
             nmeasurements = len(sequence.ro_pulses)
