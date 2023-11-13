@@ -65,10 +65,6 @@ class Controller(Instrument):
 
     PortType = Port
     """Class used by the instrument to instantiate ports."""
-    UNROLLING_BATCH_SIZE = None
-    """Maximum number of sequences that can be unrolled and played as a single sequence.
-    If ``None`` it is assumed that an infinite number of sequences can be unrolled in a single sequence.
-    """
 
     def __init__(self, name, address):
         super().__init__(name, address)
@@ -100,6 +96,18 @@ class Controller(Instrument):
             (Dict[ResultType]) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
+
+    def split_batches(self, sequences):
+        """Split sequences to batches each of which can be unrolled and played as a single sequence.
+
+        Args:
+            sequence (list): List of :class:`qibolab.pulses.PulseSequence` to be played.
+
+        Returns:
+            Iterator of batches that can be unrolled in a single one.
+            Default will return all sequences as a single batch.
+        """
+        return [sequences]
 
     @abstractmethod
     def play_sequences(self, *args, **kwargs):

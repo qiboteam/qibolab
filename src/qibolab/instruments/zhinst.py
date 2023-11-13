@@ -1249,6 +1249,19 @@ class Zurich(Controller):
             else:
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
 
+    def split_batches(self, sequences):
+        MAX_MEASUREMENTS = 34
+        batch_measurements, batch = 0, []
+        for sequence in sequences:
+            nmeasurements = len(sequence.ro_pulses)
+            if nmeasurements + batch_measurements > MAX_MEASUREMENTS:
+                yield batch
+                batch_measurements, batch = nmeasurements, [sequence]
+            else:
+                batch.append(sequence)
+                batch_measurements += nmeasurements
+        yield batch
+
     def play_sequences(self, qubits, couplers, sequence, options):
         raise NotImplementedError
 

@@ -1,6 +1,7 @@
 import signal
 
 import numpy as np
+from more_itertools import chunked
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -20,8 +21,6 @@ class QbloxController(Controller):
         is_connected (bool): .
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
-
-    UNROLLING_BATCH_SIZE = 30
 
     def __init__(self, name, cluster, modules):
         """Initialises the controller."""
@@ -235,6 +234,9 @@ class QbloxController(Controller):
 
     def play(self, qubits, couplers, sequence, options):
         return self._execute_pulse_sequence(qubits, sequence, options)
+
+    def split_batches(self, sequences):
+        return chunked(sequences, 30)
 
     def play_sequences(self, *args, **kwargs):
         raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")

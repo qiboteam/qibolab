@@ -5,7 +5,6 @@ from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional
 
 import networkx as nx
-from more_itertools import chunked
 from qibo.config import log, raise_error
 
 from qibolab.couplers import Coupler
@@ -172,6 +171,12 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
+    @property
+    def controller(self):
+        controllers = [instr for instr in self.instruments.values() if isinstance(instr, Controller)]
+        assert len(controllers) == 1
+        return controllers[0]
+
     def _execute(self, method, sequences, options, **kwargs):
         """Executes the sequences on the controllers"""
         result = {}
@@ -221,16 +226,11 @@ class Platform:
         try:
             return self._execute("play_sequences", sequences, options, **kwargs)
         except NotImplementedError:
-            # find maximum batch size supported by controller
-            for instrument in self.instruments.values():
-                if isinstance(instrument, Controller):
-                    batch_size = instrument.UNROLLING_BATCH_SIZE
-
             # find readout pulses
             ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
 
             results = defaultdict(list)
-            for batch in chunked(sequences, batch_size):
+            for batch in self.controller.split_batches(sequences):
                 sequence, readouts = unroll_sequences(batch, options.relaxation_time)
                 result = self._execute("play", sequence, options, **kwargs)
                 for serial, new_serials in readouts.items():
