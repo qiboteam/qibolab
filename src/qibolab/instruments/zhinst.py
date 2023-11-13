@@ -892,6 +892,8 @@ class Zurich(Controller):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         play_after = None
 
+        # TODO: if we use sweepers, the code might not behave as expected
+        # i.e.: self.sequence_qibo may not contain ZhSweeper for flux
         qf_finish = self.sequence_qibo.qf_pulses.finish
         qd_finish = self.sequence_qibo.qd_pulses.finish
         cf_finish = self.sequence_qibo.cf_pulses.finish
