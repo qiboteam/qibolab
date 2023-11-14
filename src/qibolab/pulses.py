@@ -733,7 +733,7 @@ class Pulse:
             value (se_int | int | np.integer): the time in ns.
         """
 
-        if not isinstance(value, (se_int, int, np.integer)):
+        if not isinstance(value, (se_int, int, np.integer, float)):
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         if not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
@@ -749,7 +749,7 @@ class Pulse:
         else:
             if isinstance(value, np.integer):
                 self._start = int(value)
-            elif isinstance(value, int):
+            else:
                 self._start = value
 
         if not self._duration is None:
@@ -794,7 +794,7 @@ class Pulse:
         else:
             if isinstance(value, np.integer):
                 self._duration = int(value)
-            elif isinstance(value, int):
+            else:
                 self._duration = value
 
         if not self._start is None:
