@@ -1167,3 +1167,12 @@ def test_pulse_properties(start, duration):
     p0.start = start + 10
     p0.duration = duration + 10
     check_properties(p0)
+
+
+def test_pulse_setter_errors():
+    faulty_duration = "hello"
+    faulty_start = "hello"
+    with pytest.raises(TypeError):
+        p0 = Pulse(faulty_start, 100, 0.9, 0, 0, Rectangular(), 0)
+    with pytest.raises(TypeError):
+        p0 = Pulse(0, faulty_duration, 0.9, 0, 0, Rectangular(), 0)
