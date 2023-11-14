@@ -9,7 +9,7 @@ from qibolab.transpilers.abstract import Placer, Router, find_gates_qubits_pairs
 
 
 class PlacementError(Exception):
-    """Raise for an error in the qubit placement"""
+    """Raise for an error in the initial qubit placement"""
 
 
 def assert_placement(circuit: Circuit, layout: dict) -> bool:
@@ -150,10 +150,8 @@ class Subgraph(Placer):
                 self.connectivity.number_of_edges() == circuit_subgraph.number_of_edges()
                 or i == len(gates_qubits_pairs) - 1
             ):
-                keys = list(result.mapping.keys())
-                keys.sort()
-                return {i: result.mapping[i] for i in keys}
-        return dict(sorted(result.mapping.items()))
+                break
+        return {"q" + str(i): result.mapping[i] for i in range(len(result.mapping))}
 
 
 class Random(Placer):
@@ -184,16 +182,17 @@ class Random(Placer):
         keys = list(self.connectivity.nodes())
         final_mapping = dict(zip(keys, range(nodes)))
         final_graph = nx.relabel_nodes(self.connectivity, final_mapping)
+        final_mapping = {"q" + str(i): final_mapping[i] for i in range(len(final_mapping))}
         final_cost = self.cost(final_graph, gates_qubits_pairs)
         for _ in range(self.samples):
             mapping = dict(zip(keys, random.sample(range(nodes), nodes)))
             graph = nx.relabel_nodes(self.connectivity, mapping)
             cost = self.cost(graph, gates_qubits_pairs)
             if cost == 0:
-                return mapping
+                return {"q" + str(i): mapping[i] for i in range(len(mapping))}
             if cost < final_cost:
                 final_graph = graph
-                final_mapping = mapping
+                final_mapping = {"q" + str(i): mapping[i] for i in range(len(mapping))}
                 final_cost = cost
         return final_mapping
 
@@ -211,8 +210,8 @@ class Random(Placer):
         """
         for allowed, gate in enumerate(gates_qubits_pairs):
             if gate not in graph.edges():
-                break
-        return len(gates_qubits_pairs) - allowed
+                return len(gates_qubits_pairs) - allowed - 1
+        return 0
 
 
 class ReverseTraversal(Placer):

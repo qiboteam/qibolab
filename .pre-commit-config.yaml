@@ -2,14 +2,15 @@ ci:
   autofix_prs: true
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-toml
       - id: debug-statements
   - repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 23.10.1
     hooks:
       - id: black
         args:
@@ -20,18 +21,18 @@ repos:
       - id: isort
         args: ["--profile", "black"]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.9.0
+    rev: v3.15.0
     hooks:
       - id: pyupgrade
   - repo: https://github.com/hadialqattan/pycln
-    rev: v2.1.6
+    rev: v2.3.0
     hooks:
       - id: pycln
         args:
           - --config=pyproject.toml
           - --all
   - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.15.0
+    rev: 1.16.0
     hooks:
       - id: blacken-docs
   - repo: https://github.com/pycqa/pydocstyle

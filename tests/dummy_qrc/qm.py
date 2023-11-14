@@ -4,12 +4,20 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.qm import QMSim
 from qibolab.platform import Platform
+from qibolab.serialize import (
+    load_instrument_settings,
+    load_qubits,
+    load_runcard,
+    load_settings,
+)
 
 RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
 
 
-def create(runcard=RUNCARD):
+def create(runcard_path=RUNCARD):
     """Dummy platform using Quantum Machines (QM) OPXs and Rohde Schwarz local oscillators.
+
+    Based on QuantWare 5-qubit device.
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
@@ -40,19 +48,6 @@ def create(runcard=RUNCARD):
         LocalOscillator("lo_drive_high", "192.168.0.34"),
         LocalOscillator("twpa_a", "192.168.0.35"),
     ]
-    # Set LO parameters
-    local_oscillators[0].frequency = 7_300_000_000
-    local_oscillators[1].frequency = 7_900_000_000
-    local_oscillators[2].frequency = 4_700_000_000
-    local_oscillators[3].frequency = 5_600_000_000
-    local_oscillators[4].frequency = 6_500_000_000
-    local_oscillators[0].power = 18.0
-    local_oscillators[1].power = 15.0
-    for i in range(2, 5):
-        local_oscillators[i].power = 16.0
-    # Set TWPA parameters
-    local_oscillators[5].frequency = 6_511_000_000
-    local_oscillators[5].power = 4.5
     # Map LOs to channels
     channels["L3-25_a"].local_oscillator = local_oscillators[0]
     channels["L3-25_b"].local_oscillator = local_oscillators[1]
@@ -63,12 +58,12 @@ def create(runcard=RUNCARD):
     channels["L3-14"].local_oscillator = local_oscillators[4]
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
-    instruments = [controller] + local_oscillators
-    platform = Platform("qw5q_gold", runcard, instruments, channels)
+    # create qubit objects
+    runcard = load_runcard(runcard_path)
+    qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
-    qubits = platform.qubits
-    for q in [0, 1, 5]:
+    for q in [0, 1]:
         qubits[q].readout = channels["L3-25_a"]
         qubits[q].feedback = channels["L2-5_a"]
     for q in [2, 3, 4]:
@@ -87,6 +82,10 @@ def create(runcard=RUNCARD):
     # set maximum allowed bias values to protect amplifier
     # relevant only for qubits where an amplifier is used
     for q in range(5):
-        platform.qubits[q].flux.max_bias = 0.2
+        qubits[q].flux.max_bias = 0.2
 
-    return platform
+    instruments = {controller.name: controller}
+    instruments.update({lo.name: lo for lo in local_oscillators})
+    settings = load_settings(runcard)
+    instruments = load_instrument_settings(runcard, instruments)
+    return Platform("qm", qubits, pairs, instruments, settings, resonator_type="2D")

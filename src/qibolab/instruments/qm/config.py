@@ -189,7 +189,26 @@ class QMConfig:
         else:
             self.elements[f"flux{qubit.name}"]["intermediate_frequency"] = intermediate_frequency
 
-    def register_pulse(self, qubit, pulse, time_of_flight, smearing):
+    def register_element(self, qubit, pulse, time_of_flight=0, smearing=0):
+        if pulse.type is PulseType.DRIVE:
+            # register drive element
+            if_frequency = pulse.frequency - math.floor(qubit.drive.local_oscillator.frequency)
+            self.register_drive_element(qubit, if_frequency)
+            # register flux element (if available)
+            if qubit.flux:
+                self.register_flux_element(qubit)
+        elif pulse.type is PulseType.READOUT:
+            # register readout element (if it does not already exist)
+            if_frequency = pulse.frequency - math.floor(qubit.readout.local_oscillator.frequency)
+            self.register_readout_element(qubit, if_frequency, time_of_flight, smearing)
+            # register flux element (if available)
+            if qubit.flux:
+                self.register_flux_element(qubit)
+        else:
+            # register flux element
+            self.register_flux_element(qubit, pulse.frequency)
+
+    def register_pulse(self, qubit, pulse):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
@@ -211,12 +230,6 @@ class QMConfig:
                     "length": pulse.duration,
                     "waveforms": {"I": serial_i, "Q": serial_q},
                 }
-                # register drive element (if it does not already exist)
-                if_frequency = pulse.frequency - math.floor(qubit.drive.local_oscillator.frequency)
-                self.register_drive_element(qubit, if_frequency)
-                # register flux element (if available)
-                if qubit.flux:
-                    self.register_flux_element(qubit)
                 # register drive pulse in elements
                 self.elements[f"drive{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
@@ -229,8 +242,6 @@ class QMConfig:
                         "single": serial,
                     },
                 }
-                # register flux element (if it does not already exist)
-                self.register_flux_element(qubit, pulse.frequency)
                 # register flux pulse in elements
                 self.elements[f"flux{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
@@ -252,12 +263,6 @@ class QMConfig:
                     },
                     "digital_marker": "ON",
                 }
-                # register readout element (if it does not already exist)
-                if_frequency = pulse.frequency - math.floor(qubit.readout.local_oscillator.frequency)
-                self.register_readout_element(qubit, if_frequency, time_of_flight, smearing)
-                # register flux element (if available)
-                if qubit.flux:
-                    self.register_flux_element(qubit)
                 # register readout pulse in elements
                 self.elements[f"readout{qubit.name}"]["operations"][pulse.serial] = pulse.serial
 
@@ -303,20 +308,20 @@ class QMConfig:
                 object that the integration weights will be used for.
             readout_len (int): Duration of the readout pulse in ns.
         """
-        iq_angle = qubit.iq_angle
+        angle = 0
         self.integration_weights.update(
             {
                 f"cosine_weights{qubit.name}": {
-                    "cosine": [(np.cos(iq_angle), readout_len)],
-                    "sine": [(-np.sin(iq_angle), readout_len)],
+                    "cosine": [(np.cos(angle), readout_len)],
+                    "sine": [(-np.sin(angle), readout_len)],
                 },
                 f"sine_weights{qubit.name}": {
-                    "cosine": [(np.sin(iq_angle), readout_len)],
-                    "sine": [(np.cos(iq_angle), readout_len)],
+                    "cosine": [(np.sin(angle), readout_len)],
+                    "sine": [(np.cos(angle), readout_len)],
                 },
                 f"minus_sine_weights{qubit.name}": {
-                    "cosine": [(-np.sin(iq_angle), readout_len)],
-                    "sine": [(-np.cos(iq_angle), readout_len)],
+                    "cosine": [(-np.sin(angle), readout_len)],
+                    "sine": [(-np.cos(angle), readout_len)],
                 },
             }
         )

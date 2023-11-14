@@ -1,0 +1,132 @@
+.. _tutorials_circuits:
+
+Circuit execution
+=================
+
+Qibolab can be used as a ``qibo`` backend for executing executions. The purpose
+of this section is to show how to do it, without entering into the details of
+circuits definition that we leave to the `Qibo
+<https://qibo.science/qibo/stable/>`_ documentation.
+
+.. testcode:: python
+
+    import numpy as np
+    import qibo
+    from qibo import Circuit, gates
+
+    np.random.seed(0)
+
+    # create a single qubit circuit
+    circuit = Circuit(1)
+
+    # attach Hadamard gate and a measurement
+    circuit.add(gates.H(0))
+    circuit.add(gates.M(0))
+
+    # execute on quantum hardware
+    qibo.set_backend("qibolab", "dummy")
+    hardware_result = circuit(nshots=5000)
+
+    # retrieve measured probabilities
+    freq = hardware_result.frequencies()
+    p0 = freq["0"] / 5000 if "0" in freq else 0
+    p1 = freq["1"] / 5000 if "1" in freq else 0
+    hardware = [p0, p1]
+
+    # execute with classical quantum simulation
+    qibo.set_backend("numpy")
+    simulation_result = circuit(nshots=5000)
+
+    simulation = simulation_result.probabilities(qubits=(0,))
+
+
+In this snippet, we first define a single-qubit circuit containing a single Hadamard gate and a measurement.
+We then proceed to define the qibo backend as ``qibolab`` using the ``tii1q_b1`` platform.
+Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
+After executing the script we can print our results that will appear more or less as:
+
+.. testcode:: python
+
+    print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
+    print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
+
+Returns:
+
+.. testoutput:: python
+    :options: +NORMALIZE_WHITESPACE
+
+    Qibolab: P(0) = 0.49    P(1) = 0.51
+    Numpy:   P(0) = 0.50    P(1) = 0.50
+
+Clearly, we do not expect the results to be exactly equal due to the non
+ideality of current NISQ devices.
+
+.. note::
+   Qibo circuits and gates are backend agnostic. The same circuit can be executed on multiple backends, including simulation and quantum platforms.
+
+A slightly more complex circuit, a variable rotation, will produce similar
+results:
+
+.. testcode:: python
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from qibo import Circuit, gates
+
+
+    def execute_rotation():
+        # create single qubit circuit
+        circuit = Circuit(1)
+
+        # attach Rotation on X-Pauli with angle = 0
+        circuit.add(gates.RX(0, theta=0))
+        circuit.add(gates.M(0))
+
+        # define range of angles from [0, 2pi]
+        exp_angles = np.arange(0, 2 * np.pi, np.pi / 16)
+
+        res = []
+        for angle in exp_angles:
+            # update circuit's rotation angle
+            circuit.set_parameters([angle])
+
+            # execute circuit
+            result = circuit.execute(nshots=4000)
+	    freq = result.frequencies()
+	    p0 = freq['0'] / 4000 if '0' in freq else 0
+	    p1 = freq['1'] / 4000 if '1' in freq else 0
+
+            # store probability in state |1>
+            res.append(p1)
+
+        return res
+
+
+    # execute on quantum hardware
+    qibo.set_backend("qibolab", "dummy")
+    hardware = execute_rotation()
+
+    # execute with classical quantum simulation
+    qibo.set_backend("numpy")
+    simulation = execute_rotation()
+
+    # plot results
+    exp_angles = np.arange(0, 2 * np.pi, np.pi / 16)
+    plt.plot(exp_angles, hardware, label="qibolab hardware")
+    plt.plot(exp_angles, simulation, label="numpy")
+
+    plt.legend()
+    plt.ylabel("P(1)")
+    plt.xlabel("Rotation [rad]")
+    plt.show()
+
+Returns the following plot:
+
+.. image:: rotation_light.svg
+   :class: only-light
+.. image:: rotation_dark.svg
+   :class: only-dark
+
+.. note::
+   Executing circuits using the Qibolab backend results to automatic application of the transpilation and compilation pipelines (:ref:`main_doc_transpiler`) which convert the circuit to a pulse sequence that is executed by the given platform.
+   It is possible to modify these pipelines following the instructions in the :ref:`tutorials_transpiler` example.

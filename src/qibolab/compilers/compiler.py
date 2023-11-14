@@ -6,6 +6,7 @@ from qibo.config import raise_error
 
 from qibolab.compilers.default import (
     cz_rule,
+    gpi2_rule,
     identity_rule,
     measurement_rule,
     rz_rule,
@@ -23,15 +24,16 @@ class Compiler:
     pulse sequence and some virtual Z-phases.
 
     A rule is a function that takes two argumens:
-        gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
-        platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
+        - gate (:class:`qibo.gates.abstract.Gate`): Gate object to be compiled.
+        - platform (:class:`qibolab.platforms.abstract.AbstractPlatform`): Platform object to read
             native gate pulses from.
-    and returns
-        sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
-            the given gate.
-        virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
 
-    See ``qibolab.compilers.default`` for an example of a compiler implementation.
+    and returns:
+        - sequence (:class:`qibolab.pulses.PulseSequence`): Sequence of pulses that implement
+            the given gate.
+        - virtual_z_phases (dict): Dictionary mapping qubits to virtual Z-phases induced by the gate.
+
+    See :class:`qibolab.compilers.default` for an example of a compiler implementation.
     """
 
     rules: dict = field(default_factory=dict)
@@ -46,6 +48,7 @@ class Compiler:
                 gates.RZ: rz_rule,
                 gates.U3: u3_rule,
                 gates.CZ: cz_rule,
+                gates.GPI2: gpi2_rule,
                 gates.M: measurement_rule,
             }
         )
@@ -75,7 +78,7 @@ class Compiler:
         """Decorator for registering a function as a rule in the compiler.
 
         Using this decorator is optional. Alternatively the user can set the rules directly
-        via ``__setitem__`.
+        via ``__setitem__``.
 
         Args:
             gate_cls: Qibo gate object that the rule will be assigned to.
@@ -87,7 +90,7 @@ class Compiler:
 
         return inner
 
-    def _compile_gate(self, gate, platform, sequence, virtual_z_phases, moment_start):
+    def _compile_gate(self, gate, platform, sequence, virtual_z_phases, moment_start, delays):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
         # get local sequence and phases for the current gate
@@ -96,7 +99,7 @@ class Compiler:
         # update global pulse sequence
         # determine the right start time based on the availability of the qubits involved
         all_qubits = {*gate_sequence.qubits, *gate.qubits}
-        start = max(sequence.get_qubit_pulses(*all_qubits).finish, moment_start)
+        start = max(*[sequence.get_qubit_pulses(qubit).finish + delays[qubit] for qubit in all_qubits], moment_start)
         # shift start time and phase according to the global sequence
         for pulse in gate_sequence:
             pulse.start += start
@@ -111,14 +114,13 @@ class Compiler:
 
         Args:
             circuit (qibo.models.Circuit): Qibo circuit that respects the platform's
-                connectivity and native gates.
+                                           connectivity and native gates.
             platform (qibolab.platforms.abstract.AbstractPlatform): Platform used
                 to load the native pulse representations.
 
         Returns:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
-            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulses
-                implementing it.
+            measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
@@ -127,12 +129,19 @@ class Compiler:
 
         measurement_map = {}
         # process circuit gates
+        delays = defaultdict(int)
         for moment in circuit.queue.moments:
             moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
+                if isinstance(gate, gates.Align):
+                    for qubit in gate.qubits:
+                        delays[qubit] += gate.delay
+                    continue
                 gate_sequence, gate_phases = self._compile_gate(
-                    gate, platform, sequence, virtual_z_phases, moment_start
+                    gate, platform, sequence, virtual_z_phases, moment_start, delays
                 )
+                for qubit in gate.qubits:
+                    delays[qubit] = 0
 
                 # update virtual Z phases
                 for qubit, phase in gate_phases.items():

@@ -29,17 +29,19 @@ def get_platforms_path():
 
 
 def create_platform(name, runcard=None):
-    """Platform for controlling quantum devices.
+    """A platform for executing quantum algorithms.
+
+    It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
     Returns:
         The plaform class.
     """
-    if name == "dummy":
+    if name == "dummy" or name == "dummy_couplers":
         from qibolab.dummy import create_dummy
 
-        return create_dummy()
+        return create_dummy(with_couplers=name == "dummy_couplers")
 
     platform = get_platforms_path() / f"{name}.py"
     if not platform.exists():

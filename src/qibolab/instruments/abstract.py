@@ -1,10 +1,16 @@
 import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Optional
 
 from qibolab.instruments.port import Port
 
+InstrumentId = str
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
+
+
+class InstrumentSettings:
+    """Container of settings that are dumped in the platform runcard yaml."""
 
 
 class Instrument(ABC):
@@ -16,10 +22,11 @@ class Instrument(ABC):
     """
 
     def __init__(self, name, address):
-        self.name: str = name
+        self.name: InstrumentId = name
         self.address: str = address
         self.is_connected: bool = False
         self.signature: str = f"{type(self).__name__}@{address}"
+        self.settings: Optional[InstrumentSettings] = None
         # create local storage folder
         instruments_data_folder = INSTRUMENTS_DATA_FOLDER
         instruments_data_folder.mkdir(parents=True, exist_ok=True)

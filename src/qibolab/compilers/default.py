@@ -1,6 +1,6 @@
 """Implementation of the default compiler.
 
-Uses I, Z, RZ, U3, CZ and M as the set of native gates.
+Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
 import math
 
@@ -22,6 +22,17 @@ def rz_rule(gate, platform):
     """RZ gate applied virtually."""
     qubit = gate.target_qubits[0]
     return PulseSequence(), {qubit: gate.parameters[0]}
+
+
+def gpi2_rule(gate, platform):
+    """Rule for GPI2."""
+    qubit = gate.target_qubits[0]
+    theta = gate.parameters[0]
+
+    sequence = PulseSequence()
+    pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
+    sequence.add(pulse)
+    return sequence, {}
 
 
 def u3_rule(gate, platform):
