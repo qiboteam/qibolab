@@ -928,6 +928,8 @@ class Zurich(Controller):
                     pulse.zhpulse.uid += str(i)
 
                     # TODO: if the measure sequence starts after the last pulse, add a delay
+                    # keep in mind that the signal might start before the last pulse
+                    # if sweepers are involved
                     if play_after is None:
                         exp.delay(
                             signal=f"measure{q}",
