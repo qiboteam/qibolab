@@ -112,6 +112,8 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
 def test_platform_execute_one_coupler_pulse(qpu_platform):
     # One drive pulse
     platform = qpu_platform
+    if len(platform.couplers) == 0:
+        pytest.skip("The platform does not have couplers")
     coupler = next(iter(platform.couplers))
     sequence = PulseSequence()
     sequence.add(platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1))

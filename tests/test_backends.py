@@ -89,11 +89,13 @@ def test_execute_circuits():
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
 def test_ground_state_probabilities_circuit(connected_backend):
+    nshots = 5000
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
     circuit.add(gates.M(*range(nqubits)))
-    result = connected_backend.execute_circuit(circuit, nshots=5000)
-    probs = result.probabilities()
+    result = connected_backend.execute_circuit(circuit, nshots=nshots)
+    freqs = result.frequencies(binary=False)
+    probs = [freqs[i] / nshots for i in range(2**nqubits)]
     warnings.warn(f"Ground state probabilities: {probs}")
     target_probs = np.zeros(2**nqubits)
     target_probs[0] = 1
@@ -103,12 +105,14 @@ def test_ground_state_probabilities_circuit(connected_backend):
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
 def test_excited_state_probabilities_circuit(connected_backend):
+    nshots = 5000
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
     circuit.add(gates.X(q) for q in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
-    result = connected_backend.execute_circuit(circuit, nshots=5000)
-    probs = result.probabilities()
+    result = connected_backend.execute_circuit(circuit, nshots=nshots)
+    freqs = result.frequencies(binary=False)
+    probs = [freqs[i] / nshots for i in range(2**nqubits)]
     warnings.warn(f"Excited state probabilities: {probs}")
     target_probs = np.zeros(2**nqubits)
     target_probs[-1] = 1
@@ -119,13 +123,15 @@ def test_excited_state_probabilities_circuit(connected_backend):
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
 def test_superposition_for_all_qubits(connected_backend):
     """Applies an H gate to each qubit of the circuit and measures the probabilities."""
+    nshots = 5000
     nqubits = connected_backend.platform.nqubits
     probs = []
     for q in range(nqubits):
         circuit = Circuit(nqubits)
         circuit.add(gates.H(q=q))
         circuit.add(gates.M(q))
-        probs.append(connected_backend.execute_circuit(circuit, nshots=5000).probabilities())
+        freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(binary=False)
+        probs.append([freqs[i] / nshots for i in range(2)])
         warnings.warn(f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}")
     probs = np.asarray(probs)
     target_probs = np.repeat(a=0.5, repeats=nqubits)
