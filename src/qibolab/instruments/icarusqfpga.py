@@ -31,7 +31,7 @@ class RFSOC(Controller):
     PortType = RFSOCPort
 
     def __init__(self, name, address, port=8080):
-        from icarusq_rfsoc_driver import IcarusQRFSoC
+        from icarusq_rfsoc_driver import IcarusQRFSoC  # pylint: disable=E0401
 
         super().__init__(name, address)
         self.device = IcarusQRFSoC(address, port)
@@ -63,7 +63,9 @@ class RFSOC(Controller):
 
         self.channel_delay_offset_dac = delay_samples_offset_dac
         self.channel_delay_offset_adc = delay_samples_offset_adc
-        from icarusq_rfsoc_driver import rfsoc_settings as settings
+        from icarusq_rfsoc_driver import (
+            rfsoc_settings as settings,  # pylint: disable=E0401
+        )
 
         for dac in range(self.device.dac_nchannels):
             self.device.dac[dac].delay = delay_samples_offset_dac
@@ -223,7 +225,9 @@ class RFSOC_RO(RFSOC):
         )
         self.adcs_to_read = adcs_to_read
 
-        from icarusq_rfsoc_driver.rfsoc_settings import TRIGGER_MODE
+        from icarusq_rfsoc_driver.rfsoc_settings import (
+            TRIGGER_MODE,  # pylint: disable=E0401
+        )
 
         self.device.init_qunit()
         self.device.set_adc_trigger_mode(TRIGGER_MODE.MASTER)
