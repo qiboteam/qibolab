@@ -216,6 +216,7 @@ class QbloxController(Controller):
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 _res = acquisition_results[ro_pulse.serial][2]
+                _res = _res.reshape(nshots, -1) if options.averaging_mode == AveragingMode.SINGLESHOT else _res
                 if average:
                     _res = np.mean(_res, axis=0)
             else:
