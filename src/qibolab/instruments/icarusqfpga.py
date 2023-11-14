@@ -10,7 +10,7 @@ from qibolab.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab.instruments.abstract import Controller, Instrument
+from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
@@ -23,7 +23,6 @@ class RFSOCPort(Port):
     name: str
     dac: int = None
     adc: int = None
-    attenuator: Instrument = None
 
 
 class RFSOC(Controller):
@@ -75,7 +74,7 @@ class RFSOC(Controller):
         for channel_settings in analog_settings:
             self.device.set_channel_analog_settings(**channel_settings)
 
-    def play(self, qubits: Dict[QubitId, Qubit], sequence: PulseSequence, options: ExecutionParameters):
+    def play(self, qubits: Dict[QubitId, Qubit], couplers, sequence: PulseSequence, options: ExecutionParameters):
         """Plays the given pulse sequence without acquisition.
 
         Arguments:
@@ -91,7 +90,9 @@ class RFSOC(Controller):
 
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
         for pulse in sequence.pulses:
-            qubit = qubits[pulse.qubit]
+            if pulse.channel not in self._ports:
+                continue
+
             dac = self.ports(pulse.channel).dac
             start = int(pulse.start * 1e-9 * dac_sampling_rate)
             end = int((pulse.start + pulse.duration) * 1e-9 * dac_sampling_rate)
@@ -104,7 +105,6 @@ class RFSOC(Controller):
 
             # Qubit drive microwave signals
             elif pulse.type == PulseType.DRIVE:
-                dac = qubit.drive.ports[pulse.channel]
                 t = np.arange(start, end) / dac_sampling_rate
                 wfm = np.sin(2 * np.pi * pulse.frequency * t + pulse.relative_phase)
 
@@ -161,7 +161,7 @@ class RFSOC(Controller):
         self.device.upload_waveform(payload)
 
     def play_sequences(
-        self, qubits: Dict[QubitId, Qubit], sequences: List[PulseSequence], options: ExecutionParameters
+        self, qubits: Dict[QubitId, Qubit], couplers, sequences: List[PulseSequence], options: ExecutionParameters
     ):
         pass
 
@@ -178,6 +178,9 @@ class RFSOC(Controller):
         pass
 
     def disconnect(self):
+        pass
+
+    def sweep(self):
         pass
 
 
@@ -225,7 +228,7 @@ class RFSOC_RO(RFSOC):
         self.device.init_qunit()
         self.device.set_adc_trigger_mode(TRIGGER_MODE.MASTER)
 
-    def play(self, qubits: Dict[QubitId, Qubit], sequence: PulseSequence, options: ExecutionParameters):
+    def play(self, qubits: Dict[QubitId, Qubit], couplers, sequence: PulseSequence, options: ExecutionParameters):
         """Plays the pulse sequence on the IcarusQ RFSoC and awaits acquisition at the end.
 
         Arguments:
@@ -233,7 +236,7 @@ class RFSOC_RO(RFSOC):
             sequence (PulseSequence): Pulse sequence to be played on this instrument.
             options (ExecutionParameters): Object representing acquisition type and number of shots.
         """
-        super().play(qubits, sequence, options)
+        super().play(qubits, couplers, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))
         readout_pulses = list(filter(lambda pulse: pulse.type is PulseType.READOUT, sequence.pulses))
         readout_qubits = {pulse.qubit for pulse in readout_pulses}
@@ -269,9 +272,9 @@ class RFSOC_RO(RFSOC):
             return res
 
     def play_sequences(
-        self, qubits: Dict[QubitId, Qubit], sequences: List[PulseSequence], options: ExecutionParameters
+        self, qubits: Dict[QubitId, Qubit], couplers, sequences: List[PulseSequence], options: ExecutionParameters
     ):
-        return [self.play(qubits, sequence, options) for sequence in sequences]
+        return [self.play(qubits, couplers, sequence, options) for sequence in sequences]
 
     def process_readout_signal(
         self,
