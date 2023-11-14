@@ -928,8 +928,6 @@ class Zurich(Controller):
                     pulse.zhpulse.uid += str(i)
 
                     # TODO: if the measure sequence starts after the last pulse, add a delay
-                    # if the delay is too large (i.e. 5us),
-                    # throw an exception / no delay / maximum delay possible
                     if play_after is None:
                         exp.delay(
                             signal=f"measure{q}",
