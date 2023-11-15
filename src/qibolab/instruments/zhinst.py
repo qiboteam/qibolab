@@ -505,7 +505,9 @@ class Zurich(Controller):
 
     def run_exp(self):
         """Compilation settings, compilation step, execution step and data retrival"""
+        # self.experiment.save("saved_exp")  # saving experiment
         self.exp = self.session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
+        # self.exp.save("saved_exp")  # saving compiled experiment
         self.results = self.session.run(self.exp)
 
     @staticmethod
