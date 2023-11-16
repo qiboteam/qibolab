@@ -503,8 +503,13 @@ class Zurich(Controller):
         )
 
     def run_exp(self):
-        """Compilation settings, compilation step, execution step and data retrival"""
-        # self.experiment.save("saved_exp")
+        """
+        Compilation settings, compilation step, execution step and data retrival
+        - Save a experiment Python object:
+        self.experiment.save("saved_exp")
+        - Save a experiment compiled experiment ():
+        self.exp.save("saved_exp")  # saving compiled experiment
+        """
         self.exp = self.session.compile(self.experiment, compiler_settings=COMPILER_SETTINGS)
         # self.exp.save_compiled_experiment("saved_exp")
         self.results = self.session.run(self.exp)
@@ -890,38 +895,18 @@ class Zurich(Controller):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         play_after = None
 
-        if len(self.sequence_qibo.qf_pulses) != 0 and len(self.sequence_qibo.qd_pulses) != 0:
-            play_after = (
-                self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
-                if self.sequence_qibo.qf_pulses.finish > self.sequence_qibo.qd_pulses.finish
-                else self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
-            )
-        if len(self.sequence_qibo.cf_pulses) != 0 and len(self.sequence_qibo.qd_pulses) != 0:
-            play_after = (
-                self.play_after_set(self.sequence_qibo.cf_pulses, "bias_coupler")
-                if self.sequence_qibo.cf_pulses.finish > self.sequence_qibo.qd_pulses.finish
-                else self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
-            )
+        # TODO: if we use duration sweepers, the code might not behave as expected
+        # i.e.: self.sequence_qibo will contain the a pulse or sweeper with a static duration that may screw the comparison
+        qf_finish = self.sequence_qibo.qf_pulses.finish
+        qd_finish = self.sequence_qibo.qd_pulses.finish
+        cf_finish = self.sequence_qibo.cf_pulses.finish
 
-        elif len(self.sequence_qibo.qf_pulses) != 0:
+        if qf_finish > qd_finish and qf_finish > cf_finish:
             play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
-        elif len(self.sequence_qibo.qd_pulses) != 0:
+        elif qd_finish > qf_finish and qd_finish > cf_finish:
             play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
-        elif (
-            len(self.sequence_qibo.qf_pulses) != 0
-            and len(self.sequence_qibo.qd_pulses) != 0
-            and len(self.sequence_qibo.cf_pulses) != 0
-        ):
-            seq_qf = self.sequence_qibo.qf_pulses.finish
-            seq_qd = self.sequence_qibo.qd_pulses.finish
-            seq_cf = self.sequence_qibo.cf_pulses.finish
-            # add here for flux coupler pulses
-            if seq_qf > seq_qd and seq_qf > seq_cf:
-                play_after = self.play_after_set(self.sequence_qibo.qf_pulses, "bias")
-            elif seq_qd > seq_qf and seq_qd > seq_cf:
-                play_after = self.play_after_set(self.sequence_qibo.qd_pulses, "drive")
-            elif seq_cf > seq_qf and seq_cf > seq_qd:
-                play_after = self.play_after_set(self.sequence_qibo.cf_pulse, "bias_coupler")
+        elif cf_finish > qf_finish and cf_finish > qd_finish:
+            play_after = self.play_after_set(self.sequence_qibo.cf_pulses, "bias_coupler")
 
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
@@ -946,6 +931,9 @@ class Zurich(Controller):
                 for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
+                    # TODO: if the measure sequence starts after the last pulse, add a delay
+                    # keep in mind that the signal might start before the last pulse
+                    # if sweepers are involved
                     if play_after is None:
                         exp.delay(
                             signal=f"measure{q}",
