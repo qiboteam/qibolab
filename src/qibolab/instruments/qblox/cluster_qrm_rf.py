@@ -448,22 +448,17 @@ class ClusterQRM_RF(Instrument):
         for sweeper in sweepers:
             num_bins *= len(sweeper.values)
 
-        # self._build_channel_map(qubits) #TODO: QUESTA IMPLEMENTAZIONE FUNZIONA, TIENI LA LOGICA MA MIGLIORA (ES CHAIAMA LA FUNZIONE GET MODULE SOLO UNA VOLTA )
-        # print('port channel map', self._port_channel_map)
-        # print('channel port  map', self._channel_port_map)
-        # print('channel list', self.channels)
         # estimate the execution time
         self._execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
 
         port = "o1"
-        # print(f'----called process pulse of module {self.name}----')
         # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
         self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
 
         # split the collection of instruments pulses by ports
         # ro_channel = None
         # feed_channel = None
-        port_channel = [chan for chan, ports in self._channel_port_map.items() if ports == port]
+        port_channel = [chan for chan, ports in self.channel_port_map.items() if ports == port]
         port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
         # initialise the list of sequencers required by the port

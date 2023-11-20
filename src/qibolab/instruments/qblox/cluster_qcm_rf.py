@@ -406,7 +406,7 @@ class ClusterQCM_RF(Instrument):
         # process the pulses for every port
         for port in self.ports:
             # split the collection of instruments pulses by ports
-            port_channel = [chan for chan, ports in self._channel_port_map.items() if ports == port]
+            port_channel = [chan for chan, ports in self.channel_port_map.items() if ports == port]
             port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
             # initialise the list of sequencers required by the port

@@ -168,8 +168,8 @@ class QbloxController(Controller):
         data = {}
         for name in self.modules:
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_pulses[name] = sequence.get_channel_pulses(*module_channels)
             module_channels = self._get_module_channel_map(name, qubits)
+            module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
             for port in self.modules[name].ports:
                 # _los = []
