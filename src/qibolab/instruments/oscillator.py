@@ -18,6 +18,10 @@ class DummyDevice:
     def set(self, name, value):
         """Set device property."""
 
+    def get(self, name):
+        """Get device property."""
+        return 0
+
     def on(self):
         """Turn device on."""
 
