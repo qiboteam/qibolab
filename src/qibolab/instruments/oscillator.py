@@ -10,13 +10,9 @@ from qibolab.instruments.abstract import (
 )
 
 
-@dataclass
-class LocalOscillatorSettings(InstrumentSettings):
-    power: Optional[float] = None
-    frequency: Optional[float] = None
-
-
 class DummyDevice:
+    """Dummy device that does nothing but follows the QCoDeS interface."""
+
     ref_osc_source = None
 
     def set(self, name, value):
@@ -32,6 +28,12 @@ class DummyDevice:
         """Close connection with device."""
 
 
+@dataclass
+class LocalOscillatorSettings(InstrumentSettings):
+    power: Optional[float] = None
+    frequency: Optional[float] = None
+
+
 class LocalOscillator(Instrument):
     """Abstraction for local oscillator instruments.
 
@@ -42,9 +44,10 @@ class LocalOscillator(Instrument):
     """
 
     def __init__(self, name, address, reference_clock_source="EXT"):
-        super().__init__(name, address)
+        super().__init__(self.name, self.address)
         self.device = None
         self.settings = LocalOscillatorSettings()
+        # TODO: Maybe create an Enum for the reference clock
         self._reference_clock_source = reference_clock_source
 
     @property
@@ -53,6 +56,15 @@ class LocalOscillator(Instrument):
 
     @frequency.setter
     def frequency(self, x):
+        """Set frequency of the local oscillator.
+
+        The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillatorSettings`
+        dataclass. If we are connected to the instrument when the setter is called, it is also
+        automatically uploaded to the instruments. If we are not connected the cached value
+        is automatically uploaded when we connect.
+
+        If the new value is the same with the cached value, it is not updated.
+        """
         if self.frequency != x:
             self.settings.frequency = x
             if self.is_connected:
@@ -64,6 +76,15 @@ class LocalOscillator(Instrument):
 
     @power.setter
     def power(self, x):
+        """Set power of the local oscillator.
+
+        The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillatorSettings`
+        dataclass. If we are connected to the instrument when the setter is called, it is also
+        automatically uploaded to the instruments. If we are not connected the cached value
+        is automatically uploaded when we connect.
+
+        If the new value is the same with the cached value, it is not updated.
+        """
         if self.power != x:
             self.settings.power = x
             if self.is_connected:
@@ -75,6 +96,13 @@ class LocalOscillator(Instrument):
 
     @reference_clock_source.setter
     def reference_clock_source(self, x):
+        """Switch the reference clock source of the local oscillator.
+
+        The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillator`
+        class. If we are connected to the instrument when the setter is called, it is also
+        automatically uploaded to the instruments. If we are not connected the cached value
+        is automatically uploaded when we connect.
+        """
         self._reference_clock_source = x
         if self.is_connected:
             self.device.ref_osc_source = x
@@ -111,7 +139,7 @@ class LocalOscillator(Instrument):
             self.device.set("frequency", self.settings.frequency)
         if self.settings.power is not None:
             self.device.set("power", self.settings.power)
-        self.ref_osc_source = self._reference_clock_source
+        self.reference_clock_source = self._reference_clock_source
 
     def setup(self, **kwargs):
         """Update instrument settings.

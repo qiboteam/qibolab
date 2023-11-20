@@ -15,6 +15,8 @@ from qibolab.instruments.oscillator import DummyDevice, LocalOscillator
 
 
 class ERASynthEthernet(DummyDevice):
+    """ERA ethernet driver that follows the QCoDeS interface."""
+
     MAX_RECONNECTION_ATTEMPTS = 10
     TIMEOUT = 10
 
