@@ -10,6 +10,20 @@ class LocalOscillatorSettings(InstrumentSettings):
     frequency: Optional[float] = None
 
 
+class DummyDevice:
+    def set(self, name, value):
+        """Set device property."""
+
+    def on(self):
+        """Turn device on."""
+
+    def off(self):
+        """Turn device on."""
+
+    def close(self):
+        """Close connection with device."""
+
+
 class LocalOscillator(Instrument):
     """Abstraction for local oscillator instruments.
 
@@ -21,6 +35,7 @@ class LocalOscillator(Instrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
+        self.device = None
         self.settings = LocalOscillatorSettings()
 
     @property
@@ -44,6 +59,7 @@ class LocalOscillator(Instrument):
 
     def connect(self):
         self.is_connected = True
+        self.device = DummyDevice()
         self.upload()
 
     def setup(self, **kwargs):
@@ -63,10 +79,10 @@ class LocalOscillator(Instrument):
             setattr(self, name, value)
 
     def start(self):
-        pass
+        self.device.on()
 
     def stop(self):
-        pass
+        self.device.off()
 
     def disconnect(self):
         self.is_connected = False

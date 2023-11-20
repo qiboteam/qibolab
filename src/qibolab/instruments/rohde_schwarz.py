@@ -95,14 +95,3 @@ class SGS100A(LocalOscillator):
 
     def __del__(self):
         self.disconnect()
-
-    def on(self):
-        self.device.on()
-
-    def off(self):
-        self.device.off()
-
-    def close(self):
-        if self.is_connected:
-            self.device.close()
-            self.is_connected = False

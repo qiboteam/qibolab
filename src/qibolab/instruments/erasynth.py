@@ -168,12 +168,3 @@ class ERA(LocalOscillator):
 
     def __del__(self):
         self.disconnect()
-
-    def on(self):
-        self.device.on()
-
-    def off(self):
-        self.device.off()
-
-    def close(self):
-        self.disconnect()
