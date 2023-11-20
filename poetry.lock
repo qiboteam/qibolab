@@ -1852,12 +1852,12 @@ files = [
 
 [[package]]
 name = "laboneq"
-version = "2.18.0"
+version = "2.19.0"
 description = "Zurich Instruments LabOne Q software framework for quantum computing control"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "laboneq-2.18.0-py3-none-any.whl", hash = "sha256:136cb68aa8c4a28c709d86a2115dc7eb91f3fe89f05b9aa2718687e83c0cde15"},
+    {file = "laboneq-2.19.0-py3-none-any.whl", hash = "sha256:f777597afd2c54546cde3fa1ce856764e467bf9357f6d7f42bfc2771a7651221"},
 ]
 
 [package.dependencies]
@@ -5337,4 +5337,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "9288ce51611372eee8afde45b359945e90b9b6fa4d250ba6041e6c94211e164f"
+content-hash = "512d74555acd3eb7150a2356e3c19e8dd225ceadc685b14029a2a244d08c63f9"
