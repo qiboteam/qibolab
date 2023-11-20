@@ -43,8 +43,10 @@ class LocalOscillator(Instrument):
     They cannot be used to play or sweep pulses.
     """
 
-    def __init__(self, name, address, reference_clock_source="EXT"):
-        super().__init__(self.name, self.address)
+    RECONNECTION_ATTEMPTS = 3
+
+    def __init__(self, name, address, reference_clock_source=None):
+        super().__init__(name, address)
         self.device = None
         self.settings = LocalOscillatorSettings()
         # TODO: Maybe create an Enum for the reference clock
@@ -105,7 +107,7 @@ class LocalOscillator(Instrument):
         """
         self._reference_clock_source = x
         if self.is_connected:
-            self.device.ref_osc_source = x
+            self.device.set("ref_osc_source", x)
 
     def create(self):
         """Create instance of physical device."""
@@ -114,7 +116,7 @@ class LocalOscillator(Instrument):
     def connect(self):
         """Connects to the instrument using the IP address set in the runcard."""
         if not self.is_connected:
-            for attempt in range(3):
+            for attempt in range(self.RECONNECTION_ATTEMPTS):
                 try:
                     self.device = self.create()
                     self.is_connected = True
@@ -137,9 +139,18 @@ class LocalOscillator(Instrument):
 
         if self.settings.frequency is not None:
             self.device.set("frequency", self.settings.frequency)
+        else:
+            self.settings.frequency = self.device.get("frequency")
+
         if self.settings.power is not None:
             self.device.set("power", self.settings.power)
-        self.reference_clock_source = self._reference_clock_source
+        else:
+            self.settings.power = self.device.get("power")
+
+        if self.reference_clock_source is not None:
+            self.reference_clock_source = self._reference_clock_source
+        else:
+            self._reference_clock_source = self.device.get("ref_osc_source")
 
     def setup(self, **kwargs):
         """Update instrument settings.

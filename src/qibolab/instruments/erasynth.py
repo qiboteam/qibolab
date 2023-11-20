@@ -59,6 +59,13 @@ class ERASynthEthernet(DummyDevice):
         Args:
             name: str = The name of the value to get.
         """
+        if name == "ref_osc_source":
+            value = self.get("reference_int_ext")
+            if value == 1:
+                return "EXT"
+            else:
+                return "INT"
+
         for _ in range(self.MAX_RECONNECTION_ATTEMPTS):
             try:
                 response = requests.post(self.url, params={"readAll": 1}, timeout=self.TIMEOUT)
@@ -68,18 +75,26 @@ class ERASynthEthernet(DummyDevice):
                 break
             except (ConnectionError, TimeoutError, requests.exceptions.ReadTimeout):
                 log.info("ERAsynth connection timed out, retrying...")
+
         raise ConnectionError(f"Unable to get {name} from {self.name}")
 
-    def ref_osc_source(self, value):
-        if value in ("int", "internal", "INT", "INTERNAL"):
-            self.post("reference_int_ext", 0)
-        elif value in ("ext", "external", "EXT", "EXTERNAL"):
-            self.post("reference_int_ext", 1)
-        else:
-            raise ValueError(f"Invalid reference clock source {value}")
-
     def set(self, name, value):
-        self.post(name, value)
+        if name == "ref_osc_source":
+            if value in ("int", "internal", "INT", "INTERNAL"):
+                self.post("reference_int_ext", 0)
+            elif value in ("ext", "external", "EXT", "EXTERNAL"):
+                self.post("reference_int_ext", 1)
+            else:
+                raise ValueError(f"Invalid reference clock source {value}")
+
+        elif name == "frequency":
+            self.post(name, int(value))
+
+        elif name == "power":
+            self.post(name, float(value))
+
+        else:
+            self.post(name, value)
 
     def on(self):
         self.post("rfoutput", 1)
@@ -92,7 +107,7 @@ class ERASynthEthernet(DummyDevice):
 
 
 class ERA(LocalOscillator):
-    def __init__(self, name, address, ethernet=True, reference_clock_source="int"):
+    def __init__(self, name, address, ethernet=True, reference_clock_source=None):
         super().__init__(name, address, reference_clock_source)
         self.ethernet = ethernet
 
@@ -101,26 +116,6 @@ class ERA(LocalOscillator):
             return ERASynthEthernet(self.name, self.address)
         else:
             return ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
-
-    @LocalOscillator.frequency.setter
-    def frequency(self, x):
-        if self.frequency != x:
-            self.settings.frequency = x
-            if self.is_connected:
-                self.device.set("frequency", int(x))
-
-    @LocalOscillator.power.setter
-    def power(self, x):
-        if self.power != x:
-            self.settings.power = x
-            if self.is_connected:
-                self.device.set("power", float(x))
-
-    @LocalOscillator.reference_clock_source.setter
-    def reference_clock_source(self, x):
-        self._reference_clock_source = x
-        if self.is_connected:
-            self.device.ref_osc_source(x)
 
     def __del__(self):
         self.disconnect()
