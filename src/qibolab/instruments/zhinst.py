@@ -288,7 +288,7 @@ class Zurich(Controller):
 
     PortType = ZhPort
 
-    def __init__(self, name, descriptor, use_emulation=False, time_of_flight=0.0, smearing=0.0):
+    def __init__(self, name, descriptor=None, device_setup=None, use_emulation=False, time_of_flight=0.0, smearing=0.0):
         self.name = name
         "Setup name (str)"
 
@@ -310,7 +310,7 @@ class Zurich(Controller):
         self.calibration = lo.Calibration()
         "Zurich calibration object)"
 
-        self.device_setup = None
+        self.device_setup = device_setup
         self.session = None
         self.device = None
         "Zurich device parameters for connection"
@@ -353,12 +353,13 @@ class Zurich(Controller):
 
     def create_device_setup(self):
         """Loads the device setup to address the instruments"""
-        self.device_setup = lo.DeviceSetup.from_dict(
-            data=self.descriptor,
-            server_host="localhost",
-            server_port=SERVER_PORT,
-            setup_name=self.name,
-        )
+        if self.device_setup is None:
+            self.device_setup = lo.DeviceSetup.from_dict(
+                data=self.descriptor,
+                server_host="localhost",
+                server_port=SERVER_PORT,
+                setup_name=self.name,
+            )
 
     def start(self):
         """Empty method to comply with Instrument interface."""
@@ -1254,12 +1255,13 @@ class Zurich(Controller):
         Args:
             sim_time (float): Time[s] to simulate starting from 0
         """
-        self.device_setup = lo.DeviceSetup.from_dict(
-            data=self.descriptor,
-            server_host="localhost",
-            server_port=SERVER_PORT,
-            setup_name=self.name,
-        )
+        if self.device_setup is None:
+            self.device_setup = lo.DeviceSetup.from_dict(
+                data=self.descriptor,
+                server_host="localhost",
+                server_port=SERVER_PORT,
+                setup_name=self.name,
+            )
         # create a session
         self.sim_session = lo.Session(self.device_setup)
         # connect to session
