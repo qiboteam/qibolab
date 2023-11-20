@@ -110,26 +110,28 @@ class ClusterQCM_BB(Instrument):
     )
 
     def __init__(self, name: str, address: str, cluster: Cluster = None):
-        """Initialises the instance.
+        """
+        Initialize a Qblox QCM baseband module.
 
-        All class attributes are defined and initialised.
+        Parameters:
+        - name: An arbitrary name to identify the module.
+        - address: The network address of the instrument, specified as "cluster_IP:module_slot_idx".
+        - cluster: The Cluster object to which the QCM baseband module is connected.
 
-        Args:
-            name(str): A unique name given to the instrument.
-            address: IP_address:module_number (the IP address of the cluster and module number)
-            cluster: the cluster to which the instrument belongs.
+        Example:
+        To create a ClusterQCM_BB instance named 'qcm_bb' connected to slot 2 of a Cluster at address '192.168.0.100':
+        >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
+        >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
         self.ports: dict = {}
         self.settings: dict = {}
         self.device = None
-        self.channels: list = []
 
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
-        self._port_channel_map: dict = {}
-        self._channel_port_map: dict = {}
+        self.channel_port_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
@@ -275,7 +277,9 @@ class ClusterQCM_BB(Instrument):
                   At the moment this param is not loaded but is always set to True.
         """
         for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
+            self.ports[port] = QbloxOutputPort(
+                self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
+            )
 
         self.settings = settings if settings else self.settings
 
@@ -392,7 +396,8 @@ class ClusterQCM_BB(Instrument):
         # process the pulses for every port
         for port in self.ports:
             # split the collection of instruments pulses by ports
-            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+            port_channel = [chan for chan, ports in self._channel_port_map.items() if ports == port]
+            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
             # initialise the list of sequencers required by the port
             self._sequencers[port] = []

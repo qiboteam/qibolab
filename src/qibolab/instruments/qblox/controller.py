@@ -97,6 +97,22 @@ class QbloxController(Controller):
             self.cluster.disconnect()
             self.is_connected = False
 
+    def _get_module_channel_map(self, module_name: str, qubits: dict):
+        """Retrieve all the channels connected to a specific Qblox module.
+
+        This method updates the `channel_port_map` attribute of the specified Qblox module
+        based on the information contained in the provided qubits dictionary (dict of `qubit` objects).
+
+        Return the list of channels connected to module_name"""
+        module = self.modules[module_name]
+        channels = []
+        for qubit in qubits.values():
+            for channel in qubit.channels:
+                if channel.port and channel.port.module.name == module_name:
+                    module.channel_port_map[channel.name] = channel.port.name
+                    channels.append(channel.name)
+        return channels
+
     def _execute_pulse_sequence(
         self,
         qubits: dict,
@@ -152,12 +168,14 @@ class QbloxController(Controller):
         data = {}
         for name in self.modules:
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
+            module_pulses[name] = sequence.get_channel_pulses(*module_channels)
+            module_channels = self._get_module_channel_map(name, qubits)
 
             for port in self.modules[name].ports:
                 # _los = []
                 # _ifs = []
-                port_pulses = module_pulses[name].get_channel_pulses(self.modules[name]._port_channel_map[port])
+                port_channel = [chan for chan, ports in self.modules[name].channel_port_map.items() if ports == port]
+                port_pulses = module_pulses[name].get_channel_pulses(*port_channel)
                 # for pulse in port_pulses:
                 #     if pulse.type == PulseType.READOUT:
                 #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
@@ -218,6 +236,7 @@ class QbloxController(Controller):
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 _res = acquisition_results[ro_pulse.serial][2]
+                _res = _res.reshape(nshots, -1) if options.averaging_mode == AveragingMode.SINGLESHOT else _res
                 if average:
                     _res = np.mean(_res, axis=0)
             else:

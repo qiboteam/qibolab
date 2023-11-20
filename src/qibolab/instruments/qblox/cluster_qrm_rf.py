@@ -162,9 +162,7 @@ class ClusterQRM_RF(Instrument):
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
         self._sequencers: dict[Sequencer] = {"o1": []}
-        self.channels: list = []
-        self._port_channel_map: dict = {}
-        self._channel_port_map: dict = {}
+        self.channel_port_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 1
         self._device_num_sequencers: int
@@ -312,7 +310,7 @@ class ClusterQRM_RF(Instrument):
         """
         if "o1" in settings:
             self.ports["o1"] = QbloxOutputPort(
-                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0
+                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0, port_name="o1"
             )
         if "i1" in settings:
             self.ports["i1"] = QbloxInputPort(
@@ -320,6 +318,7 @@ class ClusterQRM_RF(Instrument):
                 output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
                 input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
                 port_number=0,
+                port_name="i1",
             )
 
         self.settings = settings if settings else self.settings
@@ -384,7 +383,7 @@ class ClusterQRM_RF(Instrument):
         """Returns the intermediate frequency needed to synthesise a pulse based on the port lo frequency."""
 
         _rf = pulse.frequency
-        _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
+        _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
@@ -444,21 +443,28 @@ class ClusterQRM_RF(Instrument):
             sweepers = []
         sequencer: Sequencer
         sweeper: Sweeper
-
         # calculate the number of bins
         num_bins = nshots
         for sweeper in sweepers:
             num_bins *= len(sweeper.values)
 
+        # self._build_channel_map(qubits) #TODO: QUESTA IMPLEMENTAZIONE FUNZIONA, TIENI LA LOGICA MA MIGLIORA (ES CHAIAMA LA FUNZIONE GET MODULE SOLO UNA VOLTA )
+        # print('port channel map', self._port_channel_map)
+        # print('channel port  map', self._channel_port_map)
+        # print('channel list', self.channels)
         # estimate the execution time
         self._execution_time = navgs * num_bins * ((repetition_duration + 1000 * len(sweepers)) * 1e-9)
 
         port = "o1"
+        # print(f'----called process pulse of module {self.name}----')
         # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
         self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
 
         # split the collection of instruments pulses by ports
-        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+        # ro_channel = None
+        # feed_channel = None
+        port_channel = [chan for chan, ports in self._channel_port_map.items() if ports == port]
+        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
         # initialise the list of sequencers required by the port
         self._sequencers[port] = []

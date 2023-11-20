@@ -35,7 +35,8 @@ class QbloxInputPort_Settings:
 class QbloxOutputPort(Port):
     """qibolab.instruments.port.Port interface implementation for Qblox instruments"""
 
-    def __init__(self, module, sequencer_number: int, port_number: int):
+    def __init__(self, module, sequencer_number: int, port_number: int, port_name: str = None):
+        self.name = port_name
         self.module = module
         self.sequencer_number: int = sequencer_number
         self.port_number: int = port_number
@@ -243,7 +244,10 @@ class QbloxOutputPort(Port):
 
 
 class QbloxInputPort:
-    def __init__(self, module, output_sequencer_number: int, input_sequencer_number: int, port_number: int):
+    def __init__(
+        self, module, output_sequencer_number: int, input_sequencer_number: int, port_number: int, port_name: str = None
+    ):
+        self.name = port_name
         self.module = module
         self.output_sequencer_number: int = output_sequencer_number
         self.input_sequencer_number: int = input_sequencer_number
