@@ -104,7 +104,7 @@ class LocalOscillator(Instrument):
         """
         value = getattr(self, parameter)
         if value is None:
-            setattr(self.settings, parameter, value)
+            setattr(self.settings, parameter, self.device.get(parameter))
         else:
             self.device.set(parameter, value)
 
