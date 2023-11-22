@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from enum import Enum
+from dataclasses import dataclass, fields
 from typing import Optional
 
 from qibo.config import log
@@ -16,8 +15,6 @@ RECONNECTION_ATTEMPTS = 3
 
 class DummyDevice:
     """Dummy device that does nothing but follows the QCoDeS interface."""
-
-    ref_osc_source = None
 
     def set(self, name, value):
         """Set device property."""
@@ -42,32 +39,29 @@ class LocalOscillatorSettings(InstrumentSettings):
 
     power: Optional[float] = None
     frequency: Optional[float] = None
+    ref_osc_source: Optional[str] = None
 
-
-class LocalOscillatorParameters(Enum):
-    """Local oscillator parameters.
-
-    The value corresponding to each parameter is ``True`` if the parameter
-    is in :class:`qibolab.instruments.oscillator.LocalOscillatorSettings`
-    and ``False`` otherwise, if the parameter is only a property of the instrument.
-    """
-
-    power = True
-    frequency = True
-    ref_osc_source = False
+    @staticmethod
+    def dict_factory(x):
+        exclude_fields = ("ref_osc_source",)
+        return {k: v for (k, v) in x if ((v is not None) and (k not in exclude_fields))}
 
 
 def upload(func):
-    """Decorator for parameter setters."""
+    """Decorator for parameter setters.
+
+    The value of each parameter is cached in the :class:`qibolab.instruments.oscillator.LocalOscillator`
+    object. If we are connected to the instrument when the setter is called, the new value is also
+    automatically uploaded to the instruments. If we are not connected, the new value is cached
+    and it is automatically uploaded after we connect.
+
+    If the new value is the same with the cached value, it is not updated.
+    """
     parameter = func.__name__
-    is_setting = getattr(LocalOscillatorParameters, parameter).value
 
     def setter(self, x):
         if getattr(self, parameter) != x:
-            if is_setting:
-                setattr(self.settings, parameter, x)
-            else:
-                setattr(self, f"_{parameter}", x)
+            setattr(self.settings, parameter, x)
             if self.is_connected:
                 self.device.set(parameter, x)
 
@@ -86,67 +80,34 @@ class LocalOscillator(Instrument):
     def __init__(self, name, address, ref_osc_source=None):
         super().__init__(name, address)
         self.device = None
-        self.settings = LocalOscillatorSettings()
-        # TODO: Maybe create an Enum for the reference clock
-        self._ref_osc_source = ref_osc_source
+        self.settings = LocalOscillatorSettings(ref_osc_source=ref_osc_source)
 
     @property
     def frequency(self):
         return self.settings.frequency
 
     @frequency.setter
+    @upload
     def frequency(self, x):
-        """Set frequency of the local oscillator.
-
-        The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillatorSettings`
-        dataclass. If we are connected to the instrument when the setter is called, it is also
-        automatically uploaded to the instruments. If we are not connected the cached value
-        is automatically uploaded when we connect.
-
-        If the new value is the same with the cached value, it is not updated.
-        """
-        if self.frequency != x:
-            self.settings.frequency = x
-            if self.is_connected:
-                self.device.set("frequency", x)
+        """Set frequency of the local oscillator."""
 
     @property
     def power(self):
         return self.settings.power
 
     @power.setter
+    @upload
     def power(self, x):
-        """Set power of the local oscillator.
-
-        The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillatorSettings`
-        dataclass. If we are connected to the instrument when the setter is called, it is also
-        automatically uploaded to the instruments. If we are not connected the cached value
-        is automatically uploaded when we connect.
-
-        If the new value is the same with the cached value, it is not updated.
-        """
-        if self.power != x:
-            self.settings.power = x
-            if self.is_connected:
-                self.device.set("power", x)
+        """Set power of the local oscillator."""
 
     @property
     def ref_osc_source(self):
-        return self._ref_osc_source
+        return self.settings.ref_osc_source
 
     @ref_osc_source.setter
+    @upload
     def ref_osc_source(self, x):
-        """Switch the reference clock source of the local oscillator.
-
-        The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillator`
-        class. If we are connected to the instrument when the setter is called, it is also
-        automatically uploaded to the instruments. If we are not connected the cached value
-        is automatically uploaded when we connect.
-        """
-        if self.ref_osc_source != x:
-            self._ref_osc_source = x
-            if self.is_connected:
-                self.device.set("ref_osc_source", x)
+        """Switch the reference clock source of the local oscillator."""
 
     def create(self):
         """Create instance of physical device."""
@@ -170,8 +131,8 @@ class LocalOscillator(Instrument):
         else:
             raise InstrumentException(self, "There is an open connection to the instrument already")
 
-        for parameter in LocalOscillatorParameters:
-            self.sync(parameter)
+        for fld in fields(self.settings):
+            self.sync(fld.name)
 
     def sync(self, parameter):
         """Sync parameter value between our cache and the instrument.
@@ -180,21 +141,13 @@ class LocalOscillator(Instrument):
         If the value does not exist in our cache, it is downloaded
 
         Args:
-            parameter: ``LocalOscillatorParameter`` to be synced.
+            parameter (str): Parameter name to be synced.
         """
-        name, is_setting = parameter.name, parameter.value
-        if is_setting:
-            value = getattr(self.settings, name)
-        else:
-            value = getattr(self, name)
-
+        value = getattr(self, parameter)
         if value is None:
-            if is_setting:
-                setattr(self.settings, name, self.device.get(name))
-            else:
-                setattr(self, f"_{name}", self.device.get(name))
+            setattr(self.settings, parameter, value)
         else:
-            self.device.set(name, value)
+            self.device.set(parameter, value)
 
     def setup(self, **kwargs):
         """Update instrument settings.

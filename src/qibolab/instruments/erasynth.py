@@ -123,8 +123,8 @@ class ERA(LocalOscillator):
     if we are connected via ethernet.
     """
 
-    def __init__(self, name, address, ethernet=True, reference_clock_source=None):
-        super().__init__(name, address, reference_clock_source)
+    def __init__(self, name, address, ethernet=True, ref_osc_source=None):
+        super().__init__(name, address, ref_osc_source)
         self.ethernet = ethernet
 
     def create(self):

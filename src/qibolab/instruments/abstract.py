@@ -12,6 +12,14 @@ INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 class InstrumentSettings:
     """Container of settings that are dumped in the platform runcard yaml."""
 
+    @staticmethod
+    def dict_factory(x):
+        """Factory used for the dataclass ``asdict`` method.
+
+        Can be used to exclude fields from the dictionary.
+        """
+        return x
+
 
 class Instrument(ABC):
     """Parent class for all the instruments connected via TCPIP.
