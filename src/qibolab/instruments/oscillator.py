@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 from qibo.config import log
@@ -37,8 +38,40 @@ class DummyDevice:
 
 @dataclass
 class LocalOscillatorSettings(InstrumentSettings):
+    """Local oscillator parameters that are saved in the platform runcard."""
+
     power: Optional[float] = None
     frequency: Optional[float] = None
+
+
+class LocalOscillatorParameters(Enum):
+    """Local oscillator parameters.
+
+    The value corresponding to each parameter is ``True`` if the parameter
+    is in :class:`qibolab.instruments.oscillator.LocalOscillatorSettings`
+    and ``False`` otherwise, if the parameter is only a property of the instrument.
+    """
+
+    power = True
+    frequency = True
+    ref_osc_source = False
+
+
+def upload(func):
+    """Decorator for parameter setters."""
+    parameter = func.__name__
+    is_setting = getattr(LocalOscillatorParameters, parameter).value
+
+    def setter(self, x):
+        if getattr(self, parameter) != x:
+            if is_setting:
+                setattr(self.settings, parameter, x)
+            else:
+                setattr(self, f"_{parameter}", x)
+            if self.is_connected:
+                self.device.set(parameter, x)
+
+    return setter
 
 
 class LocalOscillator(Instrument):
@@ -50,12 +83,12 @@ class LocalOscillator(Instrument):
     They cannot be used to play or sweep pulses.
     """
 
-    def __init__(self, name, address, reference_clock_source=None):
+    def __init__(self, name, address, ref_osc_source=None):
         super().__init__(name, address)
         self.device = None
         self.settings = LocalOscillatorSettings()
         # TODO: Maybe create an Enum for the reference clock
-        self._reference_clock_source = reference_clock_source
+        self._ref_osc_source = ref_osc_source
 
     @property
     def frequency(self):
@@ -98,11 +131,11 @@ class LocalOscillator(Instrument):
                 self.device.set("power", x)
 
     @property
-    def reference_clock_source(self):
-        return self._reference_clock_source
+    def ref_osc_source(self):
+        return self._ref_osc_source
 
-    @reference_clock_source.setter
-    def reference_clock_source(self, x):
+    @ref_osc_source.setter
+    def ref_osc_source(self, x):
         """Switch the reference clock source of the local oscillator.
 
         The value is cached in the :class:`qibolab.instruments.oscillator.LocalOscillator`
@@ -110,9 +143,10 @@ class LocalOscillator(Instrument):
         automatically uploaded to the instruments. If we are not connected the cached value
         is automatically uploaded when we connect.
         """
-        self._reference_clock_source = x
-        if self.is_connected:
-            self.device.set("ref_osc_source", x)
+        if self.ref_osc_source != x:
+            self._ref_osc_source = x
+            if self.is_connected:
+                self.device.set("ref_osc_source", x)
 
     def create(self):
         """Create instance of physical device."""
@@ -135,27 +169,32 @@ class LocalOscillator(Instrument):
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
             raise InstrumentException(self, "There is an open connection to the instrument already")
-        self.upload()
 
-    def upload(self):
-        """Uploads cached setting values to the instruments."""
-        if not self.is_connected:
-            raise InstrumentException(self, "Cannot upload settings if instrument is not connected.")
+        for parameter in LocalOscillatorParameters:
+            self.sync(parameter)
 
-        if self.settings.frequency is not None:
-            self.device.set("frequency", self.settings.frequency)
+    def sync(self, parameter):
+        """Sync parameter value between our cache and the instrument.
+
+        If the parameter value exists in our cache, it is uploaded to the instrument.
+        If the value does not exist in our cache, it is downloaded
+
+        Args:
+            parameter: ``LocalOscillatorParameter`` to be synced.
+        """
+        name, is_setting = parameter.name, parameter.value
+        if is_setting:
+            value = getattr(self.settings, name)
         else:
-            self.settings.frequency = self.device.get("frequency")
+            value = getattr(self, name)
 
-        if self.settings.power is not None:
-            self.device.set("power", self.settings.power)
+        if value is None:
+            if is_setting:
+                setattr(self.settings, name, self.device.get(name))
+            else:
+                setattr(self, f"_{name}", self.device.get(name))
         else:
-            self.settings.power = self.device.get("power")
-
-        if self.reference_clock_source is not None:
-            self.reference_clock_source = self._reference_clock_source
-        else:
-            self._reference_clock_source = self.device.get("ref_osc_source")
+            self.device.set(name, value)
 
     def setup(self, **kwargs):
         """Update instrument settings.
