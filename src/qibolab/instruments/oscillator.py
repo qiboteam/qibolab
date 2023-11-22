@@ -9,6 +9,9 @@ from qibolab.instruments.abstract import (
     InstrumentSettings,
 )
 
+RECONNECTION_ATTEMPTS = 3
+"""Number of times to attempt connecting to instrument in case of failure."""
+
 
 class DummyDevice:
     """Dummy device that does nothing but follows the QCoDeS interface."""
@@ -46,8 +49,6 @@ class LocalOscillator(Instrument):
     to address the qubits and resonators.
     They cannot be used to play or sweep pulses.
     """
-
-    RECONNECTION_ATTEMPTS = 3
 
     def __init__(self, name, address, reference_clock_source=None):
         super().__init__(name, address)
@@ -120,7 +121,7 @@ class LocalOscillator(Instrument):
     def connect(self):
         """Connects to the instrument using the IP address set in the runcard."""
         if not self.is_connected:
-            for attempt in range(self.RECONNECTION_ATTEMPTS):
+            for attempt in range(RECONNECTION_ATTEMPTS):
                 try:
                     self.device = self.create()
                     self.is_connected = True

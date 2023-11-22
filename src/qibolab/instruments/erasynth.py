@@ -6,15 +6,17 @@ from qibo.config import log
 
 from qibolab.instruments.oscillator import LocalOscillator
 
+RECONNECTION_ATTEMPTS = 10
+"""Number of times to attempt sending requests to the web server in case of failure."""
+TIMEOUT = 10
+"""Timeout time for HTTP requests in seconds."""
+
 
 class ERASynthEthernet:
     """ERA ethernet driver that follows the QCoDeS interface.
 
     Controls the instrument via HTTP requests to the instrument's web server.
     """
-
-    MAX_RECONNECTION_ATTEMPTS = 10
-    TIMEOUT = 10
 
     def __init__(self, name, address):
         self.name = name
@@ -37,9 +39,9 @@ class ERASynthEthernet:
             value: str = The value to post.
         """
         value = str(value)
-        for _ in range(self.MAX_RECONNECTION_ATTEMPTS):
+        for _ in range(RECONNECTION_ATTEMPTS):
             try:
-                response = requests.post(self.url, data={name: value}, timeout=self.TIMEOUT)
+                response = requests.post(self.url, data={name: value}, timeout=TIMEOUT)
                 if response.status_code == 200:
                     return True
                 break
@@ -62,9 +64,9 @@ class ERASynthEthernet:
             else:
                 return "INT"
 
-        for _ in range(self.MAX_RECONNECTION_ATTEMPTS):
+        for _ in range(RECONNECTION_ATTEMPTS):
             try:
-                response = requests.post(self.url, params={"readAll": 1}, timeout=self.TIMEOUT)
+                response = requests.post(self.url, params={"readAll": 1}, timeout=TIMEOUT)
                 if response.status_code == 200:
                     # reponse.text is a dictonary in string format, convert it to a dictonary
                     return json.loads(response.text)[name]
