@@ -1,21 +1,17 @@
-"""ERAsynth drivers.
-
-Supports the ERAsynth ++.
-
-https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
-"""
-
 import json
 
 import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibo.config import log
 
-from qibolab.instruments.oscillator import DummyDevice, LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator
 
 
-class ERASynthEthernet(DummyDevice):
-    """ERA ethernet driver that follows the QCoDeS interface."""
+class ERASynthEthernet:
+    """ERA ethernet driver that follows the QCoDeS interface.
+
+    Controls the instrument via HTTP requests to the instrument's web server.
+    """
 
     MAX_RECONNECTION_ATTEMPTS = 10
     TIMEOUT = 10
@@ -79,10 +75,19 @@ class ERASynthEthernet(DummyDevice):
         raise ConnectionError(f"Unable to get {name} from {self.name}")
 
     def set(self, name, value):
+        """Set a value to the instrument's web server.
+
+        Args:
+            name (str): Name of the paramater that we are updating.
+                In qibolab this can be ``frequency``, ``power`` or ``ref_osc_source``,
+                however the instrument's web server may support more values.
+            value: New value to set to the given parameter.
+                The type of value depends on the parameter being updated.
+        """
         if name == "ref_osc_source":
-            if value in ("int", "internal", "INT", "INTERNAL"):
+            if value.lower() in ("int", "internal"):
                 self.post("reference_int_ext", 0)
-            elif value in ("ext", "external", "EXT", "EXTERNAL"):
+            elif value.lower() in ("ext", "external"):
                 self.post("reference_int_ext", 1)
             else:
                 raise ValueError(f"Invalid reference clock source {value}")
@@ -107,6 +112,15 @@ class ERASynthEthernet(DummyDevice):
 
 
 class ERA(LocalOscillator):
+    """Driver to control the ERAsynth++ local oscillator.
+
+    This driver is using:
+    https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
+
+    or the custom :class:`qibolab.instruments.erasynth.ERASynthEthernet` object
+    if we are connected via ethernet.
+    """
+
     def __init__(self, name, address, ethernet=True, reference_clock_source=None):
         super().__init__(name, address, reference_clock_source)
         self.ethernet = ethernet
