@@ -28,25 +28,26 @@ class LocalOscillatorSettings(InstrumentSettings):
         return {k: v for (k, v) in x if ((v is not None) and (k not in exclude_fields))}
 
 
-def upload(func):
-    """Decorator for parameter setters.
+def _setter(instrument, parameter, value):
+    """Set value of a setting.
 
-    The value of each parameter is cached in the :class:`qibolab.instruments.oscillator.LocalOscillator`
-    object. If we are connected to the instrument when the setter is called, the new value is also
+    The value of each parameter is cached in the :class:`qibolab.instruments.oscillator.LocalOscillator`.
+    If we are connected to the instrument when the setter is called, the new value is also
     automatically uploaded to the instruments. If we are not connected, the new value is cached
     and it is automatically uploaded after we connect.
-
     If the new value is the same with the cached value, it is not updated.
     """
-    parameter = func.__name__
+    if getattr(instrument, parameter) != value:
+        setattr(instrument.settings, parameter, value)
+        if instrument.is_connected:
+            instrument.device.set(parameter, value)
 
-    def setter(self, x):
-        if getattr(self, parameter) != x:
-            setattr(self.settings, parameter, x)
-            if self.is_connected:
-                self.device.set(parameter, x)
 
-    return setter
+def _property(parameter):
+    """Creates an instrument property."""
+    getter = lambda self: getattr(self.settings, parameter)
+    setter = lambda self, value: _setter(self, parameter, value)
+    return property(getter, setter)
 
 
 class LocalOscillator(Instrument):
@@ -58,6 +59,10 @@ class LocalOscillator(Instrument):
     They cannot be used to play or sweep pulses.
     """
 
+    frequency = _property("frequency")
+    power = _property("power")
+    ref_osc_source = _property("ref_osc_source")
+
     def __init__(self, name, address, ref_osc_source=None):
         super().__init__(name, address)
         self.device = None
@@ -66,33 +71,6 @@ class LocalOscillator(Instrument):
     @abstractmethod
     def create(self):
         """Create instance of physical device."""
-
-    @property
-    def frequency(self):
-        return self.settings.frequency
-
-    @frequency.setter
-    @upload
-    def frequency(self, x):
-        """Set frequency of the local oscillator."""
-
-    @property
-    def power(self):
-        return self.settings.power
-
-    @power.setter
-    @upload
-    def power(self, x):
-        """Set power of the local oscillator."""
-
-    @property
-    def ref_osc_source(self):
-        return self.settings.ref_osc_source
-
-    @ref_osc_source.setter
-    @upload
-    def ref_osc_source(self, x):
-        """Switch the reference clock source of the local oscillator."""
 
     def connect(self):
         """Connects to the instrument using the IP address set in the runcard."""
