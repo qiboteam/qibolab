@@ -10,16 +10,12 @@ settings:
 instruments:
     lo_readout:
         frequency: 5_500_000_000
-        power: null
     lo_drive_0:
         frequency: 4_200_000_000
-        power: null
     lo_drive_1:
         frequency: 4_600_000_000
-        power: null
     lo_drive_2:
         frequency: 4_800_000_000
-        power: null
 
 native_gates:
     single_qubit:

@@ -2,8 +2,7 @@ import itertools
 import pathlib
 
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.dummy import DummyInstrument
-from qibolab.instruments.oscillator import LocalOscillator
+from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
 
@@ -36,7 +35,7 @@ def create_dummy(with_couplers: bool = True):
     instrument = DummyInstrument(name, 0)
 
     # Create local oscillator
-    twpa_pump = LocalOscillator(name="twpa_pump", address=0)
+    twpa_pump = DummyLocalOscillator(name="twpa_pump", address=0)
     twpa_pump.frequency = 1e9
     twpa_pump.power = 10
 

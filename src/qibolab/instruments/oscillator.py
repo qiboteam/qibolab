@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass, fields
 from typing import Optional
 
@@ -11,26 +12,6 @@ from qibolab.instruments.abstract import (
 
 RECONNECTION_ATTEMPTS = 3
 """Number of times to attempt connecting to instrument in case of failure."""
-
-
-class DummyDevice:
-    """Dummy device that does nothing but follows the QCoDeS interface."""
-
-    def set(self, name, value):
-        """Set device property."""
-
-    def get(self, name):
-        """Get device property."""
-        return 0
-
-    def on(self):
-        """Turn device on."""
-
-    def off(self):
-        """Turn device on."""
-
-    def close(self):
-        """Close connection with device."""
 
 
 @dataclass
@@ -82,6 +63,10 @@ class LocalOscillator(Instrument):
         self.device = None
         self.settings = LocalOscillatorSettings(ref_osc_source=ref_osc_source)
 
+    @abstractmethod
+    def create(self):
+        """Create instance of physical device."""
+
     @property
     def frequency(self):
         return self.settings.frequency
@@ -108,10 +93,6 @@ class LocalOscillator(Instrument):
     @upload
     def ref_osc_source(self, x):
         """Switch the reference clock source of the local oscillator."""
-
-    def create(self):
-        """Create instance of physical device."""
-        return DummyDevice()
 
     def connect(self):
         """Connects to the instrument using the IP address set in the runcard."""
@@ -159,9 +140,9 @@ class LocalOscillator(Instrument):
             **kwargs: Instrument settings loaded from the runcard.
         """
         type_ = self.__class__
-        properties = {p for p in dir(type_) if isinstance(getattr(type_, p), property)}
+        _fields = {fld.name for fld in fields(self.settings)}
         for name, value in kwargs.items():
-            if name not in properties:
+            if name not in _fields:
                 raise KeyError(f"Cannot set {name} to instrument {self.name} of type {type_.__name__}")
             setattr(self, name, value)
 
