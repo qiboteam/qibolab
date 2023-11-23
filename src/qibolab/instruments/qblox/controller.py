@@ -97,7 +97,7 @@ class QbloxController(Controller):
             self.cluster.disconnect()
             self.is_connected = False
 
-    def _get_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
+    def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
         This method updates the `channel_port_map` attribute of the specified Qblox module
@@ -165,63 +165,30 @@ class QbloxController(Controller):
         data = {}
         for name, module in self.modules.items():
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_channels = self._get_module_channel_map(module, qubits)
+            module_channels = self._set_module_channel_map(module, qubits)
             module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
-            for port in self.modules[name].ports:
-                # _los = []
-                # _ifs = []
-                port_channel = [chan.name for chan in self.modules[name].channel_map.values() if chan.port.name == port]
-                port_pulses = module_pulses[name].get_channel_pulses(*port_channel)
-                # for pulse in port_pulses:
-                #     if pulse.type == PulseType.READOUT:
-                #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
-                #         pulse._if = _if
-                #         _los.append(int(pulse.frequency - _if))
-                #         _ifs.append(int(_if))
-                #     elif pulse.type == PulseType.DRIVE:
-                #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
-                #         pulse._if = _if
-                #         _los.append(int(pulse.frequency - _if))
-                #         _ifs.append(int(_if))
-
-                # # where multiple qubits share the same lo (for example on a readout line), check lo consistency
-                # if len(_los) > 1:
-                #     for _ in range(1, len(_los)):
-                #         if _los[0] != _los[_]:
-                #             raise ValueError(
-                #                 f"""Pulses:
-                #                 {module_pulses[name]}
-                #                 sharing the lo at device: {name} - port: {port}
-                #                 cannot be synthesised with intermediate frequencies:
-                #                 {_ifs}"""
-                #             )
-                # if len(_los) > 0:
-                #     self.modules[name].ports[port].lo_frequency = _los[0]
-
-                if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF)):
-                    # without access to _ifs _los cannot be set ^^^^^^
-                    for pulse in port_pulses:
-                        pulse._if = int(pulse.frequency - self.modules[name].ports[port].lo_frequency)
+            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF)):
+                for pulse in module_pulses[name]:
+                    pulse_channel = module.channel_map[pulse.channel]
+                    pulse._if = int(pulse.frequency - pulse_channel.lo_frequency)
 
             #  ask each module to generate waveforms & program and upload them to the device
-            self.modules[name].process_pulse_sequence(
-                qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers
-            )
+            module.process_pulse_sequence(qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers)
 
             # log.info(f"{self.modules[name]}: Uploading pulse sequence")
-            self.modules[name].upload()
+            module.upload()
 
         # play the sequence or sweep
-        for name in self.modules:
-            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
-                self.modules[name].play_sequence()
+        for module in self.modules.values():
+            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
+                module.play_sequence()
 
         # retrieve the results
         acquisition_results = {}
-        for name in self.modules:
-            if isinstance(self.modules[name], ClusterQRM_RF) and not module_pulses[name].ro_pulses.is_empty:
-                results = self.modules[name].acquire()
+        for name, module in self.modules.items():
+            if isinstance(module, ClusterQRM_RF) and not module_pulses[name].ro_pulses.is_empty:
+                results = module.acquire()
                 existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
                     if key in existing_keys:
