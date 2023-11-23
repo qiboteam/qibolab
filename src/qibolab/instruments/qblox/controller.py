@@ -97,21 +97,18 @@ class QbloxController(Controller):
             self.cluster.disconnect()
             self.is_connected = False
 
-    def _get_module_channel_map(self, module_name: str, qubits: dict):
+    def _get_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
         This method updates the `channel_port_map` attribute of the specified Qblox module
         based on the information contained in the provided qubits dictionary (dict of `qubit` objects).
 
         Return the list of channels connected to module_name"""
-        module = self.modules[module_name]
-        channels = []
         for qubit in qubits.values():
             for channel in qubit.channels:
-                if channel.port and channel.port.module.name == module_name:
-                    module.channel_port_map[channel.name] = channel.port.name
-                    channels.append(channel.name)
-        return channels
+                if channel.port and channel.port.module.name == module.name:
+                    module.channel_map[channel.name] = channel
+        return list(module.channel_map)
 
     def _execute_pulse_sequence(
         self,
@@ -166,15 +163,15 @@ class QbloxController(Controller):
         # Process Pulse Sequence. Assign pulses to modules and generate waveforms & program
         module_pulses = {}
         data = {}
-        for name in self.modules:
+        for name, module in self.modules.items():
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_channels = self._get_module_channel_map(name, qubits)
+            module_channels = self._get_module_channel_map(module, qubits)
             module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
             for port in self.modules[name].ports:
                 # _los = []
                 # _ifs = []
-                port_channel = [chan for chan, ports in self.modules[name].channel_port_map.items() if ports == port]
+                port_channel = [chan.name for chan in self.modules[name].channel_map.values() if chan.port.name == port]
                 port_pulses = module_pulses[name].get_channel_pulses(*port_channel)
                 # for pulse in port_pulses:
                 #     if pulse.type == PulseType.READOUT:

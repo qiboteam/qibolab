@@ -147,7 +147,7 @@ class ClusterQCM_RF(Instrument):
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
-        self.channel_port_map: dict = {}
+        self.channel_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
@@ -344,7 +344,7 @@ class ClusterQCM_RF(Instrument):
         """Returns the intermediate frequency needed to synthesise a pulse based on the port lo frequency."""
 
         _rf = pulse.frequency
-        _lo = self.ports[self.channel_port_map[pulse.channel]].lo_frequency
+        _lo = self.channel_map[pulse.channel].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
@@ -406,7 +406,7 @@ class ClusterQCM_RF(Instrument):
         # process the pulses for every port
         for port in self.ports:
             # split the collection of instruments pulses by ports
-            port_channel = [chan for chan, ports in self.channel_port_map.items() if ports == port]
+            port_channel = [chan.name for chan in self.channel_map.values() if chan.port.name == port]
             port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
             # initialise the list of sequencers required by the port
