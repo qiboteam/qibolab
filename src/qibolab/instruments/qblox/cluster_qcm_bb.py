@@ -296,7 +296,7 @@ class ClusterQCM_BB(Instrument):
         """
         # select the qubit relative to specific port
         for _qubit in qubits.values():
-            if _qubit.flux.port.name == port:
+            if _qubit.flux.port.name == port and _qubit.flux.port.module.name == self.name:
                 qubit = _qubit
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
