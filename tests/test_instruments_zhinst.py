@@ -172,7 +172,6 @@ def test_zhinst_register_readout_line(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
     IQM5q.register_readout_line(platform.qubits[0], intermediate_frequency=int(1e6))
 
     assert "measure0" in IQM5q.signal_map
@@ -184,7 +183,6 @@ def test_zhinst_register_drive_line(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
     IQM5q.register_drive_line(platform.qubits[0], intermediate_frequency=int(1e6))
 
     assert "drive0" in IQM5q.signal_map
@@ -195,7 +193,6 @@ def test_zhinst_register_flux_line(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
     IQM5q.register_flux_line(platform.qubits[0])
 
     assert "flux0" in IQM5q.signal_map
@@ -206,7 +203,6 @@ def test_experiment_execute_pulse_sequence(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -244,7 +240,6 @@ def test_experiment_execute_pulse_sequence_coupler(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -296,7 +291,6 @@ def test_experiment_fast_reset_readout(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
@@ -329,7 +323,6 @@ def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
@@ -379,7 +372,6 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
@@ -422,7 +414,6 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -489,7 +480,6 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
@@ -543,7 +533,6 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
@@ -597,7 +586,6 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
@@ -656,7 +644,6 @@ def test_sim(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.create_device_setup()
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0]}
     platform.qubits = qubits
