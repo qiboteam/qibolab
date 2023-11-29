@@ -120,9 +120,7 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
 def dump_instruments(instruments: InstrumentMap) -> dict:
     """Dump instrument settings to a dictionary following the runcard format."""
     return {
-        name: asdict(instrument.settings, dict_factory=instrument.settings.dict_factory)
-        for name, instrument in instruments.items()
-        if instrument.settings is not None
+        name: instrument.settings.dump() for name, instrument in instruments.items() if instrument.settings is not None
     }
 
 

@@ -22,10 +22,14 @@ class LocalOscillatorSettings(InstrumentSettings):
     frequency: Optional[float] = None
     ref_osc_source: Optional[str] = None
 
-    @staticmethod
-    def dict_factory(x):
-        exclude_fields = ("ref_osc_source",)
-        return {k: v for (k, v) in x if ((v is not None) and (k not in exclude_fields))}
+    def dump(self):
+        """Dictionary containing local oscillator settings.
+
+        The reference clock is excluded as it is not a calibrated parameter.
+        None values are also excluded.
+        """
+        data = super().dump()
+        return {k: v for k, v in data.items() if k != "ref_osc_source" and v is not None}
 
 
 def _setter(instrument, parameter, value):
