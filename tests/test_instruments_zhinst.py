@@ -72,7 +72,7 @@ def test_zhinst_setup(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    assert IQM5q.time_of_flight == 280
+    assert IQM5q.time_of_flight == 75
 
 
 def test_zhsequence(dummy_qrc):
