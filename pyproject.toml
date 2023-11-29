@@ -55,7 +55,7 @@ qcodes = "^0.37.0"
 qcodes_contrib_drivers = "0.18.0"
 qibosoq = ">=0.0.4,<0.2"
 qualang-tools = "==0.14.0"
-laboneq = ">=2.16.0"
+laboneq = ">=2.20.0"
 
 [tool.poetry.group.tests]
 optional = true
