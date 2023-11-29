@@ -117,7 +117,7 @@ class ERA(LocalOscillator):
     """Driver to control the ERAsynth++ local oscillator.
 
     This driver is using:
-    https://qcodes.github.io/Qcodes_contrib_drivers/_modules/qcodes_contrib_drivers/drivers/ERAInstruments/erasynth.html#ERASynthBase.clear_read_buffer
+    https://qcodes.github.io/Qcodes_contrib_drivers/api/generated/qcodes_contrib_drivers.drivers.ERAInstruments.html#qcodes_contrib_drivers.drivers.ERAInstruments.erasynth.ERASynthPlusPlus
 
     or the custom :class:`qibolab.instruments.erasynth.ERASynthEthernet` object
     if we are connected via ethernet.
