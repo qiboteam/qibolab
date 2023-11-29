@@ -146,9 +146,18 @@ class ClusterQRM_RF(Instrument):
     """
 
     def __init__(self, name: str, address: str, cluster: Cluster):
-        """Initialises the instance.
+        """
+        Initialize a Qblox QRM-RF module.
 
-        All class attributes are defined and initialised.
+        Parameters:
+        - name: An arbitrary name to identify the module.
+        - address: The network address of the instrument, specified as "cluster_IP:module_slot_idx".
+        - cluster: The Cluster object to which the QRM-RF module is connected.
+
+        Example:
+        To create a ClusterQRM_RF instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
+        >>> qrm_module = ClusterQRM_RF(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
 
         super().__init__(name, address)
