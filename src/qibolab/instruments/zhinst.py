@@ -29,7 +29,6 @@ os.environ["LABONEQ_TOKEN"] = "not required"
 laboneq._token.is_valid_token = lambda _token: True  # pylint: disable=W0212
 
 NANO_TO_SECONDS = 1e-9
-SERVER_PORT = "8004"
 COMPILER_SETTINGS = {
     "SHFSG_FORCE_COMMAND_TABLE": True,
     "SHFSG_MIN_PLAYWAVE_HINT": 32,
@@ -288,17 +287,9 @@ class Zurich(Controller):
 
     PortType = ZhPort
 
-    def __init__(self, name, descriptor, use_emulation=False, time_of_flight=0.0, smearing=0.0):
+    def __init__(self, name, device_setup, use_emulation=False, time_of_flight=0.0, smearing=0.0):
         self.name = name
         "Setup name (str)"
-
-        self.descriptor = descriptor
-        """
-        Port and device mapping in yaml text (str)
-
-        It should be used as a template by adding extra lines for each of the different
-        frequency pulses played through the same port after parsing the sequence.
-        """
 
         self.emulation = use_emulation
         "Enable emulation mode (bool)"
@@ -310,7 +301,7 @@ class Zurich(Controller):
         self.calibration = lo.Calibration()
         "Zurich calibration object)"
 
-        self.device_setup = None
+        self.device_setup = device_setup
         self.session = None
         self.device = None
         "Zurich device parameters for connection"
@@ -344,21 +335,11 @@ class Zurich(Controller):
 
     def connect(self):
         if self.is_connected is False:
-            self.create_device_setup()
             # To fully remove logging #configure_logging=False
             # I strongly advise to set it to 20 to have time estimates of the experiment duration!
             self.session = lo.Session(self.device_setup, log_level=20)
             self.device = self.session.connect(do_emulation=self.emulation)
             self.is_connected = True
-
-    def create_device_setup(self):
-        """Loads the device setup to address the instruments"""
-        self.device_setup = lo.DeviceSetup.from_dict(
-            data=self.descriptor,
-            server_host="localhost",
-            server_port=SERVER_PORT,
-            setup_name=self.name,
-        )
 
     def start(self):
         """Empty method to comply with Instrument interface."""
@@ -1254,12 +1235,6 @@ class Zurich(Controller):
         Args:
             sim_time (float): Time[s] to simulate starting from 0
         """
-        self.device_setup = lo.DeviceSetup.from_dict(
-            data=self.descriptor,
-            server_host="localhost",
-            server_port=SERVER_PORT,
-            setup_name=self.name,
-        )
         # create a session
         self.sim_session = lo.Session(self.device_setup)
         # connect to session
