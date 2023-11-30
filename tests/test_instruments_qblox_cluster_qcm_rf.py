@@ -3,18 +3,17 @@ import pytest
 
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.cluster_qcm_rf import (
-    ClusterQCM_RF,
-    ClusterQCM_RF_Settings,
-)
-from qibolab.instruments.qblox.port import (
-    ClusterRF_OutputPort,
-    ClusterRF_OutputPort_Settings,
-)
+from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
+from qibolab.instruments.qblox.port import QbloxOutputPort, QbloxOutputPort_Settings
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
+from .qblox_fixtures import (  # noqa
+    cluster,
+    connected_cluster,
+    connected_controller,
+    controller,
+)
 
 O1_OUTPUT_CHANNEL = "L3-11"
 O1_ATTENUATION = 20
@@ -27,50 +26,39 @@ O2_LO_FREQUENCY = 5_995_371_914
 O2_GAIN = 0.655
 
 
-def get_qcm_rf(controller):
-    settings = ClusterQCM_RF_Settings(
-        {
-            "o1": ClusterRF_OutputPort_Settings(
-                channel=O1_OUTPUT_CHANNEL,
-                attenuation=O1_ATTENUATION,
-                lo_frequency=O1_LO_FREQUENCY,
-                gain=O1_GAIN,
-            ),
-            "o2": ClusterRF_OutputPort_Settings(
-                channel=O2_OUTPUT_CHANNEL,
-                attenuation=O2_ATTENUATION,
-                lo_frequency=O2_LO_FREQUENCY,
-                gain=O2_GAIN,
-            ),
-        }
-    )
-    for module in controller.modules.values():
+def get_qcm_rf(cluster):
+    for module in cluster.modules.values():
         if isinstance(module, ClusterQCM_RF):
-            return ClusterQCM_RF(module.name, module.address, settings)
-    pytest.skip(f"Skipping qblox ClusterQCM_RF test for {controller.name}.")
+            return ClusterQCM_RF(module.name, module.address, cluster)
+    pytest.skip(f"Skipping qblox ClusterQCM_RF test for {cluster.name}.")
 
 
 @pytest.fixture(scope="module")
-def qcm_rf(controller):
-    return get_qcm_rf(controller)
+def qcm_rf(cluster):
+    return get_qcm_rf(cluster)
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_cluster, connected_controller):
-    qcm_rf = get_qcm_rf(connected_controller)
+def connected_qcm_rf(connected_cluster):
+    settings = {
+        "o1": {
+            "attenuation": O1_ATTENUATION,
+            "lo_frequency": O1_LO_FREQUENCY,
+            "gain": O1_GAIN,
+        },
+        "o2": {
+            "attenuation": O2_ATTENUATION,
+            "lo_frequency": O2_LO_FREQUENCY,
+            "gain": O2_GAIN,
+        },
+    }
+    qcm_rf = get_qcm_rf(connected_cluster)
     connected_cluster.connect()
-    qcm_rf.connect(connected_cluster.device)
-    qcm_rf.setup()
+    qcm_rf.connect()
+    qcm_rf.setup(**settings)
     yield qcm_rf
     qcm_rf.disconnect()
     connected_cluster.disconnect()
-
-
-def test_ClusterQCM_RF_Settings():
-    # Test default value
-    qcm_rf_settings = ClusterQCM_RF_Settings()
-    for port in ["o1", "o2"]:
-        assert port in qcm_rf_settings.ports
 
 
 def test_instrument_interface(qcm_rf: ClusterQCM_RF):
@@ -83,13 +71,13 @@ def test_instrument_interface(qcm_rf: ClusterQCM_RF):
 
 
 def test_init(qcm_rf: ClusterQCM_RF):
-    assert type(qcm_rf.settings.ports["o1"]) == ClusterRF_OutputPort_Settings
-    assert type(qcm_rf.settings.ports["o2"]) == ClusterRF_OutputPort_Settings
+    assert type(qcm_rf.settings.ports["o1"]) == QbloxOutputPort_Settings
+    assert type(qcm_rf.settings.ports["o2"]) == QbloxOutputPort_Settings
     assert qcm_rf.device == None
     for port in ["o1", "o2"]:
         assert port in qcm_rf.ports
-    o1_output_port: ClusterRF_OutputPort = qcm_rf.ports["o1"]
-    o2_output_port: ClusterRF_OutputPort = qcm_rf.ports["o2"]
+    o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
+    o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
     assert o1_output_port.sequencer_number == 0
     assert o2_output_port.sequencer_number == 1
 

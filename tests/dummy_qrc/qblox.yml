@@ -14,6 +14,82 @@ instruments:
       frequency: 6_535_900_000
       power: 4
 
+    qcm_bb0:
+        o1:
+            gain: 0.5
+            qubit: 0  # channel="L4-5", gain=0.5, offset=0.5544, qubit=0
+            offset: 0.1
+
+        o2:
+            gain: 0.5
+            qubit: 1  # channel="L4-1", gain=0.5, offset=0.2244, qubit=1
+            offset: 0.11
+
+        o3:
+            gain: 0.5
+            qubit: 2 # channel="L4-2", gain=0.5, offset=-0.3762, qubit=2
+            offset: 0.12
+
+        o4: #qubit 3
+            gain: 0.5
+            qubit: 3  # channel="L4-3", gain=0.5, offset=-0.8893, qubit=3
+            offset: 0.13
+
+    qcm_bb1:
+        o1:
+            gain: 0.5
+            qubit: 4  # channel="L4-4", gain=0.5, offset=0.5915, qubit=4
+            offset: 0.14
+
+    qcm_rf0:
+        o1:
+            attenuation: 20
+            lo_frequency: 5_252_833_073
+            gain: 0.470
+
+        o2:
+            attenuation: 20
+            lo_frequency: 5_652_833_073
+            gain: 0.570
+
+    qcm_rf1:
+        o1:
+            attenuation: 20
+            lo_frequency: 5_995_371_914
+            gain: 0.550
+
+        o2:
+            attenuation: 20
+            lo_frequency: 6_961_018_001
+            gain: 0.596
+
+    qcm_rf2:
+        o1:
+            attenuation: 20
+            lo_frequency: 6_786_543_060
+            gain: 0.470
+
+    qrm_rf_a:   # q0,q1,q5
+        o1:
+            attenuation: 36  # 38
+            lo_frequency: 7_300_000_000
+            gain: 0.6
+
+        i1:
+            acquisition_hold_off: 500
+            acquisition_duration: 900
+
+    qrm_rf_b:   # q2,q3,q4
+
+        o1:
+            attenuation: 36  # 32
+            lo_frequency: 7_850_000_000
+            gain: 0.6
+
+        i1:
+            acquisition_hold_off: 500
+            acquisition_duration: 900
+
 native_gates:
     single_qubit:
         0: # qubit id
