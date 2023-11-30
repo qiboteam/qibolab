@@ -2,22 +2,13 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
+from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
-from qibolab.instruments.qblox.port import (
-    QbloxInputPort,
-    QbloxInputPort_Settings,
-    QbloxOutputPort,
-    QbloxOutputPort_Settings,
-)
+from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
 from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import (  # noqa
-    cluster,
-    connected_cluster,
-    connected_controller,
-    controller,
-)
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
 OUTPUT_CHANNEL = "L3-25_a"
 INPUT_CHANNEL = "L2-5_a"
@@ -70,11 +61,25 @@ def test_instrument_interface(qrm_rf: ClusterQRM_RF):
 
 
 def test_init(qrm_rf: ClusterQRM_RF):
-    assert type(qrm_rf.settings.ports["o1"]) == QbloxOutputPort_Settings
-    assert type(qrm_rf.settings.ports["i1"]) == QbloxInputPort_Settings
+    assert type(qrm_rf._cluster) == Cluster
     assert qrm_rf.device == None
-    for port in ["o1", "i1"]:
-        assert port in qrm_rf.ports
+
+
+def test_setup(qrm_rf: ClusterQRM_RF):
+    settings = {
+        "o1": {
+            "attenuation": ATTENUATION,
+            "lo_frequency": LO_FREQUENCY,
+        },
+        "i1": {
+            "acquisition_hold_off": TIME_OF_FLIGHT,
+            "acquisition_duration": ACQUISITION_DURATION,
+        },
+    }
+    qrm_rf.setup(**settings)
+    assert type(qrm_rf.ports["o1"]) == QbloxOutputPort
+    assert type(qrm_rf.ports["i1"]) == QbloxInputPort
+    assert qrm_rf.settings == settings
     output_port: QbloxOutputPort = qrm_rf.ports["o1"]
     assert output_port.sequencer_number == 0
     input_port: QbloxInputPort = qrm_rf.ports["i1"]
@@ -121,11 +126,6 @@ def test_connect(connected_qrm_rf: ClusterQRM_RF):
     for s in range(1, _device_num_sequencers):
         assert qrm_rf.device.sequencers[s].get("connect_out0") == "off"
         assert qrm_rf.device.sequencers[s].get("connect_acq") == "off"
-
-
-@pytest.mark.qpu
-def test_setup(connected_qrm_rf: ClusterQRM_RF):
-    qrm_rf = connected_qrm_rf
 
     assert qrm_rf.device.get("out0_att") == ATTENUATION
     assert qrm_rf.device.get("out0_in0_lo_en") == True

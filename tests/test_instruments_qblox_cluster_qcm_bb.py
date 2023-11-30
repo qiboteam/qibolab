@@ -4,17 +4,12 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
-from qibolab.instruments.qblox.port import QbloxOutputPort_Settings
+from qibolab.instruments.qblox.cluster_qcm_bb import Cluster, ClusterQCM_BB
+from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import (  # noqa
-    cluster,
-    connected_cluster,
-    connected_controller,
-    controller,
-)
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
 O1_OUTPUT_CHANNEL = "L4-5"
 O1_OFFSET = 0.2227
@@ -45,14 +40,10 @@ def qcm_bb(controller, cluster):
 def connected_qcm_bb(connected_controller, connected_cluster):
     settings = {
         "o1": {
-            # "gain": O1_GAIN,
             "offset": O1_OFFSET,
-            # "qubit": O1_QUBIT,
         },
         "o2": {
-            # "gain": O2_GAIN,
             "offset": O2_OFFSET,
-            # "qubit": O2_QUBIT,
         },
         "o3": {
             "offset": O3_OFFSET,
@@ -79,21 +70,29 @@ def test_instrument_interface(qcm_bb: ClusterQCM_BB):
 
 
 def test_init(qcm_bb: ClusterQCM_BB):
-    assert type(qcm_bb.settings.ports["o1"]) == QbloxOutputPort_Settings
-    assert type(qcm_bb.settings.ports["o2"]) == QbloxOutputPort_Settings
-    assert type(qcm_bb.settings.ports["o3"]) == QbloxOutputPort_Settings
-    assert type(qcm_bb.settings.ports["o4"]) == QbloxOutputPort_Settings
     assert qcm_bb.device == None
-    for port in ["o1", "o2", "o3", "o4"]:
-        assert port in qcm_bb.ports
-    o1_output_port = qcm_bb.ports["o1"]
-    o2_output_port = qcm_bb.ports["o2"]
-    o3_output_port = qcm_bb.ports["o3"]
-    o4_output_port = qcm_bb.ports["o4"]
-    assert o1_output_port.sequencer_number == 0
-    assert o2_output_port.sequencer_number == 1
-    assert o3_output_port.sequencer_number == 2
-    assert o4_output_port.sequencer_number == 3
+    assert type(qcm_bb._cluster) == Cluster
+
+
+def test_setup(qcm_bb: ClusterQCM_BB):
+    settings = {
+        "o1": {
+            "offset": O1_OFFSET,
+        },
+        "o2": {
+            "offset": O2_OFFSET,
+        },
+        "o3": {
+            "offset": O3_OFFSET,
+        },
+        "o4": {
+            "offset": O4_OFFSET,
+        },
+    }
+    qcm_bb.setup(**settings)
+    for idx, port in enumerate(settings):
+        assert type(qcm_bb.ports[port]) == QbloxOutputPort
+        assert qcm_bb.ports[port].sequencer_number == idx
 
 
 @pytest.mark.qpu
@@ -141,12 +140,6 @@ def test_connect(connected_qcm_bb: ClusterQCM_BB):
         assert qcm_bb.device.sequencers[s].get("connect_out1") == "off"
         assert qcm_bb.device.sequencers[s].get("connect_out2") == "off"
         assert qcm_bb.device.sequencers[s].get("connect_out3") == "off"
-
-
-@pytest.mark.qpu
-def test_setup(connected_qcm_bb: ClusterQCM_BB):
-    qcm_bb = connected_qcm_bb
-    qcm_bb.setup()
 
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
     assert math.isclose(o1_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)

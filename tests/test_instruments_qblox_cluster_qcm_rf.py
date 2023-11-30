@@ -4,16 +4,11 @@ import pytest
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
-from qibolab.instruments.qblox.port import QbloxOutputPort, QbloxOutputPort_Settings
+from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-from .qblox_fixtures import (  # noqa
-    cluster,
-    connected_cluster,
-    connected_controller,
-    controller,
-)
+from .qblox_fixtures import cluster, connected_cluster, connected_controller, controller
 
 O1_OUTPUT_CHANNEL = "L3-15"
 O1_ATTENUATION = 20
@@ -67,11 +62,34 @@ def test_instrument_interface(qcm_rf: ClusterQCM_RF):
 
 
 def test_init(qcm_rf: ClusterQCM_RF):
-    assert type(qcm_rf.settings.ports["o1"]) == QbloxOutputPort_Settings
-    assert type(qcm_rf.settings.ports["o2"]) == QbloxOutputPort_Settings
     assert qcm_rf.device == None
-    for port in ["o1", "o2"]:
-        assert port in qcm_rf.ports
+    assert type(qcm_rf.ports) == dict
+    assert type(qcm_rf._cluster) == Cluster
+    # for port in ["o1", "o2"]:
+    #     assert port in qcm_rf.ports
+    #     assert type(qcm_rf.ports[port]) == QbloxOutputPort_Settings
+    # o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
+    # o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
+    # assert o1_output_port.sequencer_number == 0
+    # assert o2_output_port.sequencer_number == 1
+
+
+def test_setup(qcm_rf: ClusterQCM_RF):
+    settings = {
+        "o1": {
+            "attenuation": O1_ATTENUATION,
+            "lo_frequency": O1_LO_FREQUENCY,
+        },
+        "o2": {
+            "attenuation": O2_ATTENUATION,
+            "lo_frequency": O2_LO_FREQUENCY,
+        },
+    }
+    qcm_rf.setup(**settings)
+    for port in settings:
+        assert type(qcm_rf.ports[port]) == QbloxOutputPort
+        assert type(qcm_rf._sequencers[port]) == list
+    assert qcm_rf.settings == settings
     o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
     o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
     assert o1_output_port.sequencer_number == 0
@@ -120,11 +138,6 @@ def test_connect(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
     for s in range(2, _device_num_sequencers):
         assert qcm_rf.device.sequencers[s].get("connect_out0") == "off"
         assert qcm_rf.device.sequencers[s].get("connect_out1") == "off"
-
-
-@pytest.mark.qpu
-def test_setup(connected_qcm_rf: ClusterQCM_RF):
-    qcm_rf = connected_qcm_rf
 
     assert qcm_rf.device.get("out0_att") == O1_ATTENUATION
     assert qcm_rf.device.get("out0_lo_en") == True
