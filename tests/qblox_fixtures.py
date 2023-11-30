@@ -5,7 +5,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 
 
 def get_controller(platform):
-    for instrument in platform.instruments:
+    for instrument in platform.instruments.values():
         if isinstance(instrument, QbloxController):
             return instrument
     pytest.skip(f"Skipping qblox test for {platform.name}.")

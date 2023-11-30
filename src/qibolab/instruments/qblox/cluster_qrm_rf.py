@@ -241,6 +241,11 @@ class ClusterQRM_RF(Instrument):
                     self.device.sequencers[sequencer],
                     "connect_out0",
                     value="off",
+                )
+                self._set_device_parameter(
+                    self.device.sequencers[sequencer],
+                    "connect_acq",
+                    value="off",
                 )  # Default after reboot = True
             try:
                 if "o1" in self.settings:

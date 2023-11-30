@@ -15,47 +15,43 @@ from .qblox_fixtures import (  # noqa
     controller,
 )
 
-O1_OUTPUT_CHANNEL = "L3-11"
+O1_OUTPUT_CHANNEL = "L3-15"
 O1_ATTENUATION = 20
 O1_LO_FREQUENCY = 5_052_833_073
-O1_GAIN = 0.570
 
-O2_OUTPUT_CHANNEL = "L3-12"
+O2_OUTPUT_CHANNEL = "L3-11"
 O2_ATTENUATION = 20
 O2_LO_FREQUENCY = 5_995_371_914
-O2_GAIN = 0.655
 
 
-def get_qcm_rf(cluster):
-    for module in cluster.modules.values():
+def get_qcm_rf(controller, cluster):
+    for module in controller.modules.values():
         if isinstance(module, ClusterQCM_RF):
             return ClusterQCM_RF(module.name, module.address, cluster)
     pytest.skip(f"Skipping qblox ClusterQCM_RF test for {cluster.name}.")
 
 
 @pytest.fixture(scope="module")
-def qcm_rf(cluster):
-    return get_qcm_rf(cluster)
+def qcm_rf(controller, cluster):
+    return get_qcm_rf(controller, cluster)
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_cluster):
+def connected_qcm_rf(connected_controller, connected_cluster):
     settings = {
         "o1": {
             "attenuation": O1_ATTENUATION,
             "lo_frequency": O1_LO_FREQUENCY,
-            "gain": O1_GAIN,
         },
         "o2": {
             "attenuation": O2_ATTENUATION,
             "lo_frequency": O2_LO_FREQUENCY,
-            "gain": O2_GAIN,
         },
     }
-    qcm_rf = get_qcm_rf(connected_cluster)
-    connected_cluster.connect()
-    qcm_rf.connect()
+    qcm_rf = get_qcm_rf(connected_controller, connected_cluster)
     qcm_rf.setup(**settings)
+    qcm_rf.connect()
+
     yield qcm_rf
     qcm_rf.disconnect()
     connected_cluster.disconnect()
@@ -88,7 +84,7 @@ def test_connect(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
     qcm_rf = connected_qcm_rf
 
     cluster.connect()
-    qcm_rf.connect(cluster.device)
+    qcm_rf.connect()
     assert qcm_rf.is_connected
     assert not qcm_rf is None
     # test configuration after connection
@@ -114,59 +110,40 @@ def test_connect(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
         assert default_sequencer.get("upsample_rate_awg_path0") == 0
         assert default_sequencer.get("upsample_rate_awg_path1") == 0
 
-    assert o1_default_sequencer.get("channel_map_path0_out0_en") == True
-    assert o1_default_sequencer.get("channel_map_path1_out1_en") == True
-    assert o1_default_sequencer.get("channel_map_path0_out2_en") == False
-    assert o1_default_sequencer.get("channel_map_path1_out3_en") == False
+    assert o1_default_sequencer.get("connect_out0") == "IQ"
+    assert o1_default_sequencer.get("connect_out1") == "off"
 
-    assert o2_default_sequencer.get("channel_map_path0_out0_en") == False
-    assert o2_default_sequencer.get("channel_map_path1_out1_en") == False
-    assert o2_default_sequencer.get("channel_map_path0_out2_en") == True
-    assert o2_default_sequencer.get("channel_map_path1_out3_en") == True
+    assert o2_default_sequencer.get("connect_out1") == "IQ"
+    assert o2_default_sequencer.get("connect_out0") == "off"
 
     _device_num_sequencers = len(qcm_rf.device.sequencers)
     for s in range(2, _device_num_sequencers):
-        assert qcm_rf.device.sequencers[s].get("channel_map_path0_out0_en") == False
-        assert qcm_rf.device.sequencers[s].get("channel_map_path1_out1_en") == False
-        assert qcm_rf.device.sequencers[s].get("channel_map_path0_out2_en") == False
-        assert qcm_rf.device.sequencers[s].get("channel_map_path1_out3_en") == False
+        assert qcm_rf.device.sequencers[s].get("connect_out0") == "off"
+        assert qcm_rf.device.sequencers[s].get("connect_out1") == "off"
 
 
 @pytest.mark.qpu
-def test_setup(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
-    cluster = connected_cluster
+def test_setup(connected_qcm_rf: ClusterQCM_RF):
     qcm_rf = connected_qcm_rf
 
-    cluster.connect()
-    qcm_rf.connect(cluster.device)
-    qcm_rf.setup()
-
-    assert qcm_rf.ports["o1"].channel == O1_OUTPUT_CHANNEL
     assert qcm_rf.device.get("out0_att") == O1_ATTENUATION
     assert qcm_rf.device.get("out0_lo_en") == True
     assert qcm_rf.device.get("out0_lo_freq") == O1_LO_FREQUENCY
     assert qcm_rf.device.get("out0_lo_freq") == O1_LO_FREQUENCY
-    import math
 
     o1_default_sequencer = qcm_rf.device.sequencers[qcm_rf.DEFAULT_SEQUENCERS["o1"]]
-    assert math.isclose(o1_default_sequencer.get("gain_awg_path0"), O1_GAIN, rel_tol=1e-4)
-    assert math.isclose(o1_default_sequencer.get("gain_awg_path1"), O1_GAIN, rel_tol=1e-4)
 
     assert o1_default_sequencer.get("mod_en_awg") == True
 
     assert qcm_rf.ports["o1"].nco_freq == 0
     assert qcm_rf.ports["o1"].nco_phase_offs == 0
 
-    assert qcm_rf.ports["o2"].channel == O2_OUTPUT_CHANNEL
     assert qcm_rf.device.get("out1_att") == O2_ATTENUATION
     assert qcm_rf.device.get("out1_lo_en") == True
     assert qcm_rf.device.get("out1_lo_freq") == O2_LO_FREQUENCY
     assert qcm_rf.device.get("out1_lo_freq") == O2_LO_FREQUENCY
-    import math
 
     o2_default_sequencer = qcm_rf.device.sequencers[qcm_rf.DEFAULT_SEQUENCERS["o2"]]
-    assert math.isclose(o2_default_sequencer.get("gain_awg_path0"), O2_GAIN, rel_tol=1e-4)
-    assert math.isclose(o2_default_sequencer.get("gain_awg_path1"), O2_GAIN, rel_tol=1e-4)
 
     assert o2_default_sequencer.get("mod_en_awg") == True
 

@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.port import QbloxOutputPort_Settings
 from qibolab.pulses import FluxPulse, PulseSequence
@@ -17,70 +16,57 @@ from .qblox_fixtures import (  # noqa
     controller,
 )
 
-O1_OUTPUT_CHANNEL = "L4-1"
-O1_GAIN = 0.5
+O1_OUTPUT_CHANNEL = "L4-5"
 O1_OFFSET = 0.2227
-O1_QUBIT = 1
 
-O2_OUTPUT_CHANNEL = "L4-2"
-O2_GAIN = 0.5
+O2_OUTPUT_CHANNEL = "L4-1"
 O2_OFFSET = 0.3780
-O2_QUBIT = 2
 
-O3_OUTPUT_CHANNEL = "L4-3"
-O3_GAIN = 0.5
+O3_OUTPUT_CHANNEL = "L4-2"
 O3_OFFSET = -0.8899
-O3_QUBIT = 3
 
-O4_OUTPUT_CHANNEL = "L4-4"
-O4_GAIN = 0.5
+O4_OUTPUT_CHANNEL = "L4-3"
 O4_OFFSET = 0.5890
-O4_QUBIT = 4
 
 
-def get_qcm_bb(cluster):
-    for module in cluster.modules.values():
+def get_qcm_bb(controller, cluster):
+    for module in controller.modules.values():
         if isinstance(module, ClusterQCM_BB):
             return ClusterQCM_BB(module.name, module.address, cluster)
     pytest.skip(f"Skipping qblox ClusterQCM_BB test for {cluster.name}.")
 
 
 @pytest.fixture(scope="module")
-def qcm_bb(cluster):
-    return get_qcm_bb(cluster)
+def qcm_bb(controller, cluster):
+    return get_qcm_bb(controller, cluster)
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_bb(connected_cluster):
+def connected_qcm_bb(connected_controller, connected_cluster):
     settings = {
         "o1": {
-            "gain": O1_GAIN,
+            # "gain": O1_GAIN,
             "offset": O1_OFFSET,
-            "qubit": O1_QUBIT,
+            # "qubit": O1_QUBIT,
         },
         "o2": {
-            "gain": O2_GAIN,
+            # "gain": O2_GAIN,
             "offset": O2_OFFSET,
-            "qubit": O2_QUBIT,
+            # "qubit": O2_QUBIT,
         },
         "o3": {
-            "gain": O3_GAIN,
             "offset": O3_OFFSET,
-            "qubit": O3_QUBIT,
         },
         "o4": {
-            "gain": O4_GAIN,
             "offset": O4_OFFSET,
-            "qubit": O4_QUBIT,
         },
     }
-    qcm_bb = get_qcm_bb(connected_cluster)
-    connected_cluster.connect()
+    qcm_bb = get_qcm_bb(connected_controller, connected_cluster)
     qcm_bb.setup(**settings)
     qcm_bb.connect()
     yield qcm_bb
     qcm_bb.disconnect()
-    connected_cluster.disconnect()
+    connected_controller.disconnect()
 
 
 def test_instrument_interface(qcm_bb: ClusterQCM_BB):
@@ -111,12 +97,9 @@ def test_init(qcm_bb: ClusterQCM_BB):
 
 
 @pytest.mark.qpu
-def test_connect(connected_cluster: Cluster, connected_qcm_bb: ClusterQCM_BB):
-    cluster = connected_cluster
+def test_connect(connected_qcm_bb: ClusterQCM_BB):
     qcm_bb = connected_qcm_bb
 
-    cluster.connect()
-    qcm_bb.connect()
     assert qcm_bb.is_connected
     assert not qcm_bb is None
 
@@ -144,32 +127,20 @@ def test_connect(connected_cluster: Cluster, connected_qcm_bb: ClusterQCM_BB):
         assert default_sequencer.get("upsample_rate_awg_path0") == 0
         assert default_sequencer.get("upsample_rate_awg_path1") == 0
 
-    assert o1_default_sequencer.get("channel_map_path0_out0_en") == True
-    assert o1_default_sequencer.get("channel_map_path1_out1_en") == False
-    assert o1_default_sequencer.get("channel_map_path0_out2_en") == False
-    assert o1_default_sequencer.get("channel_map_path1_out3_en") == False
+    assert o1_default_sequencer.get("connect_out0") == "I"
 
-    assert o2_default_sequencer.get("channel_map_path0_out0_en") == False
-    assert o2_default_sequencer.get("channel_map_path1_out1_en") == True
-    assert o2_default_sequencer.get("channel_map_path0_out2_en") == False
-    assert o2_default_sequencer.get("channel_map_path1_out3_en") == False
+    assert o2_default_sequencer.get("connect_out1") == "Q"
 
-    assert o3_default_sequencer.get("channel_map_path0_out0_en") == False
-    assert o3_default_sequencer.get("channel_map_path1_out1_en") == False
-    assert o3_default_sequencer.get("channel_map_path0_out2_en") == True
-    assert o3_default_sequencer.get("channel_map_path1_out3_en") == False
+    assert o3_default_sequencer.get("connect_out2") == "I"
 
-    assert o4_default_sequencer.get("channel_map_path0_out0_en") == False
-    assert o4_default_sequencer.get("channel_map_path1_out1_en") == False
-    assert o4_default_sequencer.get("channel_map_path0_out2_en") == False
-    assert o4_default_sequencer.get("channel_map_path1_out3_en") == True
+    assert o4_default_sequencer.get("connect_out3") == "Q"
 
     _device_num_sequencers = len(qcm_bb.device.sequencers)
     for s in range(4, _device_num_sequencers):
-        assert qcm_bb.device.sequencers[s].get("channel_map_path0_out0_en") == False
-        assert qcm_bb.device.sequencers[s].get("channel_map_path1_out1_en") == False
-        assert qcm_bb.device.sequencers[s].get("channel_map_path0_out2_en") == False
-        assert qcm_bb.device.sequencers[s].get("channel_map_path1_out3_en") == False
+        assert qcm_bb.device.sequencers[s].get("connect_out0") == "off"
+        assert qcm_bb.device.sequencers[s].get("connect_out1") == "off"
+        assert qcm_bb.device.sequencers[s].get("connect_out2") == "off"
+        assert qcm_bb.device.sequencers[s].get("connect_out3") == "off"
 
 
 @pytest.mark.qpu
@@ -177,40 +148,28 @@ def test_setup(connected_qcm_bb: ClusterQCM_BB):
     qcm_bb = connected_qcm_bb
     qcm_bb.setup()
 
-    assert qcm_bb.ports["o1"].channel == O1_OUTPUT_CHANNEL
-
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
-    assert math.isclose(o1_default_sequencer.get("gain_awg_path0"), O1_GAIN, rel_tol=1e-4)
     assert math.isclose(o1_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert math.isclose(qcm_bb.device.get("out0_offset"), O1_OFFSET, rel_tol=1e-3)
     assert o1_default_sequencer.get("mod_en_awg") == True
     assert qcm_bb.ports["o1"].nco_freq == 0
     assert qcm_bb.ports["o1"].nco_phase_offs == 0
 
-    assert qcm_bb.ports["o2"].channel == O2_OUTPUT_CHANNEL
-
     o2_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o2"]]
-    assert math.isclose(o2_default_sequencer.get("gain_awg_path0"), O2_GAIN, rel_tol=1e-4)
     assert math.isclose(o2_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert math.isclose(qcm_bb.device.get("out1_offset"), O2_OFFSET, rel_tol=1e-3)
     assert o2_default_sequencer.get("mod_en_awg") == True
     assert qcm_bb.ports["o2"].nco_freq == 0
     assert qcm_bb.ports["o2"].nco_phase_offs == 0
 
-    assert qcm_bb.ports["o3"].channel == O3_OUTPUT_CHANNEL
-
     o3_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o3"]]
-    assert math.isclose(o3_default_sequencer.get("gain_awg_path0"), O3_GAIN, rel_tol=1e-4)
     assert math.isclose(o3_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert math.isclose(qcm_bb.device.get("out2_offset"), O3_OFFSET, rel_tol=1e-3)
     assert o3_default_sequencer.get("mod_en_awg") == True
     assert qcm_bb.ports["o3"].nco_freq == 0
     assert qcm_bb.ports["o3"].nco_phase_offs == 0
 
-    assert qcm_bb.ports["o4"].channel == O4_OUTPUT_CHANNEL
-
     o4_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o4"]]
-    assert math.isclose(o4_default_sequencer.get("gain_awg_path0"), O4_GAIN, rel_tol=1e-4)
     assert math.isclose(o4_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert math.isclose(qcm_bb.device.get("out3_offset"), O4_OFFSET, rel_tol=1e-3)
     assert o1_default_sequencer.get("mod_en_awg") == True
