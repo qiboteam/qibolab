@@ -5,20 +5,20 @@ from qibolab.instruments.qblox.controller import QbloxController
 
 
 def get_controller(platform):
-    for instrument in platform.instruments:
+    for instrument in platform.instruments.values():
         if isinstance(instrument, QbloxController):
             return instrument
     pytest.skip(f"Skipping qblox test for {platform.name}.")
 
 
-def get_cluster(controller):
-    cluster = controller.cluster
-    return Cluster(cluster.name, cluster.address, Cluster_Settings())
-
-
 @pytest.fixture(scope="module")
 def controller(platform):
     return get_controller(platform)
+
+
+def get_cluster(controller):
+    cluster = controller.cluster
+    return Cluster(cluster.name, cluster.address, Cluster_Settings())
 
 
 @pytest.fixture(scope="module")
