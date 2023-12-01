@@ -928,31 +928,18 @@ class Zurich(Controller):
                             time=self.sequence_qibo.start * NANO_TO_SECONDS,
                         )
 
-                    if i == 0:
-                        # Integration weights definition or load from the chip folder
-                        weights_file = weights_file = KERNELS_FOLDER / f"{self.chip}/weights/kernels.npz"
-                        if weights_file.is_file():
-                            from qibocal.auto.serialize import load
+                    weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / "kernels.npz"
+                    if weights_file.is_file() and acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                        kernels = np.load(weights_file)
+                        weight = lo.pulse_library.sampled_pulse_complex(
+                            uid="weight" + str(q),
+                            # Do we need the angle ?
+                            samples=kernels[str(q)] * np.exp(1j * iq_angle),
+                            # samples=kernels[str(q)],
+                        )
 
-                            raw_data_dict = dict(np.load(weights_file))
-                            samples = {}
-
-                            for data_key, array in raw_data_dict.items():
-                                samples[load(data_key)] = np.rec.array(array)
-
-                            if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    uid="weight" + str(q),
-                                    # samples=samples[q] * np.exp(1j * iq_angle),
-                                    samples=samples[q],
-                                )
-                            else:
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    uid="weight" + str(q),
-                                    samples=samples[q],
-                                )
-                        else:
-                            # We adjust for smearing and remove smearing/2 at the end
+                    else:
+                        if i == 0:
                             exp.delay(
                                 signal=f"acquire{q}",
                                 time=self.smearing * NANO_TO_SECONDS,
@@ -975,12 +962,12 @@ class Zurich(Controller):
                                     amplitude=1,
                                 )
                                 weights[q] = weight
-                    elif i != 0:
-                        exp.delay(
-                            signal=f"acquire{q}",
-                            time=self.smearing * NANO_TO_SECONDS,
-                        )
-                        weight = weights[q]
+                        elif i != 0:
+                            exp.delay(
+                                signal=f"acquire{q}",
+                                time=self.smearing * NANO_TO_SECONDS,
+                            )
+                            weight = weights[q]
 
                     measure_pulse_parameters = {"phase": 0}
 
