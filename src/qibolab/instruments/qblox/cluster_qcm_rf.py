@@ -136,9 +136,18 @@ class ClusterQCM_RF(Instrument):
     """
 
     def __init__(self, name: str, address: str, cluster: Cluster):
-        """Initialises the instance.
+        """
+        Initialize a Qblox QCM-RF module.
 
-        All class attributes are defined and initialised.
+        Parameters:
+        - name: An arbitrary name to identify the module.
+        - address: The network address of the instrument, specified as "cluster_IP:module_slot_idx".
+        - cluster: The Cluster object to which the QCM-RF module is connected.
+
+        Example:
+        To create a ClusterQCM_RF instance named 'qcm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
+        >>> qcm_module = ClusterQCM_RF(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
@@ -147,9 +156,7 @@ class ClusterQCM_RF(Instrument):
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
-        self.channels: list = []
-        self._port_channel_map: dict = {}
-        self._channel_port_map: dict = {}
+        self.channel_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
@@ -296,7 +303,9 @@ class ClusterQCM_RF(Instrument):
                   At the moment this param is not loaded but is always set to True.
         """
         for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
+            self.ports[port] = QbloxOutputPort(
+                self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
+            )
             self._sequencers[port] = []
         self.settings = settings if settings else self.settings
 
@@ -344,7 +353,7 @@ class ClusterQCM_RF(Instrument):
         """Returns the intermediate frequency needed to synthesise a pulse based on the port lo frequency."""
 
         _rf = pulse.frequency
-        _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
+        _lo = self.channel_map[pulse.channel].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
@@ -406,7 +415,8 @@ class ClusterQCM_RF(Instrument):
         # process the pulses for every port
         for port in self.ports:
             # split the collection of instruments pulses by ports
-            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+            port_channel = [chan.name for chan in self.channel_map.values() if chan.port.name == port]
+            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
             # initialise the list of sequencers required by the port
             self._sequencers[port] = []

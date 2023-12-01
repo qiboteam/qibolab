@@ -146,9 +146,18 @@ class ClusterQRM_RF(Instrument):
     """
 
     def __init__(self, name: str, address: str, cluster: Cluster):
-        """Initialises the instance.
+        """
+        Initialize a Qblox QRM-RF module.
 
-        All class attributes are defined and initialised.
+        Parameters:
+        - name: An arbitrary name to identify the module.
+        - address: The network address of the instrument, specified as "cluster_IP:module_slot_idx".
+        - cluster: The Cluster object to which the QRM-RF module is connected.
+
+        Example:
+        To create a ClusterQRM_RF instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
+        >>> qrm_module = ClusterQRM_RF(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
 
         super().__init__(name, address)
@@ -162,9 +171,7 @@ class ClusterQRM_RF(Instrument):
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
         self._sequencers: dict[Sequencer] = {"o1": []}
-        self.channels: list = []
-        self._port_channel_map: dict = {}
-        self._channel_port_map: dict = {}
+        self.channel_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 1
         self._device_num_sequencers: int
@@ -233,6 +240,11 @@ class ClusterQRM_RF(Instrument):
                 self._set_device_parameter(
                     self.device.sequencers[sequencer],
                     "connect_out0",
+                    value="off",
+                )
+                self._set_device_parameter(
+                    self.device.sequencers[sequencer],
+                    "connect_acq",
                     value="off",
                 )  # Default after reboot = True
             try:
@@ -312,7 +324,7 @@ class ClusterQRM_RF(Instrument):
         """
         if "o1" in settings:
             self.ports["o1"] = QbloxOutputPort(
-                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0
+                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0, port_name="o1"
             )
         if "i1" in settings:
             self.ports["i1"] = QbloxInputPort(
@@ -320,6 +332,7 @@ class ClusterQRM_RF(Instrument):
                 output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
                 input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
                 port_number=0,
+                port_name="i1",
             )
 
         self.settings = settings if settings else self.settings
@@ -384,7 +397,7 @@ class ClusterQRM_RF(Instrument):
         """Returns the intermediate frequency needed to synthesise a pulse based on the port lo frequency."""
 
         _rf = pulse.frequency
-        _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
+        _lo = self.channel_map[pulse.channel].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
@@ -444,7 +457,6 @@ class ClusterQRM_RF(Instrument):
             sweepers = []
         sequencer: Sequencer
         sweeper: Sweeper
-
         # calculate the number of bins
         num_bins = nshots
         for sweeper in sweepers:
@@ -458,7 +470,10 @@ class ClusterQRM_RF(Instrument):
         self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
 
         # split the collection of instruments pulses by ports
-        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+        # ro_channel = None
+        # feed_channel = None
+        port_channel = [chan.name for chan in self.channel_map.values() if chan.port.name == port]
+        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
         # initialise the list of sequencers required by the port
         self._sequencers[port] = []

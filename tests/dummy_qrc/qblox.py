@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import Channel
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.qblox.cluster import (
     Cluster,
     Cluster_Settings,
@@ -48,68 +48,49 @@ def create(runcard_path=RUNCARD):
     #     os.makedirs(folder)
     # for name in modules:
     #     modules[name]._debug_folder = folder
-    qcm_bb0 = ClusterQCM_BB("qcm_bb0", f"{ADDRESS}:2", cluster)
-    qcm_bb1 = ClusterQCM_BB("qcm_bb1", f"{ADDRESS}:4", cluster)
-    qcm_rf0 = ClusterQCM_RF("qcm_rf0", f"{ADDRESS}:6", cluster)
-    qcm_rf1 = ClusterQCM_RF("qcm_rf1", f"{ADDRESS}:8", cluster)
-    qcm_rf2 = ClusterQCM_RF("qcm_rf2", f"{ADDRESS}:10", cluster)
-    qrm_rf_a = ClusterQRM_RF("qrm_rf_a", f"{ADDRESS}:16", cluster)
-    qrm_rf_b = ClusterQRM_RF("qrm_rf_b", f"{ADDRESS}:18", cluster)
+
+    modules = {
+        "qcm_bb0": ClusterQCM_BB("qcm_bb0", f"{ADDRESS}:2", cluster),
+        "qcm_bb1": ClusterQCM_BB("qcm_bb1", f"{ADDRESS}:4", cluster),
+        "qcm_rf0": ClusterQCM_RF("qcm_rf0", f"{ADDRESS}:6", cluster),
+        "qcm_rf1": ClusterQCM_RF("qcm_rf1", f"{ADDRESS}:8", cluster),
+        "qcm_rf2": ClusterQCM_RF("qcm_rf2", f"{ADDRESS}:10", cluster),
+        "qrm_rf_a": ClusterQRM_RF("qrm_rf_a", f"{ADDRESS}:16", cluster),
+        "qrm_rf_b": ClusterQRM_RF("qrm_rf_b", f"{ADDRESS}:18", cluster),
+    }
 
     controller = QbloxController("qblox_controller", cluster, modules)
-
     twpa_pump = SGS100A(name="twpa_pump", address="192.168.0.36")
+
     instruments = {
         controller.name: controller,
         twpa_pump.name: twpa_pump,
-        qcm_bb0.name: qcm_bb0,
-        qcm_bb1.name: qcm_bb1,
-        qcm_rf0.name: qcm_rf0,
-        qcm_rf1.name: qcm_rf1,
-        qcm_rf2.name: qcm_rf2,
-        qrm_rf_a.name: qrm_rf_a,
-        qrm_rf_b.name: qrm_rf_b,
     }
-
+    instruments.update(modules)
     instruments = load_instrument_settings(runcard, instruments)
 
-    modules["qcm_bb0"] = qcm_bb0
-    modules["qcm_bb1"] = qcm_bb1
-    modules["qcm_rf0"] = qcm_rf0
-    modules["qcm_rf1"] = qcm_rf1
-    modules["qcm_rf2"] = qcm_rf2
-    modules["qrm_rf_a"] = qrm_rf_a
-    modules["qrm_rf_b"] = qrm_rf_b
-
     # Create channel objects
-    channels = {}
-
-    def instantiate_channels(channel_name: str, module, module_port_name: str):
-        module.channels.append(channel_name)
-        module._port_channel_map[module_port_name] = channel_name
-        module._channel_port_map[channel_name] = module_port_name
-        return Channel(name=channel_name, port=module.ports[module_port_name])
-
-    # readout
-    channels["L3-25_a"] = instantiate_channels(channel_name="L3-25_a", module=qrm_rf_a, module_port_name="o1")
-    channels["L3-25_b"] = instantiate_channels(channel_name="L3-25_b", module=qrm_rf_b, module_port_name="o1")
-    # feedback
-    channels["L2-5_a"] = instantiate_channels(channel_name="L2-5_a", module=qrm_rf_a, module_port_name="i1")
-    channels["L2-5_b"] = instantiate_channels(channel_name="L2-5_b", module=qrm_rf_b, module_port_name="i1")
-    # drive
-    channels["L3-15"] = instantiate_channels(channel_name="L3-15", module=qcm_rf0, module_port_name="o1")
-    channels["L3-11"] = instantiate_channels(channel_name="L3-11", module=qcm_rf0, module_port_name="o2")
-    channels["L3-12"] = instantiate_channels(channel_name="L3-12", module=qcm_rf1, module_port_name="o1")
-    channels["L3-13"] = instantiate_channels(channel_name="L3-13", module=qcm_rf1, module_port_name="o2")
-    channels["L3-14"] = instantiate_channels(channel_name="L3-14", module=qcm_rf2, module_port_name="o1")
-    # flux
-    channels["L4-5"] = instantiate_channels(channel_name="L4-5", module=qcm_bb0, module_port_name="o1")
-    channels["L4-1"] = instantiate_channels(channel_name="L4-1", module=qcm_bb0, module_port_name="o2")
-    channels["L4-2"] = instantiate_channels(channel_name="L4-2", module=qcm_bb0, module_port_name="o3")
-    channels["L4-3"] = instantiate_channels(channel_name="L4-3", module=qcm_bb0, module_port_name="o4")
-    channels["L4-4"] = instantiate_channels(channel_name="L4-4", module=qcm_bb1, module_port_name="o1")
+    channels = ChannelMap()
+    # Readout
+    channels |= Channel(name="L3-25_a", port=modules["qrm_rf_a"].ports["o1"])
+    channels |= Channel(name="L3-25_b", port=modules["qrm_rf_b"].ports["o1"])
+    # Feedback
+    channels |= Channel(name="L2-5_a", port=modules["qrm_rf_a"].ports["i1"])
+    channels |= Channel(name="L2-5_b", port=modules["qrm_rf_b"].ports["i1"])
+    # Drive
+    channels |= Channel(name="L3-15", port=modules["qcm_rf0"].ports["o1"])
+    channels |= Channel(name="L3-11", port=modules["qcm_rf0"].ports["o2"])
+    channels |= Channel(name="L3-12", port=modules["qcm_rf1"].ports["o1"])
+    channels |= Channel(name="L3-13", port=modules["qcm_rf1"].ports["o2"])
+    channels |= Channel(name="L3-14", port=modules["qcm_rf2"].ports["o1"])
+    # Flux
+    channels |= Channel(name="L4-5", port=modules["qcm_bb0"].ports["o1"])
+    channels |= Channel(name="L4-1", port=modules["qcm_bb0"].ports["o2"])
+    channels |= Channel(name="L4-2", port=modules["qcm_bb0"].ports["o3"])
+    channels |= Channel(name="L4-3", port=modules["qcm_bb0"].ports["o4"])
+    channels |= Channel(name="L4-4", port=modules["qcm_bb1"].ports["o1"])
     # TWPA
-    channels["L3-28"] = Channel(name="L3-28", port=None)
+    channels |= Channel(name="L3-28", port=None)
     channels["L3-28"].local_oscillator = twpa_pump
 
     # create qubit objects
