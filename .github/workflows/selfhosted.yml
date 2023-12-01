@@ -11,14 +11,81 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  prepare:
     if: contains(join(github.event.pull_request.labels.*.name), 'run-on')
-    uses: qiboteam/workflows/.github/workflows/selfhosted.yml@main
-    with:
-      used-labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-      python-version: "3.10"
-      artifact-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      poetry-extras: "--with tests --all-extras"
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Read platforms from labels
+        id: set-matrix
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          echo $LABELS
+          platforms="["
+          combined=""
+          shopt -s lastpipe
+          jq -c '.[]' <<< "$LABELS" | while read label; do
+              platform=(${label//-/ })
+              if [ ${platform[0]} == "\"run" ] && [ ${platform[1]} == "on" ]; then
+                platforms+="${combined:+,}\"${platform[2]}"
+                combined=${platforms}
+              fi
+          done
+          platforms+="]"
+          echo ${platforms}
+          echo matrix="${platforms}" >> $GITHUB_OUTPUT
 
-    secrets:
-      repo_token: ${{ secrets.GITHUB_TOKEN }}
+  tests:
+    needs: prepare
+    strategy:
+      matrix:
+        platform: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+    runs-on: self-hosted
+    steps:
+    - name: Cleanup workspace manually
+      run: |
+        rm -rf _work/*
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    - name: Install and configure poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: false
+    - name: Install qibolab main
+      run: |
+        python -m venv testenv
+        source testenv/bin/activate
+        poetry install --no-interaction --all-extras --with tests
+    - name: Execute on ${{ matrix.platform }}
+      run: |
+        source testenv/bin/activate
+        export platform=${{ matrix.platform }}
+        git clone https://github.com/qiboteam/qibolab_platforms_qrc
+        queues=`cat qibolab_platforms_qrc/queues.json`
+        export QIBOLAB_PLATFORMS=./qibolab_platforms_qrc
+        partition="$(jq -r -n --argjson data "$queues" '$data.'$platform)"
+        srun -p $partition selfhosted
+        mkdir coverage
+        mv coverage.xml coverage/
+        mv htmlcov coverage/
+    - name: Upload coverage report as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-from-self-hosted
+        path: coverage/
+    - name: Notify the Pull Request
+      uses: thollander/actions-comment-pull-request@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        message: |
+          Run on QPU `${{ matrix.platform }}` completed! :atom:
+
+          > *You can download the coverage report as an artifact, from the workflow summary page:*
+          > ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

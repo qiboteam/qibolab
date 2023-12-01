@@ -112,10 +112,10 @@ class QMOPX(Controller):
             results[pulse.qubit] = results[pulse.serial] = qmpulse.acquisition.fetch(handles)
         return results
 
-    def play(self, qubits, sequence, options):
-        return self.sweep(qubits, sequence, options)
+    def play(self, qubits, couplers, sequence, options):
+        return self.sweep(qubits, couplers, sequence, options)
 
-    def sweep(self, qubits, sequence, options, *sweepers):
+    def sweep(self, qubits, couplers, sequence, options, *sweepers):
         if not sequence:
             return {}
 
@@ -152,5 +152,5 @@ class QMOPX(Controller):
         result = self.execute_program(experiment)
         return self.fetch_results(result, qmsequence.ro_pulses)
 
-    def play_sequences(self, qubits, sequence, options):
+    def play_sequences(self, qubits, couplers, sequence, options):
         raise NotImplementedError

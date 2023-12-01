@@ -42,7 +42,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
 
-    couplers = None
+    couplers = {}
     pairs = {}
     if "coupler" in runcard["characterization"]:
         couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
@@ -119,8 +119,11 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
 
 def dump_instruments(instruments: InstrumentMap) -> dict:
     """Dump instrument settings to a dictionary following the runcard format."""
+    # Qblox modules settings are dictionaries and not dataclasses
     return {
-        name: asdict(instrument.settings) for name, instrument in instruments.items() if instrument.settings is not None
+        name: instrument.settings if isinstance(instrument.settings, dict) else asdict(instrument.settings)
+        for name, instrument in instruments.items()
+        if instrument.settings is not None
     }
 
 
