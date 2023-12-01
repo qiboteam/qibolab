@@ -18,10 +18,8 @@ def demodulate(input_i, input_q, frequency):
     cosalpha = np.cos(2 * np.pi * frequency * time)
     sinalpha = np.sin(2 * np.pi * frequency * time)
     demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-    result = []
-    for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
-        result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
-    return np.mean(np.array(result), axis=0)
+    result = np.einsum("ijt,jt->it", demod_matrix, np.stack([modulated_i, modulated_q]))
+    return np.mean(result, axis=1)
 
 
 @dataclass
