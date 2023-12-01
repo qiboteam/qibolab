@@ -158,6 +158,23 @@ def test_pulses_pulse_init():
     p11 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
     p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
 
+    # initialisation with float duration and start
+    p12 = Pulse(
+        start=5.5,
+        duration=34.33,
+        amplitude=0.9,
+        frequency=20_000_000,
+        relative_phase=1,
+        shape=Rectangular(),
+        channel=0,
+        type=PulseType.READOUT,
+        qubit=0,
+    )
+    assert repr(p12) == "Pulse(5.5, 34.33, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
+    assert isinstance(p12.start, float)
+    assert isinstance(p12.duration, float)
+    assert p12.finish == 5.5 + 34.33
+
 
 def test_pulses_pulse_attributes():
     channel = 0
@@ -1152,9 +1169,9 @@ def test_pulse_properties(start, duration):
     check_properties(p0)
 
 
-@pytest.mark.parametrize("faulty_start", [10.0, "hello"])
-@pytest.mark.parametrize("faulty_duration", [100.0, "hello"])
-def test_pulse_setter_errors(faulty_start, faulty_duration):
+def test_pulse_setter_errors():
+    faulty_duration = "hello"
+    faulty_start = "hello"
     with pytest.raises(TypeError):
         p0 = Pulse(faulty_start, 100, 0.9, 0, 0, Rectangular(), 0)
     with pytest.raises(TypeError):

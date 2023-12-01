@@ -299,7 +299,7 @@ def test_qmopx_qubit_spectroscopy(mocker):
         sequence.add(qd_pulses[qubit])
         sequence.add(ro_pulses[qubit])
     options = ExecutionParameters(nshots=1024, relaxation_time=100000)
-    result = opx.play(platform.qubits, sequence, options)
+    result = opx.play(platform.qubits, platform.couplers, sequence, options)
 
 
 @patch("qibolab.instruments.qm.simulator.QMSim.execute_program")
@@ -316,4 +316,4 @@ def test_qmopx_duration_sweeper(mocker):
     sequence.add(platform.create_MZ_pulse(qubit, start=qd_pulse.finish))
     sweeper = Sweeper(Parameter.duration, np.arange(2, 12, 2), pulses=[qd_pulse])
     options = ExecutionParameters(nshots=1024, relaxation_time=100000)
-    result = opx.sweep(platform.qubits, sequence, options, sweeper)
+    result = opx.sweep(platform.qubits, platform.couplers, sequence, options, sweeper)

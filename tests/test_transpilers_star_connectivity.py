@@ -6,6 +6,7 @@ from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
+from qibolab.transpilers.pipeline import transpose_qubits
 from qibolab.transpilers.star_connectivity import StarConnectivity
 
 
@@ -35,14 +36,6 @@ def generate_random_circuit(nqubits, depth, seed=None, middle_qubit=2):
             circuit.add(gates.CZ(q1, q2))
 
     return circuit
-
-
-def transpose_qubits(state, qubits):
-    """Reorders qubits of a given state vector."""
-    original_shape = state.shape
-    state = np.reshape(state, len(qubits) * (2,))
-    state = np.transpose(state, qubits)
-    return np.reshape(state, original_shape)
 
 
 @pytest.mark.parametrize("verbose", [True, False])

@@ -11,14 +11,14 @@ def get_controller(platform):
     pytest.skip(f"Skipping qblox test for {platform.name}.")
 
 
-def get_cluster(controller):
-    cluster = controller.cluster
-    return Cluster(cluster.name, cluster.address, Cluster_Settings())
-
-
 @pytest.fixture(scope="module")
 def controller(platform):
     return get_controller(platform)
+
+
+def get_cluster(controller):
+    cluster = controller.cluster
+    return Cluster(cluster.name, cluster.address, Cluster_Settings())
 
 
 @pytest.fixture(scope="module")
