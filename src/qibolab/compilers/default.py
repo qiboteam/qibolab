@@ -21,6 +21,7 @@ def z_rule(gate, platform):
 def rz_rule(gate, platform):
     """RZ gate applied virtually."""
     qubit = gate.target_qubits[0]
+    print(gate.parameters)
     return PulseSequence(), {qubit: gate.parameters[0]}
 
 
@@ -28,7 +29,6 @@ def gpi2_rule(gate, platform):
     """Rule for GPI2."""
     qubit = gate.target_qubits[0]
     theta = gate.parameters[0]
-
     sequence = PulseSequence()
     pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
     sequence.add(pulse)
