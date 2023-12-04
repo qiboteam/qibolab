@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
@@ -88,6 +89,8 @@ class Qubit:
     flux: Optional[Channel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
+
+    kernel_path: Optional[Path] = None
 
     @property
     def channels(self):

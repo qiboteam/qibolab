@@ -1,5 +1,6 @@
 nqubits: 5
 qubits: [0, 1, 2, 3, 4]
+kernel_path: "qibolab_platforms_qrc/iqm5q_kernels"
 couplers: [0, 1, 3, 4]
 topology: {0: [0, 2], 1: [1, 2], 3: [2, 3], 4: [2, 4]}
 settings:

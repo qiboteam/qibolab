@@ -431,7 +431,8 @@ class Zurich(Controller):
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
             "acquire_line"
         ]
-        weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
+        # weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
+        weights_file = qubit.kernel_path / f"kernels_q{q}.npz"
         if weights_file.is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
             # Remove software modulation as it's already included on the kernels
             print("aqui")
@@ -949,7 +950,8 @@ class Zurich(Controller):
                         time=self.smearing * NANO_TO_SECONDS,
                     )
 
-                    weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
+                    # weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
+                    weights_file = qubits[q].kernel_path / f"kernels_q{q}.npz"
                     if weights_file.is_file() and acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                         kernels = np.load(weights_file)
                         weight = lo.pulse_library.sampled_pulse_complex(
