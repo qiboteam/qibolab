@@ -944,6 +944,11 @@ class Zurich(Controller):
                             time=self.sequence_qibo.start * NANO_TO_SECONDS,
                         )
 
+                    exp.delay(
+                        signal=f"acquire{q}",
+                        time=self.smearing * NANO_TO_SECONDS,
+                    )
+
                     weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
                     if weights_file.is_file() and acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                         kernels = np.load(weights_file)
