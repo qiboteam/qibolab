@@ -1,7 +1,6 @@
 import signal
 
 import numpy as np
-from more_itertools import chunked
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -10,6 +9,7 @@ from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
@@ -223,7 +223,7 @@ class QbloxController(Controller):
         return self._execute_pulse_sequence(qubits, sequence, options)
 
     def split_batches(self, sequences):
-        return chunked(sequences, MAX_BATCH_SIZE)
+        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
     def play_sequences(self, *args, **kwargs):
         raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
