@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 from qibo.config import log, raise_error
@@ -23,7 +23,7 @@ QubitPairMap = Dict[QubitPairId, QubitPair]
 NS_TO_SEC = 1e-9
 
 
-def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> PulseSequence:
+def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> Tuple[PulseSequence, Dict[str, str]]:
     """Unrolls a list of pulse sequences to a single pulse sequence with multiple measurements.
 
     Args:
