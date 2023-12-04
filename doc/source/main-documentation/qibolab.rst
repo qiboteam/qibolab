@@ -664,6 +664,7 @@ This procedure typically involves the following steps:
 
 The transpilation and compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend` when a circuit is executed, using circuit transpilers provided by Qibo and :class:`qibolab.compilers.compiler.Compiler`.
 The transpiler is responsible for steps 1 and 2, while the compiler for step 3 of the list above.
+For more information on the transpiler please refer the `examples in the Qibo documentation <https://qibo.science/qibo/stable/code-examples/advancedexamples.html#how-to-modify-the-transpiler>`_.
 
 Once a circuit has been transpiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
 This is a container of rules which define how each native gate can be translated to pulses.
