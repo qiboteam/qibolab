@@ -97,7 +97,7 @@ class Controller(Instrument):
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
 
-    def split_batches(self, sequences):
+    def split_batches(self, sequences):  # pragma: no cover
         """Split sequences to batches each of which can be unrolled and played as a single sequence.
 
         Args:
@@ -107,7 +107,9 @@ class Controller(Instrument):
             Iterator of batches that can be unrolled in a single one.
             Default will return all sequences as a single batch.
         """
-        return [sequences]
+        raise RuntimeError(
+            f"Instrument of type {type(self)} does not support " "batch splitting for sequence unrolling."
+        )
 
     @abstractmethod
     def play_sequences(self, *args, **kwargs):

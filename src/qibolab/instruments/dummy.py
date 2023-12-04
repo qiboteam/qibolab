@@ -87,6 +87,9 @@ class DummyInstrument(Controller):
 
         return results
 
+    def split_batches(self, sequences):
+        return [sequences]
+
     def play_sequences(
         self,
         qubits: Dict[QubitId, Qubit],

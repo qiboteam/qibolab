@@ -20,6 +20,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
 from qibolab.instruments.port import Port
+from qibolab.instruments.unrolling import batch_max_readout
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter
@@ -1222,16 +1223,7 @@ class Zurich(Controller):
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
 
     def split_batches(self, sequences):
-        batch_measurements, batch = 0, []
-        for sequence in sequences:
-            nmeasurements = len(sequence.ro_pulses)
-            if nmeasurements + batch_measurements > MAX_MEASUREMENTS:
-                yield batch
-                batch_measurements, batch = nmeasurements, [sequence]
-            else:
-                batch.append(sequence)
-                batch_measurements += nmeasurements
-        yield batch
+        return batch_max_readout(sequences, MAX_MEASUREMENTS)
 
     def play_sequences(self, qubits, couplers, sequence, options):
         raise NotImplementedError
