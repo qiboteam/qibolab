@@ -62,7 +62,7 @@ class Settings:
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
 
-    def apply(self, options: ExecutionParameters):
+    def fill(self, options: ExecutionParameters):
         """Use default values for missing execution options."""
         if options.nshots is None:
             options = replace(options, nshots=self.nshots)
@@ -197,7 +197,7 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
-        options = self.settings.apply(options)
+        options = self.settings.fill(options)
 
         time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
         log.info(f"Minimal execution time (sequence): {time}")
@@ -224,7 +224,7 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
-        options = self.settings.apply(options)
+        options = self.settings.fill(options)
 
         duration = sum(seq.duration for seq in sequences)
         time = (duration + len(sequences) * options.relaxation_time) * options.nshots * NS_TO_SEC
