@@ -57,7 +57,7 @@ Instead of completely disabling, custom transpilation steps can be given:
 
     from qibolab.backends import QibolabBackend
 
-    from qibo.transpiler import NativeGates, Unroller
+    from qibo.transpiler.unroller import NativeGates, Unroller
 
     backend = QibolabBackend(platform="dummy")
     backend.transpiler = Unroller(two_qubit_natives=NativeGates.CZ)
@@ -75,7 +75,7 @@ Multiple transpilation steps can be implemented using the :class:`qibolab.transp
 
 .. testcode:: python
 
-    from qibo.transpiler import NativeGates, Unroller, Passes
+    from qibo.transpiler.unroller import NativeGates, Unroller, Passes
     from qibo.transpiler.star_connectivity import StarConnectivity
 
     backend = QibolabBackend(platform="dummy")
