@@ -907,6 +907,7 @@ class Zurich(Controller):
         ):
             if i != 0:
                 play_after = f"sequence_measure_{i-1}"
+            play_after = None
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
                 for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
@@ -918,11 +919,11 @@ class Zurich(Controller):
                     if play_after is None:
                         exp.delay(
                             signal=f"measure{q}",
-                            time=self.sequence_qibo.start * NANO_TO_SECONDS,
+                            time=pulse.pulse.start * NANO_TO_SECONDS,
                         )
                         exp.delay(
                             signal=f"acquire{q}",
-                            time=self.sequence_qibo.start * NANO_TO_SECONDS,
+                            time=pulse.pulse.start * NANO_TO_SECONDS,
                         )
 
                     if i == 0:
