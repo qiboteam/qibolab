@@ -1,18 +1,18 @@
-import os
 from collections import deque
 
 import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
+from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
+from qibo.transpiler.pipeline import Passes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.transpilers.pipeline import Passes, assert_transpiling
 
 
 class QibolabBackend(NumpyBackend):
@@ -38,19 +38,16 @@ class QibolabBackend(NumpyBackend):
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
     def transpile(self, circuit):
-        """Applies the transpiler to a single circuit."""
+        """Applies the transpiler to a single circuit.
+
+        This transforms the circuit into proper connectivity and native gates.
+        """
         # TODO: Move this method to transpilers
         if self.transpiler is None or self.transpiler.is_satisfied(circuit):
             native_circuit = circuit
             qubit_map = {q: q for q in range(circuit.nqubits)}
         else:
-            # Transform a circuit into proper connectivity and native gates
             native_circuit, qubit_map = self.transpiler(circuit)
-            # TODO: Use the qubit map to properly map measurements
-            if os.environ.get("CHECK_TRANSPILED", False):
-                assert_transpiling(
-                    native_circuit, self.transpiler.connectivity, self.transpiler.get_initial_layout, qubit_map
-                )
         return native_circuit, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
@@ -78,13 +75,11 @@ class QibolabBackend(NumpyBackend):
             initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
             nshots (int): Number of shots to sample from the experiment.
-                If ``None`` the default value provided as hardware_avg in the
-                calibration yml will be used.
 
         Returns:
-            MeasurementOutcomes object containing the results acquired from the execution.
+            ``MeasurementOutcomes`` object containing the results acquired from the execution.
         """
-        if isinstance(initial_state, type(circuit)):
+        if isinstance(initial_state, Circuit):
             return self.execute_circuit(
                 circuit=initial_state + circuit,
                 nshots=nshots,
@@ -112,7 +107,20 @@ class QibolabBackend(NumpyBackend):
         return result
 
     def execute_circuits(self, circuits, initial_state=None, nshots=1000):
-        if isinstance(initial_state, type(circuits[0])):
+        """Executes multiple quantum circuits with a single communication with the control electronics.
+
+        Circuits are unrolled to a single pulse sequence.
+
+        Args:
+            circuits (list): List of circuits to execute.
+            initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
+                If ``None`` the default ``|00...0>`` state is used.
+            nshots (int): Number of shots to sample from the experiment.
+
+        Returns:
+            List of ``MeasurementOutcomes`` objects containing the results acquired from the execution of each circuit.
+        """
+        if isinstance(initial_state, Circuit):
             return self.execute_circuits(
                 circuit=[initial_state + circuit for circuit in circuits],
                 nshots=nshots,

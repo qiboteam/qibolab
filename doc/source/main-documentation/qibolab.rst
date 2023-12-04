@@ -662,15 +662,8 @@ This procedure typically involves the following steps:
 2. All gates are transpiled to native gates, which represent the universal set of gates that can be implemented (via pulses) in the chip.
 3. Native gates are compiled to a pulse sequence.
 
-The transpilation and compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend` when a circuit is executed, using :class:`qibolab.transpilers.abstract.Transpiler` and :class:`qibolab.compilers.compiler.Compiler`.
-The transpiler is responsible for steps 1 and 2, while the compiler for step 3 of the list above. In order to accomplish this, several transpilers are provided, some of which are listed below:
-
-- :class:`qibolab.transpilers.gate_decompositions.NativeGates`: Transpiles single-qubit Qibo gates to Z, RZ, GPI2 or U3 and two-qubit gates to CZ and/or iSWAP (depending on platform support).
-- :class:`qibolab.transpilers.star_connectivity.StarConnectivity`: Transforms a circuit to respect a 5-qubit star chip topology, with one middle qubit connected to each of the remaining four qubits.
-- :class:`qibolab.transpilers.routing.ShortestPaths`: Transforms a circuit to respect a general chip topology given as a networkx graph, using a greedy algorithm.
-- :class:`qibolab.transpilers.pipeline.Pipeline`: Applies a list of other transpilers sequentially.
-
-Custom transpilers can be added by inheriting the abstract :class:`qibolab.transpilers.abstract.Transpiler` class.
+The transpilation and compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend` when a circuit is executed, using circuit transpilers provided by Qibo and :class:`qibolab.compilers.compiler.Compiler`.
+The transpiler is responsible for steps 1 and 2, while the compiler for step 3 of the list above.
 
 Once a circuit has been transpiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
 This is a container of rules which define how each native gate can be translated to pulses.
@@ -700,7 +693,6 @@ U3, the most general single-qubit gate can be implemented using two RX90 pi-puls
 Typical two-qubit native gates are the CZ and iSWAP, with their availability being platform dependent.
 These are implemented with a sequence of flux pulses, potentially to multiple qubits, and virtual Z-phases.
 Depending on the platform and the quantum chip architecture, two-qubit gates may require pulses acting on qubits that are not targeted by the gate.
-The :class:`qibolab.native.NativeType` flag is used for communicating the set of available native two-qubit gates to the transpiler.
 
 .. _main_doc_instruments:
 
