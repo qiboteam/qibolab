@@ -20,6 +20,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import INSTRUMENTS_DATA_FOLDER, Controller
 from qibolab.instruments.port import Port
+from qibolab.instruments.unrolling import batch_max_readout
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter
@@ -52,6 +53,9 @@ AVERAGING_MODE = {
 SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
 SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
+
+MAX_MEASUREMENTS = 32
+"""Maximum number of readout pulses in a single sequence."""
 
 
 def select_pulse(pulse, pulse_type):
@@ -1218,10 +1222,8 @@ class Zurich(Controller):
             else:
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
 
-    def play_sequences(self, qubits, sequence, options):
-        pass
-
-    # -----------------------------------------------------------------------------
+    def split_batches(self, sequences):
+        return batch_max_readout(sequences, MAX_MEASUREMENTS)
 
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence"""
