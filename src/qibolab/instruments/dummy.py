@@ -1,4 +1,3 @@
-from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -88,24 +87,8 @@ class DummyInstrument(Controller):
 
         return results
 
-    def play_sequences(
-        self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
-        sequences: List[PulseSequence],
-        options: ExecutionParameters,
-    ):
-        exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
-        shape = (exp_points,)
-
-        results = defaultdict(list)
-        for sequence in sequences:
-            for ro_pulse in sequence.ro_pulses:
-                values = self.get_values(options, ro_pulse, shape)
-                results[ro_pulse.serial].append(options.results_type(values))
-                results[ro_pulse.qubit].append(options.results_type(values))
-
-        return results
+    def split_batches(self, sequences):
+        return [sequences]
 
     def sweep(
         self,

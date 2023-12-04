@@ -97,14 +97,19 @@ class Controller(Instrument):
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
 
-    @abstractmethod
-    def play_sequences(self, *args, **kwargs):
-        """Play pulses sequences by unrolling and retrieve feedback.
+    def split_batches(self, sequences):  # pragma: no cover
+        """Split sequences to batches each of which can be unrolled and played as a single sequence.
+
+        Args:
+            sequence (list): List of :class:`qibolab.pulses.PulseSequence` to be played.
 
         Returns:
-            (Dict[List[ResultType]) mapping the serial of the readout pulses used to a list of
-            the acquired :class:`qibolab.result.ExecutionResults` object.
+            Iterator of batches that can be unrolled in a single one.
+            Default will return all sequences as a single batch.
         """
+        raise RuntimeError(
+            f"Instrument of type {type(self)} does not support " "batch splitting for sequence unrolling."
+        )
 
     @abstractmethod
     def sweep(self, *args, **kwargs):

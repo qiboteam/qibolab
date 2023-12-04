@@ -666,6 +666,24 @@ def test_sim(dummy_qrc):
         sequence.add(qf_pulses[qubit])
 
 
+def test_split_batches(dummy_qrc):
+    platform = create_platform("zurich")
+    platform.setup()
+    instrument = platform.instruments["EL_ZURO"]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(0, start=0))
+    sequence.add(platform.create_RX_pulse(1, start=0))
+    measurement_start = sequence.finish
+    sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
+    sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
+
+    batches = list(instrument.split_batches(20 * [sequence]))
+    assert len(batches) == 2
+    assert len(batches[0]) == 16
+    assert len(batches[1]) == 4
+
+
 @pytest.fixture(scope="module")
 def instrument(connected_platform):
     return get_instrument(connected_platform, Zurich)

@@ -9,9 +9,12 @@ from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+MAX_BATCH_SIZE = 30
+"""Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
 
 
@@ -219,8 +222,8 @@ class QbloxController(Controller):
     def play(self, qubits, couplers, sequence, options):
         return self._execute_pulse_sequence(qubits, sequence, options)
 
-    def play_sequences(self, *args, **kwargs):
-        raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
+    def split_batches(self, sequences):
+        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
     def sweep(self, qubits: dict, couplers: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.

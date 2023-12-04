@@ -23,12 +23,18 @@ def test_dummy_initialization(name):
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.RAW])
 def test_dummy_execute_pulse_sequence(name, acquisition):
+    nshots = 100
     platform = create_platform(name)
+    ro_pulse = platform.create_qubit_readout_pulse(0, 0)
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     sequence.add(platform.create_RX12_pulse(0, 0))
-    options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
+    options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
+    if acquisition is AcquisitionType.INTEGRATION:
+        assert result[0].magnitude.shape == (nshots,)
+    elif acquisition is AcquisitionType.RAW:
+        assert result[0].magnitude.shape == (nshots * ro_pulse.duration,)
 
 
 def test_dummy_execute_coupler_pulse():
@@ -81,15 +87,25 @@ def test_dummy_execute_pulse_sequence_fast_reset(name):
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize("acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION])
-def test_dummy_execute_pulse_sequence_unrolling(name, acquisition):
+@pytest.mark.parametrize("batch_size", [None, 3, 5])
+def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
+    nshots = 100
+    nsequences = 10
     platform = create_platform(name)
+    platform.instruments["dummy"].UNROLLING_BATCH_SIZE = batch_size
     sequences = []
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
-    for _ in range(5):
+    for _ in range(nsequences):
         sequences.append(sequence)
-    options = ExecutionParameters(nshots=None, acquisition_type=acquisition)
+    options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
     result = platform.execute_pulse_sequences(sequences, options)
+    assert len(result[0]) == nsequences
+    for r in result[0]:
+        if acquisition is AcquisitionType.INTEGRATION:
+            assert r.magnitude.shape == (nshots,)
+        if acquisition is AcquisitionType.DISCRIMINATION:
+            assert r.samples.shape == (nshots,)
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
