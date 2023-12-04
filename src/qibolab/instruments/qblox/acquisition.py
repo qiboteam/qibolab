@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 
@@ -37,12 +37,28 @@ class AveragedAcquisition:
     the averages all correspond to reading the same quantum state.
     """
 
-    raw: Tuple[List[float], List[float]]
-    """Tuples with the averages of the i and q waveforms for every readout pulse ([i samples], [q samples])."""
+    scope: dict
+    """Scope data returned by qblox acquisition."""
+    duration: int
+    """Duration of the readout pulse."""
+    frequency: int
+    """Frequency of the readout pulse used for demodulation."""
 
-    demodulated_integrated: Tuple[float, float, float, float]
-    """Tuples with the results of demodulating and integrating (averaging over time) the average of the
-    waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``."""
+    i: Optional[List[float]] = None
+    q: Optional[List[float]] = None
+
+    def __post_init__(self):
+        self.scope = self.scope["acquisition"]["scope"]
+
+    @property
+    def raw_i(self):
+        """Average of the i waveforms for every readout pulse."""
+        return np.array(self.scope["path0"]["data"][0 : self.duration])
+
+    @property
+    def raw_q(self):
+        """Average of the q waveforms for every readout pulse."""
+        return np.array(self.scope["path1"]["data"][0 : self.duration])
 
     @property
     def data(self):
@@ -51,23 +67,9 @@ class AveragedAcquisition:
         Ignores the data available in acquisition results and returns only i and q voltages.
         """
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        return self.demodulated_integrated[2:]  # (i, q)
-
-    @property
-    def default(self):
-        """Default Results: Averaged Demodulated Integrated"""
-        return self.demodulated_integrated
-
-    @classmethod
-    def create(cls, data, duration, frequency):
-        scope = data["acquisition"]["scope"]
-        raw = (
-            scope["path0"]["data"][0:duration],
-            scope["path1"]["data"][0:duration],
-        )
-        i, q = demodulate(*raw, frequency)
-        demod = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
-        return cls(raw, demod)
+        if self.i is None or self.q is None:
+            self.i, self.q = demodulate(self.raw_i, self.raw_q, self.frequency)
+        return (self.i, self.q)
 
 
 @dataclass
@@ -83,23 +85,39 @@ class DemodulatedAcquisition:
     at least higher than 5mV.
     """
 
-    integrated_averaged: Tuple[float, float, float, float]
-    """Tuple with the results of demodulating and integrating (averaging over time)
-    each shot waveform and then averaging of the many shots: ``(amplitude[V], phase[rad], i[V], q[V])``
-    """
-    integrated_binned: Tuple[List[float], List[float], List[float], List[float]]
-    """Tuple of lists with the results of demodulating and integrating
-    every shot waveform: ``([amplitudes[V]], [phases[rad]], [is[V]], [qs[V]])``
-    """
-    integrated_classified_binned: List[int]
-    """Lists with the results of demodulating, integrating and
-    classifying every shot: ``([states[0 or 1]])``
-    """
+    bins: dict
+    """Binned acquisition data returned by qblox."""
+    duration: int
+    """Duration of the readout pulse."""
 
-    averaged: Optional[AveragedAcquisition] = None
-    """If the number of readout pulses per qubit is only one, then the
-    :class:`qibolab.instruments.qblox.AveragedAcquisition` data are also provided.
-    """
+    @property
+    def integration(self):
+        return self.bins["integration"]
+
+    @property
+    def shots_i(self):
+        """i-component after demodulating and integrating every shot waveform."""
+        return np.array(self.integration["path0"]) / self.duration
+
+    @property
+    def shots_q(self):
+        """q-component after demodulating and integrating every shot waveform."""
+        return np.array(self.integration["path1"]) / self.duration
+
+    @property
+    def averaged_i(self):
+        """i-component after demodulating and integrating every shot waveform and then averaging over shots."""
+        return np.mean(self.shots_i)
+
+    @property
+    def averaged_q(self):
+        """q-component after demodulating and integrating every shot waveform and then averaging over shots."""
+        return np.mean(self.shots_q)
+
+    @property
+    def classified(self):
+        """List with the results of demodulating, integrating and classifying every shot."""
+        return np.array(self.bins["threshold"])
 
     @property
     def data(self):
@@ -108,37 +126,4 @@ class DemodulatedAcquisition:
         Ignores the data available in acquisition results and returns only i and q voltages.
         """
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        return (
-            self.integrated_binned[2],
-            self.integrated_binned[3],
-            np.array(self.integrated_classified_binned),
-        )
-
-    @property
-    def default(self):
-        return self.integrated_averaged
-
-    @property
-    def probability(self):
-        """Dictionary containing the frequency of state 1 measurements.
-
-        Calculated as number of shots classified as 1 / total number of shots.
-        """
-        return np.mean(self.integrated_binned)
-
-    @classmethod
-    def create(cls, bins, duration):
-        """Calculates average by dividing the integrated results by the number of samples acquired."""
-        integration = bins["integration"]
-        i = np.mean(np.array(integration["path0"])) / duration
-        q = np.mean(np.array(integration["path1"])) / duration
-        averaged = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
-
-        # Save individual shots
-        shots_i = np.array(integration["path0"]) / duration
-        shots_q = np.array(integration["path1"]) / duration
-        integrated = (np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q)
-
-        classified = bins["threshold"]
-
-        return cls(averaged, integrated, classified)
+        return (self.shots_i, self.shots_q, self.classified)

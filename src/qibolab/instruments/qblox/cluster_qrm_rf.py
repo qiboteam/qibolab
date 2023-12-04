@@ -955,7 +955,7 @@ class ClusterQRM_RF(Instrument):
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = AveragedAcquisition.create(
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = AveragedAcquisition(
                             scope, duration, frequency
                         )
                     else:
@@ -967,15 +967,13 @@ class ClusterQRM_RF(Instrument):
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
                         bins = results[pulse.serial]["acquisition"]["bins"]
-                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = DemodulatedAcquisition.create(
-                            bins, duration
-                        )
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = DemodulatedAcquisition(bins, duration)
 
                     # Provide Scope Data for verification (assuming memory reseet is being done)
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-                        acquisitions[pulse.serial].averaged = AveragedAcquisition.create(scope, duration, frequency)
+                        acquisitions[pulse.serial].averaged = AveragedAcquisition(scope, duration, frequency)
 
         # grab only the data required by the platform
         # TODO: to be updated once the functionality of ExecutionResults is extended
