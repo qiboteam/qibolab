@@ -441,7 +441,7 @@ class Zurich(Controller):
             ),
             range=qubit.feedback.power_range,
             port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            threshold=qubit.threshold,
+            # threshold=qubit.threshold, #TODO: remove
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -928,22 +928,18 @@ class Zurich(Controller):
                             time=self.sequence_qibo.start * NANO_TO_SECONDS,
                         )
 
-                    weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / "kernels.npz"
+                    weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
                     if weights_file.is_file() and acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                         kernels = np.load(weights_file)
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
                             # Do we need the angle ?
-                            samples=kernels[str(q)] * np.exp(1j * iq_angle),
-                            # samples=kernels[str(q)],
+                            # samples=kernels[str(q)] * np.exp(1j * iq_angle),
+                            samples=kernels[str(q)],
                         )
 
                     else:
                         if i == 0:
-                            exp.delay(
-                                signal=f"acquire{q}",
-                                time=self.smearing * NANO_TO_SECONDS,
-                            )
                             if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
                                 weight = lo.pulse_library.sampled_pulse_complex(
                                     samples=np.ones(
@@ -961,12 +957,9 @@ class Zurich(Controller):
                                     - 1.5 * self.smearing * NANO_TO_SECONDS,
                                     amplitude=1,
                                 )
+                                
                                 weights[q] = weight
                         elif i != 0:
-                            exp.delay(
-                                signal=f"acquire{q}",
-                                time=self.smearing * NANO_TO_SECONDS,
-                            )
                             weight = weights[q]
 
                     measure_pulse_parameters = {"phase": 0}
@@ -989,7 +982,6 @@ class Zurich(Controller):
                         measure_pulse_parameters=measure_pulse_parameters,
                         measure_pulse_amplitude=None,
                         acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
-                        # reset_delay=relaxation_time * NANO_TO_SECONDS,
                         reset_delay=reset_delay,
                     )
 
