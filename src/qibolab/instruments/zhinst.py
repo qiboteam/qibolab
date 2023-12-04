@@ -380,6 +380,7 @@ class Zurich(Controller):
                 self.register_readout_line(
                     qubit=qubit,
                     intermediate_frequency=qubit.readout_frequency - qubit.readout.local_oscillator.frequency,
+                    options=options,
                 )
                 if options.fast_reset is not False:
                     if len(self.sequence[f"drive{qubit.name}"]) == 0:
@@ -389,7 +390,7 @@ class Zurich(Controller):
                         )
         self.device_setup.set_calibration(self.calibration)
 
-    def register_readout_line(self, qubit, intermediate_frequency):
+    def register_readout_line(self, qubit, intermediate_frequency, options):
         """Registers qubit measure and acquire lines to calibration and signal map.
 
         Note
@@ -430,19 +431,27 @@ class Zurich(Controller):
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
             "acquire_line"
         ]
-        self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.SOFTWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqa_a" + str(q),
-                frequency=int(qubit.readout.local_oscillator.frequency),
-            ),
-            range=qubit.feedback.power_range,
-            port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            # threshold=qubit.threshold, #TODO: remove
-        )
+        weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
+        if weights_file.is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
+            # Remove software modulation as it's already included on the kernels
+            self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
+                oscillator=None,
+                local_oscillator=None,
+                range=qubit.feedback.power_range,
+                port_delay=self.time_of_flight * NANO_TO_SECONDS,
+                # threshold=qubit.threshold, #TODO: remove
+            )
+        else:
+            self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.SOFTWARE,
+                ),
+                local_oscillator=None,
+                range=qubit.feedback.power_range,
+                port_delay=self.time_of_flight * NANO_TO_SECONDS,
+                # threshold=qubit.threshold, #TODO: remove
+            )
 
     def register_drive_line(self, qubit, intermediate_frequency):
         """Registers qubit drive line to calibration and signal map."""
@@ -933,9 +942,7 @@ class Zurich(Controller):
                         kernels = np.load(weights_file)
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
-                            # Do we need the angle ?
-                            # samples=kernels[str(q)] * np.exp(1j * iq_angle),
-                            samples=kernels[str(q)],
+                            samples=kernels[str(q)] * np.exp(1j * iq_angle),
                         )
 
                     else:
