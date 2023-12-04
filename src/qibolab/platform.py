@@ -173,13 +173,13 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, method, sequences, options, **kwargs):
-        """Executes the sequences on the controllers"""
+    def _execute(self, sequence, options, **kwargs):
+        """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
+                new_result = instrument.play(self.qubits, self.couplers, sequence, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -202,7 +202,7 @@ class Platform:
         time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
         log.info(f"Minimal execution time (sequence): {time}")
 
-        return self._execute("play", sequence, options, **kwargs)
+        return self._execute(sequence, options, **kwargs)
 
     @property
     def _controller(self):
@@ -230,23 +230,20 @@ class Platform:
         time = (duration + len(sequences) * options.relaxation_time) * options.nshots * NS_TO_SEC
         log.info(f"Minimal execution time (unrolling): {time}")
 
-        try:
-            return self._execute("play_sequences", sequences, options, **kwargs)
-        except NotImplementedError:
-            # find readout pulses
-            ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
+        # find readout pulses
+        ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
 
-            results = defaultdict(list)
-            for batch in self._controller.split_batches(sequences):
-                sequence, readouts = unroll_sequences(batch, options.relaxation_time)
-                result = self._execute("play", sequence, options, **kwargs)
-                for serial, new_serials in readouts.items():
-                    results[serial].extend(result[ser] for ser in new_serials)
+        results = defaultdict(list)
+        for batch in self._controller.split_batches(sequences):
+            sequence, readouts = unroll_sequences(batch, options.relaxation_time)
+            result = self._execute(sequence, options, **kwargs)
+            for serial, new_serials in readouts.items():
+                results[serial].extend(result[ser] for ser in new_serials)
 
-            for serial, qubit in ro_pulses.items():
-                results[qubit] = results[serial]
+        for serial, qubit in ro_pulses.items():
+            results[qubit] = results[serial]
 
-            return results
+        return results
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.

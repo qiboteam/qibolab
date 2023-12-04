@@ -112,15 +112,6 @@ class Controller(Instrument):
         )
 
     @abstractmethod
-    def play_sequences(self, *args, **kwargs):
-        """Play pulses sequences by unrolling and retrieve feedback.
-
-        Returns:
-            (Dict[List[ResultType]) mapping the serial of the readout pulses used to a list of
-            the acquired :class:`qibolab.result.ExecutionResults` object.
-        """
-
-    @abstractmethod
     def sweep(self, *args, **kwargs):
         """Play a pulse sequence while sweeping one or more parameters.
 

@@ -1225,11 +1225,6 @@ class Zurich(Controller):
     def split_batches(self, sequences):
         return batch_max_readout(sequences, MAX_MEASUREMENTS)
 
-    def play_sequences(self, qubits, couplers, sequence, options):
-        raise NotImplementedError
-
-    # -----------------------------------------------------------------------------
-
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence"""
 

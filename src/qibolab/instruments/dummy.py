@@ -90,15 +90,6 @@ class DummyInstrument(Controller):
     def split_batches(self, sequences):
         return [sequences]
 
-    def play_sequences(
-        self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
-        sequences: List[PulseSequence],
-        options: ExecutionParameters,
-    ):
-        raise NotImplementedError
-
     def sweep(
         self,
         qubits: Dict[QubitId, Qubit],

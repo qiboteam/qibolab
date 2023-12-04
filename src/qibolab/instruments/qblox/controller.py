@@ -225,9 +225,6 @@ class QbloxController(Controller):
     def split_batches(self, sequences):
         return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
-    def play_sequences(self, *args, **kwargs):
-        raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
-
     def sweep(self, qubits: dict, couplers: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.
 
