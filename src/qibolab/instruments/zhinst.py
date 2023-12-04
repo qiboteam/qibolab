@@ -434,23 +434,30 @@ class Zurich(Controller):
         weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
         if weights_file.is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
             # Remove software modulation as it's already included on the kernels
+            print("aqui")
             self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
                 oscillator=None,
-                local_oscillator=None,
                 range=qubit.feedback.power_range,
                 port_delay=self.time_of_flight * NANO_TO_SECONDS,
-                # threshold=qubit.threshold, #TODO: remove
             )
-        else:
+        elif weights_file.is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
             self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
                     frequency=intermediate_frequency,
                     modulation_type=lo.ModulationType.SOFTWARE,
                 ),
-                local_oscillator=None,
                 range=qubit.feedback.power_range,
                 port_delay=self.time_of_flight * NANO_TO_SECONDS,
-                # threshold=qubit.threshold, #TODO: remove
+                threshold=qubit.threshold,  # To keep compatibility with angle and threshold discrimination
+            )
+        elif not weights_file.is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
+            self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.SOFTWARE,
+                ),
+                range=qubit.feedback.power_range,
+                port_delay=self.time_of_flight * NANO_TO_SECONDS,
             )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -552,7 +559,7 @@ class Zurich(Controller):
                         data = (
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
-                        data = np.ones(data.shape) - data.real  # Probability inversion patch
+                        data = np.ones(data.shape) - data.real  # Probability inversion
                         results[ropulse.pulse.serial] = options.results_type(data)
                         results[ropulse.pulse.qubit] = options.results_type(data)
                     else:
@@ -1077,8 +1084,7 @@ class Zurich(Controller):
                         data = (
                             np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
                         )
-                        data = data.real
-                        data = np.ones(data.shape) - data  # Probability inversion patch
+                        data = np.ones(data.shape) - data.real  # Probability inversion
                         results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
                         results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
                     else:
