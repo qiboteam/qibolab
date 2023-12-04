@@ -37,8 +37,8 @@ class AveragedAcquisition:
     the averages all correspond to reading the same quantum state.
     """
 
-    scope: dict
-    """Scope data returned by qblox acquisition."""
+    results: dict
+    """Data returned by qblox acquisition."""
     duration: int
     """Duration of the readout pulse."""
     frequency: int
@@ -47,8 +47,9 @@ class AveragedAcquisition:
     i: Optional[List[float]] = None
     q: Optional[List[float]] = None
 
-    def __post_init__(self):
-        self.scope = self.scope["acquisition"]["scope"]
+    @property
+    def scope(self):
+        return self.results["acquisition"]["scope"]
 
     @property
     def raw_i(self):
