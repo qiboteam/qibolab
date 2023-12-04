@@ -127,15 +127,14 @@ class DemodulatedAcquisition:
         return np.mean(self.integrated_binned)
 
     @classmethod
-    def create(cls, data, pulse, duration):
+    def create(cls, bins, duration):
         """Calculates average by dividing the integrated results by the number of samples acquired."""
-        bins = data[pulse.serial]["acquisition"]["bins"]
-        i = np.mean(np.array(bins["integration"]["path0"])) / duration
-        q = np.mean(np.array(bins["integration"]["path1"])) / duration
+        integration = bins["integration"]
+        i = np.mean(np.array(integration["path0"])) / duration
+        q = np.mean(np.array(integration["path1"])) / duration
         averaged = (np.sqrt(i**2 + q**2), np.arctan2(q, i), i, q)
 
         # Save individual shots
-        integration = bins["integration"]
         shots_i = np.array(integration["path0"]) / duration
         shots_q = np.array(integration["path1"]) / duration
         integrated = (np.sqrt(shots_i**2 + shots_q**2), np.arctan2(shots_q, shots_i), shots_i, shots_q)

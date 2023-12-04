@@ -966,8 +966,9 @@ class ClusterQRM_RF(Instrument):
                 else:  # Hardware Demodulation
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
+                        bins = results[pulse.serial]["acquisition"]["bins"]
                         acquisitions[pulse.qubit] = acquisitions[pulse.serial] = DemodulatedAcquisition.create(
-                            results, pulse, duration
+                            bins, duration
                         )
 
                     # Provide Scope Data for verification (assuming memory reseet is being done)
