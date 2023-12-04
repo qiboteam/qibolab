@@ -957,7 +957,7 @@ class Zurich(Controller):
                                     - 1.5 * self.smearing * NANO_TO_SECONDS,
                                     amplitude=1,
                                 )
-                                
+
                                 weights[q] = weight
                         elif i != 0:
                             weight = weights[q]
