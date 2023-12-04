@@ -75,7 +75,8 @@ Multiple transpilation steps can be implemented using the :class:`qibolab.transp
 
 .. testcode:: python
 
-    from qibo.transpiler.unroller import NativeGates, Unroller, Passes
+    from qibo.transpiler import Passes
+    from qibo.transpiler.unroller import NativeGates, Unroller
     from qibo.transpiler.star_connectivity import StarConnectivity
 
     backend = QibolabBackend(platform="dummy")
