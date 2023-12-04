@@ -57,11 +57,10 @@ Instead of completely disabling, custom transpilation steps can be given:
 
     from qibolab.backends import QibolabBackend
 
-    from qibo.transpiler.unroller import NativeGates
-    from qibo.transpiler.abstract import NativeType
+    from qibo.transpiler import NativeGates, Unroller
 
     backend = QibolabBackend(platform="dummy")
-    backend.transpiler = NativeGates(two_qubit_natives=NativeType.CZ)
+    backend.transpiler = Unroller(two_qubit_natives=NativeGates.CZ)
 
 
 Now circuits will only be transpiled to native gates, without any connectivity matching steps.
@@ -76,16 +75,14 @@ Multiple transpilation steps can be implemented using the :class:`qibolab.transp
 
 .. testcode:: python
 
-    from qibo.transpiler.abstract import NativeType
-    from qibo.transpiler.pipeline import Passes
+    from qibo.transpiler import NativeGates, Unroller, Passes
     from qibo.transpiler.star_connectivity import StarConnectivity
-    from qibo.transpiler.unroller import NativeGates
 
     backend = QibolabBackend(platform="dummy")
     backend.transpiler = Passes(
         [
             StarConnectivity(middle_qubit=2),
-            NativeGates(two_qubit_natives=NativeType.CZ),
+            Unroller(two_qubit_natives=NativeGates.CZ),
         ]
     )
 
