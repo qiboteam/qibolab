@@ -15,21 +15,13 @@ instruments:
       power: 4
 
     qcm_bb0:
-        o1:
-            offset: 0.1
-
-        o2:
-            offset: 0.11
-
-        o3:
-            offset: 0.12
-
-        o4:
-            offset: 0.13
+        o1: True
+        o2: True
+        o3: True
+        o4: True
 
     qcm_bb1:
-        o1:
-            offset: 0.14
+        o1: True
 
     qcm_rf0:
         o1:

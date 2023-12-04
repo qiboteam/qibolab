@@ -38,20 +38,7 @@ def qcm_bb(controller, cluster):
 
 @pytest.fixture(scope="module")
 def connected_qcm_bb(connected_controller, connected_cluster):
-    settings = {
-        "o1": {
-            "offset": O1_OFFSET,
-        },
-        "o2": {
-            "offset": O2_OFFSET,
-        },
-        "o3": {
-            "offset": O3_OFFSET,
-        },
-        "o4": {
-            "offset": O4_OFFSET,
-        },
-    }
+    settings = {"o1": True, "o2": True, "o3": True, "o4": True}
     qcm_bb = get_qcm_bb(connected_controller, connected_cluster)
     qcm_bb.setup(**settings)
     qcm_bb.connect()
@@ -75,20 +62,7 @@ def test_init(qcm_bb: ClusterQCM_BB):
 
 
 def test_setup(qcm_bb: ClusterQCM_BB):
-    settings = {
-        "o1": {
-            "offset": O1_OFFSET,
-        },
-        "o2": {
-            "offset": O2_OFFSET,
-        },
-        "o3": {
-            "offset": O3_OFFSET,
-        },
-        "o4": {
-            "offset": O4_OFFSET,
-        },
-    }
+    settings = {"o1": True, "o2": True, "o3": True, "o4": True}
     qcm_bb.setup(**settings)
     for idx, port in enumerate(settings):
         assert type(qcm_bb.ports[port]) == QbloxOutputPort
