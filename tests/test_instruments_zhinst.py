@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 
@@ -767,3 +769,43 @@ def test_experiment_sweep_2d_specific(connected_platform, instrument):
     )
 
     assert len(results[ro_pulses[qubit].serial]) > 0
+
+
+def test_experiment_measurement_sequence(dummy_qrc):
+    platform = create_platform("zurich")
+    platform.setup()
+    IQM5q = platform.instruments["EL_ZURO"]
+
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+    platform.qubits = qubits
+    couplers = {}
+
+    readout_pulse_start = 50
+
+    for qubit in qubits:
+        qubit_drive_pulse_1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=40)
+        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=readout_pulse_start)
+        qubit_drive_pulse_2 = platform.create_qubit_drive_pulse(qubit, start=100, duration=40)
+        sequence.add(qubit_drive_pulse_1)
+        sequence.add(ro_pulse)
+        sequence.add(qubit_drive_pulse_2)
+
+    options = ExecutionParameters(
+        relaxation_time=4, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    measure_start = 0
+    for section in IQM5q.experiment.sections[0].children:
+        if section.uid == "sequence_measure_0":
+            assert section.play_after is None
+            for pulse in section.children:
+                try:
+                    if pulse.signal == "measure0":
+                        measure_start += pulse.time
+                except AttributeError:
+                    # not a laboneq delay class object, skipping
+                    pass
+
+    assert math.isclose(measure_start * 1e9, readout_pulse_start, rel_tol=1e-4)
