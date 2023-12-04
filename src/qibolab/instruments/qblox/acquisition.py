@@ -14,12 +14,13 @@ def demodulate(input_i, input_q, frequency):
     modulated_q = input_q - np.mean(input_q)
 
     num_samples = modulated_i.shape[0]
-    time = np.arange(num_samples) / SAMPLING_RATE
-    cosalpha = np.cos(2 * np.pi * frequency * time)
-    sinalpha = np.sin(2 * np.pi * frequency * time)
+    time = np.arange(num_samples)
+    phase = 2 * np.pi * frequency * time / SAMPLING_RATE
+    cosalpha = np.cos(phase)
+    sinalpha = np.sin(phase)
     demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-    result = np.einsum("ijt,jt->it", demod_matrix, np.stack([modulated_i, modulated_q]))
-    return np.mean(result, axis=1)
+    result = np.einsum("ijt,jt->i", demod_matrix, np.stack([modulated_i, modulated_q]))
+    return np.sqrt(2) * result / num_samples
 
 
 @dataclass
