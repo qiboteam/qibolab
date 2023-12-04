@@ -132,7 +132,7 @@ class QibolabBackend(NumpyBackend):
             )
 
         # TODO: Maybe these loops can be parallelized
-        native_circuits, qubit_maps = zip(*(self.transpile(circuit) for circuit in circuits))
+        native_circuits, _ = zip(*(self.transpile(circuit) for circuit in circuits))
         sequences, measurement_maps = zip(
             *(self.compiler.compile(circuit, self.platform) for circuit in native_circuits)
         )

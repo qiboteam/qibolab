@@ -20,6 +20,8 @@ QubitMap = Dict[QubitId, Qubit]
 CouplerMap = Dict[QubitId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
 
+NS_TO_SEC = 1e-9
+
 
 def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> PulseSequence:
     """Unrolls a list of pulse sequences to a single pulse sequence with multiple measurements.
@@ -171,12 +173,6 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    @property
-    def controller(self):
-        controllers = [instr for instr in self.instruments.values() if isinstance(instr, Controller)]
-        assert len(controllers) == 1
-        return controllers[0]
-
     def _execute(self, method, sequences, options, **kwargs):
         """Executes the sequences on the controllers"""
         result = {}
@@ -203,10 +199,21 @@ class Platform:
         """
         options = self.settings.apply(options)
 
-        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
+        time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
         log.info(f"Minimal execution time (sequence): {time}")
 
         return self._execute("play", sequence, options, **kwargs)
+
+    @property
+    def _controller(self):
+        """Controller instrument used for splitting the unrolled sequences to batches.
+
+        Used only by :meth:`qibolab.platform.Platform.execute_pulse_sequences` (unrolling).
+        This method does not support platforms with more than one controller instruments.
+        """
+        controllers = [instr for instr in self.instruments.values() if isinstance(instr, Controller)]
+        assert len(controllers) == 1
+        return controllers[0]
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
         """
@@ -220,7 +227,7 @@ class Platform:
         options = self.settings.apply(options)
 
         duration = sum(seq.duration for seq in sequences)
-        time = (duration + len(sequences) * options.relaxation_time) * options.nshots * 1e-9
+        time = (duration + len(sequences) * options.relaxation_time) * options.nshots * NS_TO_SEC
         log.info(f"Minimal execution time (unrolling): {time}")
 
         try:
@@ -230,11 +237,11 @@ class Platform:
             ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
 
             results = defaultdict(list)
-            for batch in self.controller.split_batches(sequences):
+            for batch in self._controller.split_batches(sequences):
                 sequence, readouts = unroll_sequences(batch, options.relaxation_time)
                 result = self._execute("play", sequence, options, **kwargs)
                 for serial, new_serials in readouts.items():
-                    results[serial].extend(result[s] for s in new_serials)
+                    results[serial].extend(result[ser] for ser in new_serials)
 
             for serial, qubit in ro_pulses.items():
                 results[qubit] = results[serial]
@@ -274,7 +281,7 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.settings.relaxation_time)
 
-        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
+        time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
         for sweep in sweepers:
             time *= len(sweep.values)
         log.info(f"Minimal execution time (sweep): {time}")
