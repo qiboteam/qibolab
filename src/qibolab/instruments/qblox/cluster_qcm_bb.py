@@ -228,7 +228,6 @@ class ClusterQCM_BB(Instrument):
             try:
                 for port in self.settings:
                     self._sequencers[port] = []
-                    self.ports[port].offset = self.settings[port]["offset"]
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
