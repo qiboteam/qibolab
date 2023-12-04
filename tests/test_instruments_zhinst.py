@@ -669,7 +669,7 @@ def test_sim(dummy_qrc):
 def test_split_batches(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
-    instrument = platform.controller
+    instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, start=0))
