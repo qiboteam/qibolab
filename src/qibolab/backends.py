@@ -3,13 +3,13 @@ from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.result import MeasurementOutcomes
+from qibo.transpiler.pipeline import Passes, assert_transpiling
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.transpilers.pipeline import Passes, assert_transpiling
 
 
 class QibolabBackend(NumpyBackend):
@@ -84,7 +84,7 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
+        if self.transpiler is None:
             native_circuit = circuit
         else:
             # Transform a circuit into proper connectivity and native gates

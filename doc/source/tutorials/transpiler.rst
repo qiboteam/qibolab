@@ -24,7 +24,7 @@ Creating an instance of the backend provides access to these objects:
 .. testoutput:: python
     :hide:
 
-    <class 'qibolab.transpilers.pipeline.Passes'>
+    <class 'qibo.transpiler.pipeline.Passes'>
     <class 'qibolab.compilers.compiler.Compiler'>
 
 The transpiler is responsible for transforming the circuit to respect the chip connectivity and native gates,
@@ -56,11 +56,11 @@ Instead of completely disabling, custom transpilation steps can be given:
 .. testcode:: python
 
     from qibolab.backends import QibolabBackend
-    from qibolab.native import NativeType
-    from qibolab.transpilers.unroller import NativeGates
+
+    from qibo.transpiler.unroller import NativeGates, Unroller
 
     backend = QibolabBackend(platform="dummy")
-    backend.transpiler = NativeGates(two_qubit_natives=NativeType.CZ)
+    backend.transpiler = Unroller(native_gates=NativeGates.CZ)
 
 
 Now circuits will only be transpiled to native gates, without any connectivity matching steps.
@@ -75,16 +75,15 @@ Multiple transpilation steps can be implemented using the :class:`qibolab.transp
 
 .. testcode:: python
 
-    from qibolab.native import NativeType
-    from qibolab.transpilers.pipeline import Passes
-    from qibolab.transpilers.star_connectivity import StarConnectivity
-    from qibolab.transpilers.unroller import NativeGates
+    from qibo.transpiler import Passes
+    from qibo.transpiler.unroller import NativeGates, Unroller
+    from qibo.transpiler.star_connectivity import StarConnectivity
 
     backend = QibolabBackend(platform="dummy")
     backend.transpiler = Passes(
         [
             StarConnectivity(middle_qubit=2),
-            NativeGates(two_qubit_natives=NativeType.CZ),
+            Unroller(native_gates=NativeGates.CZ),
         ]
     )
 

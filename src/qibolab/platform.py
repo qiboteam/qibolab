@@ -5,11 +5,11 @@ from typing import Dict, List, Optional
 
 import networkx as nx
 from qibo.config import log, raise_error
+from qibo.transpiler import NativeGates
 
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.native import NativeType
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
@@ -57,7 +57,7 @@ class Platform:
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
-    two_qubit_native_types: NativeType = field(default_factory=lambda: NativeType(0))
+    two_qubit_native_types: NativeGates = field(default_factory=lambda: NativeGates(0))
     """Types of two qubit native gates. Used by the transpiler."""
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
@@ -69,9 +69,9 @@ class Platform:
 
         for pair in self.pairs.values():
             self.two_qubit_native_types |= pair.native_gates.types
-        if self.two_qubit_native_types is NativeType(0):
+        if self.two_qubit_native_types is NativeGates(0):
             # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = NativeType.CZ
+            self.two_qubit_native_types = NativeGates.CZ
 
         self.topology.add_nodes_from(self.qubits.keys())
         self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
