@@ -33,6 +33,11 @@ def load_settings(runcard: dict) -> Settings:
     return Settings(**runcard["settings"])
 
 
+def load_path(runcard: dict) -> Path:
+    """Load platform settings section from the runcard."""
+    return Path(runcard["kernel_folder"])
+
+
 def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
@@ -43,8 +48,8 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
     if "kernel_folder" in runcard:
         for qubit in qubits.values():
-            qubit.kernel_path = Path(
-                runcard["kernel_folder"] + runcard["characterization"]["single_qubit"][qubit.name]["kernel_path"]
+            qubit.kernel_path = (
+                Path(runcard["kernel_folder"]) / runcard["characterization"]["single_qubit"][qubit.name]["kernel_path"]
             )
 
     couplers = {}
@@ -115,9 +120,7 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     }
     if kernel_folder:
         for q in qubits:
-            characterization["single_qubit"][q]["kernel_path"] = str(
-                characterization["single_qubit"][q]["kernel_path"]
-            ).replace(kernel_folder, "")
+            characterization["single_qubit"][q]["kernel_path"] = characterization["single_qubit"][q]["kernel_path"].name
     if couplers:
         characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
 
@@ -156,7 +159,7 @@ def dump_runcard(platform: Platform, path: Path):
     }
 
     if platform.kernel_folder:
-        settings["kernel_folder"] = platform.kernel_folder
+        settings["kernel_folder"] = str(platform.kernel_folder)
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
         settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
