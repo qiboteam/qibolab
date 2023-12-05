@@ -1,6 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import networkx as nx
@@ -54,7 +55,7 @@ class Platform:
 
     couplers: CouplerMap = field(default_factory=dict)
     """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
-    kernel_folder: Optional[str] = None
+    kernel_folder: Optional[Path] = None
     """Folder where each qubit kernels are stored"""
 
     is_connected: bool = False

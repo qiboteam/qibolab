@@ -5,6 +5,7 @@ repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
 from dataclasses import asdict
+from os.path import normcase
 from pathlib import Path
 from typing import Tuple
 
@@ -159,7 +160,7 @@ def dump_runcard(platform: Platform, path: Path):
     }
 
     if platform.kernel_folder:
-        settings["kernel_folder"] = str(platform.kernel_folder)
+        settings["kernel_folder"] = str(normcase(platform.kernel_folder))
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
         settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
