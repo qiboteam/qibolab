@@ -41,7 +41,7 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     objects.
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
-    if runcard["kernel_path"]:
+    if "kernel_path" in runcard:
         for qubit in qubits.values():
             qubit.kernel_path = Path(runcard["kernel_path"])
 
