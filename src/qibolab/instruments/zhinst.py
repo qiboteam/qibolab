@@ -1062,15 +1062,15 @@ class Zurich(Controller):
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                for i in range(len(self.sequence[f"readout{q}"])):
+                for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
                     exp_res = self.results.get_data(f"sequence{q}_{i}")
                     # Reorder dimensions
                     data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         data = np.ones(data.shape) - data.real  # Probability inversion patch
 
-                    serial = self.sequence[f"readout{q}"][i].pulse.serial
-                    qubit = self.sequence[f"readout{q}"][i].pulse.qubit
+                    serial = ropulse.pulse.serial
+                    qubit = ropulse.pulse.qubit
                     results[serial] = results[qubit] = options.results_type(data)
 
         self.offsets_off()
