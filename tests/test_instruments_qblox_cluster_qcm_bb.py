@@ -38,9 +38,7 @@ def qcm_bb(controller, cluster):
 
 @pytest.fixture(scope="module")
 def connected_qcm_bb(connected_controller, connected_cluster):
-    settings = {"o1": True, "o2": True, "o3": True, "o4": True}
     qcm_bb = get_qcm_bb(connected_controller, connected_cluster)
-    qcm_bb.setup(**settings)
     qcm_bb.connect()
     yield qcm_bb
     qcm_bb.disconnect()
@@ -61,12 +59,12 @@ def test_init(qcm_bb: ClusterQCM_BB):
     assert type(qcm_bb._cluster) == Cluster
 
 
-def test_setup(qcm_bb: ClusterQCM_BB):
-    settings = {"o1": True, "o2": True, "o3": True, "o4": True}
-    qcm_bb.setup(**settings)
-    for idx, port in enumerate(settings):
-        assert type(qcm_bb.ports[port]) == QbloxOutputPort
-        assert qcm_bb.ports[port].sequencer_number == idx
+# def test_setup(qcm_bb: ClusterQCM_BB):
+#     settings = {"o1": True, "o2": True, "o3": True, "o4": True}
+#     qcm_bb.setup(**settings)
+#     for idx, port in enumerate(settings):
+#         assert type(qcm_bb.ports[port]) == QbloxOutputPort
+#         assert qcm_bb.ports[port].sequencer_number == idx
 
 
 @pytest.mark.qpu
@@ -75,6 +73,9 @@ def test_connect(connected_qcm_bb: ClusterQCM_BB):
 
     assert qcm_bb.is_connected
     assert not qcm_bb is None
+    for idx, port in enumerate(qcm_bb.ports):
+        assert type(qcm_bb.ports[port]) == QbloxOutputPort
+        assert qcm_bb.ports[port].sequencer_number == idx
 
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
     o2_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o2"]]

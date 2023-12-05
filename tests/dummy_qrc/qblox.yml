@@ -14,15 +14,6 @@ instruments:
       frequency: 6_535_900_000
       power: 4
 
-    qcm_bb0:
-        o1: True
-        o2: True
-        o3: True
-        o4: True
-
-    qcm_bb1:
-        o1: True
-
     qcm_rf0:
         o1:
             attenuation: 20

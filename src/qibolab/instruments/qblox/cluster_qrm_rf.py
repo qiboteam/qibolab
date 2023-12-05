@@ -6,9 +6,8 @@ import numpy as np
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
-from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
+from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -22,7 +21,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
-class ClusterQRM_RF(Instrument):
+class ClusterQRM_RF(ClusterModule):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitrary wave generator, a digitizer,
@@ -162,7 +161,6 @@ class ClusterQRM_RF(Instrument):
 
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
-        self.ports: dict = {}
         self.classification_parameters: dict = {}
 
         self.settings: dict = {}

@@ -4,9 +4,8 @@ import json
 
 from qibo.config import log
 
-from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.port import QbloxOutputPort
+from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -20,7 +19,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
-class ClusterQCM_BB(Instrument):
+class ClusterQCM_BB(ClusterModule):
     """Qblox Cluster Qubit Control Module Baseband driver.
 
     Qubit Control Module (QCM) is an arbitratry wave generator with two DACs connected to
@@ -124,8 +123,7 @@ class ClusterQCM_BB(Instrument):
         >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.ports: dict = {}
-        self.settings: dict = {}
+        # self.settings: dict = {}
         self.device = None
 
         self._debug_folder: str = ""
@@ -226,7 +224,7 @@ class ClusterQCM_BB(Instrument):
                 self._set_device_parameter(target, "connect_out2", value="off")
                 self._set_device_parameter(target, "connect_out3", value="off")
             try:
-                for port in self.settings:
+                for port in self.ports:
                     self._sequencers[port] = []
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
@@ -263,7 +261,7 @@ class ClusterQCM_BB(Instrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self, **settings):
+    def setup(self):
         """Cache the settings of the runcard and instantiate the ports of the module.
 
         Args:
@@ -274,12 +272,7 @@ class ClusterQCM_BB(Instrument):
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
                   At the moment this param is not loaded but is always set to True.
         """
-        for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(
-                self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
-            )
-
-        self.settings = settings if settings else self.settings
+        pass
 
     def _get_next_sequencer(self, port, frequency, qubits: dict):
         """Retrieves and configures the next avaliable sequencer.

@@ -86,14 +86,7 @@ def test_setup(qcm_rf: ClusterQCM_RF):
         },
     }
     qcm_rf.setup(**settings)
-    for port in settings:
-        assert type(qcm_rf.ports[port]) == QbloxOutputPort
-        assert type(qcm_rf._sequencers[port]) == list
     assert qcm_rf.settings == settings
-    o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
-    o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
-    assert o1_output_port.sequencer_number == 0
-    assert o2_output_port.sequencer_number == 1
 
 
 @pytest.mark.qpu
@@ -162,6 +155,14 @@ def test_connect(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
 
     assert qcm_rf.ports["o2"].nco_freq == 0
     assert qcm_rf.ports["o2"].nco_phase_offs == 0
+
+    for port in qcm_rf.settings:
+        assert type(qcm_rf.ports[port]) == QbloxOutputPort
+        assert type(qcm_rf._sequencers[port]) == list
+    o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
+    o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
+    assert o1_output_port.sequencer_number == 0
+    assert o2_output_port.sequencer_number == 1
 
 
 @pytest.mark.qpu

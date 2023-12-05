@@ -82,11 +82,7 @@ class Cluster(Instrument):
     @property
     def reference_clock_source(self) -> ReferenceClockSource:
         if self.is_connected:
-            _reference_clock_source = self.device.get("reference_source")
-            if _reference_clock_source == "internal":
-                self.settings.reference_clock_source = ReferenceClockSource.INTERNAL
-            elif _reference_clock_source == "external":
-                self.settings.reference_clock_source = ReferenceClockSource.EXTERNAL
+            self.settings.reference_clock_source = ReferenceClockSource[self.device.get("reference_source").upper()]
         return self.settings.reference_clock_source
 
     @reference_clock_source.setter

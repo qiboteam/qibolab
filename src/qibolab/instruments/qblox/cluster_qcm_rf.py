@@ -5,9 +5,8 @@ import json
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
-from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster import Cluster
-from qibolab.instruments.qblox.port import QbloxOutputPort
+from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -21,7 +20,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
-class ClusterQCM_RF(Instrument):
+class ClusterQCM_RF(ClusterModule):
     """Qblox Cluster Qubit Control Module RF driver.
 
     Qubit Control Module RF (QCM-RF) is an instrument that integrates an arbitratry
@@ -151,7 +150,6 @@ class ClusterQCM_RF(Instrument):
         """
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
-        self.ports: dict = {}
         self.settings = {}
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
@@ -302,11 +300,11 @@ class ClusterQCM_RF(Instrument):
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
                   At the moment this param is not loaded but is always set to True.
         """
-        for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(
-                self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
-            )
-            self._sequencers[port] = []
+        # for port_num, port in enumerate(settings):
+        #     self.ports[port] = QbloxOutputPort(
+        #         self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
+        #     )
+        # self._sequencers[port] = []
         self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
