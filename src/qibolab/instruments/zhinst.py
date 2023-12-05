@@ -536,7 +536,7 @@ class Zurich(Controller):
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
                 for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
-                    exp_res = np.array(self.results.get_data(f"sequence{q}_{i}"))
+                    data = np.array(self.results.get_data(f"sequence{q}_{i}"))
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         data = np.ones(data.shape) - data.real  # Probability inversion patch
                     serial = ropulse.pulse.serial

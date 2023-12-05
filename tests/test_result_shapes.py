@@ -26,9 +26,10 @@ def execute(platform, acquisition_type, averaging_mode, sweep=False):
 
     options = ExecutionParameters(nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode)
     if sweep:
-        values = np.linspace(0.1, 0.5, NSWEEP)
-        sweeper1 = Sweeper(Parameter.amplitude, values, pulses=[qd_pulse])
-        sweeper2 = Sweeper(Parameter.amplitude, values, pulses=[ro_pulse])
+        amp_values = np.linspace(0.1, 0.5, NSWEEP)
+        freq_values = np.linspace(-2e6, 2e6, NSWEEP)
+        sweeper1 = Sweeper(Parameter.amplitude, amp_values, pulses=[qd_pulse])
+        sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[ro_pulse])
         results = platform.sweep(sequence, options, sweeper1, sweeper2)
     else:
         results = platform.execute_pulse_sequence(sequence, options)
