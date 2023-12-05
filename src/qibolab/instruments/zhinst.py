@@ -25,8 +25,6 @@ from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter
 
-KERNELS_FOLDER = Path.home() / "qibolab" / "src" / "qibolab" / "instruments" / "data"
-
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
 laboneq._token.is_valid_token = lambda _token: True  # pylint: disable=W0212
