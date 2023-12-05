@@ -38,7 +38,6 @@ class Qubit:
     """
 
     name: QubitId
-    kernel_path: Optional[Path] = None
 
     bare_resonator_frequency: int = 0
     readout_frequency: int = 0
@@ -77,6 +76,7 @@ class Qubit:
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
+    kernel_path: Optional[Path] = None
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0

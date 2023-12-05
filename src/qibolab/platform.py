@@ -54,6 +54,8 @@ class Platform:
 
     couplers: CouplerMap = field(default_factory=dict)
     """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
+    kernel_folder: Optional[str] = None
+    """Folder where each qubit kernels are stored"""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""

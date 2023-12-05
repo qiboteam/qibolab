@@ -1,12 +1,13 @@
 nqubits: 5
 qubits: [0, 1, 2, 3, 4]
-kernel_path: "qibolab_platforms_qrc/iqm5q_kernels"
 couplers: [0, 1, 3, 4]
 topology: {0: [0, 2], 1: [1, 2], 3: [2, 3], 4: [2, 4]}
 settings:
     nshots: 4096
     sampling_rate: 2.e+9
     relaxation_time: 300_000
+
+kernel_folder: "qibolab_platforms_qrc/iqm5q_kernels/"
 
 instruments:
     lo_readout:
@@ -246,12 +247,7 @@ characterization:
             # parameters for single shot classification
             threshold: 0.8836
             iq_angle: -1.551
-            # alpha: 217.492 MHz
-            # To save power values on the runcard
-            # ro_range_lp: -15
-            # ro_range_hp: -15
-            # qd_range: 0
-            # flux_range: -0
+            kernel_path: "kernel_q0"
 
         1:
             readout_frequency: 4_931_000_000
@@ -261,6 +257,7 @@ characterization:
             sweetspot: 0.0
             mean_gnd_states: [0, 0]
             mean_exc_states: [0, 0]
+            kernel_path: "kernel_q1"
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
@@ -272,7 +269,7 @@ characterization:
             # parameters for single shot classification
             threshold: -0.0593
             iq_angle: -0.667
-            # alpha: 208 MHz
+            kernel_path: "kernel_q2"
         3:
             readout_frequency: 5_783_000_000
             drive_frequency: 4_100_000_000
@@ -281,6 +278,7 @@ characterization:
             sweetspot: 0.0
             mean_gnd_states: [0, 0]
             mean_exc_states: [0, 0]
+            kernel_path: "kernel_q3"
         4:
             readout_frequency: 5_515_000_000
             drive_frequency: 4_196_800_000
@@ -292,6 +290,7 @@ characterization:
             # parameters for single shot classification
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
+            kernel_path: "kernel_q4"
     coupler:
         0:
             sweetspot: 0.0
