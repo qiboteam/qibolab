@@ -31,7 +31,7 @@ def test_zhpulse(shape):
     if shape == "Drag":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0)
     if shape == "SNZ":
-        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10), "ch0", qubit=0)
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10, 0.01), "ch0", qubit=0)
     if shape == "IIR":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, IIR([10, 1], [0.4, 1], target=Gaussian(5)), "ch0", qubit=0)
 

@@ -468,18 +468,20 @@ class SNZ(PulseShape):
     """
     Sudden variant Net Zero.
     https://arxiv.org/abs/2008.07411
+    (Supplementary materials)
 
     """
 
-    def __init__(self, t_idling):
+    def __init__(self, t_idling, b_amplitude=None):
         self.name = "SNZ"
         self.pulse: Pulse = None
         self.t_idling: float = t_idling
+        self.b_amplitude = b_amplitude
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
         if super().__eq__(item):
-            return self.t_idling == item.t_idling
+            return self.t_idling == item.t_idling and self.b_amplitude == item.b_amplitude
         return False
 
     @property
@@ -489,6 +491,8 @@ class SNZ(PulseShape):
         if self.pulse:
             if self.t_idling > self.pulse.duration:
                 raise ValueError(f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}.")
+            if self.b_amplitude is None:
+                self.b_amplitude = self.pulse.amplitude / 2
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
             half_pulse_duration = (self.pulse.duration - self.t_idling) / 2
             half_flux_pulse_samples = int(np.rint(num_samples * half_pulse_duration / self.pulse.duration))
@@ -496,9 +500,11 @@ class SNZ(PulseShape):
             waveform = Waveform(
                 np.concatenate(
                     (
-                        self.pulse.amplitude * np.ones(half_flux_pulse_samples),
+                        self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
+                        np.array([self.b_amplitude]),
                         np.zeros(idling_samples),
-                        -1 * self.pulse.amplitude * np.ones(half_flux_pulse_samples),
+                        -np.array([self.b_amplitude]),
+                        -self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
                     )
                 )
             )

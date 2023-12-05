@@ -155,7 +155,7 @@ def test_pulses_pulse_init():
     p8 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
-    p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
+    p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), 0, 200)
     p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
 
     # initialisation with float duration and start
@@ -927,8 +927,12 @@ def test_pulses_pulseshape_eq():
     shape1 = SNZ(5)
     shape2 = SNZ(5)
     shape3 = SNZ(2)
+    shape4 = SNZ(2, 0.1)
+    shape5 = SNZ(2, 0.1)
     assert shape1 == shape2
     assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
 
     shape1 = eCap(4)
     shape2 = eCap(4)
