@@ -468,7 +468,7 @@ class SNZ(PulseShape):
     """
     Sudden variant Net Zero.
     https://arxiv.org/abs/2008.07411
-    (Supplementary materials)
+    (Supplementary materials: FIG. S1.)
 
     """
 
