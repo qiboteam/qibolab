@@ -313,7 +313,7 @@ class Zurich(Controller):
         self.smearing = smearing
         self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
-        self.kernels = defaultdict(Path) 
+        self.kernels = defaultdict(Path)
 
         self.exp = None
         self.experiment = None
@@ -432,7 +432,7 @@ class Zurich(Controller):
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
             "acquire_line"
         ]
-        
+
         if qubit.kernel_path:
             self.kernels[q] = qubit.kernel_path / f"kernels_q{q}.npz"
         if self.kernels[q].is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
