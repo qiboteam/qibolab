@@ -313,6 +313,7 @@ class Zurich(Controller):
         self.smearing = smearing
         self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
+        self.kernels = defaultdict(Path) 
 
         self.exp = None
         self.experiment = None
@@ -431,17 +432,16 @@ class Zurich(Controller):
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
             "acquire_line"
         ]
-        # weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
-        weights_file = qubit.kernel_path / f"kernels_q{q}.npz"
-        if weights_file.is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            # Remove software modulation as it's already included on the kernels
-            print("aqui")
+        
+        if qubit.kernel_path:
+            self.kernels[q] = qubit.kernel_path / f"kernels_q{q}.npz"
+        if self.kernels[q].is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
             self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
                 oscillator=None,
                 range=qubit.feedback.power_range,
                 port_delay=self.time_of_flight * NANO_TO_SECONDS,
             )
-        elif weights_file.is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
+        elif self.kernels[q].is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
             self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
                     frequency=intermediate_frequency,
@@ -451,7 +451,7 @@ class Zurich(Controller):
                 port_delay=self.time_of_flight * NANO_TO_SECONDS,
                 threshold=qubit.threshold,  # To keep compatibility with angle and threshold discrimination
             )
-        elif not weights_file.is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
+        elif not self.kernels[q].is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
             self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
                 oscillator=lo.Oscillator(
                     frequency=intermediate_frequency,
@@ -950,10 +950,8 @@ class Zurich(Controller):
                         time=self.smearing * NANO_TO_SECONDS,
                     )
 
-                    # weights_file = KERNELS_FOLDER / str(self.chip) / "weights" / f"kernels_q{q}.npz"
-                    weights_file = qubits[q].kernel_path / f"kernels_q{q}.npz"
-                    if weights_file.is_file() and acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                        kernels = np.load(weights_file)
+                    if self.kernels[q].is_file() and acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+                        kernels = np.load(self.kernels[q])
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
                             samples=kernels[str(q)] * np.exp(1j * iq_angle),

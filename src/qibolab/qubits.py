@@ -38,6 +38,7 @@ class Qubit:
     """
 
     name: QubitId
+    kernel_path: Optional[Path] = None
 
     bare_resonator_frequency: int = 0
     readout_frequency: int = 0
@@ -89,8 +90,6 @@ class Qubit:
     flux: Optional[Channel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    kernel_path: Optional[Path] = None
 
     @property
     def channels(self):
