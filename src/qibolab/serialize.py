@@ -93,7 +93,7 @@ def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> Instr
     return instruments
 
 
-def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None, kernel_folder: str = None) -> dict:
+def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
     """Dump qubit and pair objects to a dictionary following the runcard format."""
 
     native_gates = {"single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}}
@@ -111,8 +111,9 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
     for q in qubits:
-        if "kernel_path" in characterization["single_qubit"][q]:
-            characterization["single_qubit"][q]["kernel_path"] = characterization["single_qubit"][q]["kernel_path"].name
+        kernel_path = characterization["single_qubit"][q].pop("kernel_path")
+        if kernel_path is not None:
+            characterization["single_qubit"][q]["kernel_path"] = kernel_path.name
 
     if couplers:
         characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
@@ -157,5 +158,5 @@ def dump_runcard(platform: Platform, path: Path):
         settings["couplers"] = list(platform.couplers)
         settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
 
-    settings.update(dump_qubits(platform.qubits, platform.pairs, platform.couplers, platform.kernel_folder))
+    settings.update(dump_qubits(platform.qubits, platform.pairs, platform.couplers))
     path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
