@@ -11,16 +11,14 @@ from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.serialize import (
     load_instrument_settings,
-    load_path,
     load_qubits,
     load_runcard,
     load_settings,
 )
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
-
+KERNEL_FOLDER = pathlib.Path(__file__).parent / "iqm5q_kernels/"
 N_QUBITS = 5
-KERNEL_FOLDER = "qibolab_platforms_qrc/iqm5q_kernels/"
 
 
 def create(runcard_path=RUNCARD):
@@ -139,9 +137,8 @@ def create(runcard_path=RUNCARD):
 
     # create qubit objects
     runcard = load_runcard(runcard_path)
-    qubits, couplers, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard, KERNEL_FOLDER)
     settings = load_settings(runcard)
-    kernel_folder = load_path(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
     for q in range(0, 5):
@@ -168,5 +165,4 @@ def create(runcard_path=RUNCARD):
         settings,
         resonator_type="2D",
         couplers=couplers,
-        kernel_folder=kernel_folder,
     )

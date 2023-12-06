@@ -7,8 +7,6 @@ settings:
     sampling_rate: 2.e+9
     relaxation_time: 300_000
 
-kernel_folder: "qibolab_platforms_qrc/iqm5q_kernels"
-
 instruments:
     lo_readout:
         frequency: 5_500_000_000

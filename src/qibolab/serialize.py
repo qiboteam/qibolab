@@ -5,7 +5,6 @@ repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
 from dataclasses import asdict
-from os.path import normcase
 from pathlib import Path
 from typing import Tuple
 
@@ -34,12 +33,7 @@ def load_settings(runcard: dict) -> Settings:
     return Settings(**runcard["settings"])
 
 
-def load_path(runcard: dict) -> Path:
-    """Load platform settings section from the runcard."""
-    return Path(runcard["kernel_folder"])
-
-
-def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
+def load_qubits(runcard: dict, kernel_folder: Path = None) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard
@@ -47,12 +41,9 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     objects.
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
-    if "kernel_folder" in runcard:
+    if kernel_folder is not None:
         for qubit in qubits.values():
-            qubit.kernel_path = (
-                Path(runcard["kernel_folder"]) / runcard["characterization"]["single_qubit"][qubit.name]["kernel_path"]
-            )
-
+            qubit.kernel_path = kernel_folder / runcard["characterization"]["single_qubit"][qubit.name]["kernel_path"]
     couplers = {}
     pairs = {}
     if "coupler" in runcard["characterization"]:
@@ -119,9 +110,10 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
     characterization = {
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
-    if kernel_folder:
-        for q in qubits:
+    for q in qubits:
+        if "kernel_path" in characterization["single_qubit"][q]:
             characterization["single_qubit"][q]["kernel_path"] = characterization["single_qubit"][q]["kernel_path"].name
+
     if couplers:
         characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
 
@@ -159,8 +151,8 @@ def dump_runcard(platform: Platform, path: Path):
         "instruments": dump_instruments(platform.instruments),
     }
 
-    if platform.kernel_folder:
-        settings["kernel_folder"] = str(normcase(platform.kernel_folder))
+    print(platform)
+
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
         settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
