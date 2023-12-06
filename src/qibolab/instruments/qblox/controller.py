@@ -198,7 +198,7 @@ class QbloxController(Controller):
                         acquisition_results[key] = value
 
         # TODO: move to QRM_RF.acquire()
-        shape = tuple(len(sweeper.values) for sweeper in sweepers)
+        shape = tuple(len(sweeper.values) for sweeper in reversed(sweepers))
         shots_shape = (nshots,) + shape
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
