@@ -28,7 +28,6 @@ def gpi2_rule(gate, platform):
     """Rule for GPI2."""
     qubit = gate.target_qubits[0]
     theta = gate.parameters[0]
-
     sequence = PulseSequence()
     pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
     sequence.add(pulse)

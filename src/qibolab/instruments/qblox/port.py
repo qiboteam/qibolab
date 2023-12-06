@@ -12,12 +12,9 @@ MIN_PULSE_DURATION = 4
 
 @dataclass
 class QbloxOutputPort_Settings:
-    channel: str = None
-    qubit: str = None
     attenuation: int = 60
     offset: float = 0.0
     hardware_mod_en: bool = True
-    gain: float = 1.0
     nco_freq: int = 0
     nco_phase_offs: float = 0
     lo_enabled: bool = True
@@ -35,12 +32,11 @@ class QbloxInputPort_Settings:
 class QbloxOutputPort(Port):
     """qibolab.instruments.port.Port interface implementation for Qblox instruments"""
 
-    def __init__(self, module, sequencer_number: int, port_number: int):
+    def __init__(self, module, sequencer_number: int, port_number: int, port_name: str = None):
+        self.name = port_name
         self.module = module
         self.sequencer_number: int = sequencer_number
         self.port_number: int = port_number
-        self.channel = None  # To be discontinued
-        self.qubit = None  # To be discontinued
         self._settings = QbloxOutputPort_Settings()
 
     @property
@@ -243,7 +239,10 @@ class QbloxOutputPort(Port):
 
 
 class QbloxInputPort:
-    def __init__(self, module, output_sequencer_number: int, input_sequencer_number: int, port_number: int):
+    def __init__(
+        self, module, output_sequencer_number: int, input_sequencer_number: int, port_number: int, port_name: str = None
+    ):
+        self.name = port_name
         self.module = module
         self.output_sequencer_number: int = output_sequencer_number
         self.input_sequencer_number: int = input_sequencer_number

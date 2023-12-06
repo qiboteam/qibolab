@@ -110,26 +110,28 @@ class ClusterQCM_BB(Instrument):
     )
 
     def __init__(self, name: str, address: str, cluster: Cluster = None):
-        """Initialises the instance.
+        """
+        Initialize a Qblox QCM baseband module.
 
-        All class attributes are defined and initialised.
+        Parameters:
+        - name: An arbitrary name to identify the module.
+        - address: The network address of the instrument, specified as "cluster_IP:module_slot_idx".
+        - cluster: The Cluster object to which the QCM baseband module is connected.
 
-        Args:
-            name(str): A unique name given to the instrument.
-            address: IP_address:module_number (the IP address of the cluster and module number)
-            cluster: the cluster to which the instrument belongs.
+        Example:
+        To create a ClusterQCM_BB instance named 'qcm_bb' connected to slot 2 of a Cluster at address '192.168.0.100':
+        >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
+        >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
         self.ports: dict = {}
         self.settings: dict = {}
         self.device = None
-        self.channels: list = []
 
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
-        self._port_channel_map: dict = {}
-        self._channel_port_map: dict = {}
+        self.channel_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
@@ -227,7 +229,6 @@ class ClusterQCM_BB(Instrument):
                 for port in self.settings:
                     self._sequencers[port] = []
                     self.ports[port].offset = self.settings[port]["offset"]
-                    self.ports[port].qubit = self.settings[port]["qubit"]
                     self.ports[port].hardware_mod_en = True
                     self.ports[port].nco_freq = 0
                     self.ports[port].nco_phase_offs = 0
@@ -275,11 +276,13 @@ class ClusterQCM_BB(Instrument):
                   At the moment this param is not loaded but is always set to True.
         """
         for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(self, self.DEFAULT_SEQUENCERS[port], port_number=port_num)
+            self.ports[port] = QbloxOutputPort(
+                self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
+            )
 
         self.settings = settings if settings else self.settings
 
-    def _get_next_sequencer(self, port, frequency, qubits: dict, qubit: None):
+    def _get_next_sequencer(self, port, frequency, qubits: dict):
         """Retrieves and configures the next avaliable sequencer.
 
         The parameters of the new sequencer are copied from those of the default sequencer, except for the
@@ -291,6 +294,10 @@ class ClusterQCM_BB(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
+        # select the qubit relative to specific port
+        for _qubit in qubits.values():
+            if _qubit.flux.port.name == port and _qubit.flux.port.module.name == self.name:
+                qubit = _qubit
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
@@ -321,11 +328,11 @@ class ClusterQCM_BB(Instrument):
             #     value=qubits[qubit].sweetspot,
             # )
 
-            self.ports[port].offset = qubits[qubit].sweetspot
+            self.ports[port].offset = qubit.sweetspot
 
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
-        sequencer.qubit = qubit
+        sequencer.qubit = qubit.name
         return sequencer
 
     def get_if(self, pulse):
@@ -392,7 +399,8 @@ class ClusterQCM_BB(Instrument):
         # process the pulses for every port
         for port in self.ports:
             # split the collection of instruments pulses by ports
-            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+            port_channel = [chan.name for chan in self.channel_map.values() if chan.port.name == port]
+            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
             # initialise the list of sequencers required by the port
             self._sequencers[port] = []
@@ -414,10 +422,7 @@ class ClusterQCM_BB(Instrument):
                         )
                     # get next sequencer
                     sequencer = self._get_next_sequencer(
-                        port=port,
-                        frequency=self.get_if(non_overlapping_pulses[0]),
-                        qubits=qubits,
-                        qubit=non_overlapping_pulses[0].qubit,
+                        port=port, frequency=self.get_if(non_overlapping_pulses[0]), qubits=qubits
                     )
                     # add the sequencer to the list of sequencers required by the port
                     self._sequencers[port].append(sequencer)
@@ -444,17 +449,12 @@ class ClusterQCM_BB(Instrument):
                                 )
                             # get next sequencer
                             sequencer = self._get_next_sequencer(
-                                port=port,
-                                frequency=self.get_if(non_overlapping_pulses[0]),
-                                qubits=qubits,
-                                qubit=non_overlapping_pulses[0].qubit,
+                                port=port, frequency=self.get_if(non_overlapping_pulses[0]), qubits=qubits
                             )
                             # add the sequencer to the list of sequencers required by the port
                             self._sequencers[port].append(sequencer)
             else:
-                sequencer = self._get_next_sequencer(
-                    port=port, frequency=0, qubits=qubits, qubit=self.ports[port].qubit
-                )
+                sequencer = self._get_next_sequencer(port=port, frequency=0, qubits=qubits)
                 # add the sequencer to the list of sequencers required by the port
                 self._sequencers[port].append(sequencer)
 

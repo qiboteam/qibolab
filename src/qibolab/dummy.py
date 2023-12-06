@@ -27,13 +27,8 @@ def create_dummy(with_couplers: bool = True):
     Args:
         with_couplers (bool): Selects whether the dummy platform will have coupler qubits.
     """
-    if with_couplers:
-        name = "dummy_couplers"
-    else:
-        name = "dummy"
-
     # Create dummy controller
-    instrument = DummyInstrument(name, 0)
+    instrument = DummyInstrument("dummy", 0)
 
     # Create local oscillator
     twpa_pump = LocalOscillator(name="twpa_pump", address=0)
@@ -77,4 +72,5 @@ def create_dummy(with_couplers: bool = True):
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     instrument.sampling_rate = settings.sampling_rate * 1e-9
 
+    name = "dummy_couplers" if with_couplers else "dummy"
     return Platform(name, qubits, pairs, instruments, settings, resonator_type="2D", couplers=couplers)

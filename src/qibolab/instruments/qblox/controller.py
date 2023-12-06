@@ -9,9 +9,12 @@ from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+MAX_BATCH_SIZE = 30
+"""Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
 
 
@@ -97,6 +100,19 @@ class QbloxController(Controller):
             self.cluster.disconnect()
             self.is_connected = False
 
+    def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
+        """Retrieve all the channels connected to a specific Qblox module.
+
+        This method updates the `channel_port_map` attribute of the specified Qblox module
+        based on the information contained in the provided qubits dictionary (dict of `qubit` objects).
+
+        Return the list of channels connected to module_name"""
+        for qubit in qubits.values():
+            for channel in qubit.channels:
+                if channel.port and channel.port.module.name == module.name:
+                    module.channel_map[channel.name] = channel
+        return list(module.channel_map)
+
     def _execute_pulse_sequence(
         self,
         qubits: dict,
@@ -150,63 +166,32 @@ class QbloxController(Controller):
         # Process Pulse Sequence. Assign pulses to modules and generate waveforms & program
         module_pulses = {}
         data = {}
-        for name in self.modules:
+        for name, module in self.modules.items():
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_pulses[name] = sequence.get_channel_pulses(*self.modules[name].channels)
+            module_channels = self._set_module_channel_map(module, qubits)
+            module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
-            for port in self.modules[name].ports:
-                # _los = []
-                # _ifs = []
-                port_pulses = module_pulses[name].get_channel_pulses(self.modules[name]._port_channel_map[port])
-                # for pulse in port_pulses:
-                #     if pulse.type == PulseType.READOUT:
-                #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["MZ"]["if_frequency"])
-                #         pulse._if = _if
-                #         _los.append(int(pulse.frequency - _if))
-                #         _ifs.append(int(_if))
-                #     elif pulse.type == PulseType.DRIVE:
-                #         _if = int(self.native_gates["single_qubit"][pulse.qubit]["RX"]["if_frequency"])
-                #         pulse._if = _if
-                #         _los.append(int(pulse.frequency - _if))
-                #         _ifs.append(int(_if))
-
-                # # where multiple qubits share the same lo (for example on a readout line), check lo consistency
-                # if len(_los) > 1:
-                #     for _ in range(1, len(_los)):
-                #         if _los[0] != _los[_]:
-                #             raise ValueError(
-                #                 f"""Pulses:
-                #                 {module_pulses[name]}
-                #                 sharing the lo at device: {name} - port: {port}
-                #                 cannot be synthesised with intermediate frequencies:
-                #                 {_ifs}"""
-                #             )
-                # if len(_los) > 0:
-                #     self.modules[name].ports[port].lo_frequency = _los[0]
-
-                if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF)):
-                    # without access to _ifs _los cannot be set ^^^^^^
-                    for pulse in port_pulses:
-                        pulse._if = int(pulse.frequency - self.modules[name].ports[port].lo_frequency)
+            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF)):
+                for pulse in module_pulses[name]:
+                    pulse_channel = module.channel_map[pulse.channel]
+                    pulse._if = int(pulse.frequency - pulse_channel.lo_frequency)
 
             #  ask each module to generate waveforms & program and upload them to the device
-            self.modules[name].process_pulse_sequence(
-                qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers
-            )
+            module.process_pulse_sequence(qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers)
 
             # log.info(f"{self.modules[name]}: Uploading pulse sequence")
-            self.modules[name].upload()
+            module.upload()
 
         # play the sequence or sweep
-        for name in self.modules:
-            if isinstance(self.modules[name], (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
-                self.modules[name].play_sequence()
+        for module in self.modules.values():
+            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
+                module.play_sequence()
 
         # retrieve the results
         acquisition_results = {}
-        for name in self.modules:
-            if isinstance(self.modules[name], ClusterQRM_RF) and not module_pulses[name].ro_pulses.is_empty:
-                results = self.modules[name].acquire()
+        for name, module in self.modules.items():
+            if isinstance(module, ClusterQRM_RF) and not module_pulses[name].ro_pulses.is_empty:
+                results = module.acquire()
                 existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
                     if key in existing_keys:
@@ -237,8 +222,8 @@ class QbloxController(Controller):
     def play(self, qubits, couplers, sequence, options):
         return self._execute_pulse_sequence(qubits, sequence, options)
 
-    def play_sequences(self, *args, **kwargs):
-        raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
+    def split_batches(self, sequences):
+        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
     def sweep(self, qubits: dict, couplers: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.
