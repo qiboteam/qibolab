@@ -523,9 +523,6 @@ class Zurich(Controller):
     def play(self, qubits, couplers, sequence, options):
         """Play pulse sequence"""
         self.signal_map = {}
-        dimensions = []
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            dimensions = [options.nshots]
 
         self.frequency_from_pulses(qubits, sequence)
 
@@ -539,22 +536,12 @@ class Zurich(Controller):
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
                 for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
-                    exp_res = self.results.get_data(f"sequence{q}_{i}")
+                    data = np.array(self.results.get_data(f"sequence{q}_{i}"))
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        data = (
-                            np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
-                        )
                         data = np.ones(data.shape) - data.real  # Probability inversion patch
-                        results[ropulse.pulse.serial] = options.results_type(data)
-                        results[ropulse.pulse.qubit] = options.results_type(data)
-                    else:
-                        results[ropulse.pulse.serial] = options.results_type(data=np.array(exp_res))
-                        results[ropulse.pulse.qubit] = options.results_type(data=np.array(exp_res))
-
-        exp_dimensions = list(np.array(exp_res).shape)
-        if dimensions != exp_dimensions:
-            log.warning("dimensions %d , exp_dimensions %d", dimensions, exp_dimensions)
-            log.warning("dimensions not properly ordered")
+                    serial = ropulse.pulse.serial
+                    qubit = ropulse.pulse.qubit
+                    results[serial] = results[qubit] = options.results_type(data)
 
         # html containing the pulse sequence schedule
         # lo.show_pulse_sheet("pulses", self.exp)
@@ -1062,14 +1049,6 @@ class Zurich(Controller):
         self.signal_map = {}
         self.nt_sweeps = None
         sweepers = list(sweepers)
-
-        dimensions = []
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            dimensions = [options.nshots]
-
-        for sweeper in sweepers:
-            dimensions.append(len(sweeper.values))
-
         rearranging_axes, sweepers = self.rearrange_sweepers(sweepers)
         self.sweepers = sweepers
 
@@ -1083,33 +1062,18 @@ class Zurich(Controller):
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             if len(self.sequence[f"readout{q}"]) != 0:
-                for i in range(len(self.sequence[f"readout{q}"])):
+                for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
                     exp_res = self.results.get_data(f"sequence{q}_{i}")
                     # Reorder dimensions
-                    exp_res = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
+                    data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        data = (
-                            np.array([exp_res]) if options.averaging_mode is AveragingMode.CYCLIC else np.array(exp_res)
-                        )
-                        data = data.real
-                        data = np.ones(data.shape) - data  # Probability inversion patch
-                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(data)
-                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(data)
-                    else:
-                        results[self.sequence[f"readout{q}"][i].pulse.serial] = options.results_type(
-                            data=np.array(exp_res)
-                        )
-                        results[self.sequence[f"readout{q}"][i].pulse.qubit] = options.results_type(
-                            data=np.array(exp_res)
-                        )
+                        data = np.ones(data.shape) - data.real  # Probability inversion patch
 
-        exp_dimensions = list(np.array(exp_res).shape)
-        if dimensions != exp_dimensions:
-            log.warning("dimensions {}, exp_dimensions {}".format(dimensions, exp_dimensions))
-            log.warning("dimensions not properly ordered")
+                    serial = ropulse.pulse.serial
+                    qubit = ropulse.pulse.qubit
+                    results[serial] = results[qubit] = options.results_type(data)
 
         self.offsets_off()
-
         # html containing the pulse sequence schedule
         # lo.show_pulse_sheet("pulses", self.exp)
         return results

@@ -82,7 +82,7 @@ class DummyInstrument(Controller):
         results = {}
 
         for ro_pulse in sequence.ro_pulses:
-            values = self.get_values(options, ro_pulse, shape)
+            values = np.squeeze(self.get_values(options, ro_pulse, shape))
             results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
 
         return results
