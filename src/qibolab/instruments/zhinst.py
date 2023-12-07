@@ -847,7 +847,6 @@ class Zurich(Controller):
             if len(self.sequence[f"drive{q}"]) != 0:
                 play_after = None
                 for j, sequence in enumerate(self.sub_sequences[f"drive{q}"]):
-                    time = 0
                     with exp.section(uid=f"sequence_drive{q}_{j}", play_after=play_after):
                         for pulse in sequence:
                             if not isinstance(pulse, ZhSweeperLine):
