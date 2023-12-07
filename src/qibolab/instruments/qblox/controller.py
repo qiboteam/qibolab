@@ -9,9 +9,12 @@ from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+MAX_BATCH_SIZE = 30
+"""Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
 
 
@@ -131,14 +134,12 @@ class QbloxController(Controller):
         if not self.is_connected:
             raise_error(RuntimeError, "Execution failed because modules are not connected.")
 
-        if options.averaging_mode == AveragingMode.SINGLESHOT:
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
             nshots = options.nshots
             navgs = 1
-            average = False
         else:
             navgs = options.nshots
             nshots = 1
-            average = True
 
         relaxation_time = options.relaxation_time
         repetition_duration = sequence.finish + relaxation_time
@@ -197,18 +198,24 @@ class QbloxController(Controller):
                         acquisition_results[key] = value
 
         # TODO: move to QRM_RF.acquire()
+        shape = tuple(len(sweeper.values) for sweeper in reversed(sweepers))
+        shots_shape = (nshots,) + shape
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 _res = acquisition_results[ro_pulse.serial][2]
-                _res = _res.reshape(nshots, -1) if options.averaging_mode == AveragingMode.SINGLESHOT else _res
-                if average:
+                _res = np.reshape(_res, shots_shape)
+                if options.averaging_mode is not AveragingMode.SINGLESHOT:
                     _res = np.mean(_res, axis=0)
             else:
                 ires = acquisition_results[ro_pulse.serial][0]
                 qres = acquisition_results[ro_pulse.serial][1]
                 _res = ires + 1j * qres
+                if options.averaging_mode is AveragingMode.SINGLESHOT:
+                    _res = np.reshape(_res, shots_shape)
+                else:
+                    _res = np.reshape(_res, shape)
 
-            acquisition = options.results_type(_res)
+            acquisition = options.results_type(np.squeeze(_res))
             data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
 
             # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
@@ -219,8 +226,8 @@ class QbloxController(Controller):
     def play(self, qubits, couplers, sequence, options):
         return self._execute_pulse_sequence(qubits, sequence, options)
 
-    def play_sequences(self, *args, **kwargs):
-        raise_error(NotImplementedError, "play_sequences is not implemented in qblox driver yet.")
+    def split_batches(self, sequences):
+        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
     def sweep(self, qubits: dict, couplers: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
         """Executes a sequence of pulses while sweeping one or more parameters.

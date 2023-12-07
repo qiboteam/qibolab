@@ -1,16 +1,17 @@
 """A platform for executing quantum algorithms."""
 
+from collections import defaultdict
 from dataclasses import dataclass, field, replace
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 from qibo.config import log, raise_error
+from qibo.transpiler import NativeGates
 
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.native import NativeType
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
@@ -18,6 +19,36 @@ InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
 CouplerMap = Dict[QubitId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
+
+NS_TO_SEC = 1e-9
+
+
+def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> Tuple[PulseSequence, Dict[str, str]]:
+    """Unrolls a list of pulse sequences to a single pulse sequence with multiple measurements.
+
+    Args:
+        sequences (list): List of pulse sequences to unroll.
+        relaxation_time (int): Time in ns to wait for the qubit to relax between
+            playing different sequences.
+
+    Returns:
+        total_sequence (:class:`qibolab.pulses.PulseSequence`): Unrolled pulse sequence containing
+            multiple measurements.
+        readout_map (dict): Map from original readout pulse serials to the unrolled readout pulse
+            serials. Required to construct the results dictionary that is returned after execution.
+    """
+    total_sequence = PulseSequence()
+    readout_map = defaultdict(list)
+    start = 0
+    for sequence in sequences:
+        for pulse in sequence:
+            new_pulse = pulse.copy()
+            new_pulse.start += start
+            total_sequence.add(new_pulse)
+            if isinstance(pulse, ReadoutPulse):
+                readout_map[pulse.serial].append(new_pulse.serial)
+        start = total_sequence.finish + relaxation_time
+    return total_sequence, readout_map
 
 
 @dataclass
@@ -30,6 +61,16 @@ class Settings:
     """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
+
+    def fill(self, options: ExecutionParameters):
+        """Use default values for missing execution options."""
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
+
+        return options
 
 
 @dataclass
@@ -57,7 +98,7 @@ class Platform:
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
-    two_qubit_native_types: NativeType = field(default_factory=lambda: NativeType(0))
+    two_qubit_native_types: NativeGates = field(default_factory=lambda: NativeGates(0))
     """Types of two qubit native gates. Used by the transpiler."""
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
@@ -69,9 +110,9 @@ class Platform:
 
         for pair in self.pairs.values():
             self.two_qubit_native_types |= pair.native_gates.types
-        if self.two_qubit_native_types is NativeType(0):
+        if self.two_qubit_native_types is NativeGates(0):
             # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = NativeType.CZ
+            self.two_qubit_native_types = NativeGates.CZ
 
         self.topology.add_nodes_from(self.qubits.keys())
         self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
@@ -132,23 +173,13 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, method, sequences, options, **kwargs):
-        """Executes the sequences on the controllers"""
-        if options.nshots is None:
-            options = replace(options, nshots=self.settings.nshots)
-
-        if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.settings.relaxation_time)
-
-        duration = sum(seq.duration for seq in sequences) if isinstance(sequences, list) else sequences.duration
-        time = (duration + options.relaxation_time) * options.nshots * 1e-9
-        log.info(f"Minimal execution time (seq): {time}")
-
+    def _execute(self, sequence, options, **kwargs):
+        """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = getattr(instrument, method)(self.qubits, self.couplers, sequences, options)
+                new_result = instrument.play(self.qubits, self.couplers, sequence, options)
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -157,7 +188,7 @@ class Platform:
 
         return result
 
-    def execute_pulse_sequence(self, sequences: PulseSequence, options: ExecutionParameters, **kwargs):
+    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
         """
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
@@ -165,10 +196,24 @@ class Platform:
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
-
         """
+        options = self.settings.fill(options)
 
-        return self._execute("play", sequences, options, **kwargs)
+        time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
+        log.info(f"Minimal execution time (sequence): {time}")
+
+        return self._execute(sequence, options, **kwargs)
+
+    @property
+    def _controller(self):
+        """Controller instrument used for splitting the unrolled sequences to batches.
+
+        Used only by :meth:`qibolab.platform.Platform.execute_pulse_sequences` (unrolling).
+        This method does not support platforms with more than one controller instruments.
+        """
+        controllers = [instr for instr in self.instruments.values() if isinstance(instr, Controller)]
+        assert len(controllers) == 1
+        return controllers[0]
 
     def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
         """
@@ -178,9 +223,27 @@ class Platform:
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
-
         """
-        return self._execute("play_sequences", sequences, options, **kwargs)
+        options = self.settings.fill(options)
+
+        duration = sum(seq.duration for seq in sequences)
+        time = (duration + len(sequences) * options.relaxation_time) * options.nshots * NS_TO_SEC
+        log.info(f"Minimal execution time (unrolling): {time}")
+
+        # find readout pulses
+        ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
+
+        results = defaultdict(list)
+        for batch in self._controller.split_batches(sequences):
+            sequence, readouts = unroll_sequences(batch, options.relaxation_time)
+            result = self._execute(sequence, options, **kwargs)
+            for serial, new_serials in readouts.items():
+                results[serial].extend(result[ser] for ser in new_serials)
+
+        for serial, qubit in ro_pulses.items():
+            results[qubit] = results[serial]
+
+        return results
 
     def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
         """Executes a pulse sequence for different values of sweeped parameters.
@@ -215,7 +278,7 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.settings.relaxation_time)
 
-        time = (sequence.duration + options.relaxation_time) * options.nshots * 1e-9
+        time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
         for sweep in sweepers:
             time *= len(sweep.values)
         log.info(f"Minimal execution time (sweep): {time}")

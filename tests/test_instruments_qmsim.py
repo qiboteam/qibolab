@@ -443,7 +443,7 @@ def test_qmsim_bell_circuit(simulator, folder, qubits):
     circuit.add(gates.H(qubits[0]))
     circuit.add(gates.CNOT(*qubits))
     circuit.add(gates.M(*qubits))
-    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = backend.execute_circuit(circuit, nshots=1)
     result = result.execution_result
     samples = result.get_simulated_samples()
     qubitstr = "".join(str(q) for q in qubits)
@@ -457,7 +457,7 @@ def test_qmsim_ghz_circuit(simulator, folder):
     circuit.add(gates.CNOT(2, 1))
     circuit.add(gates.CNOT(2, 3))
     circuit.add(gates.M(1, 2, 3))
-    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = backend.execute_circuit(circuit, nshots=1)
     result = result.execution_result
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "ghz_circuit_123")

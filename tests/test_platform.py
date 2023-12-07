@@ -15,13 +15,28 @@ from qibolab.backends import QibolabBackend
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
-from qibolab.platform import Platform
+from qibolab.platform import Platform, unroll_sequences
 from qibolab.pulses import PulseSequence, Rectangular
 from qibolab.serialize import dump_runcard, load_runcard
 
 from .conftest import find_instrument
 
 nshots = 1024
+
+
+def test_unroll_sequences(platform):
+    qubit = next(iter(platform.qubits))
+    sequence = PulseSequence()
+    qd_pulse = platform.create_RX_pulse(qubit, start=0)
+    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.finish)
+    sequence.add(qd_pulse)
+    sequence.add(ro_pulse)
+    total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
+    assert len(total_sequence) == 20
+    assert len(total_sequence.ro_pulses) == 10
+    assert total_sequence.finish == 10 * sequence.finish + 90000
+    assert len(readouts) == 1
+    assert len(readouts[ro_pulse.serial]) == 10
 
 
 def test_create_platform(platform):

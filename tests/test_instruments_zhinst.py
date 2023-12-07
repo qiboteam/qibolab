@@ -31,7 +31,7 @@ def test_zhpulse(shape):
     if shape == "Drag":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0)
     if shape == "SNZ":
-        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10, 0.4), "ch0", qubit=0)
+        pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10, 0.01), "ch0", qubit=0)
     if shape == "IIR":
         pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, IIR([10, 1], [0.4, 1], target=Gaussian(5)), "ch0", qubit=0)
 
@@ -664,6 +664,24 @@ def test_sim(dummy_qrc):
             qubit=qubit,
         )
         sequence.add(qf_pulses[qubit])
+
+
+def test_split_batches(dummy_qrc):
+    platform = create_platform("zurich")
+    platform.setup()
+    instrument = platform.instruments["EL_ZURO"]
+
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(0, start=0))
+    sequence.add(platform.create_RX_pulse(1, start=0))
+    measurement_start = sequence.finish
+    sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
+    sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
+
+    batches = list(instrument.split_batches(20 * [sequence]))
+    assert len(batches) == 2
+    assert len(batches[0]) == 16
+    assert len(batches[1]) == 4
 
 
 @pytest.fixture(scope="module")

@@ -1,15 +1,18 @@
+from collections import deque
+
 import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
+from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
+from qibo.transpiler.pipeline import Passes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.transpilers.pipeline import Passes, assert_transpiling
 
 
 class QibolabBackend(NumpyBackend):
@@ -34,6 +37,19 @@ class QibolabBackend(NumpyBackend):
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
+    def transpile(self, circuit):
+        """Applies the transpiler to a single circuit.
+
+        This transforms the circuit into proper connectivity and native gates.
+        """
+        # TODO: Move this method to transpilers
+        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
+            native_circuit = circuit
+            qubit_map = {q: q for q in range(circuit.nqubits)}
+        else:
+            native_circuit, qubit_map = self.transpiler(circuit)
+        return native_circuit, qubit_map
+
     def assign_measurements(self, measurement_map, readout):
         """Assigning measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
 
@@ -51,9 +67,7 @@ class QibolabBackend(NumpyBackend):
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
 
-    def execute_circuit(
-        self, circuit, initial_state=None, nshots=1000, fuse_one_qubit=False, check_transpiled=False
-    ):  # pragma: no cover
+    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
         """Executes a quantum circuit.
 
         Args:
@@ -61,22 +75,14 @@ class QibolabBackend(NumpyBackend):
             initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
             nshots (int): Number of shots to sample from the experiment.
-                If ``None`` the default value provided as hardware_avg in the
-                calibration yml will be used.
-            fuse_one_qubit (bool): If ``True`` it fuses one qubit gates during
-                transpilation to reduce circuit depth.
-            check_transpiled (bool): If ``True`` it checks that the transpiled
-                circuit is equivalent to the original using simulation.
 
         Returns:
-            MeasurementOutcomes object containing the results acquired from the execution.
+            ``MeasurementOutcomes`` object containing the results acquired from the execution.
         """
-        if isinstance(initial_state, type(circuit)):
+        if isinstance(initial_state, Circuit):
             return self.execute_circuit(
                 circuit=initial_state + circuit,
                 nshots=nshots,
-                fuse_one_qubit=fuse_one_qubit,
-                check_transpiled=check_transpiled,
             )
         if initial_state is not None:
             raise_error(
@@ -84,25 +90,12 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
-            native_circuit = circuit
-        else:
-            # Transform a circuit into proper connectivity and native gates
-            native_circuit, qubit_map = self.transpiler(circuit)
-            # TODO: Use the qubit map to properly map measurements
-            if check_transpiled:
-                assert_transpiling(
-                    native_circuit, self.transpiler.connectivity, self.transpiler.get_initial_layout, qubit_map
-                )
-
-        # Transpile the native circuit into a sequence of pulses ``PulseSequence``
+        native_circuit, qubit_map = self.transpile(circuit)
         sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)
 
         if not self.platform.is_connected:
             self.platform.connect()
             self.platform.setup()
-
-        # Execute the pulse sequence on the platform
         self.platform.start()
         readout = self.platform.execute_pulse_sequence(
             sequence,
@@ -112,3 +105,54 @@ class QibolabBackend(NumpyBackend):
         result = MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
         self.assign_measurements(measurement_map, readout)
         return result
+
+    def execute_circuits(self, circuits, initial_state=None, nshots=1000):
+        """Executes multiple quantum circuits with a single communication with the control electronics.
+
+        Circuits are unrolled to a single pulse sequence.
+
+        Args:
+            circuits (list): List of circuits to execute.
+            initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
+                If ``None`` the default ``|00...0>`` state is used.
+            nshots (int): Number of shots to sample from the experiment.
+
+        Returns:
+            List of ``MeasurementOutcomes`` objects containing the results acquired from the execution of each circuit.
+        """
+        if isinstance(initial_state, Circuit):
+            return self.execute_circuits(
+                circuit=[initial_state + circuit for circuit in circuits],
+                nshots=nshots,
+            )
+        if initial_state is not None:
+            raise_error(
+                ValueError,
+                "Hardware backend only supports circuits as initial states.",
+            )
+
+        # TODO: Maybe these loops can be parallelized
+        native_circuits, _ = zip(*(self.transpile(circuit) for circuit in circuits))
+        sequences, measurement_maps = zip(
+            *(self.compiler.compile(circuit, self.platform) for circuit in native_circuits)
+        )
+
+        if not self.platform.is_connected:
+            self.platform.connect()
+            self.platform.setup()
+        self.platform.start()
+        readout = self.platform.execute_pulse_sequences(
+            sequences,
+            ExecutionParameters(nshots=nshots),
+        )
+        self.platform.stop()
+
+        results = []
+        readout = {k: deque(v) for k, v in readout.items()}
+        for circuit, measurement_map in zip(circuits, measurement_maps):
+            results.append(MeasurementOutcomes(circuit.measurements, self, nshots=nshots))
+            for gate, sequence in measurement_map.items():
+                samples = [readout[pulse.serial].popleft().samples for pulse in sequence.pulses]
+                gate.result.backend = self
+                gate.result.register_samples(np.array(samples).T)
+        return results
