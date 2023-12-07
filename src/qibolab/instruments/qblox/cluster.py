@@ -116,15 +116,15 @@ class Cluster(Instrument):
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
 
         # apply stored settings
-        self._setup()
+        # self._setup()
 
-    def _setup(self):
-        if self.is_connected:
-            self.device.set("reference_source", self.settings.reference_clock_source.value)
+    # def _setup(self):
+    #     if self.is_connected:
+    # self.device.set("reference_source", self.settings.reference_clock_source.value)
 
     def setup(self):
         """Configures the instrument with the stored settings."""
-        self._setup()
+        # self._setup()
 
     def start(self):
         """Empty method to comply with Instrument interface."""

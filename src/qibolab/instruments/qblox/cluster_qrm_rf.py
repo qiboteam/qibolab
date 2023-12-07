@@ -1,40 +1,22 @@
 """ Qblox Cluster QRM-RF driver."""
 
 import json
+import time
 
 import numpy as np
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import (
-    ClusterRF_OutputPort,
-    ClusterRF_OutputPort_Settings,
-    QbloxInputPort,
-    QbloxInputPort_Settings,
-)
-from qibolab.instruments.qblox.q1asm import (
-    Block,
-    Register,
-    convert_phase,
-    loop_block,
-    wait_block,
-)
-from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
-from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
-from qibolab.pulses import Pulse, PulseSequence, PulseShape, PulseType
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-
-class ClusterQRM_RF_Settings:
-    def __init__(self, ports=None):
-        if not ports:
-            ports: dict = {
-                "o1": ClusterRF_OutputPort_Settings(),
-                "i1": QbloxInputPort_Settings(),
-            }
-        self.ports = ports
+from .acquisition import AveragedAcquisition, DemodulatedAcquisition
+from .cluster import Cluster
+from .port import QbloxInputPort, QbloxOutputPort
+from .q1asm import Block, Register, convert_phase, loop_block, wait_block
+from .sequencer import Sequencer, WaveformsBuffer
+from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
 class ClusterQRM_RF(Instrument):
@@ -160,33 +142,33 @@ class ClusterQRM_RF(Instrument):
     sequencer parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str, settings: ClusterQRM_RF_Settings):
-        """Initialises the instance.
+    def __init__(self, name: str, address: str, cluster: Cluster):
+        """
+        Initialize a Qblox QRM-RF module.
 
-        All class attributes are defined and initialised.
+        Parameters:
+        - name: An arbitrary name to identify the module.
+        - address: The network address of the instrument, specified as "cluster_IP:module_slot_idx".
+        - cluster: The Cluster object to which the QRM-RF module is connected.
+
+        Example:
+        To create a ClusterQRM_RF instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
+        >>> qrm_module = ClusterQRM_RF(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
 
         super().__init__(name, address)
-        self.settings: ClusterQRM_RF_Settings = settings
         self.device: QbloxQrmQcm = None
         self.ports: dict = {}
-        self.ports["o1"] = ClusterRF_OutputPort(module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], number=1)
-        self.ports["i1"] = QbloxInputPort(
-            module=self,
-            output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
-            input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
-            number=1,
-        )
         self.classification_parameters: dict = {}
-        self.channels: list = []
 
+        self.settings: dict = {}
         self._debug_folder: str = ""
-        self._cluster: QbloxCluster = None
+        self._cluster: Cluster = cluster
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
         self._sequencers: dict[Sequencer] = {"o1": []}
-        self._port_channel_map: dict = {}
-        self._channel_port_map: dict = {}
+        self.channel_map: dict = {}
         self._device_parameters = {}
         self._device_num_output_ports = 1
         self._device_num_sequencers: int
@@ -195,70 +177,89 @@ class ClusterQRM_RF(Instrument):
         self._unused_sequencers_numbers: list[int] = []
         self._execution_time: float = 0
 
-    def connect(self, cluster: QbloxCluster):
+    def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
 
         Once connected, it creates port classes with properties mapped to various instrument
         parameters, and initialises the the underlying device parameters.
+        It uploads to the module the port settings loaded from the runcard.
         """
+        self._cluster.connect()
+        self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
         if not self.is_connected:
-            if cluster:
-                # save a reference to the underlying object
-                self.device: QbloxQrmQcm = cluster.modules[int(self.address.split(":")[1]) - 1]
-                # TODO: test connection with the module before continuing. Currently if there is no
-                # connection the instruction self._set_device_parameter(self.device, "in0_att", value=0)
-                # fails, providing a misleading error message
-
-                # save reference to cluster
-                self._cluster = cluster
-                self.is_connected = True
-
-                # once connected, initialise the parameters of the device to the default values
-                self._set_device_parameter(self.device, "in0_att", value=0)
-                self._set_device_parameter(
-                    self.device, "out0_offset_path0", "out0_offset_path1", value=0
-                )  # Default after reboot = 7.625
-                self._set_device_parameter(
-                    self.device, "scope_acq_avg_mode_en_path0", "scope_acq_avg_mode_en_path1", value=True
-                )
-                self._set_device_parameter(
-                    self.device, "scope_acq_sequencer_select", value=self.DEFAULT_SEQUENCERS["i1"]
-                )
-                self._set_device_parameter(
-                    self.device, "scope_acq_trigger_level_path0", "scope_acq_trigger_level_path1", value=0
-                )
-                self._set_device_parameter(
-                    self.device, "scope_acq_trigger_mode_path0", "scope_acq_trigger_mode_path1", value="sequencer"
+            # test connection with module
+            if not self.device.present():
+                raise ConnectionError(
+                    f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}"
                 )
 
-                # initialise the parameters of the default sequencer to the default values,
-                # the rest of the sequencers are not configured here, but will be configured
-                # with the same parameters as the default in process_pulse_sequence()
-                target = self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]]
+            self.is_connected = True
 
-                self._set_device_parameter(target, "connect_out0", value="IQ")
-                self._set_device_parameter(target, "connect_acq", value="in0")
-                self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
+            # once connected, initialise the parameters of the device to the default values
+            self._set_device_parameter(self.device, "in0_att", value=0)
+            self._set_device_parameter(
+                self.device, "out0_offset_path0", "out0_offset_path1", value=0
+            )  # Default after reboot = 7.625
+            self._set_device_parameter(
+                self.device, "scope_acq_avg_mode_en_path0", "scope_acq_avg_mode_en_path1", value=True
+            )
+            self._set_device_parameter(self.device, "scope_acq_sequencer_select", value=self.DEFAULT_SEQUENCERS["i1"])
+            self._set_device_parameter(
+                self.device, "scope_acq_trigger_level_path0", "scope_acq_trigger_level_path1", value=0
+            )
+            self._set_device_parameter(
+                self.device, "scope_acq_trigger_mode_path0", "scope_acq_trigger_mode_path1", value="sequencer"
+            )
+
+            # initialise the parameters of the default sequencer to the default values,
+            # the rest of the sequencers are not configured here, but will be configured
+            # with the same parameters as the default in process_pulse_sequence()
+            target = self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]]
+
+            self._set_device_parameter(target, "connect_out0", value="IQ")
+            self._set_device_parameter(target, "connect_acq", value="in0")
+            self._set_device_parameter(target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False)
+            self._set_device_parameter(
+                target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
+            )
+            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
+            self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+            self._set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
+            self._set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
+            self._set_device_parameter(target, "offset_awg_path0", value=0)
+            self._set_device_parameter(target, "offset_awg_path1", value=0)
+            self._set_device_parameter(target, "sync_en", value=False)  # Default after reboot = False
+            self._set_device_parameter(target, "upsample_rate_awg_path0", "upsample_rate_awg_path1", value=0)
+
+            # on initialisation, disconnect all other sequencers from the ports
+            self._device_num_sequencers = len(self.device.sequencers)
+            for sequencer in range(1, self._device_num_sequencers):
                 self._set_device_parameter(
-                    target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
+                    self.device.sequencers[sequencer],
+                    "connect_out0",
+                    value="off",
                 )
-                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
-                self._set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
-                self._set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
-                self._set_device_parameter(target, "offset_awg_path0", value=0)
-                self._set_device_parameter(target, "offset_awg_path1", value=0)
-                self._set_device_parameter(target, "sync_en", value=False)  # Default after reboot = False
-                self._set_device_parameter(target, "upsample_rate_awg_path0", "upsample_rate_awg_path1", value=0)
+                self._set_device_parameter(
+                    self.device.sequencers[sequencer],
+                    "connect_acq",
+                    value="off",
+                )  # Default after reboot = True
+            try:
+                if "o1" in self.settings:
+                    self.ports["o1"].attenuation = self.settings["o1"]["attenuation"]
+                    if self.settings["o1"]["lo_frequency"]:
+                        self.ports["o1"].lo_enabled = True
+                        self.ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
+                    self.ports["o1"].hardware_mod_en = True
+                    self.ports["o1"].nco_freq = 0
+                    self.ports["o1"].nco_phase_offs = 0
 
-                # on initialisation, disconnect all other sequencers from the ports
-                self._device_num_sequencers = len(self.device.sequencers)
-                for sequencer in range(1, self._device_num_sequencers):
-                    self._set_device_parameter(
-                        self.device.sequencers[sequencer],
-                        "connect_out0",
-                        value="off",
-                    )  # Default after reboot = True
+                if "i1" in self.settings:
+                    self.ports["i1"].hardware_demod_en = True
+                    self.ports["i1"].acquisition_hold_off = self.settings["i1"]["acquisition_hold_off"]
+                    self.ports["i1"].acquisition_duration = self.settings["i1"]["acquisition_duration"]
+            except:
+                raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
 
     def _set_device_parameter(self, target, *parameters, value):
         """Sets a parameter of the instrument, if it changed from the last stored in the cache.
@@ -290,72 +291,48 @@ class ClusterQRM_RF(Instrument):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self):
-        """Configures the instrument with the settings of the runcard.
+    def setup(self, **settings):
+        """Cache the settings of the runcard and instantiate the ports of the module.
 
-        A connection to the instrument needs to be established beforehand.
         Args:
-            **kwargs: dict = A dictionary of settings loaded from the runcard:
+            **settings: dict = A dictionary of settings loaded from the runcard:
 
-                - kwargs['ports']['o1']['channel'] (int | str): the id of the refrigerator channel the output port o1 is
-                  connected to.
-                - kwargs['ports']['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
-                - kwargs['ports']['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
-                - kwargs['ports']['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator
+                - settings['o1']['attenuation'] (int): [0 to 60 dBm, in multiples of 2] attenuation at the output.
+                - settings['o1']['lo_enabled'] (bool): enable or disable local oscillator for up-conversion.
+                - settings['o1']['lo_frequency'] (int): [2_000_000_000 to 18_000_000_000 Hz] local oscillator
                   frequency.
-                - kwargs['ports']['o1']['gain'] (float): [0.0 - 1.0 unitless] gain applied prior to up-conversion. Qblox
-                  recommends to keep `pulse_amplitude * gain` below 0.3 to ensure the mixers are working in their
-                  linear regime, if necessary, lowering the attenuation applied at the output.
-                - kwargs['ports']['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are
+                - settings['o1']['hardware_mod_en'] (bool): enables Hardware Modulation. In this mode, pulses are
                   modulated to the intermediate frequency using the numerically controlled oscillator within the
                   fpga. It only requires the upload of the pulse envelope waveform.
-                - kwargs['ports']['i1']['channel'] (int | str): the id of the refrigerator channel the input port i1 is
-                  connected to.
-                - kwargs['ports']['i1']['hardware_demod_en'] (bool): enables Hardware Demodulation. In this mode, the
+                  At the moment this param is not loaded but is always set to True.
+
+                - settings['i1']['hardware_demod_en'] (bool): enables Hardware Demodulation. In this mode, the
                   sequencers of the fpga demodulate, integrate and classify the results for every shot. Once
                   integrated, the i and q values and the result of the classification requires much less memory,
                   so they can be stored for every shot in separate `bins` and retrieved later. Hardware Demodulation
                   also allows making multiple readouts on the same qubit at different points in the circuit, which is
-                  not possible with Software Demodulation.
-                - kwargs['acquisition_hold_off'] (int): [0 to 16834 ns, in multiples of 4] the time between the moment
+                  not possible with Software Demodulation. At the moment this param is not loaded but is always set to True.
+                - settings['i1']['acquisition_hold_off'] (int): [0 to 16834 ns, in multiples of 4] the time between the moment
                   the start of the readout pulse begins to be played, and the start of the acquisition. This is used
                   to account for the time of flight of the pulses from the output port to the input port.
-                - kwargs['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
+                - settings['i1']['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
                   the amount of memory available in the fpga to store i q samples.
-                - kwargs['classification_parameters'][qubit_id][rotation_angle] (float): [0.0 to 359.999 deg] the angle
-                  to rotate the results so that the projection on the real axis renders the maximum fidelity.
-                - kwargs['classification_parameters'][qubit_id][threshold] (float): [-1.0 to 1.0 Volt] the voltage to be
-                  used as threshold to classify the state of each shot.
 
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        settings: ClusterQRM_RF_Settings = self.settings
-        if self.is_connected:
-            # Load settings
-            port_settings: ClusterRF_OutputPort_Settings = settings.ports["o1"]
-            self.ports["o1"].channel = port_settings.channel
-            self._port_channel_map["o1"] = self.ports["o1"].channel
-            self.ports["o1"].attenuation = port_settings.attenuation
-            self.ports["o1"].lo_enabled = port_settings.lo_enabled
-            self.ports["o1"].lo_frequency = port_settings.lo_frequency
-            self.ports["o1"].gain = port_settings.gain
-            self.ports["o1"].hardware_mod_en = port_settings.hardware_mod_en
+        if "o1" in settings:
+            self.ports["o1"] = QbloxOutputPort(
+                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0, port_name="o1"
+            )
+        if "i1" in settings:
+            self.ports["i1"] = QbloxInputPort(
+                module=self,
+                output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
+                input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
+                port_number=0,
+                port_name="i1",
+            )
 
-            self.ports["o1"].nco_freq = 0
-            self.ports["o1"].nco_phase_offs = 0
-
-            port_settings: QbloxInputPort_Settings = settings.ports["i1"]
-            self.ports["i1"].channel = port_settings.channel
-            self._port_channel_map["i1"] = self.ports["i1"].channel
-            self.ports["i1"].hardware_demod_en = port_settings.hardware_demod_en
-            self.ports["i1"].acquisition_hold_off = port_settings.acquisition_hold_off
-            self.ports["i1"].acquisition_duration = port_settings.acquisition_duration
-
-            self._channel_port_map = {v: k for k, v in self._port_channel_map.items()}
-            self.channels = list(self._channel_port_map.keys())
-        else:
-            raise Exception("The instrument cannot be set up, there is no connection")
+        self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port: str, frequency: int, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -417,7 +394,7 @@ class ClusterQRM_RF(Instrument):
         """Returns the intermediate frequency needed to synthesise a pulse based on the port lo frequency."""
 
         _rf = pulse.frequency
-        _lo = self.ports[self._channel_port_map[pulse.channel]].lo_frequency
+        _lo = self.channel_map[pulse.channel].lo_frequency
         _if = _rf - _lo
         if abs(_if) > self.FREQUENCY_LIMIT:
             raise Exception(
@@ -477,7 +454,6 @@ class ClusterQRM_RF(Instrument):
             sweepers = []
         sequencer: Sequencer
         sweeper: Sweeper
-
         # calculate the number of bins
         num_bins = nshots
         for sweeper in sweepers:
@@ -491,7 +467,10 @@ class ClusterQRM_RF(Instrument):
         self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [1, 2, 3, 4, 5]
 
         # split the collection of instruments pulses by ports
-        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(self._port_channel_map[port])
+        # ro_channel = None
+        # feed_channel = None
+        port_channel = [chan.name for chan in self.channel_map.values() if chan.port.name == port]
+        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
 
         # initialise the list of sequencers required by the port
         self._sequencers[port] = []
@@ -887,7 +866,6 @@ class ClusterQRM_RF(Instrument):
 
                 # Upload dictionary to the device sequencers
                 self.device.sequencers[sequencer.number].sequence(qblox_dict[sequencer])
-
                 # DEBUG: QRM RF Save sequence to file
                 if self._debug_folder != "":
                     filename = self._debug_folder + f"Z_{self.name}_sequencer{sequencer.number}_sequence.json"
@@ -924,91 +902,15 @@ class ClusterQRM_RF(Instrument):
     def acquire(self):
         """Retrieves the readout results.
 
-        Returns:
-            The results returned vary depending on whether demodulation is performed in software or hardware:
-            - Software Demodulation:
-              Every readout pulse triggers an acquisition, where the 16384 i and q samples of the waveform
-              acquired by the ADC are saved into a dedicated memory within the FPGA. This is what qblox calls
-              *scoped acquisition*. The results of multiple shots are averaged in this memory, and cannot be
-              retrieved independently. The resulting waveforms averages (i and q) are then demodulated and
-              integrated in software (and finally divided by the number of samples).
-              Since Software Demodulation relies on the data of the scoped acquisition and that data is the
-              average of all acquisitions, **only one readout pulse per qubit is supported**, so that
-              the averages all correspond to reading the same quantum state.
-              Multiple symultaneous readout pulses on different qubits are supported.
-              The results returned are:
-
-                - acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
-                  the i and q waveforms for every readout pulse:
-                  ([i samples], [q samples])
-                  The data for a specific reaout pulse can be obtained either with:
-
-                    - `acquisition_results["averaged_raw"][ro_pulse.serial]`
-                    - `acquisition_results["averaged_raw"][ro_pulse.qubit]`
-
-                - acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
-                  with the results of demodulating and integrating (averaging over time) the average of the
-                  waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
-
-              The data for a specific readout pulse can be obtained either with:
-
-                - `acquisition_results["averaged_demodulated_integrated"][ro_pulse.serial]`
-                - `acquisition_results["averaged_demodulated_integrated"][ro_pulse.qubit]`
-
-              Or directly with:
-
-                - `acquisition_results[ro_pulse.serial]`
-                - `acquisition_results[ro_pulse.qubit]`
-
-            - Hardware Demodulation:
-              With hardware demodulation activated, the FPGA can demodulate, integrate (average over time), and classify
-              each shot individually, saving the results on separate bins. The raw data of each acquisition continues to
-              be averaged as with software modulation, so there is no way to access the raw data of each shot (unless
-              executed one shot at a time). The FPGA uses fixed point arithmetic for the demodulation and integration;
-              if the power level of the signal at the input port is low (the minimum resolution of the ADC is 240uV)
-              rounding precission errors can accumulate and render wrong results. It is advisable to have a power level
-              at least higher than 5mV.
-              The results returned are:
-
-                - acquisition_results["demodulated_integrated_averaged"] (dict): a dictionary containing tuples
-                  with the results of demodulating and integrating (averaging over time) each shot waveform and then
-                  averaging of the many shots: ``(amplitude[V], phase[rad], i[V], q[V])``
-                - acquisition_results["demodulated_integrated_binned"] (dict): a dictionary containing tuples of lists
-                  with the results of demodulating and integrating every shot waveform: ``([amplitudes[V]], [phases[rad]], [is[V]], [qs[V]])``
-                - acquisition_results["demodulated_integrated_classified_binned"] (dict): a dictionary containing lists
-                  with the results of demodulating, integrating and classifying every shot: ``([states[0 or 1]])``
-                - acquisition_results["probability"] (dict): a dictionary containing the frequency of state 1 measurements:
-                      total number of shots classified as 1 / number of shots
-
-              If the number of readout pulses per qubit is only one, then the following is also provided:
-
-                - acquisition_results["averaged_raw"] (dict): a dictionary containing tuples with the averages of
-                  the i and q waveforms for every readout pulse: ``([i samples], [q samples])``
-                - acquisition_results["averaged_demodulated_integrated"] (dict): a dictionary containing tuples
-                  with the results of demodulating and integrating (averaging over time) the average of the
-                  waveforms for every pulse: ``(amplitude[V], phase[rad], i[V], q[V])``
-
-              The data within each of the above dictionaries, for a specific readout pulse or for the last readout
-              pulse of a qubit can be retrieved either with:
-
-                - `acquisition_results[dictionary_name][ro_pulse.serial]`
-                - `acquisition_results[dictionary_name][ro_pulse.qubit]`
-
-              And acquisition_results["averaged_demodulated_integrated"] directly with:
-
-                - `acquisition_results[ro_pulse.serial]`
-                - `acquisition_results[ro_pulse.qubit]`
-
+        The results returned vary depending on whether demodulation is performed in software or hardware.
+        See :class:`qibolab.instruments.qblox.acquisition.AveragedAcquisition` and
+        :class:`qibolab.instruments.qblox.acquisition.DemodulatedAcquisition` for
+        more details
         """
-
         # wait until all sequencers stop
         time_out = int(self._execution_time) + 60
-        import time
-
-        from qibo.config import log
 
         t = time.time()
-
         for sequencer_number in self._used_sequencers_numbers:
             while True:
                 try:
@@ -1026,8 +928,6 @@ class ClusterQRM_RF(Instrument):
                         break
                 time.sleep(1)
 
-        acquisition_results = {}
-
         # Qblox qrm modules only have one memory for scope acquisition.
         # Only one sequencer can save data to that memory.
         # Several acquisitions at different points in the circuit will result in the undesired averaging
@@ -1042,224 +942,43 @@ class ClusterQRM_RF(Instrument):
         # The data is retrieved by storing it first in one of the acquisitions of one of the sequencers.
         # Any could be used, but we always use 'scope_acquisition' acquisition of the default sequencer to store it.
 
-        # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
+        acquisitions = {}
+        duration = self.ports["i1"].acquisition_duration
+        hardware_demod_enabled = self.ports["i1"].hardware_demod_en
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
+                # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
                 if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
                     self.device.store_scope_acquisition(sequencer.number, "scope_acquisition")
-                    scope_acquisition_raw_results = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
+                    scope = self.device.get_acquisitions(sequencer.number)["scope_acquisition"]
 
-        acquisition_results["demodulated_integrated_averaged"] = {}
-        acquisition_results["averaged_raw"] = {}
-        acquisition_results["averaged_demodulated_integrated"] = {}
-        acquisition_results["demodulated_integrated_binned"] = {}
-        acquisition_results["demodulated_integrated_classified_binned"] = {}
-        acquisition_results["probability"] = {}
-        data = {}
-        for port in self._output_ports_keys:
-            for sequencer in self._sequencers[port]:
-                if not self.ports["i1"].hardware_demod_en:  # Software Demodulation
+                if not hardware_demod_enabled:  # Software Demodulation
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
-
-                        acquisition_results["averaged_raw"][pulse.serial] = (
-                            scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
-                                0 : self.ports["i1"].acquisition_duration
-                            ],
-                            scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
-                                0 : self.ports["i1"].acquisition_duration
-                            ],
+                        frequency = self.get_if(pulse)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = AveragedAcquisition(
+                            scope, duration, frequency
                         )
-                        acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
-                            pulse.serial
-                        ]
-
-                        i, q = self._process_acquisition_results(scope_acquisition_raw_results, pulse, demodulate=True)
-                        acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
-                            np.sqrt(i**2 + q**2),
-                            np.arctan2(q, i),
-                            i,
-                            q,
-                        )
-                        acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
-                            "averaged_demodulated_integrated"
-                        ][pulse.serial]
-
-                        # Default Results = Averaged Demodulated Integrated
-                        acquisition_results[pulse.serial] = acquisition_results["averaged_demodulated_integrated"][
-                            pulse.serial
-                        ]
-                        acquisition_results[pulse.qubit] = acquisition_results["averaged_demodulated_integrated"][
-                            pulse.qubit
-                        ]
-
-                        # ignores the data available in acquisition results and returns only i and q voltages
-                        # TODO: to be updated once the functionality of ExecutionResults is extended
-                        data[pulse.serial] = (i, q)
-
                     else:
-                        raise Exception(
-                            """Software Demodulation only supports one acquisition per channel.
-                        Multiple readout pulses are supported as long as they are symultaneous (requiring one acquisition)"""
+                        raise RuntimeError(
+                            "Software Demodulation only supports one acquisition per channel. "
+                            "Multiple readout pulses are supported as long as they are symultaneous (requiring one acquisition)."
                         )
-
                 else:  # Hardware Demodulation
-                    binned_raw_results = self.device.get_acquisitions(sequencer.number)
+                    results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
-                        acquisition_name = pulse.serial
-                        i, q = self._process_acquisition_results(
-                            binned_raw_results[acquisition_name], pulse, demodulate=False
-                        )
-                        acquisition_results["demodulated_integrated_averaged"][pulse.serial] = (
-                            np.sqrt(i**2 + q**2),
-                            np.arctan2(q, i),
-                            i,
-                            q,
-                        )
-                        acquisition_results["demodulated_integrated_averaged"][pulse.qubit] = acquisition_results[
-                            "demodulated_integrated_averaged"
-                        ][pulse.serial]
+                        bins = results[pulse.serial]["acquisition"]["bins"]
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = DemodulatedAcquisition(bins, duration)
 
-                        # Default Results = Demodulated Integrated Averaged
-                        acquisition_results[pulse.serial] = acquisition_results["demodulated_integrated_averaged"][
-                            pulse.serial
-                        ]
-                        acquisition_results[pulse.qubit] = acquisition_results["demodulated_integrated_averaged"][
-                            pulse.qubit
-                        ]
+                    # Provide Scope Data for verification (assuming memory reseet is being done)
+                    if len(sequencer.pulses.ro_pulses) == 1:
+                        pulse = sequencer.pulses.ro_pulses[0]
+                        frequency = self.get_if(pulse)
+                        acquisitions[pulse.serial].averaged = AveragedAcquisition(scope, duration, frequency)
 
-                        # Save individual shots
-                        shots_i = (
-                            np.array(
-                                binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path0"]
-                            )
-                            / self.ports["i1"].acquisition_duration
-                        )
-                        shots_q = (
-                            np.array(
-                                binned_raw_results[acquisition_name]["acquisition"]["bins"]["integration"]["path1"]
-                            )
-                            / self.ports["i1"].acquisition_duration
-                        )
-
-                        acquisition_results["demodulated_integrated_binned"][pulse.serial] = (
-                            np.sqrt(shots_i**2 + shots_q**2),
-                            np.arctan2(shots_q, shots_i),
-                            shots_i,
-                            shots_q,
-                        )
-                        acquisition_results["demodulated_integrated_binned"][pulse.qubit] = acquisition_results[
-                            "demodulated_integrated_binned"
-                        ][pulse.serial]
-
-                        acquisition_results["demodulated_integrated_classified_binned"][
-                            pulse.serial
-                        ] = binned_raw_results[acquisition_name]["acquisition"]["bins"]["threshold"]
-                        acquisition_results["demodulated_integrated_classified_binned"][
-                            pulse.qubit
-                        ] = acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
-
-                        acquisition_results["probability"][pulse.serial] = np.mean(
-                            acquisition_results["demodulated_integrated_classified_binned"][pulse.serial]
-                        )
-                        acquisition_results["probability"][pulse.qubit] = acquisition_results["probability"][
-                            pulse.serial
-                        ]
-
-                        # Provide Scope Data for verification (assuming memory reseet is being done)
-                        if len(sequencer.pulses.ro_pulses) == 1:
-                            pulse = sequencer.pulses.ro_pulses[0]
-
-                            acquisition_results["averaged_raw"][pulse.serial] = (
-                                scope_acquisition_raw_results["acquisition"]["scope"]["path0"]["data"][
-                                    0 : self.ports["i1"].acquisition_duration
-                                ],
-                                scope_acquisition_raw_results["acquisition"]["scope"]["path1"]["data"][
-                                    0 : self.ports["i1"].acquisition_duration
-                                ],
-                            )
-                            acquisition_results["averaged_raw"][pulse.qubit] = acquisition_results["averaged_raw"][
-                                pulse.serial
-                            ]
-
-                            i, q = self._process_acquisition_results(
-                                scope_acquisition_raw_results, pulse, demodulate=True
-                            )
-
-                            acquisition_results["averaged_demodulated_integrated"][pulse.serial] = (
-                                np.sqrt(i**2 + q**2),
-                                np.arctan2(q, i),
-                                i,
-                                q,
-                            )
-                            acquisition_results["averaged_demodulated_integrated"][pulse.qubit] = acquisition_results[
-                                "averaged_demodulated_integrated"
-                            ][pulse.serial]
-
-                        # ignores the data available in acquisition results and returns only i and q voltages
-                        # TODO: to be updated once the functionality of ExecutionResults is extended
-                        data[acquisition_name] = (
-                            shots_i,
-                            shots_q,
-                            np.array(acquisition_results["demodulated_integrated_classified_binned"][acquisition_name]),
-                        )
-
-                    # DEBUG: QRM RF Plot Incomming Pulses
-                    # import qibolab.instruments.debug.incomming_pulse_plotting as pp
-                    # pp.plot(raw_results)
-                    # DEBUG: QRM RF Plot Acquisition_results
-                    # from qibolab.debug.debug import plot_acquisition_results
-                    # plot_acquisition_results(acquisition_results, pulse, savefig_filename="acquisition_results.png")
-        return data
-
-    def _process_acquisition_results(self, acquisition_results, readout_pulse: Pulse, demodulate=True):
-        """Processes the results of the acquisition.
-
-        If hardware demodulation is disabled, it demodulates and integrates the acquired pulse. If enabled,
-        if processes the results as required by qblox (calculating the average by dividing the integrated results by
-        the number of smaples acquired).
-        """
-        if demodulate:
-            acquisition_frequency = self.get_if(readout_pulse)
-
-            # DOWN Conversion
-            n0 = 0
-            n1 = self.ports["i1"].acquisition_duration
-            input_vec_I = np.array(acquisition_results["acquisition"]["scope"]["path0"]["data"][n0:n1])
-            input_vec_Q = np.array(acquisition_results["acquisition"]["scope"]["path1"]["data"][n0:n1])
-            input_vec_I -= np.mean(input_vec_I)  # qblox does not remove the offsets in hardware
-            input_vec_Q -= np.mean(input_vec_Q)
-
-            modulated_i = input_vec_I
-            modulated_q = input_vec_Q
-
-            num_samples = modulated_i.shape[0]
-            time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
-
-            cosalpha = np.cos(2 * np.pi * acquisition_frequency * time)
-            sinalpha = np.sin(2 * np.pi * acquisition_frequency * time)
-            demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-            result = []
-            for it, t, ii, qq in zip(np.arange(modulated_i.shape[0]), time, modulated_i, modulated_q):
-                result.append(demod_matrix[:, :, it] @ np.array([ii, qq]))
-            demodulated_signal = np.array(result)
-            integrated_signal = np.mean(demodulated_signal, axis=0)
-
-            # import matplotlib.pyplot as plt
-            # plt.plot(input_vec_I[:400])
-            # plt.plot(list(map(list, zip(*demodulated_signal)))[0][:400])
-            # plt.show()
-        else:
-            i = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path0"])
-                / self.ports["i1"].acquisition_duration
-            )
-            q = np.mean(
-                np.array(acquisition_results["acquisition"]["bins"]["integration"]["path1"])
-                / self.ports["i1"].acquisition_duration
-            )
-            integrated_signal = i, q
-        return integrated_signal
+        # grab only the data required by the platform
+        # TODO: to be updated once the functionality of ExecutionResults is extended
+        return {key: acquisition.data for key, acquisition in acquisitions.items()}
 
     def start(self):
         """Empty method to comply with Instrument interface."""
