@@ -510,27 +510,51 @@ class Zurich(Controller):
             if pulse.type is PulseType.DRIVE:
                 qubit.drive_frequency = pulse.frequency
 
+    def create_sub_sequence(self, line_name, qubits):
+        """
+        Create a list of sequences for each measurement.
+
+        Args:
+            line_name (str): Name of the line from which extract the sequence.
+            qubits (dict[str, Qubit]|dict[str, Coupler]):
+                qubits or couplers for the platform.
+        """
+        for qubit in qubits.values():
+            q = qubit.name  # pylint: disable=C0103
+            measurements = self.sequence[f"readout{q}"]
+            pulses = self.sequence[f"{line_name}{q}"]
+            pulse_sequences = [[] for _ in measurements]
+            measurement_index = 0
+            for pulse in pulses:
+                if pulse.pulse.finish > measurements[measurement_index].pulse.start:
+                    measurement_index += 1
+                if measurement_index == len(measurements):
+                    pulse_sequences.append([])
+                elif measurement_index > len(measurements):
+                    measurement_index = len(measurements)
+                pulse_sequences[measurement_index].append(pulse)
+            self.sub_sequences[f"{line_name}{q}"] = pulse_sequences
+
+    def create_sub_sequences(self, qubits, couplers):
+        """
+        Create subsequences for different lines (drive, flux, coupler flux).
+
+        Args:
+            qubits (dict[str, Qubit]): qubits for the platform.
+            couplers (dict[str, Coupler]): couplers for the platform.
+        """
+        self.sub_sequences = {}  # initialize it in __init__?
+        self.create_sub_sequence("drive", qubits)
+        self.create_sub_sequence("flux", qubits)
+        self.create_sub_sequence("couplerflux", couplers)
+
     def experiment_flow(self, qubits, couplers, sequence, options, sweepers=[]):
         """
         Create the experiment object for the devices, following the steps separated one on each method:
         Translation, Calibration, Experiment Definition.
         """
         self.sequence_zh(sequence, qubits, couplers, sweepers)
-
-        # TODO: Move this part to a different function
-        self.sub_sequences = {}  # initialize it in __init__?
-        for qubit in qubits.values():
-            q = qubit.name  # pylint: disable=C0103
-            measurements = self.sequence[f"readout{q}"]
-            drives = self.sequence[f"drive{q}"]
-            drive_sequences = [[] for _ in range(len(measurements))]
-            measurement_index = 0
-            for drive in drives:
-                if drive.pulse.finish > measurements[measurement_index].pulse.start:
-                    measurement_index += 1
-                drive_sequences[measurement_index].append(drive)
-            self.sub_sequences[f"drive{q}"] = drive_sequences
-
+        self.create_sub_sequences(qubits, couplers)
         self.calibration_step(qubits, couplers, options)
         self.create_exp(qubits, couplers, options)
 
@@ -817,26 +841,30 @@ class Zurich(Controller):
         """qubit flux for bias sweep or pulses"""
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
-            with exp.section(uid=f"sequence_bias{q}"):
-                i = 0
-                time = 0
-                for pulse in self.sequence[f"flux{q}"]:
-                    if not isinstance(pulse, ZhSweeperLine):
-                        pulse.zhpulse.uid += str(i)
-                        exp.delay(
-                            signal=f"flux{q}",
-                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                        )
-                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                            pulse.pulse.start * NANO_TO_SECONDS, 9
-                        )
-                    if isinstance(pulse, ZhSweeperLine):
-                        self.play_sweep(exp, qubit, pulse, section="flux")
-                    elif isinstance(pulse, ZhSweeper):
-                        self.play_sweep(exp, qubit, pulse, section="flux")
-                    elif isinstance(pulse, ZhPulse):
-                        exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
-                    i += 1
+            time = 0
+            i = 0
+            if len(self.sequence[f"flux{q}"]) != 0:
+                play_after = None
+                for j, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
+                    with exp.section(uid=f"sequence_bias{q}_{j}", play_after=play_after):
+                        for pulse in sequence:
+                            if not isinstance(pulse, ZhSweeperLine):
+                                pulse.zhpulse.uid += str(i)
+                                exp.delay(
+                                    signal=f"flux{q}",
+                                    time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                                )
+                                time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                                    pulse.pulse.start * NANO_TO_SECONDS, 9
+                                )
+                            if isinstance(pulse, ZhSweeperLine):
+                                self.play_sweep(exp, qubit, pulse, section="flux")
+                            elif isinstance(pulse, ZhSweeper):
+                                self.play_sweep(exp, qubit, pulse, section="flux")
+                            elif isinstance(pulse, ZhPulse):
+                                exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
+                            i += 1
+                    play_after = f"sequence_bias{q}_{j}"
 
     def drive(self, exp, qubits):
         """qubit driving pulses"""
@@ -888,13 +916,22 @@ class Zurich(Controller):
                 qubit_after = pulse.qubit
         return f"sequence_{ptype}{qubit_after}"
 
-    def find_subsequence_finish(self, i, line, qubits):
+    def find_subsequence_finish(self, measure_number, line, qubits):
+        """
+        Find the finishing time and qubit for a given sequence.
+
+        Args:
+            measure_number (int): number of the measure pulse.
+            line (str): line from which measure the finishing time.
+                e.g.: "drive", "flux", "couplerflux"
+            qubits (dict[str, Qubit]): qubits from which measure the finishing time.
+        """
         time_finish = 0
         qubit_finish = None
         for qubit in qubits:
-            if len(self.sub_sequences[f"{line}{qubit}"]) <= i:
+            if len(self.sub_sequences[f"{line}{qubit}"]) <= measure_number:
                 continue
-            for pulse in self.sub_sequences[f"{line}{qubit}"][i]:
+            for pulse in self.sub_sequences[f"{line}{qubit}"][measure_number]:
                 if pulse.pulse.finish > time_finish:
                     time_finish = pulse.pulse.finish
                     qubit_finish = qubit
@@ -921,12 +958,16 @@ class Zurich(Controller):
         for i, (pulses, qubits, iq_angles) in enumerate(
             zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values())
         ):
-            _, qd_finish_q = self.find_subsequence_finish(i, "drive", qubits)
+            # TODO: This newly added section must be improved!
+            qd_finish_t, qd_finish_q = self.find_subsequence_finish(i, "drive", qubits)
+            qf_finish_t, qf_finish_q = self.find_subsequence_finish(i, "flux", qubits)
             play_after = None
-            if qd_finish_q is None:
+            if qd_finish_q is None and qf_finish_q is None:
                 play_after = None
-            else:
+            elif qd_finish_t > qf_finish_t:
                 play_after = f"sequence_drive{qd_finish_q}_{i}"
+            else:
+                play_after = f"sequence_bias{qf_finish_q}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
                 for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
