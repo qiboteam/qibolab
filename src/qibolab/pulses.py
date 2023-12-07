@@ -468,19 +468,20 @@ class SNZ(PulseShape):
     """
     Sudden variant Net Zero.
     https://arxiv.org/abs/2008.07411
+    (Supplementary materials: FIG. S1.)
 
     """
 
-    def __init__(self, t_half_flux_pulse=None, b_amplitude=1):
+    def __init__(self, t_idling, b_amplitude=None):
         self.name = "SNZ"
         self.pulse: Pulse = None
-        self.t_half_flux_pulse: float = t_half_flux_pulse
-        self.b_amplitude: float = b_amplitude
+        self.t_idling: float = t_idling
+        self.b_amplitude = b_amplitude
 
     def __eq__(self, item) -> bool:
         """Overloads == operator"""
         if super().__eq__(item):
-            return self.t_half_flux_pulse == item.t_half_flux_pulse and self.b_amplitude == item.b_amplitude
+            return self.t_idling == item.t_idling and self.b_amplitude == item.b_amplitude
         return False
 
     @property
@@ -488,21 +489,22 @@ class SNZ(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            if not self.t_half_flux_pulse:
-                self.t_half_flux_pulse = self.pulse.duration / 2
-            elif 2 * self.t_half_flux_pulse > self.pulse.duration:
-                raise ValueError("Pulse shape parameter error: pulse.t_half_flux_pulse <= pulse.duration")
+            if self.t_idling > self.pulse.duration:
+                raise ValueError(f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}.")
+            if self.b_amplitude is None:
+                self.b_amplitude = self.pulse.amplitude / 2
             num_samples = int(np.rint(self.pulse.duration / 1e9 * PulseShape.SAMPLING_RATE))
-            half_flux_pulse_samples = int(np.rint(num_samples * self.t_half_flux_pulse / self.pulse.duration))
-            iding_samples = num_samples - 2 * half_flux_pulse_samples
+            half_pulse_duration = (self.pulse.duration - self.t_idling) / 2
+            half_flux_pulse_samples = int(np.rint(num_samples * half_pulse_duration / self.pulse.duration))
+            idling_samples = num_samples - 2 * half_flux_pulse_samples
             waveform = Waveform(
                 np.concatenate(
                     (
                         self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
-                        np.array([self.pulse.amplitude * self.b_amplitude]),
-                        np.zeros(iding_samples),
-                        -1 * np.array([self.pulse.amplitude * self.b_amplitude]),
-                        -1 * self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
+                        np.array([self.b_amplitude]),
+                        np.zeros(idling_samples),
+                        -np.array([self.b_amplitude]),
+                        -self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
                     )
                 )
             )
@@ -522,7 +524,7 @@ class SNZ(PulseShape):
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({self.t_half_flux_pulse}, {self.b_amplitude})"
+        return f"{self.name}({self.t_idling})"
 
 
 class eCap(PulseShape):
@@ -733,7 +735,7 @@ class Pulse:
             value (se_int | int | np.integer): the time in ns.
         """
 
-        if not isinstance(value, (se_int, int, np.integer)):
+        if not isinstance(value, (se_int, int, np.integer, float)):
             raise TypeError(f"start argument type should be intSymbolicExpression or int, got {type(value).__name__}")
         if not value >= 0:
             raise ValueError(f"start argument must be >= 0, got {value}")
@@ -749,7 +751,7 @@ class Pulse:
         else:
             if isinstance(value, np.integer):
                 self._start = int(value)
-            elif isinstance(value, int):
+            else:
                 self._start = value
 
         if not self._duration is None:
@@ -794,7 +796,7 @@ class Pulse:
         else:
             if isinstance(value, np.integer):
                 self._duration = int(value)
-            elif isinstance(value, int):
+            else:
                 self._duration = value
 
         if not self._start is None:
