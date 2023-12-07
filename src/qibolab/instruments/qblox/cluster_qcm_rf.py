@@ -3,7 +3,6 @@
 import json
 
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
-from qibo.config import log
 
 from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.module import ClusterModule
@@ -300,11 +299,6 @@ class ClusterQCM_RF(ClusterModule):
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
                   At the moment this param is not loaded but is always set to True.
         """
-        # for port_num, port in enumerate(settings):
-        #     self.ports[port] = QbloxOutputPort(
-        #         self, self.DEFAULT_SEQUENCERS[port], port_number=port_num, port_name=port
-        #     )
-        # self._sequencers[port] = []
         self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port, frequency, qubit: None):

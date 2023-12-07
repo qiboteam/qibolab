@@ -75,8 +75,8 @@ def create(runcard_path=RUNCARD):
     channels |= Channel(name="L3-25_a", port=modules["qrm_rf_a"].port("o1"))
     channels |= Channel(name="L3-25_b", port=modules["qrm_rf_b"].port("o1"))
     # Feedback
-    channels |= Channel(name="L2-5_a", port=modules["qrm_rf_a"].port("i1"))
-    channels |= Channel(name="L2-5_b", port=modules["qrm_rf_b"].port("i1"))
+    channels |= Channel(name="L2-5_a", port=modules["qrm_rf_a"].port("i1", out=False))
+    channels |= Channel(name="L2-5_b", port=modules["qrm_rf_b"].port("i1", out=False))
     # Drive
     channels |= Channel(name="L3-15", port=modules["qcm_rf0"].port("o1"))
     channels |= Channel(name="L3-11", port=modules["qcm_rf0"].port("o2"))

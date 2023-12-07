@@ -239,16 +239,12 @@ class QbloxOutputPort(Port):
 
 
 class QbloxInputPort:
-    def __init__(
-        self, module, output_sequencer_number: int, input_sequencer_number: int, port_number: int, port_name: str = None
-    ):
+    def __init__(self, module, port_number: int, port_name: str = None):
         self.name = port_name
         self.module = module
-        self.output_sequencer_number: int = output_sequencer_number
-        self.input_sequencer_number: int = input_sequencer_number
+        self.output_sequencer_number: int = 0  # output_sequencer_number
+        self.input_sequencer_number: int = 0  # input_sequencer_number
         self.port_number: int = port_number
-        self.channel = None  # To be discontinued
-        self.qubit = None  # To be discontinued
 
         self.acquisition_hold_off = 4  # To be discontinued
 

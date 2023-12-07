@@ -320,19 +320,6 @@ class ClusterQRM_RF(ClusterModule):
                   the amount of memory available in the fpga to store i q samples.
 
         """
-        if "o1" in settings:
-            self.ports["o1"] = QbloxOutputPort(
-                module=self, sequencer_number=self.DEFAULT_SEQUENCERS["o1"], port_number=0, port_name="o1"
-            )
-        if "i1" in settings:
-            self.ports["i1"] = QbloxInputPort(
-                module=self,
-                output_sequencer_number=self.DEFAULT_SEQUENCERS["o1"],
-                input_sequencer_number=self.DEFAULT_SEQUENCERS["i1"],
-                port_number=0,
-                port_name="i1",
-            )
-
         self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port: str, frequency: int, qubits: dict, qubit: None):
