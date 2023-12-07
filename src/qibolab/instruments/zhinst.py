@@ -584,10 +584,7 @@ class Zurich(Controller):
 
         # Fill the sequences with pulses according to their lines in temporal order
         for pulse in sequence:
-            if isinstance(pulse, CouplerFluxPulse):
-                zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-            else:
-                zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
+            zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
 
         # Mess that gets the sweeper and substitutes the pulse it sweeps in the right place
 
