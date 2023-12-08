@@ -34,7 +34,7 @@ def test_pulses_plot_functions():
     p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p2 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
-    p4 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
+    p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
     p6 = SplitPulse(p5, window_start=10, window_finish=30)
     ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
@@ -155,7 +155,7 @@ def test_pulses_pulse_init():
     p8 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
-    p11 = FluxPulse(0, 40, 0.9, SNZ(t_half_flux_pulse=17, b_amplitude=0.8), 0, 200)
+    p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), 0, 200)
     p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
 
     # initialisation with float duration and start
@@ -364,7 +364,7 @@ def test_raise_shapeiniterror():
     with pytest.raises(ShapeInitError):
         shape.envelope_waveform_q
 
-    shape = SNZ(0, 0)
+    shape = SNZ(0)
     with pytest.raises(ShapeInitError):
         shape.envelope_waveform_i
     with pytest.raises(ShapeInitError):
@@ -924,11 +924,11 @@ def test_pulses_pulseshape_eq():
     assert not shape1 == shape5
     assert not shape1 == shape6
 
-    shape1 = SNZ(17, 0.8)
-    shape2 = SNZ(17, 0.8)
-    shape3 = SNZ(18, 0.8)
-    shape4 = SNZ(17, 0.9)
-    shape5 = SNZ(18, 0.9)
+    shape1 = SNZ(5)
+    shape2 = SNZ(5)
+    shape3 = SNZ(2)
+    shape4 = SNZ(2, 0.1)
+    shape5 = SNZ(2, 0.1)
     assert shape1 == shape2
     assert not shape1 == shape3
     assert not shape1 == shape4
