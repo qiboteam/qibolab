@@ -2,10 +2,10 @@
 
 import json
 
+from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -109,7 +109,7 @@ class ClusterQCM_BB(Instrument):
         lambda self, x: parent._set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
     )
 
-    def __init__(self, name: str, address: str, cluster: Cluster = None):
+    def __init__(self, name: str, address: str):
         """
         Initialize a Qblox QCM baseband module.
 
@@ -129,7 +129,6 @@ class ClusterQCM_BB(Instrument):
         self.device = None
 
         self._debug_folder: str = ""
-        self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
         self.channel_map: dict = {}
         self._device_parameters = {}
@@ -141,18 +140,17 @@ class ClusterQCM_BB(Instrument):
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
 
-    def connect(self):
+    def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the runcard.
 
         Once connected, it creates port classes with properties mapped to various instrument
         parameters, and initialises the the underlying device parameters.
         It uploads to the module the port settings loaded from the runcard.
         """
-        self._cluster.connect()
-        self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
-        if not self.is_connected:
+        if not self.is_connected and cluster is not None:
+            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
             if not self.device.present():
-                raise Exception(f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}")
+                raise ConnectionError(f"Module {self.device.name} not connected to cluster {cluster.name}")
             self.is_connected = True
 
             # once connected, initialise the parameters of the device to the default values
@@ -786,5 +784,5 @@ class ClusterQCM_BB(Instrument):
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
         self._erase_device_parameters_cache()
-        self._cluster = None
         self.is_connected = False
+        self.device = None

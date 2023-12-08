@@ -1,11 +1,11 @@
 import signal
 
 import numpy as np
+from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
@@ -26,12 +26,13 @@ class QbloxController(Controller):
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
 
-    def __init__(self, name, cluster, modules):
+    def __init__(self, name, address: str, modules):
         """Initialises the controller."""
-        super().__init__(name=name, address="")
+        super().__init__(name=name, address=address)
         self.is_connected = False
-        self.cluster: Cluster = cluster
+        self.cluster: QbloxCluster = None
         self.modules: dict = modules
+        self._reference_clock = "internal"
         signal.signal(signal.SIGTERM, self._termination_handler)
 
     def connect(self):
@@ -39,20 +40,25 @@ class QbloxController(Controller):
 
         if self.is_connected:
             return
-        try:
-            self.cluster.connect()
-            for name in self.modules:
-                self.modules[name].connect()
-            self.is_connected = True
-        except Exception as exception:
-            raise_error(
-                RuntimeError,
-                "Cannot establish connection to " f"{self.modules[name]} module. " f"Error captured: '{exception}'",
-            )
-            # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
+        for attempt in range(3):
+            try:
+                # Connect cluster
+                QbloxCluster.close_all()
+                self.cluster = QbloxCluster(self.name, self.address)
+                self.cluster.reset()
+                self.cluster.set("reference_source", self._reference_clock)
+                # Connect modules
+                for name in self.modules:
+                    self.modules[name].connect(self.cluster)
+                self.is_connected = True
+                log.info("QbloxController: all modules connected.")
+                return
 
-        else:
-            log.info("QbloxController: all modules connected.")
+            except Exception as exception:
+                log.info(f"Unable to connect:\n{str(exception)}\nRetrying...")
+        if not self.is_connected:
+            raise_error(RuntimeError, "Unable to establish a connection with the Qblox instruments")
+        # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
     def setup(self):
         """Sets all modules up."""
@@ -62,24 +68,20 @@ class QbloxController(Controller):
                 RuntimeError,
                 "There is no connection to the modules, the setup cannot be completed",
             )
-        self.cluster.setup()
         for name in self.modules:
             self.modules[name].setup()
 
     def start(self):
         """Starts all modules."""
-        self.cluster.start()
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].start()
 
     def stop(self):
         """Stops all modules."""
-
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].stop()
-        self.cluster.stop()
 
     def _termination_handler(self, signum, frame):
         """Calls all modules to stop if the program receives a termination signal."""
@@ -93,11 +95,10 @@ class QbloxController(Controller):
 
     def disconnect(self):
         """Disconnects all modules."""
-
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].disconnect()
-            self.cluster.disconnect()
+            self.cluster.close()
             self.is_connected = False
 
     def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
