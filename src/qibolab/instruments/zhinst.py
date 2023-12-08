@@ -526,14 +526,12 @@ class Zurich(Controller):
             measurements = self.sequence[f"readout{q}"]
             pulses = self.sequence[f"{line_name}{q}"]
             pulse_sequences = [[] for _ in measurements]
+            pulse_sequences.append([])
             measurement_index = 0
             for pulse in pulses:
-                if pulse.pulse.finish > measurements[measurement_index].pulse.start:
-                    measurement_index += 1
-                if measurement_index == len(measurements):
-                    pulse_sequences.append([])
-                elif measurement_index > len(measurements):
-                    measurement_index = len(measurements)
+                if measurement_index < len(measurements):
+                    if pulse.pulse.finish > measurements[measurement_index].pulse.start:
+                        measurement_index += 1
                 pulse_sequences[measurement_index].append(pulse)
             self.sub_sequences[f"{line_name}{q}"] = pulse_sequences
 
