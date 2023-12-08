@@ -16,6 +16,7 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 MAX_BATCH_SIZE = 30
 """Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
+REFERENCE_CLOCK = "internal"
 
 
 class QbloxController(Controller):
@@ -32,7 +33,7 @@ class QbloxController(Controller):
         self.is_connected = False
         self.cluster: QbloxCluster = None
         self.modules: dict = modules
-        self._reference_clock = "internal"
+        self._reference_clock = REFERENCE_CLOCK
         signal.signal(signal.SIGTERM, self._termination_handler)
 
     def connect(self):
