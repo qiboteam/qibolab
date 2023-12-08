@@ -17,6 +17,16 @@ O1_LO_FREQUENCY = 5_052_833_073
 O2_OUTPUT_CHANNEL = "L3-11"
 O2_ATTENUATION = 20
 O2_LO_FREQUENCY = 5_995_371_914
+SETTINGS = {
+    "o1": {
+        "attenuation": O1_ATTENUATION,
+        "lo_frequency": O1_LO_FREQUENCY,
+    },
+    "o2": {
+        "attenuation": O2_ATTENUATION,
+        "lo_frequency": O2_LO_FREQUENCY,
+    },
+}
 
 
 def get_qcm_rf(controller, cluster):
@@ -33,18 +43,10 @@ def qcm_rf(controller, cluster):
 
 @pytest.fixture(scope="module")
 def connected_qcm_rf(connected_controller, connected_cluster):
-    settings = {
-        "o1": {
-            "attenuation": O1_ATTENUATION,
-            "lo_frequency": O1_LO_FREQUENCY,
-        },
-        "o2": {
-            "attenuation": O2_ATTENUATION,
-            "lo_frequency": O2_LO_FREQUENCY,
-        },
-    }
     qcm_rf = get_qcm_rf(connected_controller, connected_cluster)
-    qcm_rf.setup(**settings)
+    qcm_rf.setup(**SETTINGS)
+    for port in SETTINGS:
+        qcm_rf.port(port)
     qcm_rf.connect()
 
     yield qcm_rf
@@ -65,28 +67,11 @@ def test_init(qcm_rf: ClusterQCM_RF):
     assert qcm_rf.device == None
     assert type(qcm_rf.ports) == dict
     assert type(qcm_rf._cluster) == Cluster
-    # for port in ["o1", "o2"]:
-    #     assert port in qcm_rf.ports
-    #     assert type(qcm_rf.ports[port]) == QbloxOutputPort_Settings
-    # o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
-    # o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
-    # assert o1_output_port.sequencer_number == 0
-    # assert o2_output_port.sequencer_number == 1
 
 
 def test_setup(qcm_rf: ClusterQCM_RF):
-    settings = {
-        "o1": {
-            "attenuation": O1_ATTENUATION,
-            "lo_frequency": O1_LO_FREQUENCY,
-        },
-        "o2": {
-            "attenuation": O2_ATTENUATION,
-            "lo_frequency": O2_LO_FREQUENCY,
-        },
-    }
-    qcm_rf.setup(**settings)
-    assert qcm_rf.settings == settings
+    qcm_rf.setup(**SETTINGS)
+    assert qcm_rf.settings == SETTINGS
 
 
 @pytest.mark.qpu

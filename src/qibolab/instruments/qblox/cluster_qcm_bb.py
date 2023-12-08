@@ -261,7 +261,7 @@ class ClusterQCM_BB(ClusterModule):
         """Erases the cache of instrument parameters."""
         self._device_parameters = {}
 
-    def setup(self):
+    def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the module.
 
         Args:

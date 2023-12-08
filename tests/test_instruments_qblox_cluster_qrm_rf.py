@@ -16,6 +16,16 @@ ATTENUATION = 38
 LO_FREQUENCY = 7_000_000_000
 TIME_OF_FLIGHT = 500
 ACQUISITION_DURATION = 900
+SETTINGS = {
+    "o1": {
+        "attenuation": ATTENUATION,
+        "lo_frequency": LO_FREQUENCY,
+    },
+    "i1": {
+        "acquisition_hold_off": TIME_OF_FLIGHT,
+        "acquisition_duration": ACQUISITION_DURATION,
+    },
+}
 
 
 def get_qrm_rf(controller, cluster):
@@ -32,18 +42,10 @@ def qrm_rf(controller, cluster):
 
 @pytest.fixture(scope="module")
 def connected_qrm_rf(connected_controller, connected_cluster):
-    settings = {
-        "o1": {
-            "attenuation": ATTENUATION,
-            "lo_frequency": LO_FREQUENCY,
-        },
-        "i1": {
-            "acquisition_hold_off": TIME_OF_FLIGHT,
-            "acquisition_duration": ACQUISITION_DURATION,
-        },
-    }
     qrm_rf = get_qrm_rf(connected_controller, connected_cluster)
-    qrm_rf.setup(**settings)
+    qrm_rf.setup(**SETTINGS)
+    qrm_rf.port("o1")
+    qrm_rf.port("i1", out=False)
     qrm_rf.connect()
 
     yield qrm_rf
@@ -66,25 +68,8 @@ def test_init(qrm_rf: ClusterQRM_RF):
 
 
 def test_setup(qrm_rf: ClusterQRM_RF):
-    settings = {
-        "o1": {
-            "attenuation": ATTENUATION,
-            "lo_frequency": LO_FREQUENCY,
-        },
-        "i1": {
-            "acquisition_hold_off": TIME_OF_FLIGHT,
-            "acquisition_duration": ACQUISITION_DURATION,
-        },
-    }
-    qrm_rf.setup(**settings)
-    assert type(qrm_rf.ports["o1"]) == QbloxOutputPort
-    assert type(qrm_rf.ports["i1"]) == QbloxInputPort
-    assert qrm_rf.settings == settings
-    output_port: QbloxOutputPort = qrm_rf.ports["o1"]
-    assert output_port.sequencer_number == 0
-    input_port: QbloxInputPort = qrm_rf.ports["i1"]
-    assert input_port.input_sequencer_number == 0
-    assert input_port.output_sequencer_number == 0
+    qrm_rf.setup(**SETTINGS)
+    assert qrm_rf.settings == SETTINGS
 
 
 @pytest.mark.qpu
@@ -143,6 +128,13 @@ def test_connect(connected_qrm_rf: ClusterQRM_RF):
 
     assert qrm_rf.ports["i1"].acquisition_hold_off == TIME_OF_FLIGHT
     assert qrm_rf.ports["i1"].acquisition_duration == ACQUISITION_DURATION
+    assert type(qrm_rf.ports["o1"]) == QbloxOutputPort
+    assert type(qrm_rf.ports["i1"]) == QbloxInputPort
+    output_port: QbloxOutputPort = qrm_rf.ports["o1"]
+    assert output_port.sequencer_number == 0
+    input_port: QbloxInputPort = qrm_rf.ports["i1"]
+    assert input_port.input_sequencer_number == 0
+    assert input_port.output_sequencer_number == 0
 
 
 @pytest.mark.qpu
