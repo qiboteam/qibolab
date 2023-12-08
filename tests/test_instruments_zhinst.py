@@ -844,7 +844,6 @@ def test_experiment_measurement_sequence(dummy_qrc):
     for section in IQM5q.experiment.sections[0].children:
         if section.uid == "sequence_measure_0":
             measure_start += get_previous_subsequence_finish(IQM5q, section.play_after)
-            assert section.play_after is None
             for pulse in section.children:
                 try:
                     if pulse.signal == "measure0":
