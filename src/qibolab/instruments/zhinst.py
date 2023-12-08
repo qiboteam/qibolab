@@ -329,6 +329,8 @@ class Zurich(Controller):
         "Zurich pulse sequence"
         self.sequence_qibo = None
         # Remove if able
+        self.sub_sequences = {}
+        "Sub sequences between each measurement"
 
         self.sweepers = []
         self.nt_sweeps = None
@@ -543,7 +545,7 @@ class Zurich(Controller):
             qubits (dict[str, Qubit]): qubits for the platform.
             couplers (dict[str, Coupler]): couplers for the platform.
         """
-        self.sub_sequences = {}  # initialize it in __init__?
+        self.sub_sequences = {}
         self.create_sub_sequence("drive", qubits)
         self.create_sub_sequence("flux", qubits)
         self.create_sub_sequence("couplerflux", couplers)
@@ -927,20 +929,20 @@ class Zurich(Controller):
             qubits (dict[str, Qubit]): qubits from which measure the finishing time.
         """
         time_finish = 0
-        qubit_finish = None
+        sequence_finish = "None"
         for qubit in qubits:
             if len(self.sub_sequences[f"{line}{qubit}"]) <= measure_number:
                 continue
             for pulse in self.sub_sequences[f"{line}{qubit}"][measure_number]:
                 if pulse.pulse.finish > time_finish:
                     time_finish = pulse.pulse.finish
-                    qubit_finish = qubit
-        return time_finish, qubit_finish
+                    sequence_finish = f"{line}{qubit}"
+        return time_finish, sequence_finish
 
     # For pulsed spectroscopy, set integration_length and either measure_pulse or measure_pulse_length.
     # For CW spectroscopy, set only integration_length and do not specify the measure signal.
     # For all other measurements, set either length or pulse for both the measure pulse and integration kernel.
-    def measure_relax(self, exp, qubits, relaxation_time, acquisition_type):
+    def measure_relax(self, exp, qubits, relaxation_time, acquisition_type, couplers):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
@@ -958,16 +960,22 @@ class Zurich(Controller):
         for i, (pulses, qubits, iq_angles) in enumerate(
             zip(readout_schedule.values(), qubit_readout_schedule.values(), iq_angle_readout_schedule.values())
         ):
-            # TODO: This newly added section must be improved!
-            qd_finish_t, qd_finish_q = self.find_subsequence_finish(i, "drive", qubits)
-            qf_finish_t, qf_finish_q = self.find_subsequence_finish(i, "flux", qubits)
-            play_after = None
-            if qd_finish_q is None and qf_finish_q is None:
+            qd_finish = self.find_subsequence_finish(i, "drive", qubits)
+            qf_finish = self.find_subsequence_finish(i, "flux", qubits)
+            cf_finish = self.find_subsequence_finish(i, "couplerflux", couplers)
+            finish_times = np.array(
+                [
+                    qd_finish,
+                    qf_finish,
+                    cf_finish,
+                ],
+                dtype=[("finish", "i4"), ("line", "U10")],
+            )
+            latest_sequence = finish_times[finish_times["finish"].argmax()]
+            if latest_sequence["line"] == "None":
                 play_after = None
-            elif qd_finish_t > qf_finish_t:
-                play_after = f"sequence_drive{qd_finish_q}_{i}"
             else:
-                play_after = f"sequence_bias{qf_finish_q}_{i}"
+                play_after = f"sequence_{latest_sequence['line']}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
                 for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
