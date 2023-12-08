@@ -152,8 +152,6 @@ def dump_runcard(platform: Platform, path: Path):
         "instruments": dump_instruments(platform.instruments),
     }
 
-    print(platform)
-
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
         settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
