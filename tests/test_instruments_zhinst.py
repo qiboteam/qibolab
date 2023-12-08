@@ -825,7 +825,7 @@ def test_experiment_measurement_sequence(dummy_qrc):
     platform.qubits = qubits
     couplers = {}
 
-    readout_pulse_start = 50
+    readout_pulse_start = 40
 
     for qubit in qubits:
         qubit_drive_pulse_1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=40)
