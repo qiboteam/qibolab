@@ -42,8 +42,9 @@ def load_qubits(runcard: dict, extras_folder: Path = None) -> Tuple[QubitMap, Co
     """
     qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
     if extras_folder is not None:
+        single_qubit = runcard["characterization"]["single_qubit"]
         for qubit in qubits.values():
-            qubit.kernel_path = extras_folder / runcard["characterization"]["single_qubit"][qubit.name]["kernel_path"]
+            qubit.kernel_path = extras_folder / single_qubit[qubit.name]["kernel_path"]
     couplers = {}
     pairs = {}
     if "coupler" in runcard["characterization"]:
