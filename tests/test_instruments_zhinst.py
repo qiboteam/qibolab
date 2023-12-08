@@ -1,4 +1,5 @@
 import math
+import re
 
 import numpy as np
 import pytest
@@ -788,6 +789,30 @@ def test_experiment_sweep_2d_specific(connected_platform, instrument):
 
     assert len(results[ro_pulses[qubit].serial]) > 0
 
+    def get_previous_subsequence_finish(name):
+        """
+        Look recursively for sub_section finish times.
+        """
+        signal_name = re.sub("sequence_", "", name)
+        signal_name = re.sub(r"_\d+$", "", signal_name)
+        signal_name = re.sub(r"flux", "bias", signal_name)
+        finish = 0
+        for section in IQM5q.experiment.sections[0].children:
+            if section.uid == name:
+                for pulse in section.children:
+                    if pulse.signal == signal_name:
+                        try:
+                            finish += pulse.time
+                        except AttributeError:
+                            # not a laboneq Delay class object, skipping
+                            pass
+                        try:
+                            finish += pulse.pulse.length
+                        except AttributeError:
+                            # not a laboneq PlayPulse class object, skipping
+                            pass
+        return finish
+
 
 def test_experiment_measurement_sequence(dummy_qrc):
     platform = create_platform("zurich")
@@ -817,6 +842,7 @@ def test_experiment_measurement_sequence(dummy_qrc):
     measure_start = 0
     for section in IQM5q.experiment.sections[0].children:
         if section.uid == "sequence_measure_0":
+            measure_start += get_previous_subsequence_finish(section.play_after)
             assert section.play_after is None
             for pulse in section.children:
                 try:
