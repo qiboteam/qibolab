@@ -737,7 +737,7 @@ class Zurich(Controller):
                 self.drive(exp, qubits)
         elif "flux" in str(self.sequence):
             self.flux(exp, qubits)
-        self.measure_relax(exp, qubits, exp_options.relaxation_time, exp_options.acquisition_type)
+        self.measure_relax(exp, qubits, exp_options.relaxation_time, exp_options.acquisition_type, couplers)
         if exp_options.fast_reset is not False:
             self.fast_reset(exp, qubits, exp_options.fast_reset)
 
