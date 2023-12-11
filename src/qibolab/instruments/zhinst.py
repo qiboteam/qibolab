@@ -722,7 +722,7 @@ class Zurich(Controller):
                 self.drive(exp, qubits)
         elif "flux" in str(self.sequence):
             self.flux(exp, qubits)
-        self.measure_relax(exp, qubits, exp_options.relaxation_time, exp_options.acquisition_type, couplers)
+        self.measure_relax(exp, qubits, couplers, exp_options.relaxation_time, exp_options.acquisition_type)
         if exp_options.fast_reset is not False:
             self.fast_reset(exp, qubits, exp_options.fast_reset)
 
@@ -911,7 +911,7 @@ class Zurich(Controller):
             measure_number (int): number of the measure pulse.
             line (str): line from which measure the finishing time.
                 e.g.: "drive", "flux", "couplerflux"
-            qubits (dict[str, Qubit]): qubits from which measure the finishing time.
+            quantum_elements (dict[str, Qubit]|dict[str, Coupler]):  qubits or couplers from which measure the finishing time.
         """
         time_finish = 0
         sequence_finish = "None"
