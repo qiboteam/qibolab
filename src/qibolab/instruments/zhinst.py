@@ -893,13 +893,13 @@ class Zurich(Controller):
                         self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
 
     def find_subsequence_finish(
-        self, measurament_number: int, line: str, quantum_elements: Union[Dict[str, Qubit], Dict[str, Coupler]]
+        self, measurement_number: int, line: str, quantum_elements: Union[Dict[str, Qubit], Dict[str, Coupler]]
     ) -> Tuple[int, str]:
         """
         Find the finishing time and qubit for a given sequence.
 
         Args:
-            measurament_number (int): number of the measure pulse.
+            measurement_number (int): number of the measure pulse.
             line (str): line from which measure the finishing time.
                 e.g.: "drive", "flux", "couplerflux"
             quantum_elements (dict[str, Qubit]|dict[str, Coupler]): qubits or couplers from which measure the finishing time.
@@ -912,9 +912,9 @@ class Zurich(Controller):
         time_finish = 0
         sequence_finish = "None"
         for quantum_element in quantum_elements:
-            if len(self.sub_sequences[f"{line}{quantum_element}"]) <= measurament_number:
+            if len(self.sub_sequences[f"{line}{quantum_element}"]) <= measurement_number:
                 continue
-            for pulse in self.sub_sequences[f"{line}{quantum_element}"][measurament_number]:
+            for pulse in self.sub_sequences[f"{line}{quantum_element}"][measurement_number]:
                 if pulse.pulse.finish > time_finish:
                     time_finish = pulse.pulse.finish
                     sequence_finish = f"{line}{quantum_element}"
