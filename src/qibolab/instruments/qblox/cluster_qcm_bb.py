@@ -295,9 +295,11 @@ class ClusterQCM_BB(Instrument):
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
         # select the qubit relative to specific port
+        qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux.port.name == port and _qubit.flux.port.module.name == self.name:
-                qubit = _qubit
+            if hasattr(_qubit.flux, "port"):
+                if _qubit.flux.port.name == port and _qubit.flux.port.module.name == self.name:
+                    qubit = _qubit
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
@@ -328,11 +330,10 @@ class ClusterQCM_BB(Instrument):
             #     value=qubits[qubit].sweetspot,
             # )
 
-            self.ports[port].offset = qubit.sweetspot
-
+            self.ports[port].offset = qubit.sweetspot if qubit else 0
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
-        sequencer.qubit = qubit.name
+        sequencer.qubit = qubit.name if qubit else None
         return sequencer
 
     def get_if(self, pulse):
