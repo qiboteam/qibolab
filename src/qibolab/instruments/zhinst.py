@@ -582,7 +582,7 @@ class Zurich(Controller):
                     results[serial] = results[qubit] = options.results_type(data)
 
         # html containing the pulse sequence schedule
-        lo.show_pulse_sheet("pulses", self.exp)
+        # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
     def sequence_zh(self, sequence, qubits, couplers, sweepers):
@@ -1121,7 +1121,7 @@ class Zurich(Controller):
 
         self.offsets_off()
         # html containing the pulse sequence schedule
-        lo.show_pulse_sheet("pulses", self.exp)
+        # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
     def sweep_recursion(self, qubits, couplers, exp, exp_calib, exp_options):
