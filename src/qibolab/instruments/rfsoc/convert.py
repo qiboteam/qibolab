@@ -18,7 +18,9 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
     if shape.name not in {"Gaussian", "Drag", "Rectangular", "Exponential"}:
         new_pulse = rfsoc_pulses.Arbitrary(
-            **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
+            **asdict(rfsoc_pulse),
+            i_values=shape.envelope_waveform_i(sampling_rate),
+            q_values=shape.envelope_waveform_q(sampling_rate),
         )
         return new_pulse
     new_pulse_cls = getattr(rfsoc_pulses, shape.name)

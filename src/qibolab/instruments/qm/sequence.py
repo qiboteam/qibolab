@@ -20,7 +20,7 @@ from qibolab.instruments.qm.acquisition import (
 from qibolab.pulses import Pulse, PulseType
 from qibolab.sweeper import Parameter
 
-from .config import QMConfig
+from .config import SAMPLING_RATE, QMConfig
 
 DurationsType = Union[List[int], npt.NDArray[int]]
 """Type of values that can be accepted in a duration sweeper."""
@@ -148,11 +148,11 @@ class BakedPulse(QMPulse):
         for t in durations:
             with baking(config.__dict__, padding_method="right") as segment:
                 if self.pulse.type is PulseType.FLUX:
-                    waveform = self.pulse.envelope_waveform_i.data.tolist()
+                    waveform = self.pulse.envelope_waveform_i(SAMPLING_RATE).data.tolist()
                     waveform = self.calculate_waveform(waveform, t)
                 else:
-                    waveform_i = self.pulse.envelope_waveform_i.data.tolist()
-                    waveform_q = self.pulse.envelope_waveform_q.data.tolist()
+                    waveform_i = self.pulse.envelope_waveform_i(SAMPLING_RATE).data.tolist()
+                    waveform_q = self.pulse.envelope_waveform_q(SAMPLING_RATE).data.tolist()
                     waveform = [
                         self.calculate_waveform(waveform_i, t),
                         self.calculate_waveform(waveform_q, t),

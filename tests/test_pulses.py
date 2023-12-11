@@ -38,7 +38,7 @@ def test_pulses_plot_functions():
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
     p6 = SplitPulse(p5, window_start=10, window_finish=30)
     ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
-    wf = p0.modulated_waveform_i
+    wf = p0.modulated_waveform_i()
 
     plot_file = HERE / "test_plot.png"
 
@@ -319,71 +319,80 @@ def test_pulses_pulse_serial():
     assert repr(p11) == p11.serial
 
 
-def test_pulses_pulseshape_sampling_rate():
-    p12 = Pulse(0, 40, 0.9, 100e6, 0, Rectangular(), 0, PulseType.DRIVE)
-    p13 = Pulse(0, 40, 0.9, 100e6, 0, Gaussian(5), 0, PulseType.DRIVE)
-    p14 = Pulse(0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-
-    tmp = PulseShape.SAMPLING_RATE
-    PulseShape.SAMPLING_RATE = 1e9
-    # p12.plot()
-    # p13.plot()
-    # p14.plot()
-    PulseShape.SAMPLING_RATE = tmp
-
-    tmp = PulseShape.SAMPLING_RATE
-    PulseShape.SAMPLING_RATE = 100e9
-    # p12.plot()
-    # p13.plot()
-    # p14.plot()
-    PulseShape.SAMPLING_RATE = tmp
+@pytest.mark.parametrize("shape", [Rectangular(), Gaussian(5), Drag(5, 1)])
+def test_pulses_pulseshape_sampling_rate(shape):
+    pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
+    assert len(pulse.envelope_waveform_i(sampling_rate=1e9).data) == 40
+    assert len(pulse.envelope_waveform_i(sampling_rate=100e9).data) == 4000
 
 
 def test_raise_shapeiniterror():
     shape = Rectangular()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i
+        shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q
+        shape.envelope_waveform_q()
 
     shape = Gaussian(0)
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i
+        shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q
+        shape.envelope_waveform_q()
 
     shape = Drag(0, 0)
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i
+        shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q
+        shape.envelope_waveform_q()
 
     shape = IIR([0], [0], None)
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i
+        shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q
+        shape.envelope_waveform_q()
 
     shape = SNZ(0)
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i
+        shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q
+        shape.envelope_waveform_q()
 
     shape = eCap(0)
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i
+        shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q
+        shape.envelope_waveform_q()
 
 
 def test_pulses_pulseshape_drag_shape():
-    tmp = PulseShape.SAMPLING_RATE
-    dp = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
-    PulseShape.SAMPLING_RATE = 100e9
-    # dp.plot()
-    PulseShape.SAMPLING_RATE = tmp
+    pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
     # envelope i & envelope q should cross nearly at 0 and at 2
+    waveform = pulse.envelope_waveform_i(sampling_rate=10e9).data
+    target_waveform = np.array(
+        [
+            0.63683161,
+            0.69680478,
+            0.7548396,
+            0.80957165,
+            0.85963276,
+            0.90370708,
+            0.94058806,
+            0.96923323,
+            0.98881304,
+            0.99875078,
+            0.99875078,
+            0.98881304,
+            0.96923323,
+            0.94058806,
+            0.90370708,
+            0.85963276,
+            0.80957165,
+            0.7548396,
+            0.69680478,
+            0.63683161,
+        ]
+    )
+    np.testing.assert_allclose(waveform, target_waveform)
 
 
 def test_pulses_pulse_hash():
@@ -471,10 +480,10 @@ def test_pulses_pulse_split_pulse():
     assert sp.window_finish == sp.start + b
     ps = PulseSequence(dp, sp)
     # ps.plot()
-    assert len(sp.envelope_waveform_i) == b - a
-    assert len(sp.envelope_waveform_q) == b - a
-    assert len(sp.modulated_waveform_i) == b - a
-    assert len(sp.modulated_waveform_q) == b - a
+    assert len(sp.envelope_waveform_i()) == b - a
+    assert len(sp.envelope_waveform_q()) == b - a
+    assert len(sp.modulated_waveform_i()) == b - a
+    assert len(sp.modulated_waveform_q()) == b - a
 
 
 def test_pulses_pulsesequence_init():
@@ -710,9 +719,9 @@ def test_pulses_waveform():
 
 
 def modulate(
-    i: np.ndarray, q: np.ndarray, num_samples: int, frequency: int, phase: float
+    i: np.ndarray, q: np.ndarray, num_samples: int, frequency: int, phase: float, sampling_rate: float
 ):  #  -> tuple[np.ndarray, np.ndarray]:
-    time = np.arange(num_samples) / PulseShape.SAMPLING_RATE
+    time = np.arange(num_samples) / sampling_rate
     cosalpha = np.cos(2 * np.pi * frequency * time + phase)
     sinalpha = np.sin(2 * np.pi * frequency * time + phase)
     mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(2)
@@ -739,35 +748,36 @@ def test_pulses_pulseshape_rectangular():
     assert isinstance(pulse.shape, Rectangular)
     assert pulse.shape.name == "Rectangular"
     assert repr(pulse.shape) == "Rectangular()"
-    assert isinstance(pulse.shape.envelope_waveform_i, Waveform)
-    assert isinstance(pulse.shape.envelope_waveform_q, Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i, Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q, Waveform)
+    assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
+    assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
 
-    num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+    sampling_rate = 1e9
+    num_samples = int(pulse.duration / 1e9 * sampling_rate)
     i, q = pulse.amplitude * np.ones(num_samples), pulse.amplitude * np.zeros(num_samples)
     global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q.data, q)
-    np.testing.assert_allclose(pulse.shape.modulated_waveform_i.data, mod_i)
-    np.testing.assert_allclose(pulse.shape.modulated_waveform_q.data, mod_q)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q)
 
     assert (
-        pulse.shape.envelope_waveform_i.serial
+        pulse.shape.envelope_waveform_i().serial
         == f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)})"
     )
     assert (
-        pulse.shape.envelope_waveform_q.serial
+        pulse.shape.envelope_waveform_q().serial
         == f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)})"
     )
     assert (
-        pulse.shape.modulated_waveform_i.serial
+        pulse.shape.modulated_waveform_i().serial
         == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
     assert (
-        pulse.shape.modulated_waveform_q.serial
+        pulse.shape.modulated_waveform_q().serial
         == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
 
@@ -789,39 +799,40 @@ def test_pulses_pulseshape_gaussian():
     assert pulse.shape.name == "Gaussian"
     assert pulse.shape.rel_sigma == 5
     assert repr(pulse.shape) == "Gaussian(5)"
-    assert isinstance(pulse.shape.envelope_waveform_i, Waveform)
-    assert isinstance(pulse.shape.envelope_waveform_q, Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i, Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q, Waveform)
+    assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
+    assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
 
-    num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+    sampling_rate = 1e9
+    num_samples = int(pulse.duration / 1e9 * sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
         -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / pulse.shape.rel_sigma) ** 2))
     )
     q = pulse.amplitude * np.zeros(num_samples)
     global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q.data, q)
-    np.testing.assert_allclose(pulse.shape.modulated_waveform_i.data, mod_i)
-    np.testing.assert_allclose(pulse.shape.modulated_waveform_q.data, mod_q)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q)
 
     assert (
-        pulse.shape.envelope_waveform_i.serial
+        pulse.shape.envelope_waveform_i().serial
         == f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)})"
     )
     assert (
-        pulse.shape.envelope_waveform_q.serial
+        pulse.shape.envelope_waveform_q().serial
         == f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)})"
     )
     assert (
-        pulse.shape.modulated_waveform_i.serial
+        pulse.shape.modulated_waveform_i().serial
         == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
     assert (
-        pulse.shape.modulated_waveform_q.serial
+        pulse.shape.modulated_waveform_q().serial
         == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
 
@@ -844,12 +855,13 @@ def test_pulses_pulseshape_drag():
     assert pulse.shape.rel_sigma == 5
     assert pulse.shape.beta == 0.2
     assert repr(pulse.shape) == "Drag(5, 0.2)"
-    assert isinstance(pulse.shape.envelope_waveform_i, Waveform)
-    assert isinstance(pulse.shape.envelope_waveform_q, Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i, Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q, Waveform)
+    assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
+    assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
 
-    num_samples = int(pulse.duration / 1e9 * PulseShape.SAMPLING_RATE)
+    sampling_rate = 1e9
+    num_samples = int(pulse.duration / 1e9 * sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
         -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / pulse.shape.rel_sigma) ** 2))
@@ -858,31 +870,31 @@ def test_pulses_pulseshape_drag():
         pulse.shape.beta
         * (-(x - (num_samples - 1) / 2) / ((num_samples / pulse.shape.rel_sigma) ** 2))
         * i
-        * PulseShape.SAMPLING_RATE
+        * sampling_rate
         / 1e9
     )
     global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase)
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i.data, i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q.data, q)
-    np.testing.assert_allclose(pulse.shape.modulated_waveform_i.data, mod_i)
-    np.testing.assert_allclose(pulse.shape.modulated_waveform_q.data, mod_q)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q)
 
     assert (
-        pulse.shape.envelope_waveform_i.serial
+        pulse.shape.envelope_waveform_i().serial
         == f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)})"
     )
     assert (
-        pulse.shape.envelope_waveform_q.serial
+        pulse.shape.envelope_waveform_q().serial
         == f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)})"
     )
     assert (
-        pulse.shape.modulated_waveform_i.serial
+        pulse.shape.modulated_waveform_i().serial
         == f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
     assert (
-        pulse.shape.modulated_waveform_q.serial
+        pulse.shape.modulated_waveform_q().serial
         == f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
     )
 
@@ -1131,22 +1143,22 @@ def test_envelope_waveform_i_q():
     )
 
     with pytest.raises(ShapeInitError):
-        custom_shape_pulse.envelope_waveform_i
+        custom_shape_pulse.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
-        custom_shape_pulse.envelope_waveform_q
+        custom_shape_pulse.envelope_waveform_q()
 
     custom_shape_pulse.pulse = pulse
     custom_shape_pulse_old_behaviour.pulse = pulse
-    assert isinstance(custom_shape_pulse.envelope_waveform_i, Waveform)
-    assert isinstance(custom_shape_pulse.envelope_waveform_q, Waveform)
-    assert isinstance(custom_shape_pulse_old_behaviour.envelope_waveform_q, Waveform)
+    assert isinstance(custom_shape_pulse.envelope_waveform_i(), Waveform)
+    assert isinstance(custom_shape_pulse.envelope_waveform_q(), Waveform)
+    assert isinstance(custom_shape_pulse_old_behaviour.envelope_waveform_q(), Waveform)
     pulse.duration = 2000
     with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
-        custom_shape_pulse.envelope_waveform_i
+        custom_shape_pulse.envelope_waveform_i()
     with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
-        custom_shape_pulse.envelope_waveform_q
+        custom_shape_pulse.envelope_waveform_q()
 
 
 @pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
