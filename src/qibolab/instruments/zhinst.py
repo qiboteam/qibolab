@@ -4,7 +4,7 @@ import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Tuple
+from typing import Dict, Tuple, Union
 
 import laboneq._token
 import laboneq.simple as lo
@@ -512,17 +512,16 @@ class Zurich(Controller):
             if pulse.type is PulseType.DRIVE:
                 qubit.drive_frequency = pulse.frequency
 
-    def create_sub_sequence(self, line_name, qubits):
+    def create_sub_sequence(self, line_name: str, quantum_elements: Union[Dict[str, Qubit], Dict[str, Coupler]]):
         """
         Create a list of sequences for each measurement.
 
         Args:
             line_name (str): Name of the line from which extract the sequence.
-            qubits (dict[str, Qubit]|dict[str, Coupler]):
-                qubits or couplers for the platform.
+            quantum_elements (dict[str, Qubit]|dict[str, Coupler]): qubits or couplers for the platform.
         """
-        for qubit in qubits.values():
-            q = qubit.name  # pylint: disable=C0103
+        for quantum_element in quantum_elements.values():
+            q = quantum_element.name  # pylint: disable=C0103
             measurements = self.sequence[f"readout{q}"]
             pulses = self.sequence[f"{line_name}{q}"]
             pulse_sequences = [[] for _ in measurements]
@@ -535,7 +534,7 @@ class Zurich(Controller):
                 pulse_sequences[measurement_index].append(pulse)
             self.sub_sequences[f"{line_name}{q}"] = pulse_sequences
 
-    def create_sub_sequences(self, qubits, couplers):
+    def create_sub_sequences(self, qubits: Dict[str, Qubit], couplers: Dict[str, Coupler]):
         """
         Create subsequences for different lines (drive, flux, coupler flux).
 
@@ -893,41 +892,38 @@ class Zurich(Controller):
                         exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
                         self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
 
-    @staticmethod
-    def play_after_set(sequence, ptype):
-        """Selects after which section the measurement goes"""
-        longest = 0
-        for pulse in sequence:
-            if longest < pulse.finish:
-                longest = pulse.finish
-                qubit_after = pulse.qubit
-        return f"sequence_{ptype}{qubit_after}"
-
-    def find_subsequence_finish(self, measure_number, line, qubits):
+    def find_subsequence_finish(
+        self, measurament_number: int, line: str, quantum_elements: Union[Dict[str, Qubit], Dict[str, Coupler]]
+    ) -> Tuple[int, str]:
         """
         Find the finishing time and qubit for a given sequence.
 
         Args:
-            measure_number (int): number of the measure pulse.
+            measurament_number (int): number of the measure pulse.
             line (str): line from which measure the finishing time.
                 e.g.: "drive", "flux", "couplerflux"
-            quantum_elements (dict[str, Qubit]|dict[str, Coupler]):  qubits or couplers from which measure the finishing time.
+            quantum_elements (dict[str, Qubit]|dict[str, Coupler]): qubits or couplers from which measure the finishing time.
+
+        Returns:
+            time_finish (int): Finish time of the last pulse of the subsequence before the measurement.
+            sequence_finish (str): Name of the last subsequence before measurement.
+                If there are no sequences after the previous measurement, use "None".
         """
         time_finish = 0
         sequence_finish = "None"
-        for qubit in qubits:
-            if len(self.sub_sequences[f"{line}{qubit}"]) <= measure_number:
+        for quantum_element in quantum_elements:
+            if len(self.sub_sequences[f"{line}{quantum_element}"]) <= measurament_number:
                 continue
-            for pulse in self.sub_sequences[f"{line}{qubit}"][measure_number]:
+            for pulse in self.sub_sequences[f"{line}{quantum_element}"][measurament_number]:
                 if pulse.pulse.finish > time_finish:
                     time_finish = pulse.pulse.finish
-                    sequence_finish = f"{line}{qubit}"
+                    sequence_finish = f"{line}{quantum_element}"
         return time_finish, sequence_finish
 
     # For pulsed spectroscopy, set integration_length and either measure_pulse or measure_pulse_length.
     # For CW spectroscopy, set only integration_length and do not specify the measure signal.
     # For all other measurements, set either length or pulse for both the measure pulse and integration kernel.
-    def measure_relax(self, exp, qubits, relaxation_time, acquisition_type, couplers):
+    def measure_relax(self, exp, qubits, couplers, relaxation_time, acquisition_type):
         """qubit readout pulse, data acquisition and qubit relaxation"""
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
