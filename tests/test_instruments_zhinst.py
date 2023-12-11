@@ -681,10 +681,10 @@ def test_split_batches(dummy_qrc):
     sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
     sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
 
-    batches = list(instrument.split_batches(20 * [sequence]))
+    batches = list(instrument.split_batches(200 * [sequence]))
     assert len(batches) == 2
-    assert len(batches[0]) == 16
-    assert len(batches[1]) == 4
+    assert len(batches[0]) == 150
+    assert len(batches[1]) == 50
 
 
 @pytest.fixture(scope="module")
