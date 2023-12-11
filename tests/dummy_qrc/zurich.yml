@@ -4,7 +4,6 @@ couplers: [0, 1, 3, 4]
 topology: {0: [0, 2], 1: [1, 2], 3: [2, 3], 4: [2, 4]}
 settings:
     nshots: 4096
-    sampling_rate: 2.e+9
     relaxation_time: 300_000
 
 instruments:

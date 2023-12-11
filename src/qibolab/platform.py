@@ -57,8 +57,6 @@ class Settings:
 
     nshots: int = 1024
     """Default number of repetitions when executing a pulse sequence."""
-    sampling_rate: int = 1
-    """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
     """Time in ns to wait for the qubit to relax to its ground state between shots."""
 

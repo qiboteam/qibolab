@@ -125,9 +125,7 @@ def test_dummy_single_sweep_raw(name):
     results = platform.sweep(sequence, options, sweeper)
     assert pulse.serial and pulse.qubit in results
     shape = results[pulse.qubit].magnitude.shape
-    samples = platform.settings.sampling_rate * 1e-9 * pulse.duration
-
-    assert shape == (samples * SWEPT_POINTS,)
+    assert shape == (pulse.duration * SWEPT_POINTS,)
 
 
 @pytest.mark.parametrize("fast_reset", [True, False])

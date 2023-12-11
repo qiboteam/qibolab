@@ -6,7 +6,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper
 
 SAMPLING_RATE = 1
-"""Sampling rate for qblox instruments."""
+"""Sampling rate for qblox instruments in GSps."""
 
 
 class WaveformsBuffer:
