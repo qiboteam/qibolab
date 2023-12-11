@@ -97,7 +97,6 @@ class ClusterQCM_BB(Instrument):
     """
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1, "o3": 2, "o4": 3}
-    SAMPLING_RATE: int = 1e9  # 1 GSPS
     FREQUENCY_LIMIT = 500e6
 
     property_wrapper = lambda parent, *parameter: property(

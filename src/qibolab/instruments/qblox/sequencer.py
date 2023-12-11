@@ -5,7 +5,7 @@ from qibolab.instruments.qblox.q1asm import Program
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper
 
-SAMPLING_RATE = 1e9
+SAMPLING_RATE = 1
 """Sampling rate for qblox instruments."""
 
 

@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import numpy as np
 
-SAMPLING_RATE = 1e9
+SAMPLING_RATE = 1
 
 
 def demodulate(input_i, input_q, frequency):

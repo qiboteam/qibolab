@@ -13,7 +13,7 @@ PortId = Tuple[str, int]
 IQPortId = Union[Tuple[PortId], Tuple[PortId, PortId]]
 """Type for collections of IQ ports."""
 
-SAMPLING_RATE = 1e9
+SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX."""
 
 

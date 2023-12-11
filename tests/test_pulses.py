@@ -322,8 +322,8 @@ def test_pulses_pulse_serial():
 @pytest.mark.parametrize("shape", [Rectangular(), Gaussian(5), Drag(5, 1)])
 def test_pulses_pulseshape_sampling_rate(shape):
     pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
-    assert len(pulse.envelope_waveform_i(sampling_rate=1e9).data) == 40
-    assert len(pulse.envelope_waveform_i(sampling_rate=100e9).data) == 4000
+    assert len(pulse.envelope_waveform_i(sampling_rate=1).data) == 40
+    assert len(pulse.envelope_waveform_i(sampling_rate=100).data) == 4000
 
 
 def test_raise_shapeiniterror():
@@ -367,7 +367,7 @@ def test_raise_shapeiniterror():
 def test_pulses_pulseshape_drag_shape():
     pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
     # envelope i & envelope q should cross nearly at 0 and at 2
-    waveform = pulse.envelope_waveform_i(sampling_rate=10e9).data
+    waveform = pulse.envelope_waveform_i(sampling_rate=10).data
     target_waveform = np.array(
         [
             0.63683161,
@@ -753,8 +753,8 @@ def test_pulses_pulseshape_rectangular():
     assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
     assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
 
-    sampling_rate = 1e9
-    num_samples = int(pulse.duration / 1e9 * sampling_rate)
+    sampling_rate = 1
+    num_samples = int(pulse.duration / sampling_rate)
     i, q = pulse.amplitude * np.ones(num_samples), pulse.amplitude * np.zeros(num_samples)
     global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
     mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
@@ -804,8 +804,8 @@ def test_pulses_pulseshape_gaussian():
     assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
     assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
 
-    sampling_rate = 1e9
-    num_samples = int(pulse.duration / 1e9 * sampling_rate)
+    sampling_rate = 1
+    num_samples = int(pulse.duration / sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
         -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / pulse.shape.rel_sigma) ** 2))
@@ -860,8 +860,8 @@ def test_pulses_pulseshape_drag():
     assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
     assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
 
-    sampling_rate = 1e9
-    num_samples = int(pulse.duration / 1e9 * sampling_rate)
+    sampling_rate = 1
+    num_samples = int(pulse.duration / 1 * sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
         -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / pulse.shape.rel_sigma) ** 2))
@@ -871,7 +871,6 @@ def test_pulses_pulseshape_drag():
         * (-(x - (num_samples - 1) / 2) / ((num_samples / pulse.shape.rel_sigma) ** 2))
         * i
         * sampling_rate
-        / 1e9
     )
     global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
     mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)

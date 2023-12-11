@@ -29,7 +29,7 @@ from qibolab.sweeper import Parameter
 os.environ["LABONEQ_TOKEN"] = "not required"
 laboneq._token.is_valid_token = lambda _token: True  # pylint: disable=W0212
 
-SAMPLING_RATE = 2e9
+SAMPLING_RATE = 2
 NANO_TO_SECONDS = 1e-9
 COMPILER_SETTINGS = {
     "SHFSG_FORCE_COMMAND_TABLE": True,
