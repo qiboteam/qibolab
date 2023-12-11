@@ -436,7 +436,7 @@ class Zurich(Controller):
         ]
 
         if qubit.kernel_path:
-            self.kernels[q] = qubit.kernel_path / f"kernels_q{q}.npz"
+            self.kernels[q] = qubit.kernel_path
         if self.kernels[q].is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
             self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
                 oscillator=None,
