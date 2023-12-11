@@ -437,31 +437,27 @@ class Zurich(Controller):
 
         if qubit.kernel_path:
             self.kernels[q] = qubit.kernel_path
-        if self.kernels[q].is_file() and options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
-                oscillator=None,
-                range=qubit.feedback.power_range,
-                port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            )
-        elif self.kernels[q].is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
-                oscillator=lo.Oscillator(
-                    frequency=intermediate_frequency,
-                    modulation_type=lo.ModulationType.SOFTWARE,
-                ),
-                range=qubit.feedback.power_range,
-                port_delay=self.time_of_flight * NANO_TO_SECONDS,
-                threshold=qubit.threshold,  # To keep compatibility with angle and threshold discrimination
-            )
-        elif not self.kernels[q].is_file() and not options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
-                oscillator=lo.Oscillator(
-                    frequency=intermediate_frequency,
-                    modulation_type=lo.ModulationType.SOFTWARE,
-                ),
-                range=qubit.feedback.power_range,
-                port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            )
+
+        oscillator = lo.Oscillator(
+            frequency=intermediate_frequency,
+            modulation_type=lo.ModulationType.SOFTWARE,
+        )
+        threshold = None
+
+        if options.acquisition_type == AcquisitionType.DISCRIMINATION:
+            if self.kernels[q].is_file():
+                # Kernels don't work with the software modulation on the acquire signal
+                oscillator = None
+            elif not self.kernels[q].is_file():
+                # To keep compatibility with angle and threshold discrimination (Remove when possible)
+                threshold = (qubit.threshold,)
+
+        self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = lo.SignalCalibration(
+            oscillator=oscillator,
+            range=qubit.feedback.power_range,
+            port_delay=self.time_of_flight * NANO_TO_SECONDS,
+            threshold=threshold,
+        )
 
     def register_drive_line(self, qubit, intermediate_frequency):
         """Registers qubit drive line to calibration and signal map."""
