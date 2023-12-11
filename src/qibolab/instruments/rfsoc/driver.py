@@ -45,7 +45,7 @@ class RFSoC(Controller):
 
     PortType = RFSoCPort
 
-    def __init__(self, name: str, address: str, port: int):
+    def __init__(self, name: str, address: str, port: int, sampling_rate: float = 1e9):
         """Set server information and base configuration.
 
         Args:
@@ -57,6 +57,7 @@ class RFSoC(Controller):
         self.host = address
         self.port = port
         self.cfg = rfsoc.Config()
+        self.sampling_rate = sampling_rate
 
     def connect(self):
         """Empty method to comply with Instrument interface."""
@@ -88,7 +89,7 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, qubits),
+            "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
         return client.connect(server_commands, self.host, self.port)
@@ -113,7 +114,7 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, qubits),
+            "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
             "sweepers": [sweeper.serialized for sweeper in sweepers],
         }

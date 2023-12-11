@@ -14,7 +14,7 @@ HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
 
 
-def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
+def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape, sampling_rate: float) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
     if shape.name not in {"Gaussian", "Drag", "Rectangular", "Exponential"}:
         new_pulse = rfsoc_pulses.Arbitrary(
@@ -76,13 +76,13 @@ def _(qubit: Qubit) -> rfsoc.Qubit:
 
 
 @convert.register
-def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
+def _(sequence: PulseSequence, qubits: dict[int, Qubit], sampling_rate: float) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
     last_pulse_start = 0
     list_sequence = []
     for pulse in sorted(sequence.pulses, key=lambda item: item.start):
         start_delay = (pulse.start - last_pulse_start) * NS_TO_US
-        pulse_dict = asdict(convert(pulse, qubits, start_delay))
+        pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
         list_sequence.append(pulse_dict)
 
         last_pulse_start = pulse.start
@@ -90,7 +90,7 @@ def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pu
 
 
 @convert.register
-def _(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
+def _(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float, sampling_rate: float) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
@@ -108,7 +108,7 @@ def _(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulse
         name=pulse.serial,
         type=pulse_type,
     )
-    return replace_pulse_shape(rfsoc_pulse, pulse.shape)
+    return replace_pulse_shape(rfsoc_pulse, pulse.shape, sampling_rate)
 
 
 @convert.register

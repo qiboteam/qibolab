@@ -38,7 +38,7 @@ def test_zhpulse(shape):
     zhpulse = ZhPulse(pulse)
     assert zhpulse.pulse.serial == pulse.serial
     if shape == "SNZ" or shape == "IIR":
-        assert len(zhpulse.zhpulse.samples) == 40 / 1e9 * 1e9  # * 2e9 When pulses stop hardcoding SamplingRate
+        assert len(zhpulse.zhpulse.samples) == 80
     else:
         assert zhpulse.zhpulse.length == 40e-9
 
