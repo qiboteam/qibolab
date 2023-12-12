@@ -112,9 +112,10 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
     for q in qubits:
-        kernel_path = characterization["single_qubit"][q].pop("kernel_path")
+        qubit = characterization["single_qubit"][q]
+        kernel_path = qubit["kernel_path"]
         if kernel_path is not None:
-            characterization["single_qubit"][q]["kernel_path"] = kernel_path.name
+            qubit["kernel_path"] = kernel_path.name
 
     if couplers:
         characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
