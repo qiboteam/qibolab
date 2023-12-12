@@ -11,7 +11,7 @@ from scipy.signal import lfilter
 from qibolab.symbolic import intSymbolicExpression as se_int
 
 SAMPLING_RATE = 1
-"""Default sampling rate in samples per second.
+"""Default sampling rate in gigasamples per second (GSps).
 Used for generating waveform envelopes if the instruments do not provide a different value.
 """
 

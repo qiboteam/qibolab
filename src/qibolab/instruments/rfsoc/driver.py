@@ -45,7 +45,7 @@ class RFSoC(Controller):
 
     PortType = RFSoCPort
 
-    def __init__(self, name: str, address: str, port: int, sampling_rate: float = 1):
+    def __init__(self, name: str, address: str, port: int, sampling_rate: float = 1.0):
         """Set server information and base configuration.
 
         Args:
