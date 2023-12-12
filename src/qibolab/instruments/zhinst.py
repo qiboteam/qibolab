@@ -448,7 +448,7 @@ class Zurich(Controller):
             if self.kernels[q].is_file():
                 # Kernels don't work with the software modulation on the acquire signal
                 oscillator = None
-            elif not self.kernels[q].is_file():
+            else:
                 # To keep compatibility with angle and threshold discrimination (Remove when possible)
                 threshold = (qubit.threshold,)
 
