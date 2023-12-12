@@ -16,7 +16,6 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 MAX_BATCH_SIZE = 30
 """Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
-REFERENCE_CLOCK = "internal"
 
 
 class QbloxController(Controller):
@@ -27,13 +26,13 @@ class QbloxController(Controller):
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
 
-    def __init__(self, name, address: str, modules):
+    def __init__(self, name, address: str, modules, internal_reference_clock: bool = True):
         """Initialises the controller."""
         super().__init__(name=name, address=address)
         self.is_connected = False
         self.cluster: QbloxCluster = None
         self.modules: dict = modules
-        self._reference_clock = REFERENCE_CLOCK
+        self._reference_clock = "internal" if internal_reference_clock else "external"
         signal.signal(signal.SIGTERM, self._termination_handler)
 
     def connect(self):
@@ -41,36 +40,39 @@ class QbloxController(Controller):
 
         if self.is_connected:
             return
-        for attempt in range(3):
-            try:
-                # Connect cluster
-                QbloxCluster.close_all()
-                self.cluster = QbloxCluster(self.name, self.address)
-                self.cluster.reset()
-                self.cluster.set("reference_source", self._reference_clock)
-                # Connect modules
-                for name in self.modules:
-                    self.modules[name].connect(self.cluster)
-                self.is_connected = True
-                log.info("QbloxController: all modules connected.")
-                return
+        try:
+            # Connect cluster
+            QbloxCluster.close_all()
+            self.cluster = QbloxCluster(self.name, self.address)
+            self.cluster.reset()
+            self.cluster.set("reference_source", self._reference_clock)
+            # Connect modules
+            for module in self.modules.values():
+                module.connect(self.cluster)
+            self.is_connected = True
+            log.info("QbloxController: all modules connected.")
+            return
 
-            except Exception as exception:
-                log.info(f"Unable to connect:\n{str(exception)}\nRetrying...")
-        if not self.is_connected:
-            raise_error(RuntimeError, "Unable to establish a connection with the Qblox instruments")
-        # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
+        except Exception as exception:
+            raise ConnectionError(f"Unable to connect:\n{str(exception)}\n")
+            # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
     def setup(self):
-        """Sets all modules up."""
+        """Empty method to comply with Instrument interface.
+        Setup of the modules happens in the create method:
 
-        if not self.is_connected:
-            raise_error(
-                RuntimeError,
-                "There is no connection to the modules, the setup cannot be completed",
-            )
-        for name in self.modules:
-            self.modules[name].setup()
+        >>> instruments = load_instrument_settings(runcard, instruments)
+        """
+        pass
+
+        # if not self.is_connected:
+        #     raise_error(
+        #         RuntimeError,
+        #         "There is no connection to the modules, the setup cannot be completed",
+        #     )
+        # for name in self.modules:
+        #     #THIS is
+        #     self.modules[name].setup()
 
     def start(self):
         """Starts all modules."""

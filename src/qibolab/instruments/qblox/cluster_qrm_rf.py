@@ -910,7 +910,6 @@ class ClusterQRM_RF(Instrument):
                 state = self.device.get_sequencer_state(sequencer_number)
 
                 if state.status == "STOPPED":
-                    # log.info(f"{self.device.sequencers[sequencer_number].name} state: {state}")
                     # TODO: check flags for errors
                     break
                 elif time.time() - t > time_out:
