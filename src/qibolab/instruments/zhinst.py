@@ -883,14 +883,14 @@ class Zurich(Controller):
                                     i += 1
                             elif isinstance(pulse, ZhSweeperLine):
                                 exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
-                    play_after = f"sequence_drive{q}_{j}"
 
-                    # Patch for T1 start, general ?
-                    if len(self.sequence[f"readout{q}"]) > 0 and isinstance(
-                        self.sequence[f"readout{q}"][0], ZhSweeperLine
-                    ):
-                        exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
-                        self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
+                        if len(self.sequence[f"readout{q}"]) > 0 and isinstance(
+                            self.sequence[f"readout{q}"][0], ZhSweeperLine
+                        ):
+                            exp.delay(signal=f"drive{q}", time=self.sequence[f"readout{q}"][0].zhsweeper)
+                            self.sequence[f"readout{q}"].remove(self.sequence[f"readout{q}"][0])
+
+                    play_after = f"sequence_drive{q}_{j}"
 
     def find_subsequence_finish(
         self, measurement_number: int, line: str, quantum_elements: Union[Dict[str, Qubit], Dict[str, Coupler]]
