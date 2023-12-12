@@ -136,3 +136,6 @@ data/
 
 # Debugging & Testing
 debug/
+
+# Nix
+.devenv
