@@ -172,7 +172,12 @@ def test_zhinst_register_readout_line(dummy_qrc):
     platform = create_platform("zurich")
     platform.setup()
     IQM5q = platform.instruments["EL_ZURO"]
-    IQM5q.register_readout_line(platform.qubits[0], intermediate_frequency=int(1e6))
+
+    options = ExecutionParameters(
+        relaxation_time=300e-6, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+    )
+
+    IQM5q.register_readout_line(platform.qubits[0], intermediate_frequency=int(1e6), options=options)
 
     assert "measure0" in IQM5q.signal_map
     assert "acquire0" in IQM5q.signal_map
