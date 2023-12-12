@@ -981,7 +981,6 @@ class ClusterQRM_RF(Instrument):
             self.device.stop_sequencer()
         except:
             raise RuntimeError(f"Error stopping sequencer for {self.device.name}")
-            pass
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
