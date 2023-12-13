@@ -1140,10 +1140,10 @@ class Zurich(Controller):
                 HARDWARE: Allows big scans for one qubit at a time
                 SOFTWARE: Allows to scan several qubits at the same by uploading the waveforms, limited memory
                 """
-                
+
                 # Hardcoded value, it needs to be benchmarked to get a fancier estimate
                 # I assume a dependance on threshold = pulse_duration * n_qubits * len(sweeper.values)
-                threshold = 50  
+                threshold = 50
                 if len(zhsweeper.values) > threshold:
                     mod_type = lo.ModulationType.HARDWARE
                 else:
