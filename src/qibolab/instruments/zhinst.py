@@ -1055,14 +1055,13 @@ class Zurich(Controller):
                         exp.play(signal=f"drive{q}", pulse=pulse.zhpulse)
 
     @staticmethod
-    def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[List[int], List[Sweeper]]:
+    def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[np.ndarray, List[Sweeper]]:
         """Rearranges sweepers from qibocal based on device hardware limitations"""
-        rearranging_axes = [0] * 2
+        rearranging_axes = np.zeros(2, dtype=int)
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
                 if sweepers[0].parameter is Parameter.bias:
-                    rearranging_axes[0] = sweepers.index(sweepers[1])
-                    rearranging_axes[1] = 0
+                    rearranging_axes[:] = [sweepers.index(sweepers[1]), 0]
                     sweeper_changed = sweepers[1]
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
@@ -1071,8 +1070,7 @@ class Zurich(Controller):
                     not sweepers[0].parameter is Parameter.amplitude
                     and sweepers[0].pulses[0].type is not PulseType.READOUT
                 ):
-                    rearranging_axes[0] = sweepers.index(sweepers[1])
-                    rearranging_axes[1] = 0
+                    rearranging_axes[:] = [sweepers.index(sweepers[1]), 0]
                     sweeper_changed = sweepers[1]
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
@@ -1108,7 +1106,7 @@ class Zurich(Controller):
                     exp_res = self.results.get_data(f"sequence{q}_{i}")
                     # Reorder dimensions
                     if options.averaging_mode is AveragingMode.SINGLESHOT:
-                        rearranging_axes = [rearranging_axis + 1 for rearranging_axis in rearranging_axes]
+                        rearranging_axes += 1
                     data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         data = np.ones(data.shape) - data.real  # Probability inversion patch
