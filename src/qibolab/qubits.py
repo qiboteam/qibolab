@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
@@ -60,6 +61,8 @@ class Qubit:
     """Assignment fidelity."""
     readout_fidelity: float = 0.0
     """Readout fidelity."""
+    effective_temperature: float = 0.0
+    """Effective temperature."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
     T1: int = 0
@@ -73,6 +76,7 @@ class Qubit:
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
+    kernel_path: Optional[Path] = None
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0

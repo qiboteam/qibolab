@@ -1,9 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
-from enum import Flag, auto
 from typing import List, Optional, Union
 
-from qibo import gates
+from qibo.transpiler import NativeGates
 
 from qibolab.pulses import (
     CouplerFluxPulse,
@@ -12,27 +11,6 @@ from qibolab.pulses import (
     PulseSequence,
     PulseType,
 )
-
-
-class NativeType(Flag):
-    """Define available types of native gates.
-
-    Should have the same names with qibo gates.
-    """
-
-    M = auto()
-    Z = auto()
-    RZ = auto()
-    GPI2 = auto()
-    CZ = auto()
-    iSWAP = auto()
-
-    @classmethod
-    def from_gate(cls, gate: gates.Gate):
-        try:
-            return getattr(cls, gate.__class__.__name__)
-        except AttributeError:
-            raise ValueError(f"Gate {gate} cannot be used as native.")
 
 
 @dataclass
@@ -154,20 +132,19 @@ class CouplerPulse:
         """
         kwargs = pulse.copy()
         kwargs["coupler"] = coupler
+        kwargs.pop("type")
         return cls(**kwargs)
 
     @property
     def raw(self):
-        return (
-            {
-                "type": "coupler",
-                "duration": self.duration,
-                "amplitude": self.amplitude,
-                "shape": self.shape,
-                "qubit": self.coupler,
-                "relative_start": self.relative_start,
-            },
-        )
+        return {
+            "type": "coupler",
+            "duration": self.duration,
+            "amplitude": self.amplitude,
+            "shape": self.shape,
+            "coupler": self.coupler.name,
+            "relative_start": self.relative_start,
+        }
 
     def pulse(self, start):
         """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
@@ -210,7 +187,7 @@ class NativeSequence:
             qubits (list): List of :class:`qibolab.qubits.Qubit` object for all
                 qubits in the platform. All qubits are required because the sequence may be
                 acting on qubits that the implemented gate is not targeting.
-            couplres (list): List of :class:`qibolab.couplers.Coupler` object for all
+            couplers (list): List of :class:`qibolab.couplers.Coupler` object for all
                 couplers in the platform. All couplers are required because the sequence may be
                 acting on couplers that the implemented gate is not targeting.
         """
@@ -238,7 +215,9 @@ class NativeSequence:
 
     @property
     def raw(self):
-        return [pulse.raw for pulse in self.pulses]
+        pulses = [pulse.raw for pulse in self.pulses]
+        coupler_pulses = [pulse.raw for pulse in self.coupler_pulses]
+        return pulses + coupler_pulses
 
     def sequence(self, start=0):
         """Creates a :class:`qibolab.pulses.PulseSequence` object implementing the sequence."""
@@ -278,7 +257,7 @@ class SingleQubitNatives:
         """Parse native gates of the qubit from the runcard.
 
         Args:
-            qubit (:class:`qibolab.platforms.abstract.Qubit`): Qubit object that the
+            qubit (:class:`qibolab.qubits.Qubit`): Qubit object that the
                 native gates are acting on.
             native_gates (dict): Dictionary with native gate pulse parameters as loaded
                 from the runcard.
@@ -295,6 +274,37 @@ class SingleQubitNatives:
             if attr is not None:
                 data[fld.name] = attr.raw
                 del data[fld.name]["qubit"]
+        return data
+
+
+@dataclass
+class CouplerNatives:
+    """Container with the native single-qubit gates acting on a specific qubit."""
+
+    CP: Optional[NativePulse] = None
+    """Pulse to activate the coupler."""
+
+    @classmethod
+    def from_dict(cls, coupler, native_gates):
+        """Parse coupler native gates from the runcard.
+
+        Args:
+            coupler (:class:`qibolab.couplers.Coupler`): Coupler object that the
+                native pulses are acting on.
+            native_gates (dict): Dictionary with native gate pulse parameters as loaded
+                from the runcard [Reusing the dict from qubits].
+        """
+        pulses = {n: CouplerPulse.from_dict(pulse, coupler=coupler) for n, pulse in native_gates.items()}
+        return cls(**pulses)
+
+    @property
+    def raw(self):
+        """Serialize native gate pulses. ``None`` gates are not included."""
+        data = {}
+        for fld in fields(self):
+            attr = getattr(self, fld.name)
+            if attr is not None:
+                data[fld.name] = attr.raw
         return data
 
 
@@ -321,9 +331,9 @@ class TwoQubitNatives:
 
     @property
     def types(self):
-        gate_types = NativeType(0)
+        gate_types = NativeGates(0)
         for fld in fields(self):
             gate = fld.name
             if getattr(self, gate) is not None:
-                gate_types |= NativeType[gate]
+                gate_types |= NativeGates[gate]
         return gate_types

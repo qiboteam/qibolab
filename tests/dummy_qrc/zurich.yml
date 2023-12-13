@@ -163,6 +163,40 @@ native_gates:
                 relative_start: 0
                 phase: 0
 
+    coupler:
+        0:
+            CP:
+                type: coupler
+                duration: 1000
+                amplitude: .5
+                shape: Rectangular()
+                coupler: 0
+                relative_start: 0
+        1:
+            CP:
+                type: coupler
+                duration: 1000
+                amplitude: .5
+                shape: Rectangular()
+                coupler: 1
+                relative_start: 0
+        3:
+            CP:
+                type: coupler
+                duration: 1000
+                amplitude: .5
+                shape: Rectangular()
+                coupler: 3
+                relative_start: 0
+        4:
+            CP:
+                type: coupler
+                duration: 1000
+                amplitude: .5
+                shape: Rectangular()
+                coupler: 4
+                relative_start: 0
+
     two_qubit:
         1-2:
             CZ:
@@ -211,12 +245,7 @@ characterization:
             # parameters for single shot classification
             threshold: 0.8836
             iq_angle: -1.551
-            # alpha: 217.492 MHz
-            # To save power values on the runcard
-            # ro_range_lp: -15
-            # ro_range_hp: -15
-            # qd_range: 0
-            # flux_range: -0
+            kernel_path: "kernel_q0.npz"
 
         1:
             readout_frequency: 4_931_000_000
@@ -226,6 +255,7 @@ characterization:
             sweetspot: 0.0
             mean_gnd_states: [0, 0]
             mean_exc_states: [0, 0]
+            kernel_path: "kernel_q1.npz"
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
@@ -237,7 +267,7 @@ characterization:
             # parameters for single shot classification
             threshold: -0.0593
             iq_angle: -0.667
-            # alpha: 208 MHz
+            kernel_path: "kernel_q2.npz"
         3:
             readout_frequency: 5_783_000_000
             drive_frequency: 4_100_000_000
@@ -246,6 +276,7 @@ characterization:
             sweetspot: 0.0
             mean_gnd_states: [0, 0]
             mean_exc_states: [0, 0]
+            kernel_path: "kernel_q3.npz"
         4:
             readout_frequency: 5_515_000_000
             drive_frequency: 4_196_800_000
@@ -257,6 +288,7 @@ characterization:
             # parameters for single shot classification
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
+            kernel_path: "kernel_q4.npz"
     coupler:
         0:
             sweetspot: 0.0

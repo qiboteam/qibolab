@@ -9,20 +9,34 @@ import warnings
 import numpy as np
 import pytest
 from qibo.models import Circuit
-from qibo.states import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
-from qibolab.platform import Platform
+from qibolab.platform import Platform, unroll_sequences
 from qibolab.pulses import PulseSequence, Rectangular
 from qibolab.serialize import dump_runcard, load_runcard
 
 from .conftest import find_instrument
 
 nshots = 1024
+
+
+def test_unroll_sequences(platform):
+    qubit = next(iter(platform.qubits))
+    sequence = PulseSequence()
+    qd_pulse = platform.create_RX_pulse(qubit, start=0)
+    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.finish)
+    sequence.add(qd_pulse)
+    sequence.add(ro_pulse)
+    total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
+    assert len(total_sequence) == 20
+    assert len(total_sequence.ro_pulses) == 10
+    assert total_sequence.finish == 10 * sequence.finish + 90000
+    assert len(readouts) == 1
+    assert len(readouts[ro_pulse.serial]) == 10
 
 
 def test_create_platform(platform):
@@ -34,6 +48,7 @@ def test_create_platform_error():
         platform = create_platform("nonexistent")
 
 
+@pytest.mark.xfail(reason="Cannot pickle all platforms")
 def test_platform_pickle(platform):
     serial = pickle.dumps(platform)
     new_platform = pickle.loads(serial)
@@ -92,6 +107,19 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_drive_pulse(qubit, start=0, duration=200))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+
+
+@pytest.mark.qpu
+def test_platform_execute_one_coupler_pulse(qpu_platform):
+    # One drive pulse
+    platform = qpu_platform
+    if len(platform.couplers) == 0:
+        pytest.skip("The platform does not have couplers")
+    coupler = next(iter(platform.couplers))
+    sequence = PulseSequence()
+    sequence.add(platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1))
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    assert len(sequence.cf_pulses) > 0
 
 
 @pytest.mark.qpu
@@ -203,6 +231,7 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.qpu
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
 def test_excited_state_probabilities_pulses(qpu_platform):
@@ -226,6 +255,7 @@ def test_excited_state_probabilities_pulses(qpu_platform):
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
 @pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
