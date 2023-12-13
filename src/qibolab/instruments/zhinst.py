@@ -32,7 +32,6 @@ laboneq._token.is_valid_token = lambda _token: True  # pylint: disable=W0212
 
 NANO_TO_SECONDS = 1e-9
 COMPILER_SETTINGS = {
-    "SHFSG_FORCE_COMMAND_TABLE": True,
     "SHFSG_MIN_PLAYWAVE_HINT": 32,
     "SHFSG_MIN_PLAYZERO_HINT": 32,
     "HDAWG_MIN_PLAYWAVE_HINT": 64,
