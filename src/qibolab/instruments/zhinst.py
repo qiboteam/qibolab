@@ -1076,13 +1076,7 @@ class Zurich(Controller):
         rearranging_axes = np.zeros(2, dtype=int)
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
-                if sweepers[0].parameter is Parameter.bias:
-                    rearranging_axes[:] = [sweepers.index(sweepers[1]), 0]
-                    sweeper_changed = sweepers[1]
-                    sweepers.remove(sweeper_changed)
-                    sweepers.insert(0, sweeper_changed)
-                    log.warning("Sweepers were reordered")
-                elif (
+                if (sweepers[0].parameter is Parameter.bias) or (
                     not sweepers[0].parameter is Parameter.amplitude
                     and sweepers[0].pulses[0].type is not PulseType.READOUT
                 ):
