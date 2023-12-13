@@ -5,7 +5,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import laboneq._token
 import laboneq.simple as lo
@@ -24,7 +24,7 @@ from qibolab.instruments.port import Port
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.sweeper import Parameter
+from qibolab.sweeper import Parameter, Sweeper
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -1055,14 +1055,14 @@ class Zurich(Controller):
                         exp.play(signal=f"drive{q}", pulse=pulse.zhpulse)
 
     @staticmethod
-    def rearrange_sweepers(sweepers):
+    def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[List[int], List[Sweeper]]:
         """Rearranges sweepers from qibocal based on device hardware limitations"""
-        rearranging_axes = [[], []]
+        rearranging_axes = [0] * 2
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
                 if sweepers[0].parameter is Parameter.bias:
-                    rearranging_axes[0] += [sweepers.index(sweepers[1])]
-                    rearranging_axes[1] += [0]
+                    rearranging_axes[0] = sweepers.index(sweepers[1])
+                    rearranging_axes[1] = 0
                     sweeper_changed = sweepers[1]
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
@@ -1071,8 +1071,8 @@ class Zurich(Controller):
                     not sweepers[0].parameter is Parameter.amplitude
                     and sweepers[0].pulses[0].type is not PulseType.READOUT
                 ):
-                    rearranging_axes[0] += [sweepers.index(sweepers[1])]
-                    rearranging_axes[1] += [0]
+                    rearranging_axes[0] = sweepers.index(sweepers[1])
+                    rearranging_axes[1] = 0
                     sweeper_changed = sweepers[1]
                     sweepers.remove(sweeper_changed)
                     sweepers.insert(0, sweeper_changed)
@@ -1107,6 +1107,8 @@ class Zurich(Controller):
                 for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
                     exp_res = self.results.get_data(f"sequence{q}_{i}")
                     # Reorder dimensions
+                    if options.averaging_mode is AveragingMode.SINGLESHOT:
+                        rearranging_axes = [rearranging_axis + 1 for rearranging_axis in rearranging_axes]
                     data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         data = np.ones(data.shape) - data.real  # Probability inversion patch
