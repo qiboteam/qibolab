@@ -916,12 +916,14 @@ class Zurich(Controller):
             measurement_number (int): number of the measure pulse.
             line (str): line from which measure the finishing time.
                 e.g.: "drive", "flux", "couplerflux"
-            quantum_elements (dict[str, Qubit]|dict[str, Coupler]): qubits or couplers from which measure the finishing time.
+            quantum_elements (dict[str, Qubit]|dict[str, Coupler]): qubits or couplers from
+                which measure the finishing time.
 
         Returns:
-            time_finish (int): Finish time of the last pulse of the subsequence before the measurement.
-            sequence_finish (str): Name of the last subsequence before measurement.
-                If there are no sequences after the previous measurement, use "None".
+            time_finish (int): Finish time of the last pulse of the subsequence
+                before the measurement.
+            sequence_finish (str): Name of the last subsequence before measurement. If
+                there are no sequences after the previous measurement, use "None".
         """
         time_finish = 0
         sequence_finish = "None"
@@ -1056,7 +1058,21 @@ class Zurich(Controller):
 
     @staticmethod
     def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[np.ndarray, List[Sweeper]]:
-        """Rearranges sweepers from qibocal based on device hardware limitations"""
+        """
+        Rearranges sweepers from qibocal based on device hardware limitations.
+
+        Frequency sweepers must be applied before bias or amplitude sweepers.
+
+        Args:
+            sweepers (list[Sweeper]): list of sweepers used in the experiment.
+
+        Returns:
+            rearranging_axes (np.ndarray): array of shape (2,) and dtype=int containing
+                the indexes of the sweepers to be swapped. Defaults to np.array([0, 0])
+                if no swap is needed.
+            sweepers (list[Sweeper]): updated list of sweepers used in the experiment. If
+                sweepers must be swapped, the list is updated accordingly.
+        """
         rearranging_axes = np.zeros(2, dtype=int)
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
@@ -1104,9 +1120,12 @@ class Zurich(Controller):
             if len(self.sequence[f"readout{q}"]) != 0:
                 for i, ropulse in enumerate(self.sequence[f"readout{q}"]):
                     exp_res = self.results.get_data(f"sequence{q}_{i}")
-                    # Reorder dimensions
+                    # if using singleshot, the first axis contains shots,
+                    # i.e.: (nshots, sweeper_1, sweeper_2)
+                    # if using integration: (sweeper_1, sweeper_2)
                     if options.averaging_mode is AveragingMode.SINGLESHOT:
                         rearranging_axes += 1
+                    # Reorder dimensions
                     data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                         data = np.ones(data.shape) - data.real  # Probability inversion patch
