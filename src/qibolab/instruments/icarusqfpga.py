@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Union
 
 import numpy as np
+from icarusq_rfsoc_driver import IcarusQRFSoC  # pylint: disable=E0401
+from icarusq_rfsoc_driver.rfsoc_settings import TRIGGER_MODE  # pylint: disable=E0401
 from qibo.config import log
 from scipy.signal.windows import gaussian, hamming
 
@@ -15,7 +17,7 @@ from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
 @dataclass
@@ -31,8 +33,6 @@ class RFSOC(Controller):
     PortType = RFSOCPort
 
     def __init__(self, name, address, port=8080):
-        from icarusq_rfsoc_driver import IcarusQRFSoC  # pylint: disable=E0401
-
         super().__init__(name, address)
         self.device = IcarusQRFSoC(address, port)
 
@@ -63,9 +63,6 @@ class RFSOC(Controller):
 
         self.channel_delay_offset_dac = delay_samples_offset_dac
         self.channel_delay_offset_adc = delay_samples_offset_adc
-        from icarusq_rfsoc_driver.rfsoc_settings import (  # pylint: disable=E0401
-            TRIGGER_MODE,
-        )
 
         for dac in range(self.device.dac_nchannels):
             self.device.dac[dac].delay = delay_samples_offset_dac
@@ -189,6 +186,14 @@ class RFSOC(Controller):
 class RFSOC_RO(RFSOC):
     """IcarusQ RFSoC attached with readout capability"""
 
+    available_sweep_parameters = {
+        Parameter.amplitude,
+        Parameter.duration,
+        Parameter.frequency,
+        Parameter.relative_phase,
+        Parameter.start,
+    }
+
     def __init__(self, name, address):
         super().__init__(name, address)
 
@@ -224,10 +229,6 @@ class RFSOC_RO(RFSOC):
             analog_settings,
         )
         self.adcs_to_read = adcs_to_read
-
-        from icarusq_rfsoc_driver.rfsoc_settings import (  # pylint: disable=E0401
-            TRIGGER_MODE,
-        )
 
         self.device.init_qunit()
         self.device.set_adc_trigger_mode(TRIGGER_MODE.MASTER)
@@ -278,6 +279,7 @@ class RFSOC_RO(RFSOC):
     def play_sequences(
         self, qubits: Dict[QubitId, Qubit], couplers, sequences: List[PulseSequence], options: ExecutionParameters
     ):
+        """Wrapper for play."""
         return [self.play(qubits, couplers, sequence, options) for sequence in sequences]
 
     def process_readout_signal(
@@ -287,7 +289,7 @@ class RFSOC_RO(RFSOC):
         qubits: Dict[QubitId, Qubit],
         options: ExecutionParameters,
     ):
-        """Processes the raw signal from the ADC into"""
+        """Processes the raw signal from the ADC into IQ values."""
 
         adc_sampling_rate = self.device.adc_sampling_rate * 1e6
         t = np.arange(self.device.adc_sample_size) / adc_sampling_rate
@@ -313,36 +315,36 @@ class RFSOC_RO(RFSOC):
         return results
 
     def sweep(
-        self, qubits: Dict[QubitId, Qubit], sequence: PulseSequence, options: ExecutionParameters, *sweeper: Sweeper
+        self,
+        qubits: Dict[QubitId, Qubit],
+        couplers,
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        *sweeper: Sweeper,
     ):
-        if len(sweeper > 1):
-            raise NotImplementedError
+        """Recursive python-based sweeper functionaltiy for the IcarusQ RFSoC."""
+        if len(sweeper) == 0:
+            return self.play(qubits, couplers, sequence, options)
 
         sweep = sweeper[0]
-        res = {}
+        param = sweep.parameter
+        param_name = param.name.lower()
 
-        attribute = {
-            Parameter.amplitude: "amplitude",
-            Parameter.duration: "duration",
-            Parameter.frequency: "frequency",
-            Parameter.relative_phase: "relative_phase",
-            Parameter.start: "start",
-        }
+        if param not in self.available_sweep_parameters:
+            raise NotImplementedError("Sweep parameter requested not available", param_name)
 
-        for val in sweep.values():
-            if sweep.parameter is Parameter.attenuation:
-                qubits[sweep.pulses[0].qubit].readout.port.attenuator.attenuation = val
+        base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
+        sweeper_value_setter_fn = _sweeper_value_setter.get(sweep.type)
+        ret = {}
 
-            elif sweep.parameter is Parameter.gain or Parameter.bias:
-                raise NotImplementedError
+        for value in sweep.values:
+            for idx, pulse in enumerate(sweep.pulses):
+                base = base_sweeper_values[idx]
+                sweeper_value_setter_fn(pulse, param_name, value, base)
 
-            else:
-                for pulse in sweep.pulses:
-                    setattr(pulse, attribute[sweep.parameter], val)
+            self.merge_sweep_results(ret, self.sweep(qubits, couplers, sequence, options, *sweeper[1:]))
 
-            res = self.merge_sweep_results(res, self.play(qubits, sequence, options))
-
-        return res
+        return ret
 
     @staticmethod
     def merge_sweep_results(
@@ -366,3 +368,13 @@ class RFSOC_RO(RFSOC):
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
+
+
+_sweeper_type_absolute = lambda pulse, param, value, base: setattr(pulse, param, value)
+_sweeper_type_offset = lambda pulse, param, value, base: setattr(pulse, param, base + value)
+_sweeper_type_factor = lambda pulse, param, value, base: setattr(pulse, param, base * value)
+_sweeper_value_setter = {
+    SweeperType.ABSOLUTE: _sweeper_type_absolute,
+    SweeperType.OFFSET: _sweeper_type_offset,
+    SweeperType.FACTOR: _sweeper_type_factor,
+}

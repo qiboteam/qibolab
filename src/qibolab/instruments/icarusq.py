@@ -1,3 +1,6 @@
+import pyvisa as visa
+import urllib3
+
 from qibolab.instruments.abstract import Instrument, InstrumentException
 from qibolab.instruments.oscillator import LocalOscillator
 
@@ -13,16 +16,12 @@ class MCAttenuator(Instrument):
 
     @property
     def attenuation(self):
-        import urllib3
-
         http = urllib3.PoolManager()
         res = http.request("GET", f"http://{self.address}/GETATT?")
         return float(res._body)
 
     @attenuation.setter
     def attenuation(self, attenuation: float):
-        import urllib3
-
         http = urllib3.PoolManager()
         http.request("GET", f"http://{self.address}/SETATT={attenuation}")
 
@@ -51,8 +50,6 @@ class QuicSyn(LocalOscillator):
 
     def connect(self):
         if not self.is_connected:
-            import pyvisa as visa
-
             rm = visa.ResourceManager()
             try:
                 self.device = rm.open_resource(self.address)
