@@ -652,275 +652,61 @@ class Pulse:
     """
 
     start: Optional[int] = None
-    """The time when the pulse is scheduled to be played, in ns."""
+    """Time when the pulse is scheduled to be played, in ns."""
     duration: Optional[int] = None
+    """Duration of the pulse, in ns."""
     amplitude: Optional[float] = None
+    """Pulse amplitude.
+
+    Pulse amplitudes are normalised between -1 and 1.
+    """
     frequency: Optional[int] = None
+    """Frequency of the pulse, in Hz."""
     relative_phase: Optional[float] = None
+    """Relative phase of the pulse, in radians."""
     shape: Optional[PulseShape] = None
+    """Pulse shape, as a PulseShape object."""
     channel: int =0,
+    """Channel on which the pulse should be played.
+
+    When a sequence of pulses is sent to the platform for execution,
+    each pulse is sent to the instrument responsible for playing pulses
+    the pulse channel. The connection of instruments with channels is
+    defined in the platform runcard.
+    """
     type: PulseType =PulseType.DRIVE,
+    """Pulse type, as an element of PulseType enumeration."""
     qubit: Optional[int] =0,
+    """Qubit addressed by the pulse."""
     if: int = 0
 
     @property
     def finish(self) -> Optional[int]:
+        """Time when the pulse is scheduled to finish."""
         if None in {self.start, self.duration}:
             return None
         return self.start + self.duration
 
-    @property
-    def duration(self) -> int:
-        """Returns the duration of the pulse, in ns."""
-        if isinstance(self._duration, se_int):
-            return self._duration.value
-        return self._duration
-
-    @duration.setter
-    def duration(self, value):
-        """Sets the duration of the pulse.
-
-        Args:
-            value (se_int | int | np.integer): the time in ns.
-        """
-
-        if not isinstance(value, (se_int, int, np.integer, float)):
-            raise TypeError(
-                f"duration argument type should be float, intSymbolicExpression or int, got {type(value).__name__}"
-            )
-        if not value >= 0:
-            raise ValueError(f"duration argument must be >= 0, got {value}")
-        if isinstance(value, se_int):
-            self._duration = se_int(value.symbol)["_p" + str(self._id) + "_duration"]
-
-        elif isinstance(self._duration, se_int):
-            if isinstance(value, np.integer):
-                self._duration.value = int(value)
-            elif isinstance(value, int):
-                self._duration.value = value
-        else:
-            if isinstance(value, np.integer):
-                self._duration = int(value)
-            else:
-                self._duration = value
-
-        if not self._start is None:
-            if (
-                isinstance(self._start, se_int)
-                or isinstance(self._duration, se_int)
-                or isinstance(self._finish, se_int)
-            ):
-                self._finish = se_int(self._start + self._duration)["_p" + str(self._id) + "_finish"]
-            else:
-                self._finish = self._start + self._duration
-
-    @property
-    def se_start(self) -> se_int:
-        """Returns a symbolic expression for the pulse start."""
-
-        if not isinstance(self._start, se_int):
-            self._start = se_int(self._start)["_p" + str(self._id) + "_start"]
-        return self._start
-
-    @property
-    def se_duration(self) -> se_int:
-        """Returns a symbolic expression for the pulse duration."""
-
-        if not isinstance(self._duration, se_int):
-            self._duration = se_int(self._duration)["_p" + str(self._id) + "_duration"]
-        return self._duration
-
-    @property
-    def se_finish(self) -> se_int:
-        """Returns a symbolic expression for the pulse finish."""
-
-        if not isinstance(self._finish, se_int):
-            self._finish = se_int(self._finish)["_p" + str(self._id) + "_finish"]
-        return self._finish
-
-    @property
-    def amplitude(self) -> float:
-        """Returns the amplitude of the pulse.
-
-        Pulse amplitudes are normalised between -1 and 1.
-        """
-
-        return self._amplitude
-
-    @amplitude.setter
-    def amplitude(self, value):
-        """Sets the amplitude of the pulse.
-
-        Args:
-            value (int | float | np.floating): a unitless value between -1 and 1.
-        """
-
-        if isinstance(value, int):
-            value = float(value)
-        if not isinstance(value, (float, np.floating)):
-            raise TypeError(f"amplitude argument type should be float, got {type(value).__name__}")
-        if not ((value >= -1) & (value <= 1)):
-            raise ValueError(f"amplitude argument must be >= -1 & <= 1, got {value}")
-        if isinstance(value, np.floating):
-            self._amplitude = float(value)
-        elif isinstance(value, float):
-            self._amplitude = value
-
-    @property
-    def frequency(self) -> int:
-        """Returns the frequency of the pulse, in Hz."""
-
-        return self._frequency
-
-    @frequency.setter
-    def frequency(self, value):
-        """Sets the frequency of the pulse.
-
-        Args:
-            value (int | float | np.integer | np.floating): the frequency in Hz.
-        """
-
-        if not isinstance(value, (int, float, np.integer, np.floating)):
-            raise TypeError(f"frequency argument type should be int, got {type(value).__name__}")
-        if isinstance(value, (float, np.integer, np.floating)):
-            self._frequency = int(value)
-        elif isinstance(value, int):
-            self._frequency = value
 
     @property
     def global_phase(self):
-        """Returns the global phase of the pulse, in radians.
+        """Global phase of the pulse, in radians.
 
         This phase is calculated from the pulse start time and frequency
         as `2 * pi * frequency * start`.
         """
 
         # pulse start, duration and finish are in ns
-        return 2 * np.pi * self._frequency * self.start / 1e9
-
-    @property
-    def relative_phase(self) -> float:
-        """Returns the relative phase of the pulse, in radians."""
-
-        return self._relative_phase
-
-    @relative_phase.setter
-    def relative_phase(self, value):
-        """Sets a relative phase for the pulse.
-
-        Args:
-            value (int | float | np.integer | np.floating): the relative phase in radians.
-        """
-
-        if not isinstance(value, (int, float, np.integer, np.floating)):
-            raise TypeError(f"relative_phase argument type should be int or float, got {type(value).__name__}")
-        if isinstance(value, (int, np.integer, np.floating)):
-            self._relative_phase = float(value)
-        elif isinstance(value, float):
-            self._relative_phase = value
+        return 2 * np.pi * self.frequency * self.start / 1e9
 
     @property
     def phase(self) -> float:
-        """Returns the total phase of the pulse, in radians.
+        """Total phase of the pulse, in radians.
 
         The total phase is computed as the sum of the global and
         relative phases.
         """
-        return self.global_phase + self._relative_phase
-
-    @property
-    def shape(self) -> PulseShape:
-        """Returns the shape of the pulse, as a PulseShape object."""
-
-        return self._shape
-
-    @shape.setter
-    def shape(self, value):
-        """Sets the shape of the pulse.
-
-        Args:
-            value (PulseShape | str): a string representing the pulse shape and its main parameters, or a PulseShape object.
-        """
-
-        if not isinstance(value, (PulseShape, str)):
-            raise TypeError(f"shape argument type should be PulseShape or str, got {type(value).__name__}")
-        if isinstance(value, PulseShape):
-            self._shape = value
-        elif isinstance(value, str):
-            shape_name = re.findall(r"(\w+)", value)[0]
-            if shape_name not in globals():
-                raise ValueError(f"shape {value} not found")
-            shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
-            # TODO: create multiple tests to prove regex working correctly
-            self._shape = globals()[shape_name](*shape_parameters)
-
-        # link the pulse attribute of the PulseShape object to the pulse.
-        self._shape.pulse = self
-
-    @property
-    def channel(self):
-        """Returns the channel on which the pulse should be played.
-
-        When a sequence of pulses is sent to the platform for execution,
-        each pulse is sent to the instrument responsible for playing
-        pulses the pulse channel. The connection of instruments with
-        channels is defined in the platform runcard.
-        """
-
-        # def channel(self) -> int | str:
-        return self._channel
-
-    @channel.setter
-    def channel(self, value):
-        """Sets the channel on which the pulse should be played.
-
-        Args:
-            value (int | str): an integer or a string used to identify the channel.
-        """
-
-        if not isinstance(value, (int, str)):
-            raise TypeError(f"channel argument type should be int or str, got {type(value).__name__}")
-        self._channel = value
-
-    @property
-    def type(self) -> PulseType:
-        """Returns the pulse type, as an element of PulseType enumeration."""
-
-        return self._type
-
-    @type.setter
-    def type(self, value):
-        """Sets the type of the pulse.
-
-        Args:
-            value (PulseType | str): the type of pulse as an element of PulseType enumeration or as a two-letter string.
-        """
-
-        if isinstance(value, PulseType):
-            self._type = value
-        elif isinstance(value, str):
-            self._type = PulseType(value)
-        else:
-            raise TypeError(f"type argument should be PulseType or str, got {type(value).__name__}")
-
-    @property
-    def qubit(self):
-        """Returns the qubit addressed by the pulse."""
-
-        # def qubit(self) -> int | str:
-        return self._qubit
-
-    @qubit.setter
-    def qubit(self, value):
-        """Sets the qubit addressed by the pulse.
-
-        Args:
-            value (int | str): an integer or a string used to identify the qubit.
-        """
-
-        if not isinstance(value, (int, str)):
-            raise TypeError(f"qubit argument type should be int or str, got {type(value).__name__}")
-        self._qubit = value
+        return self.global_phase + self.relative_phase
 
     @property
     def serial(self) -> str:
