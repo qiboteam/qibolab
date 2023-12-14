@@ -40,7 +40,7 @@
                 poetry = {
                   enable = true;
                   install.enable = true;
-                  install.groups = ["tests"];
+                  install.groups = ["dev" "tests"];
                   install.allExtras = true;
                 };
                 version = "3.11";
