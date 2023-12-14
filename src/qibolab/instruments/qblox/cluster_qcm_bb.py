@@ -2,6 +2,7 @@
 
 import json
 
+from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
@@ -126,13 +127,12 @@ class ClusterQCM_BB(Instrument):
         super().__init__(name, address)
         self.ports: dict = {}
         self.settings: dict = {}
-        self.device = None
+        self.device: QcmQrm = None
 
         self._debug_folder: str = ""
         self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
         self.channel_map: dict = {}
-        self._device_parameters = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
         self._free_sequencers_numbers: list[
@@ -140,6 +140,50 @@ class ClusterQCM_BB(Instrument):
         ] = []  # TODO: we can create only list and put three flags: free, used, unused
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
+
+    def _initialize_device_params(self):
+        self.device.set("out0_offset", value=0)  # Default after reboot = 0
+        self.device.set("out1_offset", value=0)  # Default after reboot = 0
+        self.device.set("out2_offset", value=0)  # Default after reboot = 0
+        self.device.set("out3_offset", value=0)  # Default after reboot = 0
+
+        # initialise the parameters of the default sequencers to the default values,
+        # the rest of the sequencers are not configured here, but will be configured
+        # with the same parameters as the default in process_pulse_sequence()
+        for target in [
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
+        ]:
+            target.set("cont_mode_en_awg_path0", False)  # Default after reboot = False
+            target.set("cont_mode_en_awg_path1", False)
+            target.set("cont_mode_waveform_idx_awg_path0", 0)
+            target.set("cont_mode_waveform_idx_awg_path1", 0)
+            target.set("marker_ovr_en", True)
+            target.set("marker_ovr_value", 15)
+            target.set("mixer_corr_gain_ratio", 1)
+            target.set("mixer_corr_phase_offset_degree", 0)
+            target.set("offset_awg_path0", 0)
+            target.set("offset_awg_path1", 0)
+            target.set("sync_en", False)
+            target.set("upsample_rate_awg_path0", 0)
+            target.set("upsample_rate_awg_path1", 0)
+            target.set("connect_out0", "off")  # Default after reboot = True
+            target.set("connect_out1", "off")
+            target.set("connect_out2", "off")
+            target.set("connect_out3", "off")
+
+        self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out0", "I")
+        self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "Q")
+        self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]].set("connect_out2", "I")
+        self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]].set("connect_out3", "Q")
+
+        # on initialisation, disconnect all other sequencers from the ports
+        self._device_num_sequencers = len(self.device.sequencers)
+        for sequencer in range(4, self._device_num_sequencers):
+            target = self.device.sequencers[sequencer]
+            [target.set(f"connect_out{x}", "off") for x in range(4)]
 
     def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
@@ -149,82 +193,14 @@ class ClusterQCM_BB(Instrument):
         It uploads to the module the port settings loaded from the runcard.
         """
         self._cluster.connect()
-        self.device = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
+        self.device: QcmQrm = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
         if not self.is_connected:
             if not self.device.present():
                 raise Exception(f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}")
             self.is_connected = True
 
             # once connected, initialise the parameters of the device to the default values
-            self._set_device_parameter(self.device, "out0_offset", value=0)  # Default after reboot = 0
-            self._set_device_parameter(self.device, "out1_offset", value=0)  # Default after reboot = 0
-            self._set_device_parameter(self.device, "out2_offset", value=0)  # Default after reboot = 0
-            self._set_device_parameter(self.device, "out3_offset", value=0)  # Default after reboot = 0
-
-            # initialise the parameters of the default sequencers to the default values,
-            # the rest of the sequencers are not configured here, but will be configured
-            # with the same parameters as the default in process_pulse_sequence()
-            for target in [
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
-            ]:
-                self._set_device_parameter(
-                    target, "cont_mode_en_awg_path0", "cont_mode_en_awg_path1", value=False
-                )  # Default after reboot = False
-                self._set_device_parameter(
-                    target, "cont_mode_waveform_idx_awg_path0", "cont_mode_waveform_idx_awg_path1", value=0
-                )  # Default after reboot = 0
-                self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-                self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
-                self._set_device_parameter(target, "mixer_corr_gain_ratio", value=1)
-                self._set_device_parameter(target, "mixer_corr_phase_offset_degree", value=0)
-                self._set_device_parameter(target, "offset_awg_path0", value=0)
-                self._set_device_parameter(target, "offset_awg_path1", value=0)
-                self._set_device_parameter(target, "sync_en", value=False)  # Default after reboot = False
-                self._set_device_parameter(target, "upsample_rate_awg_path0", "upsample_rate_awg_path1", value=0)
-
-            for target in [
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
-            ]:
-                self._set_device_parameter(target, "connect_out0", value="off")  # Default after reboot = True
-                self._set_device_parameter(target, "connect_out1", value="off")  # Default after reboot = True
-                self._set_device_parameter(target, "connect_out2", value="off")  # Default after reboot = True
-                self._set_device_parameter(target, "connect_out3", value="off")  # Default after reboot = True
-
-            self._set_device_parameter(
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-                "connect_out0",
-                value="I",
-            )
-            self._set_device_parameter(
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-                "connect_out1",
-                value="Q",
-            )
-            self._set_device_parameter(
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
-                "connect_out2",
-                value="I",
-            )
-            self._set_device_parameter(
-                self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
-                "connect_out3",
-                value="Q",
-            )
-
-            # on initialisation, disconnect all other sequencers from the ports
-            self._device_num_sequencers = len(self.device.sequencers)
-            for sequencer in range(4, self._device_num_sequencers):
-                target = self.device.sequencers[sequencer]
-                self._set_device_parameter(target, "connect_out0", value="off")
-                self._set_device_parameter(target, "connect_out1", value="off")
-                self._set_device_parameter(target, "connect_out2", value="off")
-                self._set_device_parameter(target, "connect_out3", value="off")
+            self._initialize_device_params()
             try:
                 for port in self.settings:
                     self._sequencers[port] = []
@@ -234,35 +210,6 @@ class ClusterQCM_BB(Instrument):
                     self.ports[port].nco_phase_offs = 0
             except:
                 raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
-
-    def _set_device_parameter(self, target, *parameters, value):
-        """Sets a parameter of the instrument, if it changed from the last stored in the cache.
-
-        Args:
-            target = an instance of qblox_instruments.qcodes_drivers.qcm_qrm.QcmQrm or
-                                    qblox_instruments.qcodes_drivers.sequencer.Sequencer
-            *parameters (list): A list of parameters to be cached and set.
-            value = The value to set the paramters.
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
-        """
-        if not self.is_connected:
-            raise Exception(f"There is no connection to the instrument {self.name}")
-        key = f"{target.name}.{parameters[0]}"
-        if key not in self._device_parameters:
-            for parameter in parameters:
-                if not hasattr(target, parameter):
-                    raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
-                target.set(parameter, value)
-            self._device_parameters[key] = value
-        elif self._device_parameters[key] != value:
-            for parameter in parameters:
-                target.set(parameter, value)
-            self._device_parameters[key] = value
-
-    def _erase_device_parameters_cache(self):
-        """Erases the cache of instrument parameters."""
-        self._device_parameters = {}
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the module.
@@ -311,26 +258,16 @@ class ClusterQCM_BB(Instrument):
                     value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(param_name=parameter)
                     if value:
                         target = self.device.sequencers[next_sequencer_number]
-                        self._set_device_parameter(target, parameter, value=value)
+                        target.set(parameter, value)
 
         # if hardware modulation is enabled configure nco_frequency
         if self.ports[port].hardware_mod_en:
-            self._set_device_parameter(
-                self.device.sequencers[next_sequencer_number],
-                "nco_freq",
-                value=frequency,  # Assumes all pulses in non_overlapping_pulses set
-                # have the same frequency. Non-overlapping pulses of different frequencies on the same
-                # qubit channel with hardware_demod_en would lead to wrong results.
-                # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
-                #       Even better, set the frequency before each pulse is played (would work with hardware modulation only)
-            )
-
-            # set sequencer port offset to the runcard value
-            # self._set_device_parameter(
-            #     self.device.sequencers[next_sequencer_number],
-            #     "out0_offset", #How to select device parameter offset??
-            #     value=qubits[qubit].sweetspot,
-            # )
+            self.device.sequencers[next_sequencer_number].set("nco_freq", frequency)
+            # Assumes all pulses in non_overlapping_pulses set
+            # have the same frequency. Non-overlapping pulses of different frequencies on the same
+            # qubit channel with hardware_demod_en would lead to wrong results.
+            # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
+            # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
             self.ports[port].offset = qubit.sweetspot if qubit else 0
         # create sequencer wrapper
@@ -684,28 +621,26 @@ class ClusterQCM_BB(Instrument):
         # Setup
         for sequencer_number in self._used_sequencers_numbers:
             target = self.device.sequencers[sequencer_number]
-            self._set_device_parameter(target, "sync_en", value=True)
-            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-            self._set_device_parameter(target, "marker_ovr_value", value=15)  # Default after reboot = 0
+            target.set("sync_en", True)
+            target.set("marker_ovr_en", True)  # Default after reboot = False
+            target.set("marker_ovr_value", 15)  # Default after reboot = 0
 
         for sequencer_number in self._unused_sequencers_numbers:
             target = self.device.sequencers[sequencer_number]
-            self._set_device_parameter(target, "sync_en", value=False)
-            self._set_device_parameter(target, "marker_ovr_en", value=True)  # Default after reboot = False
-            self._set_device_parameter(target, "marker_ovr_value", value=0)  # Default after reboot = 0
+            target.set("sync_en", False)
+            target.set("marker_ovr_en", True)  # Default after reboot = False
+            target.set("marker_ovr_value", 0)  # Default after reboot = 0
             if sequencer_number >= 4:  # Never disconnect default sequencers
-                self._set_device_parameter(target, "connect_out0", value="off")
-                self._set_device_parameter(target, "connect_out1", value="off")
-                self._set_device_parameter(target, "connect_out2", value="off")
-                self._set_device_parameter(target, "connect_out3", value="off")
+                target.set("connect_out0", "off")
+                target.set("connect_out1", "off")
+                target.set("connect_out2", "off")
+                target.set("connect_out3", "off")
 
         # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
         # the general offset goes to 0 (eventhough the parameter will still show the right value).
         # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
-        self.device.out0_offset(self._device_parameters[self.device.name + "." + "out0_offset"])
-        self.device.out1_offset(self._device_parameters[self.device.name + "." + "out1_offset"])
-        self.device.out2_offset(self._device_parameters[self.device.name + "." + "out2_offset"])
-        self.device.out3_offset(self._device_parameters[self.device.name + "." + "out3_offset"])
+        # FIXED, can be checked by:
+        # [print(f"offset {i}: {self.device.get(f'out{i}_offset')}") for i in range(4)]
 
         # Upload waveforms and program
         qblox_dict = {}
@@ -775,19 +710,10 @@ class ClusterQCM_BB(Instrument):
             for port in self.ports:
                 self.ports[port].offset = 0
 
-            # self._set_device_parameter(self.device, "out0_offset", value=0)
-            # self._set_device_parameter(self.device, "out1_offset", value=0)
-            # self._set_device_parameter(self.device, "out2_offset", value=0)
-            # self._set_device_parameter(self.device, "out3_offset", value=0)
-            # self.device.out0_offset(0)
-            # self.device.out1_offset(0)
-            # self.device.out2_offset(0)
-            # self.device.out3_offset(0)
         except:
             log.warning("Unable to clear offsets")
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
-        self._erase_device_parameters_cache()
         self._cluster = None
         self.is_connected = False
