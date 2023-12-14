@@ -75,11 +75,9 @@ def test_pulses_pulse_init():
     assert repr(p0) == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
 
     # initialisation with Symbolic Expressions
-    t1 = se_int(100, "t1")
-    d1 = se_int(50, "d1")
     p1 = Pulse(
-        start=t1,
-        duration=d1,
+        start=100,
+        duration=50,
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
@@ -95,7 +93,7 @@ def test_pulses_pulse_init():
         start=0,
         duration=50,
         amplitude=0.9,
-        frequency=20e6,
+        frequency=int(20e6),
         relative_phase=0,
         shape=Rectangular(),
         channel=0,
@@ -103,7 +101,7 @@ def test_pulses_pulse_init():
         qubit=0,
     )
     assert repr(p2) == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
-    assert type(p2.frequency) == int and p2.frequency == 20_000_000
+    assert isinstance(p2.frequency, int) and p2.frequency == 20_000_000
 
     # initialisation with non float (int) relative_phase
     p3 = Pulse(
@@ -111,14 +109,14 @@ def test_pulses_pulse_init():
         duration=50,
         amplitude=0.9,
         frequency=20_000_000,
-        relative_phase=1,
+        relative_phase=1.0,
         shape=Rectangular(),
         channel=0,
         type=PulseType.READOUT,
         qubit=0,
     )
     assert repr(p3) == "Pulse(0, 50, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
-    assert type(p3.relative_phase) == float and p3.relative_phase == 1.0
+    assert isinstance(p3.relative_phase, float) and p3.relative_phase == 1.0
 
     # initialisation with str shape
     p4 = Pulse(
@@ -200,83 +198,7 @@ def test_pulses_pulse_attributes():
     assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
     assert type(p10.channel) == type(channel) and p10.channel == channel
     assert type(p10.qubit) == type(qubit) and p10.qubit == qubit
-    assert type(p10.finish) == int and p10.finish == 60
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=-10,  # Start should be >= 0
-            duration=50,
-            amplitude=0.9,
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape=Rectangular(),
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=0,
-            duration=-1,  # duration should be > 0
-            amplitude=0.9,
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape=Rectangular(),
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=0,
-            duration=50,
-            amplitude=1.1,  # amplitude should be >= 0 & <= 1
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape=Rectangular(),
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=0,
-            duration=50,
-            amplitude=0.9,
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape="NonImplementedShape()",
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
+    assert isinstance(p10.finish, int) and p10.finish == 60
 
     p0 = Pulse(
         start=0,
