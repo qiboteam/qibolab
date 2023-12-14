@@ -691,38 +691,38 @@ class Pulse:
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
-        return self._shape.envelope_waveform_i(sampling_rate)
+        return self.shape.envelope_waveform_i(sampling_rate)
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
 
-        return self._shape.envelope_waveform_q(sampling_rate)
+        return self.shape.envelope_waveform_q(sampling_rate)
 
     def envelope_waveforms(self, sampling_rate=SAMPLING_RATE):  #  -> tuple[Waveform, Waveform]:
         """A tuple with the i and q envelope waveforms of the pulse."""
 
         return (
-            self._shape.envelope_waveform_i(sampling_rate),
-            self._shape.envelope_waveform_q(sampling_rate),
+            self.shape.envelope_waveform_i(sampling_rate),
+            self.shape.envelope_waveform_q(sampling_rate),
         )
 
     def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The waveform of the i component of the pulse, modulated with its
         frequency."""
 
-        return self._shape.modulated_waveform_i(sampling_rate)
+        return self.shape.modulated_waveform_i(sampling_rate)
 
     def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The waveform of the q component of the pulse, modulated with its
         frequency."""
 
-        return self._shape.modulated_waveform_q(sampling_rate)
+        return self.shape.modulated_waveform_q(sampling_rate)
 
     def modulated_waveforms(self, sampling_rate):  #  -> tuple[Waveform, Waveform]:
         """A tuple with the i and q waveforms of the pulse, modulated with its
         frequency."""
 
-        return self._shape.modulated_waveforms(sampling_rate)
+        return self.shape.modulated_waveforms(sampling_rate)
 
     def __repr__(self):
         return self.serial
@@ -762,7 +762,7 @@ class Pulse:
                 self.amplitude,
                 self.frequency,
                 self.relative_phase,
-                repr(self._shape),  # self._shape,
+                repr(self.shape),  # self.shape,
                 self.channel,
                 self.qubit,
             )
@@ -773,7 +773,7 @@ class Pulse:
                 self.amplitude,
                 self.frequency,
                 self.relative_phase,
-                repr(self._shape),  # self._shape,
+                repr(self.shape),  # self.shape,
                 self.channel,
                 self.qubit,
             )
@@ -783,7 +783,7 @@ class Pulse:
                 self.start,
                 self.duration,
                 self.amplitude,
-                self._shape,
+                self.shape,
                 self.channel,
                 self.qubit,
             )
@@ -795,7 +795,7 @@ class Pulse:
                 self.amplitude,
                 self.frequency,
                 self.relative_phase,
-                repr(self._shape),  # self._shape,
+                repr(self.shape),  # self.shape,
                 self.channel,
                 self.type,
                 self.qubit,
@@ -808,7 +808,7 @@ class Pulse:
             self._amplitude,
             self._frequency,
             self._relative_phase,
-            self._shape,
+            self.shape,
             self._channel,
             self._type,
             self._qubit,
@@ -980,7 +980,7 @@ class ReadoutPulse(Pulse):
             self.amplitude,
             self.frequency,
             self.relative_phase,
-            copy.deepcopy(self._shape),  # self._shape,
+            copy.deepcopy(self.shape),  # self.shape,
             self.channel,
             self.qubit,
         )
@@ -1048,13 +1048,13 @@ class FluxPulse(Pulse):
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """Flux pulses only have i component."""
-        return self._shape.envelope_waveform_i(sampling_rate)
+        return self.shape.envelope_waveform_i(sampling_rate)
 
     def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        return self._shape.envelope_waveform_i(sampling_rate)
+        return self.shape.envelope_waveform_i(sampling_rate)
 
     def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        return self._shape.envelope_waveform_i(sampling_rate)
+        return self.shape.envelope_waveform_i(sampling_rate)
 
     @property
     def serial(self):
@@ -1129,48 +1129,48 @@ class SplitPulse(Pulse):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         waveform = Waveform(
-            self._shape.envelope_waveform_i(sampling_rate).data[
+            self.shape.envelope_waveform_i(sampling_rate).data[
                 self._window_start - self.start : self._window_finish - self.start
             ]
         )
         waveform.serial = (
-            self._shape.envelope_waveform_i(sampling_rate).serial
+            self.shape.envelope_waveform_i(sampling_rate).serial
             + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
         )
         return waveform
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         waveform = Waveform(
-            self._shape.modulated_waveform_q(sampling_rate).data[
+            self.shape.modulated_waveform_q(sampling_rate).data[
                 self._window_start - self.start : self._window_finish - self.start
             ]
         )
         waveform.serial = (
-            self._shape.modulated_waveform_q(sampling_rate).serial
+            self.shape.modulated_waveform_q(sampling_rate).serial
             + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
         )
         return waveform
 
     def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         waveform = Waveform(
-            self._shape.modulated_waveform_i(sampling_rate).data[
+            self.shape.modulated_waveform_i(sampling_rate).data[
                 self._window_start - self.start : self._window_finish - self.start
             ]
         )
         waveform.serial = (
-            self._shape.modulated_waveform_q(sampling_rate).serial
+            self.shape.modulated_waveform_q(sampling_rate).serial
             + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
         )
         return waveform
 
     def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         waveform = Waveform(
-            self._shape.modulated_waveform_q(sampling_rate).data[
+            self.shape.modulated_waveform_q(sampling_rate).data[
                 self._window_start - self.start : self._window_finish - self.start
             ]
         )
         waveform.serial = (
-            self._shape.modulated_waveform_q(sampling_rate).serial
+            self.shape.modulated_waveform_q(sampling_rate).serial
             + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
         )
         return waveform
