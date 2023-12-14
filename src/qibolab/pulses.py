@@ -9,7 +9,6 @@ import numpy as np
 from qibo.config import log
 from scipy.signal import lfilter
 
-
 SAMPLING_RATE = 1
 """Default sampling rate in gigasamples per second (GSps).
 
