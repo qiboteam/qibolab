@@ -24,7 +24,6 @@ from qibolab.pulses import (
     Waveform,
     eCap,
 )
-from qibolab.symbolic import intSymbolicExpression as se_int
 
 HERE = pathlib.Path(__file__).parent
 
@@ -330,24 +329,12 @@ def test_pulses_pulse_hash():
 
     assert p1 == p2
 
-    t0 = se_int(0, "t0")
-    t1 = se_int(0, "t1")
-    p1 = Pulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    p2 = Pulse(t1, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    assert p1 == p2
-    t0 += 100
-    assert p1 != p2
-
-    t0 = se_int(0, "t0")
+    t0 = 0
     p1 = Pulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
     p2 = p1.shallow_copy()
     p3 = p1.copy()
     assert p1 == p2
     assert p1 == p3
-
-    t0 += 100
-    assert p1 == p2
-    assert p1 != p3
 
 
 def test_pulses_pulse_aliases():
@@ -589,39 +576,14 @@ def test_pulses_pulsesequence_separate_overlapping_pulses():
         n += 1
         for pulse in segregated_ps:
             pulse.channel = n
-    # ps.plot()
-
-
-def test_pulses_pulse_symbolic_expressions():
-    t0 = se_int(0, "t0")
-    t = se_int(0, "t")
-    p1 = DrivePulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(p1.se_finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(p2.se_finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    ps = p1 + p2 + p3
-
-    assert p1.start == 0 and p1.finish == 400
-    assert p2.start == 400 and p2.finish == 800
-    assert p3.start == 800 and p3.finish == 1200
-    assert ps.start == 0 and ps.finish == 1200
-
-    def update(start=0, t_between=0):
-        t.value = t_between
-        t0.value = start
-
-    update(50, 100)
-    assert p1.start == 50 and p1.finish == 450
-    assert p2.start == 550 and p2.finish == 950
-    assert p3.start == 950 and p3.finish == 1350
-    assert ps.start == 50 and ps.finish == 1350
 
 
 def test_pulses_pulse_pulse_order():
-    t0 = se_int(0, "t0")
-    t = se_int(0, "t")
+    t0 = 0
+    t = 0
     p1 = DrivePulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(p1.se_finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(p2.se_finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p2 = ReadoutPulse(p1.finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
+    p3 = DrivePulse(p2.finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
     ps1 = p1 + p2 + p3
     ps2 = p3 + p1 + p2
     assert ps1 == ps2
