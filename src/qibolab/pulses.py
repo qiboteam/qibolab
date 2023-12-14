@@ -664,67 +664,29 @@ class Custom(PulseShape):
 
 @dataclass
 class Pulse:
-    """A class to represent a pulse to be sent to the QPU.
-
-    Args:
-        start (int | intSymbolicExpression): Start time of pulse in ns.
-        duration (int | intSymbolicExpression): Pulse duration in ns.
-        amplitude (float): Pulse digital amplitude (unitless) [-1 to 1].
-        frequency (int): Pulse Intermediate Frequency in Hz [10e6 to 300e6].
-        relative_phase (float): To be added.
-        shape: (PulseShape | str): {'Rectangular()', 'Gaussian(rel_sigma)', 'DRAG(rel_sigma, beta)'} Pulse shape.
-            See :py:mod:`qibolab.pulses` for list of available shapes.
-        channel (int | str): the channel on which the pulse should be synthesised.
-        type (PulseType | str): {'ro', 'qd', 'qf'} type of pulse {ReadOut, Qubit Drive, Qubit Flux}
-        qubit (int): qubit or coupler associated with the pulse
-
-    Example:
-        .. code-block:: python
-
-            from qibolab.pulses import Pulse, Gaussian
-
-            # define Gaussian drive pulse
-            drive_pulse = Pulse(
-                start=0,
-                duration=60,
-                amplitude=0.3,
-                frequency=-200_000_000,
-                relative_phase=0.0,
-                shape=Gaussian(5),
-                channel=1,
-                type=PulseType.DRIVE,
-                qubit=0,
-            )
-
-            # define Rectangular readout pulse
-            readout_pulse = Pulse(
-                start=intSymbolicExpression(60),
-                duration=2000,
-                amplitude=0.3,
-                frequency=20_000_000,
-                relative_phase=0.0,
-                shape=Rectangular(),
-                channel=2,
-                type=PulseType.READOUT,
-                qubit=0,
-            )
-    """
+    """A class to represent a pulse to be sent to the QPU."""
 
     start: Optional[int] = None
-    """Time when the pulse is scheduled to be played, in ns."""
+    """Start time of pulse in ns."""
     duration: Optional[int] = None
-    """Duration of the pulse, in ns."""
+    """Pulse duration in ns."""
     amplitude: Optional[float] = None
-    """Pulse amplitude.
+    """Pulse digital amplitude (unitless).
 
     Pulse amplitudes are normalised between -1 and 1.
     """
     frequency: Optional[int] = None
-    """Frequency of the pulse, in Hz."""
+    """Pulse Intermediate Frequency in Hz.
+
+    The value has to be in the range [10e6 to 300e6].
+    """
     relative_phase: Optional[float] = None
     """Relative phase of the pulse, in radians."""
     shape: Optional[PulseShape] = None
-    """Pulse shape, as a PulseShape object."""
+    """Pulse shape, as a PulseShape object.
+
+    See :py:mod:`qibolab.pulses` for list of available shapes.
+    """
     channel: int = (0,)
     """Channel on which the pulse should be played.
 
@@ -736,7 +698,7 @@ class Pulse:
     type: PulseType = (PulseType.DRIVE,)
     """Pulse type, as an element of PulseType enumeration."""
     qubit: Optional[int] = (0,)
-    """Qubit addressed by the pulse."""
+    """Qubit or coupler addressed by the pulse."""
     _if: int = 0
 
     @property
