@@ -826,15 +826,15 @@ class Pulse:
 
     def shallow_copy(self):  # -> Pulse:
         return Pulse(
-            self._start,
-            self._duration,
-            self._amplitude,
-            self._frequency,
-            self._relative_phase,
+            self.start,
+            self.duration,
+            self.amplitude,
+            self.frequency,
+            self.relative_phase,
             self.shape,
-            self._channel,
-            self._type,
-            self._qubit,
+            self.channel,
+            self.type,
+            self.qubit,
         )
 
     def is_equal_ignoring_start(self, item) -> bool:
