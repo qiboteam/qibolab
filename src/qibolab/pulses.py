@@ -1,5 +1,6 @@
 """Pulse and PulseSequence classes."""
 import copy
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -191,6 +192,21 @@ class PulseShape(ABC):
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
         return isinstance(item, type(self))
+
+    @staticmethod
+    def eval(value: str) -> "PulseShape":
+        """Deserialize string representation.
+
+        .. todo::
+
+            To be replaced by proper serialization.
+        """
+        shape_name = re.findall(r"(\w+)", value)[0]
+        if shape_name not in globals():
+            raise ValueError(f"shape {value} not found")
+        shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
+        # TODO: create multiple tests to prove regex working correctly
+        return globals()[shape_name](*shape_parameters)
 
 
 class Rectangular(PulseShape):
@@ -653,6 +669,10 @@ class Pulse:
     def __post_init__(self):
         if isinstance(self.type, str):
             self.type = PulseType(self.type)
+        if isinstance(self.shape, str):
+            self.shape = PulseShape.eval(self.shape)
+        # TODO: drop the cyclic reference
+        self.shape.pulse = self
 
     @property
     def finish(self) -> Optional[int]:
