@@ -141,49 +141,52 @@ class ClusterQCM_BB(Instrument):
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
 
-    def _initialize_device_params(self):
-        self.device.set("out0_offset", value=0)  # Default after reboot = 0
-        self.device.set("out1_offset", value=0)  # Default after reboot = 0
-        self.device.set("out2_offset", value=0)  # Default after reboot = 0
-        self.device.set("out3_offset", value=0)  # Default after reboot = 0
+    def _set_default_values(self):
+        if self.device.present():
+            self.device.set("out0_offset", value=0)  # Default after reboot = 0
+            self.device.set("out1_offset", value=0)  # Default after reboot = 0
+            self.device.set("out2_offset", value=0)  # Default after reboot = 0
+            self.device.set("out3_offset", value=0)  # Default after reboot = 0
 
-        # initialise the parameters of the default sequencers to the default values,
-        # the rest of the sequencers are not configured here, but will be configured
-        # with the same parameters as the default in process_pulse_sequence()
-        for target in [
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
-        ]:
-            target.set("cont_mode_en_awg_path0", False)  # Default after reboot = False
-            target.set("cont_mode_en_awg_path1", False)
-            target.set("cont_mode_waveform_idx_awg_path0", 0)
-            target.set("cont_mode_waveform_idx_awg_path1", 0)
-            target.set("marker_ovr_en", True)
-            target.set("marker_ovr_value", 15)
-            target.set("mixer_corr_gain_ratio", 1)
-            target.set("mixer_corr_phase_offset_degree", 0)
-            target.set("offset_awg_path0", 0)
-            target.set("offset_awg_path1", 0)
-            target.set("sync_en", False)
-            target.set("upsample_rate_awg_path0", 0)
-            target.set("upsample_rate_awg_path1", 0)
-            target.set("connect_out0", "off")  # Default after reboot = True
-            target.set("connect_out1", "off")
-            target.set("connect_out2", "off")
-            target.set("connect_out3", "off")
+            # initialise the parameters of the default sequencers to the default values,
+            # the rest of the sequencers are not configured here, but will be configured
+            # with the same parameters as the default in process_pulse_sequence()
+            for target in [
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]],
+                self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]],
+            ]:
+                target.set("cont_mode_en_awg_path0", False)  # Default after reboot = False
+                target.set("cont_mode_en_awg_path1", False)
+                target.set("cont_mode_waveform_idx_awg_path0", 0)
+                target.set("cont_mode_waveform_idx_awg_path1", 0)
+                target.set("marker_ovr_en", True)
+                target.set("marker_ovr_value", 15)
+                target.set("mixer_corr_gain_ratio", 1)
+                target.set("mixer_corr_phase_offset_degree", 0)
+                target.set("offset_awg_path0", 0)
+                target.set("offset_awg_path1", 0)
+                target.set("sync_en", False)
+                target.set("upsample_rate_awg_path0", 0)
+                target.set("upsample_rate_awg_path1", 0)
+                target.set("connect_out0", "off")  # Default after reboot = True
+                target.set("connect_out1", "off")
+                target.set("connect_out2", "off")
+                target.set("connect_out3", "off")
 
-        self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out0", "I")
-        self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "Q")
-        self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]].set("connect_out2", "I")
-        self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]].set("connect_out3", "Q")
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out0", "I")
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "Q")
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]].set("connect_out2", "I")
+            self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]].set("connect_out3", "Q")
 
-        # on initialisation, disconnect all other sequencers from the ports
-        self._device_num_sequencers = len(self.device.sequencers)
-        for sequencer in range(4, self._device_num_sequencers):
-            target = self.device.sequencers[sequencer]
-            [target.set(f"connect_out{x}", "off") for x in range(4)]
+            # on initialisation, disconnect all other sequencers from the ports
+            self._device_num_sequencers = len(self.device.sequencers)
+            for sequencer in range(4, self._device_num_sequencers):
+                target = self.device.sequencers[sequencer]
+                [target.set(f"connect_out{x}", "off") for x in range(4)]
+        else:
+            raise ConnectionError(f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}")
 
     def connect(self):
         """Connects to the instrument using the instrument settings in the runcard.
@@ -192,24 +195,23 @@ class ClusterQCM_BB(Instrument):
         parameters, and initialises the the underlying device parameters.
         It uploads to the module the port settings loaded from the runcard.
         """
+        if self.is_connected:
+            return
+
         self._cluster.connect()
         self.device: QcmQrm = self._cluster.device.modules[int(self.address.split(":")[1]) - 1]
-        if not self.is_connected:
-            if not self.device.present():
-                raise Exception(f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}")
-            self.is_connected = True
-
-            # once connected, initialise the parameters of the device to the default values
-            self._initialize_device_params()
-            try:
-                for port in self.settings:
-                    self._sequencers[port] = []
-                    self.ports[port].offset = self.settings[port]["offset"]
-                    self.ports[port].hardware_mod_en = True
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
-            except:
-                raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
+        # once connected, initialise the parameters of the device to the default values
+        self._set_default_values()
+        try:
+            for port in self.settings:
+                self._sequencers[port] = []
+                self.ports[port].offset = self.settings[port]["offset"]
+                self.ports[port].hardware_mod_en = True
+                self.ports[port].nco_freq = 0
+                self.ports[port].nco_phase_offs = 0
+        except:
+            raise RuntimeError(f"Unable to initialize port parameters on module {self.name}")
+        self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the module.
