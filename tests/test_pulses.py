@@ -72,10 +72,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert (
-        repr(p0)
-        == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
-    )
+    assert repr(p0) == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
 
     # initialisation with Symbolic Expressions
     t1 = se_int(100, "t1")
@@ -91,10 +88,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert (
-        repr(p1)
-        == "Pulse(100, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
-    )
+    assert repr(p1) == "Pulse(100, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
 
     # initialisation with non int (float) frequency
     p2 = Pulse(
@@ -108,10 +102,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert (
-        repr(p2)
-        == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
-    )
+    assert repr(p2) == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
     assert type(p2.frequency) == int and p2.frequency == 20_000_000
 
     # initialisation with non float (int) relative_phase
@@ -126,10 +117,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert (
-        repr(p3)
-        == "Pulse(0, 50, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
-    )
+    assert repr(p3) == "Pulse(0, 50, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
     assert type(p3.relative_phase) == float and p3.relative_phase == 1.0
 
     # initialisation with str shape
@@ -144,10 +132,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert (
-        repr(p4)
-        == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
-    )
+    assert repr(p4) == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
 
     # initialisation with str channel and str qubit
     p5 = Pulse(
@@ -161,10 +146,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit="qubit0",
     )
-    assert (
-        repr(p5)
-        == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), channel0, PulseType.READOUT, qubit0)"
-    )
+    assert repr(p5) == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), channel0, PulseType.READOUT, qubit0)"
     assert p5.qubit == "qubit0"
 
     # initialisation with different frequencies, shapes and types
@@ -188,10 +170,7 @@ def test_pulses_pulse_init():
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert (
-        repr(p12)
-        == "Pulse(5.5, 34.33, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
-    )
+    assert repr(p12) == "Pulse(5.5, 34.33, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
     assert isinstance(p12.start, float)
     assert isinstance(p12.duration, float)
     assert p12.finish == 5.5 + 34.33
@@ -217,9 +196,7 @@ def test_pulses_pulse_attributes():
     assert type(p10.duration) == int and p10.duration == 50
     assert type(p10.amplitude) == float and p10.amplitude == 0.9
     assert type(p10.frequency) == int and p10.frequency == 20_000_000
-    assert type(p10.phase) == float and np.allclose(
-        p10.phase, 2 * np.pi * p10.start * p10.frequency / 1e9
-    )
+    assert type(p10.phase) == float and np.allclose(p10.phase, 2 * np.pi * p10.start * p10.frequency / 1e9)
     assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
     assert type(p10.channel) == type(channel) and p10.channel == channel
     assert type(p10.qubit) == type(qubit) and p10.qubit == qubit
@@ -338,10 +315,7 @@ def test_pulses_is_equal_ignoring_start():
 
 def test_pulses_pulse_serial():
     p11 = Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE)
-    assert (
-        p11.serial
-        == "Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE, 0)"
-    )
+    assert p11.serial == "Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE, 0)"
     assert repr(p11) == p11.serial
 
 
@@ -479,9 +453,7 @@ def test_pulses_pulse_aliases():
     )
     assert repr(dp) == "DrivePulse(0, 2000, 0.9, 200_000_000, 0, Gaussian(5), 0, 0)"
 
-    fp = FluxPulse(
-        start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0
-    )
+    fp = FluxPulse(start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0)
     assert repr(fp) == "FluxPulse(0, 300, 0.9, Rectangular(), 0, 0)"
 
 
@@ -792,21 +764,13 @@ def test_pulses_pulseshape_rectangular():
         pulse.amplitude * np.ones(num_samples),
         pulse.amplitude * np.zeros(num_samples),
     )
-    global_phase = (
-        2 * np.pi * pulse._if * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate
-    )
+    global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q
-    )
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q)
 
     assert (
         pulse.shape.envelope_waveform_i().serial
@@ -852,28 +816,16 @@ def test_pulses_pulseshape_gaussian():
     num_samples = int(pulse.duration / sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
-        -(1 / 2)
-        * (
-            ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
-        )
+        -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / pulse.shape.rel_sigma) ** 2))
     )
     q = pulse.amplitude * np.zeros(num_samples)
-    global_phase = (
-        2 * np.pi * pulse.frequency * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate
-    )
+    global_phase = 2 * np.pi * pulse.frequency * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q
-    )
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q)
 
     assert (
         pulse.shape.envelope_waveform_i().serial
@@ -920,11 +872,7 @@ def test_pulses_pulseshape_drag():
     num_samples = int(pulse.duration / 1 * sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
-        -(1 / 2)
-        * (
-            ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
-        )
+        -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / pulse.shape.rel_sigma) ** 2))
     )
     q = (
         pulse.shape.beta
@@ -932,21 +880,13 @@ def test_pulses_pulseshape_drag():
         * i
         * sampling_rate
     )
-    global_phase = (
-        2 * np.pi * pulse._if * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate
-    )
+    global_phase = 2 * np.pi * pulse._if * pulse.start / 1e9  # pulse start, duration and finish are in ns
+    mod_i, mod_q = modulate(i, q, num_samples, pulse._if, global_phase + pulse.relative_phase, sampling_rate)
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q
-    )
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i)
+    np.testing.assert_allclose(pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q)
 
     assert (
         pulse.shape.envelope_waveform_i().serial
