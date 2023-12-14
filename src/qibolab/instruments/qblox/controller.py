@@ -14,7 +14,8 @@ from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 MAX_BATCH_SIZE = 30
-"""Maximum number of sequences that can be unrolled in a single one (independent of measurements)."""
+"""Maximum number of sequences that can be unrolled in a single one
+(independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
 
 
@@ -47,7 +48,9 @@ class QbloxController(Controller):
         except Exception as exception:
             raise_error(
                 RuntimeError,
-                "Cannot establish connection to " f"{self.modules[name]} module. " f"Error captured: '{exception}'",
+                "Cannot establish connection to "
+                f"{self.modules[name]} module. "
+                f"Error captured: '{exception}'",
             )
             # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
@@ -82,7 +85,8 @@ class QbloxController(Controller):
         self.cluster.stop()
 
     def _termination_handler(self, signum, frame):
-        """Calls all modules to stop if the program receives a termination signal."""
+        """Calls all modules to stop if the program receives a termination
+        signal."""
 
         log.warning("Termination signal received, stopping modules.")
         if self.is_connected:
@@ -103,10 +107,12 @@ class QbloxController(Controller):
     def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
-        This method updates the `channel_port_map` attribute of the specified Qblox module
-        based on the information contained in the provided qubits dictionary (dict of `qubit` objects).
+        This method updates the `channel_port_map` attribute of the
+        specified Qblox module based on the information contained in the
+        provided qubits dictionary (dict of `qubit` objects).
 
-        Return the list of channels connected to module_name"""
+        Return the list of channels connected to module_name
+        """
         for qubit in qubits.values():
             for channel in qubit.channels:
                 if channel.port and channel.port.module.name == module.name:
@@ -132,7 +138,9 @@ class QbloxController(Controller):
             sweepers (list(Sweeper)): A list of Sweeper objects defining parameter sweeps.
         """
         if not self.is_connected:
-            raise_error(RuntimeError, "Execution failed because modules are not connected.")
+            raise_error(
+                RuntimeError, "Execution failed because modules are not connected."
+            )
 
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             nshots = options.nshots
@@ -175,7 +183,14 @@ class QbloxController(Controller):
                     pulse._if = int(pulse.frequency - pulse_channel.lo_frequency)
 
             #  ask each module to generate waveforms & program and upload them to the device
-            module.process_pulse_sequence(qubits, module_pulses[name], navgs, nshots, repetition_duration, sweepers)
+            module.process_pulse_sequence(
+                qubits,
+                module_pulses[name],
+                navgs,
+                nshots,
+                repetition_duration,
+                sweepers,
+            )
 
             # log.info(f"{self.modules[name]}: Uploading pulse sequence")
             module.upload()
@@ -188,7 +203,10 @@ class QbloxController(Controller):
         # retrieve the results
         acquisition_results = {}
         for name, module in self.modules.items():
-            if isinstance(module, ClusterQRM_RF) and not module_pulses[name].ro_pulses.is_empty:
+            if (
+                isinstance(module, ClusterQRM_RF)
+                and not module_pulses[name].ro_pulses.is_empty
+            ):
                 results = module.acquire()
                 existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
@@ -229,7 +247,14 @@ class QbloxController(Controller):
     def split_batches(self, sequences):
         return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
-    def sweep(self, qubits: dict, couplers: dict, sequence: PulseSequence, options: ExecutionParameters, *sweepers):
+    def sweep(
+        self,
+        qubits: dict,
+        couplers: dict,
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        *sweepers,
+    ):
         """Executes a sequence of pulses while sweeping one or more parameters.
 
         The parameters to be swept are defined in :class:`qibolab.sweeper.Sweeper` object.
@@ -248,7 +273,11 @@ class QbloxController(Controller):
         sweepers_copy = []
         for sweeper in sweepers:
             if sweeper.pulses:
-                ps = [sequence_copy[sequence_copy.index(pulse)] for pulse in sweeper.pulses if pulse in sequence_copy]
+                ps = [
+                    sequence_copy[sequence_copy.index(pulse)]
+                    for pulse in sweeper.pulses
+                    if pulse in sequence_copy
+                ]
             else:
                 ps = None
             sweepers_copy.append(
@@ -350,18 +379,26 @@ class QbloxController(Controller):
                             if sweeper.type == SweeperType.ABSOLUTE:
                                 qubits[pulse.qubit].readout.lo_frequency = value
                             elif sweeper.type == SweeperType.OFFSET:
-                                qubits[pulse.qubit].readout.lo_frequency = initial[pulse.id] + value
+                                qubits[pulse.qubit].readout.lo_frequency = (
+                                    initial[pulse.id] + value
+                                )
                             elif sweeper.type == SweeperType.FACTOR:
-                                qubits[pulse.qubit].readout.lo_frequency = initial[pulse.id] * value
+                                qubits[pulse.qubit].readout.lo_frequency = (
+                                    initial[pulse.id] * value
+                                )
 
                         elif pulse.type == PulseType.DRIVE:
                             initial[pulse.id] = qubits[pulse.qubit].drive.lo_frequency
                             if sweeper.type == SweeperType.ABSOLUTE:
                                 qubits[pulse.qubit].drive.lo_frequency = value
                             elif sweeper.type == SweeperType.OFFSET:
-                                qubits[pulse.qubit].drive.lo_frequency = initial[pulse.id] + value
+                                qubits[pulse.qubit].drive.lo_frequency = (
+                                    initial[pulse.id] + value
+                                )
                             elif sweeper.type == SweeperType.FACTOR:
-                                qubits[pulse.qubit].drive.lo_frequency = initial[pulse.id] * value
+                                qubits[pulse.qubit].drive.lo_frequency = (
+                                    initial[pulse.id] * value
+                                )
 
                 if len(sweepers) > 1:
                     self._sweep_recursion(
@@ -372,7 +409,9 @@ class QbloxController(Controller):
                         results=results,
                     )
                 else:
-                    result = self._execute_pulse_sequence(qubits=qubits, sequence=sequence, options=options)
+                    result = self._execute_pulse_sequence(
+                        qubits=qubits, sequence=sequence, options=options
+                    )
                     for pulse in sequence.ro_pulses:
                         if results[pulse.id]:
                             results[pulse.id] += result[pulse.serial]
@@ -395,14 +434,19 @@ class QbloxController(Controller):
 
             if sweeper.parameter == Parameter.relative_phase:
                 if sweeper.type != SweeperType.ABSOLUTE:
-                    raise_error(ValueError, "relative_phase sweeps other than ABSOLUTE are not supported by qblox yet")
+                    raise_error(
+                        ValueError,
+                        "relative_phase sweeps other than ABSOLUTE are not supported by qblox yet",
+                    )
                 from qibolab.instruments.qblox.q1asm import convert_phase
 
                 c_values = np.array([convert_phase(v) for v in sweeper.values])
                 if any(np.diff(c_values) < 0):
                     split_relative_phase = True
                     _from = 0
-                    for idx in np.append(np.where(np.diff(c_values) < 0), len(c_values) - 1):
+                    for idx in np.append(
+                        np.where(np.diff(c_values) < 0), len(c_values) - 1
+                    ):
                         _to = idx + 1
                         _values = sweeper.values[_from:_to]
                         split_sweeper = Sweeper(
@@ -412,16 +456,30 @@ class QbloxController(Controller):
                             qubits=sweeper.qubits,
                         )
                         self._sweep_recursion(
-                            qubits, sequence, options, *((split_sweeper,) + sweepers[1:]), results=results
+                            qubits,
+                            sequence,
+                            options,
+                            *((split_sweeper,) + sweepers[1:]),
+                            results=results,
                         )
                         _from = _to
 
             if not split_relative_phase:
                 if any(s.parameter not in rt_sweepers for s in sweepers):
                     # TODO: reorder the sequence of the sweepers and the results
-                    raise Exception("cannot execute a for-loop sweeper nested inside of a rt sweeper")
-                nshots = options.nshots if options.averaging_mode == AveragingMode.SINGLESHOT else 1
-                navgs = options.nshots if options.averaging_mode != AveragingMode.SINGLESHOT else 1
+                    raise Exception(
+                        "cannot execute a for-loop sweeper nested inside of a rt sweeper"
+                    )
+                nshots = (
+                    options.nshots
+                    if options.averaging_mode == AveragingMode.SINGLESHOT
+                    else 1
+                )
+                navgs = (
+                    options.nshots
+                    if options.averaging_mode != AveragingMode.SINGLESHOT
+                    else 1
+                )
                 num_bins = nshots
                 for sweeper in sweepers:
                     num_bins *= len(sweeper.values)
@@ -444,7 +502,9 @@ class QbloxController(Controller):
                     #             elif pulse.type == PulseType.DRIVE:
                     #                 qubits[pulse.qubit].drive.gain = 1
 
-                    result = self._execute_pulse_sequence(qubits, sequence, options, sweepers)
+                    result = self._execute_pulse_sequence(
+                        qubits, sequence, options, sweepers
+                    )
                     for pulse in sequence.ro_pulses:
                         if results[pulse.id]:
                             results[pulse.id] += result[pulse.serial]
@@ -462,7 +522,9 @@ class QbloxController(Controller):
                         num_bins = max_rt_nshots * sweepers_repetitions
 
                         for sft_iteration in range(num_full_sft_iterations + 1):
-                            _nshots = min(max_rt_nshots, nshots - sft_iteration * max_rt_nshots)
+                            _nshots = min(
+                                max_rt_nshots, nshots - sft_iteration * max_rt_nshots
+                            )
                             self._sweep_recursion(
                                 qubits,
                                 sequence,
@@ -477,11 +539,16 @@ class QbloxController(Controller):
                                 num_bins *= len(sweeper.values)
                             sweeper = sweepers[0]
                             max_rt_iterations = (SEQUENCER_MEMORY) // num_bins
-                            num_full_sft_iterations = len(sweeper.values) // max_rt_iterations
+                            num_full_sft_iterations = (
+                                len(sweeper.values) // max_rt_iterations
+                            )
                             num_bins = nshots * max_rt_iterations
                             for sft_iteration in range(num_full_sft_iterations + 1):
                                 _from = sft_iteration * max_rt_iterations
-                                _to = min((sft_iteration + 1) * max_rt_iterations, len(sweeper.values))
+                                _to = min(
+                                    (sft_iteration + 1) * max_rt_iterations,
+                                    len(sweeper.values),
+                                )
                                 _values = sweeper.values[_from:_to]
                                 split_sweeper = Sweeper(
                                     parameter=sweeper.parameter,
@@ -491,5 +558,9 @@ class QbloxController(Controller):
                                 )
 
                                 self._sweep_recursion(
-                                    qubits, sequence, options, *((split_sweeper,) + sweepers[1:]), results=results
+                                    qubits,
+                                    sequence,
+                                    options,
+                                    *((split_sweeper,) + sweepers[1:]),
+                                    results=results,
                                 )

@@ -57,7 +57,14 @@ def test_instrument_interface(qcm_rf: ClusterQCM_RF):
     for abstract_method in Instrument.__abstractmethods__:
         assert hasattr(qcm_rf, abstract_method)
 
-    for attribute in ["name", "address", "is_connected", "signature", "tmp_folder", "data_folder"]:
+    for attribute in [
+        "name",
+        "address",
+        "is_connected",
+        "signature",
+        "tmp_folder",
+        "data_folder",
+    ]:
         assert hasattr(qcm_rf, attribute)
 
 
@@ -167,8 +174,28 @@ def test_connect(connected_cluster: Cluster, connected_qcm_rf: ClusterQCM_RF):
 @pytest.mark.qpu
 def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     ps = PulseSequence()
-    ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
-    ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
+    ps.add(
+        DrivePulse(
+            0,
+            200,
+            1,
+            O1_LO_FREQUENCY - 200e6,
+            np.pi / 2,
+            "Gaussian(5)",
+            O1_OUTPUT_CHANNEL,
+        )
+    )
+    ps.add(
+        DrivePulse(
+            0,
+            200,
+            1,
+            O2_LO_FREQUENCY - 200e6,
+            np.pi / 2,
+            "Gaussian(5)",
+            O2_OUTPUT_CHANNEL,
+        )
+    )
 
     qubits = connected_platform.qubits
     connected_qcm_rf.ports["o2"].hardware_mod_en = True
@@ -185,8 +212,28 @@ def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
 @pytest.mark.qpu
 def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     ps = PulseSequence()
-    ps.add(DrivePulse(0, 200, 1, O1_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O1_OUTPUT_CHANNEL))
-    ps.add(DrivePulse(0, 200, 1, O2_LO_FREQUENCY - 200e6, np.pi / 2, "Gaussian(5)", O2_OUTPUT_CHANNEL))
+    ps.add(
+        DrivePulse(
+            0,
+            200,
+            1,
+            O1_LO_FREQUENCY - 200e6,
+            np.pi / 2,
+            "Gaussian(5)",
+            O1_OUTPUT_CHANNEL,
+        )
+    )
+    ps.add(
+        DrivePulse(
+            0,
+            200,
+            1,
+            O2_LO_FREQUENCY - 200e6,
+            np.pi / 2,
+            "Gaussian(5)",
+            O2_OUTPUT_CHANNEL,
+        )
+    )
 
     qubits = connected_platform.qubits
 
@@ -201,7 +248,9 @@ def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
         type=SweeperType.OFFSET,
     )
 
-    connected_qcm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000, sweepers=[sweeper])
+    connected_qcm_rf.process_pulse_sequence(
+        qubits, ps, 1000, 1, 10000, sweepers=[sweeper]
+    )
     connected_qcm_rf.upload()
     connected_qcm_rf.play_sequence()
 
@@ -213,7 +262,9 @@ def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
         type=SweeperType.ABSOLUTE,
     )
 
-    connected_qcm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000, sweepers=[sweeper])
+    connected_qcm_rf.process_pulse_sequence(
+        qubits, ps, 1000, 1, 10000, sweepers=[sweeper]
+    )
     connected_qcm_rf.upload()
     connected_qcm_rf.play_sequence()
 

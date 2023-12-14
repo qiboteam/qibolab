@@ -6,12 +6,12 @@ import numpy.typing as npt
 
 
 class IntegratedResults:
-    """
-    Data structure to deal with the output of
-    :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
+    act.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
-    Associated with AcquisitionType.INTEGRATION and AveragingMode.SINGLESHOT
+    Associated with AcquisitionType.INTEGRATION and
+    AveragingMode.SINGLESHOT
     """
 
     def __init__(self, data: np.ndarray):
@@ -53,16 +53,15 @@ class IntegratedResults:
 
     @property
     def average(self):
-        """Perform average over i and q"""
+        """Perform average over i and q."""
         average_data = np.mean(self.voltage, axis=0)
         std_data = np.std(self.voltage, axis=0, ddof=1) / np.sqrt(self.voltage.shape[0])
         return AveragedIntegratedResults(average_data, std_data)
 
 
 class AveragedIntegratedResults(IntegratedResults):
-    """
-    Data structure to deal with the output of
-    :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
+    act.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.INTEGRATION and AveragingMode.CYCLIC
@@ -80,20 +79,18 @@ class AveragedIntegratedResults(IntegratedResults):
 
 
 class RawWaveformResults(IntegratedResults):
-    """
-    Data structure to deal with the output of
-    :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
+    act.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
-    Associated with AcquisitionType.RAW and AveragingMode.SINGLESHOT
-    may also be used to store the integration weights ?
+    Associated with AcquisitionType.RAW and AveragingMode.SINGLESHOT may
+    also be used to store the integration weights ?
     """
 
 
 class AveragedRawWaveformResults(AveragedIntegratedResults):
-    """
-    Data structure to deal with the output of
-    :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
+    act.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.RAW and AveragingMode.CYCLIC
@@ -102,12 +99,12 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
 
 
 class SampleResults:
-    """
-    Data structure to deal with the output of
-    :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
+    act.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
-    Associated with AcquisitionType.DISCRIMINATION and AveragingMode.SINGLESHOT
+    Associated with AcquisitionType.DISCRIMINATION and
+    AveragingMode.SINGLESHOT
     """
 
     def __init__(self, data: np.ndarray):
@@ -118,7 +115,8 @@ class SampleResults:
 
     @lru_cache
     def probability(self, state=0):
-        """Returns the statistical frequency of the specified state (0 or 1)."""
+        """Returns the statistical frequency of the specified state (0 or
+        1)."""
         return abs(1 - state - np.mean(self.samples, axis=0))
 
     @property
@@ -131,16 +129,15 @@ class SampleResults:
 
     @property
     def average(self):
-        """Perform samples average"""
+        """Perform samples average."""
         average = self.probability(1)
         std = np.std(self.samples, axis=0, ddof=1) / np.sqrt(self.samples.shape[0])
         return AveragedSampleResults(average, self.samples, std=std)
 
 
 class AveragedSampleResults(SampleResults):
-    """
-    Data structure to deal with the output of
-    :func:`qibolab.platforms.abstract.AbstractPlatform.execute_pulse_sequence`
+    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
+    act.AbstractPlatform.execute_pulse_sequence`
     :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
 
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.CYCLIC
@@ -148,7 +145,10 @@ class AveragedSampleResults(SampleResults):
     """
 
     def __init__(
-        self, statistical_frequency: np.ndarray, samples: np.ndarray = np.array([]), std: np.ndarray = np.array([])
+        self,
+        statistical_frequency: np.ndarray,
+        samples: np.ndarray = np.array([]),
+        std: np.ndarray = np.array([]),
     ):
         super().__init__(samples)
         self.statistical_frequency: npt.NDArray[np.float64] = statistical_frequency
@@ -156,11 +156,14 @@ class AveragedSampleResults(SampleResults):
 
     def __add__(self, data):
         new_res = super().__add__(data)
-        new_res.statistical_frequency = np.append(self.statistical_frequency, data.statistical_frequency)
+        new_res.statistical_frequency = np.append(
+            self.statistical_frequency, data.statistical_frequency
+        )
         new_res.std = np.append(self.std, data.std)
         return new_res
 
     @lru_cache
     def probability(self, state=0):
-        """Returns the statistical frequency of the specified state (0 or 1)."""
+        """Returns the statistical frequency of the specified state (0 or
+        1)."""
         return abs(1 - state - self.statistical_frequency)

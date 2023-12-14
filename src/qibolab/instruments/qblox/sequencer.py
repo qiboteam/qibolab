@@ -7,7 +7,8 @@ from qibolab.sweeper import Parameter, Sweeper
 
 
 class WaveformsBuffer:
-    """A class to represent a buffer that holds the unique waveforms used by a sequencer.
+    """A class to represent a buffer that holds the unique waveforms used by a
+    sequencer.
 
     Attributes:
         unique_waveforms (list): A list of unique Waveform objects.
@@ -17,17 +18,21 @@ class WaveformsBuffer:
     SIZE: int = 16383
 
     class NotEnoughMemory(Exception):
-        """An error raised when there is not enough memory left to add more waveforms."""
+        """An error raised when there is not enough memory left to add more
+        waveforms."""
 
     class NotEnoughMemoryForBaking(Exception):
-        """An error raised when there is not enough memory left to bake pulses."""
+        """An error raised when there is not enough memory left to bake
+        pulses."""
 
     def __init__(self):
         """Initialises the buffer with an empty list of unique waveforms."""
         self.unique_waveforms: list = []  # Waveform
         self.available_memory: int = WaveformsBuffer.SIZE
 
-    def add_waveforms(self, pulse: Pulse, hardware_mod_en: bool, sweepers: list[Sweeper]):
+    def add_waveforms(
+        self, pulse: Pulse, hardware_mod_en: bool, sweepers: list[Sweeper]
+    ):
         """Adds a pair of i and q waveforms to the list of unique waveforms.
 
         Waveforms are added to the list if they were not there before.
@@ -62,7 +67,10 @@ class WaveformsBuffer:
             pulse.waveform_i = waveform_i
             pulse.waveform_q = waveform_q
 
-            if waveform_i not in self.unique_waveforms or waveform_q not in self.unique_waveforms:
+            if (
+                waveform_i not in self.unique_waveforms
+                or waveform_q not in self.unique_waveforms
+            ):
                 memory_needed = 0
                 if not waveform_i in self.unique_waveforms:
                     memory_needed += len(waveform_i)
@@ -78,12 +86,15 @@ class WaveformsBuffer:
                 else:
                     raise WaveformsBuffer.NotEnoughMemory
         else:
-            pulse.idx_range = self.bake_pulse_waveforms(pulse_copy, values, hardware_mod_en)
+            pulse.idx_range = self.bake_pulse_waveforms(
+                pulse_copy, values, hardware_mod_en
+            )
 
     def bake_pulse_waveforms(
         self, pulse: Pulse, values: list(), hardware_mod_en: bool
     ):  # bake_pulse_waveforms(self, pulse: Pulse, values: list(int), hardware_mod_en: bool):
-        """Generates and stores a set of i and q waveforms required for a pulse duration sweep.
+        """Generates and stores a set of i and q waveforms required for a pulse
+        duration sweep.
 
         These waveforms are generated and stored in a predefined order so that they can later be retrieved within the
         sweeper q1asm code. It bakes pulses from as short as 1ns, padding them at the end with 0s if required so that

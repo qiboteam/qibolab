@@ -32,7 +32,8 @@ class PulseBlaster(Instrument):
         self._holdtime = holdtime_ns
 
     def arm(self, nshots, readout_start=0):
-        """Arm the PulseBlaster for playback. Sends a signal to the instrument to setup the pulse sequence and repetition.
+        """Arm the PulseBlaster for playback. Sends a signal to the instrument
+        to setup the pulse sequence and repetition.
 
         Arguments:
             nshots (int): Number of TTL triggers to repeat.
@@ -72,7 +73,9 @@ class PulseBlaster(Instrument):
 
     @staticmethod
     def _hexify(pins):
-        return int("".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2)
+        return int(
+            "".join(["1" if i in set(pins) else "0" for i in reversed(range(24))]), 2
+        )
 
 
 class IcarusQFPGA(Instrument):
@@ -95,7 +98,8 @@ class IcarusQFPGA(Instrument):
         self.nshots = None
 
     def setup(self, dac_sampling_rate, adcs_to_read, **kwargs):
-        """Sets the sampling rate of the RFSoC. May need to be repeated several times due to multi-tile sync error.
+        """Sets the sampling rate of the RFSoC. May need to be repeated several
+        times due to multi-tile sync error.
 
         Arguments:
             dac_sampling_rate_id (int): Sampling rate ID to be set on the RFSoC.
@@ -111,7 +115,9 @@ class IcarusQFPGA(Instrument):
         waveform = np.zeros((self._dac_nchannels, self._dac_sample_size), dtype="i2")
 
         # The global time can first be set as float to handle rounding errors.
-        time_array = 1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
+        time_array = (
+            1 / self._dac_sampling_rate * np.arange(0, self._dac_sample_size, 1)
+        )
 
         for pulse in sequence:
             # Get array indices corresponding to the start and end of the pulse. Note that the pulse time parameters are in ns and require conversion.
@@ -120,9 +126,12 @@ class IcarusQFPGA(Instrument):
 
             # Create the pulse waveform and cast it to 16-bit. The ampltiude is max signed 14-bit (+- 8191) and the indices should take care of any overlap of pulses.
             # 2-byte bit shift for downsampling from 16 bit to 14 bit
-            pulse_waveform = (4 * np.sin(2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase)).astype(
-                "i2"
-            )
+            pulse_waveform = (
+                4
+                * np.sin(
+                    2 * np.pi * pulse.frequency * time_array[start:end] + pulse.phase
+                )
+            ).astype("i2")
             waveform[pulse.channel, start:end] += pulse_waveform
 
         self.nshots = nshots
@@ -130,7 +139,8 @@ class IcarusQFPGA(Instrument):
         return waveform
 
     def upload(self, waveform):
-        """Uploads a numpy array of size DAC_CHANNELS X DAC_SAMPLE_SIZE to the PL memory.
+        """Uploads a numpy array of size DAC_CHANNELS X DAC_SAMPLE_SIZE to the
+        PL memory.
 
         Arguments:
             waveform (numpy.ndarray): Numpy array of size DAC_CHANNELS X DAC_SAMPLE_SIZE with type signed short.
@@ -145,7 +155,8 @@ class IcarusQFPGA(Instrument):
             s.sendall(waveform.tobytes())
 
     def play_sequence(self):
-        """DACs are automatically armed for playbacked when waveforms are loaded, no need to signal"""
+        """DACs are automatically armed for playbacked when waveforms are
+        loaded, no need to signal."""
         self._buffer = np.zeros((self._adc_nchannels, self._adc_sample_size))
         self._thread = threading.Thread(target=self._play, args=(self.nshots,))
         self._thread.start()
@@ -153,8 +164,8 @@ class IcarusQFPGA(Instrument):
         time.sleep(0.1)  # Use threading lock and socket signals instead of hard sleep?
 
     def play_sequence_and_acquire(self):
-        """Signal the RFSoC to arm the ADC and start data transfer into PS memory.
-        Starts a thread to listen for ADC data from the RFSoC.
+        """Signal the RFSoC to arm the ADC and start data transfer into PS
+        memory. Starts a thread to listen for ADC data from the RFSoC.
 
         Arguments:
             nshots (int): Number of shots.
@@ -176,7 +187,9 @@ class IcarusQFPGA(Instrument):
             # Signal RFSoC to arm ADC and expect `nshots` number of triggers.
             s.sendall(struct.pack("B", 2))
             s.sendall(struct.pack("H", nshots))
-            s.sendall(struct.pack("B", len(self._adcs_to_read)))  # send number of channels
+            s.sendall(
+                struct.pack("B", len(self._adcs_to_read))
+            )  # send number of channels
 
             for adc in self._adcs_to_read:
                 s.sendall(struct.pack("B", adc))  # send ADC channel to read

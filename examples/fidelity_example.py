@@ -13,7 +13,9 @@ platform.setup()
 platform.start()
 # Executes a pulse sequence.
 results = platform.measure_fidelity(qubits=[1, 2, 3, 4], nshots=3000)
-print(f"results[qubit] (rotation_angle, threshold, fidelity, assignment_fidelity): {results}")
+print(
+    f"results[qubit] (rotation_angle, threshold, fidelity, assignment_fidelity): {results}"
+)
 # Turn off lab instruments
 platform.stop()
 # Disconnect from the instruments

@@ -23,8 +23,11 @@ QubitPairMap = Dict[QubitPairId, QubitPair]
 NS_TO_SEC = 1e-9
 
 
-def unroll_sequences(sequences: List[PulseSequence], relaxation_time: int) -> Tuple[PulseSequence, Dict[str, str]]:
-    """Unrolls a list of pulse sequences to a single pulse sequence with multiple measurements.
+def unroll_sequences(
+    sequences: List[PulseSequence], relaxation_time: int
+) -> Tuple[PulseSequence, Dict[str, str]]:
+    """Unrolls a list of pulse sequences to a single pulse sequence with
+    multiple measurements.
 
     Args:
         sequences (list): List of pulse sequences to unroll.
@@ -60,7 +63,8 @@ class Settings:
     sampling_rate: int = int(1e9)
     """Number of waveform samples supported by the instruments per second."""
     relaxation_time: int = int(1e5)
-    """Time in ns to wait for the qubit to relax to its ground state between shots."""
+    """Time in ns to wait for the qubit to relax to its ground state between
+    shots."""
 
     def fill(self, options: ExecutionParameters):
         """Use default values for missing execution options."""
@@ -80,26 +84,34 @@ class Platform:
     name: str
     """Name of the platform."""
     qubits: QubitMap
-    """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
+    """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit`
+    objects."""
     pairs: QubitPairMap
-    """Dictionary mapping sorted tuples of qubit names to :class:`qibolab.qubits.QubitPair` objects."""
+    """Dictionary mapping sorted tuples of qubit names to
+    :class:`qibolab.qubits.QubitPair` objects."""
     instruments: InstrumentMap
-    """Dictionary mapping instrument names to :class:`qibolab.instruments.abstract.Instrument` objects."""
+    """Dictionary mapping instrument names to
+    :class:`qibolab.instruments.abstract.Instrument` objects."""
 
     settings: Settings = field(default_factory=Settings)
     """Container with default execution settings."""
     resonator_type: Optional[str] = None
     """Type of resonator (2D or 3D) in the used QPU.
+
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
 
     couplers: CouplerMap = field(default_factory=dict)
-    """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
+    """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler`
+    objects."""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
     two_qubit_native_types: NativeGates = field(default_factory=lambda: NativeGates(0))
-    """Types of two qubit native gates. Used by the transpiler."""
+    """Types of two qubit native gates.
+
+    Used by the transpiler.
+    """
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
 
@@ -115,7 +127,9 @@ class Platform:
             self.two_qubit_native_types = NativeGates.CZ
 
         self.topology.add_nodes_from(self.qubits.keys())
-        self.topology.add_edges_from([(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()])
+        self.topology.add_edges_from(
+            [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
+        )
 
     def __str__(self):
         return self.name
@@ -124,7 +138,13 @@ class Platform:
     def nqubits(self) -> int:
         """Total number of usable qubits in the QPU.."""
         # TODO: Seperate couplers from qubits (PR #508)
-        return len([qubit for qubit in self.qubits if not (isinstance(qubit, str) and "c" in qubit)])
+        return len(
+            [
+                qubit
+                for qubit in self.qubits
+                if not (isinstance(qubit, str) and "c" in qubit)
+            ]
+        )
 
     def connect(self):
         """Connect to all instruments."""
@@ -179,7 +199,9 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.play(self.qubits, self.couplers, sequence, options)
+                new_result = instrument.play(
+                    self.qubits, self.couplers, sequence, options
+                )
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -188,7 +210,9 @@ class Platform:
 
         return result
 
-    def execute_pulse_sequence(self, sequence: PulseSequence, options: ExecutionParameters, **kwargs):
+    def execute_pulse_sequence(
+        self, sequence: PulseSequence, options: ExecutionParameters, **kwargs
+    ):
         """
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
@@ -199,23 +223,32 @@ class Platform:
         """
         options = self.settings.fill(options)
 
-        time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
+        time = (
+            (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
+        )
         log.info(f"Minimal execution time (sequence): {time}")
 
         return self._execute(sequence, options, **kwargs)
 
     @property
     def _controller(self):
-        """Controller instrument used for splitting the unrolled sequences to batches.
+        """Controller instrument used for splitting the unrolled sequences to
+        batches.
 
         Used only by :meth:`qibolab.platform.Platform.execute_pulse_sequences` (unrolling).
         This method does not support platforms with more than one controller instruments.
         """
-        controllers = [instr for instr in self.instruments.values() if isinstance(instr, Controller)]
+        controllers = [
+            instr
+            for instr in self.instruments.values()
+            if isinstance(instr, Controller)
+        ]
         assert len(controllers) == 1
         return controllers[0]
 
-    def execute_pulse_sequences(self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs):
+    def execute_pulse_sequences(
+        self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs
+    ):
         """
         Args:
             sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
@@ -227,11 +260,19 @@ class Platform:
         options = self.settings.fill(options)
 
         duration = sum(seq.duration for seq in sequences)
-        time = (duration + len(sequences) * options.relaxation_time) * options.nshots * NS_TO_SEC
+        time = (
+            (duration + len(sequences) * options.relaxation_time)
+            * options.nshots
+            * NS_TO_SEC
+        )
         log.info(f"Minimal execution time (unrolling): {time}")
 
         # find readout pulses
-        ro_pulses = {pulse.serial: pulse.qubit for sequence in sequences for pulse in sequence.ro_pulses}
+        ro_pulses = {
+            pulse.serial: pulse.qubit
+            for sequence in sequences
+            for pulse in sequence.ro_pulses
+        }
 
         results = defaultdict(list)
         for batch in self._controller.split_batches(sequences):
@@ -245,8 +286,11 @@ class Platform:
 
         return results
 
-    def sweep(self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper):
-        """Executes a pulse sequence for different values of sweeped parameters.
+    def sweep(
+        self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper
+    ):
+        """Executes a pulse sequence for different values of sweeped
+        parameters.
 
         Useful for performing chip characterization.
 
@@ -278,7 +322,9 @@ class Platform:
         if options.relaxation_time is None:
             options = replace(options, relaxation_time=self.settings.relaxation_time)
 
-        time = (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
+        time = (
+            (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
+        )
         for sweep in sweepers:
             time *= len(sweep.values)
         log.info(f"Minimal execution time (sweep): {time}")
@@ -286,7 +332,9 @@ class Platform:
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.sweep(self.qubits, self.couplers, sequence, options, *sweepers)
+                new_result = instrument.sweep(
+                    self.qubits, self.couplers, sequence, options, *sweepers
+                )
                 if isinstance(new_result, dict):
                     result.update(new_result)
                 elif new_result is not None:
@@ -299,10 +347,11 @@ class Platform:
         return self.execute_pulse_sequence(sequence, options)
 
     def get_qubit(self, qubit):
-        """Return the name of the physical qubit corresponding to a logical qubit.
+        """Return the name of the physical qubit corresponding to a logical
+        qubit.
 
-        Temporary fix for the compiler to work for platforms where the qubits
-        are not named as 0, 1, 2, ...
+        Temporary fix for the compiler to work for platforms where the
+        qubits are not named as 0, 1, 2, ...
         """
         try:
             return self.qubits[qubit].name
@@ -310,10 +359,11 @@ class Platform:
             return list(self.qubits.keys())[qubit]
 
     def get_coupler(self, coupler):
-        """Return the name of the physical coupler corresponding to a logical coupler.
+        """Return the name of the physical coupler corresponding to a logical
+        coupler.
 
-        Temporary fix for the compiler to work for platforms where the couplers
-        are not named as 0, 1, 2, ...
+        Temporary fix for the compiler to work for platforms where the
+        couplers are not named as 0, 1, 2, ...
         """
         try:
             return self.couplers[coupler].name
@@ -419,7 +469,8 @@ class Platform:
         return self.qubits[qubit].readout.lo_frequency
 
     def set_lo_twpa_frequency(self, qubit, freq):
-        """Set frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+        """Set frequency of the local oscillator of the TWPA to which the
+        qubit's feedline is connected to.
 
         Args:
             qubit (int): qubit whose local oscillator will be modified.
@@ -428,11 +479,13 @@ class Platform:
         self.qubits[qubit].twpa.lo_frequency = freq
 
     def get_lo_twpa_frequency(self, qubit):
-        """Get frequency of the local oscillator of the TWPA to which the qubit's feedline is connected to in Hz."""
+        """Get frequency of the local oscillator of the TWPA to which the
+        qubit's feedline is connected to in Hz."""
         return self.qubits[qubit].twpa.lo_frequency
 
     def set_lo_twpa_power(self, qubit, power):
-        """Set power of the local oscillator of the TWPA to which the qubit's feedline is connected to.
+        """Set power of the local oscillator of the TWPA to which the qubit's
+        feedline is connected to.
 
         Args:
             qubit (int): qubit whose local oscillator will be modified.
@@ -441,11 +494,13 @@ class Platform:
         self.qubits[qubit].twpa.lo_power = power
 
     def get_lo_twpa_power(self, qubit):
-        """Get power of the local oscillator of the TWPA to which the qubit's feedline is connected to in dBm."""
+        """Get power of the local oscillator of the TWPA to which the qubit's
+        feedline is connected to in dBm."""
         return self.qubits[qubit].twpa.lo_power
 
     def set_attenuation(self, qubit, att):
-        """Set attenuation value. Usefeul for calibration routines such as punchout.
+        """Set attenuation value. Usefeul for calibration routines such as
+        punchout.
 
         Args:
             qubit (int): qubit whose attenuation will be modified.
@@ -456,11 +511,15 @@ class Platform:
         self.qubits[qubit].readout.attenuation = att
 
     def get_attenuation(self, qubit):
-        """Get attenuation value. Usefeul for calibration routines such as punchout."""
+        """Get attenuation value.
+
+        Usefeul for calibration routines such as punchout.
+        """
         return self.qubits[qubit].readout.attenuation
 
     def set_gain(self, qubit, gain):
-        """Set gain value. Usefeul for calibration routines such as Rabi oscillations.
+        """Set gain value. Usefeul for calibration routines such as Rabi
+        oscillations.
 
         Args:
             qubit (int): qubit whose attenuation will be modified.
@@ -471,7 +530,10 @@ class Platform:
         raise_error(NotImplementedError, f"{self.name} does not support gain.")
 
     def get_gain(self, qubit):
-        """Get gain value. Usefeul for calibration routines such as Rabi oscillations."""
+        """Get gain value.
+
+        Usefeul for calibration routines such as Rabi oscillations.
+        """
         raise_error(NotImplementedError, f"{self.name} does not support gain.")
 
     def set_bias(self, qubit, bias):
@@ -488,5 +550,8 @@ class Platform:
         self.qubits[qubit].flux.offset = bias
 
     def get_bias(self, qubit):
-        """Get bias value. Usefeul for calibration routines involving flux."""
+        """Get bias value.
+
+        Usefeul for calibration routines involving flux.
+        """
         return self.qubits[qubit].flux.offset

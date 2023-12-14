@@ -48,7 +48,9 @@ class QMOPX(Controller):
     _ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
     """Dictionary holding the ports of controllers that are connected."""
     script_file_name: Optional[str] = "qua_script.txt"
-    """Name of the file that the QUA program will dumped in that after every execution.
+    """Name of the file that the QUA program will dumped in that after every
+    execution.
+
     If ``None`` the program will not be dumped.
     """
 
@@ -109,7 +111,9 @@ class QMOPX(Controller):
         results = {}
         for qmpulse in ro_pulses:
             pulse = qmpulse.pulse
-            results[pulse.qubit] = results[pulse.serial] = qmpulse.acquisition.fetch(handles)
+            results[pulse.qubit] = results[pulse.serial] = qmpulse.acquisition.fetch(
+                handles
+            )
         return results
 
     def play(self, qubits, couplers, sequence, options):
@@ -129,7 +133,9 @@ class QMOPX(Controller):
             if qubit.flux:
                 self.config.register_flux_element(qubit)
 
-        qmsequence = Sequence.create(qubits, sequence, sweepers, self.config, self.time_of_flight, self.smearing)
+        qmsequence = Sequence.create(
+            qubits, sequence, sweepers, self.config, self.time_of_flight, self.smearing
+        )
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)
@@ -139,7 +145,13 @@ class QMOPX(Controller):
                 qmpulse.declare_output(options, threshold, iq_angle)
 
             with for_(n, 0, n < options.nshots, n + 1):
-                sweep(list(sweepers), qubits, qmsequence, options.relaxation_time, self.config)
+                sweep(
+                    list(sweepers),
+                    qubits,
+                    qmsequence,
+                    options.relaxation_time,
+                    self.config,
+                )
 
             with qua.stream_processing():
                 for qmpulse in qmsequence.ro_pulses:

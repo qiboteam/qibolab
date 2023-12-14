@@ -48,12 +48,15 @@ class ERA(LocalOscillator):
             self._set_device_parameter("power", x)
 
     def connect(self):
-        """Connects to the instrument using the IP address set in the runcard."""
+        """Connects to the instrument using the IP address set in the
+        runcard."""
         if not self.is_connected:
             for attempt in range(3):
                 try:
                     if not self.ethernet:
-                        self.device = ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
+                        self.device = ERASynthPlusPlus(
+                            f"{self.name}", f"TCPIP::{self.address}::INSTR"
+                        )
                     else:
                         self._post("readAll", 1)
                         self._post("readDiagnostic", 0)
@@ -75,7 +78,8 @@ class ERA(LocalOscillator):
             self._set_device_parameter("power", self.settings.power)
 
     def _set_device_parameter(self, parameter: str, value):
-        """Sets a parameter of the instrument, if it changed from the last stored in the cache.
+        """Sets a parameter of the instrument, if it changed from the last
+        stored in the cache.
 
         Args:
             parameter: str = The parameter to be cached and set.
@@ -83,11 +87,16 @@ class ERA(LocalOscillator):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        if not (parameter in self._device_parameters and self._device_parameters[parameter] == value):
+        if not (
+            parameter in self._device_parameters
+            and self._device_parameters[parameter] == value
+        ):
             if self.is_connected:
                 if not self.ethernet:
                     if not hasattr(self.device, parameter):
-                        raise ValueError(f"The instrument {self.name} does not have parameter {parameter}")
+                        raise ValueError(
+                            f"The instrument {self.name} does not have parameter {parameter}"
+                        )
                     self.device.set(parameter, value)
                 else:
                     if parameter == "power":
@@ -96,7 +105,9 @@ class ERA(LocalOscillator):
                         self._post("frequency", int(value))
                 self._device_parameters[parameter] = value
             else:
-                raise ConnectionError(f"Attempting to set {parameter} without a connection to the instrument")
+                raise ConnectionError(
+                    f"Attempting to set {parameter} without a connection to the instrument"
+                )
 
     def _erase_device_parameters_cache(self):
         """Erases the cache of the instrument parameters."""
@@ -132,7 +143,9 @@ class ERA(LocalOscillator):
                 elif kwargs["reference_clock_source"] == "external":
                     self.device.ref_osc_source("ext")
                 else:
-                    raise ValueError(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+                    raise ValueError(
+                        f"Invalid reference clock source {kwargs['reference_clock_source']}"
+                    )
             else:
                 self._post("rfoutput", 0)
 
@@ -141,7 +154,9 @@ class ERA(LocalOscillator):
                 elif kwargs["reference_clock_source"] == "external":
                     self._post("reference_int_ext", 1)
                 else:
-                    raise ValueError(f"Invalid reference clock source {kwargs['reference_clock_source']}")
+                    raise ValueError(
+                        f"Invalid reference clock source {kwargs['reference_clock_source']}"
+                    )
 
     def start(self):
         self.on()
@@ -172,8 +187,7 @@ class ERA(LocalOscillator):
         self.is_connected = False
 
     def _post(self, name, value):
-        """
-        Post a value to the instrument's web server.
+        """Post a value to the instrument's web server.
 
         Try to post three times, waiting for 0.1 seconds between each attempt.
 
@@ -184,7 +198,9 @@ class ERA(LocalOscillator):
         value = str(value)
         for _ in range(MAX_RECONNECTION_ATTEMPTS):
             try:
-                response = requests.post(f"http://{self.address}/", data={name: value}, timeout=TIMEOUT)
+                response = requests.post(
+                    f"http://{self.address}/", data={name: value}, timeout=TIMEOUT
+                )
                 if response.status_code == 200:
                     return True
                 break
@@ -193,8 +209,7 @@ class ERA(LocalOscillator):
         raise InstrumentException(self, f"Unable to post {name}={value} to {self.name}")
 
     def _get(self, name):
-        """
-        Get a value from the instrument's web server.
+        """Get a value from the instrument's web server.
 
         Try to get three times, waiting for 0.1 seconds between each attempt.
 
@@ -203,7 +218,9 @@ class ERA(LocalOscillator):
         """
         for _ in range(MAX_RECONNECTION_ATTEMPTS):
             try:
-                response = requests.post(f"http://{self.address}/", params={"readAll": 1}, timeout=TIMEOUT)
+                response = requests.post(
+                    f"http://{self.address}/", params={"readAll": 1}, timeout=TIMEOUT
+                )
 
                 if response.status_code == 200:
                     # reponse.text is a dictonary in string format, convert it to a dictonary
