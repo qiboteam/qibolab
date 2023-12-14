@@ -67,11 +67,7 @@ def test_qmpulse_previous_and_next():
     qd_qmpulses = []
     ro_qmpulses = []
     for qubit in range(nqubits):
-        qd_pulse = QMPulse(
-            Pulse(
-                0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive{qubit}", qubit=qubit
-            )
-        )
+        qd_pulse = QMPulse(Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive{qubit}", qubit=qubit))
         qd_qmpulses.append(qd_pulse)
         qmsequence.add(qd_pulse)
     for qubit in range(nqubits):
@@ -109,12 +105,8 @@ def test_qmpulse_previous_and_next_flux():
     theta_pulse = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive1", qubit=1)
     x_pulse_end = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
 
-    measure_lowfreq = ReadoutPulse(
-        110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", qubit=1
-    )
-    measure_highfreq = ReadoutPulse(
-        110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", qubit=2
-    )
+    measure_lowfreq = ReadoutPulse(110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", qubit=1)
+    measure_highfreq = ReadoutPulse(110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", qubit=2)
 
     drive11 = QMPulse(y90_pulse)
     drive21 = QMPulse(x_pulse_start)
@@ -159,18 +151,14 @@ def test_qmopx_register_analog_output_controllers():
     port = QMPort((("con1", 1), ("con1", 2)))
     opx.config.register_analog_output_controllers(port)
     controllers = opx.config.controllers
-    assert controllers == {
-        "con1": {"analog_outputs": {1: {"offset": 0.0}, 2: {"offset": 0.0}}}
-    }
+    assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.0}, 2: {"offset": 0.0}}}}
 
     opx = QMOPX(name, address)
     port = QMPort((("con1", 1), ("con1", 2)))
     port.offset = 0.005
     opx.config.register_analog_output_controllers(port)
     controllers = opx.config.controllers
-    assert controllers == {
-        "con1": {"analog_outputs": {1: {"offset": 0.005}, 2: {"offset": 0.005}}}
-    }
+    assert controllers == {"con1": {"analog_outputs": {1: {"offset": 0.005}, 2: {"offset": 0.005}}}}
 
     opx = QMOPX(name, address)
     port = QMPort((("con2", 2),))
@@ -193,9 +181,7 @@ def test_qmopx_register_analog_output_controllers():
 def test_qmopx_register_drive_element(dummy_qrc):
     platform = create_platform("qm")
     opx = platform.instruments["qmopx"]
-    opx.config.register_drive_element(
-        platform.qubits[0], intermediate_frequency=int(1e6)
-    )
+    opx.config.register_drive_element(platform.qubits[0], intermediate_frequency=int(1e6))
     assert "drive0" in opx.config.elements
     target_element = {
         "mixInputs": {
@@ -221,9 +207,7 @@ def test_qmopx_register_drive_element(dummy_qrc):
 def test_qmopx_register_readout_element(dummy_qrc):
     platform = create_platform("qm")
     opx = platform.instruments["qmopx"]
-    opx.config.register_readout_element(
-        platform.qubits[2], int(1e6), opx.time_of_flight, opx.smearing
-    )
+    opx.config.register_readout_element(platform.qubits[2], int(1e6), opx.time_of_flight, opx.smearing)
     assert "readout2" in opx.config.elements
     target_element = {
         "mixInputs": {
@@ -281,26 +265,19 @@ def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
             },
         }
 
-    opx.config.register_element(
-        platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing
-    )
+    opx.config.register_element(platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing)
     opx.config.register_pulse(platform.qubits[qubit], pulse)
     assert opx.config.pulses[pulse.serial] == target_pulse
     assert target_pulse["waveforms"]["I"] in opx.config.waveforms
     assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
-    assert (
-        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.serial]
-        == pulse.serial
-    )
+    assert opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.serial] == pulse.serial
 
 
 def test_qmopx_register_flux_pulse(dummy_qrc):
     qubit = 2
     platform = create_platform("qm")
     opx = platform.instruments["qmopx"]
-    pulse = FluxPulse(
-        0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit
-    )
+    pulse = FluxPulse(0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit)
     target_pulse = {
         "operation": "control",
         "length": pulse.duration,
@@ -310,9 +287,7 @@ def test_qmopx_register_flux_pulse(dummy_qrc):
     opx.config.register_pulse(platform.qubits[qubit], pulse)
     assert opx.config.pulses[pulse.serial] == target_pulse
     assert target_pulse["waveforms"]["single"] in opx.config.waveforms
-    assert (
-        opx.config.elements[f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
-    )
+    assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
 
 
 @pytest.mark.parametrize("duration", [0, 30])
@@ -321,16 +296,12 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
     qubit = platform.qubits[3]
     opx = platform.instruments["qmopx"]
     opx.config.register_flux_element(qubit)
-    pulse = FluxPulse(
-        3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name
-    )
+    pulse = FluxPulse(3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name)
     qmpulse = BakedPulse(pulse)
     config = opx.config
     qmpulse.bake(config, [pulse.duration])
 
-    assert config.elements["flux3"]["operations"] == {
-        "baked_Op_0": "flux3_baked_pulse_0"
-    }
+    assert config.elements["flux3"]["operations"] == {"baked_Op_0": "flux3_baked_pulse_0"}
     if duration == 0:
         assert config.pulses["flux3_baked_pulse_0"] == {
             "operation": "control",
@@ -366,12 +337,8 @@ def test_qmopx_qubit_spectroscopy(mocker):
     qd_pulses = {}
     ro_pulses = {}
     for qubit in [1, 2, 3]:
-        qd_pulses[qubit] = platform.create_qubit_drive_pulse(
-            qubit, start=0, duration=500
-        )
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
+        qd_pulses[qubit] = platform.create_qubit_drive_pulse(qubit, start=0, duration=500)
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
         sequence.add(qd_pulses[qubit])
         sequence.add(ro_pulses[qubit])
     options = ExecutionParameters(nshots=1024, relaxation_time=100000)
