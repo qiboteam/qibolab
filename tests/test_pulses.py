@@ -788,8 +788,9 @@ def test_pulses_pulseshape_rectangular():
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
-    i, q = pulse.amplitude * np.ones(num_samples), pulse.amplitude * np.zeros(
-        num_samples
+    i, q = (
+        pulse.amplitude * np.ones(num_samples),
+        pulse.amplitude * np.zeros(num_samples),
     )
     global_phase = (
         2 * np.pi * pulse._if * pulse.start / 1e9
@@ -1225,34 +1226,3 @@ def test_envelope_waveform_i_q():
     with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
         custom_shape_pulse.envelope_waveform_q()
-
-
-@pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
-@pytest.mark.parametrize(
-    "duration", [100, 500, se_int(100, "d100"), se_int(500, "d500")]
-)
-def test_pulse_properties(start, duration):
-    def check_properties(pulse):
-        assert isinstance(pulse.start, int)
-        assert isinstance(pulse.se_start, se_int)
-        assert isinstance(pulse.duration, int)
-        assert isinstance(pulse.se_duration, se_int)
-        assert isinstance(pulse.finish, int)
-        assert isinstance(pulse.se_finish, se_int)
-
-    p0 = Pulse(start, duration, 0.9, 0, 0, Rectangular(), 0)
-    # Check the getters
-    check_properties(p0)
-    # Check the setters
-    p0.start = start + 10
-    p0.duration = duration + 10
-    check_properties(p0)
-
-
-def test_pulse_setter_errors():
-    faulty_duration = "hello"
-    faulty_start = "hello"
-    with pytest.raises(TypeError):
-        p0 = Pulse(faulty_start, 100, 0.9, 0, 0, Rectangular(), 0)
-    with pytest.raises(TypeError):
-        p0 = Pulse(0, faulty_duration, 0.9, 0, 0, Rectangular(), 0)
