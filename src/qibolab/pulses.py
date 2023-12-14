@@ -89,9 +89,7 @@ class Waveform:
         plt.plot(self.data, c="C0", linestyle="dashed")
         plt.xlabel("Sample Number")
         plt.ylabel("Amplitude")
-        plt.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
+        plt.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         plt.suptitle(self.serial)
         if savefig_filename:
             plt.savefig(savefig_filename)
@@ -126,20 +124,14 @@ class PulseShape(ABC):
     """
 
     @abstractmethod
-    def envelope_waveform_i(
-        self, sampling_rate=SAMPLING_RATE
-    ) -> Waveform:  # pragma: no cover
+    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:  # pragma: no cover
         raise NotImplementedError
 
     @abstractmethod
-    def envelope_waveform_q(
-        self, sampling_rate=SAMPLING_RATE
-    ) -> Waveform:  # pragma: no cover
+    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:  # pragma: no cover
         raise NotImplementedError
 
-    def envelope_waveforms(
-        self, sampling_rate=SAMPLING_RATE
-    ):  #  -> tuple[Waveform, Waveform]:  # pragma: no cover
+    def envelope_waveforms(self, sampling_rate=SAMPLING_RATE):  #  -> tuple[Waveform, Waveform]:  # pragma: no cover
         """A tuple with the i and q envelope waveforms of the pulse."""
 
         return (
@@ -174,20 +166,12 @@ class PulseShape(ABC):
         num_samples = int(np.rint(pulse.duration * sampling_rate))
         time = np.arange(num_samples) / sampling_rate
         global_phase = pulse.global_phase
-        cosalpha = np.cos(
-            2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase
-        )
-        sinalpha = np.sin(
-            2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase
-        )
+        cosalpha = np.cos(2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase)
+        sinalpha = np.sin(2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase)
 
-        mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(
-            2
-        )
+        mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(2)
 
-        (envelope_waveform_i, envelope_waveform_q) = self.envelope_waveforms(
-            sampling_rate
-        )
+        (envelope_waveform_i, envelope_waveform_q) = self.envelope_waveforms(sampling_rate)
         result = []
         for n, t, ii, qq in zip(
             np.arange(num_samples),
@@ -269,10 +253,7 @@ class Exponential(PulseShape):
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
                 self.pulse.amplitude
-                * (
-                    (np.ones(num_samples) * np.exp(-x / self.upsilon))
-                    + self.g * np.exp(-x / self.tau)
-                )
+                * ((np.ones(num_samples) * np.exp(-x / self.upsilon)) + self.g * np.exp(-x / self.tau))
                 / (1 + self.g)
             )
 
@@ -324,13 +305,7 @@ class Gaussian(PulseShape):
             x = np.arange(0, num_samples, 1)
             waveform = Waveform(
                 self.pulse.amplitude
-                * np.exp(
-                    -(1 / 2)
-                    * (
-                        ((x - (num_samples - 1) / 2) ** 2)
-                        / (((num_samples) / self.rel_sigma) ** 2)
-                    )
-                )
+                * np.exp(-(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2)))
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -378,11 +353,7 @@ class Drag(PulseShape):
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             x = np.arange(0, num_samples, 1)
             i = self.pulse.amplitude * np.exp(
-                -(1 / 2)
-                * (
-                    ((x - (num_samples - 1) / 2) ** 2)
-                    / (((num_samples) / self.rel_sigma) ** 2)
-                )
+                -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
             )
             waveform = Waveform(i)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
@@ -396,18 +367,9 @@ class Drag(PulseShape):
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             x = np.arange(0, num_samples, 1)
             i = self.pulse.amplitude * np.exp(
-                -(1 / 2)
-                * (
-                    ((x - (num_samples - 1) / 2) ** 2)
-                    / (((num_samples) / self.rel_sigma) ** 2)
-                )
+                -(1 / 2) * (((x - (num_samples - 1) / 2) ** 2) / (((num_samples) / self.rel_sigma) ** 2))
             )
-            q = (
-                self.beta
-                * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
-                * i
-                * sampling_rate
-            )
+            q = self.beta * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2)) * i * sampling_rate
             waveform = Waveform(q)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
@@ -436,11 +398,7 @@ class IIR(PulseShape):
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
         if super().__eq__(item):
-            return (
-                self.target == item.target
-                and (self.a == item.a).all()
-                and (self.b == item.b).all()
-            )
+            return self.target == item.target and (self.a == item.a).all() and (self.b == item.b).all()
         return False
 
     @property
@@ -518,9 +476,7 @@ class SNZ(PulseShape):
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
         if super().__eq__(item):
-            return (
-                self.t_idling == item.t_idling and self.b_amplitude == item.b_amplitude
-            )
+            return self.t_idling == item.t_idling and self.b_amplitude == item.b_amplitude
         return False
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
@@ -528,16 +484,12 @@ class SNZ(PulseShape):
 
         if self.pulse:
             if self.t_idling > self.pulse.duration:
-                raise ValueError(
-                    f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}."
-                )
+                raise ValueError(f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}.")
             if self.b_amplitude is None:
                 self.b_amplitude = self.pulse.amplitude / 2
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             half_pulse_duration = (self.pulse.duration - self.t_idling) / 2
-            half_flux_pulse_samples = int(
-                np.rint(num_samples * half_pulse_duration / self.pulse.duration)
-            )
+            half_flux_pulse_samples = int(np.rint(num_samples * half_pulse_duration / self.pulse.duration))
             idling_samples = num_samples - 2 * half_flux_pulse_samples
             waveform = Waveform(
                 np.concatenate(
@@ -749,9 +701,7 @@ class Pulse:
 
         return self.shape.envelope_waveform_q(sampling_rate)
 
-    def envelope_waveforms(
-        self, sampling_rate=SAMPLING_RATE
-    ):  #  -> tuple[Waveform, Waveform]:
+    def envelope_waveforms(self, sampling_rate=SAMPLING_RATE):  #  -> tuple[Waveform, Waveform]:
         """A tuple with the i and q envelope waveforms of the pulse."""
 
         return (
@@ -928,9 +878,7 @@ class Pulse:
         ax1.set_xlabel("Time [ns]")
         ax1.set_ylabel("Amplitude")
 
-        ax1.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
+        ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax1.axis([self.start, self.finish, -1, 1])
         ax1.legend()
 
@@ -973,9 +921,7 @@ class Pulse:
             linestyle="dashed",
         )
 
-        ax2.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
+        ax2.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
@@ -1131,9 +1077,7 @@ class SplitPulse(Pulse):
     """A supporting class to represent sections or slices of a pulse."""
 
     # TODO: Since this class is only required by qblox drivers, move to qblox.py
-    def __init__(
-        self, pulse: Pulse, window_start: int = None, window_finish: int = None
-    ):
+    def __init__(self, pulse: Pulse, window_start: int = None, window_finish: int = None):
         super().__init__(
             pulse.start,
             pulse.duration,
@@ -1161,13 +1105,9 @@ class SplitPulse(Pulse):
     @window_start.setter
     def window_start(self, value: int):
         if not isinstance(value, int):
-            raise TypeError(
-                f"window_start argument type should be int, got {type(value).__name__}"
-            )
+            raise TypeError(f"window_start argument type should be int, got {type(value).__name__}")
         if value < self.start:
-            raise ValueError(
-                "window_start should be >= pulse start ({self._start}), got {value}"
-            )
+            raise ValueError("window_start should be >= pulse start ({self._start}), got {value}")
         self._window_start = value
 
     @property
@@ -1177,13 +1117,9 @@ class SplitPulse(Pulse):
     @window_finish.setter
     def window_finish(self, value: int):
         if not isinstance(value, int):
-            raise TypeError(
-                f"window_start argument type should be int, got {type(value).__name__}"
-            )
+            raise TypeError(f"window_start argument type should be int, got {type(value).__name__}")
         if value > self.finish:
-            raise ValueError(
-                "window_finish should be <= pulse finish ({self._finish}), got {value}"
-            )
+            raise ValueError("window_finish should be <= pulse finish ({self._finish}), got {value}")
         self._window_finish = value
 
     @property
@@ -1291,9 +1227,7 @@ class SplitPulse(Pulse):
         ax1.set_xlabel("Time [ns]")
         ax1.set_ylabel("Amplitude")
 
-        ax1.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
+        ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax1.axis([self.window_start, self._window_finish, -1, 1])
         ax1.legend()
 
@@ -1317,9 +1251,7 @@ class SplitPulse(Pulse):
             linestyle="dashed",
         )
 
-        ax2.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
+        ax2.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
@@ -1415,9 +1347,7 @@ class PulseSequence:
         elif isinstance(other, Pulse):
             self.add(other)
         else:
-            raise TypeError(
-                f"Expected PulseSequence or Pulse; got {type(other).__name__}"
-            )
+            raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
         return self
 
     def __mul__(self, n):
@@ -1668,10 +1598,7 @@ class PulseSequence:
             for ps in separated_pulses:
                 overlaps = False
                 for existing_pulse in ps:
-                    if (
-                        new_pulse.start < existing_pulse.finish
-                        and new_pulse.finish > existing_pulse.start
-                    ):
+                    if new_pulse.start < existing_pulse.finish and new_pulse.finish > existing_pulse.start:
                         overlaps = True
                         break
                 if not overlaps:
@@ -1726,47 +1653,30 @@ class PulseSequence:
                                 pulse.window_start - pulse.start,
                                 pulse.window_finish - pulse.start,
                             )
-                            num_samples = len(
-                                pulse.shape.modulated_waveform_i(sampling_rate).data[
-                                    idx
-                                ]
-                            )
-                            time = (
-                                pulse.window_start
-                                + np.arange(num_samples) / sampling_rate
-                            )
+                            num_samples = len(pulse.shape.modulated_waveform_i(sampling_rate).data[idx])
+                            time = pulse.window_start + np.arange(num_samples) / sampling_rate
                             ax.plot(
                                 time,
-                                pulse.shape.modulated_waveform_q(sampling_rate).data[
-                                    idx
-                                ],
+                                pulse.shape.modulated_waveform_q(sampling_rate).data[idx],
                                 c="lightgrey",
                             )
                             ax.plot(
                                 time,
-                                pulse.shape.modulated_waveform_i(sampling_rate).data[
-                                    idx
-                                ],
+                                pulse.shape.modulated_waveform_i(sampling_rate).data[idx],
                                 c=f"C{str(n)}",
                             )
                             ax.plot(
                                 time,
-                                pulse.shape.envelope_waveform_i(sampling_rate).data[
-                                    idx
-                                ],
+                                pulse.shape.envelope_waveform_i(sampling_rate).data[idx],
                                 c=f"C{str(n)}",
                             )
                             ax.plot(
                                 time,
-                                -pulse.shape.envelope_waveform_i(sampling_rate).data[
-                                    idx
-                                ],
+                                -pulse.shape.envelope_waveform_i(sampling_rate).data[idx],
                                 c=f"C{str(n)}",
                             )
                         else:
-                            num_samples = len(
-                                pulse.shape.modulated_waveform_i(sampling_rate)
-                            )
+                            num_samples = len(pulse.shape.modulated_waveform_i(sampling_rate))
                             time = pulse.start + np.arange(num_samples) / sampling_rate
                             ax.plot(
                                 time,
