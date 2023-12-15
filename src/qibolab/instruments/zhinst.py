@@ -1150,8 +1150,8 @@ class Zurich(Controller):
 
     @staticmethod
     def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[np.ndarray, List[Sweeper]]:
-        """
-        Rearranges sweepers from qibocal based on device hardware limitations.
+        """Rearranges sweepers from qibocal based on device hardware
+        limitations.
 
         Frequency sweepers must be applied before bias or amplitude sweepers.
 
