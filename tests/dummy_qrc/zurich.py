@@ -17,7 +17,7 @@ from qibolab.serialize import (
 )
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
-
+FOLDER = pathlib.Path(__file__).parent / "iqm5q/"
 N_QUBITS = 5
 
 
@@ -40,13 +40,31 @@ def create(runcard_path=RUNCARD):
     )
     device_setup.add_connections(
         "device_shfqc",
-        *[create_connection(to_signal=f"q{i}/drive_line", ports=[f"SGCHANNELS/{i}/OUTPUT"]) for i in range(N_QUBITS)],
-        *[create_connection(to_signal=f"q{i}/measure_line", ports=["QACHANNELS/0/OUTPUT"]) for i in range(N_QUBITS)],
-        *[create_connection(to_signal=f"q{i}/acquire_line", ports=["QACHANNELS/0/INPUT"]) for i in range(N_QUBITS)],
+        *[
+            create_connection(
+                to_signal=f"q{i}/drive_line", ports=[f"SGCHANNELS/{i}/OUTPUT"]
+            )
+            for i in range(N_QUBITS)
+        ],
+        *[
+            create_connection(
+                to_signal=f"q{i}/measure_line", ports=["QACHANNELS/0/OUTPUT"]
+            )
+            for i in range(N_QUBITS)
+        ],
+        *[
+            create_connection(
+                to_signal=f"q{i}/acquire_line", ports=["QACHANNELS/0/INPUT"]
+            )
+            for i in range(N_QUBITS)
+        ],
     )
     device_setup.add_connections(
         "device_hdawg",
-        *[create_connection(to_signal=f"q{i}/flux_line", ports=f"SIGOUTS/{i}") for i in range(N_QUBITS)],
+        *[
+            create_connection(to_signal=f"q{i}/flux_line", ports=f"SIGOUTS/{i}")
+            for i in range(N_QUBITS)
+        ],
         *[
             create_connection(to_signal=f"qc{c}/flux_line", ports=f"SIGOUTS/{i}")
             for c, i in zip(itertools.chain(range(0, 2), range(3, 4)), range(5, 8))
@@ -76,17 +94,30 @@ def create(runcard_path=RUNCARD):
     # Create channel objects and map controllers
     channels = ChannelMap()
     # feedback
-    channels |= Channel("L2-7", port=controller[("device_shfqc", "[QACHANNELS/0/INPUT]")])
+    channels |= Channel(
+        "L2-7", port=controller[("device_shfqc", "[QACHANNELS/0/INPUT]")]
+    )
     # readout
-    channels |= Channel("L3-31", port=controller[("device_shfqc", "[QACHANNELS/0/OUTPUT]")])
+    channels |= Channel(
+        "L3-31", port=controller[("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
+    )
     # drive
     channels |= (
-        Channel(f"L4-{i}", port=controller[("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]) for i in range(15, 20)
+        Channel(
+            f"L4-{i}", port=controller[("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
+        )
+        for i in range(15, 20)
     )
     # flux qubits (CAREFUL WITH THIS !!!)
-    channels |= (Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-6}")]) for i in range(6, 11))
+    channels |= (
+        Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-6}")])
+        for i in range(6, 11)
+    )
     # flux couplers
-    channels |= (Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-11+5}")]) for i in range(11, 14))
+    channels |= (
+        Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-11+5}")])
+        for i in range(11, 14)
+    )
     channels |= Channel("L4-14", port=controller[("device_hdawg2", "SIGOUTS/0")])
     # TWPA pump(EraSynth)
     channels |= Channel("L3-32")
@@ -121,7 +152,10 @@ def create(runcard_path=RUNCARD):
         channels[f"L4-{i}"].power_range = 0.8
 
     # Instantiate local oscillators
-    local_oscillators = [LocalOscillator(f"lo_{kind}", None) for kind in ["readout"] + [f"drive_{n}" for n in range(3)]]
+    local_oscillators = [
+        LocalOscillator(f"lo_{kind}", None)
+        for kind in ["readout"] + [f"drive_{n}" for n in range(3)]
+    ]
 
     # Map LOs to channels
     ch_to_lo = {
@@ -137,7 +171,7 @@ def create(runcard_path=RUNCARD):
 
     # create qubit objects
     runcard = load_runcard(runcard_path)
-    qubits, couplers, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard, FOLDER)
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)

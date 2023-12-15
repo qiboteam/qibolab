@@ -1,13 +1,12 @@
 import numpy as np
 
 
-def print_readable_snapshot(device, file, update: bool = False, max_chars: int = 80) -> None:
-    """
-    Prints a readable version of the snapshot.
-    The readable snapshot includes the name, value and unit of each
-    parameter.
-    A convenience function to quickly get an overview of the
-    status of an instrument.
+def print_readable_snapshot(
+    device, file, update: bool = False, max_chars: int = 80
+) -> None:
+    """Prints a readable version of the snapshot. The readable snapshot
+    includes the name, value and unit of each parameter. A convenience function
+    to quickly get an overview of the status of an instrument.
 
     Args:
         update: If ``True``, update the state by querying the

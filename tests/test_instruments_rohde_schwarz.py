@@ -42,7 +42,9 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
     set_and_test_parameter_values(
         instrument, f"power", np.arange(-120, 0, 10)
     )  # Max power is 25dBm but to be safe testing only until 0dBm
-    set_and_test_parameter_values(instrument, f"frequency", np.arange(1e6, 12750e6, 1e9))
+    set_and_test_parameter_values(
+        instrument, f"frequency", np.arange(1e6, 12750e6, 1e9)
+    )
     """   # TODO: add attitional paramter tests
     SGS100A:
         parameter            value
