@@ -498,6 +498,11 @@ def test_pulses_pulsesequence_start_finish():
     assert ps.start == p1.start
     assert ps.finish == p2.finish
 
+    p1.start = None
+    assert p1.finish is None
+    p2.duration = None
+    assert p2.finish is None
+
 
 def test_pulses_pulsesequence_get_channel_pulses():
     p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
