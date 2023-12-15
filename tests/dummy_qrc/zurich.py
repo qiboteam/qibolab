@@ -17,7 +17,7 @@ from qibolab.serialize import (
 )
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
-
+FOLDER = pathlib.Path(__file__).parent / "iqm5q/"
 N_QUBITS = 5
 
 
@@ -137,7 +137,7 @@ def create(runcard_path=RUNCARD):
 
     # create qubit objects
     runcard = load_runcard(runcard_path)
-    qubits, couplers, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard, FOLDER)
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
