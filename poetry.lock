@@ -1883,12 +1883,12 @@ files = [
 
 [[package]]
 name = "laboneq"
-version = "2.20.1"
+version = "2.21.0"
 description = "Zurich Instruments LabOne Q software framework for quantum computing control"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "laboneq-2.20.1-py3-none-any.whl", hash = "sha256:b74a597efea0f72e2cfa27722ab58f21f3328f8c7f406142c9c622315dfbadd8"},
+    {file = "laboneq-2.21.0-py3-none-any.whl", hash = "sha256:9d20c10778927ed259e34488da472526d6839bd1085cc6fb38df8e0ca7a24e67"},
 ]
 
 [package.dependencies]
@@ -1900,7 +1900,6 @@ intervaltree = "*"
 jsonschema = "*"
 lagom = "*"
 matplotlib = "*"
-nest-asyncio = "*"
 numpy = "*"
 openpulse = "*"
 openqasm3 = "*"
@@ -1916,9 +1915,10 @@ sortedcollections = "*"
 sortedcontainers = "*"
 sqlitedict = "*"
 typing-extensions = "*"
-zhinst-core = ">=23.10.49450,<23.11.0"
-zhinst-toolkit = ">=0.6.0,<0.7.0"
-zhinst-utils = "0.3.5"
+unsync = "1.4.0"
+zhinst-core = ">=23.10.51605,<23.11.0"
+zhinst-toolkit = ">=0.6.2,<0.7.0"
+zhinst-utils = "0.3.6"
 
 [[package]]
 name = "lagom"
@@ -5041,6 +5041,16 @@ optional = ["numpy"]
 tests = ["nose", "numpy"]
 
 [[package]]
+name = "unsync"
+version = "1.4.0"
+description = "Unsynchronize asyncio"
+optional = false
+python-versions = "*"
+files = [
+    {file = "unsync-1.4.0.tar.gz", hash = "sha256:a29e0f8952ffb0b3a0453ce436819a5a1ba2febbb5caa707c319f6f98d35f3c5"},
+]
+
+[[package]]
 name = "urllib3"
 version = "2.1.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -5339,38 +5349,38 @@ viz = ["matplotlib", "nc-time-axis", "seaborn"]
 
 [[package]]
 name = "zhinst-core"
-version = "23.10.49450"
+version = "23.10.51605"
 description = "Python API for Zurich Instruments Devices"
 optional = false
 python-versions = "*"
 files = [
-    {file = "zhinst_core-23.10.49450-cp310-cp310-macosx_10_11_x86_64.whl", hash = "sha256:ea77c827b6f3afc4ca81145124c92aeff55892e8f664f6298a7909696337f4bb"},
-    {file = "zhinst_core-23.10.49450-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:97013a32122ab48ec3ee177a816f92a9e457667f88525cb01d2264015b04e409"},
-    {file = "zhinst_core-23.10.49450-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:5c4148e541172a1f00fe1534d44d4313929efafd40c19cca968b6b8c6c23ef58"},
-    {file = "zhinst_core-23.10.49450-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:38c59e68148d3e2441846d69cbff76820c3a6ac31000ba9dce9a1156282f910d"},
-    {file = "zhinst_core-23.10.49450-cp310-cp310-win_amd64.whl", hash = "sha256:c8635b356907fce9632d42b26bab866af7a14162ddd60397b2adef3a65af0d89"},
-    {file = "zhinst_core-23.10.49450-cp311-cp311-macosx_10_11_x86_64.whl", hash = "sha256:de54dc00cb095513e0e27f8b22ca53304172b9b84f4550c8639b5224186b55c0"},
-    {file = "zhinst_core-23.10.49450-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0b4f9235e8f335875ef3f507989b929b578103139265bc0ead213f328a663c1d"},
-    {file = "zhinst_core-23.10.49450-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:cee5e4501670e2a6924f4d3d7a73e0c252a01ea4ea22a45f57ab9d9bc3abe452"},
-    {file = "zhinst_core-23.10.49450-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:9af7a0535e7eaadd2c75d2b5ec339c1e96dc5bc28c5e753795559a554f23bd0a"},
-    {file = "zhinst_core-23.10.49450-cp311-cp311-win_amd64.whl", hash = "sha256:e00f97560d9169c3c944ee4ec07a09033caba60edfb82a78bb115e41f9474e98"},
-    {file = "zhinst_core-23.10.49450-cp312-cp312-macosx_10_11_x86_64.whl", hash = "sha256:ce6a77c6db2cc4b62204603c20854c0ac7242ee5bcf262e77248e5886e8cf501"},
-    {file = "zhinst_core-23.10.49450-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:7751954126a71d33476b9f9ea923433b7a85cb9824a2546ca75e19fe4014e014"},
-    {file = "zhinst_core-23.10.49450-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:e100dbaed4a97d1809309c8280206224ff01605a9d3461da4cbe535064cd0ba5"},
-    {file = "zhinst_core-23.10.49450-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:e873a71776dff7c2dffb20127c9600deadc3dfb50ee49e459d5ef9ad72e2906c"},
-    {file = "zhinst_core-23.10.49450-cp312-cp312-win_amd64.whl", hash = "sha256:e155c82b833f84941bcebc96e322c13d2615b3dcd79b5208e9137af9788382df"},
-    {file = "zhinst_core-23.10.49450-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:f23784febf01dec2688d343dc55d1093c890743c9766927da2c5d9df4f2b79ff"},
-    {file = "zhinst_core-23.10.49450-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:ed7827aa5ba89a3250f8993fca2cc1be77828b7dc0d9c0836acd638b216a01a9"},
-    {file = "zhinst_core-23.10.49450-cp37-cp37m-win_amd64.whl", hash = "sha256:be966393c841f292d6daa026905c546db6bcf4119cdafc782736ebfd50a3e52c"},
-    {file = "zhinst_core-23.10.49450-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:41e2785ea882d09c5b839756910ed1e321992715df873b36353bad1229fd3afd"},
-    {file = "zhinst_core-23.10.49450-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:841e70c8453a4e46000912bfbdb4b55d4e1b2faaa900a79a9d028446427cf186"},
-    {file = "zhinst_core-23.10.49450-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:2d5a7c581b1d0c98d20a790c9d9dbf7df5a8cfa03e35b4b83bc87a935ff672c0"},
-    {file = "zhinst_core-23.10.49450-cp38-cp38-win_amd64.whl", hash = "sha256:e186d864aa48ce6a6275f3b64766d8f72a68c05eba9bc545700a7a7d520b660c"},
-    {file = "zhinst_core-23.10.49450-cp39-cp39-macosx_10_11_x86_64.whl", hash = "sha256:a890f7715c448d9dcf7b2c25fc6c6329cdad82d6f9376331f6ae6070dbe69d4a"},
-    {file = "zhinst_core-23.10.49450-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:a6932dcbcf8f68adbc72d0816c7b0952dcc0eb5ffbbcc21f2aa625aeec38398a"},
-    {file = "zhinst_core-23.10.49450-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:9c80ed10ad427cd0bc09acc6f667a01b1f26a8b2e89ff6be187350c4206fd887"},
-    {file = "zhinst_core-23.10.49450-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:c457612e02ab2efdff2da0446a59bf9b5d9a9dcb299c383a2aff0e4dd8c0a888"},
-    {file = "zhinst_core-23.10.49450-cp39-cp39-win_amd64.whl", hash = "sha256:7783ca8e00b9798814de305f14b2f8b05e8ee719a5c71683b8e98080487c9020"},
+    {file = "zhinst_core-23.10.51605-cp310-cp310-macosx_10_11_x86_64.whl", hash = "sha256:13780f35ffd57f81318e1e934171f6386272ac7517ee8880d49d6064e0ceb2db"},
+    {file = "zhinst_core-23.10.51605-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d2a1246ec568a757548b41f836d518dbe14d9b77e231f848863d555ca243949e"},
+    {file = "zhinst_core-23.10.51605-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:509594b17cc7523be2905a4ec7a6ff5877fbe3b22573b409df9477a244fe41c4"},
+    {file = "zhinst_core-23.10.51605-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:fb4168f87163afb725686681552ddd8ae35592336484f8a44e66c4fe924eb939"},
+    {file = "zhinst_core-23.10.51605-cp310-cp310-win_amd64.whl", hash = "sha256:635c0b14d136b30a4adf9993c11478d72c53c6dbe403057842d0e2ced4e0f6ed"},
+    {file = "zhinst_core-23.10.51605-cp311-cp311-macosx_10_11_x86_64.whl", hash = "sha256:aea35ff7b4013b826470dec1bd72ad55eee6339d5c460e54cbf8e1bdb0f323d5"},
+    {file = "zhinst_core-23.10.51605-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:a3d9edca3dc06229769ec32b9eb4e4784c3b1e8378530b91f3b5661b6d8ff6b1"},
+    {file = "zhinst_core-23.10.51605-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:a4c7991f66b92d2c931a625f1442924323d5bb8460be24ef9aa0208ea8f810c7"},
+    {file = "zhinst_core-23.10.51605-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:ededd0c8e2e3758fa897374b717df80e670e82687639dc2c1aca886b65c19467"},
+    {file = "zhinst_core-23.10.51605-cp311-cp311-win_amd64.whl", hash = "sha256:63ea7e81b8be0ddcecd0e8ee8c4fa374cfb2b7036a0a8bf799a6cd28856ed96c"},
+    {file = "zhinst_core-23.10.51605-cp312-cp312-macosx_10_11_x86_64.whl", hash = "sha256:76107c0578e939cf5fe20ac6c71ce306f2ca0ce72157a395a32120ecf004678b"},
+    {file = "zhinst_core-23.10.51605-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:bc6b9e4b52059c1be8eb7fc58b5d2917d1d45b0eac330299e0ed64d89818784f"},
+    {file = "zhinst_core-23.10.51605-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:805c424828cbd90130a0d4624fa95af535ff1b8c5844f1ce89c03aa792778732"},
+    {file = "zhinst_core-23.10.51605-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:d6c905db7062d661e92402d54417c593a619aa1f57a6634f97a00931c717c10e"},
+    {file = "zhinst_core-23.10.51605-cp312-cp312-win_amd64.whl", hash = "sha256:d128a346853369e13888d7d983a52279cb47271d5e775264f86d86b177e9a17a"},
+    {file = "zhinst_core-23.10.51605-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:be65db0380cbba67f85861911385b11f2dfa85fa93df679e355e7e187e94a80d"},
+    {file = "zhinst_core-23.10.51605-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:d1f63c08f00e91659c5f644aa3cfef596eecb24a48c1669560c96e7afaaedef5"},
+    {file = "zhinst_core-23.10.51605-cp37-cp37m-win_amd64.whl", hash = "sha256:11310840e01b3cdb3f6a2fc9df9d254eb0b171c362510bd3f50d87e2a66197c9"},
+    {file = "zhinst_core-23.10.51605-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:e73b210b4e1067a0f36ed926fa58e520419c96a126877e4d6b211da1c8c61199"},
+    {file = "zhinst_core-23.10.51605-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:c6e64c0a223fee776e6e139059b8da9bdde2c40eaecf8932fe08abb6fa5de311"},
+    {file = "zhinst_core-23.10.51605-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:0ab44131e3e12ed48616f1f00e33c516e9b247eb338f8c5545a15c5e55254dc7"},
+    {file = "zhinst_core-23.10.51605-cp38-cp38-win_amd64.whl", hash = "sha256:e49ad0093eb43b583f448ad7eefba6c4a7e0900b56b535d188d14f6fcb11e1dd"},
+    {file = "zhinst_core-23.10.51605-cp39-cp39-macosx_10_11_x86_64.whl", hash = "sha256:81270491ae969848b5ac6c9f7ec105f9c7fe5b83d275048a8b343607b171b3a9"},
+    {file = "zhinst_core-23.10.51605-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:6ee6d8af5f059f933d748408c949d2e94e388abc33a76f39aa7214698bde1e07"},
+    {file = "zhinst_core-23.10.51605-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:031da42a0e82b9de43b2af3bdc4563a6f40a8ff469c9c12518479759f6fb4cf3"},
+    {file = "zhinst_core-23.10.51605-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:2bc8727c2bda6e2a5f47b040357f9b1a2d56095d5e6afaf847c3c6afbc150850"},
+    {file = "zhinst_core-23.10.51605-cp39-cp39-win_amd64.whl", hash = "sha256:a75be4f848036a1ae0cd4cf82156d81aad99f9c2fb2b6eac861a02d6dac78c76"},
 ]
 
 [package.dependencies]
@@ -5399,12 +5409,12 @@ zhinst-utils = ">=0.3.1"
 
 [[package]]
 name = "zhinst-utils"
-version = "0.3.5"
+version = "0.3.6"
 description = "Zurich Instruments utils for device control"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "zhinst_utils-0.3.5-py3-none-any.whl", hash = "sha256:50dd90b118ad6b7cca4906856c5d3b6bc751ce5b08100877cae3de543a19e4cd"},
+    {file = "zhinst_utils-0.3.6-py3-none-any.whl", hash = "sha256:3d13ea883d64996984214169284fffc017afd28244c9d0adabc73498ae631c39"},
 ]
 
 [package.dependencies]
@@ -5436,4 +5446,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "4c61139989d7b3d8af9b4bbcb1d7f5183118be50498138c6bee481c477122722"
+content-hash = "d0466649f0511c2f842fe31ab436a7fea8b0448fcfaca51de277c4770b922351"
