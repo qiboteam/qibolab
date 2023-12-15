@@ -13,10 +13,9 @@ class LocalOscillatorSettings(InstrumentSettings):
 class LocalOscillator(Instrument):
     """Abstraction for local oscillator instruments.
 
-    Local oscillators are used to upconvert signals, when
-    the controllers cannot send sufficiently high frequencies
-    to address the qubits and resonators.
-    They cannot be used to play or sweep pulses.
+    Local oscillators are used to upconvert signals, when the
+    controllers cannot send sufficiently high frequencies to address the
+    qubits and resonators. They cannot be used to play or sweep pulses.
     """
 
     def __init__(self, name, address):

@@ -87,7 +87,9 @@ def test_execute_circuits():
 
 
 @pytest.mark.qpu
-@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+@pytest.mark.xfail(
+    raises=AssertionError, reason="Probabilities are not well calibrated"
+)
 def test_ground_state_probabilities_circuit(connected_backend):
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
@@ -103,7 +105,9 @@ def test_ground_state_probabilities_circuit(connected_backend):
 
 
 @pytest.mark.qpu
-@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+@pytest.mark.xfail(
+    raises=AssertionError, reason="Probabilities are not well calibrated"
+)
 def test_excited_state_probabilities_circuit(connected_backend):
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
@@ -120,9 +124,12 @@ def test_excited_state_probabilities_circuit(connected_backend):
 
 
 @pytest.mark.qpu
-@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+@pytest.mark.xfail(
+    raises=AssertionError, reason="Probabilities are not well calibrated"
+)
 def test_superposition_for_all_qubits(connected_backend):
-    """Applies an H gate to each qubit of the circuit and measures the probabilities."""
+    """Applies an H gate to each qubit of the circuit and measures the
+    probabilities."""
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
     probs = []
@@ -130,9 +137,13 @@ def test_superposition_for_all_qubits(connected_backend):
         circuit = Circuit(nqubits)
         circuit.add(gates.H(q=q))
         circuit.add(gates.M(q))
-        freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(binary=False)
+        freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(
+            binary=False
+        )
         probs.append([freqs[i] / nshots for i in range(2)])
-        warnings.warn(f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}")
+        warnings.warn(
+            f"Probabilities after an Hadamard gate applied to qubit {q}: {probs[-1]}"
+        )
     probs = np.asarray(probs)
     target_probs = np.repeat(a=0.5, repeats=nqubits)
     np.testing.assert_allclose(probs.T[0], target_probs, atol=0.05)

@@ -10,11 +10,13 @@ from qibolab.instruments.port import Port
 def check_max_offset(offset, max_offset):
     """Checks if a given offset value exceeds the maximum supported offset.
 
-    This is to avoid sending high currents that could damage lab equipment
-    such as amplifiers.
+    This is to avoid sending high currents that could damage lab
+    equipment such as amplifiers.
     """
     if max_offset is not None and abs(offset) > max_offset:
-        raise_error(ValueError, f"{offset} exceeds the maximum allowed offset {max_offset}.")
+        raise_error(
+            ValueError, f"{offset} exceeds the maximum allowed offset {max_offset}."
+        )
 
 
 @dataclass
@@ -26,18 +28,19 @@ class Channel:
     port: Optional[Port] = None
     """Instrument port that is connected to this channel."""
     local_oscillator: Optional[LocalOscillator] = None
-    """Instrument object controlling the local oscillator connected to this channel.
+    """Instrument object controlling the local oscillator connected to this
+    channel.
 
-    Not applicable for setups that do not use external local oscillators because the
-    controller can send sufficiently high frequencies or contains internal local
-    oscillators.
+    Not applicable for setups that do not use external local oscillators
+    because the controller can send sufficiently high frequencies or
+    contains internal local oscillators.
     """
     max_offset: Optional[float] = None
     """Maximum DC voltage that we can safely send through this channel.
 
-    Sending high voltages for prolonged times may damage amplifiers or other lab equipment.
-    If the user attempts to send a higher value an error will be raised to prevent
-    execution in real instruments.
+    Sending high voltages for prolonged times may damage amplifiers or
+    other lab equipment. If the user attempts to send a higher value an
+    error will be raised to prevent execution in real instruments.
     """
 
     @property
@@ -112,11 +115,11 @@ class Channel:
 
 @dataclass
 class ChannelMap:
-    """Collection of :class:`qibolab.designs.channel.Channel` objects identified by name.
+    """Collection of :class:`qibolab.designs.channel.Channel` objects
+    identified by name.
 
     Essentially, it allows creating a mapping of names to channels just
     specifying the names.
-
     """
 
     _channels: Dict[str, Channel] = field(default_factory=dict)
@@ -124,9 +127,12 @@ class ChannelMap:
     def add(self, *items):
         """Add multiple items to the channel map.
 
-        If :class:`qibolab.channels.Channel` objects are given they are added to the channel map.
-        If a different type is given, a :class:`qibolab.channels.Channel` with the
-        corresponding name is created and added to the channel map.
+        If
+        :class: `qibolab.channels.Channel` objects are given they are
+                added to the channel map.         If a different type is
+                given, a
+        :class: `qibolab.channels.Channel` with the corresponding name
+                is created and added to the channel map.
         """
         for item in items:
             if isinstance(item, Channel):
@@ -140,7 +146,9 @@ class ChannelMap:
 
     def __setitem__(self, name, channel):
         if not isinstance(channel, Channel):
-            raise_error(TypeError, f"Cannot add channel of type {type(channel)} to ChannelMap.")
+            raise_error(
+                TypeError, f"Cannot add channel of type {type(channel)} to ChannelMap."
+            )
         self._channels[name] = channel
 
     def __contains__(self, name):

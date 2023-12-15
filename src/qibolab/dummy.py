@@ -9,7 +9,8 @@ from qibolab.serialize import load_qubits, load_runcard, load_settings
 
 
 def remove_couplers(runcard):
-    """Remove coupler sections from runcard to create a dummy platform without couplers."""
+    """Remove coupler sections from runcard to create a dummy platform without
+    couplers."""
     runcard["topology"] = list(runcard["topology"].values())
     del runcard["couplers"]
     del runcard["native_gates"]["coupler"]
@@ -43,8 +44,12 @@ def create_dummy(with_couplers: bool = True):
     nqubits = runcard["nqubits"]
     channels = ChannelMap()
     channels |= Channel("readout", port=instrument["readout"])
-    channels |= (Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits))
-    channels |= (Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits))
+    channels |= (
+        Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits)
+    )
+    channels |= (
+        Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits)
+    )
     channels |= Channel("twpa", port=None)
     if with_couplers:
         channels |= (
@@ -73,4 +78,12 @@ def create_dummy(with_couplers: bool = True):
     instrument.sampling_rate = settings.sampling_rate * 1e-9
 
     name = "dummy_couplers" if with_couplers else "dummy"
-    return Platform(name, qubits, pairs, instruments, settings, resonator_type="2D", couplers=couplers)
+    return Platform(
+        name,
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
+    )

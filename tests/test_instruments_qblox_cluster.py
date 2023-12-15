@@ -35,7 +35,14 @@ def test_instrument_interface(cluster: Cluster):
     for abstract_method in Instrument.__abstractmethods__:
         assert hasattr(cluster, abstract_method)
 
-    for attribute in ["name", "address", "is_connected", "signature", "tmp_folder", "data_folder"]:
+    for attribute in [
+        "name",
+        "address",
+        "is_connected",
+        "signature",
+        "tmp_folder",
+        "data_folder",
+    ]:
         assert hasattr(cluster, attribute)
 
 
