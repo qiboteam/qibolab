@@ -164,9 +164,6 @@ class PulseShape(ABC):
         """A tuple with the i and q waveforms of the pulse, modulated with its
         frequency."""
 
-        if not self.pulse:
-            raise ShapeInitError
-
         pulse = self.pulse
         if abs(pulse._if) * 2 > sampling_rate:
             log.info(

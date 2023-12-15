@@ -273,6 +273,15 @@ def test_pulses_pulseshape_sampling_rate(shape):
     assert len(pulse.envelope_waveform_i(sampling_rate=100).data) == 4000
 
 
+def test_pulseshape_eval():
+    shape = PulseShape.eval("Rectangular()")
+    assert isinstance(shape, Rectangular)
+    shape = PulseShape.eval("Drag(5, 1)")
+    assert isinstance(shape, Drag)
+    with pytest.raises(ValueError):
+        shape = PulseShape.eval("Ciao()")
+
+
 def test_raise_shapeiniterror():
     shape = Rectangular()
     with pytest.raises(ShapeInitError):
