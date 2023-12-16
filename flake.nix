@@ -3,7 +3,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
-    # nixpkgs-python.url = "github:cachix/nixpkgs-python";
+    nixpkgs-python = {
+      url = "github:cachix/nixpkgs-python";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -44,7 +47,7 @@
                   install.groups = ["dev" "tests"];
                   install.allExtras = true;
                 };
-                # version = "3.11";
+                version = "3.11";
               };
             }
           ];
