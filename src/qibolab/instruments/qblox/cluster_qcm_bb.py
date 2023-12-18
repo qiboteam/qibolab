@@ -99,15 +99,6 @@ class ClusterQCM_BB(ClusterModule):
     SAMPLING_RATE: int = 1e9  # 1 GSPS
     FREQUENCY_LIMIT = 500e6
 
-    property_wrapper = lambda parent, *parameter: property(
-        lambda self: parent.device.get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(parent.device, *parameter, value=x),
-    )
-    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
-        lambda self: parent.device.sequencers[sequencer].get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
-    )
-
     def __init__(self, name: str, address: str, cluster: Cluster = None):
         """
         Initialize a Qblox QCM baseband module.

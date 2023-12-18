@@ -118,21 +118,6 @@ class ClusterQCM_RF(ClusterModule):
     SAMPLING_RATE: int = 1e9  # 1 GSPS
     FREQUENCY_LIMIT = 500e6
 
-    property_wrapper = lambda parent, *parameter: property(
-        lambda self: parent.device.get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(parent.device, *parameter, value=x),
-    )
-    property_wrapper.__doc__ = """A lambda function used to create properties that wrap around the device parameters and
-    caches their value using `_set_device_parameter()`.
-    """
-    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
-        lambda self: parent.device.sequencers[sequencer].get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(parent.device.sequencers[sequencer], *parameter, value=x),
-    )
-    sequencer_property_wrapper.__doc__ = """A lambda function used to create properties that wrap around the device sequencer
-    parameters and caches their value using `_set_device_parameter()`.
-    """
-
     def __init__(self, name: str, address: str, cluster: Cluster):
         """
         Initialize a Qblox QCM-RF module.
