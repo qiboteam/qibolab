@@ -9,6 +9,7 @@ SAMPLING_RATE = 1
 """Sampling rate for qblox instruments in GSps."""
 
 
+#
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a
     sequencer.
@@ -49,6 +50,7 @@ class WaveformsBuffer:
             NotEnoughMemory: If the memory needed to store the waveforms in more than the memory avalible.
         """
         pulse_copy = pulse.copy()
+        #
         for sweeper in sweepers:
             if sweeper.pulses and sweeper.parameter == Parameter.amplitude:
                 if pulse in sweeper.pulses:
@@ -74,6 +76,7 @@ class WaveformsBuffer:
                 waveform_i not in self.unique_waveforms
                 or waveform_q not in self.unique_waveforms
             ):
+                #
                 memory_needed = 0
                 if not waveform_i in self.unique_waveforms:
                     memory_needed += len(waveform_i)
@@ -127,6 +130,7 @@ class WaveformsBuffer:
         # there may be other waveforms stored already, set first index as the next available
         first_idx = len(self.unique_waveforms)
 
+        #
         if pulse.type == PulseType.FLUX:
             # for flux pulses, store i waveforms
             idx_range = np.arange(first_idx, first_idx + len(values), 1)
@@ -179,6 +183,7 @@ class WaveformsBuffer:
         return idx_range
 
 
+#
 class Sequencer:
     """A class to extend the functionality of qblox_instruments Sequencer.
 
