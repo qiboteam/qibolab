@@ -143,3 +143,6 @@ class Cluster(Instrument):
         self.is_connected = False
         self.device.close()
         # TODO: set modules is_connected to False
+
+
+#

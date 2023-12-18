@@ -55,3 +55,6 @@ def print_readable_snapshot(
 
     for submodule in device.submodules.values():
         print_readable_snapshot(submodule, file, update=update, max_chars=max_chars)
+
+
+#

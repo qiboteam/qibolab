@@ -141,3 +141,6 @@ class DemodulatedAcquisition:
         """
         # TODO: to be updated once the functionality of ExecutionResults is extended
         return (self.shots_i, self.shots_q, self.classified)
+
+
+#

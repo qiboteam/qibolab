@@ -1172,3 +1172,6 @@ class ClusterQRM_RF(Instrument):
         self._erase_device_parameters_cache()
         self._cluster = None
         self.is_connected = False
+
+
+#
