@@ -5,6 +5,7 @@ import numpy as np
 END_OF_LINE = "\n"
 
 
+#
 class Program:
     """A class to represent a sequencer q1asm assembly program.
 
@@ -26,12 +27,14 @@ class Program:
         self._blocks: list = []
         self._next_register_number: int = -1
 
+    #
     def add_blocks(self, *blocks):
         """Adds a :class:`qibolab.instruments.qblox.qblox_q1asm.Block` of code
         to the list of blocks."""
         for block in blocks:
             self._blocks.append(block)
 
+    #
     def __repr__(self) -> str:
         """Returns the program."""
         block_str: str = ""
@@ -40,6 +43,7 @@ class Program:
         return block_str
 
 
+#
 class Block:
     """A class to represent a block of q1asm assembly code.
 
@@ -55,11 +59,13 @@ class Block:
     SPACES_PER_LEVEL = 4
     SPACES_BEFORE_COMMENT = 4
 
+    #
     def __init__(self, name=""):
         self.name = name
         self.lines: list = []
         self._indentation = 0
 
+    #
     def _indentation_string(self, level):
         return " " * Block.SPACES_PER_LEVEL * level
 
@@ -80,6 +86,7 @@ class Block:
             (line, comment, level + diff) for (line, comment, level) in self.lines
         ]
 
+    #
     def append(self, line, comment="", level=0):
         self.lines = self.lines + [(line, comment, self._indentation + level)]
 
@@ -89,6 +96,7 @@ class Block:
     def append_spacer(self):
         self.lines = self.lines + [("", "", self._indentation)]
 
+    #
     def __repr__(self) -> str:
         """Returns a string with the block of code, taking care of the
         indentation of instructions and comments."""
@@ -129,6 +137,7 @@ class Block:
 
         return block_str
 
+    #
     def __add__(self, other):
         if isinstance(other, Block):
             block = Block()
@@ -140,6 +149,7 @@ class Block:
             raise TypeError(f"Expected Block, got {type(other).__name__}")
         return block
 
+    #
     def __radd__(self, other):
         if isinstance(other, Block):
             block = Block()
@@ -160,6 +170,7 @@ class Block:
         return self
 
 
+#
 class Register:
     """A class to represent a q1asm program register.
 
@@ -171,11 +182,13 @@ class Register:
     def __init__(self, program: Program, name: str = ""):
         self._number = program.next_register()
         self._name = name
+        #
         self._type = type
 
     def __repr__(self) -> str:
         return "R" + str(self._number)
 
+    #
     @property
     def name(self):
         return self._name
@@ -317,6 +330,7 @@ def convert_phase(phase_rad: float):
     as an integer between 0 and 1e9 (e.g 45°=125e6).
     https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
     """
+    #
     phase_deg = (phase_rad * 360 / (2 * np.pi)) % 360
     return int(phase_deg * 1e9 / 360)
 
@@ -330,6 +344,7 @@ def convert_frequency(freq: float):
     """
     if not (freq >= -500e6 and freq <= 500e6):
         raise ValueError("frequency must be a float between -500e6 and 500e6 Hz")
+    #
     return int(freq * 4) % 2**32  # two's complement of 18? TODO: confirm with qblox
 
 
@@ -342,9 +357,11 @@ def convert_gain(gain: float):
     """
     if not (gain >= -1 and gain <= 1):
         raise ValueError("gain must be a float between -1 and 1")
+    #
     if gain == 1:
         return 2**15 - 1
     else:
+        #
         return int(np.floor(gain * 2**15)) % 2**32  # two's complement 32 bit number
 
 
@@ -362,6 +379,7 @@ def convert_offset(offset: float):
         raise ValueError(
             f"offset must be a float between {-scale_factor:.3f} and {scale_factor:.3f} V"
         )
+    #
     if normalised_offset == 1:
         return 2**15 - 1
     else:
