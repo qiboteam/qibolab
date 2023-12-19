@@ -2,8 +2,6 @@ from abc import abstractmethod
 from dataclasses import dataclass, fields
 from typing import Optional
 
-from qibo.config import log
-
 from qibolab.instruments.abstract import (
     Instrument,
     InstrumentException,
@@ -81,18 +79,10 @@ class LocalOscillator(Instrument):
         """Connects to the instrument using the IP address set in the
         runcard."""
         if not self.is_connected:
-            for attempt in range(RECONNECTION_ATTEMPTS):
-                try:
-                    self.device = self.create()
-                    self.is_connected = True
-                    break
-                except KeyError as exc:
-                    log.info(f"Unable to connect:\n{str(exc)}\nRetrying...")
-                    self.name += "_" + str(attempt)
-                except ConnectionError as exc:
-                    log.info(f"Unable to connect:\n{str(exc)}\nRetrying...")
+            self.device = self.create()
+            self.is_connected = True
             if not self.is_connected:
-                raise InstrumentException(self, f"Unable to connect to {self.name}")
+                raise InstrumentException(self, "Unable to connect to {self.name}.")
         else:
             raise InstrumentException(
                 self, "There is an open connection to the instrument already"
