@@ -18,7 +18,8 @@ from qibolab.pulses import PulseSequence, ReadoutPulse
 
 @dataclass
 class Compiler:
-    """Compiler that transforms a :class:`qibo.models.Circuit` to a :class:`qibolab.pulses.PulseSequence`.
+    """Compiler that transforms a :class:`qibo.models.Circuit` to a
+    :class:`qibolab.pulses.PulseSequence`.
 
     The transformation is done using a dictionary of rules which map each Qibo gate to a
     pulse sequence and some virtual Z-phases.
@@ -72,7 +73,10 @@ class Compiler:
         try:
             del self.rules[item]
         except KeyError:
-            raise_error(KeyError, f"Cannot remove {item} from compiler because it does not exist.")
+            raise_error(
+                KeyError,
+                f"Cannot remove {item} from compiler because it does not exist.",
+            )
 
     def register(self, gate_cls):
         """Decorator for registering a function as a rule in the compiler.
@@ -90,7 +94,9 @@ class Compiler:
 
         return inner
 
-    def _compile_gate(self, gate, platform, sequence, virtual_z_phases, moment_start, delays):
+    def _compile_gate(
+        self, gate, platform, sequence, virtual_z_phases, moment_start, delays
+    ):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
         # get local sequence and phases for the current gate
@@ -99,7 +105,13 @@ class Compiler:
         # update global pulse sequence
         # determine the right start time based on the availability of the qubits involved
         all_qubits = {*gate_sequence.qubits, *gate.qubits}
-        start = max(*[sequence.get_qubit_pulses(qubit).finish + delays[qubit] for qubit in all_qubits], moment_start)
+        start = max(
+            *[
+                sequence.get_qubit_pulses(qubit).finish + delays[qubit]
+                for qubit in all_qubits
+            ],
+            moment_start,
+        )
         # shift start time and phase according to the global sequence
         for pulse in gate_sequence:
             pulse.start += start

@@ -12,6 +12,8 @@ from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
 
+SAMPLING_RATE = 1
+
 
 @dataclass
 class DummyPort(Port):
@@ -39,7 +41,6 @@ class DummyInstrument(Controller):
     """
 
     PortType = DummyPort
-    sampling_rate = 1
 
     def connect(self):
         log.info(f"Connecting to {self.name} instrument.")
@@ -63,9 +64,12 @@ class DummyInstrument(Controller):
             elif options.averaging_mode is AveragingMode.CYCLIC:
                 values = np.random.rand(*shape)
         elif options.acquisition_type is AcquisitionType.RAW:
-            samples = int(ro_pulse.duration * self.sampling_rate)
+            samples = int(ro_pulse.duration * SAMPLING_RATE)
             waveform_shape = tuple(samples * dim for dim in shape)
-            values = np.random.rand(*waveform_shape) * 100 + 1j * np.random.rand(*waveform_shape) * 100
+            values = (
+                np.random.rand(*waveform_shape) * 100
+                + 1j * np.random.rand(*waveform_shape) * 100
+            )
         elif options.acquisition_type is AcquisitionType.INTEGRATION:
             values = np.random.rand(*shape) * 100 + 1j * np.random.rand(*shape) * 100
         return values
@@ -77,13 +81,17 @@ class DummyInstrument(Controller):
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
-        exp_points = 1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+        exp_points = (
+            1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
+        )
         shape = (exp_points,)
         results = {}
 
         for ro_pulse in sequence.ro_pulses:
             values = np.squeeze(self.get_values(options, ro_pulse, shape))
-            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(
+                values
+            )
 
         return results
 
@@ -101,12 +109,16 @@ class DummyInstrument(Controller):
         results = {}
 
         if options.averaging_mode is not AveragingMode.CYCLIC:
-            shape = (options.nshots,) + tuple(len(sweeper.values) for sweeper in sweepers)
+            shape = (options.nshots,) + tuple(
+                len(sweeper.values) for sweeper in sweepers
+            )
         else:
             shape = tuple(len(sweeper.values) for sweeper in sweepers)
 
         for ro_pulse in sequence.ro_pulses:
             values = self.get_values(options, ro_pulse, shape)
-            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(values)
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = options.results_type(
+                values
+            )
 
         return results

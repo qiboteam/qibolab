@@ -35,7 +35,9 @@ class QMSim(QMOPX):
         if self.cloud:
             from qm.simulate.credentials import create_credentials
 
-            self.manager = QuantumMachinesManager(host, int(port), credentials=create_credentials())
+            self.manager = QuantumMachinesManager(
+                host, int(port), credentials=create_credentials()
+            )
         else:
             self.manager = QuantumMachinesManager(host, int(port))
 
@@ -47,6 +49,7 @@ class QMSim(QMOPX):
         ncontrollers = len(self.config.controllers)
         controller_connections = create_simulator_controller_connections(ncontrollers)
         simulation_config = SimulationConfig(
-            duration=self.simulation_duration, controller_connections=controller_connections
+            duration=self.simulation_duration,
+            controller_connections=controller_connections,
         )
         return self.manager.simulate(self.config.__dict__, program, simulation_config)

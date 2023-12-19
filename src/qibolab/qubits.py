@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 from qibolab.channels import Channel
@@ -10,6 +11,7 @@ QubitId = Union[str, int]
 
 CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 """Names of channels that belong to a qubit.
+
 Not all channels are required to operate a qubit.
 """
 EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates")
@@ -40,22 +42,23 @@ class Qubit:
 
     bare_resonator_frequency: int = 0
     readout_frequency: int = 0
-    """ Readout dressed frequency"""
+    """Readout dressed frequency."""
     drive_frequency: int = 0
     anharmonicity: int = 0
     sweetspot: float = 0.0
     flux_to_bias: float = 0.0
     asymmetry: float = 0.0
     bare_resonator_frequency_sweetspot: float = 0.0
-    """Bare resonator frequency at sweetspot"""
+    """Bare resonator frequency at sweetspot."""
     ssf_brf: float = 0.0
-    """Estimated sweetspot qubit frequency divided by the bare_resonator_frequency"""
+    """Estimated sweetspot qubit frequency divided by the
+    bare_resonator_frequency."""
     Ec: float = 0.0
-    """Readout Charge Energy"""
+    """Readout Charge Energy."""
     Ej: float = 0.0
-    """Readout Josephson Energy"""
+    """Readout Josephson Energy."""
     g: float = 0.0
-    """Readout coupling"""
+    """Readout coupling."""
     assignment_fidelity: float = 0.0
     """Assignment fidelity."""
     readout_fidelity: float = 0.0
@@ -75,6 +78,7 @@ class Qubit:
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
+    kernel_path: Optional[Path] = None
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0
@@ -99,7 +103,11 @@ class Qubit:
     @property
     def characterization(self):
         """Dictionary containing characterization parameters."""
-        return {fld.name: getattr(self, fld.name) for fld in fields(self) if fld.name not in EXCLUDED_FIELDS}
+        return {
+            fld.name: getattr(self, fld.name)
+            for fld in fields(self)
+            if fld.name not in EXCLUDED_FIELDS
+        }
 
 
 QubitPairId = Tuple[QubitId, QubitId]
@@ -108,7 +116,8 @@ QubitPairId = Tuple[QubitId, QubitId]
 
 @dataclass
 class QubitPair:
-    """Data structure for holding the native two-qubit gates acting on a pair of qubits.
+    """Data structure for holding the native two-qubit gates acting on a pair
+    of qubits.
 
     This is needed for symmetry to the single-qubit gates which are storred in the
     :class:`qibolab.platforms.abstract.Qubit`.

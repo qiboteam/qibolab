@@ -64,7 +64,14 @@ def test_instrument_interface(qcm_bb: ClusterQCM_BB):
     for abstract_method in Instrument.__abstractmethods__:
         assert hasattr(qcm_bb, abstract_method)
 
-    for attribute in ["name", "address", "is_connected", "signature", "tmp_folder", "data_folder"]:
+    for attribute in [
+        "name",
+        "address",
+        "is_connected",
+        "signature",
+        "tmp_folder",
+        "data_folder",
+    ]:
         assert hasattr(qcm_bb, attribute)
 
 
@@ -190,7 +197,9 @@ def test_sweepers(connected_platform, connected_qcm_bb: ClusterQCM_BB):
         type=SweeperType.OFFSET,
     )
 
-    connected_qcm_bb.process_pulse_sequence(qubits, ps, 1000, 1, 10000, sweepers=[sweeper])
+    connected_qcm_bb.process_pulse_sequence(
+        qubits, ps, 1000, 1, 10000, sweepers=[sweeper]
+    )
     connected_qcm_bb.upload()
     connected_qcm_bb.play_sequence()
 

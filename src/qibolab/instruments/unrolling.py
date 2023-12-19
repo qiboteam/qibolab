@@ -6,7 +6,8 @@ from more_itertools import chunked
 
 
 def batch_max_sequences(sequences, max_size):
-    """Split a list of sequences to batches with a maximum number of sequences in each.
+    """Split a list of sequences to batches with a maximum number of sequences
+    in each.
 
     Args:
         sequences (list): List of :class:`qibolab.pulses.PulseSequence` objects.
@@ -16,7 +17,8 @@ def batch_max_sequences(sequences, max_size):
 
 
 def batch_max_readout(sequences, max_measurements):
-    """Split a list of sequences to batches with a maximum number of readout pulses in each.
+    """Split a list of sequences to batches with a maximum number of readout
+    pulses in each.
 
     Useful for sequence unrolling on instruments that support a maximum number of readout pulses
     in a single sequence due to memory limitations.

@@ -60,9 +60,9 @@ def find_instrument(platform, instrument_type):
 def get_instrument(platform, instrument_type):
     """Finds if an instrument of a given type exists in the given platform.
 
-    If the platform does not have such an instrument, the corresponding test
-    that asked for this instrument is skipped.
-    This ensures that QPU tests are executed only on the available instruments.
+    If the platform does not have such an instrument, the corresponding
+    test that asked for this instrument is skipped. This ensures that
+    QPU tests are executed only on the available instruments.
     """
     instrument = find_instrument(platform, instrument_type)
     if instrument is None:

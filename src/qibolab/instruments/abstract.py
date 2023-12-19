@@ -98,7 +98,8 @@ class Controller(Instrument):
         """
 
     def split_batches(self, sequences):  # pragma: no cover
-        """Split sequences to batches each of which can be unrolled and played as a single sequence.
+        """Split sequences to batches each of which can be unrolled and played
+        as a single sequence.
 
         Args:
             sequence (list): List of :class:`qibolab.pulses.PulseSequence` to be played.
@@ -108,7 +109,8 @@ class Controller(Instrument):
             Default will return all sequences as a single batch.
         """
         raise RuntimeError(
-            f"Instrument of type {type(self)} does not support " "batch splitting for sequence unrolling."
+            f"Instrument of type {type(self)} does not support "
+            "batch splitting for sequence unrolling."
         )
 
     @abstractmethod
