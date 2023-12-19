@@ -63,16 +63,6 @@ class QbloxController(Controller):
 
         >>> instruments = load_instrument_settings(runcard, instruments)
         """
-        pass
-
-        # if not self.is_connected:
-        #     raise_error(
-        #         RuntimeError,
-        #         "There is no connection to the modules, the setup cannot be completed",
-        #     )
-        # for name in self.modules:
-        #     #THIS is
-        #     self.modules[name].setup()
 
     def start(self):
         """Starts all modules."""
