@@ -13,6 +13,9 @@ PortId = Tuple[str, int]
 IQPortId = Union[Tuple[PortId], Tuple[PortId, PortId]]
 """Type for collections of IQ ports."""
 
+SAMPLING_RATE = 1
+"""Sampling rate of Quantum Machines OPX in GSps."""
+
 
 @dataclass
 class QMPort(Port):
@@ -328,7 +331,7 @@ class QMConfig:
             if serial not in self.waveforms:
                 self.waveforms[serial] = {"type": "constant", "sample": pulse.amplitude}
         else:
-            waveform = getattr(pulse, f"envelope_waveform_{mode}")
+            waveform = getattr(pulse, f"envelope_waveform_{mode}")(SAMPLING_RATE)
             serial = waveform.serial
             if serial not in self.waveforms:
                 self.waveforms[serial] = {

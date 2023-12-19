@@ -75,18 +75,18 @@ def test_replace_pulse_shape(dummy_qrc):
 
     pulse = rfsoc_pulses.Pulse(50, 0.9, 0, 0, 0.04, "name", "drive", 4, None)
 
-    new_pulse = replace_pulse_shape(pulse, Rectangular())
+    new_pulse = replace_pulse_shape(pulse, Rectangular(), sampling_rate=1)
     assert isinstance(new_pulse, rfsoc_pulses.Rectangular)
     for key in asdict(pulse):
         assert asdict(pulse)[key] == asdict(new_pulse)[key]
 
-    new_pulse = replace_pulse_shape(pulse, Gaussian(5))
+    new_pulse = replace_pulse_shape(pulse, Gaussian(5), sampling_rate=1)
     assert isinstance(new_pulse, rfsoc_pulses.Gaussian)
     assert new_pulse.rel_sigma == 5
     for key in asdict(pulse):
         assert asdict(pulse)[key] == asdict(new_pulse)[key]
 
-    new_pulse = replace_pulse_shape(pulse, Drag(5, 7))
+    new_pulse = replace_pulse_shape(pulse, Drag(5, 7), sampling_rate=1)
     assert isinstance(new_pulse, rfsoc_pulses.Drag)
     assert new_pulse.rel_sigma == 5
     assert new_pulse.beta == 7
@@ -111,17 +111,17 @@ def test_convert_pulse(dummy_qrc):
     targ = rfsoc_pulses.Drag(
         50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=5, beta=2
     )
-    assert convert(pulse, platform.qubits, 0) == targ
+    assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Gaussian(
         50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=2
     )
-    assert convert(pulse, platform.qubits, 0) == targ
+    assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
     targ = rfsoc_pulses.Rectangular(49, 0.9, 0, 0, 0.04, pulse.serial, "readout", 2, 1)
-    assert convert(pulse, platform.qubits, 0) == targ
+    assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
 
 def test_convert_units_sweeper(dummy_qrc):

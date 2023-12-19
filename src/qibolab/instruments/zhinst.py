@@ -30,6 +30,7 @@ from qibolab.sweeper import Parameter, Sweeper
 os.environ["LABONEQ_TOKEN"] = "not required"
 laboneq._token.is_valid_token = lambda _token: True  # pylint: disable=W0212
 
+SAMPLING_RATE = 2
 NANO_TO_SECONDS = 1e-9
 COMPILER_SETTINGS = {
     "SHFSG_MIN_PLAYWAVE_HINT": 32,
@@ -104,18 +105,18 @@ def select_pulse(pulse, pulse_type):
                 zero_boundaries=False,
             )
 
-    if np.all(pulse.envelope_waveform_q.data == 0):
+    if np.all(pulse.envelope_waveform_q(SAMPLING_RATE).data == 0):
         return sampled_pulse_real(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
-            samples=pulse.envelope_waveform_i.data,
+            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data,
             can_compress=True,
         )
     else:
         # Test this when we have pulses that use it
         return sampled_pulse_complex(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
-            samples=pulse.envelope_waveform_i.data
-            + (1j * pulse.envelope_waveform_q.data),
+            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data
+            + (1j * pulse.envelope_waveform_q(SAMPLING_RATE).data),
             can_compress=True,
         )
 

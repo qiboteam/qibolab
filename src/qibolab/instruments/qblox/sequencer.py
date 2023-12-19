@@ -5,6 +5,9 @@ from qibolab.instruments.qblox.q1asm import Program
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper
 
+SAMPLING_RATE = 1
+"""Sampling rate for qblox instruments in GSps."""
+
 
 class WaveformsBuffer:
     """A class to represent a buffer that holds the unique waveforms used by a
@@ -60,9 +63,9 @@ class WaveformsBuffer:
 
         if not baking_required:
             if hardware_mod_en:
-                waveform_i, waveform_q = pulse_copy.envelope_waveforms
+                waveform_i, waveform_q = pulse_copy.envelope_waveforms(SAMPLING_RATE)
             else:
-                waveform_i, waveform_q = pulse_copy.modulated_waveforms
+                waveform_i, waveform_q = pulse_copy.modulated_waveforms(SAMPLING_RATE)
 
             pulse.waveform_i = waveform_i
             pulse.waveform_q = waveform_q
@@ -131,9 +134,9 @@ class WaveformsBuffer:
             for duration in values:
                 pulse_copy.duration = duration
                 if hardware_mod_en:
-                    waveform = pulse_copy.envelope_waveform_i
+                    waveform = pulse_copy.envelope_waveform_i(SAMPLING_RATE)
                 else:
-                    waveform = pulse_copy.modulated_waveform_i
+                    waveform = pulse_copy.modulated_waveform_i(SAMPLING_RATE)
 
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration
@@ -152,9 +155,13 @@ class WaveformsBuffer:
             for duration in values:
                 pulse_copy.duration = duration
                 if hardware_mod_en:
-                    waveform_i, waveform_q = pulse_copy.envelope_waveforms
+                    waveform_i, waveform_q = pulse_copy.envelope_waveforms(
+                        SAMPLING_RATE
+                    )
                 else:
-                    waveform_i, waveform_q = pulse_copy.modulated_waveforms
+                    waveform_i, waveform_q = pulse_copy.modulated_waveforms(
+                        SAMPLING_RATE
+                    )
 
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration * 2
