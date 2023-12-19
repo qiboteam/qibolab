@@ -54,7 +54,6 @@ class QbloxController(Controller):
                 module.connect(self.cluster)
             self.is_connected = True
             log.info("QbloxController: all modules connected.")
-            return
 
         except Exception as exception:
             raise ConnectionError(f"Unable to connect:\n{str(exception)}\n")
