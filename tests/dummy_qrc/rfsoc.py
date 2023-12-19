@@ -21,7 +21,7 @@ def create(runcard_path=RUNCARD):
     Used in ``test_instruments_rfsoc.py``.
     """
     # Instantiate QICK instruments
-    controller = RFSoC("tii_rfsoc4x2", "0.0.0.0", 0)
+    controller = RFSoC("tii_rfsoc4x2", "0.0.0.0", 0, sampling_rate=9.8304)
 
     # Create channel objects and map to instrument controllers
     channels = ChannelMap()

@@ -13,6 +13,8 @@ from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
 
+SAMPLING_RATE = 1
+
 
 @dataclass
 class DummyPort(Port):
@@ -73,7 +75,6 @@ class DummyInstrument(Controller):
     """
 
     PortType = DummyPort
-    sampling_rate = 1
 
     def connect(self):
         log.info(f"Connecting to {self.name} instrument.")
@@ -97,7 +98,7 @@ class DummyInstrument(Controller):
             elif options.averaging_mode is AveragingMode.CYCLIC:
                 values = np.random.rand(*shape)
         elif options.acquisition_type is AcquisitionType.RAW:
-            samples = int(ro_pulse.duration * self.sampling_rate)
+            samples = int(ro_pulse.duration * SAMPLING_RATE)
             waveform_shape = tuple(samples * dim for dim in shape)
             values = (
                 np.random.rand(*waveform_shape) * 100

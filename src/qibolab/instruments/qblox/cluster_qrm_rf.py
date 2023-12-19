@@ -122,7 +122,6 @@ class ClusterQRM_RF(Instrument):
     """
 
     DEFAULT_SEQUENCERS: dict = {"o1": 0, "i1": 0}
-    SAMPLING_RATE: int = 1e9  # 1 GSPS
     FREQUENCY_LIMIT = 500e6  # 500 MHz
 
     property_wrapper = lambda parent, *parameter: property(
