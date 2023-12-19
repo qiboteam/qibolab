@@ -227,6 +227,7 @@ def find_duration_sweeper_pulses(sweepers):
 @dataclass
 class Sequence:
     """Pulse sequence containing QM specific pulses (``qmpulse``).
+
     Defined in :meth:`qibolab.instruments.qm.QMOPX.play`.
     Holds attributes for the ``element`` and ``operation`` that
     corresponds to each pulse, as defined in the QM config.
@@ -245,7 +246,8 @@ class Sequence:
     pulse_finish: Dict[int, List[QMPulse]] = field(
         default_factory=lambda: collections.defaultdict(list)
     )
-    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
+    """Map to find all pulses that finish at a given time (useful for
+    ``_find_previous``)."""
 
     @classmethod
     def create(cls, qubits, sequence, sweepers, config, time_of_flight, smearing):
@@ -319,7 +321,8 @@ class Sequence:
         self.qmpulses.append(qmpulse)
 
     def shift(self):
-        """Shift all pulses that come after a ``BakedPulse`` a bit to avoid overlapping pulses."""
+        """Shift all pulses that come after a ``BakedPulse`` a bit to avoid
+        overlapping pulses."""
         to_shift = collections.deque()
         for qmpulse in self.qmpulses:
             if isinstance(qmpulse, BakedPulse):

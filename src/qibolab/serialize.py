@@ -77,7 +77,8 @@ def load_qubits(
 def register_gates(
     runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> Tuple[QubitMap, QubitPairMap]:
-    """Register single qubit native gates to ``Qubit`` objects from the runcard.
+    """Register single qubit native gates to ``Qubit`` objects from the
+    runcard.
 
     Uses the native gate and characterization sections of the runcard
     to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
