@@ -1,4 +1,5 @@
-"""Test compilation of different pulse sequences using the Quantum Machines simulator.
+"""Test compilation of different pulse sequences using the Quantum Machines
+simulator.
 
 In order to run these tests, provide the following options through the ``pytest`` parser:
     address (str): token for the QM simulator
@@ -33,8 +34,8 @@ def simulator(request):
     """Platform using the QM cloud simulator.
 
     Requires the address for connecting to the simulator, which is
-    provided via command line. If an address is not provided these
-    tests are skipped.
+    provided via command line. If an address is not provided these tests
+    are skipped.
     """
     set_platform_profile()
     address = request.config.getoption("--address")
@@ -92,7 +93,10 @@ def assert_regression(samples, folder=None, filename=None):
                         np.testing.assert_allclose(waveform, target_waveform[:])
                     except AssertionError as exception:
                         np.savetxt(os.path.join(folder, "waveform.txt"), waveform)
-                        np.savetxt(os.path.join(folder, "target_waveform.txt"), target_waveform[:])
+                        np.savetxt(
+                            os.path.join(folder, "target_waveform.txt"),
+                            target_waveform[:],
+                        )
                         plot()
                         raise exception
 
@@ -129,9 +133,13 @@ def test_qmsim_qubit_spectroscopy(simulator, folder):
     qd_pulses = {}
     ro_pulses = {}
     for qubit in qubits:
-        qd_pulses[qubit] = simulator.create_qubit_drive_pulse(qubit, start=0, duration=500)
+        qd_pulses[qubit] = simulator.create_qubit_drive_pulse(
+            qubit, start=0, duration=500
+        )
         qd_pulses[qubit].amplitude = 0.05
-        ro_pulses[qubit] = simulator.create_qubit_readout_pulse(qubit, start=qd_pulses[qubit].finish)
+        ro_pulses[qubit] = simulator.create_qubit_readout_pulse(
+            qubit, start=qd_pulses[qubit].finish
+        )
         sequence.add(qd_pulses[qubit])
         sequence.add(ro_pulses[qubit])
     options = ExecutionParameters(nshots=1)
@@ -155,13 +163,18 @@ def test_qmsim_sweep(simulator, folder, parameter, values):
     ro_pulses = {}
     for qubit in qubits:
         qd_pulses[qubit] = simulator.create_RX_pulse(qubit, start=0)
-        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses[qubit].finish)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(
+            qubit, start=qd_pulses[qubit].finish
+        )
         sequence.add(qd_pulses[qubit])
         sequence.add(ro_pulses[qubit])
     pulses = [qd_pulses[qubit] for qubit in qubits]
     sweeper = Sweeper(parameter, values, pulses)
     options = ExecutionParameters(
-        nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=20,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
@@ -176,9 +189,14 @@ def test_qmsim_sweep_bias(simulator, folder):
         ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=0)
         sequence.add(ro_pulses[qubit])
     values = [0, 0.005]
-    sweeper = Sweeper(Parameter.bias, values, qubits=[simulator.qubits[q] for q in qubits])
+    sweeper = Sweeper(
+        Parameter.bias, values, qubits=[simulator.qubits[q] for q in qubits]
+    )
     options = ExecutionParameters(
-        nshots=1, relaxation_time=20, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=20,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
@@ -192,14 +210,19 @@ def test_qmsim_sweep_start(simulator, folder):
     ro_pulses = {}
     for qubit in qubits:
         qd_pulses[qubit] = simulator.create_RX_pulse(qubit, start=0)
-        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses[qubit].finish)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(
+            qubit, start=qd_pulses[qubit].finish
+        )
         sequence.add(qd_pulses[qubit])
         sequence.add(ro_pulses[qubit])
     values = [20, 40]
     pulses = [ro_pulses[qubit] for qubit in qubits]
     sweeper = Sweeper(Parameter.start, values, pulses=pulses)
     options = ExecutionParameters(
-        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=0,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
@@ -214,8 +237,12 @@ def test_qmsim_sweep_start_two_pulses(simulator, folder):
     ro_pulses = {}
     for qubit in qubits:
         qd_pulses1[qubit] = simulator.create_RX_pulse(qubit, start=0)
-        qd_pulses2[qubit] = simulator.create_RX_pulse(qubit, start=qd_pulses1[qubit].finish)
-        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses2[qubit].finish)
+        qd_pulses2[qubit] = simulator.create_RX_pulse(
+            qubit, start=qd_pulses1[qubit].finish
+        )
+        ro_pulses[qubit] = simulator.create_MZ_pulse(
+            qubit, start=qd_pulses2[qubit].finish
+        )
         sequence.add(qd_pulses1[qubit])
         sequence.add(qd_pulses2[qubit])
         sequence.add(ro_pulses[qubit])
@@ -223,7 +250,10 @@ def test_qmsim_sweep_start_two_pulses(simulator, folder):
     pulses = [qd_pulses2[qubit] for qubit in qubits]
     sweeper = Sweeper(Parameter.start, values, pulses=pulses)
     options = ExecutionParameters(
-        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=0,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
@@ -240,14 +270,19 @@ def test_qmsim_sweep_duration(simulator, folder):
     ro_pulses = {}
     for qubit in qubits:
         qd_pulses[qubit] = simulator.create_RX_pulse(qubit, start=0)
-        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses[qubit].finish)
+        ro_pulses[qubit] = simulator.create_MZ_pulse(
+            qubit, start=qd_pulses[qubit].finish
+        )
         sequence.add(qd_pulses[qubit])
         sequence.add(ro_pulses[qubit])
     values = [20, 60]
     pulses = [qd_pulses[qubit] for qubit in qubits]
     sweeper = Sweeper(Parameter.duration, values, pulses=pulses)
     options = ExecutionParameters(
-        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=0,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
@@ -266,8 +301,12 @@ def test_qmsim_sweep_duration_two_pulses(simulator, folder):
     ro_pulses = {}
     for qubit in qubits:
         qd_pulses1[qubit] = simulator.create_RX_pulse(qubit, start=0)
-        qd_pulses2[qubit] = simulator.create_RX_pulse(qubit, start=qd_pulses1[qubit].finish)
-        ro_pulses[qubit] = simulator.create_MZ_pulse(qubit, start=qd_pulses2[qubit].finish)
+        qd_pulses2[qubit] = simulator.create_RX_pulse(
+            qubit, start=qd_pulses1[qubit].finish
+        )
+        ro_pulses[qubit] = simulator.create_MZ_pulse(
+            qubit, start=qd_pulses2[qubit].finish
+        )
         sequence.add(qd_pulses1[qubit])
         sequence.add(qd_pulses2[qubit])
         sequence.add(ro_pulses[qubit])
@@ -275,7 +314,10 @@ def test_qmsim_sweep_duration_two_pulses(simulator, folder):
     pulses = [qd_pulses1[qubit] for qubit in qubits]
     sweeper = Sweeper(Parameter.duration, values, pulses=pulses)
     options = ExecutionParameters(
-        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=0,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     result = simulator.sweep(sequence, options, sweeper)
     samples = result.get_simulated_samples()
@@ -314,9 +356,15 @@ def test_qmsim_allxy(simulator, folder, count, gate_pair):
     allxy_pulses = {
         "I": lambda qubit, start: None,
         "RX(pi)": lambda qubit, start: simulator.create_RX_pulse(qubit, start=start),
-        "RX(pi/2)": lambda qubit, start: simulator.create_RX90_pulse(qubit, start=start),
-        "RY(pi)": lambda qubit, start: simulator.create_RX_pulse(qubit, start=start, relative_phase=np.pi / 2),
-        "RY(pi/2)": lambda qubit, start: simulator.create_RX90_pulse(qubit, start=start, relative_phase=np.pi / 2),
+        "RX(pi/2)": lambda qubit, start: simulator.create_RX90_pulse(
+            qubit, start=start
+        ),
+        "RY(pi)": lambda qubit, start: simulator.create_RX_pulse(
+            qubit, start=start, relative_phase=np.pi / 2
+        ),
+        "RY(pi/2)": lambda qubit, start: simulator.create_RX90_pulse(
+            qubit, start=start, relative_phase=np.pi / 2
+        ),
     }
 
     sequence = PulseSequence()
@@ -348,8 +396,12 @@ def test_qmsim_chevron(simulator, folder, sweep):
         channel=simulator.qubits[highfreq].flux.name,
         qubit=highfreq,
     )
-    measure_lowfreq = simulator.create_qubit_readout_pulse(lowfreq, start=flux_pulse.finish)
-    measure_highfreq = simulator.create_qubit_readout_pulse(highfreq, start=flux_pulse.finish)
+    measure_lowfreq = simulator.create_qubit_readout_pulse(
+        lowfreq, start=flux_pulse.finish
+    )
+    measure_highfreq = simulator.create_qubit_readout_pulse(
+        highfreq, start=flux_pulse.finish
+    )
     sequence = PulseSequence()
     sequence.add(initialize_1)
     sequence.add(initialize_2)
@@ -358,7 +410,10 @@ def test_qmsim_chevron(simulator, folder, sweep):
     sequence.add(measure_highfreq)
 
     options = ExecutionParameters(
-        nshots=1, relaxation_time=0, acquisition_type=AcquisitionType.INTEGRATION, averaging_mode=AveragingMode.CYCLIC
+        nshots=1,
+        relaxation_time=0,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
     )
     if sweep is None:
         result = simulator.execute_pulse_sequence(sequence, options)
@@ -392,14 +447,26 @@ def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
             channel=simulator.qubits[highfreq].flux.name,
             qubit=highfreq,
         )
-        theta_pulse = simulator.create_RX90_pulse(lowfreq, start=flux_pulse.se_finish, relative_phase=np.pi / 3)
-        x_pulse_end = simulator.create_RX_pulse(highfreq, start=flux_pulse.se_finish, relative_phase=0)
+        theta_pulse = simulator.create_RX90_pulse(
+            lowfreq, start=flux_pulse.se_finish, relative_phase=np.pi / 3
+        )
+        x_pulse_end = simulator.create_RX_pulse(
+            highfreq, start=flux_pulse.se_finish, relative_phase=0
+        )
     else:
-        theta_pulse = simulator.create_RX90_pulse(lowfreq, start=y90_pulse.se_finish, relative_phase=np.pi / 3)
-        x_pulse_end = simulator.create_RX_pulse(highfreq, start=x_pulse_start.se_finish, relative_phase=0)
+        theta_pulse = simulator.create_RX90_pulse(
+            lowfreq, start=y90_pulse.se_finish, relative_phase=np.pi / 3
+        )
+        x_pulse_end = simulator.create_RX_pulse(
+            highfreq, start=x_pulse_start.se_finish, relative_phase=0
+        )
 
-    measure_lowfreq = simulator.create_qubit_readout_pulse(lowfreq, start=theta_pulse.se_finish)
-    measure_highfreq = simulator.create_qubit_readout_pulse(highfreq, start=x_pulse_end.se_finish)
+    measure_lowfreq = simulator.create_qubit_readout_pulse(
+        lowfreq, start=theta_pulse.se_finish
+    )
+    measure_highfreq = simulator.create_qubit_readout_pulse(
+        highfreq, start=x_pulse_end.se_finish
+    )
 
     sequence = x_pulse_start + y90_pulse
     if use_flux_pulse:
@@ -443,7 +510,7 @@ def test_qmsim_bell_circuit(simulator, folder, qubits):
     circuit.add(gates.H(qubits[0]))
     circuit.add(gates.CNOT(*qubits))
     circuit.add(gates.M(*qubits))
-    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = backend.execute_circuit(circuit, nshots=1)
     result = result.execution_result
     samples = result.get_simulated_samples()
     qubitstr = "".join(str(q) for q in qubits)
@@ -457,7 +524,7 @@ def test_qmsim_ghz_circuit(simulator, folder):
     circuit.add(gates.CNOT(2, 1))
     circuit.add(gates.CNOT(2, 3))
     circuit.add(gates.M(1, 2, 3))
-    result = backend.execute_circuit(circuit, nshots=1, check_transpiled=True)
+    result = backend.execute_circuit(circuit, nshots=1)
     result = result.execution_result
     samples = result.get_simulated_samples()
     assert_regression(samples, folder, "ghz_circuit_123")

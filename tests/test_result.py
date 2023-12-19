@@ -1,4 +1,4 @@
-"""Testing result.py"""
+"""Testing result.py."""
 import numpy as np
 import pytest
 
@@ -42,50 +42,56 @@ def generate_random_avg_state_result(length=5):
 
 
 def test_iq_constructor():
-    """Testing ExecutionResults constructor"""
+    """Testing ExecutionResults constructor."""
     test = np.array([(1, 2), (1, 2)])
     IntegratedResults(test)
 
 
 def test_raw_constructor():
-    """Testing ExecutionResults constructor"""
+    """Testing ExecutionResults constructor."""
     test = np.array([(1, 2), (1, 2)])
     RawWaveformResults(test)
 
 
 def test_state_constructor():
-    """Testing ExecutionResults constructor"""
+    """Testing ExecutionResults constructor."""
     test = np.array([1, 1, 0])
     SampleResults(test)
 
 
 @pytest.mark.parametrize("result", ["iq", "raw"])
 def test_integrated_result_properties(result):
-    """Testing IntegratedResults and RawWaveformResults properties"""
+    """Testing IntegratedResults and RawWaveformResults properties."""
     if result == "iq":
         results = generate_random_iq_result(5)
     else:
         results = generate_random_raw_result(5)
-    np.testing.assert_equal(np.sqrt(results.voltage_i**2 + results.voltage_q**2), results.magnitude)
-    np.testing.assert_equal(np.angle(results.voltage_i + 1.0j * results.voltage_q), results.phase)
+    np.testing.assert_equal(
+        np.sqrt(results.voltage_i**2 + results.voltage_q**2), results.magnitude
+    )
+    np.testing.assert_equal(
+        np.angle(results.voltage_i + 1.0j * results.voltage_q), results.phase
+    )
 
 
 @pytest.mark.parametrize("state", [0, 1])
 def test_state_probability(state):
-    """Testing raw_probability method"""
+    """Testing raw_probability method."""
     results = generate_random_state_result(5)
     if state == 0:
         target_dict = {"probability": results.probability(0)}
     else:
         target_dict = {"probability": results.probability(1)}
 
-    assert np.allclose(target_dict["probability"], results.probability(state=state), atol=1e-08)
+    assert np.allclose(
+        target_dict["probability"], results.probability(state=state), atol=1e-08
+    )
 
 
 @pytest.mark.parametrize("average", [True, False])
 @pytest.mark.parametrize("result", ["iq", "raw"])
 def test_serialize(average, result):
-    """Testing to_dict method"""
+    """Testing to_dict method."""
     if not average:
         if result == "iq":
             results = generate_random_iq_result(5)
@@ -121,7 +127,7 @@ def test_serialize(average, result):
 
 @pytest.mark.parametrize("average", [True, False])
 def test_serialize_state(average):
-    """Testing to_dict method"""
+    """Testing to_dict method."""
     if not average:
         results = generate_random_state_result(5)
         output = results.serialize
@@ -138,7 +144,7 @@ def test_serialize_state(average):
 
 @pytest.mark.parametrize("result", ["iq", "raw"])
 def test_serialize_averaged_iq_results(result):
-    """Testing to_dict method"""
+    """Testing to_dict method."""
     if result == "iq":
         results = generate_random_avg_iq_result(5)
     else:

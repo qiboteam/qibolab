@@ -12,8 +12,9 @@ QubitId = Union[str, int]
 class Coupler:
     """Representation of a physical coupler.
 
-    Coupler objects are instantiated by :class:`qibolab.platforms.platform.Platform`
-    but they are passed to instrument designs in order to play pulses.
+    Coupler objects are instantiated by
+    :class: `qibolab.platforms.platform.Platform`     but they are
+        passed to instrument designs in order to play pulses.
     """
 
     name: QubitId

@@ -1,4 +1,4 @@
-""" Qblox instruments driver.
+"""Qblox instruments driver.
 
 Supports the following Instruments:
 
@@ -53,29 +53,32 @@ class Cluster_Settings:
     """Settings of the Cluster instrument."""
 
     reference_clock_source: ReferenceClockSource = ReferenceClockSource.INTERNAL
-    """Instruct the cluster to use the internal clock source or an external source."""
+    """Instruct the cluster to use the internal clock source or an external
+    source."""
 
 
 class Cluster(Instrument):
     """A class to extend the functionality of qblox_instruments Cluster.
 
-    The class exposes the attribute `reference_clock_source` to enable the selection of an internal or external clock
-    source.
+    The class exposes the attribute `reference_clock_source` to enable
+    the selection of an internal or external clock source.
 
-    The class inherits from :class:`qibolab.instruments.abstract.Instrument` and implements its interface methods:
-        __init__()
-        connect()
-        setup()
-        start()
-        stop()
+    The class inherits from
+
+    :class: `qibolab.instruments.abstract.Instrument` and implements its
+        interface methods: __init__() connect() setup() start() stop()
         disconnect()
     """
 
-    def __init__(self, name: str, address: str, settings: Cluster_Settings = Cluster_Settings()):
-        """Initialises the instrument storing its name, address and settings."""
+    def __init__(
+        self, name: str, address: str, settings: Cluster_Settings = Cluster_Settings()
+    ):
+        """Initialises the instrument storing its name, address and
+        settings."""
         super().__init__(name, address)
         self.device: QbloxCluster = None
-        """Reference to the underlying `qblox_instruments.qcodes_drivers.cluster.Cluster` object."""
+        """Reference to the underlying
+        `qblox_instruments.qcodes_drivers.cluster.Cluster` object."""
         self.settings: Cluster_Settings = settings
         """Instrument settings."""
 
@@ -93,13 +96,16 @@ class Cluster(Instrument):
     def reference_clock_source(self, value: ReferenceClockSource):
         self.settings.reference_clock_source = value
         if self.is_connected:
-            self.device.set("reference_source", self.settings.reference_clock_source.value)
+            self.device.set(
+                "reference_source", self.settings.reference_clock_source.value
+            )
 
     def connect(self):
         """Connects to the cluster.
 
-        If the connection is successful, it resets the instrument and configures it with the stored settings.
-        A reference to the underlying object is saved in the attribute `device`.
+        If the connection is successful, it resets the instrument and
+        configures it with the stored settings. A reference to the
+        underlying object is saved in the attribute `device`.
         """
         if not self.is_connected:
             for attempt in range(3):
@@ -116,15 +122,15 @@ class Cluster(Instrument):
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
 
         # apply stored settings
-        self._setup()
+        # self._setup()
 
-    def _setup(self):
-        if self.is_connected:
-            self.device.set("reference_source", self.settings.reference_clock_source.value)
+    # def _setup(self):
+    #     if self.is_connected:
+    # self.device.set("reference_source", self.settings.reference_clock_source.value)
 
     def setup(self):
         """Configures the instrument with the stored settings."""
-        self._setup()
+        # self._setup()
 
     def start(self):
         """Empty method to comply with Instrument interface."""

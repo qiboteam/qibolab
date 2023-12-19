@@ -8,7 +8,8 @@ from qibolab.serialize import load_qubits, load_runcard, load_settings
 
 
 def remove_couplers(runcard):
-    """Remove coupler sections from runcard to create a dummy platform without couplers."""
+    """Remove coupler sections from runcard to create a dummy platform without
+    couplers."""
     runcard["topology"] = list(runcard["topology"].values())
     del runcard["couplers"]
     del runcard["native_gates"]["coupler"]
@@ -26,13 +27,8 @@ def create_dummy(with_couplers: bool = True):
     Args:
         with_couplers (bool): Selects whether the dummy platform will have coupler qubits.
     """
-    if with_couplers:
-        name = "dummy_couplers"
-    else:
-        name = "dummy"
-
     # Create dummy controller
-    instrument = DummyInstrument(name, 0)
+    instrument = DummyInstrument("dummy", 0)
 
     # Create local oscillator
     twpa_pump = DummyLocalOscillator(name="twpa_pump", address=0)
@@ -47,8 +43,12 @@ def create_dummy(with_couplers: bool = True):
     nqubits = runcard["nqubits"]
     channels = ChannelMap()
     channels |= Channel("readout", port=instrument["readout"])
-    channels |= (Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits))
-    channels |= (Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits))
+    channels |= (
+        Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits)
+    )
+    channels |= (
+        Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits)
+    )
     channels |= Channel("twpa", port=None)
     if with_couplers:
         channels |= (
@@ -76,4 +76,13 @@ def create_dummy(with_couplers: bool = True):
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     instrument.sampling_rate = settings.sampling_rate * 1e-9
 
-    return Platform(name, qubits, pairs, instruments, settings, resonator_type="2D", couplers=couplers)
+    name = "dummy_couplers" if with_couplers else "dummy"
+    return Platform(
+        name,
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
+    )

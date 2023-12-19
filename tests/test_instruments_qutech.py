@@ -15,7 +15,9 @@ def spi(connected_platform):
 def test_instruments_qutech_init(spi):
     assert spi.is_connected == True
     assert spi.device is None
-    assert spi.data_folder == INSTRUMENTS_DATA_FOLDER / spi.tmp_folder.name.split("/")[-1]
+    assert (
+        spi.data_folder == INSTRUMENTS_DATA_FOLDER / spi.tmp_folder.name.split("/")[-1]
+    )
 
 
 @pytest.mark.qpu

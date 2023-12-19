@@ -25,11 +25,13 @@ class LocalOscillatorSettings(InstrumentSettings):
     def dump(self):
         """Dictionary containing local oscillator settings.
 
-        The reference clock is excluded as it is not a calibrated parameter.
-        None values are also excluded.
+        The reference clock is excluded as it is not a calibrated
+        parameter. None values are also excluded.
         """
         data = super().dump()
-        return {k: v for k, v in data.items() if k != "ref_osc_source" and v is not None}
+        return {
+            k: v for k, v in data.items() if k != "ref_osc_source" and v is not None
+        }
 
 
 def _setter(instrument, parameter, value):
@@ -57,10 +59,9 @@ def _property(parameter):
 class LocalOscillator(Instrument):
     """Abstraction for local oscillator instruments.
 
-    Local oscillators are used to upconvert signals, when
-    the controllers cannot send sufficiently high frequencies
-    to address the qubits and resonators.
-    They cannot be used to play or sweep pulses.
+    Local oscillators are used to upconvert signals, when the
+    controllers cannot send sufficiently high frequencies to address the
+    qubits and resonators. They cannot be used to play or sweep pulses.
     """
 
     frequency = _property("frequency")
@@ -77,7 +78,8 @@ class LocalOscillator(Instrument):
         """Create instance of physical device."""
 
     def connect(self):
-        """Connects to the instrument using the IP address set in the runcard."""
+        """Connects to the instrument using the IP address set in the
+        runcard."""
         if not self.is_connected:
             for attempt in range(RECONNECTION_ATTEMPTS):
                 try:
@@ -92,7 +94,9 @@ class LocalOscillator(Instrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise InstrumentException(self, "There is an open connection to the instrument already")
+            raise InstrumentException(
+                self, "There is an open connection to the instrument already"
+            )
 
         for fld in fields(self.settings):
             self.sync(fld.name)
@@ -125,7 +129,9 @@ class LocalOscillator(Instrument):
         _fields = {fld.name for fld in fields(self.settings)}
         for name, value in kwargs.items():
             if name not in _fields:
-                raise KeyError(f"Cannot set {name} to instrument {self.name} of type {type_.__name__}")
+                raise KeyError(
+                    f"Cannot set {name} to instrument {self.name} of type {type_.__name__}"
+                )
             setattr(self, name, value)
 
     def start(self):

@@ -22,8 +22,9 @@ from qibolab.result import (
 class Acquisition(ABC):
     """QUA variables used for saving of acquisition results.
 
-    This class can be instantiated only within a QUA program scope.
-    Each readout pulse is associated with its own set of acquisition variables.
+    This class can be instantiated only within a QUA program scope. Each
+    readout pulse is associated with its own set of acquisition
+    variables.
     """
 
     serial: str
@@ -70,7 +71,9 @@ class Acquisition(ABC):
 class RawAcquisition(Acquisition):
     """QUA variables used for raw waveform acquisition."""
 
-    adc_stream: _ResultSource = field(default_factory=lambda: declare_stream(adc_trace=True))
+    adc_stream: _ResultSource = field(
+        default_factory=lambda: declare_stream(adc_trace=True)
+    )
     """Stream to collect raw ADC data."""
 
     def assign_element(self, element):
@@ -186,7 +189,10 @@ class ShotsAcquisition(Acquisition):
             qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
             qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
         )
-        qua.assign(self.shot, qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > self.threshold))
+        qua.assign(
+            self.shot,
+            qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > self.threshold),
+        )
 
     def save(self):
         qua.save(self.shot, self.shots)

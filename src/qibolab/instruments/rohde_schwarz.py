@@ -11,7 +11,9 @@ class SGS100A(LocalOscillator):
     """
 
     def create(self):
-        return LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::5025::SOCKET")
+        return LO_SGS100A.RohdeSchwarz_SGS100A(
+            self.name, f"TCPIP0::{self.address}::5025::SOCKET"
+        )
 
     def __del__(self):
         self.disconnect()
