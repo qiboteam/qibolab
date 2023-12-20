@@ -167,10 +167,9 @@ class ClusterQCM_RF(Instrument):
     def _set_default_values(self):
         if self.device.present():
             # Default after reboot = 7.625
-            self.device.set("out0_offset_path0", 0)
-            self.device.set("out0_offset_path1", 0)
-            self.device.set("out1_offset_path0", 0)
-            self.device.set("out1_offset_path1", 0)
+            for i in range(2):
+                [self.device.set(f"out{i}_offset_path{j}", 0) for j in range(2)]
+
             # initialise the parameters of the default sequencers to the default values,
             # the rest of the sequencers are not configured here, but will be configured
             # with the same parameters as the default in process_pulse_sequence()
@@ -243,9 +242,9 @@ class ClusterQCM_RF(Instrument):
                 self.ports[port].hardware_mod_en = True
                 self.ports[port].nco_freq = 0
                 self.ports[port].nco_phase_offs = 0
-        except:
+        except Exception as error:
             raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}"
+                f"Unable to initialize port parameters on module {self.name}: {error}"
             )
         self.is_connected = True
 

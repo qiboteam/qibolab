@@ -145,10 +145,9 @@ class ClusterQCM_BB(Instrument):
 
     def _set_default_values(self):
         if self.device.present():
-            self.device.set("out0_offset", value=0)  # Default after reboot = 0
-            self.device.set("out1_offset", value=0)  # Default after reboot = 0
-            self.device.set("out2_offset", value=0)  # Default after reboot = 0
-            self.device.set("out3_offset", value=0)  # Default after reboot = 0
+            [
+                self.device.set(f"out{idx}_offset", value=0) for idx in range(4)
+            ]  # Default after reboot = 0
 
             # initialise the parameters of the default sequencers to the default values,
             # the rest of the sequencers are not configured here, but will be configured
@@ -179,18 +178,9 @@ class ClusterQCM_BB(Instrument):
                 target.set("connect_out2", "off")
                 target.set("connect_out3", "off")
 
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set(
-                "connect_out0", "I"
-            )
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set(
-                "connect_out1", "Q"
-            )
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o3"]].set(
-                "connect_out2", "I"
-            )
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o4"]].set(
-                "connect_out3", "Q"
-            )
+            out_values = {0: "I", 1: "Q", 2: "I", 3: "Q"}
+            for key, value in out_values.items():
+                self.device.sequencers[key].set(f"connect_out{key}", value)
 
             # on initialisation, disconnect all other sequencers from the ports
             self._device_num_sequencers = len(self.device.sequencers)
@@ -227,9 +217,9 @@ class ClusterQCM_BB(Instrument):
                 self.ports[port].hardware_mod_en = True
                 self.ports[port].nco_freq = 0
                 self.ports[port].nco_phase_offs = 0
-        except:
+        except Exception as error:
             raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}"
+                f"Unable to initialize port parameters on module {self.name}: {error}"
             )
         self.is_connected = True
 
@@ -753,12 +743,6 @@ class ClusterQCM_BB(Instrument):
                 target.set("connect_out1", "off")
                 target.set("connect_out2", "off")
                 target.set("connect_out3", "off")
-
-        # There seems to be a bug in qblox that when any of the mappings between paths and outputs is set,
-        # the general offset goes to 0 (eventhough the parameter will still show the right value).
-        # Until that is fixed, I'm going to always set the offset just before playing (bypassing the cache):
-        # FIXED, can be checked by:
-        # [print(f"offset {i}: {self.device.get(f'out{i}_offset')}") for i in range(4)]
 
         # Upload waveforms and program
         qblox_dict = {}

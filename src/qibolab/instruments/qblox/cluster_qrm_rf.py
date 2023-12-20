@@ -257,9 +257,9 @@ class ClusterQRM_RF(Instrument):
                 self.ports["i1"].acquisition_duration = self.settings["i1"][
                     "acquisition_duration"
                 ]
-        except:
+        except Exception as error:
             raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}"
+                f"Unable to initialize port parameters on module {self.name}: {error}"
             )
         self.is_connected = True
 
