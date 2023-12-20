@@ -1,11 +1,6 @@
 import pathlib
 
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.qblox.cluster import (
-    Cluster,
-    Cluster_Settings,
-    ReferenceClockSource,
-)
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
@@ -35,12 +30,6 @@ def create(runcard_path=RUNCARD):
     runcard = load_runcard(runcard_path)
     modules = {}
 
-    cluster = Cluster(
-        name="cluster",
-        address=ADDRESS,
-        settings=Cluster_Settings(reference_clock_source=ReferenceClockSource.INTERNAL),
-    )
-
     # DEBUG: debug folder = report folder
     # import os
     # folder = os.path.dirname(runcard) + "/debug/"
@@ -50,16 +39,16 @@ def create(runcard_path=RUNCARD):
     #     modules[name]._debug_folder = folder
 
     modules = {
-        "qcm_bb0": ClusterQCM_BB("qcm_bb0", f"{ADDRESS}:2", cluster),
-        "qcm_bb1": ClusterQCM_BB("qcm_bb1", f"{ADDRESS}:4", cluster),
-        "qcm_rf0": ClusterQCM_RF("qcm_rf0", f"{ADDRESS}:6", cluster),
-        "qcm_rf1": ClusterQCM_RF("qcm_rf1", f"{ADDRESS}:8", cluster),
-        "qcm_rf2": ClusterQCM_RF("qcm_rf2", f"{ADDRESS}:10", cluster),
-        "qrm_rf_a": ClusterQRM_RF("qrm_rf_a", f"{ADDRESS}:16", cluster),
-        "qrm_rf_b": ClusterQRM_RF("qrm_rf_b", f"{ADDRESS}:18", cluster),
+        "qcm_bb0": ClusterQCM_BB("qcm_bb0", f"{ADDRESS}:2"),
+        "qcm_bb1": ClusterQCM_BB("qcm_bb1", f"{ADDRESS}:4"),
+        "qcm_rf0": ClusterQCM_RF("qcm_rf0", f"{ADDRESS}:6"),
+        "qcm_rf1": ClusterQCM_RF("qcm_rf1", f"{ADDRESS}:8"),
+        "qcm_rf2": ClusterQCM_RF("qcm_rf2", f"{ADDRESS}:10"),
+        "qrm_rf_a": ClusterQRM_RF("qrm_rf_a", f"{ADDRESS}:16"),
+        "qrm_rf_b": ClusterQRM_RF("qrm_rf_b", f"{ADDRESS}:18"),
     }
 
-    controller = QbloxController("qblox_controller", cluster, modules)
+    controller = QbloxController("qblox_controller", ADDRESS, modules)
     twpa_pump = SGS100A(name="twpa_pump", address="192.168.0.36")
 
     instruments = {
