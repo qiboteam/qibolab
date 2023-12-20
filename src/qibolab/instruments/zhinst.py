@@ -686,16 +686,25 @@ class Zurich(Controller):
                                     )
 
             if sweeper.parameter.name in SWEEPER_BIAS:
-                if sweeper.qubits:
-                    for qubit in sweeper.qubits:
-                        zhsequence[f"flux{qubit.name}"] = [
-                            ZhSweeperLine(sweeper, qubit, sequence)
-                        ]
-                if sweeper.couplers:
-                    for coupler in sweeper.couplers:
-                        zhsequence[f"couplerflux{coupler.name}"] = [
-                            ZhSweeperLine(sweeper, coupler, sequence)
-                        ]
+
+                def bias_nt_loop(sweeper):  # duplicate code
+                    if not self.nt_sweeps:
+                        self.nt_sweeps = [sweeper]
+                    else:
+                        self.nt_sweeps.append(sweeper)
+                    self.sweepers.remove(sweeper)
+
+                bias_nt_loop(sweeper)
+                # if sweeper.qubits:
+                #     for qubit in sweeper.qubits:
+                #         zhsequence[f"flux{qubit.name}"] = [
+                #             ZhSweeperLine(sweeper, qubit, sequence)
+                #         ]
+                # if sweeper.couplers:
+                #     for coupler in sweeper.couplers:
+                #         zhsequence[f"couplerflux{coupler.name}"] = [
+                #             ZhSweeperLine(sweeper, coupler, sequence)
+                #         ]
 
             # This may not place the Zhsweeper when the start occurs among different sections or lines
             if sweeper.parameter.name in SWEEPER_START:
