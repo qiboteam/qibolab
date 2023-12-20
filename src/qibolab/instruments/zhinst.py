@@ -1324,7 +1324,18 @@ class Zurich(Controller):
 
         parameter = None
 
-        if sweeper.parameter is Parameter.amplitude:
+        if sweeper.parameter is Parameter.bias:
+            if sweeper.qubits:
+                for qubit in sweeper.qubits:
+                    zhsweeper = ZhSweeperLine(
+                        sweeper, qubit, self.sequence_qibo
+                    ).zhsweeper
+                    zhsweeper.uid = "bias"  # f"bias{i}"
+                    path = "DEV8660"
+                    parameter = zhsweeper
+                    device_path = f"{path}/sigouts/0/offset"
+
+        elif sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 pulse = pulse.copy()
                 pulse.amplitude *= max(abs(sweeper.values))
@@ -1342,18 +1353,22 @@ class Zurich(Controller):
                 zhsweeper.uid = "amplitude"  # f"amplitude{i}"
                 path = "DEV12146"  # Hardcoded for SHFQC(SHFQA)
                 parameter = zhsweeper
+                device_path = (
+                    f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
+                )
 
         elif parameter is None:
             parameter = ZhSweeper(
                 sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]
             ).zhsweeper
+            device_path = f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
 
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
             parameter=parameter,
         ):
             exp.set_node(
-                path=f"/{path}/qachannels/*/oscs/0/gain",  # Hardcoded SHFQA device
+                path=device_path,
                 value=parameter,
             )
 
