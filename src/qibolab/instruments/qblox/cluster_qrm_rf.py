@@ -4,7 +4,8 @@ import json
 import time
 
 import numpy as np
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm
+from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
+from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
@@ -12,7 +13,6 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .acquisition import AveragedAcquisition, DemodulatedAcquisition
-from .cluster import Cluster
 from .port import QbloxInputPort, QbloxOutputPort
 from .q1asm import Block, Register, convert_phase, loop_block, wait_block
 from .sequencer import Sequencer, WaveformsBuffer
@@ -143,7 +143,7 @@ class ClusterQRM_RF(Instrument):
     sequencer parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str, cluster: Cluster):
+    def __init__(self, name: str, address: str):
         """Initialize a Qblox QRM-RF module.
 
         Parameters:
@@ -158,13 +158,12 @@ class ClusterQRM_RF(Instrument):
         """
 
         super().__init__(name, address)
-        self.device: QcmQrm = None
+        self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.classification_parameters: dict = {}
         self.settings: dict = {}
 
         self._debug_folder: str = ""
-        self._cluster: Cluster = cluster
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
         self._sequencers: dict[Sequencer] = {"o1": []}
@@ -221,7 +220,7 @@ class ClusterQRM_RF(Instrument):
                 f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}"
             )
 
-    def connect(self):
+    def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -233,35 +232,41 @@ class ClusterQRM_RF(Instrument):
         if self.is_connected:
             return
 
-        self._cluster.connect()
-        self.device: QcmQrm = self._cluster.device.modules[
-            int(self.address.split(":")[1]) - 1
-        ]
-        # once connected, initialise the parameters of the device to the default values
-        self._set_default_values()
-        try:
-            if "o1" in self.settings:
-                self.ports["o1"].attenuation = self.settings["o1"]["attenuation"]
-                if self.settings["o1"]["lo_frequency"]:
-                    self.ports["o1"].lo_enabled = True
-                    self.ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
-                self.ports["o1"].hardware_mod_en = True
-                self.ports["o1"].nco_freq = 0
-                self.ports["o1"].nco_phase_offs = 0
+        elif cluster is not None:
+            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
+            # test connection with module
+            if not self.device.present():
+                raise ConnectionError(
+                    f"Module {self.device.name} not connected to cluster {cluster.name}"
+                )
+            # once connected, initialise the parameters of the device to the default values
+            self._set_default_values()
+            # then set the value loaded from the runcard
+            try:
+                if "o1" in self.settings:
+                    self.ports["o1"].attenuation = self.settings["o1"]["attenuation"]
+                    if self.settings["o1"]["lo_frequency"]:
+                        self.ports["o1"].lo_enabled = True
+                        self.ports["o1"].lo_frequency = self.settings["o1"][
+                            "lo_frequency"
+                        ]
+                    self.ports["o1"].hardware_mod_en = True
+                    self.ports["o1"].nco_freq = 0
+                    self.ports["o1"].nco_phase_offs = 0
 
-            if "i1" in self.settings:
-                self.ports["i1"].hardware_demod_en = True
-                self.ports["i1"].acquisition_hold_off = self.settings["i1"][
-                    "acquisition_hold_off"
-                ]
-                self.ports["i1"].acquisition_duration = self.settings["i1"][
-                    "acquisition_duration"
-                ]
-        except Exception as error:
-            raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}: {error}"
-            )
-        self.is_connected = True
+                if "i1" in self.settings:
+                    self.ports["i1"].hardware_demod_en = True
+                    self.ports["i1"].acquisition_hold_off = self.settings["i1"][
+                        "acquisition_hold_off"
+                    ]
+                    self.ports["i1"].acquisition_duration = self.settings["i1"][
+                        "acquisition_duration"
+                    ]
+            except Exception as error:
+                raise RuntimeError(
+                    f"Unable to initialize port parameters on module {self.name}: {error}"
+                )
+            self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
@@ -990,26 +995,21 @@ class ClusterQRM_RF(Instrument):
         """
         # wait until all sequencers stop
         time_out = int(self._execution_time) + 60
-
         t = time.time()
         for sequencer_number in self._used_sequencers_numbers:
             while True:
-                try:
-                    state = self.device.get_sequencer_state(sequencer_number)
-                except:
-                    pass
-                else:
-                    if state.status == "STOPPED":
-                        # log.info(f"{self.device.sequencers[sequencer_number].name} state: {state}")
-                        # TODO: check flags for errors
-                        break
-                    elif time.time() - t > time_out:
-                        log.info(
-                            f"Timeout - {self.device.sequencers[sequencer_number].name} state: {state}"
-                        )
-                        self.device.stop_sequencer(sequencer_number)
-                        break
-                time.sleep(1)
+                state = self.device.get_sequencer_state(sequencer_number)
+
+                if state.status == "STOPPED":
+                    # TODO: check flags for errors
+                    break
+                elif time.time() - t > time_out:
+                    log.info(
+                        f"Timeout - {self.device.sequencers[sequencer_number].name} state: {state}"
+                    )
+                    self.device.stop_sequencer(sequencer_number)
+                    break
+                time.sleep(0.5)
 
         # Qblox qrm modules only have one memory for scope acquisition.
         # Only one sequencer can save data to that memory.
@@ -1080,9 +1080,10 @@ class ClusterQRM_RF(Instrument):
         try:
             self.device.stop_sequencer()
         except:
-            pass
+            raise RuntimeError(f"Error stopping sequencer for {self.device.name}")
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
+        self.device = None

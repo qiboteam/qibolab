@@ -2,11 +2,11 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm
+from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
+from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -136,7 +136,7 @@ class ClusterQCM_RF(Instrument):
     parameters and caches their value using `_set_device_parameter()`.
     """
 
-    def __init__(self, name: str, address: str, cluster: Cluster):
+    def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM-RF module.
 
         Parameters:
@@ -150,12 +150,11 @@ class ClusterQCM_RF(Instrument):
         >>> qcm_module = ClusterQCM_RF(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.device: QcmQrm = None
+        self.device: QbloxQrmQcm = None
         self.ports: dict = {}
         self.settings = {}
 
         self._debug_folder: str = ""
-        self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
         self.channel_map: dict = {}
         self._device_num_output_ports = 2
@@ -214,7 +213,7 @@ class ClusterQCM_RF(Instrument):
                 f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}"
             )
 
-    def connect(self):
+    def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -226,27 +225,33 @@ class ClusterQCM_RF(Instrument):
         if self.is_connected:
             return
 
-        self._cluster.connect()
-        self.device: QcmQrm = self._cluster.device.modules[
-            int(self.address.split(":")[1]) - 1
-        ]
-        # once connected, initialise the parameters of the device to the default values
-        self._set_default_values()
-        try:
-            for port in self.settings:
-                self._sequencers[port] = []
-                if self.settings[port]["lo_frequency"]:
-                    self.ports[port].lo_enabled = True
-                    self.ports[port].lo_frequency = self.settings[port]["lo_frequency"]
-                self.ports[port].attenuation = self.settings[port]["attenuation"]
-                self.ports[port].hardware_mod_en = True
-                self.ports[port].nco_freq = 0
-                self.ports[port].nco_phase_offs = 0
-        except Exception as error:
-            raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}: {error}"
-            )
-        self.is_connected = True
+        elif cluster is not None:
+            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
+            # test connection with module
+            if not self.device.present():
+                raise ConnectionError(
+                    f"Module {self.device.name} not connected to cluster {cluster.name}"
+                )
+            # once connected, initialise the parameters of the device to the default values
+            self._set_default_values()
+            # then set the value loaded from the runcard
+            try:
+                for port in self.settings:
+                    self._sequencers[port] = []
+                    if self.settings[port]["lo_frequency"]:
+                        self.ports[port].lo_enabled = True
+                        self.ports[port].lo_frequency = self.settings[port][
+                            "lo_frequency"
+                        ]
+                    self.ports[port].attenuation = self.settings[port]["attenuation"]
+                    self.ports[port].hardware_mod_en = True
+                    self.ports[port].nco_freq = 0
+                    self.ports[port].nco_phase_offs = 0
+            except Exception as error:
+                raise RuntimeError(
+                    f"Unable to initialize port parameters on module {self.name}: {error}"
+                )
+            self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
@@ -834,3 +839,4 @@ class ClusterQCM_RF(Instrument):
         """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
+        self.device = None

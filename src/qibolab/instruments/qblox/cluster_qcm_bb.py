@@ -2,11 +2,11 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm
+from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
+from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster import Cluster
 from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -113,7 +113,7 @@ class ClusterQCM_BB(Instrument):
         ),
     )
 
-    def __init__(self, name: str, address: str, cluster: Cluster = None):
+    def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM baseband module.
 
         Parameters:
@@ -129,10 +129,9 @@ class ClusterQCM_BB(Instrument):
         super().__init__(name, address)
         self.ports: dict = {}
         self.settings: dict = {}
-        self.device: QcmQrm = None
+        self.device: QbloxQrmQcm = None
 
         self._debug_folder: str = ""
-        self._cluster: Cluster = cluster
         self._sequencers: dict[Sequencer] = {}
         self.channel_map: dict = {}
         self._device_num_output_ports = 2
@@ -192,7 +191,7 @@ class ClusterQCM_BB(Instrument):
                 f"Module {self.device.name} not connected to cluster {self._cluster.cluster.name}"
             )
 
-    def connect(self):
+    def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -204,24 +203,28 @@ class ClusterQCM_BB(Instrument):
         if self.is_connected:
             return
 
-        self._cluster.connect()
-        self.device: QcmQrm = self._cluster.device.modules[
-            int(self.address.split(":")[1]) - 1
-        ]
-        # once connected, initialise the parameters of the device to the default values
-        self._set_default_values()
-        try:
-            for port in self.settings:
-                self._sequencers[port] = []
-                self.ports[port].offset = self.settings[port]["offset"]
-                self.ports[port].hardware_mod_en = True
-                self.ports[port].nco_freq = 0
-                self.ports[port].nco_phase_offs = 0
-        except Exception as error:
-            raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}: {error}"
-            )
-        self.is_connected = True
+        elif cluster is not None:
+            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
+            # test connection with module
+            if not self.device.present():
+                raise ConnectionError(
+                    f"Module {self.device.name} not connected to cluster {cluster.name}"
+                )
+            # once connected, initialise the parameters of the device to the default values
+            self._set_default_values()
+            # then set the value loaded from the runcard
+            try:
+                for port in self.settings:
+                    self._sequencers[port] = []
+                    self.ports[port].offset = self.settings[port]["offset"]
+                    self.ports[port].hardware_mod_en = True
+                    self.ports[port].nco_freq = 0
+                    self.ports[port].nco_phase_offs = 0
+            except Exception as error:
+                raise RuntimeError(
+                    f"Unable to initialize port parameters on module {self.name}: {error}"
+                )
+            self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
@@ -822,3 +825,4 @@ class ClusterQCM_BB(Instrument):
         """Empty method to comply with Instrument interface."""
         self._cluster = None
         self.is_connected = False
+        self.device = None

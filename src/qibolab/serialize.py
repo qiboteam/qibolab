@@ -77,7 +77,8 @@ def load_qubits(
 def register_gates(
     runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> Tuple[QubitMap, QubitPairMap]:
-    """Register single qubit native gates to ``Qubit`` objects from the runcard.
+    """Register single qubit native gates to ``Qubit`` objects from the
+    runcard.
 
     Uses the native gate and characterization sections of the runcard
     to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
@@ -151,13 +152,15 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     """Dump instrument settings to a dictionary following the runcard
     format."""
     # Qblox modules settings are dictionaries and not dataclasses
-    return {
-        name: instrument.settings
-        if isinstance(instrument.settings, dict)
-        else asdict(instrument.settings)
-        for name, instrument in instruments.items()
-        if instrument.settings is not None
-    }
+    data = {}
+    for name, instrument in instruments.items():
+        settings = instrument.settings
+        if settings is not None:
+            if isinstance(settings, dict):
+                data[name] = settings
+            else:
+                data[name] = settings.dump()
+    return data
 
 
 def dump_runcard(platform: Platform, path: Path):
