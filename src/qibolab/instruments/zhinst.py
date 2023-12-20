@@ -1073,7 +1073,7 @@ class Zurich(Controller):
                     qf_finish,
                     cf_finish,
                 ],
-                dtype=[("finish", "i4"), ("line", "U10")],
+                dtype=[("finish", "i4"), ("line", "U15")],
             )
             latest_sequence = finish_times[finish_times["finish"].argmax()]
             if latest_sequence["line"] == "None":
