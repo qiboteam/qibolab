@@ -1,4 +1,4 @@
-""" Qblox instruments driver.
+"""Qblox instruments driver.
 
 Supports the following Instruments:
     Cluster
@@ -25,7 +25,6 @@ It supports:
     - waveforms cache, uses additional free sequencers if the memory of one sequencer (16384) is exhausted
     - instrument parameters cache
     - safe disconnection of offsets on termination
-
 """
 
 

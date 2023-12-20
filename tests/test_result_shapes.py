@@ -25,7 +25,9 @@ def execute(platform, acquisition_type, averaging_mode, sweep=False):
     sequence.add(qd_pulse)
     sequence.add(ro_pulse)
 
-    options = ExecutionParameters(nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode)
+    options = ExecutionParameters(
+        nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode
+    )
     if sweep:
         amp_values = np.linspace(0.01, 0.05, NSWEEP1)
         freq_values = np.linspace(-2e6, 2e6, NSWEEP2)
@@ -41,7 +43,12 @@ def execute(platform, acquisition_type, averaging_mode, sweep=False):
 @pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_discrimination_singleshot(connected_platform, sweep):
-    result = execute(connected_platform, AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT, sweep)
+    result = execute(
+        connected_platform,
+        AcquisitionType.DISCRIMINATION,
+        AveragingMode.SINGLESHOT,
+        sweep,
+    )
     assert isinstance(result, SampleResults)
     if sweep:
         assert result.samples.shape == (NSHOTS, NSWEEP1, NSWEEP2)
@@ -52,7 +59,9 @@ def test_discrimination_singleshot(connected_platform, sweep):
 @pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_discrimination_cyclic(connected_platform, sweep):
-    result = execute(connected_platform, AcquisitionType.DISCRIMINATION, AveragingMode.CYCLIC, sweep)
+    result = execute(
+        connected_platform, AcquisitionType.DISCRIMINATION, AveragingMode.CYCLIC, sweep
+    )
     assert isinstance(result, AveragedSampleResults)
     if sweep:
         assert result.statistical_frequency.shape == (NSWEEP1, NSWEEP2)
@@ -63,7 +72,9 @@ def test_discrimination_cyclic(connected_platform, sweep):
 @pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_integration_singleshot(connected_platform, sweep):
-    result = execute(connected_platform, AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT, sweep)
+    result = execute(
+        connected_platform, AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT, sweep
+    )
     assert isinstance(result, IntegratedResults)
     if sweep:
         assert result.voltage.shape == (NSHOTS, NSWEEP1, NSWEEP2)
@@ -74,7 +85,9 @@ def test_integration_singleshot(connected_platform, sweep):
 @pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_integration_cyclic(connected_platform, sweep):
-    result = execute(connected_platform, AcquisitionType.INTEGRATION, AveragingMode.CYCLIC, sweep)
+    result = execute(
+        connected_platform, AcquisitionType.INTEGRATION, AveragingMode.CYCLIC, sweep
+    )
     assert isinstance(result, AveragedIntegratedResults)
     if sweep:
         assert result.voltage.shape == (NSWEEP1, NSWEEP2)

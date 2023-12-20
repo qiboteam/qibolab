@@ -20,7 +20,8 @@ class SPI(Instrument):
         self.device_parameters = {}
 
     def connect(self):
-        """Connects to the instrument using the IP address set in the runcard."""
+        """Connects to the instrument using the IP address set in the
+        runcard."""
         if not self.is_connected:
             for attempt in range(3):
                 try:
@@ -35,7 +36,9 @@ class SPI(Instrument):
             if not self.is_connected:
                 raise InstrumentException(self, f"Unable to connect to {self.name}")
         else:
-            raise_error(Exception, "There is an open connection to the instrument already")
+            raise_error(
+                Exception, "There is an open connection to the instrument already"
+            )
 
     def _set_device_parameter(self, target, *parameters, value):
         if self.is_connected:
@@ -43,7 +46,9 @@ class SPI(Instrument):
             if not key in self.device_parameters:
                 for parameter in parameters:
                     if not hasattr(target, parameter):
-                        raise Exception(f"The instrument {self.name} does not have parameters {parameter}")
+                        raise Exception(
+                            f"The instrument {self.name} does not have parameters {parameter}"
+                        )
                     target.set(parameter, value)
                 self.device_parameters[key] = value
             elif self.device_parameters[key] != value:
@@ -73,7 +78,9 @@ class SPI(Instrument):
                 current = settings[2]
                 if not module_name in self.device.instrument_modules:
                     self.device.add_spi_module(settings[0], "S4g", module_name)
-                device = self.device.instrument_modules[module_name].instrument_modules["dac" + str(port_number - 1)]
+                device = self.device.instrument_modules[module_name].instrument_modules[
+                    "dac" + str(port_number - 1)
+                ]
                 self.dacs[channel] = type(
                     "S4g_dac",
                     (),
@@ -92,7 +99,9 @@ class SPI(Instrument):
                 voltage = settings[2]
                 if not module_name in self.device.instrument_modules:
                     self.device.add_spi_module(settings[0], "D5a", module_name)
-                device = self.device.instrument_modules[module_name].instrument_modules["dac" + str(port_number - 1)]
+                device = self.device.instrument_modules[module_name].instrument_modules[
+                    "dac" + str(port_number - 1)
+                ]
                 self.dacs[channel] = type(
                     "D5a_dac",
                     (),

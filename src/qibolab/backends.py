@@ -40,7 +40,8 @@ class QibolabBackend(NumpyBackend):
     def transpile(self, circuit):
         """Applies the transpiler to a single circuit.
 
-        This transforms the circuit into proper connectivity and native gates.
+        This transforms the circuit into proper connectivity and native
+        gates.
         """
         # TODO: Move this method to transpilers
         if self.transpiler is None or self.transpiler.is_satisfied(circuit):
@@ -51,7 +52,8 @@ class QibolabBackend(NumpyBackend):
         return native_circuit, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
-        """Assigning measurement outcomes to :class:`qibo.states.MeasurementResult` for each gate.
+        """Assigning measurement outcomes to
+        :class:`qibo.states.MeasurementResult` for each gate.
 
         This allows properly obtaining the measured shots from the :class:`qibolab.pulses.ReadoutPulse` object obtaned after pulse sequence execution.
 
@@ -107,7 +109,8 @@ class QibolabBackend(NumpyBackend):
         return result
 
     def execute_circuits(self, circuits, initial_state=None, nshots=1000):
-        """Executes multiple quantum circuits with a single communication with the control electronics.
+        """Executes multiple quantum circuits with a single communication with
+        the control electronics.
 
         Circuits are unrolled to a single pulse sequence.
 
@@ -134,7 +137,10 @@ class QibolabBackend(NumpyBackend):
         # TODO: Maybe these loops can be parallelized
         native_circuits, _ = zip(*(self.transpile(circuit) for circuit in circuits))
         sequences, measurement_maps = zip(
-            *(self.compiler.compile(circuit, self.platform) for circuit in native_circuits)
+            *(
+                self.compiler.compile(circuit, self.platform)
+                for circuit in native_circuits
+            )
         )
 
         if not self.platform.is_connected:
@@ -150,9 +156,13 @@ class QibolabBackend(NumpyBackend):
         results = []
         readout = {k: deque(v) for k, v in readout.items()}
         for circuit, measurement_map in zip(circuits, measurement_maps):
-            results.append(MeasurementOutcomes(circuit.measurements, self, nshots=nshots))
+            results.append(
+                MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
+            )
             for gate, sequence in measurement_map.items():
-                samples = [readout[pulse.serial].popleft().samples for pulse in sequence.pulses]
+                samples = [
+                    readout[pulse.serial].popleft().samples for pulse in sequence.pulses
+                ]
                 gate.result.backend = self
                 gate.result.register_samples(np.array(samples).T)
         return results

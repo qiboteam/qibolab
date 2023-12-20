@@ -1,6 +1,5 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
-:class:`qibolab.platforms.platform.DesignPlatform`.
-"""
+:class:`qibolab.platforms.platform.DesignPlatform`."""
 import os
 import pathlib
 import pickle
@@ -117,7 +116,9 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
         pytest.skip("The platform does not have couplers")
     coupler = next(iter(platform.couplers))
     sequence = PulseSequence()
-    sequence.add(platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1))
+    sequence.add(
+        platform.create_coupler_pulse(coupler, start=0, duration=200, amplitude=1)
+    )
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
     assert len(sequence.cf_pulses) > 0
 
@@ -134,7 +135,9 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
             platform.execute_pulse_sequence(sequence, options)
-    elif find_instrument(platform, RFSoC) is not None and not isinstance(pulse.shape, Rectangular):
+    elif find_instrument(platform, RFSoC) is not None and not isinstance(
+        pulse.shape, Rectangular
+    ):
         with pytest.raises(RuntimeError):
             platform.execute_pulse_sequence(sequence, options)
     else:
@@ -153,7 +156,9 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
             platform.execute_pulse_sequence(sequence, options)
-    elif find_instrument(platform, RFSoC) is not None and not isinstance(pulse.shape, Rectangular):
+    elif find_instrument(platform, RFSoC) is not None and not isinstance(
+        pulse.shape, Rectangular
+    ):
         with pytest.raises(RuntimeError):
             platform.execute_pulse_sequence(sequence, options)
     else:
@@ -222,8 +227,12 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
     sequence = PulseSequence()
     qd_pulse1 = platform.create_qubit_drive_pulse(qubit, start=0, duration=200)
     ro_pulse1 = platform.create_qubit_readout_pulse(qubit, start=200)
-    qd_pulse2 = platform.create_qubit_drive_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400)
-    ro_pulse2 = platform.create_qubit_readout_pulse(qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400))
+    qd_pulse2 = platform.create_qubit_drive_pulse(
+        qubit, start=(ro_pulse1.start + ro_pulse1.duration), duration=400
+    )
+    ro_pulse2 = platform.create_qubit_readout_pulse(
+        qubit, start=(ro_pulse1.start + ro_pulse1.duration + 400)
+    )
     sequence.add(qd_pulse1)
     sequence.add(ro_pulse1)
     sequence.add(qd_pulse2)
@@ -233,7 +242,9 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
 
 @pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.qpu
-@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+@pytest.mark.xfail(
+    raises=AssertionError, reason="Probabilities are not well calibrated"
+)
 def test_excited_state_probabilities_pulses(qpu_platform):
     platform = qpu_platform
     qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
@@ -248,7 +259,9 @@ def test_excited_state_probabilities_pulses(qpu_platform):
 
     nqubits = len(qubits)
     cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
-    probs = [backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits]
+    probs = [
+        backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits
+    ]
     warnings.warn(f"Excited state probabilities: {probs}")
     target_probs = np.zeros((nqubits, 2))
     target_probs[:, 1] = 1
@@ -258,7 +271,9 @@ def test_excited_state_probabilities_pulses(qpu_platform):
 @pytest.mark.skip(reason="no way of currently testing this")
 @pytest.mark.qpu
 @pytest.mark.parametrize("start_zero", [False, True])
-@pytest.mark.xfail(raises=AssertionError, reason="Probabilities are not well calibrated")
+@pytest.mark.xfail(
+    raises=AssertionError, reason="Probabilities are not well calibrated"
+)
 def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     platform = qpu_platform
     qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
@@ -275,7 +290,9 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
 
     nqubits = len(qubits)
     cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
-    probs = [backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits]
+    probs = [
+        backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits
+    ]
     warnings.warn(f"Ground state probabilities: {probs}")
     target_probs = np.zeros((nqubits, 2))
     target_probs[:, 0] = 1

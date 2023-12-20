@@ -14,11 +14,15 @@ HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
 
 
-def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> rfsoc_pulses.Pulse:
+def replace_pulse_shape(
+    rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape, sampling_rate: float
+) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
     if shape.name not in {"Gaussian", "Drag", "Rectangular", "Exponential"}:
         new_pulse = rfsoc_pulses.Arbitrary(
-            **asdict(rfsoc_pulse), i_values=shape.envelope_waveform_i, q_values=shape.envelope_waveform_q
+            **asdict(rfsoc_pulse),
+            i_values=shape.envelope_waveform_i(sampling_rate),
+            q_values=shape.envelope_waveform_q(sampling_rate),
         )
         return new_pulse
     new_pulse_cls = getattr(rfsoc_pulses, shape.name)
@@ -27,22 +31,30 @@ def replace_pulse_shape(rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape) -> r
     if shape.name == "Gaussian":
         return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma)
     if shape.name == "Drag":
-        return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta)
+        return new_pulse_cls(
+            **asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta
+        )
     if shape.name == "Exponential":
-        return new_pulse_cls(**asdict(rfsoc_pulse), tau=shape.tau, upsilon=shape.upsilon, weight=shape.g)
+        return new_pulse_cls(
+            **asdict(rfsoc_pulse), tau=shape.tau, upsilon=shape.upsilon, weight=shape.g
+        )
 
 
 def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
     """Return local_oscillator frequency (HZ) of a pulse."""
     pulse_type = pulse.type.name.lower()
     try:
-        lo_frequency = getattr(qubits[pulse.qubit], pulse_type).local_oscillator.frequency
+        lo_frequency = getattr(
+            qubits[pulse.qubit], pulse_type
+        ).local_oscillator.frequency
     except AttributeError:
         lo_frequency = 0
     return lo_frequency
 
 
-def convert_units_sweeper(sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]):
+def convert_units_sweeper(
+    sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
+):
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
     for idx, jdx in enumerate(sweeper.indexes):
         parameter = sweeper.parameters[idx]
@@ -67,20 +79,23 @@ def convert(*args):
 
 @convert.register
 def _(qubit: Qubit) -> rfsoc.Qubit:
-    """Convert `qibolab.platforms.abstract.Qubit` to `qibosoq.abstract.Qubit`."""
+    """Convert `qibolab.platforms.abstract.Qubit` to
+    `qibosoq.abstract.Qubit`."""
     if qubit.flux:
         return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
     return rfsoc.Qubit(0.0, None)
 
 
 @convert.register
-def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pulse]:
+def _(
+    sequence: PulseSequence, qubits: dict[int, Qubit], sampling_rate: float
+) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
     last_pulse_start = 0
     list_sequence = []
     for pulse in sorted(sequence.pulses, key=lambda item: item.start):
         start_delay = (pulse.start - last_pulse_start) * NS_TO_US
-        pulse_dict = asdict(convert(pulse, qubits, start_delay))
+        pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
         list_sequence.append(pulse_dict)
 
         last_pulse_start = pulse.start
@@ -88,7 +103,9 @@ def _(sequence: PulseSequence, qubits: dict[int, Qubit]) -> list[rfsoc_pulses.Pu
 
 
 @convert.register
-def _(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulses.Pulse:
+def _(
+    pulse: Pulse, qubits: dict[int, Qubit], start_delay: float, sampling_rate: float
+) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
@@ -106,7 +123,7 @@ def _(pulse: Pulse, qubits: dict[int, Qubit], start_delay: float) -> rfsoc_pulse
         name=pulse.serial,
         type=pulse_type,
     )
-    return replace_pulse_shape(rfsoc_pulse, pulse.shape)
+    return replace_pulse_shape(rfsoc_pulse, pulse.shape, sampling_rate)
 
 
 @convert.register
@@ -116,11 +133,14 @@ def _(par: Parameter) -> rfsoc.Parameter:
 
 
 @convert.register
-def _(sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]) -> rfsoc.Sweeper:
+def _(
+    sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
+) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
-    Note that any unit conversion is not done in this function (to avoid to do it multiple times).
-    Conversion will be done in `convert_units_sweeper`.
+    Note that any unit conversion is not done in this function (to avoid
+    to do it multiple times). Conversion will be done in
+    `convert_units_sweeper`.
     """
     parameters = []
     starts = []

@@ -27,7 +27,8 @@ class Program:
         self._next_register_number: int = -1
 
     def add_blocks(self, *blocks):
-        """Adds a :class:`qibolab.instruments.qblox.qblox_q1asm.Block` of code to the list of blocks."""
+        """Adds a :class:`qibolab.instruments.qblox.qblox_q1asm.Block` of code
+        to the list of blocks."""
         for block in blocks:
             self._blocks.append(block)
 
@@ -69,11 +70,15 @@ class Block:
     @indentation.setter
     def indentation(self, value):
         if not isinstance(value, int):
-            raise TypeError(f"indentation type should be int, got {type(value).__name__}")
+            raise TypeError(
+                f"indentation type should be int, got {type(value).__name__}"
+            )
 
         diff = value - self._indentation
         self._indentation = value
-        self.lines = [(line, comment, level + diff) for (line, comment, level) in self.lines]
+        self.lines = [
+            (line, comment, level + diff) for (line, comment, level) in self.lines
+        ]
 
     def append(self, line, comment="", level=0):
         self.lines = self.lines + [(line, comment, self._indentation + level)]
@@ -85,7 +90,8 @@ class Block:
         self.lines = self.lines + [("", "", self._indentation)]
 
     def __repr__(self) -> str:
-        """Returns a string with the block of code, taking care of the indentation of instructions and comments."""
+        """Returns a string with the block of code, taking care of the
+        indentation of instructions and comments."""
 
         def comment_col(line, level):
             col = Block.SPACES_PER_LEVEL * (level + Block.GLOBAL_INDENTATION_LEVEL)
@@ -100,16 +106,25 @@ class Block:
         block_str: str = ""
         if self.name:
             block_str += (
-                self._indentation_string(self._indentation + Block.GLOBAL_INDENTATION_LEVEL)
+                self._indentation_string(
+                    self._indentation + Block.GLOBAL_INDENTATION_LEVEL
+                )
                 + "# "
                 + self.name
                 + END_OF_LINE
             )
 
         for line, comment, level in self.lines:
-            block_str += self._indentation_string(level + Block.GLOBAL_INDENTATION_LEVEL) + line
+            block_str += (
+                self._indentation_string(level + Block.GLOBAL_INDENTATION_LEVEL) + line
+            )
             if comment:
-                block_str += " " * (max_col - comment_col(line, level) + Block.SPACES_BEFORE_COMMENT) + " # " + comment
+                block_str += (
+                    " "
+                    * (max_col - comment_col(line, level) + Block.SPACES_BEFORE_COMMENT)
+                    + " # "
+                    + comment
+                )
             block_str += END_OF_LINE
 
         return block_str
@@ -170,7 +185,9 @@ class Register:
         self._name = value
 
 
-def wait_block(wait_time: int, register: Register, force_multiples_of_four: bool = False):
+def wait_block(
+    wait_time: int, register: Register, force_multiples_of_four: bool = False
+):
     """Generates blocks of code to implement long delays.
 
     Arguments:
@@ -216,7 +233,9 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_four: bool
             wait = wait_time % loop_wait
 
         if loop_wait < 4 or (wait > 0 and wait < 4):
-            raise ValueError(f"Unable to decompose {wait_time} into valid (n_loops * loop_wait + wait)")
+            raise ValueError(
+                f"Unable to decompose {wait_time} into valid (n_loops * loop_wait + wait)"
+            )
     else:
         raise ValueError("wait_time > 65535**2 is not supported yet.")
 
@@ -237,7 +256,9 @@ def wait_block(wait_time: int, register: Register, force_multiples_of_four: bool
     return block
 
 
-def loop_block(start: int, stop: int, step: int, register: Register, block: Block):  # validate values
+def loop_block(
+    start: int, stop: int, step: int, register: Register, block: Block
+):  # validate values
     """Generates blocks of code to implement loops.
 
     Its behaviour is similar to range(): it includes the first value, but never the last.
@@ -275,11 +296,16 @@ def loop_block(start: int, stop: int, step: int, register: Register, block: Bloc
     if stop > start:
         footer_block.append(f"add {register}, {step}, {register}")
         footer_block.append("nop")
-        footer_block.append(f"jlt {register}, {stop}, @loop_{register}", comment=register.name + " loop")
+        footer_block.append(
+            f"jlt {register}, {stop}, @loop_{register}", comment=register.name + " loop"
+        )
     elif stop < start:
         footer_block.append(f"sub {register}, {abs(step)}, {register}")
         footer_block.append("nop")
-        footer_block.append(f"jge {register}, {stop + 1}, @loop_{register}", comment=register.name + " loop")
+        footer_block.append(
+            f"jge {register}, {stop + 1}, @loop_{register}",
+            comment=register.name + " loop",
+        )
 
     return header_block + body_block + footer_block
 
@@ -287,8 +313,8 @@ def loop_block(start: int, stop: int, step: int, register: Register, block: Bloc
 def convert_phase(phase_rad: float):
     """Converts phase values in radiants to the encoding used in qblox FPGAs.
 
-    The phase is divided into 1e9 steps between 0° and 360°,
-    expressed as an integer between 0 and 1e9 (e.g 45°=125e6).
+    The phase is divided into 1e9 steps between 0° and 360°, expressed
+    as an integer between 0 and 1e9 (e.g 45°=125e6).
     https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
     """
     phase_deg = (phase_rad * 360 / (2 * np.pi)) % 360
@@ -310,8 +336,8 @@ def convert_frequency(freq: float):
 def convert_gain(gain: float):
     """Converts gain values to the encoding used in qblox FPGAs.
 
-    Both gain values are divided in 2**sample path width steps.
-    QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit
+    Both gain values are divided in 2**sample path width steps. QCM DACs
+    resolution 16bits, QRM DACs and ADCs 12 bit
     https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
     """
     if not (gain >= -1 and gain <= 1):
@@ -325,17 +351,20 @@ def convert_gain(gain: float):
 def convert_offset(offset: float):
     """Converts offset values to the encoding used in qblox FPGAs.
 
-    Both offset values are divided in 2**sample path width steps.
-    QCM DACs resolution 16bits, QRM DACs and ADCs 12 bit
-    QCM 5Vpp, QRM 2Vpp
+    Both offset values are divided in 2**sample path width steps. QCM
+    DACs resolution 16bits, QRM DACs and ADCs 12 bit QCM 5Vpp, QRM 2Vpp
     https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
     """
     scale_factor = 1.25 * np.sqrt(2)
     normalised_offset = offset / scale_factor
 
     if not (normalised_offset >= -1 and normalised_offset <= 1):
-        raise ValueError(f"offset must be a float between {-scale_factor:.3f} and {scale_factor:.3f} V")
+        raise ValueError(
+            f"offset must be a float between {-scale_factor:.3f} and {scale_factor:.3f} V"
+        )
     if normalised_offset == 1:
         return 2**15 - 1
     else:
-        return int(np.floor(normalised_offset * 2**15)) % 2**32  # two's complement 32 bit number? or 12 or 24?
+        return (
+            int(np.floor(normalised_offset * 2**15)) % 2**32
+        )  # two's complement 32 bit number? or 12 or 24?

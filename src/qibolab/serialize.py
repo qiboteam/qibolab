@@ -33,14 +33,21 @@ def load_settings(runcard: dict) -> Settings:
     return Settings(**runcard["settings"])
 
 
-def load_qubits(runcard: dict, extras_folder: Path = None) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
+def load_qubits(
+    runcard: dict, extras_folder: Path = None
+) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
-    Uses the native gate and characterization sections of the runcard
-    to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
+    Uses the native gate and characterization sections of the runcard to
+    parse the
+    :class: `qibolab.qubits.Qubit` and
+    :class: `qibolab.qubits.QubitPair`
     objects.
     """
-    qubits = {q: Qubit(q, **char) for q, char in runcard["characterization"]["single_qubit"].items()}
+    qubits = {
+        q: Qubit(q, **char)
+        for q, char in runcard["characterization"]["single_qubit"].items()
+    }
     if extras_folder is not None:
         single_qubit = runcard["characterization"]["single_qubit"]
         for qubit in qubits.values():
@@ -48,7 +55,10 @@ def load_qubits(runcard: dict, extras_folder: Path = None) -> Tuple[QubitMap, Co
     couplers = {}
     pairs = {}
     if "coupler" in runcard["characterization"]:
-        couplers = {c: Coupler(c, **char) for c, char in runcard["characterization"]["coupler"].items()}
+        couplers = {
+            c: Coupler(c, **char)
+            for c, char in runcard["characterization"]["coupler"].items()
+        }
 
         for c, pair in runcard["topology"].items():
             pair = tuple(sorted(pair))
@@ -87,19 +97,28 @@ def register_gates(
     return qubits, pairs, couplers
 
 
-def load_instrument_settings(runcard: dict, instruments: InstrumentMap) -> InstrumentMap:
+def load_instrument_settings(
+    runcard: dict, instruments: InstrumentMap
+) -> InstrumentMap:
     """Setup instruments according to the settings given in the runcard."""
     for name, settings in runcard.get("instruments", {}).items():
         instruments[name].setup(**settings)
     return instruments
 
 
-def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None) -> dict:
-    """Dump qubit and pair objects to a dictionary following the runcard format."""
+def dump_qubits(
+    qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
+) -> dict:
+    """Dump qubit and pair objects to a dictionary following the runcard
+    format."""
 
-    native_gates = {"single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}}
+    native_gates = {
+        "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}
+    }
     if couplers:
-        native_gates["coupler"] = {c: coupler.native_pulse.raw for c, coupler in couplers.items()}
+        native_gates["coupler"] = {
+            c: coupler.native_pulse.raw for c, coupler in couplers.items()
+        }
     native_gates["two_qubit"] = {}
 
     # add two-qubit native gates
@@ -118,7 +137,9 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
             qubit["kernel_path"] = kernel_path.name
 
     if couplers:
-        characterization["coupler"] = {c.name: {"sweetspot": c.sweetspot} for c in couplers.values()}
+        characterization["coupler"] = {
+            c.name: {"sweetspot": c.sweetspot} for c in couplers.values()
+        }
 
     return {
         "native_gates": native_gates,
@@ -127,10 +148,13 @@ def dump_qubits(qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = No
 
 
 def dump_instruments(instruments: InstrumentMap) -> dict:
-    """Dump instrument settings to a dictionary following the runcard format."""
+    """Dump instrument settings to a dictionary following the runcard
+    format."""
     # Qblox modules settings are dictionaries and not dataclasses
     return {
-        name: instrument.settings if isinstance(instrument.settings, dict) else asdict(instrument.settings)
+        name: instrument.settings
+        if isinstance(instrument.settings, dict)
+        else asdict(instrument.settings)
         for name, instrument in instruments.items()
         if instrument.settings is not None
     }
@@ -156,7 +180,12 @@ def dump_runcard(platform: Platform, path: Path):
 
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
-        settings["topology"] = {coupler: list(pair) for pair, coupler in zip(platform.pairs, platform.couplers)}
+        settings["topology"] = {
+            coupler: list(pair)
+            for pair, coupler in zip(platform.pairs, platform.couplers)
+        }
 
     settings.update(dump_qubits(platform.qubits, platform.pairs, platform.couplers))
-    path.write_text(yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None))
+    path.write_text(
+        yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None)
+    )

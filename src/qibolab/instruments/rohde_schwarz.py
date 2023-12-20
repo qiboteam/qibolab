@@ -52,11 +52,14 @@ class SGS100A(LocalOscillator):
             self.device.ref_osc_source = x
 
     def connect(self):
-        """Connects to the instrument using the IP address set in the runcard."""
+        """Connects to the instrument using the IP address set in the
+        runcard."""
         if not self.is_connected:
             for attempt in range(3):
                 try:
-                    self.device = LO_SGS100A.RohdeSchwarz_SGS100A(self.name, f"TCPIP0::{self.address}::5025::SOCKET")
+                    self.device = LO_SGS100A.RohdeSchwarz_SGS100A(
+                        self.name, f"TCPIP0::{self.address}::5025::SOCKET"
+                    )
                     self.is_connected = True
                     break
                 except KeyError as exc:
@@ -76,7 +79,8 @@ class SGS100A(LocalOscillator):
         self.device.ref_osc_source = self._ref_osc_source
 
     def _set_device_parameter(self, parameter: str, value):
-        """Sets a parameter of the instrument, if it changed from the last stored in the cache.
+        """Sets a parameter of the instrument, if it changed from the last
+        stored in the cache.
 
         Args:
             parameter: str = The parameter to be cached and set.
@@ -84,18 +88,25 @@ class SGS100A(LocalOscillator):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        if not (parameter in self._device_parameters and self._device_parameters[parameter] == value):
+        if not (
+            parameter in self._device_parameters
+            and self._device_parameters[parameter] == value
+        ):
             if self.is_connected:
                 if not parameter in self._device_parameters:
                     if not hasattr(self.device, parameter):
-                        raise ValueError(f"The instrument {self.name} does not have parameter {parameter}")
+                        raise ValueError(
+                            f"The instrument {self.name} does not have parameter {parameter}"
+                        )
                     self.device.set(parameter, value)
                     self._device_parameters[parameter] = value
                 elif self._device_parameters[parameter] != value:
                     self.device.set(parameter, value)
                     self._device_parameters[parameter] = value
             else:
-                raise ConnectionError("There is no connection to the instrument {self.name}")
+                raise ConnectionError(
+                    "There is no connection to the instrument {self.name}"
+                )
 
     def _erase_device_parameters_cache(self):
         """Erases the cache of instrument parameters."""

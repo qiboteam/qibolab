@@ -43,14 +43,18 @@ def u3_rule(gate, platform):
     virtual_z_phases = {qubit: lam}
     sequence = PulseSequence()
     # Fetch pi/2 pulse from calibration
-    RX90_pulse_1 = platform.create_RX90_pulse(qubit, start=0, relative_phase=virtual_z_phases[qubit])
+    RX90_pulse_1 = platform.create_RX90_pulse(
+        qubit, start=0, relative_phase=virtual_z_phases[qubit]
+    )
     # apply RX(pi/2)
     sequence.add(RX90_pulse_1)
     # apply RZ(theta)
     virtual_z_phases[qubit] += theta
     # Fetch pi/2 pulse from calibration
     RX90_pulse_2 = platform.create_RX90_pulse(
-        qubit, start=RX90_pulse_1.finish, relative_phase=virtual_z_phases[qubit] - math.pi
+        qubit,
+        start=RX90_pulse_1.finish,
+        relative_phase=virtual_z_phases[qubit] - math.pi,
     )
     # apply RX(-pi/2)
     sequence.add(RX90_pulse_2)
@@ -63,8 +67,8 @@ def u3_rule(gate, platform):
 def cz_rule(gate, platform):
     """CZ applied as defined in the platform runcard.
 
-    Applying the CZ gate may involve sending pulses on qubits
-    that the gate is not directly acting on.
+    Applying the CZ gate may involve sending pulses on qubits that the
+    gate is not directly acting on.
     """
     return platform.create_CZ_pulse_sequence(gate.qubits)
 

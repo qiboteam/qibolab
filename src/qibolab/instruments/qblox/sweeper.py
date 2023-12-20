@@ -39,7 +39,8 @@ class QbloxSweeperType(Enum):
 
 
 class QbloxSweeper:
-    """A custom sweeper object with the data and functionality required by qblox instruments.
+    """A custom sweeper object with the data and functionality required by
+    qblox instruments.
 
     It is responsible for generating the q1asm code required to execute sweeps in a sequencer. The object can be
     initialised with either:
@@ -75,7 +76,8 @@ class QbloxSweeper:
         multiply_to: float = 1,
         name: str = "",
     ):
-        """Creates an instance from a range of values and a sweeper type (:class:`qibolab.instruments.qblox.QbloxSweeperType`).
+        """Creates an instance from a range of values and a sweeper type
+        (:class:`qibolab.instruments.qblox.QbloxSweeperType`).
 
         Args:
             program (:class:`qibolab.instruments.qblox_q1asm.Program`): a program object representing the q1asm program
@@ -142,18 +144,33 @@ class QbloxSweeper:
         # Verify that all values are within acceptable ranges
         check_values = {
             QbloxSweeperType.frequency: (
-                lambda v: all((-self.FREQUENCY_LIMIT <= x and x <= self.FREQUENCY_LIMIT) for x in v)
+                lambda v: all(
+                    (-self.FREQUENCY_LIMIT <= x and x <= self.FREQUENCY_LIMIT)
+                    for x in v
+                )
             ),
             QbloxSweeperType.gain: (lambda v: all((-1 <= x and x <= 1) for x in v)),
-            QbloxSweeperType.offset: (lambda v: all((-1.25 * np.sqrt(2) <= x and x <= 1.25 * np.sqrt(2)) for x in v)),
+            QbloxSweeperType.offset: (
+                lambda v: all(
+                    (-1.25 * np.sqrt(2) <= x and x <= 1.25 * np.sqrt(2)) for x in v
+                )
+            ),
             QbloxSweeperType.relative_phase: (lambda v: True),
-            QbloxSweeperType.start: (lambda v: all((4 <= x and x < 2**16) for x in v)),
-            QbloxSweeperType.duration: (lambda v: all((0 <= x and x < 2**16) for x in v)),
-            QbloxSweeperType.number: (lambda v: all((-(2**16) < x and x < 2**16) for x in v)),
+            QbloxSweeperType.start: (
+                lambda v: all((4 <= x and x < 2**16) for x in v)
+            ),
+            QbloxSweeperType.duration: (
+                lambda v: all((0 <= x and x < 2**16) for x in v)
+            ),
+            QbloxSweeperType.number: (
+                lambda v: all((-(2**16) < x and x < 2**16) for x in v)
+            ),
         }
 
         if not check_values[type](np.append(self._abs_values, [self._abs_stop])):
-            raise ValueError(f"Sweeper {self.name} values are not within the allowed range")
+            raise ValueError(
+                f"Sweeper {self.name} values are not within the allowed range"
+            )
 
         # Convert absolute values to q1asm values
         convert = {
@@ -169,18 +186,30 @@ class QbloxSweeper:
         self._con_start = convert[type](self._abs_start)
         self._con_step = convert[type](self._abs_step)
         self._con_stop = (self._con_start + self._con_step * (self._n) + 1) % 2**32
-        self._con_values = np.array([(self._con_start + self._con_step * m) % 2**32 for m in range(self._n + 1)])
+        self._con_values = np.array(
+            [
+                (self._con_start + self._con_step * m) % 2**32
+                for m in range(self._n + 1)
+            ]
+        )
 
         # log.info(f"Qblox sweeper converted values: {self._con_values}")
 
         if not (
-            isinstance(self._con_start, int) and isinstance(self._con_stop, int) and isinstance(self._con_step, int)
+            isinstance(self._con_start, int)
+            and isinstance(self._con_stop, int)
+            and isinstance(self._con_step, int)
         ):
             raise ValueError("start, stop and step must be int")
 
     @classmethod
     def from_sweeper(
-        cls, program: Program, sweeper: Sweeper, add_to: float = 0, multiply_to: float = 1, name: str = ""
+        cls,
+        program: Program,
+        sweeper: Sweeper,
+        add_to: float = 0,
+        multiply_to: float = 1,
+        name: str = "",
     ):
         """Creates an instance form a :class:`qibolab.sweepers.Sweeper` object.
 
@@ -208,8 +237,17 @@ class QbloxSweeper:
             type = type_c[sweeper.parameter]
             rel_values = sweeper.values
         else:
-            raise ValueError(f"Sweeper parameter {sweeper.parameter} is not supported by qblox driver yet.")
-        return cls(program=program, rel_values=rel_values, type=type, add_to=add_to, multiply_to=multiply_to, name=name)
+            raise ValueError(
+                f"Sweeper parameter {sweeper.parameter} is not supported by qblox driver yet."
+            )
+        return cls(
+            program=program,
+            rel_values=rel_values,
+            type=type,
+            add_to=add_to,
+            multiply_to=multiply_to,
+            name=name,
+        )
 
     def block(self, inner_block: Block):
         """Generates the block of q1asm code that implements the sweep.
@@ -244,7 +282,6 @@ class QbloxSweeper:
         Args:
             inner_block (:class:`qibolab.instruments.qblox_q1asm.Block`): the block of q1asm code to be repeated within
                 the loop.
-
         """
         # Initialisation
         header_block = Block()
@@ -260,19 +297,27 @@ class QbloxSweeper:
             update_parameter_block = Block()
             update_time = 1000
             if self.type == QbloxSweeperType.frequency:
-                update_parameter_block.append(f"set_freq {self.register}")  # TODO: move to pulse
+                update_parameter_block.append(
+                    f"set_freq {self.register}"
+                )  # TODO: move to pulse
                 update_parameter_block.append(f"upd_param {update_time}")
             if self.type == QbloxSweeperType.gain:
-                update_parameter_block.append(f"set_awg_gain {self.register}, {self.register}")  # TODO: move to pulse
+                update_parameter_block.append(
+                    f"set_awg_gain {self.register}, {self.register}"
+                )  # TODO: move to pulse
                 update_parameter_block.append(f"upd_param {update_time}")
             if self.type == QbloxSweeperType.offset:
-                update_parameter_block.append(f"set_awg_offs {self.register}, {self.register}")
+                update_parameter_block.append(
+                    f"set_awg_offs {self.register}, {self.register}"
+                )
                 update_parameter_block.append(f"upd_param {update_time}")
 
             if self.type == QbloxSweeperType.start:
                 pass
             if self.type == QbloxSweeperType.duration:
-                update_parameter_block.append(f"add {self.register}, 1, {self.aux_register}")
+                update_parameter_block.append(
+                    f"add {self.register}, 1, {self.aux_register}"
+                )
             if self.type == QbloxSweeperType.time:
                 pass
             if self.type == QbloxSweeperType.number:
