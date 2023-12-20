@@ -876,7 +876,7 @@ class Zurich(Controller):
         """Coupler flux for bias sweep or pulses."""
         for coupler in couplers.values():
             c = coupler.name  # pylint: disable=C0103
-            with exp.section(uid=f"sequence_bias_coupler{c}"):
+            with exp.section(uid=f"sequence_couplerflux{c}"):
                 i = 0
                 time = 0
                 for pulse in self.sequence[f"couplerflux{c}"]:
@@ -906,7 +906,7 @@ class Zurich(Controller):
                 play_after = None
                 for j, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
                     with exp.section(
-                        uid=f"sequence_bias{q}_{j}", play_after=play_after
+                        uid=f"sequence_flux{q}_{j}", play_after=play_after
                     ):
                         for pulse in sequence:
                             if not isinstance(pulse, ZhSweeperLine):
@@ -926,7 +926,7 @@ class Zurich(Controller):
                             elif isinstance(pulse, ZhPulse):
                                 exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
                             i += 1
-                    play_after = f"sequence_bias{q}_{j}"
+                    play_after = f"sequence_flux{q}_{j}"
 
     def drive(self, exp, qubits):
         """Qubit driving pulses."""
