@@ -876,25 +876,36 @@ class Zurich(Controller):
         """Coupler flux for bias sweep or pulses."""
         for coupler in couplers.values():
             c = coupler.name  # pylint: disable=C0103
-            with exp.section(uid=f"sequence_couplerflux{c}"):
-                i = 0
-                time = 0
-                for pulse in self.sequence[f"couplerflux{c}"]:
-                    pulse.zhpulse.uid += str(i)
-                    exp.delay(
-                        signal=f"couplerflux{c}",
-                        time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                    )
-                    time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                        pulse.pulse.start * NANO_TO_SECONDS, 9
-                    )
-                    if isinstance(pulse, ZhSweeperLine):
-                        self.play_sweep(exp, coupler, pulse, section="couplerflux")
-                    elif isinstance(pulse, ZhSweeper):
-                        self.play_sweep(exp, coupler, pulse, section="couplerflux")
-                    elif isinstance(pulse, ZhPulse):
-                        exp.play(signal=f"couplerflux{c}", pulse=pulse.zhpulse)
-                    i += 1
+            time = 0
+            i = 0
+            if len(self.sequence[f"couplerflux{c}"]) != 0:
+                play_after = None
+                for j, sequence in enumerate(self.sub_sequences[f"couplerflux{c}"]):
+                    with exp.section(
+                        uid=f"sequence_couplerflux{c}_{j}", play_after=play_after
+                    ):
+                        for pulse in sequence:
+                            pulse.zhpulse.uid += str(i)
+                            exp.delay(
+                                signal=f"couplerflux{c}",
+                                time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                                - time,
+                            )
+                            time = round(
+                                pulse.pulse.duration * NANO_TO_SECONDS, 9
+                            ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                            if isinstance(pulse, ZhSweeperLine):
+                                self.play_sweep(
+                                    exp, coupler, pulse, section="couplerflux"
+                                )
+                            elif isinstance(pulse, ZhSweeper):
+                                self.play_sweep(
+                                    exp, coupler, pulse, section="couplerflux"
+                                )
+                            elif isinstance(pulse, ZhPulse):
+                                exp.play(signal=f"couplerflux{c}", pulse=pulse.zhpulse)
+                            i += 1
+                    play_after = f"sequence_couplerflux{c}_{j}"
 
     def flux(self, exp, qubits):
         """Qubit flux for bias sweep or pulses."""
