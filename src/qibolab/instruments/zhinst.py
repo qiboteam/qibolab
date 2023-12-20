@@ -872,8 +872,13 @@ class Zurich(Controller):
                     exp, qubit, pulse, section, parameters, partial_sweep
                 )
 
-    def couplerflux(self, exp, couplers):
-        """Coupler flux for bias sweep or pulses."""
+    def couplerflux(self, exp: lo.Experiment, couplers: Dict[str, Coupler]):
+        """Coupler flux for bias sweep or pulses.
+
+        Args:
+            exp (lo.Experiment): laboneq experiment on which register sequences.
+            couplers (dict[str, Coupler]): coupler on which pulses are played.
+        """
         for coupler in couplers.values():
             c = coupler.name  # pylint: disable=C0103
             time = 0
@@ -907,8 +912,13 @@ class Zurich(Controller):
                             i += 1
                     play_after = f"sequence_couplerflux{c}_{j}"
 
-    def flux(self, exp, qubits):
-        """Qubit flux for bias sweep or pulses."""
+    def flux(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
+        """Qubit flux for bias sweep or pulses.
+
+        Args:
+            exp (lo.Experiment): laboneq experiment on which register sequences.
+            qubits (dict[str, Qubit]): qubits on which pulses are played.
+        """
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             time = 0
@@ -939,8 +949,13 @@ class Zurich(Controller):
                             i += 1
                     play_after = f"sequence_flux{q}_{j}"
 
-    def drive(self, exp, qubits):
-        """Qubit driving pulses."""
+    def drive(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
+        """Qubit driving pulses.
+
+        Args:
+            exp (lo.Experiment): laboneq experiment on which register sequences.
+            qubits (dict[str, Qubit]): qubits on which pulses are played.
+        """
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             time = 0
