@@ -6,6 +6,7 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.oscillator import LocalOscillator
 from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence
@@ -25,6 +26,39 @@ class DummyPort(Port):
     attenuation: int = 0
     power_range: int = 0
     filters: Optional[dict] = None
+
+
+class DummyDevice:
+    """Dummy device that does nothing but follows the QCoDeS interface.
+
+    Used by :class:`qibolab.instruments.dummy.DummyLocalOscillator`.
+    """
+
+    def set(self, name, value):
+        """Set device property."""
+
+    def get(self, name):
+        """Get device property."""
+        return 0
+
+    def on(self):
+        """Turn device on."""
+
+    def off(self):
+        """Turn device on."""
+
+    def close(self):
+        """Close connection with device."""
+
+
+class DummyLocalOscillator(LocalOscillator):
+    """Dummy local oscillator instrument.
+
+    Useful for testing the interface defined in :class:`qibolab.instruments.oscillator.LocalOscillator`.
+    """
+
+    def create(self):
+        return DummyDevice()
 
 
 class DummyInstrument(Controller):

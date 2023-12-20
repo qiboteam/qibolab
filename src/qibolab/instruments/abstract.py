@@ -1,5 +1,6 @@
 import tempfile
 from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -9,8 +10,16 @@ InstrumentId = str
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
+@dataclass
 class InstrumentSettings:
     """Container of settings that are dumped in the platform runcard yaml."""
+
+    def dump(self):
+        """Dictionary containing the settings.
+
+        Useful when dumping the instruments to the runcard YAML.
+        """
+        return asdict(self)
 
 
 class Instrument(ABC):

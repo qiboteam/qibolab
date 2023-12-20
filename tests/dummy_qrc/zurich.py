@@ -7,7 +7,7 @@ from laboneq.simple import DeviceSetup
 
 from qibolab import Platform
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.oscillator import LocalOscillator
+from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.serialize import (
     load_instrument_settings,
