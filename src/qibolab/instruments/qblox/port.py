@@ -264,9 +264,6 @@ class QbloxOutputPort(Port):
                 )
             elif self.module.device.is_qcm_type:
                 self.module.device.set(f"out{self.port_number}_lo_freq", value=value)
-        else:
-            pass
-            # TODO: This case regards a connection error of the module
 
 
 class QbloxInputPort:
