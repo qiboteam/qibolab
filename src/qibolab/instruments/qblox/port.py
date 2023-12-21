@@ -78,9 +78,7 @@ class QbloxOutputPort(Port):
 
         self._settings.attenuation = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device, f"out{self.port_number}_att", value=value
-            )
+            self.module.device.set(f"out{self.port_number}_att", value=value)
 
     @property
     def offset(self):
@@ -112,9 +110,7 @@ class QbloxOutputPort(Port):
 
         self._settings.offset = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device, f"out{self.port_number}_offset", value=value
-            )
+            self.module.device.set(f"out{self.port_number}_offset", value=value)
 
     # Additional attributes needed by the driver
     @property
@@ -133,10 +129,8 @@ class QbloxOutputPort(Port):
 
         self._settings.hardware_mod_en = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device.sequencers[self.sequencer_number],
-                "mod_en_awg",
-                value=value,
+            self.module.device.sequencers[self.sequencer_number].set(
+                "mod_en_awg", value=value
             )
 
     @property
@@ -171,10 +165,8 @@ class QbloxOutputPort(Port):
 
         self._settings.nco_freq = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device.sequencers[self.sequencer_number],
-                "nco_freq",
-                value=value,
+            self.module.device.sequencers[self.sequencer_number].set(
+                "nco_freq", value=value
             )
 
     @property
@@ -198,10 +190,8 @@ class QbloxOutputPort(Port):
 
         self._settings.nco_phase_offs = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device.sequencers[self.sequencer_number],
-                "nco_phase_offs",
-                value=value,
+            self.module.device.sequencers[self.sequencer_number].set(
+                "nco_phase_offs", value=value
             )
 
     @property
@@ -227,15 +217,11 @@ class QbloxOutputPort(Port):
         self._settings.lo_enabled = value
         if self.module.device:
             if self.module.device.is_qrm_type:
-                self.module._set_device_parameter(
-                    self.module.device,
-                    f"out{self.port_number}_in{self.port_number}_lo_en",
-                    value=value,
+                self.module.device.set(
+                    f"out{self.port_number}_in{self.port_number}_lo_en", value=value
                 )
             elif self.module.device.is_qcm_type:
-                self.module._set_device_parameter(
-                    self.module.device, f"out{self.port_number}_lo_en", value=value
-                )
+                self.module.device.set(f"out{self.port_number}_lo_en", value=value)
 
     @property
     def lo_frequency(self):
@@ -273,18 +259,11 @@ class QbloxOutputPort(Port):
         self._settings.lo_frequency = value
         if self.module.device:
             if self.module.device.is_qrm_type:
-                self.module._set_device_parameter(
-                    self.module.device,
-                    f"out{self.port_number}_in{self.port_number}_lo_freq",
-                    value=value,
+                self.module.device.set(
+                    f"out{self.port_number}_in{self.port_number}_lo_freq", value=value
                 )
             elif self.module.device.is_qcm_type:
-                self.module._set_device_parameter(
-                    self.module.device, f"out{self.port_number}_lo_freq", value=value
-                )
-        else:
-            pass
-            # TODO: This case regards a connection error of the module
+                self.module.device.set(f"out{self.port_number}_lo_freq", value=value)
 
 
 class QbloxInputPort:
@@ -325,10 +304,8 @@ class QbloxInputPort:
 
         self._settings.hardware_demod_en = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device.sequencers[self.input_sequencer_number],
-                "demod_en_acq",
-                value=value,
+            self.module.device.sequencers[self.input_sequencer_number].set(
+                "demod_en_acq", value=value
             )
 
     @property
@@ -365,8 +342,6 @@ class QbloxInputPort:
 
         self._settings.acquisition_duration = value
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device.sequencers[self.output_sequencer_number],
-                "integration_length_acq",
-                value=value,
+            self.module.device.sequencers[self.output_sequencer_number].set(
+                "integration_length_acq", value=value
             )
