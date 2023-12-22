@@ -698,7 +698,7 @@ class Pulse:
     See
     :py: mod:`qibolab.pulses` for list of available shapes.
     """
-    channel: int = 0
+    channel: Optional[str] = None
     """Channel on which the pulse should be played.
 
     When a sequence of pulses is sent to the platform for execution,
