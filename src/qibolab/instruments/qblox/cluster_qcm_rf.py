@@ -142,37 +142,26 @@ class ClusterQCM_RF(ClusterModule):
         self._unused_sequencers_numbers: list[int] = []
 
     def _set_default_values(self):
-        # Default after reboot = 7.625
+        # set I (path0) and Q (path1) offset to zero on output port 0 and 1. Default values after reboot = 7.625
         for i in range(2):
             [self.device.set(f"out{i}_offset_path{j}", 0) for j in range(2)]
 
         # initialise the parameters of the default sequencers to the default values,
-        # the rest of the sequencers are not configured here, but will be configured
+        # the rest of the sequencers are disconnected but will be configured
         # with the same parameters as the default in process_pulse_sequence()
         for target in [
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
+            self.device.sequencers[i] for i in self.DEFAULT_SEQUENCERS.values()
         ]:
-            target.set("cont_mode_en_awg_path0", False)
-            target.set("cont_mode_en_awg_path1", False)
-            target.set("cont_mode_waveform_idx_awg_path0", 0)
-            target.set("cont_mode_waveform_idx_awg_path1", 0)
-            target.set("marker_ovr_en", True)  # Default after reboot = False
-            target.set("marker_ovr_value", 15)  # Default after reboot = 0
-            target.set("mixer_corr_gain_ratio", 1)
-            target.set("mixer_corr_phase_offset_degree", 0)
-            target.set("offset_awg_path0", 0)
-            target.set("offset_awg_path1", 0)
-            target.set("sync_en", False)  # Default after reboot = False
-            target.set("upsample_rate_awg_path0", 0)
-            target.set("upsample_rate_awg_path1", 0)
-
+            [
+                target.set(name, value)
+                for name, value in self.DEFAULT_SEQUENCERS_VALUES.items()
+            ]
+        # connect the sequencers to the out port
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out0", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out1", "off")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
-
-        # on initialisation, disconnect all other sequencers from the ports
+        # disconnect all other sequencers from the ports
         self._device_num_sequencers = len(self.device.sequencers)
         for sequencer in range(2, self._device_num_sequencers):
             self.device.sequencers[sequencer].set("connect_out0", "off")

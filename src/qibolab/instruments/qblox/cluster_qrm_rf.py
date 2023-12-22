@@ -155,9 +155,10 @@ class ClusterQRM_RF(ClusterModule):
         self._execution_time: float = 0
 
     def _set_default_values(self):
+        # set I (path0) and Q (path1) offset to zero on output port 0. Default values after reboot = 7.625
+        [self.device.set(f"out0_offset_path{i}", 0) for i in range(2)]
+        # set input port parameters to default
         self.device.set("in0_att", 0)
-        self.device.set("out0_offset_path0", 0)  # Default after reboot = 7.625
-        self.device.set("out0_offset_path1", 0)
         self.device.set("scope_acq_avg_mode_en_path0", True)
         self.device.set("scope_acq_avg_mode_en_path1", True)
         self.device.set("scope_acq_sequencer_select", self.DEFAULT_SEQUENCERS["i1"])
@@ -165,34 +166,22 @@ class ClusterQRM_RF(ClusterModule):
         self.device.set("scope_acq_trigger_level_path1", 0)
         self.device.set("scope_acq_trigger_mode_path0", "sequencer")
         self.device.set("scope_acq_trigger_mode_path1", "sequencer")
-
         # initialise the parameters of the default sequencer to the default values,
-        # the rest of the sequencers are not configured here, but will be configured
+        # the rest of the sequencers are disconnected, but will be configured
         # with the same parameters as the default in process_pulse_sequence()
         target = self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]]
-
+        [
+            target.set(name, value)
+            for name, value in self.DEFAULT_SEQUENCERS_VALUES.items()
+        ]
+        # connect sequencer to out/in ports
         target.set("connect_out0", "IQ")
         target.set("connect_acq", "in0")
-        target.set("cont_mode_en_awg_path0", False)  # Default after reboot = False
-        target.set("cont_mode_en_awg_path1", False)
-        target.set("cont_mode_waveform_idx_awg_path0", 0)
-        target.set("cont_mode_waveform_idx_awg_path1", 0)
-        target.set("marker_ovr_en", True)  # Default after reboot = False
-        target.set("marker_ovr_value", 15)  # Default after reboot = 0
-        target.set("mixer_corr_gain_ratio", 1)
-        target.set("mixer_corr_phase_offset_degree", 0)
-        target.set("offset_awg_path0", 0)
-        target.set("offset_awg_path1", 0)
-        target.set("sync_en", False)  # Default after reboot = False
-        target.set("upsample_rate_awg_path0", 0)
-        target.set("upsample_rate_awg_path1", 0)
-        # on initialisation, disconnect all other sequencers from the ports
+        # disconnect all other sequencers from the ports
         self._device_num_sequencers = len(self.device.sequencers)
         for sequencer in range(1, self._device_num_sequencers):
             self.device.sequencers[sequencer].set("connect_out0", "off")
-            self.device.sequencers[sequencer].set(
-                "connect_acq", "off"
-            )  # Default after reboot = True
+            self.device.sequencers[sequencer].set("connect_acq", "off")
 
     def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
