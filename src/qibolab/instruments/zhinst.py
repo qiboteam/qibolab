@@ -1333,7 +1333,10 @@ class Zurich(Controller):
                     ).zhsweeper
                     zhsweeper.uid = "bias"  # f"bias{i}"
                     path = "DEV8660"
-                    from copy import deepcopy  # if really needed, it needs to be moved on top of the module
+                    from copy import (  # if really needed, it needs to be moved on top of the module
+                        deepcopy,
+                    )
+
                     parameter = deepcopy(zhsweeper)
                     parameter.values += qubit.flux.offset
                     device_path = f"{path}/sigouts/0/offset"
