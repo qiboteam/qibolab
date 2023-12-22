@@ -17,10 +17,12 @@ class Port:
     """DC offset that is applied to this port."""
     lo_frequency: float
     """Local oscillator frequency for the given port.
+
     Relevant only for controllers with internal local oscillators.
     """
     lo_power: float
     """Local oscillator power for the given port.
+
     Relevant only for controllers with internal local oscillators.
     """
     # TODO: Maybe gain, attenuation and power range can be unified to a single attribute
@@ -29,11 +31,13 @@ class Port:
     attenuation: float
     """Attenuation that is applied to this port."""
     power_range: int
-    """Similar to attenuation (negative) and gain (positive) for (Zurich instruments)."""
+    """Similar to attenuation (negative) and gain (positive) for (Zurich
+    instruments)."""
     filters: dict
-    """Filters to be applied to the channel to reduce the distortions when sending flux pulses.
+    """Filters to be applied to the channel to reduce the distortions when
+    sending flux pulses.
 
-    Useful for two-qubit gates.
-    Quantum Machines (:class:`qibolab.instruments.qm.QMOPX`) associate filters to channels
-    but this may not be the case in other instruments.
+    Useful for two-qubit gates. Quantum Machines (
+    :class: `qibolab.instruments.qm.QMOPX`) associate filters to
+        channels     but this may not be the case in other instruments.
     """

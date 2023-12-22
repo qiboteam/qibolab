@@ -15,7 +15,8 @@ from qibolab.pulses import (
 
 @dataclass
 class NativePulse:
-    """Container with parameters required to generate a pulse implementing a native gate."""
+    """Container with parameters required to generate a pulse implementing a
+    native gate."""
 
     name: str
     """Name of the gate that the pulse implements."""
@@ -26,7 +27,8 @@ class NativePulse:
     qubit: "qubits.Qubit"
     frequency: int = 0
     relative_start: int = 0
-    """Relative start is relevant for two-qubit gate operations which correspond to a pulse sequence."""
+    """Relative start is relevant for two-qubit gate operations which
+    correspond to a pulse sequence."""
 
     # used for qblox
     if_frequency: Optional[int] = None
@@ -52,7 +54,11 @@ class NativePulse:
 
     @property
     def raw(self):
-        data = {fld.name: getattr(self, fld.name) for fld in fields(self) if getattr(self, fld.name) is not None}
+        data = {
+            fld.name: getattr(self, fld.name)
+            for fld in fields(self)
+            if getattr(self, fld.name) is not None
+        }
         del data["name"]
         del data["start"]
         if self.pulse_type is PulseType.FLUX:
@@ -63,7 +69,8 @@ class NativePulse:
         return data
 
     def pulse(self, start, relative_phase=0.0):
-        """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
+        """Construct the :class:`qibolab.pulses.Pulse` object implementing the
+        gate.
 
         Args:
             start (int): Start time of the pulse in the sequence.
@@ -99,7 +106,8 @@ class NativePulse:
 
 @dataclass
 class VirtualZPulse:
-    """Container with parameters required to add a virtual Z phase in a pulse sequence."""
+    """Container with parameters required to add a virtual Z phase in a pulse
+    sequence."""
 
     phase: float
     qubit: "qubits.Qubit"
@@ -111,7 +119,8 @@ class VirtualZPulse:
 
 @dataclass
 class CouplerPulse:
-    """Container with parameters required to add a coupler pulse in a pulse sequence."""
+    """Container with parameters required to add a coupler pulse in a pulse
+    sequence."""
 
     duration: int
     amplitude: float
@@ -147,7 +156,8 @@ class CouplerPulse:
         }
 
     def pulse(self, start):
-        """Construct the :class:`qibolab.pulses.Pulse` object implementing the gate.
+        """Construct the :class:`qibolab.pulses.Pulse` object implementing the
+        gate.
 
         Args:
             start (int): Start time of the pulse in the sequence.
@@ -167,10 +177,12 @@ class CouplerPulse:
 
 @dataclass
 class NativeSequence:
-    """List of :class:`qibolab.platforms.native.NativePulse` objects implementing a gate.
+    """List of :class:`qibolab.platforms.native.NativePulse` objects
+    implementing a gate.
 
-    Relevant for two-qubit gates, which usually require a sequence of pulses to be implemented.
-    These pulses may act on qubits different than the qubits the gate is targeting.
+    Relevant for two-qubit gates, which usually require a sequence of
+    pulses to be implemented. These pulses may act on qubits different
+    than the qubits the gate is targeting.
     """
 
     name: str
@@ -179,7 +191,8 @@ class NativeSequence:
 
     @classmethod
     def from_dict(cls, name, sequence, qubits, couplers):
-        """Constructs the native sequence from the dictionaries provided in the runcard.
+        """Constructs the native sequence from the dictionaries provided in the
+        runcard.
 
         Args:
             name (str): Name of the gate the sequence is applying.
@@ -210,7 +223,14 @@ class NativeSequence:
                     phase = pulse["phase"]
                     pulses.append(VirtualZPulse(phase, qubit))
                 else:
-                    pulses.append(NativePulse(f"{name}{i}", **pulse, pulse_type=PulseType(pulse_type), qubit=qubit))
+                    pulses.append(
+                        NativePulse(
+                            f"{name}{i}",
+                            **pulse,
+                            pulse_type=PulseType(pulse_type),
+                            qubit=qubit,
+                        )
+                    )
         return cls(name, pulses, coupler_pulses)
 
     @property
@@ -220,7 +240,8 @@ class NativeSequence:
         return pulses + coupler_pulses
 
     def sequence(self, start=0):
-        """Creates a :class:`qibolab.pulses.PulseSequence` object implementing the sequence."""
+        """Creates a :class:`qibolab.pulses.PulseSequence` object implementing
+        the sequence."""
         sequence = PulseSequence()
         virtual_z_phases = defaultdict(int)
 
@@ -238,7 +259,8 @@ class NativeSequence:
 
 @dataclass
 class SingleQubitNatives:
-    """Container with the native single-qubit gates acting on a specific qubit."""
+    """Container with the native single-qubit gates acting on a specific
+    qubit."""
 
     RX: Optional[NativePulse] = None
     """Pulse to drive the qubit from state 0 to state 1."""
@@ -262,12 +284,18 @@ class SingleQubitNatives:
             native_gates (dict): Dictionary with native gate pulse parameters as loaded
                 from the runcard.
         """
-        pulses = {n: NativePulse.from_dict(n, pulse, qubit=qubit) for n, pulse in native_gates.items()}
+        pulses = {
+            n: NativePulse.from_dict(n, pulse, qubit=qubit)
+            for n, pulse in native_gates.items()
+        }
         return cls(**pulses)
 
     @property
     def raw(self):
-        """Serialize native gate pulses. ``None`` gates are not included."""
+        """Serialize native gate pulses.
+
+        ``None`` gates are not included.
+        """
         data = {}
         for fld in fields(self):
             attr = getattr(self, fld.name)
@@ -279,7 +307,8 @@ class SingleQubitNatives:
 
 @dataclass
 class CouplerNatives:
-    """Container with the native single-qubit gates acting on a specific qubit."""
+    """Container with the native single-qubit gates acting on a specific
+    qubit."""
 
     CP: Optional[NativePulse] = None
     """Pulse to activate the coupler."""
@@ -294,12 +323,18 @@ class CouplerNatives:
             native_gates (dict): Dictionary with native gate pulse parameters as loaded
                 from the runcard [Reusing the dict from qubits].
         """
-        pulses = {n: CouplerPulse.from_dict(pulse, coupler=coupler) for n, pulse in native_gates.items()}
+        pulses = {
+            n: CouplerPulse.from_dict(pulse, coupler=coupler)
+            for n, pulse in native_gates.items()
+        }
         return cls(**pulses)
 
     @property
     def raw(self):
-        """Serialize native gate pulses. ``None`` gates are not included."""
+        """Serialize native gate pulses.
+
+        ``None`` gates are not included.
+        """
         data = {}
         for fld in fields(self):
             attr = getattr(self, fld.name)
@@ -310,14 +345,18 @@ class CouplerNatives:
 
 @dataclass
 class TwoQubitNatives:
-    """Container with the native two-qubit gates acting on a specific pair of qubits."""
+    """Container with the native two-qubit gates acting on a specific pair of
+    qubits."""
 
     CZ: Optional[NativeSequence] = None
     iSWAP: Optional[NativeSequence] = None
 
     @classmethod
     def from_dict(cls, qubits, couplers, native_gates):
-        sequences = {n: NativeSequence.from_dict(n, seq, qubits, couplers) for n, seq in native_gates.items()}
+        sequences = {
+            n: NativeSequence.from_dict(n, seq, qubits, couplers)
+            for n, seq in native_gates.items()
+        }
         return cls(**sequences)
 
     @property

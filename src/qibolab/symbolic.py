@@ -33,7 +33,10 @@ class SymbolicExpression:
 
             internal_ref_count = 0
             for se in list(SymbolicExpression.instances):
-                if re.search(rf"\b{re.escape(symbol)}\b", SymbolicExpression.instances[se].expression):
+                if re.search(
+                    rf"\b{re.escape(symbol)}\b",
+                    SymbolicExpression.instances[se].expression,
+                ):
                     internal_ref_count += 1
 
             if not internal_ref_count and external_ref_count < 4:
@@ -64,7 +67,9 @@ class SymbolicExpression:
         self, type: type, expression=0, symbol: str = ""
     ):  # (self, expression: str|{self.type}|SymbolicExpression = 0, symbol: str = ''):
         if type not in self.supported_types:
-            raise TypeError(f"type argument should be int or float, got {type.__name__}")
+            raise TypeError(
+                f"type argument should be int or float, got {type.__name__}"
+            )
         self.type = type
 
         self._symbol: str = ""
@@ -101,7 +106,9 @@ class SymbolicExpression:
     @symbol.setter
     def symbol(self, symbol: str):
         if not isinstance(symbol, str):
-            raise TypeError(f"symbol argument type should be str, got {type(symbol).__name__}")
+            raise TypeError(
+                f"symbol argument type should be str, got {type(symbol).__name__}"
+            )
         if symbol in SymbolicExpression.instances.keys():
             pass  # Allows overwriting
             # raise KeyError(f"symbol should be unique, there is already a SymbolicExpression with symbol {symbol}: {SymbolicExpression.instances[symbol]}")
@@ -110,16 +117,27 @@ class SymbolicExpression:
             SymbolicExpression.instances[symbol] = self
         else:
             # Renaming
-            SymbolicExpression.instances[symbol] = self  # Add a new reference with the new symbol
+            SymbolicExpression.instances[
+                symbol
+            ] = self  # Add a new reference with the new symbol
             if not self._symbol == symbol:
-                del SymbolicExpression.instances[self._symbol]  # Remove the previous reference
+                del SymbolicExpression.instances[
+                    self._symbol
+                ]  # Remove the previous reference
 
-            for se in SymbolicExpression.instances.values():  # Update all SymbolicExpressions with the symbol change
+            for (
+                se
+            ) in (
+                SymbolicExpression.instances.values()
+            ):  # Update all SymbolicExpressions with the symbol change
                 match_string = rf"\b{re.escape(self._symbol)}\b"
                 replacement = symbol
                 try:
                     se.expression = re.sub(match_string, replacement, se.expression)
-                except (SymbolicExpression.InvalidExpressionError, SymbolicExpression.CircularReferenceError) as e:
+                except (
+                    SymbolicExpression.InvalidExpressionError,
+                    SymbolicExpression.CircularReferenceError,
+                ) as e:
                     pass
         self._symbol = symbol
         # test for CircularReferenceError
@@ -134,7 +152,9 @@ class SymbolicExpression:
         return self._expression
 
     @expression.setter
-    def expression(self, expression):  # (self, expression: str|{self.type}|SymbolicExpression):
+    def expression(
+        self, expression
+    ):  # (self, expression: str|{self.type}|SymbolicExpression):
         if isinstance(expression, str):
             # evaluate the str expression to confirm it is valid before assigning it
             self.evaluate(expression)
@@ -158,7 +178,9 @@ class SymbolicExpression:
         if isinstance(value, self.type):
             self._expression = str(value)
         else:
-            raise TypeError(f"value argument type should be {self.type.__name__}, got {type(value).__name__}")
+            raise TypeError(
+                f"value argument type should be {self.type.__name__}, got {type(value).__name__}"
+            )
 
     @property
     def is_constant(self) -> bool:
@@ -200,7 +222,9 @@ class SymbolicExpression:
                     raise Exception()
             result = eval(expression)
         except:
-            raise SymbolicExpression.InvalidExpressionError(f"Unable to evaluate expression: {expression}")
+            raise SymbolicExpression.InvalidExpressionError(
+                f"Unable to evaluate expression: {expression}"
+            )
 
         if not isinstance(result, self.type):
             raise SymbolicExpression.InvalidExpressionError(
@@ -208,7 +232,9 @@ class SymbolicExpression:
             )
         return result
 
-    def _replace_internal_symbols(self, expression: str, *previous_evaluations):  # -> {self.type}:
+    def _replace_internal_symbols(
+        self, expression: str, *previous_evaluations
+    ):  # -> {self.type}:
         symbol: str
         for symbol in SymbolicExpression.instances.keys():
             if symbol.startswith("_sym_") and symbol in expression:

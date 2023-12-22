@@ -2,7 +2,6 @@ nqubits: 5
 
 settings:
     nshots: 1024
-    sampling_rate: 1_000_000_000
     relaxation_time: 20_000
 
 qubits: [0, 1, 2, 3, 4]

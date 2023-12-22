@@ -73,7 +73,13 @@ class RFSOC(Controller):
         for channel_settings in analog_settings:
             self.device.set_channel_analog_settings(**channel_settings)
 
-    def play(self, qubits: Dict[QubitId, Qubit], couplers, sequence: PulseSequence, options: ExecutionParameters):
+    def play(
+        self,
+        qubits: Dict[QubitId, Qubit],
+        couplers,
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+    ):
         """Plays the given pulse sequence without acquisition.
 
         Arguments:
@@ -112,10 +118,17 @@ class RFSOC(Controller):
                     sigma = num_samples / pulse.shape.rel_sigma
                     beta = pulse.shape.beta
                     real = gaussian(num_samples, sigma)
-                    img = -beta * (np.arange(num_samples) - num_samples / 2) * real / sigma**2
+                    img = (
+                        -beta
+                        * (np.arange(num_samples) - num_samples / 2)
+                        * real
+                        / sigma**2
+                    )
 
                     wfm *= real
-                    wfm += img * np.cos(2 * np.pi * pulse.frequency * t + pulse.relative_phase)
+                    wfm += img * np.cos(
+                        2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                    )
 
                 else:
                     wfm *= hamming(wfm.shape[0])
@@ -135,7 +148,13 @@ class RFSOC(Controller):
                 # Next, we raise it to the next nearest integer to prevent an overlap between drive and readout pulses
                 # Finally, we ensure that the number is even for the DAC delay conversion
                 delay_start_adc = int(
-                    int(np.ceil(self.device.adc_sampling_rate * 1e6 * pulse.start * 1e-9 / 8) / 2) * 2
+                    int(
+                        np.ceil(
+                            self.device.adc_sampling_rate * 1e6 * pulse.start * 1e-9 / 8
+                        )
+                        / 2
+                    )
+                    * 2
                 )
 
                 # For the DAC, currently the sampling rate is 3x higher than the ADC
@@ -143,29 +162,51 @@ class RFSOC(Controller):
                 # Hence, we multiply the adc delay clock cycles by 1.5x to align the DAC/ADC pair
                 delay_start_dac = int(delay_start_adc * 1.5)
 
-                self.device.dac[dac].delay = delay_start_dac + self.channel_delay_offset_dac
-                self.device.adc[adc].delay = delay_start_adc + self.channel_delay_offset_adc
+                self.device.dac[dac].delay = (
+                    delay_start_dac + self.channel_delay_offset_dac
+                )
+                self.device.adc[adc].delay = (
+                    delay_start_adc + self.channel_delay_offset_adc
+                )
                 # ADC0 complete marks the end of acquisition, so we also need to move ADC0
-                self.device.adc[0].delay = delay_start_adc + self.channel_delay_offset_adc
+                self.device.adc[0].delay = (
+                    delay_start_adc + self.channel_delay_offset_adc
+                )
 
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION or AcquisitionType.INTEGRATION:
+                if (
+                    options.acquisition_type is AcquisitionType.DISCRIMINATION
+                    or AcquisitionType.INTEGRATION
+                ):
                     self.device.program_qunit(
-                        readout_frequency=pulse.frequency, readout_time=pulse.duration * 1e-9, qunit=pulse.qubit
+                        readout_frequency=pulse.frequency,
+                        readout_time=pulse.duration * 1e-9,
+                        qunit=pulse.qubit,
                     )
 
-            waveform_array[dac][start:end] += self.device.dac_max_amplitude * pulse.amplitude * wfm
+            waveform_array[dac][start:end] += (
+                self.device.dac_max_amplitude * pulse.amplitude * wfm
+            )
             dac_end_addr[dac] = max(end >> 4, dac_end_addr[dac])
 
-        payload = [(dac, wfm, dac_end_addr[dac]) for dac, wfm in waveform_array.items() if dac_end_addr[dac] != 0]
+        payload = [
+            (dac, wfm, dac_end_addr[dac])
+            for dac, wfm in waveform_array.items()
+            if dac_end_addr[dac] != 0
+        ]
         self.device.upload_waveform(payload)
 
     def play_sequences(
-        self, qubits: Dict[QubitId, Qubit], couplers, sequences: List[PulseSequence], options: ExecutionParameters
+        self,
+        qubits: Dict[QubitId, Qubit],
+        couplers,
+        sequences: List[PulseSequence],
+        options: ExecutionParameters,
     ):
         pass
 
     def connect(self):
-        """Currently we only connect to the board when we have to send a command."""
+        """Currently we only connect to the board when we have to send a
+        command."""
         # Request the version from the board
         ver = self.device.get_server_version()
         log.info(f"Connected to {self.name}, version: {ver}")
@@ -184,7 +225,7 @@ class RFSOC(Controller):
 
 
 class RFSOC_RO(RFSOC):
-    """IcarusQ RFSoC attached with readout capability"""
+    """IcarusQ RFSoC attached with readout capability."""
 
     available_sweep_parameters = {
         Parameter.amplitude,
@@ -233,8 +274,15 @@ class RFSOC_RO(RFSOC):
         self.device.init_qunit()
         self.device.set_adc_trigger_mode(TRIGGER_MODE.MASTER)
 
-    def play(self, qubits: Dict[QubitId, Qubit], couplers, sequence: PulseSequence, options: ExecutionParameters):
-        """Plays the pulse sequence on the IcarusQ RFSoC and awaits acquisition at the end.
+    def play(
+        self,
+        qubits: Dict[QubitId, Qubit],
+        couplers,
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+    ):
+        """Plays the pulse sequence on the IcarusQ RFSoC and awaits acquisition
+        at the end.
 
         Arguments:
             qubits (dict): Dictionary of qubit IDs mapped to qubit objects.
@@ -243,7 +291,9 @@ class RFSOC_RO(RFSOC):
         """
         super().play(qubits, couplers, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))
-        readout_pulses = list(filter(lambda pulse: pulse.type is PulseType.READOUT, sequence.pulses))
+        readout_pulses = list(
+            filter(lambda pulse: pulse.type is PulseType.READOUT, sequence.pulses)
+        )
         readout_qubits = {pulse.qubit for pulse in readout_pulses}
 
         if options.acquisition_type is AcquisitionType.RAW:
@@ -259,9 +309,15 @@ class RFSOC_RO(RFSOC):
             raw = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
 
             if options.averaging_mode is not AveragingMode.SINGLESHOT:
-                res = {qubit: IntegratedResults(I + 1j * Q).average for qubit, (I, Q) in raw.items()}
+                res = {
+                    qubit: IntegratedResults(I + 1j * Q).average
+                    for qubit, (I, Q) in raw.items()
+                }
             else:
-                res = {qubit: IntegratedResults(I + 1j * Q) for qubit, (I, Q) in raw.items()}
+                res = {
+                    qubit: IntegratedResults(I + 1j * Q)
+                    for qubit, (I, Q) in raw.items()
+                }
 
             for ro_pulse in readout_pulses:
                 res[ro_pulse.serial] = res[ro_pulse.qubit]
@@ -277,10 +333,16 @@ class RFSOC_RO(RFSOC):
             return res
 
     def play_sequences(
-        self, qubits: Dict[QubitId, Qubit], couplers, sequences: List[PulseSequence], options: ExecutionParameters
+        self,
+        qubits: Dict[QubitId, Qubit],
+        couplers,
+        sequences: List[PulseSequence],
+        options: ExecutionParameters,
     ):
         """Wrapper for play."""
-        return [self.play(qubits, couplers, sequence, options) for sequence in sequences]
+        return [
+            self.play(qubits, couplers, sequence, options) for sequence in sequences
+        ]
 
     def process_readout_signal(
         self,
@@ -308,7 +370,9 @@ class RFSOC_RO(RFSOC):
             results[readout_pulse.qubit] = IntegratedResults(I + 1j * Q)
 
             if options.averaging_mode is not AveragingMode.SINGLESHOT:
-                results[readout_pulse.qubit] = results[readout_pulse.serial] = results[readout_pulse.qubit].average
+                results[readout_pulse.qubit] = results[readout_pulse.serial] = results[
+                    readout_pulse.qubit
+                ].average
             else:
                 results[readout_pulse.serial] = results[readout_pulse.qubit]
 
@@ -322,7 +386,8 @@ class RFSOC_RO(RFSOC):
         options: ExecutionParameters,
         *sweeper: Sweeper,
     ):
-        """Recursive python-based sweeper functionaltiy for the IcarusQ RFSoC."""
+        """Recursive python-based sweeper functionaltiy for the IcarusQ
+        RFSoC."""
         if len(sweeper) == 0:
             return self.play(qubits, couplers, sequence, options)
 
@@ -331,7 +396,9 @@ class RFSOC_RO(RFSOC):
         param_name = param.name.lower()
 
         if param not in self.available_sweep_parameters:
-            raise NotImplementedError("Sweep parameter requested not available", param_name)
+            raise NotImplementedError(
+                "Sweep parameter requested not available", param_name
+            )
 
         base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
         sweeper_value_setter_fn = _sweeper_value_setter.get(sweep.type)
@@ -342,7 +409,9 @@ class RFSOC_RO(RFSOC):
                 base = base_sweeper_values[idx]
                 sweeper_value_setter_fn(pulse, param_name, value, base)
 
-            self.merge_sweep_results(ret, self.sweep(qubits, couplers, sequence, options, *sweeper[1:]))
+            self.merge_sweep_results(
+                ret, self.sweep(qubits, couplers, sequence, options, *sweeper[1:])
+            )
 
         return ret
 
@@ -371,8 +440,12 @@ class RFSOC_RO(RFSOC):
 
 
 _sweeper_type_absolute = lambda pulse, param, value, base: setattr(pulse, param, value)
-_sweeper_type_offset = lambda pulse, param, value, base: setattr(pulse, param, base + value)
-_sweeper_type_factor = lambda pulse, param, value, base: setattr(pulse, param, base * value)
+_sweeper_type_offset = lambda pulse, param, value, base: setattr(
+    pulse, param, base + value
+)
+_sweeper_type_factor = lambda pulse, param, value, base: setattr(
+    pulse, param, base * value
+)
 _sweeper_value_setter = {
     SweeperType.ABSOLUTE: _sweeper_type_absolute,
     SweeperType.OFFSET: _sweeper_type_offset,

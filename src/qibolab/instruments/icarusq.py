@@ -31,7 +31,6 @@ class MCAttenuator(Instrument):
         Arguments:
             attenuation(float
             ): Attenuation setting in dB. Ranges from 0 to 35.
-
         """
         self.attenuation = attenuation
 
