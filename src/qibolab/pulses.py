@@ -708,7 +708,7 @@ class Pulse:
     """
     type: PulseType = PulseType.DRIVE
     """Pulse type, as an element of PulseType enumeration."""
-    qubit: Optional[int] = 0
+    qubit: int = 0
     """Qubit or coupler addressed by the pulse."""
     _if: int = 0
 
