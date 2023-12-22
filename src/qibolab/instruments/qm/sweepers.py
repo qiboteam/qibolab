@@ -35,7 +35,10 @@ def _update_baked_pulses(sweeper, qmsequence, config):
         qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
         if isinstance(qmpulse, BakedPulse):
             if not is_baked:
-                raise_error(TypeError, "Duration sweeper cannot contain both baked and not baked pulses.")
+                raise_error(
+                    TypeError,
+                    "Duration sweeper cannot contain both baked and not baked pulses.",
+                )
             values = np.array(sweeper.values).astype(int)
             qmpulse.bake(config, values)
 
@@ -49,14 +52,17 @@ def sweep(sweepers, qubits, qmsequence, relaxation_time, config):
 
 
 def _sweep_recursion(sweepers, qubits, qmsequence, relaxation_time):
-    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops using recursion."""
+    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
+    using recursion."""
     if len(sweepers) > 0:
         parameter = sweepers[0].parameter.name
         func_name = f"_sweep_{parameter}"
         if func_name in globals():
             globals()[func_name](sweepers, qubits, qmsequence, relaxation_time)
         else:
-            raise_error(NotImplementedError, f"Sweeper for {parameter} is not implemented.")
+            raise_error(
+                NotImplementedError, f"Sweeper for {parameter} is not implemented."
+            )
     else:
         qmsequence.play(relaxation_time)
 
@@ -71,14 +77,20 @@ def _sweep_frequency(sweepers, qubits, qmsequence, relaxation_time):
         elif pulse.type is PulseType.READOUT:
             lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
         else:
-            raise_error(NotImplementedError, f"Cannot sweep frequency of pulse of type {pulse.type}.")
+            raise_error(
+                NotImplementedError,
+                f"Cannot sweep frequency of pulse of type {pulse.type}.",
+            )
         # convert to IF frequency for readout and drive pulses
         f0 = math.floor(pulse.frequency - lo_frequency)
         freqs0.append(declare(int, value=f0))
         # check if sweep is within the supported bandwidth [-400, 400] MHz
         max_freq = maximum_sweep_value(sweeper.values, f0)
         if max_freq > 4e8:
-            raise_error(ValueError, f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.")
+            raise_error(
+                ValueError,
+                f"Frequency {max_freq} for qubit {qubit.name} is beyond instrument bandwidth.",
+            )
 
     # is it fine to have this declaration inside the ``nshots`` QUA loop?
     f = declare(int)
@@ -94,7 +106,9 @@ def _sweep_amplitude(sweepers, qubits, qmsequence, relaxation_time):
     sweeper = sweepers[0]
     # TODO: Consider sweeping amplitude without multiplication
     if min(sweeper.values) < -2:
-        raise_error(ValueError, "Amplitude sweep values are <-2 which is not supported.")
+        raise_error(
+            ValueError, "Amplitude sweep values are <-2 which is not supported."
+        )
     if max(sweeper.values) > 2:
         raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
 

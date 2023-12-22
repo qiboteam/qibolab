@@ -30,7 +30,7 @@ def test_instruments_rohde_schwarz_setup(instrument):
 
 def set_and_test_parameter_values(instrument, parameter, values):
     for value in values:
-        instrument._set_device_parameter(parameter, value)
+        setattr(instrument, parameter, value)
         assert instrument.device.get(parameter) == value
 
 
@@ -39,11 +39,11 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
     original_frequency = instrument.frequency
     original_power = instrument.power
 
-    set_and_test_parameter_values(
-        instrument, f"power", np.arange(-120, 0, 10)
-    )  # Max power is 25dBm but to be safe testing only until 0dBm
-    set_and_test_parameter_values(instrument, f"frequency", np.arange(1e6, 12750e6, 1e9))
-    """   # TODO: add attitional paramter tests
+    # Max power is 25dBm but to be safe testing only until 0dBm
+    set_and_test_parameter_values(instrument, "power", np.arange(-120, 0, 10))
+    set_and_test_parameter_values(instrument, "frequency", np.arange(1e6, 12750e6, 1e9))
+    # TODO: add additional paramter tests
+    """
     SGS100A:
         parameter            value
     --------------------------------------------------------------------------------
@@ -67,7 +67,6 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
     status                :	None
     timeout               :	5 (s)
     """
-
     instrument.frequency = original_frequency
     instrument.power = original_power
 

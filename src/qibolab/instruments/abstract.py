@@ -1,5 +1,6 @@
 import tempfile
 from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -9,8 +10,16 @@ InstrumentId = str
 INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
+@dataclass
 class InstrumentSettings:
     """Container of settings that are dumped in the platform runcard yaml."""
+
+    def dump(self):
+        """Dictionary containing the settings.
+
+        Useful when dumping the instruments to the runcard YAML.
+        """
+        return asdict(self)
 
 
 class Instrument(ABC):
@@ -98,7 +107,8 @@ class Controller(Instrument):
         """
 
     def split_batches(self, sequences):  # pragma: no cover
-        """Split sequences to batches each of which can be unrolled and played as a single sequence.
+        """Split sequences to batches each of which can be unrolled and played
+        as a single sequence.
 
         Args:
             sequence (list): List of :class:`qibolab.pulses.PulseSequence` to be played.
@@ -108,7 +118,8 @@ class Controller(Instrument):
             Default will return all sequences as a single batch.
         """
         raise RuntimeError(
-            f"Instrument of type {type(self)} does not support " "batch splitting for sequence unrolling."
+            f"Instrument of type {type(self)} does not support "
+            "batch splitting for sequence unrolling."
         )
 
     @abstractmethod

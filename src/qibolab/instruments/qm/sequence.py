@@ -20,7 +20,7 @@ from qibolab.instruments.qm.acquisition import (
 from qibolab.pulses import Pulse, PulseType
 from qibolab.sweeper import Parameter
 
-from .config import QMConfig
+from .config import SAMPLING_RATE, QMConfig
 
 DurationsType = Union[List[int], npt.NDArray[int]]
 """Type of values that can be accepted in a duration sweeper."""
@@ -28,7 +28,8 @@ DurationsType = Union[List[int], npt.NDArray[int]]
 
 @dataclass
 class QMPulse:
-    """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to QUA program.
+    """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to
+    QUA program.
 
     These pulses are defined when :meth:`qibolab.instruments.qm.QMOPX.play` is called
     and hold attributes for the ``element`` and ``operation`` that corresponds to each pulse,
@@ -38,26 +39,38 @@ class QMPulse:
     pulse: Pulse
     """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
     element: Optional[str] = None
-    """Element that the pulse will be played on, as defined in the QM config."""
+    """Element that the pulse will be played on, as defined in the QM
+    config."""
     operation: Optional[str] = None
-    """Name of the operation that is implementing the pulse in the QM config."""
+    """Name of the operation that is implementing the pulse in the QM
+    config."""
     relative_phase: Optional[float] = None
     """Relative phase of the pulse normalized to follow QM convention.
-    May be overwritten when sweeping phase."""
+
+    May be overwritten when sweeping phase.
+    """
     wait_time: int = 0
     """Time (in clock cycles) to wait before playing this pulse.
-    Calculated and assigned by :meth:`qibolab.instruments.qm.Sequence.add`."""
+
+    Calculated and assigned by
+    :meth: `qibolab.instruments.qm.Sequence.add`.
+    """
     wait_time_variable: Optional[_Variable] = None
-    """Time (in clock cycles) to wait before playing this pulse when we are sweeping start."""
+    """Time (in clock cycles) to wait before playing this pulse when we are
+    sweeping start."""
     swept_duration: Optional[_Variable] = None
     """Pulse duration when sweeping it."""
 
     acquisition: Optional[Acquisition] = None
-    """Data class containing the variables required for data acquisition for the instrument."""
+    """Data class containing the variables required for data acquisition for
+    the instrument."""
 
     next_: Set["QMPulse"] = field(default_factory=set)
     """Pulses that will be played after the current pulse.
-    These pulses need to be re-aligned if we are sweeping the start or duration."""
+
+    These pulses need to be re-aligned if we are sweeping the start or
+    duration.
+    """
     elements_to_align: Set[str] = field(default_factory=set)
 
     def __post_init__(self):
@@ -71,15 +84,18 @@ class QMPulse:
 
     @property
     def duration(self):
-        """Duration of the pulse as defined in the :class:`qibolab.pulses.PulseSequence`.
+        """Duration of the pulse as defined in the
+        :class:`qibolab.pulses.PulseSequence`.
 
-        Remains constant even when we are sweeping the duration of this pulse.
+        Remains constant even when we are sweeping the duration of this
+        pulse.
         """
         return self.pulse.duration
 
     @property
     def wait_cycles(self):
-        """Instrument clock cycles (1 cycle = 4ns) to wait before playing the pulse.
+        """Instrument clock cycles (1 cycle = 4ns) to wait before playing the
+        pulse.
 
         This property will be used in the QUA ``wait`` command, so that it is compatible
         with and without start sweepers.
@@ -107,9 +123,13 @@ class QMPulse:
         elif acquisition_type is AcquisitionType.DISCRIMINATION:
             if threshold is None or angle is None:
                 raise_error(
-                    ValueError, "Cannot use ``AcquisitionType.DISCRIMINATION`` " "if threshold and angle are not given."
+                    ValueError,
+                    "Cannot use ``AcquisitionType.DISCRIMINATION`` "
+                    "if threshold and angle are not given.",
                 )
-            self.acquisition = ShotsAcquisition(self.pulse.serial, average, threshold, angle)
+            self.acquisition = ShotsAcquisition(
+                self.pulse.serial, average, threshold, angle
+            )
         else:
             raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
         self.acquisition.assign_element(self.element)
@@ -122,7 +142,10 @@ class BakedPulse(QMPulse):
     segments: List[Baking] = field(default_factory=list)
     """Baked segments implementing the pulse."""
     amplitude: Optional[float] = None
-    """Amplitude of the baked pulse. Relevant only when sweeping amplitude."""
+    """Amplitude of the baked pulse.
+
+    Relevant only when sweeping amplitude.
+    """
     durations: Optional[DurationsType] = None
 
     def __hash__(self):
@@ -148,11 +171,17 @@ class BakedPulse(QMPulse):
         for t in durations:
             with baking(config.__dict__, padding_method="right") as segment:
                 if self.pulse.type is PulseType.FLUX:
-                    waveform = self.pulse.envelope_waveform_i.data.tolist()
+                    waveform = self.pulse.envelope_waveform_i(
+                        SAMPLING_RATE
+                    ).data.tolist()
                     waveform = self.calculate_waveform(waveform, t)
                 else:
-                    waveform_i = self.pulse.envelope_waveform_i.data.tolist()
-                    waveform_q = self.pulse.envelope_waveform_q.data.tolist()
+                    waveform_i = self.pulse.envelope_waveform_i(
+                        SAMPLING_RATE
+                    ).data.tolist()
+                    waveform_q = self.pulse.envelope_waveform_q(
+                        SAMPLING_RATE
+                    ).data.tolist()
                     waveform = [
                         self.calculate_waveform(waveform_i, t),
                         self.calculate_waveform(waveform_q, t),
@@ -179,7 +208,8 @@ class BakedPulse(QMPulse):
 
 
 def find_duration_sweeper_pulses(sweepers):
-    """Find all pulses that require baking because we are sweeping their duration."""
+    """Find all pulses that require baking because we are sweeping their
+    duration."""
     duration_sweep_pulses = set()
     for sweeper in sweepers:
         try:
@@ -197,25 +227,32 @@ def find_duration_sweeper_pulses(sweepers):
 @dataclass
 class Sequence:
     """Pulse sequence containing QM specific pulses (``qmpulse``).
+
     Defined in :meth:`qibolab.instruments.qm.QMOPX.play`.
     Holds attributes for the ``element`` and ``operation`` that
     corresponds to each pulse, as defined in the QM config.
     """
 
     qmpulses: List[QMPulse] = field(default_factory=list)
-    """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to the original pulses."""
+    """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to
+    the original pulses."""
     ro_pulses: List[QMPulse] = field(default_factory=list)
     """List of readout pulses used for registering outputs."""
     pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
     """Map from qibolab pulses to QMPulses (useful when sweeping)."""
     clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
-    """Dictionary used to keep track of times of each element, in order to calculate wait times."""
-    pulse_finish: Dict[int, List[QMPulse]] = field(default_factory=lambda: collections.defaultdict(list))
-    """Map to find all pulses that finish at a given time (useful for ``_find_previous``)."""
+    """Dictionary used to keep track of times of each element, in order to
+    calculate wait times."""
+    pulse_finish: Dict[int, List[QMPulse]] = field(
+        default_factory=lambda: collections.defaultdict(list)
+    )
+    """Map to find all pulses that finish at a given time (useful for
+    ``_find_previous``)."""
 
     @classmethod
     def create(cls, qubits, sequence, sweepers, config, time_of_flight, smearing):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to a :class:`qibolab.instruments.qm.sequence.Sequence`.
+        """Translates a :class:`qibolab.pulses.PulseSequence` to a
+        :class:`qibolab.instruments.qm.sequence.Sequence`.
 
         Args:
             qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
@@ -229,9 +266,17 @@ class Sequence:
         # like we do for readout multiplex
         duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
         qmsequence = cls()
-        for pulse in sorted(sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)):
-            config.register_element(qubits[pulse.qubit], pulse, time_of_flight, smearing)
-            if pulse.duration % 4 != 0 or pulse.duration < 16 or pulse.serial in duration_sweep_pulses:
+        for pulse in sorted(
+            sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
+        ):
+            config.register_element(
+                qubits[pulse.qubit], pulse, time_of_flight, smearing
+            )
+            if (
+                pulse.duration % 4 != 0
+                or pulse.duration < 16
+                or pulse.serial in duration_sweep_pulses
+            ):
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(config, durations=[pulse.duration])
             else:
@@ -276,7 +321,8 @@ class Sequence:
         self.qmpulses.append(qmpulse)
 
     def shift(self):
-        """Shift all pulses that come after a ``BakedPulse`` a bit to avoid overlapping pulses."""
+        """Shift all pulses that come after a ``BakedPulse`` a bit to avoid
+        overlapping pulses."""
         to_shift = collections.deque()
         for qmpulse in self.qmpulses:
             if isinstance(qmpulse, BakedPulse):
@@ -300,7 +346,10 @@ class Sequence:
             if pulse.type is PulseType.READOUT:
                 qmpulse.acquisition.measure(qmpulse.operation, qmpulse.element)
             else:
-                if not isinstance(qmpulse.relative_phase, float) or qmpulse.relative_phase != 0:
+                if (
+                    not isinstance(qmpulse.relative_phase, float)
+                    or qmpulse.relative_phase != 0
+                ):
                     qua.frame_rotation_2pi(qmpulse.relative_phase, qmpulse.element)
                     needs_reset = True
                 qmpulse.play()

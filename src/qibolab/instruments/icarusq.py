@@ -34,7 +34,9 @@ class TektronixAWG5204(Instrument):
                 raise InstrumentException(self, str(exc))
             self.is_connected = True
         else:
-            raise_error(Exception, "There is an open connection to the instrument already")
+            raise_error(
+                Exception, "There is an open connection to the instrument already"
+            )
 
     def setup(self, **kwargs):
         if self.is_connected:
@@ -52,14 +54,16 @@ class TektronixAWG5204(Instrument):
                 awg_ch = getattr(self.device, f"ch{channel}")
                 awg_ch.awg_amplitude(amplitude[idx])
                 awg_ch.resolution(resolution)
-                self.device.write(f"SOURCE{channel}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {offset[idx]}")
+                self.device.write(
+                    f"SOURCE{channel}:VOLTAGE:LEVEL:IMMEDIATE:OFFSET {offset[idx]}"
+                )
 
             self.__dict__.update(kwargs)
         else:
             raise_error(Exception, "There is no connection to the instrument")
 
     def generate_waveforms_from_pulse(self, pulse: Pulse, time_array: np.ndarray):
-        """Generates a numpy array based on the pulse parameters
+        """Generates a numpy array based on the pulse parameters.
 
         Arguments:
             pulse (qibolab.pulses.Pulse | qibolab.pulses.ReadoutPulse): Pulse to be compiled
@@ -67,17 +71,24 @@ class TektronixAWG5204(Instrument):
         """
         i_ch, q_ch = pulse.channel
 
-        i = pulse.envelope_i * np.cos(2 * np.pi * pulse.frequency * time_array + pulse.phase + self.channel_phase[i_ch])
+        i = pulse.envelope_i * np.cos(
+            2 * np.pi * pulse.frequency * time_array
+            + pulse.phase
+            + self.channel_phase[i_ch]
+        )
         q = (
             -1
             * pulse.envelope_i
-            * np.sin(2 * np.pi * pulse.frequency * time_array + pulse.phase + self.channel_phase[q_ch])
+            * np.sin(
+                2 * np.pi * pulse.frequency * time_array
+                + pulse.phase
+                + self.channel_phase[q_ch]
+            )
         )
         return i, q
 
     def translate(self, sequence: List[Pulse], nshots=None):
-        """
-        Translates the pulse sequence into a numpy array.
+        """Translates the pulse sequence into a numpy array.
 
         Arguments:
             sequence (qibolab.pulses.Pulse[]): Array containing pulses to be fired on this instrument.
@@ -98,14 +109,17 @@ class TektronixAWG5204(Instrument):
             start_index = bisect(time_array, pulse.start * 1e-9)
             end_index = bisect(time_array, (pulse.start + pulse.duration) * 1e-9)
             i_ch, q_ch = pulse.channel
-            i, q = self.generate_waveforms_from_pulse(pulse, time_array[start_index:end_index])
+            i, q = self.generate_waveforms_from_pulse(
+                pulse, time_array[start_index:end_index]
+            )
             waveform_arrays[i_ch, start_index:end_index] += i
             waveform_arrays[q_ch, start_index:end_index] += q
 
         return waveform_arrays
 
     def upload(self, waveform: np.ndarray):
-        """Uploads a nchannels X nsamples array to the AWG, load it into memory and assign it to the channels for playback."""
+        """Uploads a nchannels X nsamples array to the AWG, load it into memory
+        and assign it to the channels for playback."""
 
         # TODO: Add additional check to ensure all waveforms are of the same size? Should be caught by qcodes driver anyway.
         if len(waveform) != self.device.num_channels:
@@ -169,7 +183,6 @@ class MCAttenuator(Instrument):
         Arguments:
             attenuation(float
             ): Attenuation setting in dB. Ranges from 0 to 35.
-
         """
         import urllib3
 
@@ -289,16 +302,17 @@ class AlazarADC(Instrument):
 
     def arm(self, nshots, readout_start):
         with self.device.syncing():
-            self.device.trigger_delay(int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8))
+            self.device.trigger_delay(
+                int(int((readout_start * 1e-9 + 4e-6) / 1e-9 / 8) * 8)
+            )
         self.controller.arm(nshots)
 
     def play_sequence_and_acquire(self):
-        """
-        this method performs an acquisition, which is the get_cmd for the
-        acquisiion parameter of this instrument
-        :return:
-        """
-        raw = self.device.acquire(acquisition_controller=self.controller, **self.controller.acquisitionkwargs)
+        """This method performs an acquisition, which is the get_cmd for the
+        acquisiion parameter of this instrument :return:"""
+        raw = self.device.acquire(
+            acquisition_controller=self.controller, **self.controller.acquisitionkwargs
+        )
         return self.process_result(raw)
 
     def process_result(self, readout_frequency=100e6, readout_channels=[0, 1]):
@@ -320,8 +334,12 @@ class AlazarADC(Instrument):
         it = 0
         qt = 0
         for i in range(self.device.samples_per_record):
-            it += input_vec_I[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
-            qt += input_vec_Q[i] * np.cos(2 * np.pi * readout_frequency * self.device.time_array[i])
+            it += input_vec_I[i] * np.cos(
+                2 * np.pi * readout_frequency * self.device.time_array[i]
+            )
+            qt += input_vec_Q[i] * np.cos(
+                2 * np.pi * readout_frequency * self.device.time_array[i]
+            )
         phase = np.arctan2(qt, it)
         ampl = np.sqrt(it**2 + qt**2)
 
