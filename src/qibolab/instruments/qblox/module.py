@@ -1,4 +1,4 @@
-""" Qblox Cluster QCM driver."""
+"""Qblox Cluster QCM driver."""
 
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
@@ -8,10 +8,12 @@ class ClusterModule(Instrument):
     DEFAULT_SEQUENCERS = {}
 
     def __init__(self, name: str, address: str):
-        """
-        This class defines common features shared by all Qblox modules (QCM-BB, QCM-RF, QRM-RF).
-        It serves as a foundational class, unifying the behavior of the three distinct modules.
-        All module-specific classes are intended to inherit from this base class.
+        """This class defines common features shared by all Qblox modules (QCM-
+        BB, QCM-RF, QRM-RF).
+
+        It serves as a foundational class, unifying the behavior of the
+        three distinct modules. All module-specific classes are intended
+        to inherit from this base class.
         """
 
         super().__init__(name, address)
