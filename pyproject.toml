@@ -78,6 +78,7 @@ qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq"]
 los = ["qcodes", "qcodes_contrib_drivers"]
+icarusq = ["pyvisa-py"]
 
 
 [tool.poe.tasks]

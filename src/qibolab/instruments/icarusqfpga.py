@@ -5,7 +5,6 @@ import numpy as np
 from icarusq_rfsoc_driver import IcarusQRFSoC  # pylint: disable=E0401
 from icarusq_rfsoc_driver.rfsoc_settings import TRIGGER_MODE  # pylint: disable=E0401
 from qibo.config import log
-from scipy.signal.windows import gaussian, hamming
 
 from qibolab.execution_parameters import (
     AcquisitionType,
@@ -92,6 +91,7 @@ class RFSOC(Controller):
 
         dac_end_addr = {dac.id: 0 for dac in self.device.dac}
         dac_sampling_rate = self.device.dac_sampling_rate * 1e6
+        dac_sr_ghz = dac_sampling_rate / 1e9
 
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
         for pulse in sequence.pulses:
@@ -100,48 +100,42 @@ class RFSOC(Controller):
 
             dac = self.ports(pulse.channel).dac
             start = int(pulse.start * 1e-9 * dac_sampling_rate)
-            end = int((pulse.start + pulse.duration) * 1e-9 * dac_sampling_rate)
-            num_samples = end - start
+            i_env = pulse.envelope_waveform_i(dac_sr_ghz).data
+            q_env = pulse.envelope_waveform_q(dac_sr_ghz).data
 
             # Flux pulses
             # TODO: Add envelope support for flux pulses
             if pulse.type == PulseType.FLUX:
-                wfm = np.ones(num_samples)
+                wfm = i_env
+                end = start + len(wfm)
 
             # Qubit drive microwave signals
             elif pulse.type == PulseType.DRIVE:
+                end = start + len(i_env)
                 t = np.arange(start, end) / dac_sampling_rate
-                wfm = np.sin(2 * np.pi * pulse.frequency * t + pulse.relative_phase)
-
-                # Currently we only support DRAG pulses
-                if pulse.shape.name == "DRAG":
-                    sigma = num_samples / pulse.shape.rel_sigma
-                    beta = pulse.shape.beta
-                    real = gaussian(num_samples, sigma)
-                    img = (
-                        -beta
-                        * (np.arange(num_samples) - num_samples / 2)
-                        * real
-                        / sigma**2
-                    )
-
-                    wfm *= real
-                    wfm += img * np.cos(
-                        2 * np.pi * pulse.frequency * t + pulse.relative_phase
-                    )
-
-                else:
-                    wfm *= hamming(wfm.shape[0])
+                cosalpha = np.cos(
+                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                )
+                sinalpha = np.sin(
+                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                )
+                wfm = i_env * sinalpha + q_env * cosalpha
 
             elif pulse.type == PulseType.READOUT:
                 # For readout pulses, we move the corresponding DAC/ADC pair to the start of the pulse to save memory
                 # This locks the phase of the readout in the demodulation
                 adc = self.ports(pulse.channel).adc
                 start = 0
-                end = int(pulse.duration * 1e-9 * dac_sampling_rate)
 
+                end = start + len(i_env)
                 t = np.arange(start, end) / dac_sampling_rate
-                wfm = np.sin(2 * np.pi * pulse.frequency * t + pulse.relative_phase)
+                cosalpha = np.cos(
+                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                )
+                sinalpha = np.sin(
+                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                )
+                wfm = i_env * sinalpha + q_env * cosalpha
 
                 # First we convert the pulse starting time to number of ADC samples
                 # Then, we convert this number to the number of ADC clock cycles (8 samples per clock cycle)
@@ -183,9 +177,8 @@ class RFSOC(Controller):
                         qunit=pulse.qubit,
                     )
 
-            waveform_array[dac][start:end] += (
-                self.device.dac_max_amplitude * pulse.amplitude * wfm
-            )
+            end = start + len(wfm)
+            waveform_array[dac][start:end] += self.device.dac_max_amplitude * wfm
             dac_end_addr[dac] = max(end >> 4, dac_end_addr[dac])
 
         payload = [
