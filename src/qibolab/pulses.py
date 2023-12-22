@@ -676,23 +676,23 @@ class Custom(PulseShape):
 class Pulse:
     """A class to represent a pulse to be sent to the QPU."""
 
-    start: Optional[int] = None
+    start: int
     """Start time of pulse in ns."""
-    duration: Optional[int] = None
+    duration: int
     """Pulse duration in ns."""
-    amplitude: Optional[float] = None
+    amplitude: float
     """Pulse digital amplitude (unitless).
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: Optional[int] = None
+    frequency: int
     """Pulse Intermediate Frequency in Hz.
 
     The value has to be in the range [10e6 to 300e6].
     """
-    relative_phase: Optional[float] = None
+    relative_phase: float
     """Relative phase of the pulse, in radians."""
-    shape: Optional[PulseShape] = None
+    shape: PulseShape
     """Pulse shape, as a PulseShape object.
 
     See
