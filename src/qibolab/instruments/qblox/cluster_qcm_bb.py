@@ -114,7 +114,6 @@ class ClusterQCM_BB(ClusterModule):
         """
         super().__init__(name, address)
         self.ports: dict = {}
-        self.settings: dict = {}
         self.device: QbloxQrmQcm = None
         # self.settings: dict = {}
         self.device = None
