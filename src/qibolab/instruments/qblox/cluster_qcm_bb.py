@@ -131,27 +131,27 @@ class ClusterQCM_BB(ClusterModule):
         self._unused_sequencers_numbers: list[int] = []
 
     def _set_default_values(self):
+        # disable all sequencer connections
+        self.device.disconnect_outputs()
+
         # set offset to zero on all ports. Default values after reboot = 0
         [self.device.set(f"out{idx}_offset", value=0) for idx in range(4)]
+
         # initialise the parameters of the default sequencers to the default values,
         # the rest of the sequencers are disconnected, but will be configured
         # with the same parameters as the default in process_pulse_sequence()
-        for target in [
+        default_sequencers = [
             self.device.sequencers[i] for i in self.DEFAULT_SEQUENCERS.values()
-        ]:
-            [
+        ]
+        for target in default_sequencers:
+            for name, value in self.DEFAULT_SEQUENCERS_VALUES.items():
                 target.set(name, value)
-                for name, value in self.DEFAULT_SEQUENCERS_VALUES.items()
-            ]
-        # connect the sequencers to the out port
-        out_values = {0: "I", 1: "Q", 2: "I", 3: "Q"}
-        for key, value in out_values.items():
-            self.device.sequencers[key].set(f"connect_out{key}", value)
+
+        # connect the default sequencers to the out ports
+        out__port_path = {0: "I", 1: "Q", 2: "I", 3: "Q"}
+        for port_num, value in out__port_path.items():
+            self.device.sequencers[port_num].set(f"connect_out{port_num}", value)
         # disconnect all other sequencers from the ports
-        self._device_num_sequencers = len(self.device.sequencers)
-        for sequencer in range(4, self._device_num_sequencers):
-            target = self.device.sequencers[sequencer]
-            [target.set(f"connect_out{x}", "off") for x in range(4)]
 
     def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
@@ -173,6 +173,7 @@ class ClusterQCM_BB(ClusterModule):
                     f"Module {self.device.name} not connected to cluster {cluster.name}"
                 )
             # once connected, initialise the parameters of the device to the default values
+            self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
             try:

@@ -155,6 +155,10 @@ class ClusterQRM_RF(ClusterModule):
         self._execution_time: float = 0
 
     def _set_default_values(self):
+        # disable all sequencer connections
+        self.device.disconnect_outputs()
+        self.device.disconnect_inputs()
+
         # set I (path0) and Q (path1) offset to zero on output port 0. Default values after reboot = 7.625
         [self.device.set(f"out0_offset_path{i}", 0) for i in range(2)]
         # set input port parameters to default
@@ -170,18 +174,12 @@ class ClusterQRM_RF(ClusterModule):
         # the rest of the sequencers are disconnected, but will be configured
         # with the same parameters as the default in process_pulse_sequence()
         target = self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]]
-        [
+        for name, value in self.DEFAULT_SEQUENCERS_VALUES.items():
             target.set(name, value)
-            for name, value in self.DEFAULT_SEQUENCERS_VALUES.items()
-        ]
+
         # connect sequencer to out/in ports
         target.set("connect_out0", "IQ")
         target.set("connect_acq", "in0")
-        # disconnect all other sequencers from the ports
-        self._device_num_sequencers = len(self.device.sequencers)
-        for sequencer in range(1, self._device_num_sequencers):
-            self.device.sequencers[sequencer].set("connect_out0", "off")
-            self.device.sequencers[sequencer].set("connect_acq", "off")
 
     def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
@@ -203,6 +201,7 @@ class ClusterQRM_RF(ClusterModule):
                     f"Module {self.device.name} not connected to cluster {cluster.name}"
                 )
             # once connected, initialise the parameters of the device to the default values
+            self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
             try:
