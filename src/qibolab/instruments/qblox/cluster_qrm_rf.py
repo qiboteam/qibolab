@@ -1026,6 +1026,7 @@ class ClusterQRM_RF(Instrument):
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
+                # TODO: Maybe this store_scope can be done only if needed to optimize the process!
                 if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
                     self.device.store_scope_acquisition(
                         sequencer.number, "scope_acquisition"
@@ -1033,7 +1034,6 @@ class ClusterQRM_RF(Instrument):
                     scope = self.device.get_acquisitions(sequencer.number)[
                         "scope_acquisition"
                     ]
-
                 if not hardware_demod_enabled:  # Software Demodulation
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
@@ -1052,19 +1052,18 @@ class ClusterQRM_RF(Instrument):
                         bins = results[pulse.serial]["acquisition"]["bins"]
                         acquisitions[pulse.qubit] = acquisitions[
                             pulse.serial
-                        ] = DemodulatedAcquisition(bins, duration)
-
+                        ] = DemodulatedAcquisition(scope, bins, duration)
                     # Provide Scope Data for verification (assuming memory reseet is being done)
-                    if len(sequencer.pulses.ro_pulses) == 1:
-                        pulse = sequencer.pulses.ro_pulses[0]
-                        frequency = self.get_if(pulse)
-                        acquisitions[pulse.serial].averaged = AveragedAcquisition(
-                            scope, duration, frequency
-                        )
+                    # if len(sequencer.pulses.ro_pulses) == 1:
+                    #     pulse = sequencer.pulses.ro_pulses[0]
+                    #     frequency = self.get_if(pulse)
+                    #     acquisitions[pulse.serial].averaged = AveragedAcquisition(
+                    #         scope, duration, frequency
+                    #     )
 
         # grab only the data required by the platform
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        return {key: acquisition.data for key, acquisition in acquisitions.items()}
+        return {key: acquisition for key, acquisition in acquisitions.items()}
 
     def start(self):
         """Empty method to comply with Instrument interface."""
