@@ -268,22 +268,6 @@ class ClusterQCM_RF(ClusterModule):
         sequencer.qubit = qubit
         return sequencer
 
-    def get_if(self, pulse):
-        """Returns the intermediate frequency needed to synthesise a pulse
-        based on the port lo frequency."""
-
-        _rf = pulse.frequency
-        _lo = self.channel_map[pulse.channel].lo_frequency
-        _if = _rf - _lo
-        if abs(_if) > self.FREQUENCY_LIMIT:
-            raise Exception(
-                f"""
-            Pulse frequency {_rf:_} cannot be synthesised with current lo frequency {_lo:_}.
-            The intermediate frequency {_if:_} would exceed the maximum frequency of {self.FREQUENCY_LIMIT:_}
-            """
-            )
-        return _if
-
     def process_pulse_sequence(
         self,
         qubits: dict,
@@ -743,20 +727,6 @@ class ClusterQCM_RF(ClusterModule):
             with open(filename, "w", encoding="utf-8") as file:
                 print_readable_snapshot(self.device, file, update=True)
 
-    def play_sequence(self):
-        """Plays the sequence of pulses.
-
-        Starts the sequencers needed to play the sequence of pulses.
-        """
-
-        for sequencer_number in self._used_sequencers_numbers:
-            # Start used sequencers
-            self.device.start_sequencer(sequencer_number)
-
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-        pass
-
     def stop(self):
         """Stops all sequencers."""
         from qibo.config import log
@@ -771,8 +741,3 @@ class ClusterQCM_RF(ClusterModule):
             self.device.stop_sequencer()
         except:
             log.warning("Unable to stop sequencers")
-
-    def disconnect(self):
-        """Empty method to comply with Instrument interface."""
-        self.is_connected = False
-        self.device = None

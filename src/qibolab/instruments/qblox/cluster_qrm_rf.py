@@ -317,22 +317,6 @@ class ClusterQRM_RF(ClusterModule):
         sequencer.qubit = qubit
         return sequencer
 
-    def get_if(self, pulse: Pulse):
-        """Returns the intermediate frequency needed to synthesise a pulse
-        based on the port lo frequency."""
-
-        _rf = pulse.frequency
-        _lo = self.channel_map[pulse.channel].lo_frequency
-        _if = _rf - _lo
-        if abs(_if) > self.FREQUENCY_LIMIT:
-            raise Exception(
-                f"""
-            Pulse frequency {_rf:_} cannot be synthesised with current lo frequency {_lo:_}.
-            The intermediate frequency {_if:_} would exceed the maximum frequency of {self.FREQUENCY_LIMIT:_}
-            """
-            )
-        return _if
-
     def process_pulse_sequence(
         self,
         qubits: dict,
@@ -916,16 +900,6 @@ class ClusterQRM_RF(ClusterModule):
             with open(filename, "w", encoding="utf-8") as file:
                 print_readable_snapshot(self.device, file, update=True)
 
-    def play_sequence(self):
-        """Plays the sequence of pulses.
-
-        Starts the sequencers needed to play the sequence of pulses.
-        """
-
-        # Start used sequencers
-        for sequencer_number in self._used_sequencers_numbers:
-            self.device.start_sequencer(sequencer_number)
-
     def acquire(self):
         """Retrieves the readout results.
 
@@ -1012,18 +986,9 @@ class ClusterQRM_RF(ClusterModule):
         # TODO: to be updated once the functionality of ExecutionResults is extended
         return {key: acquisition.data for key, acquisition in acquisitions.items()}
 
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-        pass
-
     def stop(self):
         """Stops all sequencers."""
         try:
             self.device.stop_sequencer()
         except:
             raise RuntimeError(f"Error stopping sequencer for {self.device.name}")
-
-    def disconnect(self):
-        """Empty method to comply with Instrument interface."""
-        self.is_connected = False
-        self.device = None

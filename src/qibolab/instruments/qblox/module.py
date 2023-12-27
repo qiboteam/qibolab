@@ -2,7 +2,7 @@
 
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.qubits import Qubit
 
 
@@ -58,3 +58,42 @@ class ClusterModule(Instrument):
                 if channel.port == port_obj:
                     self.channel_map[channel.name] = channel
                     return pulses.get_channel_pulses(channel.name)
+
+    def get_if(self, pulse: Pulse):
+        """Returns the intermediate frequency needed to synthesise a pulse
+        based on the port lo frequency.
+
+        Note:
+        - ClusterQCM_BB has no external neither internal local oscillator so its
+        _lo should be always zero.
+        """
+
+        _rf = pulse.frequency
+        _lo = self.channel_map[pulse.channel].lo_frequency
+        _if = _rf - _lo
+        if abs(_if) > self.FREQUENCY_LIMIT:
+            raise Exception(
+                f"""
+            Pulse frequency {_rf:_} cannot be synthesised with current lo frequency {_lo:_}.
+            The intermediate frequency {_if:_} would exceed the maximum frequency of {self.FREQUENCY_LIMIT:_}
+            """
+            )
+        return _if
+
+    def play_sequence(self):
+        """Plays the sequence of pulses.
+
+        Starts the sequencers needed to play the sequence of pulses.
+        """
+        # Start used sequencers
+        for sequencer_number in self._used_sequencers_numbers:
+            self.device.start_sequencer(sequencer_number)
+
+    def start(self):
+        """Empty method to comply with Instrument interface."""
+        pass
+
+    def disconnect(self):
+        """Empty method to comply with Instrument interface."""
+        self.is_connected = False
+        self.device = None

@@ -18,7 +18,7 @@ class QbloxOutputPort_Settings:
     nco_freq: int = 0
     nco_phase_offs: float = 0
     lo_enabled: bool = True
-    lo_frequency: int = 2_000_000_000
+    lo_frequency: int = 0
 
 
 @dataclass
