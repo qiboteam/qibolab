@@ -2,6 +2,8 @@
 
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
+from qibolab.pulses import PulseSequence
+from qibolab.qubits import Qubit
 
 
 class ClusterModule(Instrument):
@@ -40,3 +42,19 @@ class ClusterModule(Instrument):
         port_cls = QbloxOutputPort if out else QbloxInputPort
         self.ports[name] = port_cls(self, port_number=count(port_cls), port_name=name)
         return self.ports[name]
+
+    def filter_port_pulse(
+        self, pulses: PulseSequence, qubits: dict, port_obj: QbloxOutputPort
+    ) -> PulseSequence:
+        """Filters the pulses and return a new pulse sequence containing only
+        pulses relative to the specified port (port_obj).
+
+        Additionally builds the channel_map attribute which maps the
+        channel name to the channel object.
+        """
+        for qubit in qubits.values():
+            qubit: Qubit
+            for channel in qubit.channels:
+                if channel.port == port_obj:
+                    self.channel_map[channel.name] = channel
+                    return pulses.get_channel_pulses(channel.name)

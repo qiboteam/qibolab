@@ -271,7 +271,7 @@ class ClusterQCM_BB(ClusterModule):
     def process_pulse_sequence(
         self,
         qubits: dict,
-        instrument_pulses: PulseSequence,
+        sequence: PulseSequence,
         navgs: int,
         nshots: int,
         repetition_duration: int,
@@ -317,16 +317,9 @@ class ClusterQCM_BB(ClusterModule):
         self._free_sequencers_numbers = list(range(len(self.ports), 6))
 
         # process the pulses for every port
-        for port in self.ports:
+        for port, port_obj in self.ports.items():
             # split the collection of instruments pulses by ports
-            port_channel = [
-                chan.name
-                for chan in self.channel_map.values()
-                if chan.port.name == port
-            ]
-            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(
-                *port_channel
-            )
+            port_pulses = self.filter_port_pulse(sequence, qubits, port_obj)
 
             # initialise the list of sequencers required by the port
             self._sequencers[port] = []

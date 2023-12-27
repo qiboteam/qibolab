@@ -336,7 +336,7 @@ class ClusterQRM_RF(ClusterModule):
     def process_pulse_sequence(
         self,
         qubits: dict,
-        instrument_pulses: PulseSequence,
+        sequence: PulseSequence,
         navgs: int,
         nshots: int,
         repetition_duration: int,
@@ -403,12 +403,7 @@ class ClusterQRM_RF(ClusterModule):
         ]
 
         # split the collection of instruments pulses by ports
-        # ro_channel = None
-        # feed_channel = None
-        port_channel = [
-            chan.name for chan in self.channel_map.values() if chan.port.name == port
-        ]
-        port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(*port_channel)
+        port_pulses = self.filter_port_pulse(sequence, qubits, self.ports[port])
 
         # initialise the list of sequencers required by the port
         self._sequencers[port] = []

@@ -97,21 +97,6 @@ class QbloxController(Controller):
             self.cluster.close()
             self.is_connected = False
 
-    def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
-        """Retrieve all the channels connected to a specific Qblox module.
-
-        This method updates the `channel_port_map` attribute of the
-        specified Qblox module based on the information contained in the
-        provided qubits dictionary (dict of `qubit` objects).
-
-        Return the list of channels connected to module_name
-        """
-        for qubit in qubits.values():
-            for channel in qubit.channels:
-                if channel.port and channel.port.module.name == module.name:
-                    module.channel_map[channel.name] = channel
-        return list(module.channel_map)
-
     def _execute_pulse_sequence(
         self,
         qubits: dict,
@@ -163,22 +148,12 @@ class QbloxController(Controller):
         #                 print(f"type: {module.module_type}, sequencer: {sequencer.name}, sync_en: True")
 
         # Process Pulse Sequence. Assign pulses to modules and generate waveforms & program
-        module_pulses = {}
         data = {}
-        for name, module in self.modules.items():
-            # from the pulse sequence, select those pulses to be synthesised by the module
-            module_channels = self._set_module_channel_map(module, qubits)
-            module_pulses[name] = sequence.get_channel_pulses(*module_channels)
-
-            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF)):
-                for pulse in module_pulses[name]:
-                    pulse_channel = module.channel_map[pulse.channel]
-                    pulse._if = int(pulse.frequency - pulse_channel.lo_frequency)
-
+        for module in self.modules.values():
             #  ask each module to generate waveforms & program and upload them to the device
             module.process_pulse_sequence(
                 qubits,
-                module_pulses[name],
+                sequence,
                 navgs,
                 nshots,
                 repetition_duration,
@@ -195,11 +170,8 @@ class QbloxController(Controller):
 
         # retrieve the results
         acquisition_results = {}
-        for name, module in self.modules.items():
-            if (
-                isinstance(module, ClusterQRM_RF)
-                and not module_pulses[name].ro_pulses.is_empty
-            ):
+        for module in self.modules.values():
+            if isinstance(module, ClusterQRM_RF):
                 results = module.acquire()
                 existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
