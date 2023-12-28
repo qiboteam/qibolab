@@ -43,6 +43,36 @@ class ClusterModule(Instrument):
         self.ports[name] = port_cls(self, port_number=count(port_cls), port_name=name)
         return self.ports[name]
 
+    def clone_sequencer_params(self, first_sequencer: int, next_sequencer: int):
+        """Clone the values of all writable parameters from the first_sequencer
+        into the next_sequencer."""
+        for parameter in self.device.sequencers[first_sequencer].parameters:
+            # exclude read-only parameter `sequence` and others that have wrong default values (qblox bug)
+            if not parameter in [
+                "sequence",
+                "thresholded_acq_marker_address",
+                "thresholded_acq_trigger_address",
+            ]:
+                value = self.device.sequencers[first_sequencer].get(
+                    param_name=parameter
+                )
+                print(f"Module {self.name}")
+                if parameter == "nco_freq":
+                    print(
+                        f"default sequencer param {parameter} value {self.device.sequencers[first_sequencer].get(parameter)}"
+                    )
+                    print(
+                        f"old sequencer param {parameter} value {self.device.sequencers[next_sequencer].get(parameter)}"
+                    )
+                if value:
+                    target = self.device.sequencers[next_sequencer]
+                    target.set(parameter, value)
+                if parameter == "nco_freq":
+                    print(
+                        f"new sequencer param {parameter} value {self.device.sequencers[next_sequencer].get(parameter)}"
+                    )
+                print("\n")
+
     def filter_port_pulse(
         self, pulses: PulseSequence, qubits: dict, port_obj: QbloxOutputPort
     ) -> PulseSequence:

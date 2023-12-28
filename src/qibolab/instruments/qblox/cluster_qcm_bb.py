@@ -226,18 +226,9 @@ class ClusterQCM_BB(ClusterModule):
                 log.warning(f"Qubit {_qubit.name} has no flux line connected")
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
-        if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
-            for parameter in self.device.sequencers[
-                self.DEFAULT_SEQUENCERS[port]
-            ].parameters:
-                # exclude read-only parameter `sequence`
-                if parameter not in ["sequence"]:
-                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(
-                        param_name=parameter
-                    )
-                    if value:
-                        target = self.device.sequencers[next_sequencer_number]
-                        target.set(parameter, value)
+        default_sequencer_number = self.DEFAULT_SEQUENCERS[port]
+        if next_sequencer_number != default_sequencer_number:
+            self.clone_sequencer_params(default_sequencer_number, next_sequencer_number)
 
         # if hardware modulation is enabled configure nco_frequency
         if self.ports[port].hardware_mod_en:

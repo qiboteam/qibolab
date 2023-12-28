@@ -276,22 +276,9 @@ class ClusterQRM_RF(ClusterModule):
 
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
-        if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
-            for parameter in self.device.sequencers[
-                self.DEFAULT_SEQUENCERS[port]
-            ].parameters:
-                # exclude read-only parameter `sequence` and others that have wrong default values (qblox bug)
-                if not parameter in [
-                    "sequence",
-                    "thresholded_acq_marker_address",
-                    "thresholded_acq_trigger_address",
-                ]:
-                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(
-                        param_name=parameter
-                    )
-                    if value:
-                        target = self.device.sequencers[next_sequencer_number]
-                        target.set(parameter, value)
+        default_sequencer_number = self.DEFAULT_SEQUENCERS[port]
+        if next_sequencer_number != default_sequencer_number:
+            self.clone_sequencer_params(default_sequencer_number, next_sequencer_number)
 
         # if hardware demodulation is enabled, configure nco_frequency and classification parameters
         if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
@@ -302,8 +289,7 @@ class ClusterQRM_RF(ClusterModule):
             # TODO: Throw error in that event or implement non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
-        # if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
-        if self.ports["i1"].hardware_demod_en and not qubits[qubit].threshold is None:
+        if self.ports["i1"].hardware_demod_en and qubits[qubit].threshold is not None:
             self.device.sequencers[next_sequencer_number].set(
                 "thresholded_acq_rotation",
                 (qubits[qubit].iq_angle * 360 / (2 * np.pi)) % 360,
@@ -378,13 +364,7 @@ class ClusterQRM_RF(ClusterModule):
 
         port = "o1"
         # initialise the list of free sequencer numbers to include the default for each port {'o1': 0}
-        self._free_sequencers_numbers = [self.DEFAULT_SEQUENCERS[port]] + [
-            1,
-            2,
-            3,
-            4,
-            5,
-        ]
+        self._free_sequencers_numbers = [*range(self._device_num_sequencers)]
 
         # split the collection of instruments pulses by ports
         port_pulses = self.filter_port_pulse(sequence, qubits, self.ports[port])

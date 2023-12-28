@@ -229,35 +229,17 @@ class ClusterQCM_RF(ClusterModule):
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
 
-        The parameters of the new sequencer are copied from those of the default sequencer, except for the
-        intermediate frequency and classification parameters.
-        Args:
-            port (str):
-            frequency ():
-            qubit ():
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
+        The parameters of the new sequencer are copied from those of the
+        default sequencer of the port.
         """
-
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
-        if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
-            for parameter in self.device.sequencers[
-                self.DEFAULT_SEQUENCERS[port]
-            ].parameters:
-                # exclude read-only parameter `sequence`
-                if parameter not in ["sequence"]:
-                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(
-                        param_name=parameter
-                    )
-                    if value:
-                        target = self.device.sequencers[next_sequencer_number]
-                        target.set(parameter, value)
-
-        # if hardware modulation is enabled configure nco_frequency
+        default_sequencer_number = self.DEFAULT_SEQUENCERS[port]
+        if next_sequencer_number != default_sequencer_number:
+            self.clone_sequencer_params(default_sequencer_number, next_sequencer_number)
         if self.ports[port].hardware_mod_en:
             self.device.sequencers[next_sequencer_number].set("nco_freq", frequency)
-            # Assumes all pulses in non_overlapping_pulses set
+            # It's assuming that all pulses in non_overlapping_pulses set
             # have the same frequency. Non-overlapping pulses of different frequencies on the same
             # qubit channel with hardware_demod_en would lead to wrong results.
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
