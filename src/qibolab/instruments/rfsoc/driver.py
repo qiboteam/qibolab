@@ -57,7 +57,11 @@ class RFSoC(Controller):
         self.host = address
         self.port = port
         self.cfg = rfsoc.Config()
-        self.sampling_rate = sampling_rate
+        self._sampling_rate = sampling_rate
+
+    @property
+    def sampling_rate(self):
+        return self._sampling_rate
 
     def connect(self):
         """Empty method to comply with Instrument interface."""

@@ -8,7 +8,7 @@ from qm.QuantumMachinesManager import QuantumMachinesManager
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
 
-from .config import IQPortId, QMConfig, QMPort
+from .config import SAMPLING_RATE, IQPortId, QMConfig, QMPort
 from .sequence import Sequence
 from .sweepers import sweep
 
@@ -56,6 +56,10 @@ class QMOPX(Controller):
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
+
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
 
     def connect(self):
         """Connect to the QM manager."""
