@@ -56,22 +56,9 @@ class ClusterModule(Instrument):
                 value = self.device.sequencers[first_sequencer].get(
                     param_name=parameter
                 )
-                print(f"Module {self.name}")
-                if parameter == "nco_freq":
-                    print(
-                        f"default sequencer param {parameter} value {self.device.sequencers[first_sequencer].get(parameter)}"
-                    )
-                    print(
-                        f"old sequencer param {parameter} value {self.device.sequencers[next_sequencer].get(parameter)}"
-                    )
                 if value:
                     target = self.device.sequencers[next_sequencer]
                     target.set(parameter, value)
-                if parameter == "nco_freq":
-                    print(
-                        f"new sequencer param {parameter} value {self.device.sequencers[next_sequencer].get(parameter)}"
-                    )
-                print("\n")
 
     def filter_port_pulse(
         self, pulses: PulseSequence, qubits: dict, port_obj: QbloxOutputPort
