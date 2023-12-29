@@ -1,20 +1,46 @@
 from dataclasses import dataclass, field
-from typing import ClassVar, Dict, Optional
+from typing import Dict, Optional
 
 from qm import generate_qua_script, qua
+from qm.octave import QmOctaveConfig
 from qm.qua import declare, for_
 from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
 
-from .config import IQPortId, QMConfig, QMPort
+from .config import QMConfig
+from .ports import OPXIQ, Octave, OPXInput, OPXOutput, OPXplus
 from .sequence import Sequence
 from .sweepers import sweep
 
+IQPortId = Tuple[Tuple[str, int], Tuple[str, int]]
+
+OCTAVE_ADDRESS = 11000
+"""Must be 11xxx, where xxx are the last three digits of the Octave IP
+address."""
+
+
+def declare_octaves(octaves, host):
+    """Initiate octave_config class, set the calibration file and add octaves
+    info.
+
+    :param octaves: objects that holds the information about octave's
+        name, the controller that is connected to this octave, octave's
+        ip and octave's port.
+    """
+    # TODO: Fix docstring
+    config = None
+    if len(octaves) > 0:
+        config = QmOctaveConfig()
+        # config.set_calibration_db(os.getcwd())
+        for octave in octaves:
+            config.add_device_info(octave.name, host, OCTAVE_ADDRESS + octave.port)
+    return config
+
 
 @dataclass
-class QMOPX(Controller):
+class QMController(Controller):
     """Instrument object for controlling Quantum Machines (QM) OPX controllers.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
@@ -30,23 +56,16 @@ class QMOPX(Controller):
         address (str): IP address and port for connecting to the OPX instruments.
     """
 
-    PortType: ClassVar = QMPort
-
     name: str
     address: str
 
-    manager: Optional[QuantumMachinesManager] = None
-    """Manager object used for controlling the QM OPXs."""
-    config: QMConfig = field(default_factory=QMConfig)
-    """Configuration dictionary required for pulse execution on the OPXs."""
-    is_connected: bool = False
-    """Boolean that shows whether we are connected to the QM manager."""
+    opxs: Dict[int, OPXplus] = field(default_factory=dict)
+    octaves: Dict[int, Octave] = field(default_factory=dict)
+
     time_of_flight: int = 0
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
-    _ports: Dict[IQPortId, QMPort] = field(default_factory=dict)
-    """Dictionary holding the ports of controllers that are connected."""
     script_file_name: Optional[str] = "qua_script.txt"
     """Name of the file that the QUA program will dumped in that after every
     execution.
@@ -54,13 +73,35 @@ class QMOPX(Controller):
     If ``None`` the program will not be dumped.
     """
 
+    output_ports: Dict[IQPortId, OPXIQ] = field(default_factory=dict)
+    input_ports: Dict[IQPortId, OPXIQ] = field(default_factory=dict)
+    """Dictionary holding the ports of IQ pairs.
+
+    Not needed when using only Octaves.
+    """
+
+    manager: Optional[QuantumMachinesManager] = None
+    """Manager object used for controlling the QM OPXs."""
+    config: QMConfig = field(default_factory=QMConfig)
+    """Configuration dictionary required for pulse execution on the OPXs."""
+    is_connected: bool = False
+    """Boolean that shows whether we are connected to the QM manager."""
+
     def __post_init__(self):
         super().__init__(self.name, self.address)
+
+    def ports(self, name, input=False):
+        _ports = self.input_ports if input else self.output_ports
+        if name not in self._ports:
+            port_cls = OPXInput if input else OPXOutput
+            _ports[name] = OPXIQ(port_cls(*name[0]), port_cls(*name[1]))
+        return _ports[name]
 
     def connect(self):
         """Connect to the QM manager."""
         host, port = self.address.split(":")
-        self.manager = QuantumMachinesManager(host, int(port))
+        octave = declare_octaves(self.octaves, host)
+        self.manager = QuantumMachinesManager(host=host, port=int(port), octave=octave)
 
     def setup(self):
         """Deprecated method."""
