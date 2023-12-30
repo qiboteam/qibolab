@@ -8,10 +8,19 @@ from qm.QuantumMachinesManager import QuantumMachinesManager
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
+from qibolab.pulses import PulseType
 
 from .config import QMConfig
-from .ports import OPXIQ, Octave, OPXInput, OPXOutput, OPXplus
-from .sequence import Sequence
+from .ports import (
+    OPXIQ,
+    Octave,
+    OctaveInput,
+    OctaveOutput,
+    OPXInput,
+    OPXOutput,
+    OPXplus,
+)
+from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
 IQPortId = Tuple[Tuple[str, int], Tuple[str, int]]
@@ -37,6 +46,23 @@ def declare_octaves(octaves, host):
         for octave in octaves:
             config.add_device_info(octave.name, host, OCTAVE_ADDRESS + octave.port)
     return config
+
+
+def find_duration_sweeper_pulses(sweepers):
+    """Find all pulses that require baking because we are sweeping their
+    duration."""
+    duration_sweep_pulses = set()
+    for sweeper in sweepers:
+        try:
+            step = sweeper.values[1] - sweeper.values[0]
+        except IndexError:
+            step = sweeper.values[0]
+
+        if sweeper.parameter is Parameter.duration and step % 4 != 0:
+            for pulse in sweeper.pulses:
+                duration_sweep_pulses.add(pulse.serial)
+
+    return duration_sweep_pulses
 
 
 @dataclass
@@ -156,6 +182,62 @@ class QMController(Controller):
                 handles
             )
         return results
+
+    def register_port(self, port):
+        if isinstance(port, OPXIQ):
+            self.register_port(port.i)
+            self.register_port(port.q)
+        else:
+            self.config.register_port(port)
+            if isinstance(port, (OctaveInput, OctaveOutput)):
+                self.config.octaves[port.device]["connectivity"] = self.octaves[
+                    port.device
+                ].connectivity
+
+    def create_sequence(self, qubits, sequence, sweepers):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to a
+        :class:`qibolab.instruments.qm.sequence.Sequence`.
+
+        Args:
+            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
+                passed from the platform.
+            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
+            sweepers (list): List of sweeper objects so that pulses that require baking are identified.
+        Returns:
+            (:class:`qibolab.instruments.qm.sequence.Sequence`) containing the pulses from given pulse sequence.
+        """
+        # Current driver cannot play overlapping pulses on drive and flux channels
+        # If we want to play overlapping pulses we need to define different elements on the same ports
+        # like we do for readout multiplex
+
+        duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
+
+        qmsequence = Sequence()
+        sort_key = lambda pulse: (pulse.start, pulse.duration)
+        for pulse in sorted(sequence.pulses, key=sort_key):
+            qubit = qubits[pulse.qubit]
+
+            self.register_port(getattr(qubit, pulse.type.name.lower()).port)
+            if pulse.type is PulseType.READOUT:
+                self.register_port(qubit.feedback.port)
+
+            self.config.register_element(
+                qubit, pulse, self.time_of_flight, self.smearing
+            )
+            if (
+                pulse.duration % 4 != 0
+                or pulse.duration < 16
+                or pulse.serial in duration_sweep_pulses
+            ):
+                qmpulse = BakedPulse(pulse)
+                qmpulse.bake(self.config, durations=[pulse.duration])
+            else:
+                qmpulse = QMPulse(pulse)
+                self.config.register_pulse(qubit, pulse)
+            qmsequence.add(qmpulse)
+
+        qmsequence.shift()
+        return qmsequence
 
     def play(self, qubits, couplers, sequence, options):
         return self.sweep(qubits, couplers, sequence, options)

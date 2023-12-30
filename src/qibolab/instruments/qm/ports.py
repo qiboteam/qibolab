@@ -7,6 +7,7 @@ class QMPort(Port):
     device: str
     number: int
 
+    key: ClassVar[Optional[str]] = None
     _replace: ClassVar[dict] = {}
 
     @property
@@ -25,12 +26,15 @@ class QMPort(Port):
 
 @dataclass
 class OPXOutput(QMPort):
+    key: ClassVar[str] = "analog_outputs"
+
     offset: float = 0.0
     filter: Optional[Dict[str, float]] = None
 
 
 @dataclass
 class OPXInput(QMPort):
+    key: ClassVar[str] = "analog_inputs"
     _replace: ClassVar[dict] = {"gain": "gain_db"}
 
     offset: float = 0.0
@@ -45,6 +49,7 @@ class OPXIQ(Port):
 
 @dataclass
 class OctaveOutput(QMPort):
+    key: ClassVar[str] = "RF_outputs"
     _replace: ClassVar[dict] = {
         "lo_frequency": "LO_frequency",
         "lo_source": "LO_source",
@@ -61,6 +66,7 @@ class OctaveOutput(QMPort):
 
 @dataclass
 class OctaveInput(QMPort):
+    key: ClassVar[str] = "RF_inputs"
     _replace: ClassVar[dict] = {
         "lo_frequency": "LO_frequency",
         "lo_source": "LO_source",

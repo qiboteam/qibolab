@@ -6,7 +6,7 @@ from qibo.config import raise_error
 
 from qibolab.pulses import PulseType, Rectangular
 
-from .ports import OPXIQ, OctaveOutput, OPXOutput
+from .ports import OPXOutput
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
@@ -18,6 +18,7 @@ class QMConfig:
 
     version: int = 1
     controllers: dict = field(default_factory=dict)
+    octaves: dict = field(default_factory=dict)
     elements: dict = field(default_factory=dict)
     pulses: dict = field(default_factory=dict)
     waveforms: dict = field(default_factory=dict)
@@ -27,48 +28,25 @@ class QMConfig:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def register_opxplus_port(self, port):
-        if port.device not in self.controllers:
-            self.controllers[port.device] = {}
-
-        key = "analog_outputs" if isinstance(port, OPXOutput) else "analog_inputs"
-        data = self.controllers[port.device]
-        if key in data:
-            data[key].update(port.serial)
-        else:
-            data[key] = port.serial
-
-    def register_octave_port(self, port):
-        if port.device not in self.controllers:
-            self.controllers[port.device] = {}
-
-        key = "RF_outputs" if isinstance(port, OctaveOutput) else "RF_inputs"
-        data = self.controllers[port.device]
-        if key in data:
-            data[key].update(port.serial)
-        else:
-            data[key] = port.serial
-        # TODO: Missing ``connectivity`` key here which declares which OPX+
-        # is connected to this Octave
-        # Probably need to move this to ``Octave`` to make it work
-
     def register_port(self, port):
-        """Register controllers in the ``config``.
+        """Register controllers and octaves sections in the ``config``.
 
         Args:
             ports (QMPort): Port we are registering.
                 Contains information about the controller and port number and
-                some parameters (offset, gain, filter, etc.).
+                some parameters, such as offset, gain, filter, etc.).
         """
-        # TODO: Update docstring
-        if isinstance(port, OPXIQ):
-            self.register_output_port(port.i)
-            self.register_output_port(port.q)
+        data = (
+            self.controllers
+            if isinstance(port, (OPXInput, OPXOutput))
+            else self.octaves
+        )
+        if port.device not in self.controllers:
+            data[port.device] = {}
+        if port.key in data:
+            data[port.device][port.key].update(port.serial)
         else:
-            if isinstance(port, (OPXInput, OPXOutput)):
-                self.register_opxplus_port(port)
-            else:
-                self.register_octave_port(port)
+            data[port.device][port.key] = port.serial
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -101,9 +79,6 @@ class QMConfig:
                 LO connected to the same channel.
         """
         if f"drive{qubit.name}" not in self.elements:
-            # register drive controllers
-            self.register_port(qubit.drive.port)
-            # register element
             if isinstance(qubit.drive.port, OPXOutput):
                 lo_frequency = math.floor(qubit.drive.lo_frequency)
                 self.elements[f"drive{qubit.name}"] = {
@@ -153,11 +128,6 @@ class QMConfig:
                 LO connected to the same channel.
         """
         if f"readout{qubit.name}" not in self.elements:
-            # register readout controllers
-            self.register_port(qubit.readout.port)
-            # register feedback controllers
-            self.register_port(qubit.feedback.port)
-            # register element
             if isinstance(qubit.readout.port, OPXOutput):
                 lo_frequency = math.floor(qubit.readout.lo_frequency)
                 self.elements[f"readout{qubit.name}"] = {
@@ -212,9 +182,6 @@ class QMConfig:
                 LO connected to the same channel.
         """
         if f"flux{qubit.name}" not in self.elements:
-            # register controller
-            self.register_port(qubit.flux.port)
-            # register element
             self.elements[f"flux{qubit.name}"] = {
                 "singleInput": {
                     "port": qubit.flux.port.pair,

@@ -18,7 +18,6 @@ from qibolab.instruments.qm.acquisition import (
     ShotsAcquisition,
 )
 from qibolab.pulses import Pulse, PulseType
-from qibolab.sweeper import Parameter
 
 from .config import SAMPLING_RATE, QMConfig
 
@@ -207,23 +206,6 @@ class BakedPulse(QMPulse):
             segment.run(amp_array=self.amplitude_array)
 
 
-def find_duration_sweeper_pulses(sweepers):
-    """Find all pulses that require baking because we are sweeping their
-    duration."""
-    duration_sweep_pulses = set()
-    for sweeper in sweepers:
-        try:
-            step = sweeper.values[1] - sweeper.values[0]
-        except IndexError:
-            step = sweeper.values[0]
-
-        if sweeper.parameter is Parameter.duration and step % 4 != 0:
-            for pulse in sweeper.pulses:
-                duration_sweep_pulses.add(pulse.serial)
-
-    return duration_sweep_pulses
-
-
 @dataclass
 class Sequence:
     """Pulse sequence containing QM specific pulses (``qmpulse``).
@@ -248,45 +230,6 @@ class Sequence:
     )
     """Map to find all pulses that finish at a given time (useful for
     ``_find_previous``)."""
-
-    @classmethod
-    def create(cls, qubits, sequence, sweepers, config, time_of_flight, smearing):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to a
-        :class:`qibolab.instruments.qm.sequence.Sequence`.
-
-        Args:
-            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
-                passed from the platform.
-            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
-        Returns:
-            (:class:`qibolab.instruments.qm.Sequence`) containing the pulses from given pulse sequence.
-        """
-        # Current driver cannot play overlapping pulses on drive and flux channels
-        # If we want to play overlapping pulses we need to define different elements on the same ports
-        # like we do for readout multiplex
-        duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
-        qmsequence = cls()
-        for pulse in sorted(
-            sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
-        ):
-            config.register_element(
-                qubits[pulse.qubit], pulse, time_of_flight, smearing
-            )
-            if (
-                pulse.duration % 4 != 0
-                or pulse.duration < 16
-                or pulse.serial in duration_sweep_pulses
-            ):
-                qmpulse = BakedPulse(pulse)
-                qmpulse.bake(config, durations=[pulse.duration])
-            else:
-                qmpulse = QMPulse(pulse)
-                config.register_pulse(qubits[pulse.qubit], pulse)
-            qmsequence.add(qmpulse)
-
-        qmsequence.shift()
-
-        return qmsequence
 
     def _find_previous(self, pulse):
         for finish in reversed(sorted(self.pulse_finish.keys())):
