@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from qm import generate_qua_script, qua
 from qm.octave import QmOctaveConfig
@@ -9,17 +9,11 @@ from qm.QuantumMachinesManager import QuantumMachinesManager
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import PulseType
+from qibolab.sweeper import Parameter
 
 from .config import QMConfig
-from .ports import (
-    OPXIQ,
-    Octave,
-    OctaveInput,
-    OctaveOutput,
-    OPXInput,
-    OPXOutput,
-    OPXplus,
-)
+from .devices import Octave, OPXplus
+from .ports import OPXIQ, OctaveInput, OctaveOutput, OPXInput, OPXOutput
 from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
@@ -92,7 +86,7 @@ class QMController(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
-    script_file_name: Optional[str] = "qua_script.txt"
+    script_file_name: Optional[str] = "qua_script.py"
     """Name of the file that the QUA program will dumped in that after every
     execution.
 
@@ -117,8 +111,12 @@ class QMController(Controller):
         super().__init__(self.name, self.address)
 
     def ports(self, name, input=False):
+        if len(name) != 2:
+            raise ValueError(
+                "QMController provides only IQ ports. Please access individual ports from the specific device."
+            )
         _ports = self.input_ports if input else self.output_ports
-        if name not in self._ports:
+        if name not in _ports:
             port_cls = OPXInput if input else OPXOutput
             _ports[name] = OPXIQ(port_cls(*name[0]), port_cls(*name[1]))
         return _ports[name]
@@ -254,11 +252,10 @@ class QMController(Controller):
         # always at sweetspot even when they are not used
         for qubit in qubits.values():
             if qubit.flux:
+                self.register_port(qubit.flux.port)
                 self.config.register_flux_element(qubit)
 
-        qmsequence = Sequence.create(
-            qubits, sequence, sweepers, self.config, self.time_of_flight, self.smearing
-        )
+        qmsequence = self.create_sequence(qubits, sequence, sweepers)
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)

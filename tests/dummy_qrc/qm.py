@@ -2,7 +2,7 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
-from qibolab.instruments.qm import QMSim
+from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.platform import Platform
 from qibolab.serialize import (
     load_instrument_settings,
@@ -22,32 +22,35 @@ def create(runcard_path=RUNCARD):
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
-    controller = QMSim(
-        "qmopx", "0.0.0.0:0", simulation_duration=1000, cloud=False, time_of_flight=280
-    )
+    opxs = [OPXplus(i) for i in range(1, 4)]
+    controller = QMController("qm", "192.168.0.101:80", opxs=opxs, time_of_flight=280)
 
     # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels |= Channel("L3-25_a", port=controller[(("con1", 10), ("con1", 9))])
-    channels |= Channel("L3-25_b", port=controller[(("con2", 10), ("con2", 9))])
+    channels |= Channel("L3-25_a", port=controller.ports((("con1", 10), ("con1", 9))))
+    channels |= Channel("L3-25_b", port=controller.ports((("con2", 10), ("con2", 9))))
     # feedback
-    channels |= Channel("L2-5_a", port=controller[(("con1", 2), ("con1", 1))])
-    channels |= Channel("L2-5_b", port=controller[(("con2", 2), ("con2", 1))])
+    channels |= Channel(
+        "L2-5_a", port=controller.ports((("con1", 2), ("con1", 1)), input=True)
+    )
+    channels |= Channel(
+        "L2-5_b", port=controller.ports((("con2", 2), ("con2", 1)), input=True)
+    )
     # drive
     channels |= (
-        Channel(f"L3-1{i}", port=controller[(("con1", 2 * i), ("con1", 2 * i - 1))])
+        Channel(
+            f"L3-1{i}", port=controller.ports((("con1", 2 * i), ("con1", 2 * i - 1)))
+        )
         for i in range(1, 5)
     )
-    channels |= Channel("L3-15", port=controller[(("con3", 2), ("con3", 1))])
+    channels |= Channel("L3-15", port=controller.ports((("con3", 2), ("con3", 1))))
     # flux
-    channels |= (
-        Channel(f"L4-{i}", port=controller[(("con2", i),)]) for i in range(1, 6)
-    )
+    channels |= (Channel(f"L4-{i}", port=opxs[1].ports(i)) for i in range(1, 6))
     # TWPA
     channels |= "L4-26"
 
-    # Instantiate local oscillators (HARDCODED)
+    # Instantiate local oscillators
     local_oscillators = [
         LocalOscillator("lo_readout_a", "192.168.0.39"),
         LocalOscillator("lo_readout_b", "192.168.0.31"),

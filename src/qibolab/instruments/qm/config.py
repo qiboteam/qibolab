@@ -6,7 +6,7 @@ from qibo.config import raise_error
 
 from qibolab.pulses import PulseType, Rectangular
 
-from .ports import OPXOutput
+from .ports import OPXIQ, OPXInput, OPXOutput
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
@@ -36,17 +36,18 @@ class QMConfig:
                 Contains information about the controller and port number and
                 some parameters, such as offset, gain, filter, etc.).
         """
-        data = (
+        controllers = (
             self.controllers
             if isinstance(port, (OPXInput, OPXOutput))
             else self.octaves
         )
-        if port.device not in self.controllers:
-            data[port.device] = {}
-        if port.key in data:
-            data[port.device][port.key].update(port.serial)
+        if port.device not in controllers:
+            controllers[port.device] = {}
+        device = controllers[port.device]
+        if port.key in device:
+            device[port.key].update(port.serial)
         else:
-            data[port.device][port.key] = port.serial
+            device[port.key] = port.serial
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -79,7 +80,7 @@ class QMConfig:
                 LO connected to the same channel.
         """
         if f"drive{qubit.name}" not in self.elements:
-            if isinstance(qubit.drive.port, OPXOutput):
+            if isinstance(qubit.drive.port, OPXIQ):
                 lo_frequency = math.floor(qubit.drive.lo_frequency)
                 self.elements[f"drive{qubit.name}"] = {
                     "mixInputs": {
@@ -128,7 +129,7 @@ class QMConfig:
                 LO connected to the same channel.
         """
         if f"readout{qubit.name}" not in self.elements:
-            if isinstance(qubit.readout.port, OPXOutput):
+            if isinstance(qubit.readout.port, OPXIQ):
                 lo_frequency = math.floor(qubit.readout.lo_frequency)
                 self.elements[f"readout{qubit.name}"] = {
                     "mixInputs": {

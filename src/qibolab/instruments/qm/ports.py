@@ -1,9 +1,9 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import ClassVar, Dict, Optional, Union
 
 
 @dataclass
-class QMPort(Port):
+class QMPort:
     device: str
     number: int
 
@@ -29,7 +29,7 @@ class OPXOutput(QMPort):
     key: ClassVar[str] = "analog_outputs"
 
     offset: float = 0.0
-    filter: Optional[Dict[str, float]] = None
+    filter: Dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -42,7 +42,7 @@ class OPXInput(QMPort):
 
 
 @dataclass
-class OPXIQ(Port):
+class OPXIQ:
     i: Union[OPXOutput, OPXInput]
     q: Union[OPXOutput, OPXInput]
 
