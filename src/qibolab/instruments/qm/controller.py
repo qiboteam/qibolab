@@ -109,6 +109,10 @@ class QMController(Controller):
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
+        if isinstance(self.opxs, list):
+            self.opxs = {instr.name: instr for instr in self.opxs}
+        if isinstance(self.octaves, list):
+            self.octaves = {instr.name: instr for instr in self.octaves}
 
     def ports(self, name, input=False):
         if len(name) != 2:

@@ -45,9 +45,9 @@ class QMConfig:
             controllers[port.device] = {}
         device = controllers[port.device]
         if port.key in device:
-            device[port.key].update(port.serial)
+            device[port.key].update(port.config)
         else:
-            device[port.key] = port.serial
+            device[port.key] = port.config
 
     @staticmethod
     def iq_imbalance(g, phi):

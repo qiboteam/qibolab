@@ -4,7 +4,7 @@ from qm import SimulationConfig
 from qm.QuantumMachinesManager import QuantumMachinesManager
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from .driver import QMController
+from .controller import QMController
 
 
 @dataclass

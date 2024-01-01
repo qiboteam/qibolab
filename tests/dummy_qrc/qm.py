@@ -22,7 +22,7 @@ def create(runcard_path=RUNCARD):
 
     Used in ``test_instruments_qm.py`` and ``test_instruments_qmsim.py``
     """
-    opxs = [OPXplus(i) for i in range(1, 4)]
+    opxs = [OPXplus(f"con{i}") for i in range(1, 4)]
     controller = QMController("qm", "192.168.0.101:80", opxs=opxs, time_of_flight=280)
 
     # Create channel objects and map controllers to channels
@@ -99,6 +99,7 @@ def create(runcard_path=RUNCARD):
         qubits[q].flux.max_bias = 0.2
 
     instruments = {controller.name: controller}
+    instruments.update(controller.opxs)
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
     instruments = load_instrument_settings(runcard, instruments)

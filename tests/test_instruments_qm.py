@@ -5,8 +5,8 @@ import pytest
 from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-from qibolab.instruments.qm import QMOPX, QMPort
 from qibolab.instruments.qm.acquisition import Acquisition
+from qibolab.instruments.qm.ports import QMPort
 from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 from qibolab.sweeper import Parameter, Sweeper

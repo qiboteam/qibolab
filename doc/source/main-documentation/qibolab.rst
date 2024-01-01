@@ -706,7 +706,7 @@ A list of all the supported instruments follows:
 Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
     - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
-    - Quantum Machines: :class:`qibolab.instruments.qm.driver.QMOPX`
+    - Quantum Machines: :class:`qibolab.instruments.qm.controller.QMController`
     - Qblox: :class:`qibolab.instruments.qblox.cluster.Cluster`
     - Xilinx RFSoCs: :class:`qibolab.instruments.rfsoc.driver.RFSoC`
 

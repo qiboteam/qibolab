@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import ClassVar, Dict, Optional, Union
 
 
@@ -8,19 +8,31 @@ class QMPort:
     number: int
 
     key: ClassVar[Optional[str]] = None
-    _replace: ClassVar[dict] = {}
 
     @property
     def pair(self):
         return (self.device, self.number)
 
+    def setup(self, **kwargs):
+        for name, value in kwargs.items():
+            if not hasattr(self, name):
+                raise KeyError(f"Unknown port setting {name}.")
+            setattr(self, name, value)
+
     @property
-    def serial(self):
-        data = asdict(self)
-        del data["device"]
-        del data["number"]
-        for old, new in self._replace.items():
-            data[new] = data.pop(old)
+    def settings(self):
+        return {
+            fld.name: fld.value
+            for fld in fields(self)
+            if fld.metadata.get("settings", False)
+        }
+
+    @property
+    def config(self):
+        data = {}
+        for fld in fields(self):
+            if "config" in fld.metadata:
+                data[fld.metadata["config"]] = fld.value
         return {self.number: data}
 
 
@@ -28,17 +40,18 @@ class QMPort:
 class OPXOutput(QMPort):
     key: ClassVar[str] = "analog_outputs"
 
-    offset: float = 0.0
-    filter: Dict[str, float] = field(default_factory=dict)
+    offset: float = field(default=0.0, metadata={"config": "offset", "settings": True})
+    filter: Dict[str, float] = field(
+        default_factory=dict, metadata={"config": "filter", "settings": True}
+    )
 
 
 @dataclass
 class OPXInput(QMPort):
     key: ClassVar[str] = "analog_inputs"
-    _replace: ClassVar[dict] = {"gain": "gain_db"}
 
-    offset: float = 0.0
-    gain: int = 0
+    offset: float = field(default=0.0, metadata={"config": "offset", "settings": True})
+    gain: int = field(default=0, metadata={"config": "gain_db", "settings": True})
 
 
 @dataclass
@@ -50,41 +63,25 @@ class OPXIQ:
 @dataclass
 class OctaveOutput(QMPort):
     key: ClassVar[str] = "RF_outputs"
-    _replace: ClassVar[dict] = {
-        "lo_frequency": "LO_frequency",
-        "lo_source": "LO_source",
-    }
 
-    lo_frequency: float = 0.0
-    gain: float = 0
+    lo_frequency: float = field(
+        default=0.0, metadata={"config": "LO_frequency", "settings": True}
+    )
+    gain: int = field(default=0, metadata={"config": "gain", "settings": True})
     """Can be in the range [-20 : 0.5 : 20]dB."""
-    lo_source: str = "internal"
+    lo_source: str = field(default="internal", metadata={"config": "LO_source"})
     """Can be external or internal."""
-    output_mode: str = "always_on"
+    output_mode: str = field(default="always_on", metadata={"config": "output_mode"})
     """Can be: "always_on" / "always_off"/ "triggered" / "triggered_reversed"."""
 
 
 @dataclass
 class OctaveInput(QMPort):
     key: ClassVar[str] = "RF_inputs"
-    _replace: ClassVar[dict] = {
-        "lo_frequency": "LO_frequency",
-        "lo_source": "LO_source",
-    }
 
-    lo_frequency: float = 0.0
-    lo_source: str = "internal"
-    IF_mode_I: str = "direct"
-    IF_mode_Q: str = "direct"
-
-
-class Ports(dict):
-    def __init__(self, constructor, device):
-        self.constructor = constructor
-        self.device = device
-        super().__init__()
-
-    def __getitem__(self, number):
-        if number not in self:
-            self[number] = self.constructor(self.device, number)
-        return super().__getitem__(number)
+    lo_frequency: float = field(
+        default=0.0, metadata={"config": "LO_frequency", "settings": True}
+    )
+    lo_source: str = field(default="internal", metadata={"config": "LO_source"})
+    IF_mode_I: str = field(default="direct", metadata={"config": "IF_mode_I"})
+    IF_mode_Q: str = field(default="direct", metadata={"config": "IF_mode_Q"})
