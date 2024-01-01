@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from qibolab.instruments.abstract import Instrument
+
 from .ports import OctaveInput, OctaveOutput, OPXInput, OPXOutput, QMPort
 
 
@@ -17,7 +19,7 @@ class Ports(dict):
 
 
 @dataclass
-class QMDevice:
+class QMDevice(Instrument):
     output_type = QMPort
     input_type = QMPort
 
@@ -35,12 +37,33 @@ class QMDevice:
         else:
             return self.outputs[number]
 
-    def setup(self, port_settings):
-        for number, settings in port_settings.items():
-            if settings.pop("input", False):
-                self.inputs[number].setup(**settings)
-            else:
-                self.outputs[number].setup(**settings)
+    def connect(self):
+        """Only applicable for
+        :class:`qibolab.instruments.qm.controller.QMController`, not individual
+        devices."""
+
+    def start(self):
+        """Only applicable for
+        :class:`qibolab.instruments.qm.controller.QMController`, not individual
+        devices."""
+
+    def setup(self, port_settings=None):
+        if port_settings is not None:
+            for number, settings in port_settings.items():
+                if settings.pop("input", False):
+                    self.inputs[number].setup(**settings)
+                else:
+                    self.outputs[number].setup(**settings)
+
+    def stop(self):
+        """Only applicable for
+        :class:`qibolab.instruments.qm.controller.QMController`, not individual
+        devices."""
+
+    def disconnect(self):
+        """Only applicable for
+        :class:`qibolab.instruments.qm.controller.QMController`, not individual
+        devices."""
 
     def dump(self):
         data = {port.number: port.settings for port in self.outputs.values()}
