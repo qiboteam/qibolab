@@ -35,17 +35,20 @@ class QMDevice:
         else:
             return self.outputs[number]
 
-    def setup(self, **kwargs):
-        for number, settings in kwargs.items():
+    def setup(self, port_settings):
+        for number, settings in port_settings.items():
             if settings.pop("input", False):
                 self.inputs[number].setup(**settings)
             else:
                 self.outputs[number].setup(**settings)
 
     def dump(self):
-        data = {port.name: port.settings for port in self.outputs}
+        data = {port.number: port.settings for port in self.outputs.values()}
         data.update(
-            {port.name: port.settings | {"input": True} for port in self.inputs}
+            {
+                port.number: port.settings | {"input": True}
+                for port in self.inputs.values()
+            }
         )
         return data
 

@@ -22,7 +22,7 @@ class QMPort:
     @property
     def settings(self):
         return {
-            fld.name: fld.value
+            fld.name: getattr(self, fld.name)
             for fld in fields(self)
             if fld.metadata.get("settings", False)
         }
@@ -32,7 +32,7 @@ class QMPort:
         data = {}
         for fld in fields(self):
             if "config" in fld.metadata:
-                data[fld.metadata["config"]] = fld.value
+                data[fld.metadata["config"]] = getattr(self, fld.name)
         return {self.number: data}
 
 
@@ -40,7 +40,7 @@ class QMPort:
 class OPXOutput(QMPort):
     key: ClassVar[str] = "analog_outputs"
 
-    offset: float = field(default=0.0, metadata={"config": "offset", "settings": True})
+    offset: float = field(default=0.0, metadata={"config": "offset"})
     filter: Dict[str, float] = field(
         default_factory=dict, metadata={"config": "filter", "settings": True}
     )
@@ -50,7 +50,7 @@ class OPXOutput(QMPort):
 class OPXInput(QMPort):
     key: ClassVar[str] = "analog_inputs"
 
-    offset: float = field(default=0.0, metadata={"config": "offset", "settings": True})
+    offset: float = field(default=0.0, metadata={"config": "offset"})
     gain: int = field(default=0, metadata={"config": "gain_db", "settings": True})
 
 

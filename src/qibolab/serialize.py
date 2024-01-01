@@ -103,7 +103,10 @@ def load_instrument_settings(
 ) -> InstrumentMap:
     """Setup instruments according to the settings given in the runcard."""
     for name, settings in runcard.get("instruments", {}).items():
-        instruments[name].setup(**settings)
+        try:
+            instruments[name].setup(**settings)
+        except TypeError:
+            instruments[name].setup(settings)
     return instruments
 
 
@@ -155,16 +158,18 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     data = {}
     for name, instrument in instruments.items():
         try:
-            # TODO: Migrate all instruments to this approach
-            # (I think it is also useful for qblox)
-            data[name] = instrument.dump()
-        except AttributeError:
             settings = instrument.settings
             if settings is not None:
                 if isinstance(settings, dict):
                     data[name] = settings
                 else:
                     data[name] = settings.dump()
+        except AttributeError:
+            # TODO: Migrate all instruments to this approach
+            # (I think it is also useful for qblox)
+            settings = instrument.dump()
+            if len(settings) > 0:
+                data[name] = settings
     return data
 
 

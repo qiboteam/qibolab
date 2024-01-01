@@ -9,6 +9,18 @@ settings:
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 instruments:
+    con2:
+        1:
+            filter: {}
+        2:
+            filter: {}
+        3:
+            filter: {}
+        4:
+            filter: {}
+        5:
+            filter: {}
+
     lo_readout_a:
         frequency: 7_300_000_000
         power: 18
