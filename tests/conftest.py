@@ -6,7 +6,7 @@ import pytest
 from qibolab import PLATFORMS, create_platform
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
-DUMMY_PLATFORM_NAMES = ["qm", "qblox", "rfsoc", "zurich"]
+DUMMY_PLATFORM_NAMES = ["qm", "qm_octave", "qblox", "rfsoc", "zurich"]
 
 
 def pytest_addoption(parser):

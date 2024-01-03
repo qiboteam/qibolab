@@ -3,7 +3,15 @@ from typing import Optional
 
 from qibolab.instruments.abstract import Instrument
 
-from .ports import OPXIQ, OctaveInput, OctaveOutput, OPXInput, OPXOutput, QMPort
+from .ports import (
+    OPXIQ,
+    OctaveInput,
+    OctaveOutput,
+    OPXInput,
+    OPXOutput,
+    QMInput,
+    QMOutput,
+)
 
 
 class Ports(dict):
@@ -24,8 +32,8 @@ class QMDevice(Instrument):
     port: Optional[int] = None
     connectivity: Optional["QMDevice"] = None
 
-    outputs: Optional[Ports[int, QMPort]] = None
-    inputs: Optional[Ports[int, QMPort]] = None
+    outputs: Optional[Ports[int, QMOutput]] = None
+    inputs: Optional[Ports[int, QMInput]] = None
 
     def ports(self, number, input=False):
         if input:
@@ -43,13 +51,17 @@ class QMDevice(Instrument):
         :class:`qibolab.instruments.qm.controller.QMController`, not individual
         devices."""
 
-    def setup(self, port_settings=None):
-        if port_settings is not None:
-            for number, settings in port_settings.items():
-                if settings.pop("input", False):
-                    self.inputs[number].setup(**settings)
-                else:
-                    self.outputs[number].setup(**settings)
+    def setup(self, **kwargs):
+        for name, settings in kwargs.items():
+            number = int(name[1:])
+            if name[0] == "o":
+                self.outputs[number].setup(**settings)
+            elif name[0] == "i":
+                self.inputs[number].setup(**settings)
+            else:
+                raise ValueError(
+                    f"Invalid port name {name} in instrument settings for {self.name}."
+                )
 
     def stop(self):
         """Only applicable for
@@ -62,14 +74,7 @@ class QMDevice(Instrument):
         devices."""
 
     def dump(self):
-        data = {port.number: port.settings for port in self.outputs.values()}
-        data.update(
-            {
-                port.number: port.settings | {"input": True}
-                for port in self.inputs.values()
-            }
-        )
-        return data
+        return {port.name: port.settings for port in self.outputs.values()}
 
 
 @dataclass

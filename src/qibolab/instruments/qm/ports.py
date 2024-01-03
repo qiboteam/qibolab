@@ -36,8 +36,20 @@ class QMPort:
         return {self.number: data}
 
 
+class QMOutput(QMPort):
+    @property
+    def name(self):
+        return f"o{self.number}"
+
+
+class QMInput(QMPort):
+    @property
+    def name(self):
+        return f"i{self.number}"
+
+
 @dataclass
-class OPXOutput(QMPort):
+class OPXOutput(QMOutput):
     key: ClassVar[str] = "analog_outputs"
 
     offset: float = field(default=0.0, metadata={"config": "offset"})
@@ -47,7 +59,7 @@ class OPXOutput(QMPort):
 
 
 @dataclass
-class OPXInput(QMPort):
+class OPXInput(QMInput):
     key: ClassVar[str] = "analog_inputs"
 
     offset: float = field(default=0.0, metadata={"config": "offset"})
@@ -61,7 +73,7 @@ class OPXIQ:
 
 
 @dataclass
-class OctaveOutput(QMPort):
+class OctaveOutput(QMOutput):
     key: ClassVar[str] = "RF_outputs"
 
     lo_frequency: float = field(
@@ -78,7 +90,7 @@ class OctaveOutput(QMPort):
 
 
 @dataclass
-class OctaveInput(QMPort):
+class OctaveInput(QMInput):
     key: ClassVar[str] = "RF_inputs"
 
     lo_frequency: float = field(

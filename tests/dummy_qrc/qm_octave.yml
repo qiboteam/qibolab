@@ -20,22 +20,27 @@ instruments:
             filter: {}
         o5:
             filter: {}
-
-    lo_readout_a:
-        frequency: 7_300_000_000
-        power: 18
-    lo_readout_b:
-        frequency: 7_900_000_000
-        power: 15
-    lo_drive_low:
-        frequency: 4_700_000_000
-        power: 16
-    lo_drive_mid:
-        frequency: 5_600_000_000
-        power: 16
-    lo_drive_high:
-        frequency: 6_500_000_000
-        power: 16
+    octave1:
+        o1:
+            lo_frequency: 4_700_000_000
+        o2:
+            lo_frequency: 5_600_000_000
+        o3:
+            lo_frequency: 6_500_000_000
+        o4:
+            lo_frequency: 6_500_000_000
+        o5:
+            lo_frequency: 7_300_000_000
+        i1:
+            lo_frequency: 7_300_000_000
+    octave2:
+        o5:
+            lo_frequency: 7_900_000_000
+        i1:
+            lo_frequency: 7_900_000_000
+    octave3:
+        o1:
+            lo_frequency: 4_700_000_000
     twpa_a:
         frequency: 6_511_000_000
         power: 4.5
