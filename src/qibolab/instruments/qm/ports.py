@@ -74,6 +74,8 @@ class OctaveOutput(QMPort):
     output_mode: str = field(default="always_on", metadata={"config": "output_mode"})
     """Can be: "always_on" / "always_off"/ "triggered" / "triggered_reversed"."""
 
+    opx_port: Optional[OPXOutput] = None
+
 
 @dataclass
 class OctaveInput(QMPort):
@@ -85,3 +87,5 @@ class OctaveInput(QMPort):
     lo_source: str = field(default="internal", metadata={"config": "LO_source"})
     IF_mode_I: str = field(default="direct", metadata={"config": "IF_mode_I"})
     IF_mode_Q: str = field(default="direct", metadata={"config": "IF_mode_Q"})
+
+    opx_port: Optional[OPXOutput] = None

@@ -13,7 +13,7 @@ from qibolab.sweeper import Parameter
 
 from .config import QMConfig
 from .devices import Octave, OPXplus
-from .ports import OPXIQ, OctaveInput, OctaveOutput, OPXInput, OPXOutput
+from .ports import OPXIQ, OPXInput, OPXOutput
 from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
@@ -37,7 +37,7 @@ def declare_octaves(octaves, host):
     if len(octaves) > 0:
         config = QmOctaveConfig()
         # config.set_calibration_db(os.getcwd())
-        for octave in octaves:
+        for octave in octaves.values():
             config.add_device_info(octave.name, host, OCTAVE_ADDRESS + octave.port)
     return config
 
@@ -185,17 +185,6 @@ class QMController(Controller):
             )
         return results
 
-    def register_port(self, port):
-        if isinstance(port, OPXIQ):
-            self.register_port(port.i)
-            self.register_port(port.q)
-        else:
-            self.config.register_port(port)
-            if isinstance(port, (OctaveInput, OctaveOutput)):
-                self.config.octaves[port.device]["connectivity"] = self.octaves[
-                    port.device
-                ].connectivity
-
     def create_sequence(self, qubits, sequence, sweepers):
         """Translates a :class:`qibolab.pulses.PulseSequence` to a
         :class:`qibolab.instruments.qm.sequence.Sequence`.
@@ -219,9 +208,9 @@ class QMController(Controller):
         for pulse in sorted(sequence.pulses, key=sort_key):
             qubit = qubits[pulse.qubit]
 
-            self.register_port(getattr(qubit, pulse.type.name.lower()).port)
+            self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
             if pulse.type is PulseType.READOUT:
-                self.register_port(qubit.feedback.port)
+                self.config.register_port(qubit.feedback.port)
 
             self.config.register_element(
                 qubit, pulse, self.time_of_flight, self.smearing
@@ -256,7 +245,7 @@ class QMController(Controller):
         # always at sweetspot even when they are not used
         for qubit in qubits.values():
             if qubit.flux:
-                self.register_port(qubit.flux.port)
+                self.config.register_port(qubit.flux.port)
                 self.config.register_flux_element(qubit)
 
         qmsequence = self.create_sequence(qubits, sequence, sweepers)
@@ -280,6 +269,11 @@ class QMController(Controller):
             with qua.stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
                     qmpulse.acquisition.download(*buffer_dims)
+
+        import json
+
+        with open("qm_config.json", "w") as file:
+            file.write(json.dumps(self.config.__dict__, indent=4))
 
         if self.script_file_name is not None:
             with open(self.script_file_name, "w") as file:

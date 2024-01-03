@@ -6,7 +6,7 @@ from qibo.config import raise_error
 
 from qibolab.pulses import PulseType, Rectangular
 
-from .ports import OPXIQ, OPXInput, OPXOutput
+from .ports import OPXIQ, OctaveInput, OctaveOutput
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
@@ -36,18 +36,22 @@ class QMConfig:
                 Contains information about the controller and port number and
                 some parameters, such as offset, gain, filter, etc.).
         """
-        controllers = (
-            self.controllers
-            if isinstance(port, (OPXInput, OPXOutput))
-            else self.octaves
-        )
-        if port.device not in controllers:
-            controllers[port.device] = {}
-        device = controllers[port.device]
-        if port.key in device:
-            device[port.key].update(port.config)
+        if isinstance(port, OPXIQ):
+            self.register_port(port.i)
+            self.register_port(port.q)
         else:
-            device[port.key] = port.config
+            is_octave = isinstance(port, (OctaveOutput, OctaveInput))
+            controllers = self.octaves if is_octave else self.controllers
+            if port.device not in controllers:
+                controllers[port.device] = {}
+            device = controllers[port.device]
+            if port.key in device:
+                device[port.key].update(port.config)
+            else:
+                device[port.key] = port.config
+            if is_octave:
+                device["connectivity"] = port.opx_port.i.device
+                self.register_port(port.opx_port)
 
     @staticmethod
     def iq_imbalance(g, phi):

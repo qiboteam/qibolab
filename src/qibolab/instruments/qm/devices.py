@@ -3,7 +3,7 @@ from typing import Optional
 
 from qibolab.instruments.abstract import Instrument
 
-from .ports import OctaveInput, OctaveOutput, OPXInput, OPXOutput, QMPort
+from .ports import OPXIQ, OctaveInput, OctaveOutput, OPXInput, OPXOutput, QMPort
 
 
 class Ports(dict):
@@ -20,16 +20,12 @@ class Ports(dict):
 
 @dataclass
 class QMDevice(Instrument):
-    output_type = QMPort
-    input_type = QMPort
-
     name: str
+    port: Optional[int] = None
+    connectivity: Optional["QMDevice"] = None
+
     outputs: Optional[Ports[int, QMPort]] = None
     inputs: Optional[Ports[int, QMPort]] = None
-
-    def __post_init__(self):
-        self.outputs = Ports(self.output_type, self.name)
-        self.inputs = Ports(self.input_type, self.name)
 
     def ports(self, number, input=False):
         if input:
@@ -78,14 +74,21 @@ class QMDevice(Instrument):
 
 @dataclass
 class OPXplus(QMDevice):
-    output_type = OPXOutput
-    input_type = OPXInput
+    def __post_init__(self):
+        self.outputs = Ports(OPXOutput, self.name)
+        self.inputs = Ports(OPXInput, self.name)
 
 
 @dataclass
 class Octave(QMDevice):
-    output_type = OctaveOutput
-    input_type = OctaveInput
+    def __post_init__(self):
+        self.outputs = Ports(OctaveOutput, self.name)
+        self.inputs = Ports(OctaveInput, self.name)
 
-    port: int = 0
-    connectivity: Optional[str] = None
+    def ports(self, number, input=False):
+        port = super().ports(number, input)
+        if port.opx_port is None:
+            iport = self.connectivity.ports(2 * number - 1, input)
+            qport = self.connectivity.ports(2 * number, input)
+            port.opx_port = OPXIQ(iport, qport)
+        return port
