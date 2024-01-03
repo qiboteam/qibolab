@@ -25,14 +25,8 @@ class MCAttenuator(Instrument):
         http = urllib3.PoolManager()
         http.request("GET", f"http://{self.address}/SETATT={attenuation}")
 
-    def setup(self, attenuation: float, **kwargs):
-        """Assigns the attenuation level on the attenuator.
-
-        Arguments:
-            attenuation(float
-            ): Attenuation setting in dB. Ranges from 0 to 35.
-        """
-        self.attenuation = attenuation
+    def setup(self):
+        pass
 
     def start(self):
         pass

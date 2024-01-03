@@ -31,31 +31,19 @@ class RFSOC(Controller):
 
     PortType = RFSOCPort
 
-    def __init__(self, name, address, port=8080):
-        super().__init__(name, address)
-        self.device = IcarusQRFSoC(address, port)
-
-        self.channel_delay_offset_dac = 0
-        self.channel_delay_offset_adc = 0
-
-    def setup(
+    def __init__(
         self,
-        dac_sampling_rate: float,
-        adc_sampling_rate: float,
+        name,
+        address,
+        port=8080,
+        dac_sampling_rate=5898.24,
+        adc_sampling_rate=1966.08,
         delay_samples_offset_dac: int = 0,
         delay_samples_offset_adc: int = 0,
         analog_settings: List["dict[str, int]"] = [],
-        **kwargs,
     ):
-        """Performs the setup for the IcarusQ RFSoC.
-
-        Arguments:
-            dac_sampling_rate (float): Sampling rate of the 16 DACs in MHz.
-            adc_sampling_rate (float): Sampling rate of the 16 ADCs in MHz.
-            delay_samples_offset_dac (int): Number of clock cycles (per 16 DAC samples) to delay all DAC playback
-            delay_samples_offset_adc (int): Number of clock cycles (per 8 ADC samples) to delay all ADC acquistion
-            analog_settings (list): List of analog settings per DAC/ADC channel to set
-        """
+        super().__init__(name, address)
+        self.device = IcarusQRFSoC(address, port)
 
         self.device.dac_sampling_rate = dac_sampling_rate
         self.device.adc_sampling_rate = adc_sampling_rate
@@ -71,6 +59,11 @@ class RFSOC(Controller):
 
         for channel_settings in analog_settings:
             self.device.set_channel_analog_settings(**channel_settings)
+
+        self.device.set_adc_trigger_mode(TRIGGER_MODE.SLAVE)
+
+    def setup(self):
+        pass
 
     def play(
         self,
@@ -228,41 +221,27 @@ class RFSOC_RO(RFSOC):
         Parameter.start,
     }
 
-    def __init__(self, name, address):
-        super().__init__(name, address)
-
-        self.qubit_adc_map = {}
-        self.adcs_to_read: List[int] = None
-
-    def setup(
+    def __init__(
         self,
-        dac_sampling_rate: float,
-        adc_sampling_rate: float,
+        name,
+        address,
+        dac_sampling_rate=5898.24,
+        adc_sampling_rate=1966.08,
         delay_samples_offset_dac: int = 0,
         delay_samples_offset_adc: int = 0,
         analog_settings: List["dict[str, int]"] = [],
-        adcs_to_read: List[int] = [],
-        **kwargs,
     ):
-        """Setup the board and assign ADCs to be read.
-
-        Arguments:
-            dac_sampling_rate (float): Sampling rate of the 16 DACs in MHz.
-            adc_sampling_rate (float): Sampling rate of the 16 ADCs in MHz.
-            delay_samples_offset_dac (int): Number of clock cycles (per 16 DAC samples) to delay all DAC playback.
-            delay_samples_offset_adc (int): Number of clock cycles (per 8 ADC samples) to delay all ADC acquistion.
-            analog_settings (list): List of analog settings per DAC/ADC channel to set.
-            adcs_to_read (list[int]): List of ADC channels to be read.
-        """
-
-        super().setup(
-            dac_sampling_rate,
-            adc_sampling_rate,
-            delay_samples_offset_dac,
-            delay_samples_offset_adc,
-            analog_settings,
+        super().__init__(
+            name,
+            address,
+            dac_sampling_rate=dac_sampling_rate,
+            adc_sampling_rate=adc_sampling_rate,
+            delay_samples_offset_dac=delay_samples_offset_dac,
+            delay_samples_offset_adc=delay_samples_offset_adc,
+            analog_settings=analog_settings,
         )
-        self.adcs_to_read = adcs_to_read
+
+        self.adcs_to_read: List[int] = None
 
         self.device.init_qunit()
         self.device.set_adc_trigger_mode(TRIGGER_MODE.MASTER)
@@ -319,7 +298,7 @@ class RFSOC_RO(RFSOC):
         elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
             self.device.set_adc_trigger_mode(1)
             self.device.set_qunit_mode(1)
-            raw = self.device.start_qunit_acquisition(options.nshots)
+            raw = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
             res = {qubit: SampleResults(states) for qubit, states in raw.items()}
             for ro_pulse in readout_pulses:
                 res[ro_pulse.serial] = res[ro_pulse.qubit]
@@ -379,6 +358,34 @@ class RFSOC_RO(RFSOC):
         options: ExecutionParameters,
         *sweeper: Sweeper,
     ):
+        # Record pulse values before sweeper modification
+        bsv = []
+        for sweep in sweeper:
+            param_name = sweep.parameter.name.lower()
+            base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
+            bsv.append(base_sweeper_values)
+
+        res = self._sweep(qubits, couplers, sequence, options, *sweeper)
+
+        # Reset pulse values back to original values
+        for sweep, base_sweeper_values in zip(sweeper, bsv):
+            param_name = sweep.parameter.name.lower()
+            for pulse, value in zip(sweep.pulses, base_sweeper_values):
+                setattr(pulse, param_name, value)
+
+                if pulse.type is PulseType.READOUT:
+                    res[pulse.serial] = res[pulse.qubit]
+
+        return res
+
+    def _sweep(
+        self,
+        qubits: Dict[QubitId, Qubit],
+        couplers,
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        *sweeper: Sweeper,
+    ):
         """Recursive python-based sweeper functionaltiy for the IcarusQ
         RFSoC."""
         if len(sweeper) == 0:
@@ -403,7 +410,7 @@ class RFSOC_RO(RFSOC):
                 sweeper_value_setter_fn(pulse, param_name, value, base)
 
             self.merge_sweep_results(
-                ret, self.sweep(qubits, couplers, sequence, options, *sweeper[1:])
+                ret, self._sweep(qubits, couplers, sequence, options, *sweeper[1:])
             )
 
         return ret
