@@ -343,6 +343,10 @@ class Zurich(Controller):
         self._ports = {}
         self.settings = None
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         if self.is_connected is False:
             # To fully remove logging #configure_logging=False

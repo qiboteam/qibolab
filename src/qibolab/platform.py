@@ -144,6 +144,14 @@ class Platform:
             ]
         )
 
+    @property
+    def sampling_rate(self):
+        """Sampling rate of control electronics in giga samples per second
+        (GSps)."""
+        for instrument in self.instruments.values():
+            if isinstance(instrument, Controller):
+                return instrument.sampling_rate
+
     def connect(self):
         """Connect to all instruments."""
         if not self.is_connected:

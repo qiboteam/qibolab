@@ -9,6 +9,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -37,6 +38,10 @@ class QbloxController(Controller):
         self.modules: dict = modules
         self._reference_clock = "internal" if internal_reference_clock else "external"
         signal.signal(signal.SIGTERM, self._termination_handler)
+
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
 
     def connect(self):
         """Connects to the modules."""
