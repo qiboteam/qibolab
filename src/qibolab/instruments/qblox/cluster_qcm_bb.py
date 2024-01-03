@@ -115,8 +115,6 @@ class ClusterQCM_BB(ClusterModule):
         super().__init__(name, address)
         self.ports: dict = {}
         self.device: QbloxQrmQcm = None
-        # self.settings: dict = {}
-        self.device = None
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}
