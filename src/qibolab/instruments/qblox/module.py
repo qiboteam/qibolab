@@ -31,12 +31,12 @@ class ClusterModule(Instrument):
         """
 
         super().__init__(name, address)
-        self.ports: dict = {}
+        self._ports: dict = {}
 
-    def port(self, name: str, out: bool = True):
+    def ports(self, name: str, out: bool = True):
         def count(cls):
-            return len(list(filter(lambda x: isinstance(x, cls), self.ports.values())))
+            return len(list(filter(lambda x: isinstance(x, cls), self._ports.values())))
 
         port_cls = QbloxOutputPort if out else QbloxInputPort
-        self.ports[name] = port_cls(self, port_number=count(port_cls), port_name=name)
-        return self.ports[name]
+        self._ports[name] = port_cls(self, port_number=count(port_cls), port_name=name)
+        return self._ports[name]

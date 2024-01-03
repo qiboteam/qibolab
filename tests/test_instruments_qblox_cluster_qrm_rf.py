@@ -128,18 +128,18 @@ def test_connect(connected_qrm_rf: ClusterQRM_RF):
 
     assert default_sequencer.get("mod_en_awg") == True
 
-    assert qrm_rf.ports["o1"].nco_freq == 0
-    assert qrm_rf.ports["o1"].nco_phase_offs == 0
+    assert qrm_rf._ports["o1"].nco_freq == 0
+    assert qrm_rf._ports["o1"].nco_phase_offs == 0
 
     assert default_sequencer.get("demod_en_acq") == True
 
-    assert qrm_rf.ports["i1"].acquisition_hold_off == TIME_OF_FLIGHT
-    assert qrm_rf.ports["i1"].acquisition_duration == ACQUISITION_DURATION
-    assert type(qrm_rf.ports["o1"]) == QbloxOutputPort
-    assert type(qrm_rf.ports["i1"]) == QbloxInputPort
-    output_port: QbloxOutputPort = qrm_rf.ports["o1"]
+    assert qrm_rf._ports["i1"].acquisition_hold_off == TIME_OF_FLIGHT
+    assert qrm_rf._ports["i1"].acquisition_duration == ACQUISITION_DURATION
+    assert type(qrm_rf._ports["o1"]) == QbloxOutputPort
+    assert type(qrm_rf._ports["i1"]) == QbloxInputPort
+    output_port: QbloxOutputPort = qrm_rf._ports["o1"]
     assert output_port.sequencer_number == 0
-    input_port: QbloxInputPort = qrm_rf.ports["i1"]
+    input_port: QbloxInputPort = qrm_rf._ports["i1"]
     assert input_port.input_sequencer_number == 0
     assert input_port.output_sequencer_number == 0
 
@@ -160,12 +160,12 @@ def test_pulse_sequence(connected_platform, connected_qrm_rf: ClusterQRM_RF):
             )
         )
     qubits = connected_platform.qubits
-    connected_qrm_rf.ports["i1"].hardware_demod_en = True
+    connected_qrm_rf._ports["i1"].hardware_demod_en = True
     connected_qrm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qrm_rf.upload()
     connected_qrm_rf.play_sequence()
     results = connected_qrm_rf.acquire()
-    connected_qrm_rf.ports["i1"].hardware_demod_en = False
+    connected_qrm_rf._ports["i1"].hardware_demod_en = False
     connected_qrm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qrm_rf.upload()
     connected_qrm_rf.play_sequence()

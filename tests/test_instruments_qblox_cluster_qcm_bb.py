@@ -88,9 +88,9 @@ def test_connect(connected_qcm_bb: ClusterQCM_BB):
 
     assert qcm_bb.is_connected
     assert not qcm_bb is None
-    for idx, port in enumerate(qcm_bb.ports):
-        assert type(qcm_bb.ports[port]) == QbloxOutputPort
-        assert qcm_bb.ports[port].sequencer_number == idx
+    for idx, port in enumerate(qcm_bb._ports):
+        assert type(qcm_bb._ports[port]) == QbloxOutputPort
+        assert qcm_bb._ports[port].sequencer_number == idx
 
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
     o2_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o2"]]
@@ -131,26 +131,26 @@ def test_connect(connected_qcm_bb: ClusterQCM_BB):
     o1_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o1"]]
     assert math.isclose(o1_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert o1_default_sequencer.get("mod_en_awg") == True
-    assert qcm_bb.ports["o1"].nco_freq == 0
-    assert qcm_bb.ports["o1"].nco_phase_offs == 0
+    assert qcm_bb._ports["o1"].nco_freq == 0
+    assert qcm_bb._ports["o1"].nco_phase_offs == 0
 
     o2_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o2"]]
     assert math.isclose(o2_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert o2_default_sequencer.get("mod_en_awg") == True
-    assert qcm_bb.ports["o2"].nco_freq == 0
-    assert qcm_bb.ports["o2"].nco_phase_offs == 0
+    assert qcm_bb._ports["o2"].nco_freq == 0
+    assert qcm_bb._ports["o2"].nco_phase_offs == 0
 
     o3_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o3"]]
     assert math.isclose(o3_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert o3_default_sequencer.get("mod_en_awg") == True
-    assert qcm_bb.ports["o3"].nco_freq == 0
-    assert qcm_bb.ports["o3"].nco_phase_offs == 0
+    assert qcm_bb._ports["o3"].nco_freq == 0
+    assert qcm_bb._ports["o3"].nco_phase_offs == 0
 
     o4_default_sequencer = qcm_bb.device.sequencers[qcm_bb.DEFAULT_SEQUENCERS["o4"]]
     assert math.isclose(o4_default_sequencer.get("gain_awg_path1"), 1, rel_tol=1e-4)
     assert o1_default_sequencer.get("mod_en_awg") == True
-    assert qcm_bb.ports["o4"].nco_freq == 0
-    assert qcm_bb.ports["o4"].nco_phase_offs == 0
+    assert qcm_bb._ports["o4"].nco_freq == 0
+    assert qcm_bb._ports["o4"].nco_phase_offs == 0
 
 
 @pytest.mark.qpu
@@ -161,12 +161,12 @@ def test_pulse_sequence(connected_platform, connected_qcm_bb: ClusterQCM_BB):
     ps.add(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
     ps.add(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
     qubits = connected_platform.qubits
-    connected_qcm_bb.ports["o2"].hardware_mod_en = True
+    connected_qcm_bb._ports["o2"].hardware_mod_en = True
     connected_qcm_bb.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_bb.upload()
     connected_qcm_bb.play_sequence()
 
-    connected_qcm_bb.ports["o2"].hardware_mod_en = False
+    connected_qcm_bb._ports["o2"].hardware_mod_en = False
     connected_qcm_bb.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_bb.upload()
     connected_qcm_bb.play_sequence()

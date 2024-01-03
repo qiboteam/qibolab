@@ -206,22 +206,22 @@ class ClusterQRM_RF(ClusterModule):
             # then set the value loaded from the runcard
             try:
                 if "o1" in self.settings:
-                    self.ports["o1"].attenuation = self.settings["o1"]["attenuation"]
+                    self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
                     if self.settings["o1"]["lo_frequency"]:
-                        self.ports["o1"].lo_enabled = True
-                        self.ports["o1"].lo_frequency = self.settings["o1"][
+                        self._ports["o1"].lo_enabled = True
+                        self._ports["o1"].lo_frequency = self.settings["o1"][
                             "lo_frequency"
                         ]
-                    self.ports["o1"].hardware_mod_en = True
-                    self.ports["o1"].nco_freq = 0
-                    self.ports["o1"].nco_phase_offs = 0
+                    self._ports["o1"].hardware_mod_en = True
+                    self._ports["o1"].nco_freq = 0
+                    self._ports["o1"].nco_phase_offs = 0
 
                 if "i1" in self.settings:
-                    self.ports["i1"].hardware_demod_en = True
-                    self.ports["i1"].acquisition_hold_off = self.settings["i1"][
+                    self._ports["i1"].hardware_demod_en = True
+                    self._ports["i1"].acquisition_hold_off = self.settings["i1"][
                         "acquisition_hold_off"
                     ]
-                    self.ports["i1"].acquisition_duration = self.settings["i1"][
+                    self._ports["i1"].acquisition_duration = self.settings["i1"][
                         "acquisition_duration"
                     ]
             except Exception as error:
@@ -294,7 +294,7 @@ class ClusterQRM_RF(ClusterModule):
                         target.set(parameter, value)
 
         # if hardware demodulation is enabled, configure nco_frequency and classification parameters
-        if self.ports["i1"].hardware_demod_en or self.ports["o1"].hardware_mod_en:
+        if self._ports["i1"].hardware_demod_en or self._ports["o1"].hardware_mod_en:
             self.device.sequencers[next_sequencer_number].set("nco_freq", frequency)
             # It assumes all pulses in non_overlapping_pulses set have the same frequency.
             # Non-overlapping pulses of different frequencies on the same qubit channel, with hardware_demod_en
@@ -302,15 +302,15 @@ class ClusterQRM_RF(ClusterModule):
             # TODO: Throw error in that event or implement non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
-        # if self.ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
-        if self.ports["i1"].hardware_demod_en and not qubits[qubit].threshold is None:
+        # if self._ports["i1"].hardware_demod_en and qubit in self.classification_parameters:
+        if self._ports["i1"].hardware_demod_en and not qubits[qubit].threshold is None:
             self.device.sequencers[next_sequencer_number].set(
                 "thresholded_acq_rotation",
                 (qubits[qubit].iq_angle * 360 / (2 * np.pi)) % 360,
             )
             self.device.sequencers[next_sequencer_number].set(
                 "thresholded_acq_threshold",
-                qubits[qubit].threshold * self.ports["i1"].acquisition_duration,
+                qubits[qubit].threshold * self._ports["i1"].acquisition_duration,
             )
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -440,7 +440,7 @@ class ClusterQRM_RF(ClusterModule):
                     # attempt to save the waveforms to the sequencer waveforms buffer
                     try:
                         sequencer.waveforms_buffer.add_waveforms(
-                            pulse, self.ports[port].hardware_mod_en, sweepers
+                            pulse, self._ports[port].hardware_mod_en, sweepers
                         )
                         sequencer.pulses.add(pulse)
                         pulses_to_be_processed.remove(pulse)
@@ -571,7 +571,7 @@ class ClusterQRM_RF(ClusterModule):
                     #     if sweeper.qubits and sequencer.qubit in [_.name for _ in sweeper.qubits]:
                     #         # plays an active role
                     #         if sweeper.parameter == Parameter.bias:
-                    #             reference_value = self.ports[port].offset
+                    #             reference_value = self._ports[port].offset
                     #             # create QbloxSweepers and attach them to qibolab sweeper
                     #             if sweeper.type == SweeperType.ABSOLUTE:
                     #                 sweeper.qs = QbloxSweeper.from_sweeper(
@@ -664,8 +664,8 @@ class ClusterQRM_RF(ClusterModule):
 
                 body_block.append(f"wait_sync {minimum_delay_between_instructions}")
                 if (
-                    self.ports["i1"].hardware_demod_en
-                    or self.ports["o1"].hardware_mod_en
+                    self._ports["i1"].hardware_demod_en
+                    or self._ports["o1"].hardware_mod_en
                 ):
                     body_block.append("reset_ph")
                     body_block.append_spacer()
@@ -686,7 +686,7 @@ class ClusterQRM_RF(ClusterModule):
                     ):
                         pulses_block.append(f"wait {pulses[n].sweeper.register}")
 
-                    if self.ports["o1"].hardware_mod_en:
+                    if self._ports["o1"].hardware_mod_en:
                         # # Set frequency
                         # _if = self.get_if(pulses[n])
                         # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
@@ -705,14 +705,14 @@ class ClusterQRM_RF(ClusterModule):
                             )
 
                     if pulses[n].type == PulseType.READOUT:
-                        delay_after_play = self.ports["i1"].acquisition_hold_off
+                        delay_after_play = self._ports["i1"].acquisition_hold_off
 
                         if len(pulses) > n + 1:
                             # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
                             delay_after_acquire = (
                                 pulses[n + 1].start
                                 - pulses[n].start
-                                - self.ports["i1"].acquisition_hold_off
+                                - self._ports["i1"].acquisition_hold_off
                             )
                         else:
                             delay_after_acquire = (
@@ -721,7 +721,7 @@ class ClusterQRM_RF(ClusterModule):
                             time_between_repetitions = (
                                 repetition_duration
                                 - sequence_total_duration
-                                - self.ports["i1"].acquisition_hold_off
+                                - self._ports["i1"].acquisition_hold_off
                             )
                             assert time_between_repetitions > 0
 
@@ -972,8 +972,8 @@ class ClusterQRM_RF(ClusterModule):
         # Any could be used, but we always use 'scope_acquisition' acquisition of the default sequencer to store it.
 
         acquisitions = {}
-        duration = self.ports["i1"].acquisition_duration
-        hardware_demod_enabled = self.ports["i1"].hardware_demod_en
+        duration = self._ports["i1"].acquisition_duration
+        hardware_demod_enabled = self._ports["i1"].hardware_demod_en
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
