@@ -40,14 +40,14 @@ def qcm_rf(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_controller, connected_cluster):
-    qcm_rf = get_qcm_rf(connected_controller, connected_cluster)
+def connected_qcm_rf(connected_controller):
+    qcm_rf = get_qcm_rf(connected_controller)
     qcm_rf.setup(**SETTINGS)
     for port in SETTINGS:
-        qcm_rf.port(port)
-    qcm_rf.connect()
-
+        qcm_rf.ports(port)
+    qcm_rf.connect(connected_controller.cluster)
     yield qcm_rf
+
     qcm_rf.disconnect()
     connected_controller.disconnect()
 

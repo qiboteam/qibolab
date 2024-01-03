@@ -39,12 +39,12 @@ def qrm_rf(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qrm_rf(connected_controller, connected_cluster):
-    qrm_rf = get_qrm_rf(connected_controller, connected_cluster)
+def connected_qrm_rf(connected_controller):
+    qrm_rf = get_qrm_rf(connected_controller)
     qrm_rf.setup(**SETTINGS)
-    qrm_rf.port("o1")
-    qrm_rf.port("i1", out=False)
-    qrm_rf.connect()
+    qrm_rf.ports("o1")
+    qrm_rf.ports("i1", out=False)
+    qrm_rf.connect(connected_controller.cluster)
 
     yield qrm_rf
     qrm_rf.disconnect()

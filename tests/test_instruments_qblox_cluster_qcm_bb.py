@@ -12,28 +12,11 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from .qblox_fixtures import connected_controller, controller
 
 O1_OUTPUT_CHANNEL = "L4-5"
-O1_OFFSET = 0.2227
 O2_OUTPUT_CHANNEL = "L4-1"
-O2_OFFSET = 0.3780
 O3_OUTPUT_CHANNEL = "L4-2"
-O3_OFFSET = -0.8899
 O4_OUTPUT_CHANNEL = "L4-3"
-O4_OFFSET = 0.5890
 
-SETTINGS = {
-    "o1": {
-        "offset": O1_OFFSET,
-    },
-    "o2": {
-        "offset": O2_OFFSET,
-    },
-    "o3": {
-        "offset": O3_OFFSET,
-    },
-    "o4": {
-        "offset": O4_OFFSET,
-    },
-}
+PORT_SETTINGS = ["o1", "o2", "o3", "o4"]
 
 
 def get_qcm_bb(controller):
@@ -48,11 +31,11 @@ def qcm_bb(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_bb(connected_controller, connected_cluster):
-    qcm_bb = get_qcm_bb(connected_controller, connected_cluster)
-    for port in ["o1", "o2", "o3", "o4"]:
-        qcm_bb.port(port)
-    qcm_bb.connect()
+def connected_qcm_bb(connected_controller):
+    qcm_bb = get_qcm_bb(connected_controller)
+    for port in PORT_SETTINGS:
+        qcm_bb.ports(port)
+    qcm_bb.connect(connected_controller.cluster)
     yield qcm_bb
     qcm_bb.disconnect()
     connected_controller.disconnect()
