@@ -9,6 +9,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -37,6 +38,10 @@ class QbloxController(Controller):
         self.modules: dict = modules
         self._reference_clock = "internal" if internal_reference_clock else "external"
         signal.signal(signal.SIGTERM, self._termination_handler)
+
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
 
     def connect(self):
         """Connects to the modules."""
@@ -170,11 +175,6 @@ class QbloxController(Controller):
             module_channels = self._set_module_channel_map(module, qubits)
             module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
-            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF)):
-                for pulse in module_pulses[name]:
-                    pulse_channel = module.channel_map[pulse.channel]
-                    pulse._if = int(pulse.frequency - pulse_channel.lo_frequency)
-
             #  ask each module to generate waveforms & program and upload them to the device
             module.process_pulse_sequence(
                 qubits,
@@ -229,9 +229,6 @@ class QbloxController(Controller):
             acquisition = options.results_type(np.squeeze(_res))
             data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
 
-            # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
-            # data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
-            # data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
     def play(self, qubits, couplers, sequence, options):

@@ -47,6 +47,10 @@ def test_create_platform_error():
         platform = create_platform("nonexistent")
 
 
+def test_platform_sampling_rate(platform):
+    assert platform.sampling_rate >= 1
+
+
 @pytest.mark.xfail(reason="Cannot pickle all platforms")
 def test_platform_pickle(platform):
     serial = pickle.dumps(platform)
