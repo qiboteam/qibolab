@@ -16,6 +16,18 @@ from .ports import (
 
 
 class Ports(dict):
+    """Dictionary mapping port numbers to
+    :class:`qibolab.instruments.qm.ports.QMPort` objects.
+
+    Automatically instantiates ports that have not yet been created.
+    Used by :class:`qibolab.instruments.qm.devices.QMDevice`
+
+    Args:
+        constructor (type): Type of :class:`qibolab.instruments.qm.ports.QMPort` to be used for
+            initializing new ports.
+        device (str): Name of device holding these ports.
+    """
+
     def __init__(self, constructor, device):
         self.constructor = constructor
         self.device = device
@@ -92,12 +104,16 @@ class QMDevice(Instrument):
         devices."""
 
     def dump(self):
+        """Serializes device settings to a dictionary for dumping to the
+        runcard YAML."""
         ports = chain(self.outputs.values(), self.inputs.values())
         return {port.name: port.settings for port in ports if len(port.settings) > 0}
 
 
 @dataclass
 class OPXplus(QMDevice):
+    """Device handling OPX+ controllers."""
+
     def __post_init__(self):
         self.outputs = Ports(OPXOutput, self.name)
         self.inputs = Ports(OPXInput, self.name)
@@ -105,11 +121,18 @@ class OPXplus(QMDevice):
 
 @dataclass
 class Octave(QMDevice):
+    """Device handling Octaves."""
+
     def __post_init__(self):
         self.outputs = Ports(OctaveOutput, self.name)
         self.inputs = Ports(OctaveInput, self.name)
 
     def ports(self, number, input=False):
+        """Provides Octave ports.
+
+        Extension of the abstract :meth:`qibolab.instruments.qm.devices.QMDevice.ports`
+        because Octave ports are used for mixing two existing (I, Q) OPX+ ports.
+        """
         port = super().ports(number, input)
         if port.opx_port is None:
             iport = self.connectivity.ports(2 * number - 1, input)
