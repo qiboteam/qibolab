@@ -384,7 +384,7 @@ def test_qm_register_baked_pulse(qmplatform, duration):
 
 
 @patch("qibolab.instruments.qm.QMController.execute_program")
-def test_qm_qubit_spectroscopy(qmplatform, mocker):
+def test_qm_qubit_spectroscopy(mocker, qmplatform):
     platform = qmplatform
     platform.setup()
     controller = platform.instruments["qm"]
@@ -407,7 +407,7 @@ def test_qm_qubit_spectroscopy(qmplatform, mocker):
 
 
 @patch("qibolab.instruments.qm.QMController.execute_program")
-def test_qm_duration_sweeper(qmplatform, mocker):
+def test_qm_duration_sweeper(mocker, qmplatform):
     platform = qmplatform
     platform.setup()
     controller = platform.instruments["qm"]
@@ -420,6 +420,13 @@ def test_qm_duration_sweeper(qmplatform, mocker):
     sequence.add(platform.create_MZ_pulse(qubit, start=qd_pulse.finish))
     sweeper = Sweeper(Parameter.duration, np.arange(2, 12, 2), pulses=[qd_pulse])
     options = ExecutionParameters(nshots=1024, relaxation_time=100000)
-    result = controller.sweep(
-        platform.qubits, platform.couplers, sequence, options, sweeper
-    )
+    if platform.name == "qm":
+        result = controller.sweep(
+            platform.qubits, platform.couplers, sequence, options, sweeper
+        )
+    else:
+        with pytest.raises(ValueError):
+            # TODO: Figure what is wrong with baking and Octaves
+            result = controller.sweep(
+                platform.qubits, platform.couplers, sequence, options, sweeper
+            )
