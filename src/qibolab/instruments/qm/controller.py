@@ -11,7 +11,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 
-from .config import QMConfig
+from .config import SAMPLING_RATE, QMConfig
 from .devices import Octave, OPXplus
 from .ports import OPXIQ
 from .sequence import BakedPulse, QMPulse, Sequence
@@ -93,13 +93,6 @@ class QMController(Controller):
     If ``None`` the program will not be dumped.
     """
 
-    output_ports: Dict[IQPortId, OPXIQ] = field(default_factory=dict)
-    input_ports: Dict[IQPortId, OPXIQ] = field(default_factory=dict)
-    """Dictionary holding the ports of IQ pairs.
-
-    Not needed when using only Octaves.
-    """
-
     manager: Optional[QuantumMachinesManager] = None
     """Manager object used for controlling the QM OPXs."""
     config: QMConfig = field(default_factory=QMConfig)
@@ -125,6 +118,10 @@ class QMController(Controller):
             )
         else:
             raise ValueError(f"Invalid port {name} for Quantum Machines controller.")
+
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
 
     def connect(self):
         """Connect to the QM manager."""

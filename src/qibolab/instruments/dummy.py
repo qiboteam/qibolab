@@ -76,6 +76,10 @@ class DummyInstrument(Controller):
 
     PortType = DummyPort
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         log.info(f"Connecting to {self.name} instrument.")
 

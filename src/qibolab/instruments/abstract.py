@@ -79,6 +79,12 @@ class Controller(Instrument):
         super().__init__(name, address)
         self._ports = {}
 
+    @property
+    @abstractmethod
+    def sampling_rate(self):
+        """Sampling rate of control electronics in giga samples per second
+        (GSps)."""
+
     def __getitem__(self, port_name):
         return self.ports(port_name)
 
