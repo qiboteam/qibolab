@@ -57,6 +57,13 @@ class OPXOutput(QMOutput):
         default_factory=dict, metadata={"config": "filter", "settings": True}
     )
 
+    @property
+    def settings(self):
+        data = super().settings
+        if len(self.filter) == 0:
+            del data["filter"]
+        return data
+
 
 @dataclass
 class OPXInput(QMInput):

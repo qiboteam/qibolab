@@ -9,38 +9,44 @@ settings:
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 instruments:
+    con1:
+        i1:
+            gain: 0
+        i2:
+            gain: 0
     con2:
-        o1:
-            filter: {}
-        o2:
-            filter: {}
-        o3:
-            filter: {}
-        o4:
-            filter: {}
-        o5:
-            filter: {}
+        i1:
+            gain: 0
+        i2:
+            gain: 0
     octave1:
         o1:
             lo_frequency: 4_700_000_000
+            gain: 0
         o2:
             lo_frequency: 5_600_000_000
+            gain: 0
         o3:
             lo_frequency: 6_500_000_000
+            gain: 0
         o4:
             lo_frequency: 6_500_000_000
+            gain: 0
         o5:
             lo_frequency: 7_300_000_000
+            gain: 0
         i1:
             lo_frequency: 7_300_000_000
     octave2:
         o5:
             lo_frequency: 7_900_000_000
+            gain: 0
         i1:
             lo_frequency: 7_900_000_000
     octave3:
         o1:
             lo_frequency: 4_700_000_000
+            gain: 0
     twpa_a:
         frequency: 6_511_000_000
         power: 4.5

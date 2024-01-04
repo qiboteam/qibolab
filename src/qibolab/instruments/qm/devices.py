@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from itertools import chain
 from typing import Optional
 
 from qibolab.instruments.abstract import Instrument
@@ -74,7 +75,8 @@ class QMDevice(Instrument):
         devices."""
 
     def dump(self):
-        return {port.name: port.settings for port in self.outputs.values()}
+        ports = chain(self.outputs.values(), self.inputs.values())
+        return {port.name: port.settings for port in ports if len(port.settings) > 0}
 
 
 @dataclass
