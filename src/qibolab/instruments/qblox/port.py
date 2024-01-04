@@ -44,6 +44,7 @@ class QbloxOutputPort(Port):
 
     @property
     def attenuation(self) -> str:
+        """Attenuation that is applied to this port."""
         return self._settings.attenuation
 
     @attenuation.setter
