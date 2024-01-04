@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import chain
 from typing import Optional
 
@@ -15,22 +15,22 @@ from .ports import (
 )
 
 
+@dataclass
 class Ports(dict):
     """Dictionary mapping port numbers to
     :class:`qibolab.instruments.qm.ports.QMPort` objects.
 
     Automatically instantiates ports that have not yet been created.
     Used by :class:`qibolab.instruments.qm.devices.QMDevice`
-
-    Args:
-        constructor (type): Type of :class:`qibolab.instruments.qm.ports.QMPort` to be used for
-            initializing new ports.
-        device (str): Name of device holding these ports.
     """
 
-    def __init__(self, constructor, device):
-        self.constructor = constructor
-        self.device = device
+    constructor: type
+    """Type of :class:`qibolab.instruments.qm.ports.QMPort` to be used for
+    initializing new ports."""
+    device: str
+    """Name of device holding these ports."""
+
+    def __post_init__(self):
         super().__init__()
 
     def __getitem__(self, number):
@@ -45,15 +45,10 @@ class QMDevice(Instrument):
 
     name: str
     """Name of the device."""
-    port: Optional[int] = None
-    """Network port of the device in the cluster configuration (relevant for
-    Octaves)."""
-    connectivity: Optional["QMDevice"] = None
-    """OPXplus that acts as the waveform generator for the Octave."""
 
-    outputs: Optional[Ports[int, QMOutput]] = None
+    outputs: Ports[int, QMOutput] = field(init=False)
     """Dictionary containing the instrument's output ports."""
-    inputs: Optional[Ports[int, QMInput]] = None
+    inputs: Ports[int, QMInput] = field(init=False)
     """Dictionary containing the instrument's input ports."""
 
     def ports(self, number, input=False):
@@ -122,6 +117,11 @@ class OPXplus(QMDevice):
 @dataclass
 class Octave(QMDevice):
     """Device handling Octaves."""
+
+    port: Optional[int] = None
+    """Network port of the Octave in the cluster configuration."""
+    connectivity: Optional["QMDevice"] = None
+    """OPXplus that acts as the waveform generator for the Octave."""
 
     def __post_init__(self):
         self.outputs = Ports(OctaveOutput, self.name)

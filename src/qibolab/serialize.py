@@ -103,10 +103,7 @@ def load_instrument_settings(
 ) -> InstrumentMap:
     """Setup instruments according to the settings given in the runcard."""
     for name, settings in runcard.get("instruments", {}).items():
-        try:
-            instruments[name].setup(**settings)
-        except TypeError:
-            instruments[name].setup(settings)
+        instruments[name].setup(**settings)
     return instruments
 
 
