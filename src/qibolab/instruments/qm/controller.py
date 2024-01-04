@@ -13,7 +13,7 @@ from qibolab.sweeper import Parameter
 
 from .config import QMConfig
 from .devices import Octave, OPXplus
-from .ports import OPXIQ, OPXInput, OPXOutput
+from .ports import OPXIQ
 from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
@@ -115,15 +115,16 @@ class QMController(Controller):
             self.octaves = {instr.name: instr for instr in self.octaves}
 
     def ports(self, name, input=False):
-        if len(name) != 2:
-            raise ValueError(
-                "QMController provides only IQ ports. Please access individual ports from the specific device."
+        if len(name) == 1:
+            con, port = name[0]
+            return self.opxs[con].ports(port, input)
+        elif len(name) == 2:
+            (con1, port1), (con2, port2) = name
+            return OPXIQ(
+                self.opxs[con1].ports(port1, input), self.opxs[con2].ports(port2, input)
             )
-        _ports = self.input_ports if input else self.output_ports
-        if name not in _ports:
-            port_cls = OPXInput if input else OPXOutput
-            _ports[name] = OPXIQ(port_cls(*name[0]), port_cls(*name[1]))
-        return _ports[name]
+        else:
+            raise ValueError(f"Invalid port {name} for Quantum Machines controller.")
 
     def connect(self):
         """Connect to the QM manager."""
@@ -269,11 +270,6 @@ class QMController(Controller):
             with qua.stream_processing():
                 for qmpulse in qmsequence.ro_pulses:
                     qmpulse.acquisition.download(*buffer_dims)
-
-        import json
-
-        with open("qm_config.json", "w") as file:
-            file.write(json.dumps(self.config.__dict__, indent=4))
 
         if self.script_file_name is not None:
             with open(self.script_file_name, "w") as file:

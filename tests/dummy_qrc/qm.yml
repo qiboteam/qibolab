@@ -9,6 +9,20 @@ settings:
 topology: [[0, 2], [1, 2], [2, 3], [2, 4]]
 
 instruments:
+    con1:
+        i1:
+            gain: 0
+        i2:
+            gain: 0
+    con2:
+        o2:
+            filter:
+                feedforward: [1.0684635881381783, -1.0163217174522334]
+                feedback: [0.947858129314055]
+        i1:
+            gain: 0
+        i2:
+            gain: 0
     lo_readout_a:
         frequency: 7_300_000_000
         power: 18
