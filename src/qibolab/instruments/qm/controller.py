@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from qm import generate_qua_script, qua
 from qm.octave import QmOctaveConfig
@@ -17,22 +17,19 @@ from .ports import OPXIQ
 from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
-IQPortId = Tuple[Tuple[str, int], Tuple[str, int]]
-
 OCTAVE_ADDRESS = 11000
-"""Must be 11xxx, where xxx are the last three digits of the Octave IP
-address."""
+"""Offset to be added to Octave addresses, because they must be 11xxx, where
+xxx are the last three digits of the Octave IP address."""
 
 
 def declare_octaves(octaves, host):
-    """Initiate octave_config class, set the calibration file and add octaves
-    info.
+    """Initiate Octave configuration and add octaves info.
 
-    :param octaves: objects that holds the information about octave's
-        name, the controller that is connected to this octave, octave's
-        ip and octave's port.
+    Args:
+        octaves (dict): Dictionary containing :class:`qibolab.instruments.qm.devices.Octave` objects
+            for each Octave device in the experiment configuration.
+        host (str): IP of the Quantum Machines controller.
     """
-    # TODO: Fix docstring
     config = None
     if len(octaves) > 0:
         config = QmOctaveConfig()
@@ -44,7 +41,11 @@ def declare_octaves(octaves, host):
 
 def find_duration_sweeper_pulses(sweepers):
     """Find all pulses that require baking because we are sweeping their
-    duration."""
+    duration.
+
+    Args:
+        sweepers (list): List of :class:`qibolab.sweeper.Sweeper` objects.
+    """
     duration_sweep_pulses = set()
     for sweeper in sweepers:
         try:
@@ -61,26 +62,35 @@ def find_duration_sweeper_pulses(sweepers):
 
 @dataclass
 class QMController(Controller):
-    """Instrument object for controlling Quantum Machines (QM) OPX controllers.
+    """:class:`qibolab.instruments.abstract.Controller` object for controlling
+    a Quantum Machines cluster.
+
+    A cluster consists of multiple :class:`qibolab.instruments.qm.devices.QMDevice` devices.
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
-    written in QUA language. The ``config`` file is generated in parts in the following places
-    in the ``register_*`` methods. The controllers, elements and pulses are all
-    registered after a pulse sequence is given, so that the config contains only
-    elements related to the participating qubits.
-    The QUA program for executing an arbitrary qibolab ``PulseSequence`` is written in
-    ``play`` and ``play_pulses`` and executed in ``execute_program``.
-
-    Args:
-        name (str): Name of the instrument instance.
-        address (str): IP address and port for connecting to the OPX instruments.
+    written in QUA language.
+    The ``config`` file is generated in parts in :class:`qibolab.instruments.qm.config.QMConfig`.
+    Controllers, elements and pulses are all registered after a pulse sequence is given, so that
+    the config contains only elements related to the participating qubits.
+    The QUA program for executing an arbitrary :class:`qibolab.pulses.PulseSequence` is written in
+    :meth:`qibolab.instruments.qm.controller.QMController.play` and executed in
+    :meth:`qibolab.instruments.qm.controller.QMController.execute_program`.
     """
 
     name: str
+    """Name of the instrument instance."""
     address: str
+    """IP address and port for connecting to the OPX instruments.
+
+    Has the form XXX.XXX.XXX.XXX:XXX.
+    """
 
     opxs: Dict[int, OPXplus] = field(default_factory=dict)
+    """Dictionary containing the
+    :class:`qibolab.instruments.qm.devices.OPXplus` instruments being used."""
     octaves: Dict[int, Octave] = field(default_factory=dict)
+    """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
+    instruments being used."""
 
     time_of_flight: int = 0
     """Time of flight used for hardware signal integration."""
@@ -94,7 +104,7 @@ class QMController(Controller):
     """
 
     manager: Optional[QuantumMachinesManager] = None
-    """Manager object used for controlling the QM OPXs."""
+    """Manager object used for controlling the Quantum Machines cluster."""
     config: QMConfig = field(default_factory=QMConfig)
     """Configuration dictionary required for pulse execution on the OPXs."""
     is_connected: bool = False
@@ -102,12 +112,26 @@ class QMController(Controller):
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
-        if isinstance(self.opxs, list):
+        # convert lists to dicts
+        if not isinstance(self.opxs, dict):
             self.opxs = {instr.name: instr for instr in self.opxs}
-        if isinstance(self.octaves, list):
+        if not isinstance(self.octaves, dict):
             self.octaves = {instr.name: instr for instr in self.octaves}
 
     def ports(self, name, input=False):
+        """Provides instrument ports to the user.
+
+        Note that individual ports can also be accessed from the corresponding devices
+        using :meth:`qibolab.instruments.qm.devices.QMDevice.ports`.
+
+        Args:
+            name (tuple): Contains the numbers of controller and port to be obtained.
+                For example ``((conX, Y),)`` returns port-Y of OPX+ controller X.
+                ``((conX, Y), (conX, Z))`` returns port-Y and Z of OPX+ controller X
+                as an :class:`qibolab.instruments.qm.ports.OPXIQ` port pair.
+            input (bool): ``True`` for obtaining an input port, otherwise an
+                output port is returned. Default is ``False``.
+        """
         if len(name) == 1:
             con, port = name[0]
             return self.opxs[con].ports(port, input)
@@ -121,10 +145,11 @@ class QMController(Controller):
 
     @property
     def sampling_rate(self):
+        """Sampling rate of Quantum Machines instruments."""
         return SAMPLING_RATE
 
     def connect(self):
-        """Connect to the QM manager."""
+        """Connect to the Quantum Machines manager."""
         host, port = self.address.split(":")
         octave = declare_octaves(self.octaves, host)
         self.manager = QuantumMachinesManager(host=host, port=int(port), octave=octave)

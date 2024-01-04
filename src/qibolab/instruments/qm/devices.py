@@ -29,14 +29,31 @@ class Ports(dict):
 
 @dataclass
 class QMDevice(Instrument):
+    """Abstract class for an individual Quantum Machines devices."""
+
     name: str
+    """Name of the device."""
     port: Optional[int] = None
+    """Network port of the device in the cluster configuration (relevant for
+    Octaves)."""
     connectivity: Optional["QMDevice"] = None
+    """OPXplus that acts as the waveform generator for the Octave."""
 
     outputs: Optional[Ports[int, QMOutput]] = None
+    """Dictionary containing the instrument's output ports."""
     inputs: Optional[Ports[int, QMInput]] = None
+    """Dictionary containing the instrument's input ports."""
 
     def ports(self, number, input=False):
+        """Provides instrument's ports to the user.
+
+        Args:
+            number (int): Port number.
+                Can be 1 to 10 for :class:`qibolab.instruments.qm.devices.OPXplus`
+                and 1 to 5 for :class:`qibolab.instruments.qm.devices.Octave`.
+            input (bool): ``True`` for obtaining an input port, otherwise an
+                output port is returned. Default is ``False``.
+        """
         if input:
             return self.inputs[number]
         else:
