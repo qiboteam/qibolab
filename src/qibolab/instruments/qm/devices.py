@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import Optional
 
 from qibolab.instruments.abstract import Instrument
 
@@ -118,9 +117,9 @@ class OPXplus(QMDevice):
 class Octave(QMDevice):
     """Device handling Octaves."""
 
-    port: Optional[int] = None
+    port: int
     """Network port of the Octave in the cluster configuration."""
-    connectivity: Optional["QMDevice"] = None
+    connectivity: OPXplus
     """OPXplus that acts as the waveform generator for the Octave."""
 
     def __post_init__(self):

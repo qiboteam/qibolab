@@ -11,6 +11,8 @@ from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
+from .conftest import set_platform_profile
+
 
 def test_qmpulse():
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
@@ -139,19 +141,6 @@ def test_qmpulse_previous_and_next_flux():
     assert drive22.next_ == {measure2}
 
 
-# TODO: Test connect/disconnect
-
-
-def test_qm_setup(dummy_qrc):
-    platform = create_platform("qm")
-    platform.setup()
-    controller = platform.instruments["qm"]
-    assert controller.time_of_flight == 280
-
-
-# TODO: Test start/stop
-
-
 @pytest.fixture
 def qmcontroller():
     name = "test"
@@ -188,71 +177,111 @@ def test_qm_register_port_filter(qmcontroller):
     }
 
 
-def test_qm_register_drive_element(dummy_qrc):
-    platform = create_platform("qm")
+@pytest.fixture(params=["qm", "qm_octave"])
+def qmplatform(request):
+    set_platform_profile()
+    return create_platform(request.param)
+
+
+# TODO: Test connect/disconnect
+
+
+def test_qm_setup(qmplatform):
+    platform = qmplatform
+    platform.setup()
+    controller = platform.instruments["qm"]
+    assert controller.time_of_flight == 280
+
+
+# TODO: Test start/stop
+
+
+def test_qm_register_drive_element(qmplatform):
+    platform = qmplatform
     controller = platform.instruments["qm"]
     controller.config.register_drive_element(
         platform.qubits[0], intermediate_frequency=int(1e6)
     )
     assert "drive0" in controller.config.elements
-    target_element = {
-        "mixInputs": {
-            "I": ("con3", 2),
-            "Q": ("con3", 1),
-            "lo_frequency": 4700000000,
-            "mixer": "mixer_drive0",
-        },
-        "intermediate_frequency": 1000000,
-        "operations": {},
-    }
-    assert controller.config.elements["drive0"] == target_element
-    target_mixer = [
-        {
+    if platform.name == "qm":
+        target_element = {
+            "mixInputs": {
+                "I": ("con3", 2),
+                "Q": ("con3", 1),
+                "lo_frequency": 4700000000,
+                "mixer": "mixer_drive0",
+            },
             "intermediate_frequency": 1000000,
-            "lo_frequency": 4700000000,
-            "correction": [1.0, 0.0, 0.0, 1.0],
+            "operations": {},
         }
-    ]
-    assert controller.config.mixers["mixer_drive0"] == target_mixer
+        assert controller.config.elements["drive0"] == target_element
+        target_mixer = [
+            {
+                "intermediate_frequency": 1000000,
+                "lo_frequency": 4700000000,
+                "correction": [1.0, 0.0, 0.0, 1.0],
+            }
+        ]
+        assert controller.config.mixers["mixer_drive0"] == target_mixer
+    else:
+        target_element = {
+            "RF_inputs": {"port": ("octave3", 1)},
+            "intermediate_frequency": 1000000,
+            "operations": {},
+        }
+        assert controller.config.elements["drive0"] == target_element
+        assert "mixer_drive0" not in controller.config.mixers
 
 
-def test_qm_register_readout_element(dummy_qrc):
-    platform = create_platform("qm")
+def test_qm_register_readout_element(qmplatform):
+    platform = qmplatform
     controller = platform.instruments["qm"]
     controller.config.register_readout_element(
         platform.qubits[2], int(1e6), controller.time_of_flight, controller.smearing
     )
     assert "readout2" in controller.config.elements
-    target_element = {
-        "mixInputs": {
-            "I": ("con2", 10),
-            "Q": ("con2", 9),
-            "lo_frequency": 7900000000,
-            "mixer": "mixer_readout2",
-        },
-        "intermediate_frequency": 1000000,
-        "operations": {},
-        "outputs": {
-            "out1": ("con2", 2),
-            "out2": ("con2", 1),
-        },
-        "time_of_flight": 280,
-        "smearing": 0,
-    }
-    assert controller.config.elements["readout2"] == target_element
-    target_mixer = [
-        {
+    if platform.name == "qm":
+        target_element = {
+            "mixInputs": {
+                "I": ("con2", 10),
+                "Q": ("con2", 9),
+                "lo_frequency": 7900000000,
+                "mixer": "mixer_readout2",
+            },
             "intermediate_frequency": 1000000,
-            "lo_frequency": 7900000000,
-            "correction": [1.0, 0.0, 0.0, 1.0],
+            "operations": {},
+            "outputs": {
+                "out1": ("con2", 2),
+                "out2": ("con2", 1),
+            },
+            "time_of_flight": 280,
+            "smearing": 0,
         }
-    ]
-    assert controller.config.mixers["mixer_readout2"] == target_mixer
+        assert controller.config.elements["readout2"] == target_element
+        target_mixer = [
+            {
+                "intermediate_frequency": 1000000,
+                "lo_frequency": 7900000000,
+                "correction": [1.0, 0.0, 0.0, 1.0],
+            }
+        ]
+        assert controller.config.mixers["mixer_readout2"] == target_mixer
+    else:
+        target_element = {
+            "RF_inputs": {"port": ("octave2", 5)},
+            "RF_outputs": {"port": ("octave2", 1)},
+            "intermediate_frequency": 1000000,
+            "operations": {},
+            "time_of_flight": 280,
+            "smearing": 0,
+        }
+        assert controller.config.elements["readout2"] == target_element
+        assert "mixer_readout2" not in controller.config.mixers
 
 
 @pytest.mark.parametrize("pulse_type,qubit", [("drive", 2), ("readout", 1)])
-def test_qm_register_pulse(dummy_qrc, pulse_type, qubit):
-    platform = create_platform("qm")
+def test_qm_register_pulse(qmplatform, pulse_type, qubit):
+    platform = qmplatform
     controller = platform.instruments["qm"]
     if pulse_type == "drive":
         pulse = platform.create_RX_pulse(qubit, start=0)
@@ -292,9 +321,9 @@ def test_qm_register_pulse(dummy_qrc, pulse_type, qubit):
     )
 
 
-def test_qm_register_flux_pulse(dummy_qrc):
+def test_qm_register_flux_pulse(qmplatform):
     qubit = 2
-    platform = create_platform("qm")
+    platform = qmplatform
     controller = platform.instruments["qm"]
     pulse = FluxPulse(
         0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit
@@ -315,8 +344,8 @@ def test_qm_register_flux_pulse(dummy_qrc):
 
 
 @pytest.mark.parametrize("duration", [0, 30])
-def test_qm_register_baked_pulse(dummy_qrc, duration):
-    platform = create_platform("qm")
+def test_qm_register_baked_pulse(qmplatform, duration):
+    platform = qmplatform
     qubit = platform.qubits[3]
     controller = platform.instruments["qm"]
     controller.config.register_flux_element(qubit)
@@ -355,8 +384,8 @@ def test_qm_register_baked_pulse(dummy_qrc, duration):
 
 
 @patch("qibolab.instruments.qm.QMController.execute_program")
-def test_qm_qubit_spectroscopy(mocker):
-    platform = create_platform("qm")
+def test_qm_qubit_spectroscopy(qmplatform, mocker):
+    platform = qmplatform
     platform.setup()
     controller = platform.instruments["qm"]
     # disable program dump otherwise it will fail if we don't connect
@@ -378,8 +407,8 @@ def test_qm_qubit_spectroscopy(mocker):
 
 
 @patch("qibolab.instruments.qm.QMController.execute_program")
-def test_qm_duration_sweeper(mocker):
-    platform = create_platform("qm")
+def test_qm_duration_sweeper(qmplatform, mocker):
+    platform = qmplatform
     platform.setup()
     controller = platform.instruments["qm"]
     # disable program dump otherwise it will fail if we don't connect
