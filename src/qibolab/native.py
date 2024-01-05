@@ -348,8 +348,18 @@ class TwoQubitNatives:
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Optional[NativeSequence] = None
-    iSWAP: Optional[NativeSequence] = None
+    CZ: Optional[NativeSequence] = field(default=None, metadata={"symmetric": True})
+    CNOT: Optional[NativeSequence] = field(default=None, metadata={"symmetric": False})
+    iSWAP: Optional[NativeSequence] = field(default=None, metadata={"symmetric": True})
+
+    @property
+    def symmetric(self):
+        """Check if the defined two-qubit gates are symmetric between target
+        and control qubits."""
+        for fld in fields(self):
+            if not fld.metadata["symmetric"] and getattr(self, fld.name) is not None:
+                return False
+        return True
 
     @classmethod
     def from_dict(cls, qubits, couplers, native_gates):

@@ -85,7 +85,7 @@ class Platform:
     """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit`
     objects."""
     pairs: QubitPairMap
-    """Dictionary mapping sorted tuples of qubit names to
+    """Dictionary mapping tuples of qubit names to
     :class:`qibolab.qubits.QubitPair` objects."""
     instruments: InstrumentMap
     """Dictionary mapping instrument names to
@@ -134,15 +134,13 @@ class Platform:
 
     @property
     def nqubits(self) -> int:
-        """Total number of usable qubits in the QPU.."""
-        # TODO: Seperate couplers from qubits (PR #508)
-        return len(
-            [
-                qubit
-                for qubit in self.qubits
-                if not (isinstance(qubit, str) and "c" in qubit)
-            ]
-        )
+        """Total number of usable qubits in the QPU."""
+        return len(self.qubits)
+
+    @property
+    def ordered_pairs(self):
+        """List of qubit pairs that are connected in the QPU."""
+        return sorted({tuple(sorted(pair)) for pair in self.pairs})
 
     @property
     def sampling_rate(self):
@@ -389,8 +387,7 @@ class Platform:
         return self.qubits[qubit].native_gates.RX12.pulse(start, relative_phase)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
-        # Check in the settings if qubits[0]-qubits[1] is a key
-        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
+        pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
             raise_error(
                 ValueError,
@@ -399,14 +396,22 @@ class Platform:
         return self.pairs[pair].native_gates.CZ.sequence(start)
 
     def create_iSWAP_pulse_sequence(self, qubits, start=0):
-        # Check in the settings if qubits[0]-qubits[1] is a key
-        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
+        pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.iSWAP is None:
             raise_error(
                 ValueError,
                 f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
         return self.pairs[pair].native_gates.iSWAP.sequence(start)
+
+    def create_CNOT_pulse_sequence(self, qubits, start=0):
+        pair = tuple(self.get_qubit(q) for q in qubits)
+        if pair not in self.pairs or self.pairs[pair].native_gates.CNOT is None:
+            raise_error(
+                ValueError,
+                f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
+            )
+        return self.pairs[pair].native_gates.CNOT.sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
         qubit = self.get_qubit(qubit)

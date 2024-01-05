@@ -122,13 +122,18 @@ class QubitPair:
 
     This is needed for symmetry to the single-qubit gates which are storred in the
     :class:`qibolab.platforms.abstract.Qubit`.
-
-    Qubits are sorted according to ``qubit.name`` such that
-    ``qubit1.name < qubit2.name``.
     """
 
     qubit1: Qubit
+    """First qubit of the pair.
+
+    Acts as control on two-qubit gates.
+    """
     qubit2: Qubit
+    """Second qubit of the pair.
+
+    Acts as target on two-qubit gates.
+    """
 
     coupler: Optional[Coupler] = None
 
