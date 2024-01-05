@@ -2,8 +2,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
 from typing import List, Optional, Union
 
-from qibo.transpiler import NativeGates
-
 from qibolab.pulses import (
     CouplerFluxPulse,
     FluxPulse,
@@ -377,12 +375,3 @@ class TwoQubitNatives:
             if gate is not None:
                 data[fld.name] = gate.raw
         return data
-
-    @property
-    def types(self):
-        gate_types = NativeGates(0)
-        for fld in fields(self):
-            gate = fld.name
-            if getattr(self, gate) is not None:
-                gate_types |= NativeGates[gate]
-        return gate_types

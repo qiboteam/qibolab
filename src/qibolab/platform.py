@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 from qibo.config import log, raise_error
-from qibo.transpiler import NativeGates
 
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
@@ -105,11 +104,7 @@ class Platform:
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
-    two_qubit_native_types: NativeGates = field(default_factory=lambda: NativeGates(0))
-    """Types of two qubit native gates.
 
-    Used by the transpiler.
-    """
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
 
@@ -117,12 +112,6 @@ class Platform:
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
-
-        for pair in self.pairs.values():
-            self.two_qubit_native_types |= pair.native_gates.types
-        if self.two_qubit_native_types is NativeGates(0):
-            # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = NativeGates.CZ
 
         self.topology.add_nodes_from(self.qubits.keys())
         self.topology.add_edges_from(

@@ -63,7 +63,14 @@ def test_dump_runcard(platform):
     path = pathlib.Path(__file__).parent / "test.yml"
     dump_runcard(platform, path)
     final_runcard = load_runcard(path)
-    target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}.yml"
+    if platform.name == "dummy" or platform.name == "dummy_couplers":
+        target_path = (
+            pathlib.Path(__file__).parent.parent / "src" / "qibolab" / "dummy.yml"
+        )
+    else:
+        target_path = (
+            pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}.yml"
+        )
     target_runcard = load_runcard(target_path)
     # for the characterization section the dumped runcard may contain
     # some default ``Qubit`` parameters
