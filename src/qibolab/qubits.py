@@ -47,13 +47,9 @@ class Qubit:
     drive_frequency: int = 0
     anharmonicity: int = 0
     sweetspot: float = 0.0
-    flux_to_bias: float = 0.0
     asymmetry: float = 0.0
-    bare_resonator_frequency_sweetspot: float = 0.0
-    """Bare resonator frequency at sweetspot."""
-    ssf_brf: float = 0.0
-    """Estimated sweetspot qubit frequency divided by the
-    bare_resonator_frequency."""
+    crosstalk_matrix: dict[QubitId, float] = field(default_factory=dict)
+    """Crosstalk matrix for voltages."""
     Ec: float = 0.0
     """Readout Charge Energy."""
     Ej: float = 0.0
