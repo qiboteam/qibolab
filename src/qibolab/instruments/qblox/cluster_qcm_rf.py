@@ -130,7 +130,6 @@ class ClusterQCM_RF(ClusterModule):
         """
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
-        self.settings = {}
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}
@@ -188,14 +187,12 @@ class ClusterQCM_RF(ClusterModule):
             self._set_default_values()
             # then set the value loaded from the runcard
             try:
-                for port in self.settings:
+                for port in self._ports:
                     self._sequencers[port] = []
-                    if self.settings[port]["lo_frequency"]:
+                    if self._ports[port].lo_frequency != 0:
                         self._ports[port].lo_enabled = True
-                        self._ports[port].lo_frequency = self.settings[port][
-                            "lo_frequency"
-                        ]
-                    self._ports[port].attenuation = self.settings[port]["attenuation"]
+                        self._ports[port].lo_frequency = self._ports[port].lo_frequency
+                    self._ports[port].attenuation = self._ports[port].attenuation
                     self._ports[port].hardware_mod_en = True
                     self._ports[port].nco_freq = 0
                     self._ports[port].nco_phase_offs = 0
@@ -224,7 +221,9 @@ class ClusterQCM_RF(ClusterModule):
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
                   At the moment this param is not loaded but is always set to True.
         """
-        self.settings = settings if settings else self.settings
+        for port, settings in settings.items():
+            for setting_name, value in settings.items():
+                setattr(self._ports[port]._settings, setting_name, value)
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.

@@ -140,7 +140,6 @@ class ClusterQRM_RF(ClusterModule):
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
         self.classification_parameters: dict = {}
-        self.settings: dict = {}
 
         self._debug_folder: str = ""
         self._input_ports_keys = ["i1"]
@@ -205,25 +204,28 @@ class ClusterQRM_RF(ClusterModule):
             self._set_default_values()
             # then set the value loaded from the runcard
             try:
-                if "o1" in self.settings:
-                    self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
-                    if self.settings["o1"]["lo_frequency"]:
+                if "o1" in self._ports:
+                    self._ports["o1"].attenuation = self._ports["o1"].attenuation
+                    if self._ports["o1"].lo_frequency != 0:
                         self._ports["o1"].lo_enabled = True
-                        self._ports["o1"].lo_frequency = self.settings["o1"][
-                            "lo_frequency"
-                        ]
-                    self._ports["o1"].hardware_mod_en = True
-                    self._ports["o1"].nco_freq = 0
-                    self._ports["o1"].nco_phase_offs = 0
+                        self._ports["o1"].lo_frequency = self._ports["o1"].lo_frequency
 
-                if "i1" in self.settings:
-                    self._ports["i1"].hardware_demod_en = True
-                    self._ports["i1"].acquisition_hold_off = self.settings["i1"][
-                        "acquisition_hold_off"
-                    ]
-                    self._ports["i1"].acquisition_duration = self.settings["i1"][
-                        "acquisition_duration"
-                    ]
+                    self._ports["o1"].hardware_mod_en = self._ports[
+                        "o1"
+                    ].hardware_mod_en
+                    self._ports["o1"].nco_freq = self._ports["o1"].nco_freq
+                    self._ports["o1"].nco_phase_offs = self._ports["o1"].nco_phase_offs
+
+                if "i1" in self._ports:
+                    self._ports["i1"].hardware_demod_en = self._ports[
+                        "i1"
+                    ].hardware_demod_en
+                    self._ports["i1"].acquisition_hold_off = self._ports[
+                        "i1"
+                    ].acquisition_hold_off
+                    self._ports["i1"].acquisition_duration = self._ports[
+                        "i1"
+                    ].acquisition_duration
             except Exception as error:
                 raise RuntimeError(
                     f"Unable to initialize port parameters on module {self.name}: {error}"
@@ -258,7 +260,9 @@ class ClusterQRM_RF(ClusterModule):
                 - settings['i1']['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
                   the amount of memory available in the fpga to store i q samples.
         """
-        self.settings = settings if settings else self.settings
+        for port, settings in settings.items():
+            for setting_name, value in settings.items():
+                setattr(self._ports[port]._settings, setting_name, value)
 
     def _get_next_sequencer(self, port: str, frequency: int, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.

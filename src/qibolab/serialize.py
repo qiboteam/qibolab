@@ -11,6 +11,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.couplers import Coupler
+from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
@@ -151,15 +152,15 @@ def dump_qubits(
 def dump_instruments(instruments: InstrumentMap) -> dict:
     """Dump instrument settings to a dictionary following the runcard
     format."""
-    # Qblox modules settings are dictionaries and not dataclasses
+    # Qblox modules have no settings but the controller takes care of it
     data = {}
     for name, instrument in instruments.items():
-        settings = instrument.settings
-        if settings is not None:
-            if isinstance(settings, dict):
-                data[name] = settings
-            else:
-                data[name] = settings.dump()
+        if isinstance(instrument, QbloxController):
+            data = instrument.dump()
+        elif instrument.settings is not None:
+            settings = instrument.settings
+            data[name] = settings.dump()
+
     return data
 
 

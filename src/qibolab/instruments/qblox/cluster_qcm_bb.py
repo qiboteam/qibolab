@@ -176,9 +176,11 @@ class ClusterQCM_BB(ClusterModule):
             try:
                 for port in self._ports:
                     self._sequencers[port] = []
-                    self._ports[port].hardware_mod_en = True
-                    self._ports[port].nco_freq = 0
-                    self._ports[port].nco_phase_offs = 0
+                    self._ports[port].hardware_mod_en = self._ports[
+                        port
+                    ].hardware_mod_en
+                    self._ports[port].nco_freq = self._ports[port].nco_freq
+                    self._ports[port].nco_phase_offs = self._ports[port].nco_phase_offs
             except Exception as error:
                 raise RuntimeError(
                     f"Unable to initialize port parameters on module {self.name}: {error}"
