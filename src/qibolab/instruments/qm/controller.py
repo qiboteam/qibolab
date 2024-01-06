@@ -22,18 +22,20 @@ OCTAVE_ADDRESS = 11000
 xxx are the last three digits of the Octave IP address."""
 
 
-def declare_octaves(octaves, host):
+def declare_octaves(octaves, host, calibration_path=None):
     """Initiate Octave configuration and add octaves info.
 
     Args:
         octaves (dict): Dictionary containing :class:`qibolab.instruments.qm.devices.Octave` objects
             for each Octave device in the experiment configuration.
         host (str): IP of the Quantum Machines controller.
+        calibration_path (str): Path to the JSON file with the mixer calibration.
     """
     config = None
     if len(octaves) > 0:
         config = QmOctaveConfig()
-        # config.set_calibration_db(os.getcwd())
+        if calibration_path is not None:
+            config.set_calibration_db(calibration_path)
         for octave in octaves.values():
             config.add_device_info(octave.name, host, OCTAVE_ADDRESS + octave.port)
     return config
@@ -96,6 +98,8 @@ class QMController(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
+    calibration_path: Optional[str] = None
+    """Path to the JSON file that contains the mixer calibration."""
     script_file_name: Optional[str] = "qua_script.py"
     """Name of the file that the QUA program will dumped in that after every
     execution.
@@ -151,7 +155,7 @@ class QMController(Controller):
     def connect(self):
         """Connect to the Quantum Machines manager."""
         host, port = self.address.split(":")
-        octave = declare_octaves(self.octaves, host)
+        octave = declare_octaves(self.octaves, host, self.calibration_path)
         self.manager = QuantumMachinesManager(host=host, port=int(port), octave=octave)
 
     def setup(self):
@@ -175,6 +179,31 @@ class QMController(Controller):
         if self.is_connected:
             self.manager.close()
             self.is_connected = False
+
+    def calibrate_mixers(self, qubits):
+        if isinstance(qubits, dict):
+            qubits = list(qubits.values())
+
+        config = QMConfig()
+        for qubit in qubits:
+            if qubit.readout is not None:
+                config.register_port(qubit.readout.port)
+                config.register_readout_element(
+                    qubit, qubit.mz_frequencies[1], self.time_of_flight, self.smearing
+                )
+            if qubit.drive is not None:
+                config.register_port(qubit.drive.port)
+                config.register_drive_element(qubit, qubit.rx_frequencies[1])
+
+        machine = self.manager.open_qm(config.__dict__)
+        for qubit in qubits:
+            print(f"Calibrating mixers for qubit {qubit.name}")
+            if qubit.readout is not None:
+                _lo, _if = qubit.mz_frequencies
+                machine.calibrate_element(f"readout{qubit.name}", {_lo: (_if,)})
+            if qubit.drive is not None:
+                _lo, _if = qubit.rx_frequencies
+                machine.calibrate_element(f"drive{qubit.name}", {_lo: (_if,)})
 
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language.

@@ -11,6 +11,13 @@ from .ports import OPXIQ, OctaveInput, OctaveOutput
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
 
+DEFAULT_INPUTS = {1: {}, 2: {}}
+"""Default controller config section.
+
+Inputs are always registered to avoid issues with automatic mixer
+calibration when using Octaves.
+"""
+
 
 @dataclass
 class QMConfig:
@@ -44,6 +51,9 @@ class QMConfig:
             controllers = self.octaves if is_octave else self.controllers
             if port.device not in controllers:
                 controllers[port.device] = {}
+                if not is_octave:
+                    controllers[port.device]["analog_inputs"] = DEFAULT_INPUTS
+
             device = controllers[port.device]
             if port.key in device:
                 device[port.key].update(port.config)

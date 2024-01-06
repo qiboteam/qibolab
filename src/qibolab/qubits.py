@@ -110,6 +110,26 @@ class Qubit:
             if fld.name not in EXCLUDED_FIELDS
         }
 
+    @property
+    def mz_frequencies(self):
+        """Get local oscillator and intermediate frequency used for readout.
+
+        Assumes RF = LO + IF.
+        """
+        _lo = self.readout.lo_frequency
+        _if = self.native_gates.MZ.frequency - _lo
+        return _lo, _if
+
+    @property
+    def rx_frequencies(self):
+        """Get local oscillator and intermediate frequency used for drive.
+
+        Assumes RF = LO + IF.
+        """
+        _lo = self.drive.lo_frequency
+        _if = self.native_gates.RX.frequency - _lo
+        return _lo, _if
+
 
 QubitPairId = Tuple[QubitId, QubitId]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
