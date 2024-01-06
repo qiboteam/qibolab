@@ -62,6 +62,31 @@ def find_duration_sweeper_pulses(sweepers):
     return duration_sweep_pulses
 
 
+def controllers_config(qubits, time_of_flight, smearing=0):
+    """Create a Quantum Machines configuration without pulses.
+
+    This contains the readout and drive elements and controllers and
+    is used by :meth:`qibolab.instruments.qm.controller.QMController.calibrate_mixers`.
+
+    Args:
+        qubits (list): List of :class:`qibolab.qubits.Qubit` objects to be
+            included in the config.
+        time_of_flight (int): Time of flight used on readout elements.
+        smearing (int): Smearing used on readout elements.
+    """
+    config = QMConfig()
+    for qubit in qubits:
+        if qubit.readout is not None:
+            config.register_port(qubit.readout.port)
+            config.register_readout_element(
+                qubit, qubit.mz_frequencies[1], time_of_flight, smearing
+            )
+        if qubit.drive is not None:
+            config.register_port(qubit.drive.port)
+            config.register_drive_element(qubit, qubit.rx_frequencies[1])
+    return config
+
+
 @dataclass
 class QMController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
@@ -181,20 +206,16 @@ class QMController(Controller):
             self.is_connected = False
 
     def calibrate_mixers(self, qubits):
+        """Calibrate Octave mixers for readout and drive lines of given qubits.
+
+        Args:
+            qubits (list): List of :class:`qibolab.qubits.Qubit` objects for
+                which mixers will be calibrated.
+        """
         if isinstance(qubits, dict):
             qubits = list(qubits.values())
 
-        config = QMConfig()
-        for qubit in qubits:
-            if qubit.readout is not None:
-                config.register_port(qubit.readout.port)
-                config.register_readout_element(
-                    qubit, qubit.mz_frequencies[1], self.time_of_flight, self.smearing
-                )
-            if qubit.drive is not None:
-                config.register_port(qubit.drive.port)
-                config.register_drive_element(qubit, qubit.rx_frequencies[1])
-
+        config = controllers_config(qubits, self.time_of_flight, self.smearing)
         machine = self.manager.open_qm(config.__dict__)
         for qubit in qubits:
             print(f"Calibrating mixers for qubit {qubit.name}")

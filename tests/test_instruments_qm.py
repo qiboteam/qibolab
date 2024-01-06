@@ -7,6 +7,7 @@ from qm import qua
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
 from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.instruments.qm.acquisition import Acquisition
+from qibolab.instruments.qm.controller import controllers_config
 from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
@@ -155,7 +156,10 @@ def test_qm_register_port(qmcontroller, offset):
     qmcontroller.config.register_port(port)
     controllers = qmcontroller.config.controllers
     assert controllers == {
-        "con1": {"analog_outputs": {1: {"offset": offset, "filter": {}}}}
+        "con1": {
+            "analog_inputs": {1: {}, 2: {}},
+            "analog_outputs": {1: {"offset": offset, "filter": {}}},
+        }
     }
 
 
@@ -167,12 +171,13 @@ def test_qm_register_port_filter(qmcontroller):
     controllers = qmcontroller.config.controllers
     assert controllers == {
         "con1": {
+            "analog_inputs": {1: {}, 2: {}},
             "analog_outputs": {
                 2: {
                     "filter": {"feedback": [0.95], "feedforward": [1, -1]},
                     "offset": 0.005,
                 }
-            }
+            },
         }
     }
 
@@ -181,6 +186,12 @@ def test_qm_register_port_filter(qmcontroller):
 def qmplatform(request):
     set_platform_profile()
     return create_platform(request.param)
+
+
+def test_controllers_config(qmplatform):
+    config = controllers_config(list(qmplatform.qubits.values()), time_of_flight=30)
+    assert len(config.controllers) == 3
+    assert len(config.elements) == 10
 
 
 # TODO: Test connect/disconnect
