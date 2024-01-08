@@ -35,7 +35,7 @@ class QMPulse:
     as defined in the QM config.
     """
 
-    pulse: Pulse
+    pulses: List[Pulse]
     """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
     element: Optional[str] = None
     """Element that the pulse will be played on, as defined in the QM
@@ -73,10 +73,21 @@ class QMPulse:
     elements_to_align: Set[str] = field(default_factory=set)
 
     def __post_init__(self):
-        self.element: str = f"{self.pulse.type.name.lower()}{self.pulse.qubit}"
-        self.operation: str = self.pulse.serial
+        if isinstance(self.pulses, Pulse):
+            self.pulses = [self.pulses]
+
+        pulse_type = self.pulse.type.name.lower()
+        amplitude = format(self.pulse.amplitude, ".6f").rstrip("0").rstrip(".")
+        self.element: str = f"{pulse_type}{self.pulse.qubit}"
+        self.operation: str = (
+            f"{pulse_type}({self.pulse.duration}, {amplitude}, {self.pulse.shape})"
+        )
         self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
         self.elements_to_align.add(self.element)
+
+    @property
+    def pulse(self):
+        return self.pulses[0]
 
     def __hash__(self):
         return hash(self.pulse)
@@ -115,10 +126,15 @@ class QMPulse:
     def declare_output(self, options, threshold=None, angle=None):
         average = options.averaging_mode is AveragingMode.CYCLIC
         acquisition_type = options.acquisition_type
+        acquisition_name = f"{self.operation}_{self.pulse.qubit}"
         if acquisition_type is AcquisitionType.RAW:
-            self.acquisition = RawAcquisition(self.pulse.serial, average)
+            self.acquisition = RawAcquisition(
+                acquisition_name, average, len(self.pulses)
+            )
         elif acquisition_type is AcquisitionType.INTEGRATION:
-            self.acquisition = IntegratedAcquisition(self.pulse.serial, average)
+            self.acquisition = IntegratedAcquisition(
+                acquisition_name, average, len(self.pulses)
+            )
         elif acquisition_type is AcquisitionType.DISCRIMINATION:
             if threshold is None or angle is None:
                 raise_error(
@@ -127,7 +143,7 @@ class QMPulse:
                     "if threshold and angle are not given.",
                 )
             self.acquisition = ShotsAcquisition(
-                self.pulse.serial, average, threshold, angle
+                acquisition_name, average, len(self.pulses), threshold, angle
             )
         else:
             raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
@@ -185,8 +201,8 @@ class BakedPulse(QMPulse):
                         self.calculate_waveform(waveform_i, t),
                         self.calculate_waveform(waveform_q, t),
                     ]
-                segment.add_op(self.pulse.serial, self.element, waveform)
-                segment.play(self.pulse.serial, self.element)
+                segment.add_op(self.operation, self.element, waveform)
+                segment.play(self.operation, self.element)
             self.segments.append(segment)
 
     @property
@@ -248,7 +264,9 @@ class Sequence:
         pulse = qmpulse.pulse
         self.pulse_to_qmpulse[pulse.serial] = qmpulse
         if pulse.type is PulseType.READOUT:
-            self.ro_pulses.append(qmpulse)
+            if len(qmpulse.pulses) == 1:
+                # if ``qmpulse`` contains more than one pulses it is already added in ``ro_pulses``
+                self.ro_pulses.append(qmpulse)
 
         previous = self._find_previous(pulse)
         if previous is not None:
@@ -287,7 +305,9 @@ class Sequence:
             if qmpulse.wait_cycles is not None:
                 qua.wait(qmpulse.wait_cycles, qmpulse.element)
             if pulse.type is PulseType.READOUT:
+                # Save data to the stream processing
                 qmpulse.acquisition.measure(qmpulse.operation, qmpulse.element)
+                qmpulse.acquisition.save()
             else:
                 if (
                     not isinstance(qmpulse.relative_phase, float)
@@ -304,7 +324,3 @@ class Sequence:
 
         if relaxation_time > 0:
             qua.wait(relaxation_time // 4)
-
-        # Save data to the stream processing
-        for qmpulse in self.ro_pulses:
-            qmpulse.acquisition.save()

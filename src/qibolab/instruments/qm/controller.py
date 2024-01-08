@@ -252,10 +252,9 @@ class QMController(Controller):
         handles.wait_for_all_values()
         results = {}
         for qmpulse in ro_pulses:
-            pulse = qmpulse.pulse
-            results[pulse.qubit] = results[pulse.serial] = qmpulse.acquisition.fetch(
-                handles
-            )
+            data = qmpulse.acquisition.fetch(handles)
+            for pulse, result in zip(qmpulse.pulses, data):
+                results[pulse.qubit] = results[pulse.serial] = result
         return results
 
     def create_sequence(self, qubits, sequence, sweepers):
@@ -276,6 +275,17 @@ class QMController(Controller):
 
         duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
 
+        qmpulses = {}
+
+        def create_qmpulse(pulse, qmpulse_cls):
+            qmpulse = qmpulse_cls(pulse)
+            key = (qmpulse.operation, pulse.qubit)
+            if key not in qmpulses:
+                qmpulses[key] = qmpulse
+            else:
+                qmpulses[key].pulses.append(pulse)
+            return qmpulses[key]
+
         qmsequence = Sequence()
         sort_key = lambda pulse: (pulse.start, pulse.duration)
         for pulse in sorted(sequence.pulses, key=sort_key):
@@ -293,11 +303,11 @@ class QMController(Controller):
                 or pulse.duration < 16
                 or pulse.serial in duration_sweep_pulses
             ):
-                qmpulse = BakedPulse(pulse)
+                qmpulse = create_qmpulse(pulse, BakedPulse)
                 qmpulse.bake(self.config, durations=[pulse.duration])
             else:
-                qmpulse = QMPulse(pulse)
-                self.config.register_pulse(qubit, pulse)
+                qmpulse = create_qmpulse(pulse, QMPulse)
+                self.config.register_pulse(qubit, qmpulse)
             qmsequence.add(qmpulse)
 
         qmsequence.shift()
@@ -349,3 +359,6 @@ class QMController(Controller):
 
         result = self.execute_program(experiment)
         return self.fetch_results(result, qmsequence.ro_pulses)
+
+    def split_batches(self, sequences):
+        return [sequences]

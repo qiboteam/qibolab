@@ -27,9 +27,11 @@ class Acquisition(ABC):
     variables.
     """
 
-    serial: str
-    """Serial of the readout pulse that generates this acquisition."""
+    name: str
+    """Name of the acquisition used as identifier to download results from the
+    instruments."""
     average: bool
+    npulses: int
 
     @abstractmethod
     def assign_element(self, element):
@@ -91,19 +93,18 @@ class RawAcquisition(Acquisition):
         if self.average:
             i_stream = i_stream.average()
             q_stream = q_stream.average()
-        i_stream.save(f"{self.serial}_I")
-        q_stream.save(f"{self.serial}_Q")
+        i_stream.save(f"{self.name}_I")
+        q_stream.save(f"{self.name}_Q")
 
     def fetch(self, handles):
-        ires = handles.get(f"{self.serial}_I").fetch_all()
-        qres = handles.get(f"{self.serial}_Q").fetch_all()
+        ires = handles.get(f"{self.name}_I").fetch_all()
+        qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
-        ires = u.raw2volts(ires)
-        qres = u.raw2volts(qres)
+        signal = u.raw2volts(ires) + 1j * u.raw2volts(qres)
         if self.average:
-            return AveragedRawWaveformResults(ires + 1j * qres)
-        return RawWaveformResults(ires + 1j * qres)
+            return [AveragedRawWaveformResults(signal)]
+        return [RawWaveformResults(signal)]
 
 
 @dataclass
@@ -136,22 +137,35 @@ class IntegratedAcquisition(Acquisition):
     def download(self, *dimensions):
         Istream = self.I_stream
         Qstream = self.Q_stream
+        if self.npulses > 1:
+            Istream = Istream.buffer(self.npulses)
+            Qstream = Qstream.buffer(self.npulses)
         for dim in dimensions:
             Istream = Istream.buffer(dim)
             Qstream = Qstream.buffer(dim)
         if self.average:
             Istream = Istream.average()
             Qstream = Qstream.average()
-        Istream.save(f"{self.serial}_I")
-        Qstream.save(f"{self.serial}_Q")
+        Istream.save(f"{self.name}_I")
+        Qstream.save(f"{self.name}_Q")
 
     def fetch(self, handles):
-        ires = handles.get(f"{self.serial}_I").fetch_all()
-        qres = handles.get(f"{self.serial}_Q").fetch_all()
-        if self.average:
-            # TODO: calculate std
-            return AveragedIntegratedResults(ires + 1j * qres)
-        return IntegratedResults(ires + 1j * qres)
+        ires = handles.get(f"{self.name}_I").fetch_all()
+        qres = handles.get(f"{self.name}_Q").fetch_all()
+        signal = ires + 1j * qres
+        if self.npulses > 1:
+            if self.average:
+                # TODO: calculate std
+                return [
+                    AveragedIntegratedResults(signal[..., i])
+                    for i in range(self.npulses)
+                ]
+            return [IntegratedResults(signal[..., i]) for i in range(self.npulses)]
+        else:
+            if self.average:
+                # TODO: calculate std
+                return [AveragedIntegratedResults(signal)]
+            return [IntegratedResults(signal)]
 
 
 @dataclass
@@ -199,15 +213,27 @@ class ShotsAcquisition(Acquisition):
 
     def download(self, *dimensions):
         shots = self.shots
+        if self.npulses > 1:
+            shots = shots.buffer(self.npulses)
         for dim in dimensions:
             shots = shots.buffer(dim)
         if self.average:
             shots = shots.average()
-        shots.save(f"{self.serial}_shots")
+        shots.save(f"{self.name}_shots")
 
     def fetch(self, handles):
-        shots = handles.get(f"{self.serial}_shots").fetch_all()
-        if self.average:
-            # TODO: calculate std
-            return AveragedSampleResults(shots)
-        return SampleResults(shots.astype(int))
+        shots = handles.get(f"{self.name}_shots").fetch_all()
+        if len(self.npulses) > 1:
+            if self.average:
+                # TODO: calculate std
+                return [
+                    AveragedSampleResults(shots[..., i]) for i in range(self.npulses)
+                ]
+            return [
+                SampleResults(shots[..., i].astype(int)) for i in range(self.npulses)
+            ]
+        else:
+            if self.average:
+                # TODO: calculate std
+                return [AveragedSampleResults(shots)]
+            return [SampleResults(shots.astype(int))]
