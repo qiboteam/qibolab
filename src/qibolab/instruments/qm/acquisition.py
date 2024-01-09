@@ -236,7 +236,7 @@ class ShotsAcquisition(Acquisition):
 
     def fetch(self, handles):
         shots = handles.get(f"{self.name}_shots").fetch_all()
-        if len(self.npulses) > 1:
+        if self.npulses > 1:
             if self.average:
                 # TODO: calculate std
                 return [

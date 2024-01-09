@@ -6,10 +6,11 @@ from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
 from qibolab.instruments.qm import OPXplus, QMController
-from qibolab.instruments.qm.acquisition import Acquisition
+from qibolab.instruments.qm.acquisition import Acquisition, declare_acquisitions
 from qibolab.instruments.qm.controller import controllers_config
 from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
 from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
+from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile
@@ -18,7 +19,7 @@ from .conftest import set_platform_profile
 def test_qmpulse():
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     qmpulse = QMPulse(pulse)
-    assert qmpulse.operation == pulse.serial
+    assert qmpulse.operation == "drive(40, 0.05, Rectangular())"
     assert qmpulse.relative_phase == 0
 
 
@@ -27,13 +28,14 @@ def test_qmpulse_declare_output(acquisition_type):
     options = ExecutionParameters(acquisition_type=acquisition_type)
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     qmpulse = QMPulse(pulse)
+    qubits = {0: Qubit(0, threshold=0.1, iq_angle=0.2)}
     if acquisition_type is AcquisitionType.SPECTROSCOPY:
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             with qua.program() as _:
-                qmpulse.declare_output(options, 0.1, 0.2)
+                declare_acquisitions([qmpulse], qubits, options)
     else:
         with qua.program() as _:
-            qmpulse.declare_output(options, 0.1, 0.2)
+            declare_acquisitions([qmpulse], qubits, options)
         acquisition = qmpulse.acquisition
         assert isinstance(acquisition, Acquisition)
         if acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -61,7 +63,6 @@ def test_qmsequence():
     qmsequence.add(QMPulse(ro_pulse))
     assert len(qmsequence.pulse_to_qmpulse) == 2
     assert len(qmsequence.qmpulses) == 2
-    assert len(qmsequence.ro_pulses) == 1
 
 
 def test_qmpulse_previous_and_next():
@@ -322,14 +323,11 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
     controller.config.register_element(
         platform.qubits[qubit], pulse, controller.time_of_flight, controller.smearing
     )
-    controller.config.register_pulse(platform.qubits[qubit], pulse)
-    assert controller.config.pulses[pulse.serial] == target_pulse
+    qmpulse = QMPulse(pulse)
+    controller.config.register_pulse(platform.qubits[qubit], qmpulse)
+    assert controller.config.pulses[qmpulse.operation] == target_pulse
     assert target_pulse["waveforms"]["I"] in controller.config.waveforms
     assert target_pulse["waveforms"]["Q"] in controller.config.waveforms
-    assert (
-        controller.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.serial]
-        == pulse.serial
-    )
 
 
 def test_qm_register_flux_pulse(qmplatform):
@@ -344,14 +342,11 @@ def test_qm_register_flux_pulse(qmplatform):
         "length": pulse.duration,
         "waveforms": {"single": "constant_wf0.005"},
     }
+    qmpulse = QMPulse(pulse)
     controller.config.register_element(platform.qubits[qubit], pulse)
-    controller.config.register_pulse(platform.qubits[qubit], pulse)
-    assert controller.config.pulses[pulse.serial] == target_pulse
+    controller.config.register_pulse(platform.qubits[qubit], qmpulse)
+    assert controller.config.pulses[qmpulse.operation] == target_pulse
     assert target_pulse["waveforms"]["single"] in controller.config.waveforms
-    assert (
-        controller.config.elements[f"flux{qubit}"]["operations"][pulse.serial]
-        == pulse.serial
-    )
 
 
 @pytest.mark.parametrize("duration", [0, 30])

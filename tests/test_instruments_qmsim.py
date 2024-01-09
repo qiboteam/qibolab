@@ -22,7 +22,6 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.instruments.qm import QMSim
 from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -43,10 +42,11 @@ def simulator(request):
         pytest.skip("Skipping QM simulator tests because address was not provided.")
 
     platform = create_platform("qm")
-    duration = request.config.getoption("--simulation-duration")
-    controller = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
+    controller = platform.instruments["qm"]
+    controller.simulation_duration = request.config.getoption("--simulation-duration")
     controller.time_of_flight = 280
-    platform.instruments["qmopx"] = controller
+    # controller.cloud = True
+
     platform.connect()
     platform.setup()
     yield platform
