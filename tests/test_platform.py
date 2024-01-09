@@ -11,6 +11,7 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.dummy import load_dummy_runcard
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
@@ -64,14 +65,12 @@ def test_dump_runcard(platform):
     dump_runcard(platform, path)
     final_runcard = load_runcard(path)
     if platform.name == "dummy" or platform.name == "dummy_couplers":
-        target_path = (
-            pathlib.Path(__file__).parent.parent / "src" / "qibolab" / "dummy.yml"
-        )
+        target_runcard = load_dummy_runcard()
     else:
         target_path = (
             pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}.yml"
         )
-    target_runcard = load_runcard(target_path)
+        target_runcard = load_runcard(target_path)
     # for the characterization section the dumped runcard may contain
     # some default ``Qubit`` parameters
     target_char = target_runcard.pop("characterization")["single_qubit"]

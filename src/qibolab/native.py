@@ -354,10 +354,10 @@ class TwoQubitNatives:
     def symmetric(self):
         """Check if the defined two-qubit gates are symmetric between target
         and control qubits."""
-        for fld in fields(self):
-            if not fld.metadata["symmetric"] and getattr(self, fld.name) is not None:
-                return False
-        return True
+        return all(
+            fld.metadata["symmetric"] or getattr(self, fld.name) is None
+            for fld in fields(self)
+        )
 
     @classmethod
     def from_dict(cls, qubits, couplers, native_gates):
