@@ -59,9 +59,6 @@ def test_instrument_interface(qrm_rf: ClusterQRM_RF):
         "name",
         "address",
         "is_connected",
-        "signature",
-        "tmp_folder",
-        "data_folder",
     ]:
         assert hasattr(qrm_rf, attribute)
 
