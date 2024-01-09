@@ -355,12 +355,6 @@ class Zurich(Controller):
             self.device = self.session.connect(do_emulation=self.emulation)
             self.is_connected = True
 
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-
-    def stop(self):
-        """Empty method to comply with Instrument interface."""
-
     def disconnect(self):
         if self.is_connected:
             self.device = self.session.disconnect()

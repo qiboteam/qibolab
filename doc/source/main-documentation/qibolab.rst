@@ -14,7 +14,7 @@ The API reference section provides a description of all the attributes and metho
 In the platform, the main methods can be divided in different sections:
 
 - functions save and change qubit parameters (``dump``, ``update``)
-- functions to coordinate the instruments (``connect``, ``setup``, ``start``, ``stop``, ``disconnect``)
+- functions to coordinate the instruments (``connect``, ``setup``, ``disconnect``)
 - functions to execute experiments (``execute_pulse_sequence``, ``execute_pulse_sequences``, ``sweep``)
 - functions to initialize gates (``create_RX90_pulse``, ``create_RX_pulse``, ``create_CZ_pulse``, ``create_MZ_pulse``, ``create_qubit_drive_pulse``, ``create_qubit_readout_pulse``, ``create_RX90_drag_pulse``, ``create_RX_drag_pulse``)
 - setters and getters of channel/qubit parameters (local oscillator parameters, attenuations, gain and biases)
@@ -29,13 +29,11 @@ For example, let's first define a platform (that we consider to be a single qubi
 
     platform = create_platform("dummy")
 
-Now we connect and start the instruments (note that we, the user, do not need to know which instruments are connected).
+Now we connect to the instruments (note that we, the user, do not need to know which instruments are connected).
 
 .. testcode::  python
 
     platform.connect()
-    platform.setup()
-    platform.start()
 
 We can easily print some of the parameters of the channels (similarly we can set those, if needed):
 
@@ -93,7 +91,6 @@ Finally, we can stop instruments and close connections.
 
 .. testcode::  python
 
-    platform.stop()
     platform.disconnect()
 
 
@@ -719,8 +716,6 @@ Instruments all implement a set of methods:
 
 - connect
 - setup
-- start
-- stop
 - disconnect
 
 While the controllers, the main instruments in a typical setup, add other two methods:

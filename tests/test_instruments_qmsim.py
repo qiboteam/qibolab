@@ -48,7 +48,6 @@ def simulator(request):
     controller.time_of_flight = 280
     platform.instruments["qmopx"] = controller
     platform.connect()
-    platform.setup()
     yield platform
     platform.disconnect()
 

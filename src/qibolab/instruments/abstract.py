@@ -46,27 +46,14 @@ class Instrument(ABC):
     @abstractmethod
     def connect(self):
         """Establish connection to the physical instrument."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def setup(self, *args, **kwargs):
-        """Upload settings to the physical instrument."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def start(self):
-        """Turn on the physical instrument."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self):
-        """Turn off the physical instrument."""
-        raise NotImplementedError
 
     @abstractmethod
     def disconnect(self):
         """Close connection to the physical instrument."""
-        raise NotImplementedError
+
+    @abstractmethod
+    def setup(self, *args, **kwargs):
+        """Set instrument settings."""
 
 
 class Controller(Instrument):
@@ -85,10 +72,7 @@ class Controller(Instrument):
         """Sampling rate of control electronics in giga samples per second
         (GSps)."""
 
-    def __getitem__(self, port_name):
-        return self.ports(port_name)
-
-    def ports(self, port_name):
+    def ports(self, port_name, *args, **kwargs):
         """Get ports associated to this controller.
 
         Args:

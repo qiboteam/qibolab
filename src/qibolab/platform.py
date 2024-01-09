@@ -166,32 +166,6 @@ class Platform:
                     )
         self.is_connected = True
 
-    def setup(self):
-        """Prepares instruments to execute experiments.
-
-        Sets flux port offsets to the qubit sweetspots.
-        """
-        for instrument in self.instruments.values():
-            instrument.setup()
-        for qubit in self.qubits.values():
-            if qubit.flux is not None and qubit.sweetspot != 0:
-                qubit.flux.offset = qubit.sweetspot
-        for coupler in self.couplers.values():
-            if coupler.flux is not None and coupler.sweetspot != 0:
-                coupler.flux.offset = coupler.sweetspot
-
-    def start(self):
-        """Starts all the instruments."""
-        if self.is_connected:
-            for instrument in self.instruments.values():
-                instrument.start()
-
-    def stop(self):
-        """Starts all the instruments."""
-        if self.is_connected:
-            for instrument in self.instruments.values():
-                instrument.stop()
-
     def disconnect(self):
         """Disconnects from instruments."""
         if self.is_connected:

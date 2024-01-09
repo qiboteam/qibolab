@@ -91,6 +91,14 @@ class LocalOscillator(Instrument):
         for fld in fields(self.settings):
             self.sync(fld.name)
 
+        self.device.on()
+
+    def disconnect(self):
+        if self.is_connected:
+            self.device.off()
+            self.device.close()
+            self.is_connected = False
+
     def sync(self, parameter):
         """Sync parameter value between our cache and the instrument.
 
@@ -123,14 +131,3 @@ class LocalOscillator(Instrument):
                     f"Cannot set {name} to instrument {self.name} of type {type_.__name__}"
                 )
             setattr(self, name, value)
-
-    def start(self):
-        self.device.on()
-
-    def stop(self):
-        self.device.off()
-
-    def disconnect(self):
-        if self.is_connected:
-            self.device.close()
-            self.is_connected = False

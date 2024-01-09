@@ -144,12 +144,8 @@ def test_qmpulse_previous_and_next_flux():
 
 def test_qmopx_setup(dummy_qrc):
     platform = create_platform("qm")
-    platform.setup()
     opx = platform.instruments["qmopx"]
     assert opx.time_of_flight == 280
-
-
-# TODO: Test start/stop
 
 
 def test_qmopx_register_analog_output_controllers():
@@ -358,7 +354,6 @@ def test_qmopx_register_baked_pulse(dummy_qrc, duration):
 @patch("qibolab.instruments.qm.simulator.QMSim.execute_program")
 def test_qmopx_qubit_spectroscopy(mocker):
     platform = create_platform("qm")
-    platform.setup()
     opx = platform.instruments["qmopx"]
     # disable program dump otherwise it will fail if we don't connect
     opx.script_file_name = None
@@ -381,7 +376,6 @@ def test_qmopx_qubit_spectroscopy(mocker):
 @patch("qibolab.instruments.qm.simulator.QMSim.execute_program")
 def test_qmopx_duration_sweeper(mocker):
     platform = create_platform("qm")
-    platform.setup()
     opx = platform.instruments["qmopx"]
     # disable program dump otherwise it will fail if we don't connect
     opx.script_file_name = None
