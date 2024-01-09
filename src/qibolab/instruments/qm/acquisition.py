@@ -197,11 +197,10 @@ class ShotsAcquisition(Acquisition):
     """Stream to collect multiple shots."""
 
     def __post_init__(self):
-        if threshold is None or angle is None:
-            raise_error(
-                ValueError,
+        if self.threshold is None or self.angle is None:
+            raise ValueError(
                 "Cannot use ``AcquisitionType.DISCRIMINATION`` "
-                "if threshold and angle are not given.",
+                "if threshold and angle are not given."
             )
         self.cos = np.cos(self.angle)
         self.sin = np.sin(self.angle)
@@ -289,3 +288,26 @@ def declare_acquisitions(ro_pulses, qubits, options):
         acquisitions[name].keys.append(qmpulse.pulse.serial)
         qmpulse.acquisition = acquisitions[name]
     return acquisitions
+
+
+def fetch_results(result, acquisitions):
+    """Fetches results from an executed experiment.
+
+    Args:
+        result: Result of the executed experiment.
+        acquisition (dict): Dictionary containing :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
+
+    Returns:
+        Dictionary with the results in the format required by the platform.
+    """
+    # TODO: Update result asynchronously instead of waiting
+    # for all values, in order to allow live plotting
+    # using ``handles.is_processing()``
+    handles = result.result_handles
+    handles.wait_for_all_values()
+    results = {}
+    for acquisition in acquisitions.values():
+        data = acquisition.fetch(handles)
+        for serial, result in zip(acquisition.keys, data):
+            results[acquisition.qubit] = results[serial] = result
+    return results

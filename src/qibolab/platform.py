@@ -210,9 +210,6 @@ class Platform:
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
-                elif new_result is not None:
-                    # currently the result of QMSim is not a dict
-                    result = new_result
 
         return result
 
@@ -283,11 +280,6 @@ class Platform:
         results = defaultdict(list)
         for batch in self._controller.split_batches(sequences):
             sequence, readouts = unroll_sequences(batch, options.relaxation_time)
-
-            print()
-            print(sequence)
-            print()
-
             result = self._execute(sequence, options, **kwargs)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
@@ -348,10 +340,6 @@ class Platform:
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
-                elif new_result is not None:
-                    # currently the result of QMSim is not a dict
-                    result = new_result
-
         return result
 
     def __call__(self, sequence, options):

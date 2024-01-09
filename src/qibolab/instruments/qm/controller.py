@@ -1,17 +1,18 @@
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
-from qm import generate_qua_script, qua
+from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script, qua
 from qm.octave import QmOctaveConfig
 from qm.qua import declare, for_
-from qm.QuantumMachinesManager import QuantumMachinesManager
+from qm.simulate.credentials import create_credentials
+from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 
-from .acquisition import declare_acquisitions
+from .acquisition import declare_acquisitions, fetch_results
 from .config import SAMPLING_RATE, QMConfig
 from .devices import Octave, OPXplus
 from .ports import OPXIQ
@@ -140,6 +141,22 @@ class QMController(Controller):
     is_connected: bool = False
     """Boolean that shows whether we are connected to the QM manager."""
 
+    simulation_duration: Optional[int] = None
+    """Duration for the simulation in ns.
+
+    If given the simulator will be used instead of actual hardware
+    execution.
+    """
+    cloud: bool = False
+    """If ``True`` the QM cloud simulator is used which does not require access
+    to physical instruments.
+
+    This assumes that a proper cloud address has been given.
+    If ``False`` and ``simulation_duration`` was given, then the built-in simulator
+    of the instruments is used. This requires connection to instruments.
+    Default is ``False``.
+    """
+
     def __post_init__(self):
         super().__init__(self.name, self.address)
         # convert lists to dicts
@@ -147,6 +164,10 @@ class QMController(Controller):
             self.opxs = {instr.name: instr for instr in self.opxs}
         if not isinstance(self.octaves, dict):
             self.octaves = {instr.name: instr for instr in self.octaves}
+
+        if self.simulation_duration is not None:
+            # convert simulation duration from ns to clock cycles
+            self.simulation_duration //= 4
 
     def ports(self, name, input=False):
         """Provides instrument ports to the user.
@@ -182,7 +203,12 @@ class QMController(Controller):
         """Connect to the Quantum Machines manager."""
         host, port = self.address.split(":")
         octave = declare_octaves(self.octaves, host, self.calibration_path)
-        self.manager = QuantumMachinesManager(host=host, port=int(port), octave=octave)
+        credentials = None
+        if self.cloud:
+            credentials = create_credentials()
+        self.manager = QuantumMachinesManager(
+            host=host, port=int(port), octave=octave, credentials=credentials
+        )
 
     def setup(self):
         """Deprecated method."""
@@ -232,31 +258,23 @@ class QMController(Controller):
 
         Args:
             program: QUA program.
-
-        Returns:
-            TODO
         """
         machine = self.manager.open_qm(self.config.__dict__)
         return machine.execute(program)
 
-    @staticmethod
-    def fetch_results(result, acquisitions):
-        """Fetches results from an executed experiment.
+    def simulate_program(self, program):
+        """Simulates an arbitrary program written in QUA language.
 
-        Defined as ``@staticmethod`` because it is overwritten
-        in :class:`qibolab.instruments.qm.simulator.QMSim`.
+        Args:
+            program: QUA program.
         """
-        # TODO: Update result asynchronously instead of waiting
-        # for all values, in order to allow live plotting
-        # using ``handles.is_processing()``
-        handles = result.result_handles
-        handles.wait_for_all_values()
-        results = {}
-        for acquisition in acquisitions.values():
-            data = acquisition.fetch(handles)
-            for serial, result in zip(acquisition.keys, data):
-                results[acquisition.qubit] = results[serial] = result
-        return results
+        ncontrollers = len(self.config.controllers)
+        controller_connections = create_simulator_controller_connections(ncontrollers)
+        simulation_config = SimulationConfig(
+            duration=self.simulation_duration,
+            controller_connections=controller_connections,
+        )
+        return self.manager.simulate(self.config.__dict__, program, simulation_config)
 
     def create_sequence(self, qubits, sequence, sweepers):
         """Translates a :class:`qibolab.pulses.PulseSequence` to a
@@ -275,17 +293,6 @@ class QMController(Controller):
         # like we do for readout multiplex
 
         duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
-
-        qmpulses = {}
-
-        def create_qmpulse(pulse, qmpulse_cls):
-            qmpulse = qmpulse_cls(pulse)
-            key = (qmpulse.operation, pulse.qubit)
-            if key not in qmpulses:
-                qmpulses[key] = qmpulse
-            else:
-                qmpulses[key].pulses.append(pulse)
-            return qmpulses[key]
 
         qmsequence = Sequence()
         ro_pulses = []
@@ -357,8 +364,15 @@ class QMController(Controller):
             with open(self.script_file_name, "w") as file:
                 file.write(generate_qua_script(experiment, self.config.__dict__))
 
-        result = self.execute_program(experiment)
-        return self.fetch_results(result, acquisitions)
+        if self.simulation_duration is not None:
+            result = self.simulate_program(experiment)
+            results = {}
+            for pulse in ro_pulses:
+                results[pulse.qubit] = results[pulse.serial] = result
+            return results
+        else:
+            result = self.execute_program(experiment)
+            return fetch_results(result, acquisitions)
 
     def split_batches(self, sequences):
         return [sequences]
