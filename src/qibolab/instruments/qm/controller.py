@@ -367,7 +367,8 @@ class QMController(Controller):
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for pulse in ro_pulses:
+            for qmpulse in ro_pulses:
+                pulse = qmpulse.pulse
                 results[pulse.qubit] = results[pulse.serial] = result
             return results
         else:
