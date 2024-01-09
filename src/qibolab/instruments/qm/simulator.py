@@ -42,7 +42,7 @@ class QMSim(QMController):
             self.manager = QuantumMachinesManager(host, int(port))
 
     @staticmethod
-    def fetch_results(result, ro_pulses):
+    def fetch_results(result, acquisitions):
         return result
 
     def execute_program(self, program):

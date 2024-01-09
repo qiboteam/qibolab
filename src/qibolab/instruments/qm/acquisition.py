@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import List, Optional
 
 import numpy as np
 from qm import qua
@@ -8,6 +9,8 @@ from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qualang_tools.addons.variables import assign_variables_to_element
 from qualang_tools.units import unit
 
+from qibolab.execution_parameters import AcquisitionType, AveragingMode
+from qibolab.qubits import QubitId
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
@@ -30,8 +33,18 @@ class Acquisition(ABC):
     name: str
     """Name of the acquisition used as identifier to download results from the
     instruments."""
+    qubit: QubitId
     average: bool
-    npulses: int
+    threshold: Optional[float] = None
+    """Threshold to be used for classification of single shots."""
+    angle: Optional[float] = None
+    """Angle in the IQ plane to be used for classification of single shots."""
+
+    keys: List[str] = field(default_factory=list)
+
+    @property
+    def npulses(self):
+        return len(self.keys)
 
     @abstractmethod
     def assign_element(self, element):
@@ -175,11 +188,6 @@ class ShotsAcquisition(Acquisition):
     Threshold and angle must be given in order to classify shots.
     """
 
-    threshold: float
-    """Threshold to be used for classification of single shots."""
-    angle: float
-    """Angle in the IQ plane to be used for classification of single shots."""
-
     I: _Variable = field(default_factory=lambda: declare(fixed))
     Q: _Variable = field(default_factory=lambda: declare(fixed))
     """Variables to save the (I, Q) values acquired from a single shot."""
@@ -189,6 +197,12 @@ class ShotsAcquisition(Acquisition):
     """Stream to collect multiple shots."""
 
     def __post_init__(self):
+        if threshold is None or angle is None:
+            raise_error(
+                ValueError,
+                "Cannot use ``AcquisitionType.DISCRIMINATION`` "
+                "if threshold and angle are not given.",
+            )
         self.cos = np.cos(self.angle)
         self.sin = np.sin(self.angle)
 
@@ -237,3 +251,41 @@ class ShotsAcquisition(Acquisition):
                 # TODO: calculate std
                 return [AveragedSampleResults(shots)]
             return [SampleResults(shots.astype(int))]
+
+
+ACQUISITION_TYPES = {
+    AcquisitionType.RAW: RawAcquisition,
+    AcquisitionType.INTEGRATION: IntegratedAcquisition,
+    AcquisitionType.DISCRIMINATION: ShotsAcquisition,
+}
+
+
+def declare_acquisitions(ro_pulses, qubits, options):
+    """Declares variables for saving acquisition in the QUA program.
+
+    Args:
+        ro_pulses (list): List of readout pulses in the sequence.
+        qubits (dict): Dictionary containing all the :class:`qibolab.qubits.Qubit`
+            objects of the platform.
+        options (:class:`qibolab.execution_parameters.ExecutionParameters`): Execution
+            options containing acquisition type and averaging mode.
+
+    Returns:
+        Dictionary containing the different :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
+    """
+    acquisitions = {}
+    for qmpulse in ro_pulses:
+        qubit = qmpulse.pulse.qubit
+        name = f"{qmpulse.operation}_{qubit}"
+        if name not in acquisitions:
+            threshold = qubits[qubit].threshold
+            iq_angle = qubits[qubit].iq_angle
+            average = options.averaging_mode is AveragingMode.CYCLIC
+            acquisition_cls = ACQUISITION_TYPES[options.acquisition_type]
+            acquisition = acquisition_cls(name, qubit, options, threshold, iq_angle)
+            acquisition.assign_element(qmpulse.element)
+            acquisitions[name] = acquisition
+
+        acquisitions[name].keys.append(qmpulse.pulse.serial)
+        qmpulse.acquisition = acquisitions[name]
+    return acquisitions

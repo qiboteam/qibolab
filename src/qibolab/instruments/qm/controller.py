@@ -11,6 +11,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 
+from .acquisition import declare_acquisitions
 from .config import SAMPLING_RATE, QMConfig
 from .devices import Octave, OPXplus
 from .ports import OPXIQ
@@ -239,7 +240,7 @@ class QMController(Controller):
         return machine.execute(program)
 
     @staticmethod
-    def fetch_results(result, ro_pulses):
+    def fetch_results(result, acquisitions):
         """Fetches results from an executed experiment.
 
         Defined as ``@staticmethod`` because it is overwritten
@@ -251,10 +252,10 @@ class QMController(Controller):
         handles = result.result_handles
         handles.wait_for_all_values()
         results = {}
-        for qmpulse in ro_pulses:
-            data = qmpulse.acquisition.fetch(handles)
-            for pulse, result in zip(qmpulse.pulses, data):
-                results[pulse.qubit] = results[pulse.serial] = result
+        for acquisition in acquisitions.values():
+            data = acquisition.fetch(handles)
+            for serial, result in zip(acquisition.keys, data):
+                results[acquisition.qubit] = results[serial] = result
         return results
 
     def create_sequence(self, qubits, sequence, sweepers):
@@ -287,6 +288,7 @@ class QMController(Controller):
             return qmpulses[key]
 
         qmsequence = Sequence()
+        ro_pulses = []
         sort_key = lambda pulse: (pulse.start, pulse.duration)
         for pulse in sorted(sequence.pulses, key=sort_key):
             qubit = qubits[pulse.qubit]
@@ -303,15 +305,17 @@ class QMController(Controller):
                 or pulse.duration < 16
                 or pulse.serial in duration_sweep_pulses
             ):
-                qmpulse = create_qmpulse(pulse, BakedPulse)
+                qmpulse = BakedPulse(pulse)
                 qmpulse.bake(self.config, durations=[pulse.duration])
             else:
-                qmpulse = create_qmpulse(pulse, QMPulse)
+                qmpulse = QMPulse(pulse)
+                if pulse.type is PulseType.READOUT:
+                    ro_pulses.append(qmpulse)
                 self.config.register_pulse(qubit, qmpulse)
             qmsequence.add(qmpulse)
 
         qmsequence.shift()
-        return qmsequence
+        return qmsequence, ro_pulses
 
     def play(self, qubits, couplers, sequence, options):
         return self.sweep(qubits, couplers, sequence, options)
@@ -331,15 +335,11 @@ class QMController(Controller):
                 self.config.register_port(qubit.flux.port)
                 self.config.register_flux_element(qubit)
 
-        qmsequence = self.create_sequence(qubits, sequence, sweepers)
+        qmsequence, ro_pulses = self.create_sequence(qubits, sequence, sweepers)
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)
-            for qmpulse in qmsequence.ro_pulses:
-                threshold = qubits[qmpulse.pulse.qubit].threshold
-                iq_angle = qubits[qmpulse.pulse.qubit].iq_angle
-                qmpulse.declare_output(options, threshold, iq_angle)
-
+            acquisitions = declare_acquisitions(ro_pulses, qubits, options)
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(
                     list(sweepers),
@@ -350,15 +350,15 @@ class QMController(Controller):
                 )
 
             with qua.stream_processing():
-                for qmpulse in qmsequence.ro_pulses:
-                    qmpulse.acquisition.download(*buffer_dims)
+                for acquisition in acquisitions.values():
+                    acquisition.download(*buffer_dims)
 
         if self.script_file_name is not None:
             with open(self.script_file_name, "w") as file:
                 file.write(generate_qua_script(experiment, self.config.__dict__))
 
         result = self.execute_program(experiment)
-        return self.fetch_results(result, qmsequence.ro_pulses)
+        return self.fetch_results(result, acquisitions)
 
     def split_batches(self, sequences):
         return [sequences]

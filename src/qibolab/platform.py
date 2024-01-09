@@ -283,6 +283,11 @@ class Platform:
         results = defaultdict(list)
         for batch in self._controller.split_batches(sequences):
             sequence, readouts = unroll_sequences(batch, options.relaxation_time)
+
+            print()
+            print(sequence)
+            print()
+
             result = self._execute(sequence, options, **kwargs)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
