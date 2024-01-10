@@ -255,7 +255,7 @@ class ClusterQCM_BB(Instrument):
         # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux and _qubit.flux.port == self.ports[port]:
+            if _qubit.flux is not None and _qubit.flux.port == self.ports[port]:
                 qubit = _qubit
 
         # select a new sequencer and configure it as required
