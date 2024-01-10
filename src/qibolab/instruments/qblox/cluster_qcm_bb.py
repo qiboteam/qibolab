@@ -252,17 +252,12 @@ class ClusterQCM_BB(Instrument):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # select the qubit relative to specific port
+        # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux.port is not None:
-                if (
-                    _qubit.flux.port.name == port
-                    and _qubit.flux.port.module.name == self.name
-                ):
-                    qubit = _qubit
-            else:
-                log.warning(f"Qubit {_qubit.name} has no flux line connected")
+            if _qubit.flux is not None and _qubit.flux.port == self.ports[port]:
+                qubit = _qubit
+
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
@@ -287,7 +282,6 @@ class ClusterQCM_BB(Instrument):
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
-            self.ports[port].offset = qubit.sweetspot if qubit else 0
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit.name if qubit else None
