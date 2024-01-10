@@ -40,6 +40,8 @@ class ClusterModule(Instrument):
         automatically determined based on the number of ports of the same type
         inside `self._ports`.
 
+        Returns this port object.
+
         Example:
         >>> qrm_module = ClusterQRM_RF("qrm_rf", f"{IP_ADDRESS}:{SLOT_IDX}")
         >>> output_port = qrm_module.add_port("o1")
