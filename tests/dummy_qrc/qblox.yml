@@ -13,23 +13,6 @@ instruments:
       frequency: 6_535_900_000
       power: 4
 
-    qcm_bb0:
-        o1:
-            offset: 0.1
-
-        o2:
-            offset: 0.11
-
-        o3:
-            offset: 0.12
-
-        o4:
-            offset: 0.13
-
-    qcm_bb1:
-        o1:
-            offset: 0.14
-
     qcm_rf0:
         o1:
             attenuation: 20
