@@ -505,27 +505,6 @@ class ClusterQCM_RF(ClusterModule):
                                 name=sweeper.parameter.name,
                             )
 
-                    # else: # qubit_sweeper_parameters
-                    #     if sweeper.qubits and sequencer.qubit in [_.name for _ in sweeper.qubits]:
-                    #         # plays an active role
-                    #         if sweeper.parameter == Parameter.bias:
-                    #             reference_value = self._ports[port].offset
-                    #             # create QbloxSweepers and attach them to qibolab sweeper
-                    #             if sweeper.type == SweeperType.ABSOLUTE:
-                    #                 sweeper.qs = QbloxSweeper.from_sweeper(
-                    #                     program=program, sweeper=sweeper, add_to=-reference_value
-                    #                 )
-                    #             elif sweeper.type == SweeperType.OFFSET:
-                    #                 sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
-                    #             elif sweeper.type == SweeperType.FACTOR:
-                    #                 raise Exception("SweeperType.FACTOR for Parameter.bias not supported")
-                    #             sweeper.qs.update_parameters = True
-                    #     else:
-                    #         # does not play an active role
-                    #         sweeper.qs = QbloxSweeper(
-                    #             program=program, type=QbloxSweeperType.number, rel_values=range(len(sweeper.values)),
-                    #             name = sweeper.parameter.name
-                    #         )
                     else:
                         # does not play an active role
                         sweeper.qs = QbloxSweeper(
