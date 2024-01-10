@@ -201,9 +201,9 @@ Note that while channels are defined in a device-independent manner, the port pa
     from qibolab.instruments.rfsoc import RFSoC
 
     controller = RFSoC(name="dummy", address="192.168.0.10", port="6000")
-    channel1 = Channel("my_channel_name_1", port=controller[1])
-    channel2 = Channel("my_channel_name_2", port=controller[2])
-    channel3 = Channel("my_channel_name_3", port=controller[3])
+    channel1 = Channel("my_channel_name_1", port=controller.ports(1))
+    channel2 = Channel("my_channel_name_2", port=controller.ports(2))
+    channel3 = Channel("my_channel_name_3", port=controller.ports(3))
 
 Channels are then organized in :class:`qibolab.channels.ChannelMap` to be passed as a single argument to the platform.
 Following the tutorial in :doc:`/tutorials/lab`, we can continue the initialization:
@@ -704,13 +704,12 @@ Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
     - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
     - Quantum Machines: :class:`qibolab.instruments.qm.driver.QMOPX`
-    - Qblox: :class:`qibolab.instruments.qblox.cluster.Cluster`
+    - Qblox: :class:`qibolab.instruments.qblox.controller.QbloxCluster`
     - Xilinx RFSoCs: :class:`qibolab.instruments.rfsoc.driver.RFSoC`
 
 Other Instruments (subclasses of :class:`qibolab.instruments.abstract.Instrument`):
     - Erasynth++: :class:`qibolab.instruments.erasynth.ERA`
     - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
-    - Qutech SPI rack: :class:`qibolab.instruments.qutech.SPI`
 
 Instruments all implement a set of methods:
 

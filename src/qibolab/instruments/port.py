@@ -35,9 +35,4 @@ class Port:
     instruments)."""
     filters: dict
     """Filters to be applied to the channel to reduce the distortions when
-    sending flux pulses.
-
-    Useful for two-qubit gates. Quantum Machines (
-    :class: `qibolab.instruments.qm.QMOPX`) associate filters to
-        channels     but this may not be the case in other instruments.
-    """
+    sending flux pulses."""

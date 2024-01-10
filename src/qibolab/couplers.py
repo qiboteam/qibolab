@@ -13,8 +13,8 @@ class Coupler:
     """Representation of a physical coupler.
 
     Coupler objects are instantiated by
-    :class: `qibolab.platforms.platform.Platform`     but they are
-        passed to instrument designs in order to play pulses.
+    :class: `qibolab.platforms.platform.Platform`
+    and are passed to instruments to play pulses on them.
     """
 
     name: QubitId
