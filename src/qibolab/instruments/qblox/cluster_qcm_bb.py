@@ -788,12 +788,9 @@ class ClusterQCM_BB(Instrument):
             # Start used sequencers
             self.device.start_sequencer(sequencer_number)
 
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-        pass
-
-    def stop(self):
-        """Stops all sequencers."""
+    def disconnect(self):
+        """Stops all sequencers, disconnect all the outputs from the AWG paths
+        of the sequencers."""
 
         for sequencer_number in self._used_sequencers_numbers:
             state = self.device.get_sequencer_state(sequencer_number)
@@ -801,19 +798,9 @@ class ClusterQCM_BB(Instrument):
                 log.warning(
                     f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
                 )
-        try:
-            self.device.stop_sequencer()
-        except:
-            log.warning("Unable to stop sequencers")
 
-        try:
-            for port in self.ports:
-                self.ports[port].offset = 0
+        self.device.stop_sequencer()
+        self.device.disconnect_outputs()
 
-        except:
-            log.warning("Unable to clear offsets")
-
-    def disconnect(self):
-        """Empty method to comply with Instrument interface."""
         self.is_connected = False
         self.device = None
