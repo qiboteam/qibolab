@@ -281,7 +281,7 @@ def declare_acquisitions(ro_pulses, qubits, options):
             iq_angle = qubits[qubit].iq_angle
             average = options.averaging_mode is AveragingMode.CYCLIC
             acquisition_cls = ACQUISITION_TYPES[options.acquisition_type]
-            acquisition = acquisition_cls(name, qubit, options, threshold, iq_angle)
+            acquisition = acquisition_cls(name, qubit, average, threshold, iq_angle)
             acquisition.assign_element(qmpulse.element)
             acquisitions[name] = acquisition
 
