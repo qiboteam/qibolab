@@ -887,9 +887,7 @@ class Zurich(Controller):
                 previous_section = None
                 for j, sequence in enumerate(self.sub_sequences[f"couplerflux{c}"]):
                     section_uid = f"sequence_couplerflux{c}_{j}"
-                    with exp.section(
-                        uid=section_uid, play_after=previous_section
-                    ):
+                    with exp.section(uid=section_uid, play_after=previous_section):
                         for pulse in sequence:
                             pulse.zhpulse.uid += str(i)
                             exp.delay(
