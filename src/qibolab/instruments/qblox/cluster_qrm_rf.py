@@ -13,7 +13,7 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .acquisition import AveragedAcquisition, DemodulatedAcquisition
 from .module import ClusterModule
-from .port import QbloxInputPort, QbloxOutputPort
+from .port import QbloxPort
 from .q1asm import Block, Register, convert_phase, loop_block, wait_block
 from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
@@ -206,7 +206,7 @@ class ClusterQRM_RF(ClusterModule):
             # then set the value loaded from the runcard
 
             if "o1" in self._ports:
-                out_port: QbloxOutputPort = self._ports["o1"]
+                out_port: QbloxPort = self._ports["o1"]
                 out_port.upload_settings(
                     "attenuation",
                     "lo_enabled",
@@ -217,7 +217,7 @@ class ClusterQRM_RF(ClusterModule):
                 )
 
             if "i1" in self._ports:
-                input_port: QbloxInputPort = self._ports["i1"]
+                input_port: QbloxPort = self._ports["i1"]
                 input_port.upload_settings(
                     "hardware_demod_en", "acquisition_hold_off", "acquisition_duration"
                 )

@@ -9,7 +9,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .module import ClusterModule
-from .port import QbloxOutputPort
+from .port import QbloxPort
 from .q1asm import Block, Register, convert_phase, loop_block, wait_block
 from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
@@ -183,7 +183,7 @@ class ClusterQCM_RF(ClusterModule):
             self._set_default_values()
             # then set the value loaded from the runcard
             for port in self._ports.values():
-                port: QbloxOutputPort
+                port: QbloxPort
                 self._sequencers[port.name] = []
                 port.upload_settings(
                     "attenuation",
