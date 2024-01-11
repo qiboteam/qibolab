@@ -5,18 +5,14 @@ import json
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 
-from qibolab.instruments.qblox.module import ClusterModule
-from qibolab.instruments.qblox.q1asm import (
-    Block,
-    Register,
-    convert_phase,
-    loop_block,
-    wait_block,
-)
-from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
-from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .module import ClusterModule
+from .port import QbloxOutputPort
+from .q1asm import Block, Register, convert_phase, loop_block, wait_block
+from .sequencer import Sequencer, WaveformsBuffer
+from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
 class ClusterQCM_RF(ClusterModule):
@@ -186,20 +182,18 @@ class ClusterQCM_RF(ClusterModule):
             self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
-            try:
-                for port in self._ports:
-                    self._sequencers[port] = []
-                    if self._ports[port].lo_frequency != 0:
-                        self._ports[port].lo_enabled = True
-                        self._ports[port].lo_frequency = self._ports[port].lo_frequency
-                    self._ports[port].attenuation = self._ports[port].attenuation
-                    self._ports[port].hardware_mod_en = True
-                    self._ports[port].nco_freq = 0
-                    self._ports[port].nco_phase_offs = 0
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
+            for port in self._ports.values():
+                port: QbloxOutputPort
+                self._sequencers[port.name] = []
+                port.upload_settings(
+                    "attenuation",
+                    "lo_enabled",
+                    "lo_frequency",
+                    "hardware_mod_en",
+                    "nco_freq",
+                    "nco_phase_offs",
                 )
+
             self.is_connected = True
 
     def setup(self, **settings):

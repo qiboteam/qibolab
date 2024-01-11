@@ -13,6 +13,7 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .acquisition import AveragedAcquisition, DemodulatedAcquisition
 from .module import ClusterModule
+from .port import QbloxInputPort, QbloxOutputPort
 from .q1asm import Block, Register, convert_phase, loop_block, wait_block
 from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
@@ -203,33 +204,24 @@ class ClusterQRM_RF(ClusterModule):
             self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
-            try:
-                if "o1" in self._ports:
-                    self._ports["o1"].attenuation = self._ports["o1"].attenuation
-                    if self._ports["o1"].lo_frequency != 0:
-                        self._ports["o1"].lo_enabled = True
-                        self._ports["o1"].lo_frequency = self._ports["o1"].lo_frequency
 
-                    self._ports["o1"].hardware_mod_en = self._ports[
-                        "o1"
-                    ].hardware_mod_en
-                    self._ports["o1"].nco_freq = self._ports["o1"].nco_freq
-                    self._ports["o1"].nco_phase_offs = self._ports["o1"].nco_phase_offs
-
-                if "i1" in self._ports:
-                    self._ports["i1"].hardware_demod_en = self._ports[
-                        "i1"
-                    ].hardware_demod_en
-                    self._ports["i1"].acquisition_hold_off = self._ports[
-                        "i1"
-                    ].acquisition_hold_off
-                    self._ports["i1"].acquisition_duration = self._ports[
-                        "i1"
-                    ].acquisition_duration
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
+            if "o1" in self._ports:
+                out_port: QbloxOutputPort = self._ports["o1"]
+                out_port.upload_settings(
+                    "attenuation",
+                    "lo_enabled",
+                    "lo_frequency",
+                    "hardware_mod_en",
+                    "nco_freq",
+                    "nco_phase_offs",
                 )
+
+            if "i1" in self._ports:
+                input_port: QbloxInputPort = self._ports["i1"]
+                input_port.upload_settings(
+                    "hardware_demod_en", "acquisition_hold_off", "acquisition_duration"
+                )
+
             self.is_connected = True
 
     def setup(self, **settings):

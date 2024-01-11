@@ -220,8 +220,19 @@ class QbloxOutputPort(Port):
             elif self.module.device.is_qcm_type:
                 self.module.device.set(f"out{self.port_number}_lo_freq", value=value)
 
+    def upload_settings(self, *settings):
+        """Upload to the instrument the requested settings cached in
+        `self._settings`."""
+        for setting in settings:
+            try:
+                setattr(self, setting, getattr(self, setting))
+            except Exception as error:
+                raise RuntimeError(
+                    f"Unable to initialize port parameters '{setting}' on module {self.name}: {error}"
+                )
 
-class QbloxInputPort:
+
+class QbloxInputPort(Port):
     def __init__(self, module, port_number: int, port_name: str = None):
         self.name = port_name
         self.module = module
@@ -281,3 +292,14 @@ class QbloxInputPort:
             self.module.device.sequencers[self.output_sequencer_number].set(
                 "integration_length_acq", value=value
             )
+
+    def upload_settings(self, *settings):
+        """Upload to the instrument the requested settings cached in
+        `self._settings`."""
+        for setting in settings:
+            try:
+                setattr(self, setting, getattr(self, setting))
+            except Exception as error:
+                raise RuntimeError(
+                    f"Unable to initialize port parameters '{setting}' on module {self.name}: {error}"
+                )
