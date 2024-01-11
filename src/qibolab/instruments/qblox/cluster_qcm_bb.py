@@ -98,6 +98,7 @@ class ClusterQCM_BB(ClusterModule):
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1, "o3": 2, "o4": 3}
     FREQUENCY_LIMIT = 500e6
+    OUT_PORT_PATH = {0: "I", 1: "Q", 2: "I", 3: "Q"}
 
     def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM baseband module.
@@ -145,10 +146,8 @@ class ClusterQCM_BB(ClusterModule):
                 target.set(name, value)
 
         # connect the default sequencers to the out ports
-        out__port_path = {0: "I", 1: "Q", 2: "I", 3: "Q"}
-        for port_num, value in out__port_path.items():
+        for port_num, value in self.OUT_PORT_PATH.items():
             self.device.sequencers[port_num].set(f"connect_out{port_num}", value)
-        # disconnect all other sequencers from the ports
 
     def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
@@ -213,17 +212,12 @@ class ClusterQCM_BB(ClusterModule):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # select the qubit relative to specific port
+        # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux.port is not None:
-                if (
-                    _qubit.flux.port.name == port
-                    and _qubit.flux.port.module.name == self.name
-                ):
-                    qubit = _qubit
-            else:
-                log.warning(f"Qubit {_qubit.name} has no flux line connected")
+            if _qubit.flux is not None and _qubit.flux.port == self.ports[port]:
+                qubit = _qubit
+
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
@@ -248,7 +242,6 @@ class ClusterQCM_BB(ClusterModule):
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
-            self._ports[port].offset = qubit.sweetspot if qubit else 0
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit.name if qubit else None
