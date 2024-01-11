@@ -96,16 +96,11 @@ def register_gates(
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
-        qpair = pairs[(q0, q1)]
         native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
+        coupler = pairs[(q0, q1)].coupler
+        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], coupler, native_gates)
         if native_gates.symmetric:
-            qpair.qubit1 = qubits[q0]
-            qpair.qubit2 = qubits[q1]
-            qpair.native_gates = native_gates
-        else:
-            pairs[(q0, q1)] = QubitPair(
-                qubits[q0], qubits[q1], qpair.coupler, native_gates
-            )
+            pairs[(q1, q0)] = pairs[(q0, q1)]
 
     return qubits, pairs, couplers
 
