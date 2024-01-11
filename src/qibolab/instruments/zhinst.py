@@ -891,20 +891,15 @@ class Zurich(Controller):
                         pulse.zhpulse.uid += str(i)
                         exp.delay(
                             signal=f"couplerflux{c}",
-                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                            - time,
+                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
                         )
-                        time = round(
-                            pulse.pulse.duration * NANO_TO_SECONDS, 9
-                        ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                            pulse.pulse.start * NANO_TO_SECONDS, 9
+                        )
                         if isinstance(pulse, ZhSweeperLine):
-                            self.play_sweep(
-                                exp, coupler, pulse, section="couplerflux"
-                            )
+                            self.play_sweep(exp, coupler, pulse, section="couplerflux")
                         elif isinstance(pulse, ZhSweeper):
-                            self.play_sweep(
-                                exp, coupler, pulse, section="couplerflux"
-                            )
+                            self.play_sweep(exp, coupler, pulse, section="couplerflux")
                         elif isinstance(pulse, ZhPulse):
                             exp.play(signal=f"couplerflux{c}", pulse=pulse.zhpulse)
                         i += 1
@@ -923,9 +918,7 @@ class Zurich(Controller):
             i = 0
             play_after = None
             for j, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
-                with exp.section(
-                    uid=f"sequence_flux{q}_{j}", play_after=play_after
-                ):
+                with exp.section(uid=f"sequence_flux{q}_{j}", play_after=play_after):
                     for pulse in sequence:
                         if not isinstance(pulse, ZhSweeperLine):
                             pulse.zhpulse.uid += str(i)
@@ -959,9 +952,7 @@ class Zurich(Controller):
             i = 0
             play_after = None
             for j, sequence in enumerate(self.sub_sequences[f"drive{q}"]):
-                with exp.section(
-                    uid=f"sequence_drive{q}_{j}", play_after=play_after
-                ):
+                with exp.section(uid=f"sequence_drive{q}_{j}", play_after=play_after):
                     for pulse in sequence:
                         if not isinstance(pulse, ZhSweeperLine):
                             exp.delay(
