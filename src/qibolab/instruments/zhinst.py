@@ -884,10 +884,11 @@ class Zurich(Controller):
             time = 0
             i = 0
             if len(self.sequence[f"couplerflux{c}"]) != 0:
-                play_after = None
+                previous_section = None
                 for j, sequence in enumerate(self.sub_sequences[f"couplerflux{c}"]):
+                    section_uid = f"sequence_couplerflux{c}_{j}"
                     with exp.section(
-                        uid=f"sequence_couplerflux{c}_{j}", play_after=play_after
+                        uid=section_uid, play_after=previous_section
                     ):
                         for pulse in sequence:
                             pulse.zhpulse.uid += str(i)
@@ -910,7 +911,7 @@ class Zurich(Controller):
                             elif isinstance(pulse, ZhPulse):
                                 exp.play(signal=f"couplerflux{c}", pulse=pulse.zhpulse)
                             i += 1
-                    play_after = f"sequence_couplerflux{c}_{j}"
+                    previous_section = section_uid
 
     def flux(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
         """Qubit flux for bias sweep or pulses.
