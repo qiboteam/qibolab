@@ -76,7 +76,6 @@ def test_pulses_pulse_init():
         == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
     )
 
-    # initialisation with Symbolic Expressions
     p1 = Pulse(
         start=100,
         duration=50,
