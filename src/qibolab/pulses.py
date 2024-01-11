@@ -1023,8 +1023,6 @@ class ReadoutPulse(Pulse):
         channel=0,
         qubit=0,
     ):
-        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-        #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
             start,
             duration,
@@ -1080,8 +1078,6 @@ class DrivePulse(Pulse):
         channel=0,
         qubit=0,
     ):
-        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-        #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
             start,
             duration,
@@ -1110,8 +1106,6 @@ class FluxPulse(Pulse):
     PULSE_TYPE = PulseType.FLUX
 
     def __init__(self, start, duration, amplitude, shape, channel=0, qubit=0):
-        # def __init__(self, start:int | se_int, duration:int | se_int, amplitude:float, frequency:int, relative_phase:float, shape: PulseShape | str,
-        #                    channel: int | str, qubit: int | str = 0):
         super().__init__(
             start,
             duration,

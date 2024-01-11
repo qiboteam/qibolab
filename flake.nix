@@ -37,7 +37,7 @@
 
           modules = [
             {
-              packages = with pkgs; [pre-commit poethepoet stdenv.cc.cc.lib zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
 
               languages.python = {
                 enable = true;
