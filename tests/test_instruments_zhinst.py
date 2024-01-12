@@ -50,7 +50,7 @@ def test_zhpulse(shape):
         )
 
     zhpulse = ZhPulse(pulse)
-    assert zhpulse.pulse.serial == pulse.serial
+    assert zhpulse.pulse.id == pulse.id
     if shape == "SNZ" or shape == "IIR":
         assert len(zhpulse.zhpulse.samples) == 80
     else:

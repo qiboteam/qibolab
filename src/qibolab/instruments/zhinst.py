@@ -612,7 +612,7 @@ class Zurich(Controller):
                         data = (
                             np.ones(data.shape) - data.real
                         )  # Probability inversion patch
-                    serial = ropulse.pulse.serial
+                    serial = ropulse.pulse.id
                     qubit = ropulse.pulse.qubit
                     results[serial] = results[qubit] = options.results_type(data)
 
@@ -1224,7 +1224,7 @@ class Zurich(Controller):
                             np.ones(data.shape) - data.real
                         )  # Probability inversion patch
 
-                    serial = ropulse.pulse.serial
+                    serial = ropulse.pulse.id
                     qubit = ropulse.pulse.qubit
                     results[serial] = results[qubit] = options.results_type(data)
 

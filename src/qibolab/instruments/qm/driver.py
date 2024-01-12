@@ -103,7 +103,7 @@ class QMOPX(Controller):
         results = {}
         for qmpulse in ro_pulses:
             pulse = qmpulse.pulse
-            results[pulse.qubit] = results[pulse.serial] = qmpulse.acquisition.fetch(
+            results[pulse.qubit] = results[pulse.id] = qmpulse.acquisition.fetch(
                 handles
             )
         return results
