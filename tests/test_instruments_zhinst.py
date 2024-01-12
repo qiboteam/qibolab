@@ -18,9 +18,7 @@ from qibolab.instruments.zhinst import (
 from qibolab.pulses import (
     IIR,
     SNZ,
-    CouplerFluxPulse,
     Drag,
-    FluxPulse,
     Gaussian,
     Pulse,
     PulseSequence,
