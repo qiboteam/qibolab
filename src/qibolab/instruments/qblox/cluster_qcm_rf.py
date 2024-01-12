@@ -4,10 +4,8 @@ import json
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
-from qibo.config import log
 
-from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import QbloxOutputPort
+from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
     Register,
@@ -21,7 +19,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
-class ClusterQCM_RF(Instrument):
+class ClusterQCM_RF(ClusterModule):
     """Qblox Cluster Qubit Control Module RF driver.
 
     Qubit Control Module RF (QCM-RF) is an instrument that integrates an arbitratry
@@ -117,25 +115,6 @@ class ClusterQCM_RF(Instrument):
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1}
     FREQUENCY_LIMIT = 500e6
 
-    property_wrapper = lambda parent, *parameter: property(
-        lambda self: parent.device.get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(
-            parent.device, *parameter, value=x
-        ),
-    )
-    property_wrapper.__doc__ = """A lambda function used to create properties that wrap around the device parameters and
-    caches their value using `_set_device_parameter()`.
-    """
-    sequencer_property_wrapper = lambda parent, sequencer, *parameter: property(
-        lambda self: parent.device.sequencers[sequencer].get(parameter[0]),
-        lambda self, x: parent._set_device_parameter(
-            parent.device.sequencers[sequencer], *parameter, value=x
-        ),
-    )
-    sequencer_property_wrapper.__doc__ = """A lambda function used to create properties that wrap around the device sequencer
-    parameters and caches their value using `_set_device_parameter()`.
-    """
-
     def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM-RF module.
 
@@ -151,7 +130,6 @@ class ClusterQCM_RF(Instrument):
         """
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
-        self.ports: dict = {}
         self.settings = {}
 
         self._debug_folder: str = ""
@@ -164,41 +142,27 @@ class ClusterQCM_RF(Instrument):
         self._unused_sequencers_numbers: list[int] = []
 
     def _set_default_values(self):
-        # Default after reboot = 7.625
+        # disable all sequencer connections
+        self.device.disconnect_outputs()
+        # set I (path0) and Q (path1) offset to zero on output port 0 and 1. Default values after reboot = 7.625
         for i in range(2):
             [self.device.set(f"out{i}_offset_path{j}", 0) for j in range(2)]
 
         # initialise the parameters of the default sequencers to the default values,
-        # the rest of the sequencers are not configured here, but will be configured
+        # the rest of the sequencers are disconnected but will be configured
         # with the same parameters as the default in process_pulse_sequence()
-        for target in [
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]],
-            self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]],
-        ]:
-            target.set("cont_mode_en_awg_path0", False)
-            target.set("cont_mode_en_awg_path1", False)
-            target.set("cont_mode_waveform_idx_awg_path0", 0)
-            target.set("cont_mode_waveform_idx_awg_path1", 0)
-            target.set("marker_ovr_en", True)  # Default after reboot = False
-            target.set("marker_ovr_value", 15)  # Default after reboot = 0
-            target.set("mixer_corr_gain_ratio", 1)
-            target.set("mixer_corr_phase_offset_degree", 0)
-            target.set("offset_awg_path0", 0)
-            target.set("offset_awg_path1", 0)
-            target.set("sync_en", False)  # Default after reboot = False
-            target.set("upsample_rate_awg_path0", 0)
-            target.set("upsample_rate_awg_path1", 0)
+        default_sequencers = [
+            self.device.sequencers[i] for i in self.DEFAULT_SEQUENCERS.values()
+        ]
+        for target in default_sequencers:
+            for name, value in self.DEFAULT_SEQUENCERS_VALUES.items():
+                target.set(name, value)
 
+        # connect the  default sequencers to the out port
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out0", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o1"]].set("connect_out1", "off")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
-
-        # on initialisation, disconnect all other sequencers from the ports
-        self._device_num_sequencers = len(self.device.sequencers)
-        for sequencer in range(2, self._device_num_sequencers):
-            self.device.sequencers[sequencer].set("connect_out0", "off")
-            self.device.sequencers[sequencer].set("connect_out1", "off")
 
     def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
@@ -220,20 +184,21 @@ class ClusterQCM_RF(Instrument):
                     f"Module {self.device.name} not connected to cluster {cluster.name}"
                 )
             # once connected, initialise the parameters of the device to the default values
+            self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
             try:
                 for port in self.settings:
                     self._sequencers[port] = []
                     if self.settings[port]["lo_frequency"]:
-                        self.ports[port].lo_enabled = True
-                        self.ports[port].lo_frequency = self.settings[port][
+                        self._ports[port].lo_enabled = True
+                        self._ports[port].lo_frequency = self.settings[port][
                             "lo_frequency"
                         ]
-                    self.ports[port].attenuation = self.settings[port]["attenuation"]
-                    self.ports[port].hardware_mod_en = True
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
+                    self._ports[port].attenuation = self.settings[port]["attenuation"]
+                    self._ports[port].hardware_mod_en = True
+                    self._ports[port].nco_freq = 0
+                    self._ports[port].nco_phase_offs = 0
             except Exception as error:
                 raise RuntimeError(
                     f"Unable to initialize port parameters on module {self.name}: {error}"
@@ -259,14 +224,6 @@ class ClusterQCM_RF(Instrument):
                   using the numerically controlled oscillator within the fpga. It only requires the upload of the pulse envelope waveform.
                   At the moment this param is not loaded but is always set to True.
         """
-        for port_num, port in enumerate(settings):
-            self.ports[port] = QbloxOutputPort(
-                self,
-                self.DEFAULT_SEQUENCERS[port],
-                port_number=port_num,
-                port_name=port,
-            )
-            self._sequencers[port] = []
         self.settings = settings if settings else self.settings
 
     def _get_next_sequencer(self, port, frequency, qubit: None):
@@ -298,7 +255,7 @@ class ClusterQCM_RF(Instrument):
                         target.set(parameter, value)
 
         # if hardware modulation is enabled configure nco_frequency
-        if self.ports[port].hardware_mod_en:
+        if self._ports[port].hardware_mod_en:
             self.device.sequencers[next_sequencer_number].set("nco_freq", frequency)
             # Assumes all pulses in non_overlapping_pulses set
             # have the same frequency. Non-overlapping pulses of different frequencies on the same
@@ -373,10 +330,10 @@ class ClusterQCM_RF(Instrument):
         sequencer: Sequencer
         sweeper: Sweeper
 
-        self._free_sequencers_numbers = list(range(len(self.ports), 6))
+        self._free_sequencers_numbers = list(range(len(self._ports), 6))
 
         # process the pulses for every port
-        for port in self.ports:
+        for port in self._ports:
             # split the collection of instruments pulses by ports
             port_channel = [
                 chan.name
@@ -422,7 +379,7 @@ class ClusterQCM_RF(Instrument):
                         # attempt to save the waveforms to the sequencer waveforms buffer
                         try:
                             sequencer.waveforms_buffer.add_waveforms(
-                                pulse, self.ports[port].hardware_mod_en, sweepers
+                                pulse, self._ports[port].hardware_mod_en, sweepers
                             )
                             sequencer.pulses.add(pulse)
                             pulses_to_be_processed.remove(pulse)
@@ -451,7 +408,7 @@ class ClusterQCM_RF(Instrument):
 
         # update the lists of used and unused sequencers that will be needed later on
         self._used_sequencers_numbers = []
-        for port in self.ports:
+        for port in self._ports:
             for sequencer in self._sequencers[port]:
                 self._used_sequencers_numbers.append(sequencer.number)
         self._unused_sequencers_numbers = []
@@ -460,7 +417,7 @@ class ClusterQCM_RF(Instrument):
                 self._unused_sequencers_numbers.append(n)
 
         # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
-        for port in self.ports:
+        for port in self._ports:
             for sequencer in self._sequencers[port]:
                 pulses = sequencer.pulses
                 program = sequencer.program
@@ -548,27 +505,6 @@ class ClusterQCM_RF(Instrument):
                                 name=sweeper.parameter.name,
                             )
 
-                    # else: # qubit_sweeper_parameters
-                    #     if sweeper.qubits and sequencer.qubit in [_.name for _ in sweeper.qubits]:
-                    #         # plays an active role
-                    #         if sweeper.parameter == Parameter.bias:
-                    #             reference_value = self.ports[port].offset
-                    #             # create QbloxSweepers and attach them to qibolab sweeper
-                    #             if sweeper.type == SweeperType.ABSOLUTE:
-                    #                 sweeper.qs = QbloxSweeper.from_sweeper(
-                    #                     program=program, sweeper=sweeper, add_to=-reference_value
-                    #                 )
-                    #             elif sweeper.type == SweeperType.OFFSET:
-                    #                 sweeper.qs = QbloxSweeper.from_sweeper(program=program, sweeper=sweeper)
-                    #             elif sweeper.type == SweeperType.FACTOR:
-                    #                 raise Exception("SweeperType.FACTOR for Parameter.bias not supported")
-                    #             sweeper.qs.update_parameters = True
-                    #     else:
-                    #         # does not play an active role
-                    #         sweeper.qs = QbloxSweeper(
-                    #             program=program, type=QbloxSweeperType.number, rel_values=range(len(sweeper.values)),
-                    #             name = sweeper.parameter.name
-                    #         )
                     else:
                         # does not play an active role
                         sweeper.qs = QbloxSweeper(
@@ -617,7 +553,7 @@ class ClusterQCM_RF(Instrument):
                 body_block = Block()
 
                 body_block.append(f"wait_sync {minimum_delay_between_instructions}")
-                if self.ports[port].hardware_mod_en:
+                if self._ports[port].hardware_mod_en:
                     body_block.append("reset_ph")
                     body_block.append_spacer()
 
@@ -637,7 +573,7 @@ class ClusterQCM_RF(Instrument):
                     ):
                         pulses_block.append(f"wait {pulses[n].sweeper.register}")
 
-                    if self.ports[port].hardware_mod_en:
+                    if self._ports[port].hardware_mod_en:
                         # # Set frequency
                         # _if = self.get_if(pulses[n])
                         # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
@@ -754,7 +690,7 @@ class ClusterQCM_RF(Instrument):
         # Upload waveforms and program
         qblox_dict = {}
         sequencer: Sequencer
-        for port in self.ports:
+        for port in self._ports:
             for sequencer in self._sequencers[port]:
                 # Add sequence program and waveforms to single dictionary
                 qblox_dict[sequencer] = {

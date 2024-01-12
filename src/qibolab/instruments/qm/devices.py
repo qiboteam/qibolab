@@ -1,5 +1,7 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
+from typing import Dict
 
 from qibolab.instruments.abstract import Instrument
 
@@ -14,28 +16,19 @@ from .ports import (
 )
 
 
-@dataclass
-class Ports(dict):
+class PortsDefaultdict(defaultdict):
     """Dictionary mapping port numbers to
     :class:`qibolab.instruments.qm.ports.QMPort` objects.
 
     Automatically instantiates ports that have not yet been created.
     Used by :class:`qibolab.instruments.qm.devices.QMDevice`
+
+    https://stackoverflow.com/questions/2912231/is-there-a-clever-way-to-pass-the-key-to-defaultdicts-default-factory
     """
 
-    constructor: type
-    """Type of :class:`qibolab.instruments.qm.ports.QMPort` to be used for
-    initializing new ports."""
-    device: str
-    """Name of device holding these ports."""
-
-    def __post_init__(self):
-        super().__init__()
-
-    def __getitem__(self, number):
-        if number not in self:
-            self[number] = self.constructor(self.device, number)
-        return super().__getitem__(number)
+    def __missing__(self, key):
+        ret = self[key] = self.default_factory(key)  # pylint: disable=E1102
+        return ret
 
 
 @dataclass
@@ -45,9 +38,9 @@ class QMDevice(Instrument):
     name: str
     """Name of the device."""
 
-    outputs: Ports[int, QMOutput] = field(init=False)
+    outputs: Dict[int, QMOutput] = field(init=False)
     """Dictionary containing the instrument's output ports."""
-    inputs: Ports[int, QMInput] = field(init=False)
+    inputs: Dict[int, QMInput] = field(init=False)
     """Dictionary containing the instrument's input ports."""
 
     def ports(self, number, input=False):
@@ -109,8 +102,8 @@ class OPXplus(QMDevice):
     """Device handling OPX+ controllers."""
 
     def __post_init__(self):
-        self.outputs = Ports(OPXOutput, self.name)
-        self.inputs = Ports(OPXInput, self.name)
+        self.outputs = PortsDefaultdict(lambda n: OPXOutput(self.name, n))
+        self.inputs = PortsDefaultdict(lambda n: OPXInput(self.name, n))
 
 
 @dataclass
@@ -123,8 +116,8 @@ class Octave(QMDevice):
     """OPXplus that acts as the waveform generator for the Octave."""
 
     def __post_init__(self):
-        self.outputs = Ports(OctaveOutput, self.name)
-        self.inputs = Ports(OctaveInput, self.name)
+        self.outputs = PortsDefaultdict(lambda n: OctaveOutput(self.name, n))
+        self.inputs = PortsDefaultdict(lambda n: OctaveInput(self.name, n))
 
     def ports(self, number, input=False):
         """Provides Octave ports.
