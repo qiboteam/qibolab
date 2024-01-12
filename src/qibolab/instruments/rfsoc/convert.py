@@ -121,7 +121,7 @@ def _(
         duration=pulse.duration * NS_TO_US,
         dac=dac,
         adc=adc,
-        name=pulse.serial,
+        name=pulse.id,
         type=pulse_type,
     )
     return replace_pulse_shape(rfsoc_pulse, pulse.shape, sampling_rate)

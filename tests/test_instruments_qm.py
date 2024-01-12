@@ -15,7 +15,7 @@ from qibolab.sweeper import Parameter, Sweeper
 def test_qmpulse():
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     qmpulse = QMPulse(pulse)
-    assert qmpulse.operation == pulse.serial
+    assert qmpulse.operation == pulse.id
     assert qmpulse.relative_phase == 0
 
 
@@ -281,12 +281,11 @@ def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
         platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing
     )
     opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[pulse.serial] == target_pulse
+    assert opx.config.pulses[pulse.id] == target_pulse
     assert target_pulse["waveforms"]["I"] in opx.config.waveforms
     assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
     assert (
-        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.serial]
-        == pulse.serial
+        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.id] == pulse.id
     )
 
 
@@ -304,11 +303,9 @@ def test_qmopx_register_flux_pulse(dummy_qrc):
     }
     opx.config.register_element(platform.qubits[qubit], pulse)
     opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[pulse.serial] == target_pulse
+    assert opx.config.pulses[pulse.id] == target_pulse
     assert target_pulse["waveforms"]["single"] in opx.config.waveforms
-    assert (
-        opx.config.elements[f"flux{qubit}"]["operations"][pulse.serial] == pulse.serial
-    )
+    assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.id] == pulse.id
 
 
 @pytest.mark.parametrize("duration", [0, 30])

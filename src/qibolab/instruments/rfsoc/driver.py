@@ -182,7 +182,7 @@ class RFSoC(Controller):
                     result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
-                results[ro_pulse.qubit] = results[ro_pulse.serial] = result
+                results[ro_pulse.qubit] = results[ro_pulse.id] = result
 
         return results
 
@@ -253,7 +253,7 @@ class RFSoC(Controller):
         """
         res = self.play(qubits, couplers, sequence, execution_parameters)
         newres = {}
-        serials = [pulse.serial for pulse in or_sequence.ro_pulses]
+        serials = [pulse.id for pulse in or_sequence.ro_pulses]
         for idx, key in enumerate(res):
             if idx % 2 == 1:
                 newres[serials[idx // 2]] = res[key]
@@ -477,7 +477,7 @@ class RFSoC(Controller):
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
-                results[original_ro_pulse.qubit] = results[ro_pulse.serial] = result
+                results[original_ro_pulse.qubit] = results[ro_pulse.id] = result
         return results
 
     def sweep(

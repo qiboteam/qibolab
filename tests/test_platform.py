@@ -45,7 +45,7 @@ def test_unroll_sequences(platform):
     assert len(total_sequence.ro_pulses) == 10
     assert total_sequence.finish == 10 * sequence.finish + 90000
     assert len(readouts) == 1
-    assert len(readouts[ro_pulse.serial]) == 10
+    assert len(readouts[ro_pulse.id]) == 10
 
 
 def test_create_platform(platform):
