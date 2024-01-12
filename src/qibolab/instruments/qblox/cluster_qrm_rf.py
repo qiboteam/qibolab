@@ -614,7 +614,7 @@ class ClusterQRM_RF(ClusterModule):
 
                 # Acquisitions
                 for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
-                    sequencer.acquisitions[pulse.serial] = {
+                    sequencer.acquisitions[pulse.id] = {
                         "num_bins": num_bins,
                         "index": acquisition_index,
                     }
@@ -990,7 +990,7 @@ class ClusterQRM_RF(ClusterModule):
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
                         acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
+                            pulse.id
                         ] = AveragedAcquisition(scope, duration, frequency)
                     else:
                         raise RuntimeError(
@@ -1000,16 +1000,16 @@ class ClusterQRM_RF(ClusterModule):
                 else:  # Hardware Demodulation
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
-                        bins = results[pulse.serial]["acquisition"]["bins"]
+                        bins = results[pulse.id]["acquisition"]["bins"]
                         acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
+                            pulse.id
                         ] = DemodulatedAcquisition(bins, duration)
 
                     # Provide Scope Data for verification (assuming memory reseet is being done)
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-                        acquisitions[pulse.serial].averaged = AveragedAcquisition(
+                        acquisitions[pulse.id].averaged = AveragedAcquisition(
                             scope, duration, frequency
                         )
 

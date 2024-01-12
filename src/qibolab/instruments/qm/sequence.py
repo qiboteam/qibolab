@@ -75,7 +75,7 @@ class QMPulse:
 
     def __post_init__(self):
         self.element: str = f"{self.pulse.type.name.lower()}{self.pulse.qubit}"
-        self.operation: str = self.pulse.serial
+        self.operation: str = self.pulse.id
         self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
         self.elements_to_align.add(self.element)
 
@@ -117,9 +117,9 @@ class QMPulse:
         average = options.averaging_mode is AveragingMode.CYCLIC
         acquisition_type = options.acquisition_type
         if acquisition_type is AcquisitionType.RAW:
-            self.acquisition = RawAcquisition(self.pulse.serial, average)
+            self.acquisition = RawAcquisition(self.pulse.id, average)
         elif acquisition_type is AcquisitionType.INTEGRATION:
-            self.acquisition = IntegratedAcquisition(self.pulse.serial, average)
+            self.acquisition = IntegratedAcquisition(self.pulse.id, average)
         elif acquisition_type is AcquisitionType.DISCRIMINATION:
             if threshold is None or angle is None:
                 raise_error(
@@ -128,7 +128,7 @@ class QMPulse:
                     "if threshold and angle are not given.",
                 )
             self.acquisition = ShotsAcquisition(
-                self.pulse.serial, average, threshold, angle
+                self.pulse.id, average, threshold, angle
             )
         else:
             raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
@@ -186,8 +186,8 @@ class BakedPulse(QMPulse):
                         self.calculate_waveform(waveform_i, t),
                         self.calculate_waveform(waveform_q, t),
                     ]
-                segment.add_op(self.pulse.serial, self.element, waveform)
-                segment.play(self.pulse.serial, self.element)
+                segment.add_op(self.pulse.id, self.element, waveform)
+                segment.play(self.pulse.id, self.element)
             self.segments.append(segment)
 
     @property
@@ -219,7 +219,7 @@ def find_duration_sweeper_pulses(sweepers):
 
         if sweeper.parameter is Parameter.duration and step % 4 != 0:
             for pulse in sweeper.pulses:
-                duration_sweep_pulses.add(pulse.serial)
+                duration_sweep_pulses.add(pulse.id)
 
     return duration_sweep_pulses
 
@@ -273,7 +273,7 @@ class Sequence:
             if (
                 pulse.duration % 4 != 0
                 or pulse.duration < 16
-                or pulse.serial in duration_sweep_pulses
+                or pulse.id in duration_sweep_pulses
             ):
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(config, durations=[pulse.duration])
@@ -301,7 +301,7 @@ class Sequence:
 
     def add(self, qmpulse: QMPulse):
         pulse = qmpulse.pulse
-        self.pulse_to_qmpulse[pulse.serial] = qmpulse
+        self.pulse_to_qmpulse[pulse.id] = qmpulse
         if pulse.type is PulseType.READOUT:
             self.ro_pulses.append(qmpulse)
 

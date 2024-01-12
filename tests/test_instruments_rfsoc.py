@@ -109,18 +109,18 @@ def test_convert_pulse(dummy_qrc):
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Drag(
-        50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=5, beta=2
+        50, 0.9, 0, 0, 0.04, pulse.id, "drive", 4, None, rel_sigma=5, beta=2
     )
     assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
     targ = rfsoc_pulses.Gaussian(
-        50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=2
+        50, 0.9, 0, 0, 0.04, pulse.id, "drive", 4, None, rel_sigma=2
     )
     assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
-    targ = rfsoc_pulses.Rectangular(49, 0.9, 0, 0, 0.04, pulse.serial, "readout", 2, 1)
+    targ = rfsoc_pulses.Rectangular(49, 0.9, 0, 0, 0.04, pulse.id, "readout", 2, 1)
     assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
 

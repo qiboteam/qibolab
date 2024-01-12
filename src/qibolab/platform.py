@@ -48,7 +48,7 @@ def unroll_sequences(
             new_pulse.start += start
             total_sequence.append(new_pulse)
             if isinstance(pulse, ReadoutPulse):
-                readout_map[pulse.serial].append(new_pulse.serial)
+                readout_map[pulse.id].append(new_pulse.id)
         start = total_sequence.finish + relaxation_time
     return total_sequence, readout_map
 
@@ -236,7 +236,7 @@ class Platform:
 
         # find readout pulses
         ro_pulses = {
-            pulse.serial: pulse.qubit
+            pulse.id: pulse.qubit
             for sequence in sequences
             for pulse in sequence.ro_pulses
         }
