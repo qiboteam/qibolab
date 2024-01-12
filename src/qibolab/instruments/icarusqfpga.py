@@ -1,3 +1,4 @@
+import operator
 from dataclasses import dataclass
 from typing import Dict, List, Union
 
@@ -251,10 +252,10 @@ class RFSOC_RO(RFSOC):
         """
         super().play(qubits, couplers, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))
-        readout_pulses = list(
-            filter(lambda pulse: pulse.type is PulseType.READOUT, sequence.pulses)
-        )
-        readout_qubits = {pulse.qubit for pulse in readout_pulses}
+        readout_pulses = [
+            pulse for pulse in sequence.pulses if pulse.type is PulseType.READOUT
+        ]
+        readout_qubits = [pulse.qubit for pulse in readout_pulses]
 
         if options.acquisition_type is AcquisitionType.RAW:
             self.device.set_adc_trigger_mode(0)
@@ -268,19 +269,23 @@ class RFSOC_RO(RFSOC):
             self.device.set_qunit_mode(0)
             raw = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
 
+            qunit_mapping = {
+                ro_pulse.qubit: ro_pulse.serial for ro_pulse in readout_pulses
+            }
+
             if options.averaging_mode is not AveragingMode.SINGLESHOT:
                 res = {
-                    qubit: IntegratedResults(I + 1j * Q).average
-                    for qubit, (I, Q) in raw.items()
+                    qunit_mapping[qunit]: IntegratedResults(i + 1j * q).average
+                    for qunit, (i, q) in raw.items()
                 }
             else:
                 res = {
-                    qubit: IntegratedResults(I + 1j * Q)
-                    for qubit, (I, Q) in raw.items()
+                    qunit_mapping[qunit]: IntegratedResults(i + 1j * q)
+                    for qunit, (i, q) in raw.items()
                 }
-
+            # Temp fix for readout pulse sweepers, to be removed with IcarusQ v2
             for ro_pulse in readout_pulses:
-                res[ro_pulse.serial] = res[ro_pulse.qubit]
+                res[ro_pulse.qubit] = res[ro_pulse.serial]
             return res
 
         elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -288,8 +293,9 @@ class RFSOC_RO(RFSOC):
             self.device.set_qunit_mode(1)
             raw = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
             res = {qubit: SampleResults(states) for qubit, states in raw.items()}
+            # Temp fix for readout pulse sweepers, to be removed with IcarusQ v2
             for ro_pulse in readout_pulses:
-                res[ro_pulse.serial] = res[ro_pulse.qubit]
+                res[ro_pulse.qubit] = res[ro_pulse.serial]
             return res
 
     def process_readout_signal(
@@ -313,16 +319,16 @@ class RFSOC_RO(RFSOC):
             sin = np.sin(2 * np.pi * readout_pulse.frequency * t)
             cos = np.sin(2 * np.pi * readout_pulse.frequency * t)
 
-            I = np.dot(raw_signal, cos)
-            Q = np.dot(raw_signal, sin)
-            results[readout_pulse.qubit] = IntegratedResults(I + 1j * Q)
-
-            if options.averaging_mode is not AveragingMode.SINGLESHOT:
-                results[readout_pulse.qubit] = results[readout_pulse.serial] = results[
-                    readout_pulse.qubit
-                ].average
-            else:
-                results[readout_pulse.serial] = results[readout_pulse.qubit]
+            i = np.dot(raw_signal, cos)
+            q = np.dot(raw_signal, sin)
+            singleshot = IntegratedResults(i + 1j * q)
+            results[readout_pulse.serial] = (
+                singleshot.average
+                if options.averaging_mode is not AveragingMode.SINGLESHOT
+                else singleshot
+            )
+            # Temp fix for readout pulse sweepers, to be removed with IcarusQ v2
+            results[readout_pulse.qubit] = results[readout_pulse.serial]
 
         return results
 
@@ -337,11 +343,16 @@ class RFSOC_RO(RFSOC):
         # Record pulse values before sweeper modification
         bsv = []
         for sweep in sweeper:
+            if sweep.parameter not in self.available_sweep_parameters:
+                raise NotImplementedError(
+                    "Sweep parameter requested not available", param_name
+                )
+
             param_name = sweep.parameter.name.lower()
             base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
             bsv.append(base_sweeper_values)
 
-        res = self._sweep(qubits, couplers, sequence, options, *sweeper)
+        res = self._sweep_recursion(qubits, couplers, sequence, options, *sweeper)
 
         # Reset pulse values back to original values
         for sweep, base_sweeper_values in zip(sweeper, bsv):
@@ -349,12 +360,14 @@ class RFSOC_RO(RFSOC):
             for pulse, value in zip(sweep.pulses, base_sweeper_values):
                 setattr(pulse, param_name, value)
 
+                # Since the sweeper will modify the readout pulse serial, we collate the results with the qubit number.
+                # This is only for qibocal compatiability and will be removed with IcarusQ v2.
                 if pulse.type is PulseType.READOUT:
                     res[pulse.serial] = res[pulse.qubit]
 
         return res
 
-    def _sweep(
+    def _sweep_recursion(
         self,
         qubits: Dict[QubitId, Qubit],
         couplers,
@@ -377,16 +390,19 @@ class RFSOC_RO(RFSOC):
             )
 
         base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
-        sweeper_value_setter_fn = _sweeper_value_setter.get(sweep.type)
+        sweeper_op = _sweeper_operation.get(sweep.type)
         ret = {}
 
         for value in sweep.values:
             for idx, pulse in enumerate(sweep.pulses):
                 base = base_sweeper_values[idx]
-                sweeper_value_setter_fn(pulse, param_name, value, base)
+                setattr(pulse, param_name, sweeper_op(value, base))
 
             self.merge_sweep_results(
-                ret, self._sweep(qubits, couplers, sequence, options, *sweeper[1:])
+                ret,
+                self._sweep_recursion(
+                    qubits, couplers, sequence, options, *sweeper[1:]
+                ),
             )
 
         return ret
@@ -415,15 +431,8 @@ class RFSOC_RO(RFSOC):
         return dict_a
 
 
-_sweeper_type_absolute = lambda pulse, param, value, base: setattr(pulse, param, value)
-_sweeper_type_offset = lambda pulse, param, value, base: setattr(
-    pulse, param, base + value
-)
-_sweeper_type_factor = lambda pulse, param, value, base: setattr(
-    pulse, param, base * value
-)
-_sweeper_value_setter = {
-    SweeperType.ABSOLUTE: _sweeper_type_absolute,
-    SweeperType.OFFSET: _sweeper_type_offset,
-    SweeperType.FACTOR: _sweeper_type_factor,
+_sweeper_operation = {
+    SweeperType.ABSOLUTE: lambda value, base: value,
+    SweeperType.OFFSET: operator.add,
+    SweeperType.FACTOR: operator.mul,
 }
