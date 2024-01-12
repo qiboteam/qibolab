@@ -877,7 +877,7 @@ def test_pulse():
     )
 
     target = f"Pulse({pulse.start}, {pulse.duration}, {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(pulse.frequency, '_')}, {format(pulse.relative_phase, '.6f').rstrip('0').rstrip('.')}, {pulse.shape}, {pulse.channel}, {pulse.type}, {pulse.qubit})"
-    assert pulse.serial == target
+    assert pulse.id == target
     assert repr(pulse) == target
 
 
@@ -894,7 +894,7 @@ def test_readout_pulse():
     )
 
     target = f"ReadoutPulse({pulse.start}, {pulse.duration}, {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(pulse.frequency, '_')}, {format(pulse.relative_phase, '.6f').rstrip('0').rstrip('.')}, {pulse.shape}, {pulse.channel}, {pulse.qubit})"
-    assert pulse.serial == target
+    assert pulse.id == target
     assert repr(pulse) == target
 
 

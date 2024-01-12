@@ -192,17 +192,17 @@ class QbloxController(Controller):
         shots_shape = (nshots,) + shape
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                _res = acquisition_results[ro_pulse.serial].classified
+                _res = acquisition_results[ro_pulse.id].classified
                 _res = np.reshape(_res, shots_shape)
                 if options.averaging_mode is not AveragingMode.SINGLESHOT:
                     _res = np.mean(_res, axis=0)
             elif options.acquisition_type is AcquisitionType.RAW:
-                i_raw = acquisition_results[ro_pulse.serial].raw_i
-                q_raw = acquisition_results[ro_pulse.serial].raw_q
+                i_raw = acquisition_results[ro_pulse.id].raw_i
+                q_raw = acquisition_results[ro_pulse.id].raw_q
                 _res = i_raw + 1j * q_raw
             elif options.acquisition_type is AcquisitionType.INTEGRATION:
-                ires = acquisition_results[ro_pulse.serial].shots_i
-                qres = acquisition_results[ro_pulse.serial].shots_q
+                ires = acquisition_results[ro_pulse.id].shots_i
+                qres = acquisition_results[ro_pulse.id].shots_q
                 _res = ires + 1j * qres
                 if options.averaging_mode is AveragingMode.SINGLESHOT:
                     _res = np.reshape(_res, shots_shape)
@@ -210,7 +210,7 @@ class QbloxController(Controller):
                     _res = np.reshape(_res, shape)
 
             acquisition = options.results_type(np.squeeze(_res))
-            data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
+            data[ro_pulse.id] = data[ro_pulse.qubit] = acquisition
 
         return data
 
@@ -272,7 +272,7 @@ class QbloxController(Controller):
 
         # create a map between the pulse id, which never changes, and the original serial
         for pulse in sequence_copy.ro_pulses:
-            map_id_serial[pulse.id] = pulse.serial
+            map_id_serial[pulse.id] = pulse.id
             id_results[pulse.id] = None
             id_results[pulse.qubit] = None
 
@@ -384,9 +384,9 @@ class QbloxController(Controller):
                     )
                     for pulse in sequence.ro_pulses:
                         if results[pulse.id]:
-                            results[pulse.id] += result[pulse.serial]
+                            results[pulse.id] += result[pulse.id]
                         else:
-                            results[pulse.id] = result[pulse.serial]
+                            results[pulse.id] = result[pulse.id]
                         results[pulse.qubit] = results[pulse.id]
         else:
             # rt sweeps
