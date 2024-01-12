@@ -18,6 +18,9 @@ from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+DAC_SAMPLNG_RATE_MHZ = 5898.24
+ADC_SAMPLNG_RATE_MHZ = 1966.08
+
 
 @dataclass
 class RFSOCPort(Port):
@@ -36,11 +39,11 @@ class RFSOC(Controller):
         name,
         address,
         port=8080,
-        dac_sampling_rate=5898.24,
-        adc_sampling_rate=1966.08,
+        dac_sampling_rate=DAC_SAMPLNG_RATE_MHZ,
+        adc_sampling_rate=ADC_SAMPLNG_RATE_MHZ,
         delay_samples_offset_dac: int = 0,
         delay_samples_offset_adc: int = 0,
-        analog_settings: List["dict[str, int]"] = [],
+        analog_settings: List[Dict[str, int]] = [],
     ):
         super().__init__(name, address)
         self.device = IcarusQRFSoC(address, port)
@@ -181,27 +184,12 @@ class RFSOC(Controller):
         ]
         self.device.upload_waveform(payload)
 
-    def play_sequences(
-        self,
-        qubits: Dict[QubitId, Qubit],
-        couplers,
-        sequences: List[PulseSequence],
-        options: ExecutionParameters,
-    ):
-        pass
-
     def connect(self):
         """Currently we only connect to the board when we have to send a
         command."""
         # Request the version from the board
         ver = self.device.get_server_version()
         log.info(f"Connected to {self.name}, version: {ver}")
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
 
     def disconnect(self):
         pass
@@ -303,18 +291,6 @@ class RFSOC_RO(RFSOC):
             for ro_pulse in readout_pulses:
                 res[ro_pulse.serial] = res[ro_pulse.qubit]
             return res
-
-    def play_sequences(
-        self,
-        qubits: Dict[QubitId, Qubit],
-        couplers,
-        sequences: List[PulseSequence],
-        options: ExecutionParameters,
-    ):
-        """Wrapper for play."""
-        return [
-            self.play(qubits, couplers, sequence, options) for sequence in sequences
-        ]
 
     def process_readout_signal(
         self,
