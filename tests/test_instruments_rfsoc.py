@@ -389,7 +389,7 @@ def test_play(mocker, dummy_qrc):
         averaging_mode=AveragingMode.SINGLESHOT,
     )
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
-    assert pulse1.serial in results.keys()
+    assert pulse.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -397,7 +397,7 @@ def test_play(mocker, dummy_qrc):
         averaging_mode=AveragingMode.SINGLESHOT,
     )
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
-    assert pulse1.serial in results.keys()
+    assert pulse.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -405,7 +405,7 @@ def test_play(mocker, dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
-    assert pulse1.serial in results.keys()
+    assert pulse.id in results.keys()
 
 
 def test_sweep(mocker, dummy_qrc):
@@ -438,7 +438,7 @@ def test_sweep(mocker, dummy_qrc):
     results = instrument.sweep(
         platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1
     )
-    assert pulse1.serial in results.keys()
+    assert pulse.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -448,7 +448,7 @@ def test_sweep(mocker, dummy_qrc):
     results = instrument.sweep(
         platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1
     )
-    assert pulse1.serial in results.keys()
+    assert pulse.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -458,7 +458,7 @@ def test_sweep(mocker, dummy_qrc):
     results = instrument.sweep(
         platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1
     )
-    assert pulse1.serial in results.keys()
+    assert pulse.id in results.keys()
 
 
 def test_validate_input_command(dummy_qrc):
@@ -548,22 +548,18 @@ def test_merge_sweep_results(dummy_qrc):
 
     assert targ_dict.keys() == out_dict1.keys()
     assert (
-        out_dict1["serial1"].serialize["MSR[V]"]
-        == targ_dict["serial1"].serialize["MSR[V]"]
+        out_dict1["serial1"].idize["MSR[V]"] == targ_dict["serial1"].idize["MSR[V]"]
     ).all()
     assert (
-        out_dict1["serial1"].serialize["MSR[V]"]
-        == targ_dict["serial1"].serialize["MSR[V]"]
+        out_dict1["serial1"].idize["MSR[V]"] == targ_dict["serial1"].idize["MSR[V]"]
     ).all()
 
     assert dict_a.keys() == out_dict2.keys()
     assert (
-        out_dict2["serial1"].serialize["MSR[V]"]
-        == dict_a["serial1"].serialize["MSR[V]"]
+        out_dict2["serial1"].idize["MSR[V]"] == dict_a["serial1"].idize["MSR[V]"]
     ).all()
     assert (
-        out_dict2["serial1"].serialize["MSR[V]"]
-        == dict_a["serial1"].serialize["MSR[V]"]
+        out_dict2["serial1"].idize["MSR[V]"] == dict_a["serial1"].idize["MSR[V]"]
     ).all()
 
 
@@ -674,8 +670,8 @@ def test_convert_av_sweep_results(dummy_qrc):
         pulses=[sequence[0]],
     )
     sweep1 = convert(sweep1, sequence, platform.qubits)
-    serial1 = sequence[1].serial
-    serial2 = sequence[2].serial
+    serial1 = sequence[1].id
+    serial2 = sequence[2].id
 
     avgi = [[[1, 2, 3], [4, 1, 2]]]
     avgq = [[[7, 8, 9], [-1, -2, -3]]]
@@ -696,18 +692,10 @@ def test_convert_av_sweep_results(dummy_qrc):
         ),
     }
 
-    assert (
-        out_dict[serial1].serialize["i[V]"] == targ_dict[serial1].serialize["i[V]"]
-    ).all()
-    assert (
-        out_dict[serial1].serialize["q[V]"] == targ_dict[serial1].serialize["q[V]"]
-    ).all()
-    assert (
-        out_dict[serial2].serialize["i[V]"] == targ_dict[serial2].serialize["i[V]"]
-    ).all()
-    assert (
-        out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]
-    ).all()
+    assert (out_dict[serial1].idize["i[V]"] == targ_dict[serial1].idize["i[V]"]).all()
+    assert (out_dict[serial1].idize["q[V]"] == targ_dict[serial1].idize["q[V]"]).all()
+    assert (out_dict[serial2].idize["i[V]"] == targ_dict[serial2].idize["i[V]"]).all()
+    assert (out_dict[serial2].idize["q[V]"] == targ_dict[serial2].idize["q[V]"]).all()
 
 
 def test_convert_nav_sweep_results(dummy_qrc):
@@ -727,8 +715,8 @@ def test_convert_nav_sweep_results(dummy_qrc):
         pulses=[sequence[0]],
     )
     sweep1 = convert(sweep1, sequence, platform.qubits)
-    serial1 = sequence[1].serial
-    serial2 = sequence[2].serial
+    serial1 = sequence[1].id
+    serial2 = sequence[2].id
 
     avgi = [[[[1, 1], [2, 2], [3, 3]], [[4, 4], [1, 1], [2, 2]]]]
     avgq = [[[[7, 7], [8, 8], [9, 9]], [[-1, -1], [-2, -2], [-3, -3]]]]
@@ -749,18 +737,10 @@ def test_convert_nav_sweep_results(dummy_qrc):
         ),
     }
 
-    assert (
-        out_dict[serial1].serialize["i[V]"] == targ_dict[serial1].serialize["i[V]"]
-    ).all()
-    assert (
-        out_dict[serial1].serialize["q[V]"] == targ_dict[serial1].serialize["q[V]"]
-    ).all()
-    assert (
-        out_dict[serial2].serialize["i[V]"] == targ_dict[serial2].serialize["i[V]"]
-    ).all()
-    assert (
-        out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]
-    ).all()
+    assert (out_dict[serial1].idize["i[V]"] == targ_dict[serial1].idize["i[V]"]).all()
+    assert (out_dict[serial1].idize["q[V]"] == targ_dict[serial1].idize["q[V]"]).all()
+    assert (out_dict[serial2].idize["i[V]"] == targ_dict[serial2].idize["i[V]"]).all()
+    assert (out_dict[serial2].idize["q[V]"] == targ_dict[serial2].idize["q[V]"]).all()
 
 
 @pytest.fixture(scope="module")
@@ -846,9 +826,9 @@ def test_play_qpu(connected_platform, instrument):
         ExecutionParameters(acquisition_type=AcquisitionType.INTEGRATION),
     )
 
-    assert sequence[1].serial in out_dict
-    assert isinstance(out_dict[sequence[1].serial], IntegratedResults)
-    assert np.shape(out_dict[sequence[1].serial].voltage_i) == (1000,)
+    assert sequence[1].id in out_dict
+    assert isinstance(out_dict[sequence[1].id], IntegratedResults)
+    assert np.shape(out_dict[sequence[1].id].voltage_i) == (1000,)
 
 
 @pytest.mark.qpu
@@ -888,15 +868,15 @@ def test_sweep_qpu(connected_platform, instrument):
         sweep,
     )
 
-    assert sequence[1].serial in out_dict1
-    assert sequence[1].serial in out_dict2
-    assert isinstance(out_dict1[sequence[1].serial], AveragedSampleResults)
-    assert isinstance(out_dict2[sequence[1].serial], IntegratedResults)
-    assert np.shape(out_dict2[sequence[1].serial].voltage_i) == (
+    assert sequence[1].id in out_dict1
+    assert sequence[1].id in out_dict2
+    assert isinstance(out_dict1[sequence[1].id], AveragedSampleResults)
+    assert isinstance(out_dict2[sequence[1].id], IntegratedResults)
+    assert np.shape(out_dict2[sequence[1].id].voltage_i) == (
         1000,
         len(sweep.values),
     )
-    assert np.shape(out_dict1[sequence[1].serial].statistical_frequency) == (
+    assert np.shape(out_dict1[sequence[1].id].statistical_frequency) == (
         len(sweep.values),
     )
 
@@ -933,4 +913,4 @@ def test_python_reqursive_sweep(connected_platform, instrument):
         sweep2,
     )
 
-    assert sequence[1].serial in out_dict
+    assert sequence[1].id in out_dict
