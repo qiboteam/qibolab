@@ -95,30 +95,31 @@ def create(runcard_path=RUNCARD):
     channels = ChannelMap()
     # feedback
     channels |= Channel(
-        "L2-7", port=controller[("device_shfqc", "[QACHANNELS/0/INPUT]")]
+        "L2-7", port=controller.ports(("device_shfqc", "[QACHANNELS/0/INPUT]"))
     )
     # readout
     channels |= Channel(
-        "L3-31", port=controller[("device_shfqc", "[QACHANNELS/0/OUTPUT]")]
+        "L3-31", port=controller.ports(("device_shfqc", "[QACHANNELS/0/OUTPUT]"))
     )
     # drive
     channels |= (
         Channel(
-            f"L4-{i}", port=controller[("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")]
+            f"L4-{i}",
+            port=controller.ports(("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")),
         )
         for i in range(15, 20)
     )
     # flux qubits (CAREFUL WITH THIS !!!)
     channels |= (
-        Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-6}")])
+        Channel(f"L4-{i}", port=controller.ports(("device_hdawg", f"SIGOUTS/{i-6}")))
         for i in range(6, 11)
     )
     # flux couplers
     channels |= (
-        Channel(f"L4-{i}", port=controller[("device_hdawg", f"SIGOUTS/{i-11+5}")])
+        Channel(f"L4-{i}", port=controller.ports(("device_hdawg", f"SIGOUTS/{i-11+5}")))
         for i in range(11, 14)
     )
-    channels |= Channel("L4-14", port=controller[("device_hdawg2", "SIGOUTS/0")])
+    channels |= Channel("L4-14", port=controller.ports(("device_hdawg2", "SIGOUTS/0")))
     # TWPA pump(EraSynth)
     channels |= Channel("L3-32")
 

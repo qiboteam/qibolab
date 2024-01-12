@@ -30,11 +30,3 @@ def test_oscillator_setup(lo):
     lo.setup(frequency=5e9, power=0)
     assert lo.frequency == 5e9
     assert lo.power == 0
-
-
-def test_oscillator_start_stop(lo):
-    with pytest.raises(AttributeError):
-        lo.start()
-    lo.connect()
-    lo.start()
-    lo.stop()

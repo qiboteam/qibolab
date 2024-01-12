@@ -83,15 +83,7 @@ def test_dump_runcard(platform):
 @pytest.fixture(scope="module")
 def qpu_platform(connected_platform):
     connected_platform.connect()
-    connected_platform.setup()
-    connected_platform.start()
     yield connected_platform
-    connected_platform.stop()
-
-
-@pytest.mark.qpu
-def test_platform_setup_start_stop(qpu_platform):
-    pass
 
 
 @pytest.mark.qpu
