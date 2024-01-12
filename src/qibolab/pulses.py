@@ -862,14 +862,27 @@ class Pulse:
         return self.shape.modulated_waveforms(sampling_rate)
 
     def __hash__(self):
-        return hash(
-            tuple(getattr(self, f.name) for f in fields(self) if f.name != "type")
-        )
+        """Hash the content.
 
-    def __eq__(self, other):
-        if isinstance(other, Pulse):
-            return hash(self) == hash(other)
-        return NotImplemented
+        .. warning::
+
+            unhashable attributes are not taken into account, so there will be more
+            clashes than those usually expected with a regular hash
+
+        .. todo::
+
+            This method should be eventually dropped, and be provided automatically by
+            freezing the dataclass (i.e. setting ``frozen=true`` in the decorator).
+            However, at the moment is not possible nor desired, because it contains
+            unhashable attributes and because some instances are mutated inside Qibolab.
+        """
+        return hash(
+            tuple(
+                getattr(self, f.name)
+                for f in fields(self)
+                if f.name not in ("type", "shape")
+            )
+        )
 
     def __add__(self, other):
         if isinstance(other, Pulse):
@@ -1062,7 +1075,6 @@ class Pulse:
         ax2.legend()
         # ax2.axis([ -1, 1, -1, 1])
         ax2.axis("equal")
-        plt.suptitle(self.serial)
         if savefig_filename:
             plt.savefig(savefig_filename)
         else:
