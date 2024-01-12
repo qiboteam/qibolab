@@ -73,7 +73,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     import matplotlib.pyplot as plt
 
-    amplitudes = results[readout_pulse.serial].magnitude
+    amplitudes = results[readout_pulse.id].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + readout_pulse.frequency
 
     plt.title("Resonator Spectroscopy")
@@ -154,7 +154,7 @@ We can now proceed to launch on hardware:
 
     results = platform.sweep(sequence, options, sweeper)
 
-    amplitudes = results[readout_pulse.serial].magnitude
+    amplitudes = results[readout_pulse.id].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + drive_pulse.frequency
 
     plt.title("Resonator Spectroscopy")
@@ -242,13 +242,13 @@ and its impact on qubit states in the IQ plane.
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[readout_pulse1.serial].voltage_i,
-        results_one[readout_pulse1.serial].voltage_q,
+        results_one[readout_pulse1.id].voltage_i,
+        results_one[readout_pulse1.id].voltage_q,
         label="One state",
     )
     plt.scatter(
-        results_zero[readout_pulse2.serial].voltage_i,
-        results_zero[readout_pulse2.serial].voltage_q,
+        results_zero[readout_pulse2.id].voltage_i,
+        results_zero[readout_pulse2.id].voltage_q,
         label="Zero state",
     )
     plt.show()
