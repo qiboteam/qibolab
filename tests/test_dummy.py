@@ -65,7 +65,7 @@ def test_dummy_execute_coupler_pulse():
         "CouplerFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux_coupler-0, 0)"
     )
 
-    assert test_pulse == pulse.serial
+    assert test_pulse == pulse.id
 
 
 def test_dummy_execute_pulse_sequence_couplers():
@@ -141,7 +141,7 @@ def test_dummy_single_sweep_raw(name):
         acquisition_type=AcquisitionType.RAW,
     )
     results = platform.sweep(sequence, options, sweeper)
-    assert pulse.serial and pulse.qubit in results
+    assert pulse.id and pulse.qubit in results
     shape = results[pulse.qubit].magnitude.shape
     assert shape == (pulse.duration * SWEPT_POINTS,)
 
@@ -187,7 +187,7 @@ def test_dummy_single_sweep_coupler(
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper)
 
-    assert ro_pulse.serial and ro_pulse.qubit in results
+    assert ro_pulse.id and ro_pulse.qubit in results
     if average:
         results_shape = (
             results[ro_pulse.qubit].magnitude.shape
@@ -233,7 +233,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper)
 
-    assert pulse.serial and pulse.qubit in results
+    assert pulse.id and pulse.qubit in results
     if average:
         results_shape = (
             results[pulse.qubit].magnitude.shape
@@ -292,7 +292,7 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.sweep(sequence, options, sweeper1, sweeper2)
 
-    assert ro_pulse.serial and ro_pulse.qubit in results
+    assert ro_pulse.id and ro_pulse.qubit in results
 
     if average:
         results_shape = (
@@ -356,7 +356,7 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
     results = platform.sweep(sequence, options, sweeper1)
 
     for ro_pulse in ro_pulses.values():
-        assert ro_pulse.serial and ro_pulse.qubit in results
+        assert ro_pulse.id and ro_pulse.qubit in results
         if average:
             results_shape = (
                 results[ro_pulse.qubit].magnitude.shape
