@@ -34,7 +34,7 @@ def test_pulses_plot_functions():
     p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
     p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
-    ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
+    ps = p0 + p1 + p2 + p3 + p4 + p5
     wf = p0.modulated_waveform_i()
 
     plot_file = HERE / "test_plot.png"
