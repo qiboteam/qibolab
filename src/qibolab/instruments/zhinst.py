@@ -913,13 +913,13 @@ class Zurich(Controller):
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             time = 0
-            i = 0
-            play_after = None
-            for j, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
-                with exp.section(uid=f"sequence_flux{q}_{j}", play_after=play_after):
-                    for pulse in sequence:
+            previous_section = None
+            for i, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
+                section_uid = f"sequence_flux{q}_{i}"
+                with exp.section(uid=section_uid, play_after=previous_section):
+                    for j, pulse in enumerate(sequence):
                         if not isinstance(pulse, ZhSweeperLine):
-                            pulse.zhpulse.uid += str(i)
+                            pulse.zhpulse.uid += f"{i}_{j}"
                             exp.delay(
                                 signal=f"flux{q}",
                                 time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
@@ -934,8 +934,7 @@ class Zurich(Controller):
                             self.play_sweep(exp, qubit, pulse, section="flux")
                         elif isinstance(pulse, ZhPulse):
                             exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
-                        i += 1
-                play_after = f"sequence_flux{q}_{j}"
+                previous_section = section_uid
 
     def drive(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
         """Qubit driving pulses.
@@ -947,11 +946,11 @@ class Zurich(Controller):
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             time = 0
-            i = 0
-            play_after = None
-            for j, sequence in enumerate(self.sub_sequences[f"drive{q}"]):
-                with exp.section(uid=f"sequence_drive{q}_{j}", play_after=play_after):
-                    for pulse in sequence:
+            previous_section = None
+            for i, sequence in enumerate(self.sub_sequences[f"drive{q}"]):
+                section_uid = f"sequence_drive{q}_{i}"
+                with exp.section(uid=section_uid, play_after=previous_section):
+                    for j, pulse in enumerate(sequence):
                         if not isinstance(pulse, ZhSweeperLine):
                             exp.delay(
                                 signal=f"drive{q}",
@@ -961,7 +960,7 @@ class Zurich(Controller):
                             time = round(
                                 pulse.pulse.duration * NANO_TO_SECONDS, 9
                             ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                            pulse.zhpulse.uid += str(i)
+                            pulse.zhpulse.uid += f"{i}_{j}"
                             if isinstance(pulse, ZhSweeper):
                                 self.play_sweep(exp, qubit, pulse, section="drive")
                             elif isinstance(pulse, ZhPulse):
@@ -970,7 +969,6 @@ class Zurich(Controller):
                                     pulse=pulse.zhpulse,
                                     phase=pulse.pulse.relative_phase,
                                 )
-                                i += 1
                         elif isinstance(pulse, ZhSweeperLine):
                             exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
 
@@ -985,7 +983,7 @@ class Zurich(Controller):
                             self.sequence[f"readout{q}"][0]
                         )
 
-                play_after = f"sequence_drive{q}_{j}"
+                previous_section = section_uid
 
     def find_subsequence_finish(
         self,
