@@ -168,7 +168,7 @@ class PulseShape(ABC):
         pulse = self.pulse
         if abs(pulse._if) * 2 > sampling_rate:
             log.info(
-                f"WARNING: The frequency of pulse {pulse.serial} is higher than the nyqusit frequency ({int(sampling_rate // 2)}) for the device sampling rate: {int(sampling_rate)}"
+                f"WARNING: The frequency of pulse {pulse.id} is higher than the nyqusit frequency ({int(sampling_rate // 2)}) for the device sampling rate: {int(sampling_rate)}"
             )
         num_samples = int(np.rint(pulse.duration * sampling_rate))
         time = np.arange(num_samples) / sampling_rate
@@ -817,12 +817,6 @@ class Pulse:
         relative phases.
         """
         return self.global_phase + self.relative_phase
-
-    @property
-    def serial(self) -> str:
-        """Returns a string representation of the pulse."""
-
-        return f"Pulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.type}, {self.qubit})"
 
     @property
     def id(self) -> int:

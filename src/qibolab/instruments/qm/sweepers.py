@@ -32,7 +32,7 @@ def _update_baked_pulses(sweeper, qmsequence, config):
     qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
     is_baked = isinstance(qmpulse, BakedPulse)
     for pulse in sweeper.pulses:
-        qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+        qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
         if isinstance(qmpulse, BakedPulse):
             if not is_baked:
                 raise_error(
@@ -96,7 +96,7 @@ def _sweep_frequency(sweepers, qubits, qmsequence, relaxation_time):
     f = declare(int)
     with for_(*from_array(f, sweeper.values.astype(int))):
         for pulse, f0 in zip(sweeper.pulses, freqs0):
-            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
             qua.update_frequency(qmpulse.element, f + f0)
 
         _sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
@@ -115,7 +115,7 @@ def _sweep_amplitude(sweepers, qubits, qmsequence, relaxation_time):
     a = declare(fixed)
     with for_(*from_array(a, sweeper.values)):
         for pulse in sweeper.pulses:
-            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
             if isinstance(qmpulse, BakedPulse):
                 qmpulse.amplitude = a
             else:
@@ -129,7 +129,7 @@ def _sweep_relative_phase(sweepers, qubits, qmsequence, relaxation_time):
     relphase = declare(fixed)
     with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
         for pulse in sweeper.pulses:
-            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
             qmpulse.relative_phase = relphase
 
         _sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
@@ -169,7 +169,7 @@ def _sweep_start(sweepers, qubits, qmsequence, relaxation_time):
 
     with loop:
         for pulse in sweeper.pulses:
-            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
             # find all pulses that are connected to ``qmpulse`` and update their starts
             to_process = {qmpulse}
             while to_process:
@@ -191,7 +191,7 @@ def _sweep_duration(sweepers, qubits, qmsequence, relaxation_time):
     dur = declare(int)
     with for_(*from_array(dur, values)):
         for pulse in sweeper.pulses:
-            qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
+            qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
             qmpulse.swept_duration = dur
             # find all pulses that are connected to ``qmpulse`` and align them
             if not isinstance(qmpulse, BakedPulse):
