@@ -221,7 +221,7 @@ class Sequence:
 
     def add(self, qmpulse: QMPulse):
         pulse = qmpulse.pulse
-        self.pulse_to_qmpulse[pulse.serial] = qmpulse
+        self.pulse_to_qmpulse[pulse.id] = qmpulse
 
         previous = self._find_previous(pulse)
         if previous is not None:
