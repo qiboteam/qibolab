@@ -102,7 +102,7 @@ def test_qmpulse_previous_and_next_flux():
     y90_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive1", qubit=1)
     x_pulse_start = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
     flux_pulse = FluxPulse(
-        start=y90_pulse.se_finish,
+        start=y90_pulse.finish,
         duration=30,
         amplitude=0.055,
         shape=Rectangular(),
