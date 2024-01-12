@@ -253,15 +253,6 @@ def test_is_equal_ignoring_start():
     assert not p1.is_equal_ignoring_start(p4)
 
 
-def test_pulse_serial():
-    p11 = Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE)
-    assert (
-        p11.serial
-        == "Pulse(0, 40, 0.9, 50_000_000, 0, Gaussian(5), 0, PulseType.DRIVE, 0)"
-    )
-    assert repr(p11) == p11.serial
-
-
 @pytest.mark.parametrize(
     "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
 )

@@ -172,7 +172,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     results = platform.sweep(sequence, options, sweeper)
 
     # plot the results
-    amplitudes = results[ro_pulse.serial].magnitude
+    amplitudes = results[ro_pulse.id].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + ro_pulse.frequency
 
     plt.title("Resonator Spectroscopy")
