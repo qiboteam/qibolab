@@ -851,7 +851,7 @@ def test_experiment_execute_pulse_sequence_qpu(connected_platform, instrument):
         options,
     )
 
-    assert len(results[ro_pulses[q].serial]) > 0
+    assert len(results[ro_pulses[q].id]) > 0
 
 
 @pytest.mark.qpu
@@ -903,7 +903,7 @@ def test_experiment_sweep_2d_specific_qpu(connected_platform, instrument):
         sweepers[1],
     )
 
-    assert len(results[ro_pulses[qubit].serial]) > 0
+    assert len(results[ro_pulses[qubit].id]) > 0
 
 
 def get_previous_subsequence_finish(instrument, name):
