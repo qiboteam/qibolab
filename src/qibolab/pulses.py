@@ -3,7 +3,7 @@
 import copy
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Optional
 
@@ -861,16 +861,15 @@ class Pulse:
 
         return self.shape.modulated_waveforms(sampling_rate)
 
-    def __repr__(self):
-        return self.serial
-
     def __hash__(self):
-        return hash(self.serial)
+        return hash(
+            tuple(getattr(self, f.name) for f in fields(self) if f.name != "type")
+        )
 
     def __eq__(self, other):
         if isinstance(other, Pulse):
-            return self.serial == other.serial
-        return False
+            return hash(self) == hash(other)
+        return NotImplemented
 
     def __add__(self, other):
         if isinstance(other, Pulse):
