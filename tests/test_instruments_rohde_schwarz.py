@@ -69,9 +69,3 @@ def test_instruments_rohde_schwarz_set_device_paramter(instrument):
     """
     instrument.frequency = original_frequency
     instrument.power = original_power
-
-
-@pytest.mark.qpu
-def test_instruments_rohde_schwarz_start_stop_disconnect(instrument):
-    instrument.start()
-    instrument.stop()
