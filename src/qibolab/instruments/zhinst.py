@@ -343,6 +343,10 @@ class Zurich(Controller):
         self._ports = {}
         self.settings = None
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         if self.is_connected is False:
             # To fully remove logging #configure_logging=False
@@ -350,12 +354,6 @@ class Zurich(Controller):
             self.session = lo.Session(self.device_setup, log_level=20)
             self.device = self.session.connect(do_emulation=self.emulation)
             self.is_connected = True
-
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-
-    def stop(self):
-        """Empty method to comply with Instrument interface."""
 
     def disconnect(self):
         if self.is_connected:

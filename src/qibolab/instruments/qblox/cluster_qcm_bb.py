@@ -98,6 +98,7 @@ class ClusterQCM_BB(ClusterModule):
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1, "o3": 2, "o4": 3}
     FREQUENCY_LIMIT = 500e6
+    OUT_PORT_PATH = {0: "I", 1: "Q", 2: "I", 3: "Q"}
 
     def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM baseband module.
@@ -113,10 +114,8 @@ class ClusterQCM_BB(ClusterModule):
         >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.ports: dict = {}
+        self._ports: dict = {}
         self.device: QbloxQrmQcm = None
-        # self.settings: dict = {}
-        self.device = None
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}
@@ -147,10 +146,8 @@ class ClusterQCM_BB(ClusterModule):
                 target.set(name, value)
 
         # connect the default sequencers to the out ports
-        out__port_path = {0: "I", 1: "Q", 2: "I", 3: "Q"}
-        for port_num, value in out__port_path.items():
+        for port_num, value in self.OUT_PORT_PATH.items():
             self.device.sequencers[port_num].set(f"connect_out{port_num}", value)
-        # disconnect all other sequencers from the ports
 
     def connect(self, cluster: QbloxCluster = None):
         """Connects to the instrument using the instrument settings in the
@@ -176,11 +173,11 @@ class ClusterQCM_BB(ClusterModule):
             self._set_default_values()
             # then set the value loaded from the runcard
             try:
-                for port in self.ports:
+                for port in self._ports:
                     self._sequencers[port] = []
-                    self.ports[port].hardware_mod_en = True
-                    self.ports[port].nco_freq = 0
-                    self.ports[port].nco_phase_offs = 0
+                    self._ports[port].hardware_mod_en = True
+                    self._ports[port].nco_freq = 0
+                    self._ports[port].nco_phase_offs = 0
             except Exception as error:
                 raise RuntimeError(
                     f"Unable to initialize port parameters on module {self.name}: {error}"
@@ -213,17 +210,12 @@ class ClusterQCM_BB(ClusterModule):
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # select the qubit relative to specific port
+        # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux.port is not None:
-                if (
-                    _qubit.flux.port.name == port
-                    and _qubit.flux.port.module.name == self.name
-                ):
-                    qubit = _qubit
-            else:
-                log.warning(f"Qubit {_qubit.name} has no flux line connected")
+            if _qubit.flux is not None and _qubit.flux.port == self.ports(port):
+                qubit = _qubit
+
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         default_sequencer_number = self.DEFAULT_SEQUENCERS[port]
@@ -231,7 +223,7 @@ class ClusterQCM_BB(ClusterModule):
             self.clone_sequencer_params(default_sequencer_number, next_sequencer_number)
 
         # if hardware modulation is enabled configure nco_frequency
-        if self.ports[port].hardware_mod_en:
+        if self._ports[port].hardware_mod_en:
             self.device.sequencers[next_sequencer_number].set("nco_freq", frequency)
             # Assumes all pulses in non_overlapping_pulses set
             # have the same frequency. Non-overlapping pulses of different frequencies on the same
@@ -239,7 +231,6 @@ class ClusterQCM_BB(ClusterModule):
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
-            self.ports[port].offset = qubit.sweetspot if qubit else 0
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit.name if qubit else None
@@ -291,10 +282,10 @@ class ClusterQCM_BB(ClusterModule):
         sequencer: Sequencer
         sweeper: Sweeper
 
-        self._free_sequencers_numbers = list(range(len(self.ports), 6))
+        self._free_sequencers_numbers = list(range(len(self._ports), 6))
 
         # process the pulses for every port
-        for port, port_obj in self.ports.items():
+        for port, port_obj in self._ports.items():
             # split the collection of instruments pulses by ports
             port_pulses = self.filter_port_pulse(sequence, qubits, port_obj)
 
@@ -334,7 +325,7 @@ class ClusterQCM_BB(ClusterModule):
                         # attempt to save the waveforms to the sequencer waveforms buffer
                         try:
                             sequencer.waveforms_buffer.add_waveforms(
-                                pulse, self.ports[port].hardware_mod_en, sweepers
+                                pulse, self._ports[port].hardware_mod_en, sweepers
                             )
                             sequencer.pulses.add(pulse)
                             pulses_to_be_processed.remove(pulse)
@@ -369,7 +360,7 @@ class ClusterQCM_BB(ClusterModule):
 
         # update the lists of used and unused sequencers that will be needed later on
         self._used_sequencers_numbers = []
-        for port in self.ports:
+        for port in self._ports:
             for sequencer in self._sequencers[port]:
                 self._used_sequencers_numbers.append(sequencer.number)
         self._unused_sequencers_numbers = []
@@ -378,7 +369,7 @@ class ClusterQCM_BB(ClusterModule):
                 self._unused_sequencers_numbers.append(n)
 
         # generate and store the Waveforms dictionary, the Acquisitions dictionary, the Weights and the Program
-        for port in self.ports:
+        for port in self._ports:
             for sequencer in self._sequencers[port]:
                 pulses = sequencer.pulses
                 program = sequencer.program
@@ -472,7 +463,7 @@ class ClusterQCM_BB(ClusterModule):
                         ]:
                             # plays an active role
                             if sweeper.parameter == Parameter.bias:
-                                reference_value = self.ports[port].offset
+                                reference_value = self._ports[port].offset
                                 # create QbloxSweepers and attach them to qibolab sweeper
                                 if sweeper.type == SweeperType.ABSOLUTE:
                                     sweeper.qs = QbloxSweeper.from_sweeper(
@@ -537,7 +528,7 @@ class ClusterQCM_BB(ClusterModule):
                 body_block = Block()
 
                 body_block.append(f"wait_sync {minimum_delay_between_instructions}")
-                if self.ports[port].hardware_mod_en:
+                if self._ports[port].hardware_mod_en:
                     body_block.append("reset_ph")
                     body_block.append_spacer()
 
@@ -557,7 +548,7 @@ class ClusterQCM_BB(ClusterModule):
                     ):
                         pulses_block.append(f"wait {pulses[n].sweeper.register}")
 
-                    if self.ports[port].hardware_mod_en:
+                    if self._ports[port].hardware_mod_en:
                         # # Set frequency
                         # _if = self.get_if(pulses[n])
                         # pulses_block.append(f"set_freq {convert_frequency(_if)}", f"set intermediate frequency to {_if} Hz")
@@ -673,7 +664,7 @@ class ClusterQCM_BB(ClusterModule):
         # Upload waveforms and program
         qblox_dict = {}
         sequencer: Sequencer
-        for port in self.ports:
+        for port in self._ports:
             for sequencer in self._sequencers[port]:
                 # Add sequence program and waveforms to single dictionary
                 qblox_dict[sequencer] = {
@@ -727,8 +718,8 @@ class ClusterQCM_BB(ClusterModule):
             log.warning("Unable to stop sequencers")
 
         try:
-            for port in self.ports:
-                self.ports[port].offset = 0
+            for port in self._ports:
+                self._ports[port].offset = 0
 
         except:
             log.warning("Unable to clear offsets")

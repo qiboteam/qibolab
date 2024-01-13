@@ -40,14 +40,14 @@ def qcm_rf(controller):
 
 
 @pytest.fixture(scope="module")
-def connected_qcm_rf(connected_controller, connected_cluster):
-    qcm_rf = get_qcm_rf(connected_controller, connected_cluster)
+def connected_qcm_rf(connected_controller):
+    qcm_rf = get_qcm_rf(connected_controller)
     qcm_rf.setup(**SETTINGS)
     for port in SETTINGS:
-        qcm_rf.port(port)
-    qcm_rf.connect()
-
+        qcm_rf.ports(port)
+    qcm_rf.connect(connected_controller.cluster)
     yield qcm_rf
+
     qcm_rf.disconnect()
     connected_controller.disconnect()
 
@@ -61,16 +61,13 @@ def test_instrument_interface(qcm_rf: ClusterQCM_RF):
         "name",
         "address",
         "is_connected",
-        "signature",
-        "tmp_folder",
-        "data_folder",
     ]:
         assert hasattr(qcm_rf, attribute)
 
 
 def test_init(qcm_rf: ClusterQCM_RF):
     assert qcm_rf.device == None
-    assert type(qcm_rf.ports) == dict
+    assert type(qcm_rf._ports) == dict
 
 
 def test_setup(qcm_rf: ClusterQCM_RF):
@@ -127,8 +124,8 @@ def test_connect(connected_qcm_rf: ClusterQCM_RF):
 
     assert o1_default_sequencer.get("mod_en_awg") == True
 
-    assert qcm_rf.ports["o1"].nco_freq == 0
-    assert qcm_rf.ports["o1"].nco_phase_offs == 0
+    assert qcm_rf._ports["o1"].nco_freq == 0
+    assert qcm_rf._ports["o1"].nco_phase_offs == 0
 
     assert qcm_rf.device.get("out1_att") == O2_ATTENUATION
     assert qcm_rf.device.get("out1_lo_en") == True
@@ -139,14 +136,14 @@ def test_connect(connected_qcm_rf: ClusterQCM_RF):
 
     assert o2_default_sequencer.get("mod_en_awg") == True
 
-    assert qcm_rf.ports["o2"].nco_freq == 0
-    assert qcm_rf.ports["o2"].nco_phase_offs == 0
+    assert qcm_rf._ports["o2"].nco_freq == 0
+    assert qcm_rf._ports["o2"].nco_phase_offs == 0
 
     for port in qcm_rf.settings:
-        assert type(qcm_rf.ports[port]) == QbloxOutputPort
+        assert type(qcm_rf._ports[port]) == QbloxOutputPort
         assert type(qcm_rf._sequencers[port]) == list
-    o1_output_port: QbloxOutputPort = qcm_rf.ports["o1"]
-    o2_output_port: QbloxOutputPort = qcm_rf.ports["o2"]
+    o1_output_port: QbloxOutputPort = qcm_rf._ports["o1"]
+    o2_output_port: QbloxOutputPort = qcm_rf._ports["o2"]
     assert o1_output_port.sequencer_number == 0
     assert o2_output_port.sequencer_number == 1
 
@@ -178,12 +175,12 @@ def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     )
 
     qubits = connected_platform.qubits
-    connected_qcm_rf.ports["o2"].hardware_mod_en = True
+    connected_qcm_rf._ports["o2"].hardware_mod_en = True
     connected_qcm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_rf.upload()
     connected_qcm_rf.play_sequence()
 
-    connected_qcm_rf.ports["o2"].hardware_mod_en = False
+    connected_qcm_rf._ports["o2"].hardware_mod_en = False
     connected_qcm_rf.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
     connected_qcm_rf.upload()
     connected_qcm_rf.play_sequence()

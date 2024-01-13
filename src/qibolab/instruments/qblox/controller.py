@@ -9,6 +9,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -38,6 +39,10 @@ class QbloxController(Controller):
         self._reference_clock = "internal" if internal_reference_clock else "external"
         signal.signal(signal.SIGTERM, self._termination_handler)
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         """Connects to the modules."""
 
@@ -52,6 +57,7 @@ class QbloxController(Controller):
             # Connect modules
             for module in self.modules.values():
                 module.connect(self.cluster)
+                module.start()
             self.is_connected = True
             log.info("QbloxController: all modules connected.")
 
@@ -59,24 +65,21 @@ class QbloxController(Controller):
             raise ConnectionError(f"Unable to connect:\n{str(exception)}\n")
             # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
+    def disconnect(self):
+        """Disconnects all modules."""
+        if self.is_connected:
+            for module in self.modules.values():
+                module.stop()
+                module.disconnect()
+            self.cluster.close()
+            self.is_connected = False
+
     def setup(self):
         """Empty method to comply with Instrument interface.
-        Setup of the modules happens in the create method:
 
-        >>> instruments = load_instrument_settings(runcard, instruments)
+        Setup of the modules happens in the platform ``create`` method
+        using :meth:`qibolab.serialize.load_instrument_settings`.
         """
-
-    def start(self):
-        """Starts all modules."""
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].start()
-
-    def stop(self):
-        """Stops all modules."""
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].stop()
 
     def _termination_handler(self, signum, frame):
         """Calls all modules to stop if the program receives a termination
@@ -201,9 +204,6 @@ class QbloxController(Controller):
             acquisition = options.results_type(np.squeeze(_res))
             data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
 
-            # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
-            # data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
-            # data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
     def play(self, qubits, couplers, sequence, options):

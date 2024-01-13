@@ -58,10 +58,6 @@ platform = create_platform("my_platform")
 
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
-# Configures instruments using the loaded calibration settings.
-platform.setup()
-# Turns on the local oscillators
-platform.start()
 
 # Execute a pulse sequence
 options = ExecutionParameters(nshots=1000)
@@ -70,8 +66,6 @@ results = platform.execute_pulse_sequence(sequence, options)
 # Print the acquired shots
 print(results.samples)
 
-# Turn off lab instruments
-platform.stop()
 # Disconnect from the instruments
 platform.disconnect()
 ```

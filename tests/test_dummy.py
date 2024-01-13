@@ -14,9 +14,6 @@ PLATFORM_NAMES = ["dummy", "dummy_couplers"]
 def test_dummy_initialization(name):
     platform = create_platform(name)
     platform.connect()
-    platform.setup()
-    platform.start()
-    platform.stop()
     platform.disconnect()
 
 

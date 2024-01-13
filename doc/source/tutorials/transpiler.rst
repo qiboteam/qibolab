@@ -64,14 +64,14 @@ Instead of completely disabling, custom transpilation steps can be given:
 
 
 Now circuits will only be transpiled to native gates, without any connectivity matching steps.
-The :class:`qibolab.transpilers.gate_decompositions.NativeGates` transpiler used in this example assumes Z, RZ, GPI2 or U3 as the single-qubit native gates, and supports CZ and iSWAP as two-qubit natives.
+The transpiler used in this example assumes Z, RZ, GPI2 or U3 as the single-qubit native gates, and supports CZ and iSWAP as two-qubit natives.
 In this case we restricted the two-qubit gate set to CZ only.
 If the circuit to be executed contains gates that are not included in this gate set, they will be transformed to multiple gates from the gate set.
 Arbitrary single-qubit gates are typically transformed to U3.
 Arbitrary two-qubit gates are transformed to two or three CZ gates following their `universal CNOT decomposition <https://arxiv.org/abs/quant-ph/0307177>`_.
 The decomposition of some common gates such as the SWAP and CNOT is hard-coded for efficiency.
 
-Multiple transpilation steps can be implemented using the :class:`qibolab.transpilers.pipeline.Pipeline`:
+Multiple transpilation steps can be implemented using the transpiler ``Passes``:
 
 .. testcode:: python
 
