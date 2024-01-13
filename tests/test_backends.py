@@ -17,10 +17,7 @@ def generate_circuit_with_gate(nqubits, gate, **kwargs):
 
 @pytest.fixture(scope="module")
 def connected_backend(connected_platform):
-    connected_platform.setup()
-    connected_platform.start()
     yield QibolabBackend(connected_platform)
-    connected_platform.stop()
 
 
 def test_execute_circuit_initial_state():

@@ -1,13 +1,10 @@
-import tempfile
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
-from pathlib import Path
 from typing import Optional
 
 from qibolab.instruments.port import Port
 
 InstrumentId = str
-INSTRUMENTS_DATA_FOLDER = Path.home() / ".qibolab" / "instruments" / "data"
 
 
 @dataclass
@@ -34,39 +31,23 @@ class Instrument(ABC):
         self.name: InstrumentId = name
         self.address: str = address
         self.is_connected: bool = False
-        self.signature: str = f"{type(self).__name__}@{address}"
         self.settings: Optional[InstrumentSettings] = None
-        # create local storage folder
-        instruments_data_folder = INSTRUMENTS_DATA_FOLDER
-        instruments_data_folder.mkdir(parents=True, exist_ok=True)
-        # create temporary directory
-        self.tmp_folder = tempfile.TemporaryDirectory(dir=instruments_data_folder)
-        self.data_folder = Path(self.tmp_folder.name)
+
+    @property
+    def signature(self):
+        return f"{type(self).__name__}@{self.address}"
 
     @abstractmethod
     def connect(self):
         """Establish connection to the physical instrument."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def setup(self, *args, **kwargs):
-        """Upload settings to the physical instrument."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def start(self):
-        """Turn on the physical instrument."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self):
-        """Turn off the physical instrument."""
-        raise NotImplementedError
 
     @abstractmethod
     def disconnect(self):
         """Close connection to the physical instrument."""
-        raise NotImplementedError
+
+    @abstractmethod
+    def setup(self, *args, **kwargs):
+        """Set instrument settings."""
 
 
 class Controller(Instrument):
@@ -85,10 +66,7 @@ class Controller(Instrument):
         """Sampling rate of control electronics in giga samples per second
         (GSps)."""
 
-    def __getitem__(self, port_name):
-        return self.ports(port_name)
-
-    def ports(self, port_name):
+    def ports(self, port_name, *args, **kwargs):
         """Get ports associated to this controller.
 
         Args:

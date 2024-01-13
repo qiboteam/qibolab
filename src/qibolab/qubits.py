@@ -14,7 +14,7 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates")
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "_flux")
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
@@ -90,9 +90,23 @@ class Qubit:
     feedback: Optional[Channel] = None
     twpa: Optional[Channel] = None
     drive: Optional[Channel] = None
-    flux: Optional[Channel] = None
+    _flux: Optional[Channel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
+
+    def __post_init__(self):
+        if self.flux is not None and self.sweetspot != 0:
+            self.flux.offset = self.sweetspot
+
+    @property
+    def flux(self):
+        return self._flux
+
+    @flux.setter
+    def flux(self, channel):
+        if self.sweetspot != 0:
+            channel.offset = self.sweetspot
+        self._flux = channel
 
     @property
     def channels(self):
