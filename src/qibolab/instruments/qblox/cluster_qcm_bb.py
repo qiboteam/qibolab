@@ -751,7 +751,6 @@ class ClusterQCM_BB(ClusterModule):
                     f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
                 )
 
-
         self.device.stop_sequencer()
         self.device.disconnect_outputs()
         self.is_connected = False
