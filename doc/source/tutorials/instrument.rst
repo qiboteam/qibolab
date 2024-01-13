@@ -189,7 +189,7 @@ write something like this:
 
     instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
     channels = ChannelMap()
-    channels |= Channel("ch1out", port=instrument["o1"])
+    channels |= Channel("ch1out", port=instrument.ports("o1"))
 
 
 The interesting part of this section is the ``port`` parameter that works as an

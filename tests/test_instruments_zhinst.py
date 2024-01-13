@@ -368,7 +368,7 @@ def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
         sequence.add(ro_pulses[qubit])
         qf_pulses[qubit] = FluxPulse(
             start=0,
-            duration=ro_pulses[qubit].se_start,
+            duration=ro_pulses[qubit].start,
             amplitude=1,
             shape=Rectangular(),
             channel=platform.qubits[qubit].flux.name,

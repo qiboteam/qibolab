@@ -74,9 +74,9 @@ class QbloxController(Controller):
 
     def setup(self):
         """Empty method to comply with Instrument interface.
-        Setup of the modules happens in the create method:
 
-        >>> instruments = load_instrument_settings(runcard, instruments)
+        Setup of the modules happens in the platform ``create`` method
+        using :meth:`qibolab.serialize.load_instrument_settings`.
         """
 
     def _termination_handler(self, signum, frame):

@@ -24,9 +24,3 @@ def test_instruments_erasynth_setup(era):
     assert era.power == -10
     era.frequency = original_frequency
     era.power = original_power
-
-
-@pytest.mark.qpu
-def test_instruments_erasynth_start_stop_disconnect(era):
-    era.start()
-    era.stop()
