@@ -54,7 +54,7 @@ def test_convert_qubit(dummy_qrc):
     """
     platform = create_platform("rfsoc")
     qubit = platform.qubits[0]
-    qubit.flux.port = platform.instruments["tii_rfsoc4x2"][4]
+    qubit.flux.port = platform.instruments["tii_rfsoc4x2"].ports(4)
     qubit.flux.offset = 0.05
     qubit = convert(qubit)
     targ = rfsoc.Qubit(0.05, 4)
@@ -102,9 +102,9 @@ def test_convert_pulse(dummy_qrc):
     platform = create_platform("rfsoc")
     controller = platform.instruments["tii_rfsoc4x2"]
     qubit = platform.qubits[0]
-    qubit.drive.port = controller[4]
-    qubit.readout.port = controller[2]
-    qubit.feedback.port = controller[1]
+    qubit.drive.port = controller.ports(4)
+    qubit.readout.port = controller.ports(2)
+    qubit.feedback.port = controller.ports(1)
     qubit.readout.local_oscillator.frequency = 1e6
 
     pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)

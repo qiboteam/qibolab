@@ -97,6 +97,5 @@ def connected_platform(request):
     name = request.config.getoption("--platform")
     platform = create_platform(name)
     platform.connect()
-    platform.setup()
     yield platform
     platform.disconnect()

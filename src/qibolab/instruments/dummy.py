@@ -76,20 +76,18 @@ class DummyInstrument(Controller):
 
     PortType = DummyPort
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         log.info(f"Connecting to {self.name} instrument.")
 
-    def setup(self, *args, **kwargs):
-        log.info(f"Setting up {self.name} instrument.")
-
-    def start(self):
-        log.info(f"Starting {self.name} instrument.")
-
-    def stop(self):
-        log.info(f"Stopping {self.name} instrument.")
-
     def disconnect(self):
         log.info(f"Disconnecting {self.name} instrument.")
+
+    def setup(self, *args, **kwargs):
+        log.info(f"Setting up {self.name} instrument.")
 
     def get_values(self, options, ro_pulse, shape):
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
