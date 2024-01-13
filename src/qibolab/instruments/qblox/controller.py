@@ -118,14 +118,6 @@ class QbloxController(Controller):
 
         return data
 
-    def disconnect(self):
-        """Disconnects all modules."""
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].disconnect()
-            self.cluster.close()
-            self.is_connected = False
-
     def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
