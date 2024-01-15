@@ -2,8 +2,6 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-
 from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -156,7 +154,7 @@ class ClusterQCM_RF(ClusterModule):
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -167,35 +165,28 @@ class ClusterQCM_RF(ClusterModule):
         """
         if self.is_connected:
             return
-
-        elif cluster is not None:
-            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
-            # test connection with module
-            if not self.device.present():
-                raise ConnectionError(
-                    f"Module {self.device.name} not connected to cluster {cluster.name}"
-                )
-            # once connected, initialise the parameters of the device to the default values
-            self._device_num_sequencers = len(self.device.sequencers)
-            self._set_default_values()
-            # then set the value loaded from the runcard
-            try:
-                for port in self.settings:
-                    self._sequencers[port] = []
-                    if self.settings[port]["lo_frequency"]:
-                        self._ports[port].lo_enabled = True
-                        self._ports[port].lo_frequency = self.settings[port][
-                            "lo_frequency"
-                        ]
-                    self._ports[port].attenuation = self.settings[port]["attenuation"]
-                    self._ports[port].hardware_mod_en = True
-                    self._ports[port].nco_freq = 0
-                    self._ports[port].nco_phase_offs = 0
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
-                )
-            self.is_connected = True
+        # test connection with module. self.device is initialized in QbloxController connect()
+        if not self.device.present():
+            raise ConnectionError(f"Module {self.device.name} not present")
+        # once connected, initialise the parameters of the device to the default values
+        self._device_num_sequencers = len(self.device.sequencers)
+        self._set_default_values()
+        # then set the value loaded from the runcard
+        try:
+            for port in self.settings:
+                self._sequencers[port] = []
+                if self.settings[port]["lo_frequency"]:
+                    self._ports[port].lo_enabled = True
+                    self._ports[port].lo_frequency = self.settings[port]["lo_frequency"]
+                self._ports[port].attenuation = self.settings[port]["attenuation"]
+                self._ports[port].hardware_mod_en = True
+                self._ports[port].nco_freq = 0
+                self._ports[port].nco_phase_offs = 0
+        except Exception as error:
+            raise RuntimeError(
+                f"Unable to initialize port parameters on module {self.name}: {error}"
+            )
+        self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the

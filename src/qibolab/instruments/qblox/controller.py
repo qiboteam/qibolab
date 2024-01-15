@@ -56,7 +56,10 @@ class QbloxController(Controller):
             self.cluster.set("reference_source", self._reference_clock)
             # Connect modules
             for module in self.modules.values():
-                module.connect(self.cluster)
+                module.device = self.cluster.modules[
+                    int(module.address.split(":")[1]) - 1
+                ]
+                module.connect()
                 module.start()
             self.is_connected = True
             log.info("QbloxController: all modules connected.")

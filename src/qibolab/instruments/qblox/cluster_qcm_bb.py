@@ -2,8 +2,6 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-
 from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -137,7 +135,7 @@ class ClusterQCM_BB(ClusterModule):
         for port_num, value in self.OUT_PORT_PATH.items():
             self.device.sequencers[port_num].set(f"connect_out{port_num}", value)
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -148,29 +146,24 @@ class ClusterQCM_BB(ClusterModule):
         """
         if self.is_connected:
             return
-
-        elif cluster is not None:
-            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
-            # test connection with module
-            if not self.device.present():
-                raise ConnectionError(
-                    f"Module {self.device.name} not connected to cluster {cluster.name}"
-                )
-            # once connected, initialise the parameters of the device to the default values
-            self._device_num_sequencers = len(self.device.sequencers)
-            self._set_default_values()
-            # then set the value loaded from the runcard
-            try:
-                for port in self._ports:
-                    self._sequencers[port] = []
-                    self._ports[port].hardware_mod_en = True
-                    self._ports[port].nco_freq = 0
-                    self._ports[port].nco_phase_offs = 0
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
-                )
-            self.is_connected = True
+        # test connection with module. self.device is initialized in QbloxController connect()
+        if not self.device.present():
+            raise ConnectionError(f"Module {self.device.name} not present")
+        # once connected, initialise the parameters of the device to the default values
+        self._device_num_sequencers = len(self.device.sequencers)
+        self._set_default_values()
+        # then set the value loaded from the runcard
+        try:
+            for port in self._ports:
+                self._sequencers[port] = []
+                self._ports[port].hardware_mod_en = True
+                self._ports[port].nco_freq = 0
+                self._ports[port].nco_phase_offs = 0
+        except Exception as error:
+            raise RuntimeError(
+                f"Unable to initialize port parameters on module {self.name}: {error}"
+            )
+        self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the

@@ -4,7 +4,6 @@ import json
 import time
 
 import numpy as np
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qibo.config import log
 
 from qibolab.pulses import Pulse, PulseSequence, PulseType
@@ -173,7 +172,7 @@ class ClusterQRM_RF(ClusterModule):
         target.set("connect_out0", "IQ")
         target.set("connect_acq", "in0")
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -184,43 +183,36 @@ class ClusterQRM_RF(ClusterModule):
         """
         if self.is_connected:
             return
+        # test connection with module. self.device is initialized in QbloxController connect()
+        if not self.device.present():
+            raise ConnectionError(f"Module {self.device.name} not present")
+        # once connected, initialise the parameters of the device to the default values
+        self._device_num_sequencers = len(self.device.sequencers)
+        self._set_default_values()
+        # then set the value loaded from the runcard
+        try:
+            if "o1" in self.settings:
+                self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
+                if self.settings["o1"]["lo_frequency"]:
+                    self._ports["o1"].lo_enabled = True
+                    self._ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
+                self._ports["o1"].hardware_mod_en = True
+                self._ports["o1"].nco_freq = 0
+                self._ports["o1"].nco_phase_offs = 0
 
-        elif cluster is not None:
-            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
-            # test connection with module
-            if not self.device.present():
-                raise ConnectionError(
-                    f"Module {self.device.name} not connected to cluster {cluster.name}"
-                )
-            # once connected, initialise the parameters of the device to the default values
-            self._device_num_sequencers = len(self.device.sequencers)
-            self._set_default_values()
-            # then set the value loaded from the runcard
-            try:
-                if "o1" in self.settings:
-                    self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
-                    if self.settings["o1"]["lo_frequency"]:
-                        self._ports["o1"].lo_enabled = True
-                        self._ports["o1"].lo_frequency = self.settings["o1"][
-                            "lo_frequency"
-                        ]
-                    self._ports["o1"].hardware_mod_en = True
-                    self._ports["o1"].nco_freq = 0
-                    self._ports["o1"].nco_phase_offs = 0
-
-                if "i1" in self.settings:
-                    self._ports["i1"].hardware_demod_en = True
-                    self._ports["i1"].acquisition_hold_off = self.settings["i1"][
-                        "acquisition_hold_off"
-                    ]
-                    self._ports["i1"].acquisition_duration = self.settings["i1"][
-                        "acquisition_duration"
-                    ]
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
-                )
-            self.is_connected = True
+            if "i1" in self.settings:
+                self._ports["i1"].hardware_demod_en = True
+                self._ports["i1"].acquisition_hold_off = self.settings["i1"][
+                    "acquisition_hold_off"
+                ]
+                self._ports["i1"].acquisition_duration = self.settings["i1"][
+                    "acquisition_duration"
+                ]
+        except Exception as error:
+            raise RuntimeError(
+                f"Unable to initialize port parameters on module {self.name}: {error}"
+            )
+        self.is_connected = True
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
