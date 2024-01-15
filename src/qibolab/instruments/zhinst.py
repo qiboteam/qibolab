@@ -82,11 +82,12 @@ def select_pulse(pulse, pulse_type):
 
         if "GaussianSquare" in str(pulse.shape):
             sigma = pulse.shape.rel_sigma
+            width = pulse.shape.width
             can_compress = pulse.type is not PulseType.READOUT
             return lo.pulse_library.gaussian_square(
                 uid=(f"{pulse_type}_{pulse.qubit}_"),
                 length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
+                width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,
                 amplitude=pulse.amplitude,
                 can_compress=can_compress,
                 sigma=2 / sigma,
