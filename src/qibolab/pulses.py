@@ -1143,209 +1143,6 @@ class CouplerFluxPulse(FluxPulse):
     PULSE_TYPE = PulseType.COUPLERFLUX
 
 
-class SplitPulse(Pulse):
-    """A supporting class to represent sections or slices of a pulse."""
-
-    # TODO: Since this class is only required by qblox drivers, move to qblox.py
-    def __init__(
-        self, pulse: Pulse, window_start: int = None, window_finish: int = None
-    ):
-        super().__init__(
-            pulse.start,
-            pulse.duration,
-            pulse.amplitude,
-            pulse.frequency,
-            pulse.relative_phase,
-            eval(str(pulse.shape)),
-            pulse.channel,
-            type=pulse.type,
-            qubit=pulse.qubit,
-        )
-        self._window_start: int = pulse.start
-        self._window_finish: int = pulse.finish
-        if not window_start:
-            window_start = pulse.start
-        if not window_finish:
-            window_finish = pulse.finish
-        self.window_start = window_start
-        self.window_finish = window_finish
-
-    @property
-    def window_start(self):
-        return self._window_start
-
-    @window_start.setter
-    def window_start(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(
-                f"window_start argument type should be int, got {type(value).__name__}"
-            )
-        if value < self.start:
-            raise ValueError(
-                "window_start should be >= pulse start ({self._start}), got {value}"
-            )
-        self._window_start = value
-
-    @property
-    def window_finish(self):
-        return self._window_finish
-
-    @window_finish.setter
-    def window_finish(self, value: int):
-        if not isinstance(value, int):
-            raise TypeError(
-                f"window_start argument type should be int, got {type(value).__name__}"
-            )
-        if value > self.finish:
-            raise ValueError(
-                "window_finish should be <= pulse finish ({self._finish}), got {value}"
-            )
-        self._window_finish = value
-
-    @property
-    def window_duration(self):
-        return self._window_finish - self._window_start
-
-    @property
-    def serial(self):
-        return f"SplitPulse({self.window_start}, {self.window_duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        waveform = Waveform(
-            self.shape.envelope_waveform_i(sampling_rate).data[
-                self._window_start - self.start : self._window_finish - self.start
-            ]
-        )
-        waveform.serial = (
-            self.shape.envelope_waveform_i(sampling_rate).serial
-            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        )
-        return waveform
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        waveform = Waveform(
-            self.shape.modulated_waveform_q(sampling_rate).data[
-                self._window_start - self.start : self._window_finish - self.start
-            ]
-        )
-        waveform.serial = (
-            self.shape.modulated_waveform_q(sampling_rate).serial
-            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        )
-        return waveform
-
-    def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        waveform = Waveform(
-            self.shape.modulated_waveform_i(sampling_rate).data[
-                self._window_start - self.start : self._window_finish - self.start
-            ]
-        )
-        waveform.serial = (
-            self.shape.modulated_waveform_q(sampling_rate).serial
-            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        )
-        return waveform
-
-    def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        waveform = Waveform(
-            self.shape.modulated_waveform_q(sampling_rate).data[
-                self._window_start - self.start : self._window_finish - self.start
-            ]
-        )
-        waveform.serial = (
-            self.shape.modulated_waveform_q(sampling_rate).serial
-            + f"[{self._window_start - self.start} : {self._window_finish - self.start}]"
-        )
-        return waveform
-
-    def plot(self, savefig_filename=None, sampling_rate=SAMPLING_RATE):
-        import matplotlib.pyplot as plt
-        from matplotlib import gridspec
-
-        idx = slice(self._window_start - self.start, self._window_finish - self.start)
-        waveform_i = self.shape.envelope_waveform_i(sampling_rate).data[idx]
-        waveform_q = self.shape.envelope_waveform_q(sampling_rate).data[idx]
-
-        num_samples = len(waveform_i)
-        time = self.window_start + np.arange(num_samples) / sampling_rate
-
-        fig = plt.figure(figsize=(14, 5), dpi=200)
-        gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=[2, 1])
-        ax1 = plt.subplot(gs[0])
-        ax1.plot(
-            time,
-            waveform_i,
-            label="envelope i",
-            c="C0",
-            linestyle="dashed",
-        )
-        ax1.plot(
-            time,
-            waveform_q,
-            label="envelope q",
-            c="C1",
-            linestyle="dashed",
-        )
-        ax1.plot(
-            time,
-            self.shape.modulated_waveform_i(sampling_rate).data[idx],
-            label="modulated i",
-            c="C0",
-        )
-        ax1.plot(
-            time,
-            self.shape.modulated_waveform_q(sampling_rate).data[idx],
-            label="modulated q",
-            c="C1",
-        )
-        ax1.plot(
-            time,
-            -waveform_i,
-            c="silver",
-            linestyle="dashed",
-        )
-        ax1.set_xlabel("Time [ns]")
-        ax1.set_ylabel("Amplitude")
-
-        ax1.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
-        ax1.axis([self.window_start, self._window_finish, -1, 1])
-        ax1.legend()
-
-        ax2 = plt.subplot(gs[1])
-        ax2.plot(
-            self.shape.modulated_waveform_i(sampling_rate).data[idx],
-            self.shape.modulated_waveform_q(sampling_rate).data[idx],
-            label="modulated",
-            c="C3",
-        )
-        ax2.plot(
-            waveform_i,
-            waveform_q,
-            label="envelope",
-            c="C2",
-        )
-        ax2.plot(
-            np.cos(time * 2 * np.pi / self.window_duration),
-            np.sin(time * 2 * np.pi / self.window_duration),
-            c="silver",
-            linestyle="dashed",
-        )
-
-        ax2.grid(
-            visible=True, which="both", axis="both", color="#888888", linestyle="-"
-        )
-        ax2.legend()
-        # ax2.axis([ -1, 1, -1, 1])
-        ax2.axis("equal")
-        if savefig_filename:
-            plt.savefig(savefig_filename)
-        else:
-            plt.show()
-        plt.close()
-
-
 class PulseConstructor(Enum):
     """An enumeration to map each ``PulseType`` to the proper pulse
     constructor."""
@@ -1737,73 +1534,30 @@ class PulseSequence:
                     ax = plt.subplot(gs[n])
                     ax.axis([0, self.finish, -1, 1])
                     for pulse in channel_pulses:
-                        if isinstance(pulse, SplitPulse):
-                            idx = slice(
-                                pulse.window_start - pulse.start,
-                                pulse.window_finish - pulse.start,
-                            )
-                            num_samples = len(
-                                pulse.shape.modulated_waveform_i(sampling_rate).data[
-                                    idx
-                                ]
-                            )
-                            time = (
-                                pulse.window_start
-                                + np.arange(num_samples) / sampling_rate
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_q(sampling_rate).data[
-                                    idx
-                                ],
-                                c="lightgrey",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_i(sampling_rate).data[
-                                    idx
-                                ],
-                                c=f"C{str(n)}",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.envelope_waveform_i(sampling_rate).data[
-                                    idx
-                                ],
-                                c=f"C{str(n)}",
-                            )
-                            ax.plot(
-                                time,
-                                -pulse.shape.envelope_waveform_i(sampling_rate).data[
-                                    idx
-                                ],
-                                c=f"C{str(n)}",
-                            )
-                        else:
-                            num_samples = len(
-                                pulse.shape.modulated_waveform_i(sampling_rate)
-                            )
-                            time = pulse.start + np.arange(num_samples) / sampling_rate
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_q(sampling_rate).data,
-                                c="lightgrey",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.modulated_waveform_i(sampling_rate).data,
-                                c=f"C{str(n)}",
-                            )
-                            ax.plot(
-                                time,
-                                pulse.shape.envelope_waveform_i(sampling_rate).data,
-                                c=f"C{str(n)}",
-                            )
-                            ax.plot(
-                                time,
-                                -pulse.shape.envelope_waveform_i(sampling_rate).data,
-                                c=f"C{str(n)}",
-                            )
+                        num_samples = len(
+                            pulse.shape.modulated_waveform_i(sampling_rate)
+                        )
+                        time = pulse.start + np.arange(num_samples) / sampling_rate
+                        ax.plot(
+                            time,
+                            pulse.shape.modulated_waveform_q(sampling_rate).data,
+                            c="lightgrey",
+                        )
+                        ax.plot(
+                            time,
+                            pulse.shape.modulated_waveform_i(sampling_rate).data,
+                            c=f"C{str(n)}",
+                        )
+                        ax.plot(
+                            time,
+                            pulse.shape.envelope_waveform_i(sampling_rate).data,
+                            c=f"C{str(n)}",
+                        )
+                        ax.plot(
+                            time,
+                            -pulse.shape.envelope_waveform_i(sampling_rate).data,
+                            c=f"C{str(n)}",
+                        )
                         # TODO: if they overlap use different shades
                         ax.axhline(0, c="dimgrey")
                         ax.set_ylabel(f"qubit {qubit} \n channel {channel}")

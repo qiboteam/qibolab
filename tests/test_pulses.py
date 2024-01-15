@@ -20,7 +20,6 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
     ShapeInitError,
-    SplitPulse,
     Waveform,
     eCap,
 )
@@ -35,8 +34,7 @@ def test_pulses_plot_functions():
     p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
     p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
-    p6 = SplitPulse(p5, window_start=10, window_finish=30)
-    ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
+    ps = p0 + p1 + p2 + p3 + p4 + p5
     wf = p0.modulated_waveform_i()
 
     plot_file = HERE / "test_plot.png"
@@ -46,10 +44,6 @@ def test_pulses_plot_functions():
     os.remove(plot_file)
 
     p0.plot(plot_file)
-    assert os.path.exists(plot_file)
-    os.remove(plot_file)
-
-    p6.plot(plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
 
@@ -402,35 +396,6 @@ def test_pulses_pulse_aliases():
     assert repr(fp) == "FluxPulse(0, 300, 0.9, Rectangular(), 0, 0)"
 
 
-def test_pulses_pulse_split_pulse():
-    dp = Pulse(
-        start=500,
-        duration=2000,
-        amplitude=0.9,
-        frequency=5_000_000,
-        relative_phase=0.0,
-        shape=Rectangular(),
-        channel=0,
-        type=PulseType.READOUT,
-        qubit=0,
-    )
-
-    sp = SplitPulse(dp)
-    sp.channel = 1
-    a = 720
-    b = 960
-    sp.window_start = sp.start + a
-    sp.window_finish = sp.start + b
-    assert sp.window_start == sp.start + a
-    assert sp.window_finish == sp.start + b
-    ps = PulseSequence(dp, sp)
-    # ps.plot()
-    assert len(sp.envelope_waveform_i()) == b - a
-    assert len(sp.envelope_waveform_q()) == b - a
-    assert len(sp.modulated_waveform_i()) == b - a
-    assert len(sp.modulated_waveform_q()) == b - a
-
-
 def test_pulses_pulsesequence_init():
     p1 = Pulse(400, 40, 0.9, 100e6, 0, Drag(5, 1), 3, PulseType.DRIVE)
     p2 = Pulse(500, 40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
@@ -586,21 +551,6 @@ def test_pulses_pulsesequence_pulses_overlap():
     assert ps.get_channel_pulses(10).pulses_overlap == False
     assert ps.get_channel_pulses(20).pulses_overlap == True
     assert ps.get_channel_pulses(30).pulses_overlap == True
-
-    channel10_ps = ps.get_channel_pulses(10)
-    channel20_ps = ps.get_channel_pulses(20)
-    channel30_ps = ps.get_channel_pulses(30)
-
-    split_pulses = PulseSequence()
-    overlaps = channel20_ps.get_pulse_overlaps()
-    n = 0
-    for section in overlaps.keys():
-        for pulse in overlaps[section]:
-            sp = SplitPulse(pulse, section[0], section[1])
-            sp.channel = n
-            split_pulses.add(sp)
-            n += 1
-    # split_pulses.plot()
 
 
 def test_pulses_pulsesequence_separate_overlapping_pulses():
