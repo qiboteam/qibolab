@@ -1224,7 +1224,7 @@ class PulseConstructor(Enum):
     FLUX = FluxPulse
 
 
-class PulseSequence:
+class PulseSequence(list):
     """A collection of scheduled pulses.
 
     A quantum circuit can be translated into a set of scheduled pulses
@@ -1233,30 +1233,6 @@ class PulseSequence:
     these collections of pulses. None of the methods of PulseSequence
     modify any of the properties of its pulses.
     """
-
-    def __init__(self, *pulses):
-        self.pulses = []  #: list[Pulse] = []
-        """Pulses (list): a list containing the pulses, ordered by their
-        channel and start times."""
-        self.add(*pulses)
-
-    def __len__(self):
-        return len(self.pulses)
-
-    def __iter__(self):
-        return iter(self.pulses)
-
-    def __getitem__(self, index):
-        return self.pulses[index]
-
-    def __setitem__(self, index, value):
-        self.pulses[index] = value
-
-    def __delitem__(self, index):
-        del self.pulses[index]
-
-    def __contains__(self, pulse):
-        return pulse in self.pulses
 
     def __repr__(self):
         return self.serial
@@ -1267,127 +1243,8 @@ class PulseSequence:
 
         return "PulseSequence\n" + "\n".join(f"{pulse.serial}" for pulse in self.pulses)
 
-    def __eq__(self, other):
-        if not isinstance(other, PulseSequence):
-            raise TypeError(f"Expected PulseSequence; got {type(other).__name__}")
-        return self.serial == other.serial
-
-    def __ne__(self, other):
-        if not isinstance(other, PulseSequence):
-            raise TypeError(f"Expected PulseSequence; got {type(other).__name__}")
-        return self.serial != other.serial
-
     def __hash__(self):
         return hash(self.serial)
-
-    def __add__(self, other):
-        if isinstance(other, PulseSequence):
-            return PulseSequence(*self.pulses, *other.pulses)
-        if isinstance(other, Pulse):
-            return PulseSequence(*self.pulses, other)
-        raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
-
-    def __radd__(self, other):
-        if isinstance(other, PulseSequence):
-            return PulseSequence(*other.pulses, *self.pulses)
-        if isinstance(other, Pulse):
-            return PulseSequence(other, *self.pulses)
-        raise TypeError(f"Expected PulseSequence or Pulse; got {type(other).__name__}")
-
-    def __iadd__(self, other):
-        if isinstance(other, PulseSequence):
-            self.add(*other.pulses)
-        elif isinstance(other, Pulse):
-            self.add(other)
-        else:
-            raise TypeError(
-                f"Expected PulseSequence or Pulse; got {type(other).__name__}"
-            )
-        return self
-
-    def __mul__(self, n):
-        if not isinstance(n, int):
-            raise TypeError(f"Expected int; got {type(n).__name__}")
-        if n < 0:
-            raise TypeError(f"argument n should be >=0, got {n}")
-        return PulseSequence(*(self.pulses * n))
-
-    def __rmul__(self, n):
-        if not isinstance(n, int):
-            raise TypeError(f"Expected int; got {type(n).__name__}")
-        if n < 0:
-            raise TypeError(f"argument n should be >=0, got {n}")
-        return PulseSequence(*(self.pulses * n))
-
-    def __imul__(self, n):
-        if not isinstance(n, int):
-            raise TypeError(f"Expected int; got {type(n).__name__}")
-        if n < 1:
-            raise TypeError(f"argument n should be >=1, got {n}")
-        original_set = self.shallow_copy()
-        for x in range(n - 1):
-            self.add(*original_set.pulses)
-        return self
-
-    @property
-    def count(self):
-        """Returns the number of pulses in the sequence."""
-
-        return len(self.pulses)
-
-    def add(self, *items):
-        """Adds pulses to the sequence and sorts them by channel and start
-        time."""
-
-        for item in items:
-            if isinstance(item, Pulse):
-                pulse = item
-                self.pulses.append(pulse)
-            elif isinstance(item, PulseSequence):
-                ps = item
-                for pulse in ps.pulses:
-                    self.pulses.append(pulse)
-        self.pulses.sort(key=lambda item: (item.start, item.channel))
-
-    def index(self, pulse):
-        """Returns the index of a pulse in the sequence."""
-
-        return self.pulses.index(pulse)
-
-    def pop(self, index=-1):
-        """Returns the pulse with the index provided and removes it from the
-        sequence."""
-
-        return self.pulses.pop(index)
-
-    def remove(self, pulse):
-        """Removes a pulse from the sequence."""
-
-        while pulse in self.pulses:
-            self.pulses.remove(pulse)
-
-    def clear(self):
-        """Removes all pulses from the sequence."""
-
-        self.pulses.clear()
-
-    def shallow_copy(self):
-        """Returns a shallow copy of the sequence.
-
-        It returns a new PulseSequence object with references to the
-        same Pulse objects.
-        """
-
-        return PulseSequence(*self.pulses)
-
-    def copy(self):
-        """Returns a deep copy of the sequence.
-
-        It returns a new PulseSequence with replicates of each of the
-        pulses contained in the original sequence.
-        """
-
-        return PulseSequence(*[pulse.copy() for pulse in self.pulses])
 
     @property
     def ro_pulses(self):
@@ -1463,12 +1320,6 @@ class PulseSequence:
                 if pulse.qubit in couplers:
                     new_pc.add(pulse)
         return new_pc
-
-    @property
-    def is_empty(self):
-        """Returns True if the sequence does not contain any pulses."""
-
-        return len(self.pulses) == 0
 
     @property
     def finish(self) -> int:
