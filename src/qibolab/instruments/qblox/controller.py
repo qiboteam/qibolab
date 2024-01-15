@@ -65,40 +65,12 @@ class QbloxController(Controller):
             raise ConnectionError(f"Unable to connect:\n{str(exception)}\n")
             # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
-    def disconnect(self):
-        """Disconnects all modules."""
-        if self.is_connected:
-            for module in self.modules.values():
-                module.stop()
-                module.disconnect()
-            self.cluster.close()
-            self.is_connected = False
-
     def setup(self):
         """Empty method to comply with Instrument interface.
 
         Setup of the modules happens in the platform ``create`` method
         using :meth:`qibolab.serialize.load_instrument_settings`.
         """
-
-    def _termination_handler(self, signum, frame):
-        """Calls all modules to stop if the program receives a termination
-        signal."""
-
-        log.warning("Termination signal received, stopping modules.")
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].stop()
-        log.warning("QbloxController: all modules stopped.")
-        exit(0)
-
-    def disconnect(self):
-        """Disconnects all modules."""
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].disconnect()
-            self.cluster.close()
-            self.is_connected = False
 
     def _execute_pulse_sequence(
         self,
@@ -529,3 +501,22 @@ class QbloxController(Controller):
                                     *((split_sweeper,) + sweepers[1:]),
                                     results=results,
                                 )
+
+    def _termination_handler(self):
+        """Calls all modules to stop if the program receives a termination
+        signal."""
+
+        log.warning("Termination signal received, disconnecting modules.")
+        if self.is_connected:
+            for name in self.modules:
+                self.modules[name].disconnect()
+        log.warning("QbloxController: all modules disconnected.")
+        exit(0)
+
+    def disconnect(self):
+        """Disconnects all modules."""
+        if self.is_connected:
+            for name in self.modules:
+                self.modules[name].disconnect()
+            self.cluster.close()
+            self.is_connected = False
