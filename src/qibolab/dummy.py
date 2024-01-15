@@ -6,6 +6,8 @@ from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
 
+FOLDER = pathlib.Path(__file__).parent / "dummy/"
+
 
 def remove_couplers(runcard):
     """Remove coupler sections from runcard to create a dummy platform without
@@ -59,7 +61,7 @@ def create_dummy(with_couplers: bool = True):
     channels["readout"].attenuation = 0
     channels["twpa"].local_oscillator = twpa_pump
 
-    qubits, couplers, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard, FOLDER)
     settings = load_settings(runcard)
 
     # map channels to qubits
