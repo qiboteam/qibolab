@@ -1,5 +1,6 @@
 """Qblox Cluster QCM driver."""
 
+from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
@@ -17,6 +18,7 @@ class ClusterModule(Instrument):
     inherit from this base class.
     """
 
+    FREQUENCY_LIMIT = 500e6  # 500Mhz
     DEFAULT_SEQUENCERS_VALUES = {
         "cont_mode_en_awg_path0": False,
         "cont_mode_en_awg_path1": False,
@@ -35,7 +37,14 @@ class ClusterModule(Instrument):
 
     def __init__(self, name: str, address: str):
         super().__init__(name, address)
+        self.device: QbloxQrmQcm = None
+        self.channel_map: dict = {}
         self._ports: dict = {}
+        self._device_num_sequencers: int
+        # TODO: we can create only list and put three flags: free, used, unused
+        self._free_sequencers_numbers: list[int] = []
+        self._used_sequencers_numbers: list[int] = []
+        self._unused_sequencers_numbers: list[int] = []
 
     def ports(self, name: str, out: bool = True):
         """Adds an entry to the dictionary `self._ports` with key 'name' and

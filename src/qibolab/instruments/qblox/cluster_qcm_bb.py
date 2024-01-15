@@ -3,7 +3,6 @@
 import json
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 
 from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
@@ -96,7 +95,6 @@ class ClusterQCM_BB(ClusterModule):
     """
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1, "o3": 2, "o4": 3}
-    FREQUENCY_LIMIT = 500e6
     OUT_PORT_PATH = {0: "I", 1: "Q", 2: "I", 3: "Q"}
 
     def __init__(self, name: str, address: str):
@@ -113,19 +111,10 @@ class ClusterQCM_BB(ClusterModule):
         >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self._ports: dict = {}
-        self.device: QbloxQrmQcm = None
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}
-        self.channel_map: dict = {}
         self._device_num_output_ports = 2
-        self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[
-            int
-        ] = []  # TODO: we can create only list and put three flags: free, used, unused
-        self._used_sequencers_numbers: list[int] = []
-        self._unused_sequencers_numbers: list[int] = []
 
     def _set_default_values(self):
         # disable all sequencer connections

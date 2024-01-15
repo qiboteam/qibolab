@@ -3,7 +3,6 @@
 import json
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 
 from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
@@ -113,7 +112,6 @@ class ClusterQCM_RF(ClusterModule):
     """
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1}
-    FREQUENCY_LIMIT = 500e6
 
     def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM-RF module.
@@ -129,17 +127,11 @@ class ClusterQCM_RF(ClusterModule):
         >>> qcm_module = ClusterQCM_RF(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.device: QbloxQrmQcm = None
         self.settings = {}
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}
-        self.channel_map: dict = {}
         self._device_num_output_ports = 2
-        self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[int] = []
-        self._used_sequencers_numbers: list[int] = []
-        self._unused_sequencers_numbers: list[int] = []
 
     def _set_default_values(self):
         # disable all sequencer connections

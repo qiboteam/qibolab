@@ -5,7 +5,6 @@ import time
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.pulses import Pulse, PulseSequence, PulseType
@@ -121,7 +120,6 @@ class ClusterQRM_RF(ClusterModule):
     """
 
     DEFAULT_SEQUENCERS: dict = {"o1": 0, "i1": 0}
-    FREQUENCY_LIMIT = 500e6  # 500 MHz
 
     def __init__(self, name: str, address: str):
         """Initialize a Qblox QRM-RF module.
@@ -138,7 +136,6 @@ class ClusterQRM_RF(ClusterModule):
         """
 
         super().__init__(name, address)
-        self.device: QbloxQrmQcm = None
         self.classification_parameters: dict = {}
         self.settings: dict = {}
 
@@ -146,12 +143,7 @@ class ClusterQRM_RF(ClusterModule):
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
         self._sequencers: dict[Sequencer] = {"o1": []}
-        self.channel_map: dict = {}
         self._device_num_output_ports = 1
-        self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[int] = []
-        self._used_sequencers_numbers: list[int] = []
-        self._unused_sequencers_numbers: list[int] = []
         self._execution_time: float = 0
 
     def _set_default_values(self):
