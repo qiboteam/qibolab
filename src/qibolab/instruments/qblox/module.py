@@ -1,5 +1,7 @@
 """Qblox Cluster QCM driver."""
 
+from qibo.config import log
+
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
 from qibolab.pulses import Pulse, PulseSequence
@@ -125,11 +127,22 @@ class ClusterModule(Instrument):
         for sequencer_number in self._used_sequencers_numbers:
             self.device.start_sequencer(sequencer_number)
 
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-        pass
-
     def disconnect(self):
-        """Empty method to comply with Instrument interface."""
+        """Stops all sequencers, disconnect all the outputs from the AWG paths
+        of the sequencers.
+
+        If the module is a QRM-RF disconnect all the inputs from the
+        acquisition paths of the sequencers.
+        """
+        for sequencer_number in self._used_sequencers_numbers:
+            state = self.device.get_sequencer_state(sequencer_number)
+            if state.status != "STOPPED":
+                log.warning(
+                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
+                )
+        self.device.stop_sequencer()
+        self.device.disconnect_outputs()
+        if self.device.is_qrm_type():
+            self.device.disconnect_inputs()
         self.is_connected = False
         self.device = None

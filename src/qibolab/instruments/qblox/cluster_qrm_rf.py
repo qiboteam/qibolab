@@ -966,10 +966,3 @@ class ClusterQRM_RF(ClusterModule):
         # grab only the data required by the platform
         # TODO: to be updated once the functionality of ExecutionResults is extended
         return {key: acquisition.data for key, acquisition in acquisitions.items()}
-
-    def stop(self):
-        """Stops all sequencers."""
-        try:
-            self.device.stop_sequencer()
-        except:
-            raise RuntimeError(f"Error stopping sequencer for {self.device.name}")
