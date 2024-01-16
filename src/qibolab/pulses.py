@@ -395,7 +395,7 @@ class GaussianSquare(PulseShape):
             flat_samples = int(np.rint(self.width * num_samples))
             gaussian_samples = (num_samples - flat_samples) // 2
 
-            x = np.arange(0, 2 * gaussian_samples, 1)
+            x = np.arange(0, 2 * gaussian_samples)
             a = np.exp(
                 -(1 / 2)
                 * (
