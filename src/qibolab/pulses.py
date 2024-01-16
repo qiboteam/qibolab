@@ -1234,6 +1234,12 @@ class PulseSequence(list):
     modify any of the properties of its pulses.
     """
 
+    def __add__(self, other):
+        return PulseSequence(super().__add__(other))
+
+    def __mul__(self, other):
+        return PulseSequence(super().__mul__(other))
+
     def __repr__(self):
         return f"{type(self).__name__}({super().__repr__()})"
 
@@ -1379,7 +1385,7 @@ class PulseSequence(list):
             overlaps[(times[n], times[n + 1])] = PulseSequence()
             for pulse in self:
                 if (pulse.start <= times[n]) & (pulse.finish >= times[n + 1]):
-                    overlaps[(times[n], times[n + 1])] += pulse
+                    overlaps[(times[n], times[n + 1])] += [pulse]
         return overlaps
 
     def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
@@ -1406,7 +1412,7 @@ class PulseSequence(list):
                     stored = True
                     break
             if not stored:
-                separated_pulses.append(PulseSequence(new_pulse))
+                separated_pulses.append(PulseSequence([new_pulse]))
         return separated_pulses
 
     # TODO: Implement separate_different_frequency_pulses()
@@ -1417,8 +1423,9 @@ class PulseSequence(list):
 
         overlap = False
         for pc in self.get_pulse_overlaps().values():
-            if pc.count > 1:
+            if len(pc) > 1:
                 overlap = True
+                break
         return overlap
 
     def plot(self, savefig_filename=None, sampling_rate=SAMPLING_RATE):
@@ -1432,8 +1439,8 @@ class PulseSequence(list):
             import matplotlib.pyplot as plt
             from matplotlib import gridspec
 
-            fig = plt.figure(figsize=(14, 2 * self.count), dpi=200)
-            gs = gridspec.GridSpec(ncols=1, nrows=self.count)
+            fig = plt.figure(figsize=(14, 2 * len(self)), dpi=200)
+            gs = gridspec.GridSpec(ncols=1, nrows=len(self))
             vertical_lines = []
             for pulse in self:
                 vertical_lines.append(pulse.start)
