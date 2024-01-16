@@ -191,7 +191,7 @@ def test_cnot_to_sequence():
     sequence = compile_circuit(circuit, platform)
     test_sequence, virtual_z_phases = platform.create_CNOT_pulse_sequence((2, 3))
     assert len(sequence) == len(test_sequence)
-    assert sequence.pulses[0] == test_sequence.pulses[0]
+    assert sequence[0] == test_sequence[0]
 
 
 def test_add_measurement_to_sequence(platform):
