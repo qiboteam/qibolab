@@ -44,7 +44,7 @@ around the pre-defined frequency.
     # create pulse sequence and add pulse
     sequence = PulseSequence()
     readout_pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    sequence.add(readout_pulse)
+    sequence.append(readout_pulse)
 
     # allocate frequency sweeper
     sweeper = Sweeper(
@@ -127,8 +127,8 @@ complex pulse sequence. Therefore with start with that:
     drive_pulse.duration = 2000
     drive_pulse.amplitude = 0.01
     readout_pulse = platform.create_MZ_pulse(qubit=0, start=drive_pulse.finish)
-    sequence.add(drive_pulse)
-    sequence.add(readout_pulse)
+    sequence.append(drive_pulse)
+    sequence.append(readout_pulse)
 
     # allocate frequency sweeper
     sweeper = Sweeper(
@@ -220,13 +220,13 @@ and its impact on qubit states in the IQ plane.
     one_sequence = PulseSequence()
     drive_pulse = platform.create_RX_pulse(qubit=0, start=0)
     readout_pulse1 = platform.create_MZ_pulse(qubit=0, start=drive_pulse.finish)
-    one_sequence.add(drive_pulse)
-    one_sequence.add(readout_pulse1)
+    one_sequence.append(drive_pulse)
+    one_sequence.append(readout_pulse1)
 
     # create pulse sequence 2 and add pulses
     zero_sequence = PulseSequence()
     readout_pulse2 = platform.create_MZ_pulse(qubit=0, start=0)
-    zero_sequence.add(readout_pulse2)
+    zero_sequence.append(readout_pulse2)
 
     options = ExecutionParameters(
         nshots=1000,
