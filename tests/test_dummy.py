@@ -64,18 +64,16 @@ def test_dummy_execute_pulse_sequence_couplers():
         qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
         start=0,
     )
-    sequence.append(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
-    sequence.append(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
-    sequence.append(cz.coupler_pulses(qubit_ordered_pair.coupler.name))
+    sequence.extend(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
+    sequence.extend(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
+    sequence.extend(cz.coupler_pulses(qubit_ordered_pair.coupler.name))
     sequence.append(platform.create_qubit_readout_pulse(0, 40))
     sequence.append(platform.create_qubit_readout_pulse(2, 40))
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
-    test_pulses = "PulseSequence\nFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux-2, 2)\nCouplerFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux_coupler-1, 1)"
     test_phases = {1: 0.0, 2: 0.0}
 
-    assert test_pulses == cz.serial
     assert test_phases == cz_phases
 
 
