@@ -274,7 +274,7 @@ class Platform:
                 sequence = PulseSequence()
                 parameter = Parameter.frequency
                 pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
-                sequence.add(pulse)
+                sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
                 platform.sweep(sequence, ExecutionParameters(), sweeper)
