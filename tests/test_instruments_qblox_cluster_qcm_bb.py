@@ -136,10 +136,10 @@ def test_connect(connected_qcm_bb: QcmBb):
 @pytest.mark.qpu
 def test_pulse_sequence(connected_platform, connected_qcm_bb: QcmBb):
     ps = PulseSequence()
-    ps.add(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
-    ps.add(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
-    ps.add(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
-    ps.add(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
     qubits = connected_platform.qubits
     connected_qcm_bb._ports["o2"].hardware_mod_en = True
     connected_qcm_bb.process_pulse_sequence(qubits, ps, 1000, 1, 10000)
@@ -155,10 +155,10 @@ def test_pulse_sequence(connected_platform, connected_qcm_bb: QcmBb):
 @pytest.mark.qpu
 def test_sweepers(connected_platform, connected_qcm_bb: QcmBb):
     ps = PulseSequence()
-    ps.add(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
-    ps.add(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
-    ps.add(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
-    ps.add(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(20, 100, 0.02, "Rectangular", O3_OUTPUT_CHANNEL))
+    ps.append(FluxPulse(32, 48, 0.4, "Rectangular", O4_OUTPUT_CHANNEL))
     qubits = connected_platform.qubits
 
     amplitude_range = np.linspace(0, 0.25, 50)

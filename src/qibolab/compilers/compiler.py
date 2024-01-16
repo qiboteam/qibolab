@@ -121,7 +121,7 @@ class Compiler:
             pulse.start += start
             if not isinstance(pulse, ReadoutPulse):
                 pulse.relative_phase += virtual_z_phases[pulse.qubit]
-            sequence.add(pulse)
+            sequence.append(pulse)
 
         return gate_sequence, gate_phases
 
