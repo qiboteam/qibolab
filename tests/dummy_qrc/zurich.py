@@ -177,11 +177,8 @@ def create(runcard_path=RUNCARD, with_kernels: bool = True):
     if with_kernels and (FOLDER / "kernels.npz").is_file():
         kernels = Kernels.load(path=FOLDER / "kernels.npz")
         for q in kernels:
-            # To handle Kernel.save() using strings
-            if q in qubits.keys():
-                qubits[q].kernel = kernels[q]
-            else:
-                qubits[int(q)].kernel = kernels[q]
+            qubits[q].kernel = kernels[q]
+
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)

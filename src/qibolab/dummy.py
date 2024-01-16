@@ -65,11 +65,8 @@ def create_dummy(with_kernels: bool = True, with_couplers: bool = True):
     if with_kernels:
         kernels = Kernels.load(path=extras_folder / "kernels.npz")
         for q in kernels:
-            # To handle Kernel.save() using strings
-            if q in qubits.keys():
-                qubits[q].kernel = kernels[q]
-            else:
-                qubits[int(q)].kernel = kernels[q]
+            qubits[q].kernel = kernels[q]
+
     settings = load_settings(runcard)
 
     # map channels to qubits
