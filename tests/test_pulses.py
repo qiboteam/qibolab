@@ -452,8 +452,8 @@ def test_pulses_pulsesequence_operators():
     p6 = Pulse(300, 40, 0.9, 50e6, 0, Gaussian(5), 1, PulseType.DRIVE)
 
     another_ps = PulseSequence()
-    another_ps.add(p4)
-    another_ps.add(p5, p6)
+    another_ps.append(p4)
+    another_ps.append(p5, p6)
 
     assert another_ps[0] == p4
     assert another_ps[1] == p5
@@ -488,10 +488,10 @@ def test_pulses_pulsesequence_add():
     p3 = Pulse(400, 40, 0.9, 50e6, 0, Gaussian(5), 40, PulseType.DRIVE, 4)
 
     ps = PulseSequence()
-    ps.add(p0)
-    ps.add(p1)
+    ps.append(p0)
+    ps.append(p1)
     psx = PulseSequence(p2, p3)
-    ps.add(psx)
+    ps.append(psx)
 
     assert ps.count == 4
     assert ps.qubits == [1, 2, 3, 4]
@@ -933,7 +933,7 @@ def test_readout_pulse():
 
 def test_pulse_sequence_add():
     sequence = PulseSequence()
-    sequence.add(
+    sequence.append(
         Pulse(
             start=0,
             frequency=200_000_000,
@@ -944,7 +944,7 @@ def test_pulse_sequence_add():
             channel=1,
         )
     )
-    sequence.add(
+    sequence.append(
         Pulse(
             start=64,
             frequency=200_000_000,
@@ -961,7 +961,7 @@ def test_pulse_sequence_add():
 
 def test_pulse_sequence__add__():
     sequence = PulseSequence()
-    sequence.add(
+    sequence.append(
         Pulse(
             start=0,
             frequency=200_000_000,
@@ -972,7 +972,7 @@ def test_pulse_sequence__add__():
             channel=1,
         )
     )
-    sequence.add(
+    sequence.append(
         Pulse(
             start=64,
             frequency=200_000_000,
@@ -991,7 +991,7 @@ def test_pulse_sequence__add__():
 
 def test_pulse_sequence__mul__():
     sequence = PulseSequence()
-    sequence.add(
+    sequence.append(
         Pulse(
             start=0,
             frequency=200_000_000,
@@ -1002,7 +1002,7 @@ def test_pulse_sequence__mul__():
             channel=1,
         )
     )
-    sequence.add(
+    sequence.append(
         Pulse(
             start=64,
             frequency=200_000_000,
@@ -1027,7 +1027,7 @@ def test_pulse_sequence__mul__():
 
 def test_pulse_sequence_add_readout():
     sequence = PulseSequence()
-    sequence.add(
+    sequence.append(
         Pulse(
             start=0,
             frequency=200_000_000,
@@ -1039,7 +1039,7 @@ def test_pulse_sequence_add_readout():
         )
     )
 
-    sequence.add(
+    sequence.append(
         Pulse(
             start=64,
             frequency=200_000_000,
@@ -1052,7 +1052,7 @@ def test_pulse_sequence_add_readout():
         )
     )
 
-    sequence.add(
+    sequence.append(
         ReadoutPulse(
             start=128,
             frequency=20_000_000,

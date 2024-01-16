@@ -151,7 +151,7 @@ def test_connect(connected_qcm_rf: QcmRf):
 @pytest.mark.qpu
 def test_pulse_sequence(connected_platform, connected_qcm_rf: QcmRf):
     ps = PulseSequence()
-    ps.add(
+    ps.append(
         DrivePulse(
             0,
             200,
@@ -162,7 +162,7 @@ def test_pulse_sequence(connected_platform, connected_qcm_rf: QcmRf):
             O1_OUTPUT_CHANNEL,
         )
     )
-    ps.add(
+    ps.append(
         DrivePulse(
             0,
             200,
@@ -189,7 +189,7 @@ def test_pulse_sequence(connected_platform, connected_qcm_rf: QcmRf):
 @pytest.mark.qpu
 def test_sweepers(connected_platform, connected_qcm_rf: QcmRf):
     ps = PulseSequence()
-    ps.add(
+    ps.append(
         DrivePulse(
             0,
             200,
@@ -200,7 +200,7 @@ def test_sweepers(connected_platform, connected_qcm_rf: QcmRf):
             O1_OUTPUT_CHANNEL,
         )
     )
-    ps.add(
+    ps.append(
         DrivePulse(
             0,
             200,
