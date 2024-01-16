@@ -4,7 +4,7 @@ Pulses execution
 First, we create the pulse sequence that will be executed. We can do this by
 defining a :class:`qibolab.pulses.PulseSequence` object and adding different
 pulses (:class:`qibolab.pulses.Pulse`) through the
-:func:`qibolab.pulses.PulseSequence.add()` method:
+:func:`qibolab.pulses.PulseSequence.append()` method:
 
 .. testcode::  python
 
@@ -20,7 +20,7 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
     sequence = PulseSequence()
 
     # Add some pulses to the pulse sequence
-    sequence.add(
+    sequence.append(
         DrivePulse(
             start=0,
             frequency=200000000,
@@ -31,7 +31,7 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
             qubit=0,
         )
     )
-    sequence.add(
+    sequence.append(
         ReadoutPulse(
             start=70,
             frequency=20000000.0,
