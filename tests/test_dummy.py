@@ -26,8 +26,8 @@ def test_dummy_execute_pulse_sequence(name, acquisition):
     platform = create_platform(name)
     ro_pulse = platform.create_qubit_readout_pulse(0, 0)
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_readout_pulse(0, 0))
-    sequence.add(platform.create_RX12_pulse(0, 0))
+    sequence.append(platform.create_qubit_readout_pulse(0, 0))
+    sequence.append(platform.create_RX12_pulse(0, 0))
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
     if acquisition is AcquisitionType.INTEGRATION:
@@ -41,7 +41,7 @@ def test_dummy_execute_coupler_pulse():
     sequence = PulseSequence()
 
     pulse = platform.create_coupler_pulse(coupler=0, start=0)
-    sequence.add(pulse)
+    sequence.append(pulse)
 
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
@@ -64,11 +64,11 @@ def test_dummy_execute_pulse_sequence_couplers():
         qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
         start=0,
     )
-    sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
-    sequence.add(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
-    sequence.add(cz.coupler_pulses(qubit_ordered_pair.coupler.name))
-    sequence.add(platform.create_qubit_readout_pulse(0, 40))
-    sequence.add(platform.create_qubit_readout_pulse(2, 40))
+    sequence.append(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
+    sequence.append(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
+    sequence.append(cz.coupler_pulses(qubit_ordered_pair.coupler.name))
+    sequence.append(platform.create_qubit_readout_pulse(0, 40))
+    sequence.append(platform.create_qubit_readout_pulse(2, 40))
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
@@ -83,7 +83,7 @@ def test_dummy_execute_pulse_sequence_couplers():
 def test_dummy_execute_pulse_sequence_fast_reset(name):
     platform = create_platform(name)
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    sequence.append(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(nshots=None, fast_reset=True)
     result = platform.execute_pulse_sequence(sequence, options)
 
@@ -100,7 +100,7 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
     platform.instruments["dummy"].UNROLLING_BATCH_SIZE = batch_size
     sequences = []
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    sequence.append(platform.create_qubit_readout_pulse(0, 0))
     for _ in range(nsequences):
         sequences.append(sequence)
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
@@ -120,7 +120,7 @@ def test_dummy_single_sweep_raw(name):
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
 
     parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.add(pulse)
+    sequence.append(pulse)
     sweeper = Sweeper(Parameter.frequency, parameter_range, pulses=[pulse])
     options = ExecutionParameters(
         nshots=10,
@@ -160,7 +160,7 @@ def test_dummy_single_sweep_coupler(
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
         parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.add(ro_pulse)
+    sequence.append(ro_pulse)
     if parameter in QubitParameter:
         sweeper = Sweeper(parameter, parameter_range, couplers=[platform.couplers[0]])
     else:
@@ -206,7 +206,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
         parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.add(pulse)
+    sequence.append(pulse)
     if parameter in QubitParameter:
         sweeper = Sweeper(parameter, parameter_range, qubits=[platform.qubits[0]])
     else:
@@ -249,8 +249,8 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
     sequence = PulseSequence()
     pulse = platform.create_qubit_drive_pulse(qubit=0, start=0, duration=1000)
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=pulse.finish)
-    sequence.add(pulse)
-    sequence.add(ro_pulse)
+    sequence.append(pulse)
+    sequence.append(ro_pulse)
     parameter_range_1 = (
         np.random.rand(SWEPT_POINTS)
         if parameter1 is Parameter.amplitude
@@ -314,7 +314,7 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
     ro_pulses = {}
     for qubit in platform.qubits:
         ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit=qubit, start=0)
-        sequence.add(ro_pulses[qubit])
+        sequence.append(ro_pulses[qubit])
     parameter_range = (
         np.random.rand(SWEPT_POINTS)
         if parameter is Parameter.amplitude

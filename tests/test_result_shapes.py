@@ -22,8 +22,8 @@ def execute(platform, acquisition_type, averaging_mode, sweep=False):
     qd_pulse = platform.create_RX_pulse(qubit, start=0)
     ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.finish)
     sequence = PulseSequence()
-    sequence.add(qd_pulse)
-    sequence.add(ro_pulse)
+    sequence.append(qd_pulse)
+    sequence.append(ro_pulse)
 
     options = ExecutionParameters(
         nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode
