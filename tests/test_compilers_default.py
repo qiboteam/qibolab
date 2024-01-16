@@ -112,14 +112,14 @@ def test_gpi2_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0.2))
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 1
+    assert len(sequence) == 1
     assert len(sequence.qd_pulses) == 1
 
-    RX90_pulse = platform.create_RX90_pulse(0, start=0, relative_phase=0.2)
-    s = PulseSequence(RX90_pulse)
+    rx90_pulse = platform.create_RX90_pulse(0, start=0, relative_phase=0.2)
+    s = PulseSequence([rx90_pulse])
 
-    np.testing.assert_allclose(sequence.duration, RX90_pulse.duration)
-    assert sequence.serial == s.serial
+    np.testing.assert_allclose(sequence.duration, rx90_pulse.duration)
+    assert sequence == s
 
 
 def test_u3_to_sequence(platform):
@@ -127,19 +127,19 @@ def test_u3_to_sequence(platform):
     circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
 
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 2
+    assert len(sequence) == 2
     assert len(sequence.qd_pulses) == 2
 
-    RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
-    RX90_pulse2 = platform.create_RX90_pulse(
-        0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi
+    rx90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
+    rx90_pulse2 = platform.create_RX90_pulse(
+        0, start=rx90_pulse1.finish, relative_phase=0.4 - np.pi
     )
-    s = PulseSequence(RX90_pulse1, RX90_pulse2)
+    s = PulseSequence([rx90_pulse1, rx90_pulse2])
 
     np.testing.assert_allclose(
-        sequence.duration, RX90_pulse1.duration + RX90_pulse2.duration
+        sequence.duration, rx90_pulse1.duration + rx90_pulse2.duration
     )
-    assert sequence.serial == s.serial
+    assert sequence == s
 
 
 def test_two_u3_to_sequence(platform):
@@ -148,25 +148,25 @@ def test_two_u3_to_sequence(platform):
     circuit.add(gates.U3(0, 0.4, 0.6, 0.5))
 
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 4
+    assert len(sequence) == 4
     assert len(sequence.qd_pulses) == 4
 
-    RX90_pulse = platform.create_RX90_pulse(0)
+    rx90_pulse = platform.create_RX90_pulse(0)
 
-    np.testing.assert_allclose(sequence.duration, 2 * 2 * RX90_pulse.duration)
+    np.testing.assert_allclose(sequence.duration, 2 * 2 * rx90_pulse.duration)
 
-    RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
-    RX90_pulse2 = platform.create_RX90_pulse(
-        0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi
+    rx90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
+    rx90_pulse2 = platform.create_RX90_pulse(
+        0, start=rx90_pulse1.finish, relative_phase=0.4 - np.pi
     )
-    RX90_pulse3 = platform.create_RX90_pulse(
-        0, start=RX90_pulse2.finish, relative_phase=1.1
+    rx90_pulse3 = platform.create_RX90_pulse(
+        0, start=rx90_pulse2.finish, relative_phase=1.1
     )
-    RX90_pulse4 = platform.create_RX90_pulse(
-        0, start=RX90_pulse3.finish, relative_phase=1.5 - np.pi
+    rx90_pulse4 = platform.create_RX90_pulse(
+        0, start=rx90_pulse3.finish, relative_phase=1.5 - np.pi
     )
-    s = PulseSequence(RX90_pulse1, RX90_pulse2, RX90_pulse3, RX90_pulse4)
-    assert sequence.serial == s.serial
+    s = PulseSequence([rx90_pulse1, rx90_pulse2, rx90_pulse3, rx90_pulse4])
+    assert sequence == s
 
 
 def test_cz_to_sequence(platform):
@@ -200,17 +200,17 @@ def test_add_measurement_to_sequence(platform):
     circuit.add(gates.M(0))
 
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 3
+    assert len(sequence) == 3
     assert len(sequence.qd_pulses) == 2
     assert len(sequence.ro_pulses) == 1
 
-    RX90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
-    RX90_pulse2 = platform.create_RX90_pulse(
-        0, start=RX90_pulse1.finish, relative_phase=0.4 - np.pi
+    rx90_pulse1 = platform.create_RX90_pulse(0, start=0, relative_phase=0.3)
+    rx90_pulse2 = platform.create_RX90_pulse(
+        0, start=rx90_pulse1.finish, relative_phase=0.4 - np.pi
     )
-    MZ_pulse = platform.create_MZ_pulse(0, start=RX90_pulse2.finish)
-    s = PulseSequence(RX90_pulse1, RX90_pulse2, MZ_pulse)
-    assert sequence.serial == s.serial
+    mz_pulse = platform.create_MZ_pulse(0, start=rx90_pulse2.finish)
+    s = PulseSequence([rx90_pulse1, rx90_pulse2, mz_pulse])
+    assert sequence == s
 
 
 @pytest.mark.parametrize("delay", [0, 100])
@@ -220,9 +220,9 @@ def test_align_delay_measurement(platform, delay):
     circuit.add(gates.M(0))
 
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 1
+    assert len(sequence) == 1
     assert len(sequence.ro_pulses) == 1
 
-    MZ_pulse = platform.create_MZ_pulse(0, start=delay)
-    s = PulseSequence(MZ_pulse)
-    assert sequence.serial == s.serial
+    mz_pulse = platform.create_MZ_pulse(0, start=delay)
+    s = PulseSequence([mz_pulse])
+    assert sequence == s
