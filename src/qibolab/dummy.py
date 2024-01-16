@@ -64,7 +64,7 @@ def create_dummy(with_kernels: bool = True, with_couplers: bool = True):
     qubits, couplers, pairs = load_qubits(runcard)
     if with_kernels:
         kernels = Kernels.load(path=extras_folder / "kernels.npz")
-        for q in kernels.data.keys():
+        for q in kernels:
             # To handle Kernel.save() using strings
             if q in qubits.keys():
                 qubits[q].kernel = kernels[q]
