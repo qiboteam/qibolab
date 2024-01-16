@@ -97,7 +97,7 @@ def _(
     """Convert PulseSequence to list of rfosc pulses with relative time."""
     last_pulse_start = 0
     list_sequence = []
-    for pulse in sorted(sequence.pulses, key=lambda item: item.start):
+    for pulse in sorted(sequence, key=lambda item: item.start):
         start_delay = (pulse.start - last_pulse_start) * NS_TO_US
         pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
         list_sequence.append(pulse_dict)
