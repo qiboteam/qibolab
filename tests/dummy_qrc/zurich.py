@@ -9,7 +9,6 @@ from qibolab import Platform
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.zhinst import Zurich
-from qibolab.kernels import Kernels
 from qibolab.serialize import (
     load_instrument_settings,
     load_qubits,
@@ -22,7 +21,7 @@ FOLDER = pathlib.Path(__file__).parent / "zurich/"
 N_QUBITS = 5
 
 
-def create(runcard_path=RUNCARD, with_kernels: bool = True):
+def create(runcard_path=RUNCARD):
     """IQM 5q-chip controlled Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
 
     Args:
@@ -172,13 +171,8 @@ def create(runcard_path=RUNCARD, with_kernels: bool = True):
         channels[ch].local_oscillator = local_oscillators[lo]
 
     # create qubit objects
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(runcard_path, FOLDER)
     qubits, couplers, pairs = load_qubits(runcard)
-    if with_kernels and (FOLDER / "kernels.npz").is_file():
-        kernels = Kernels.load(path=FOLDER / "kernels.npz")
-        for q in kernels:
-            qubits[q].kernel = kernels[q]
-
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)

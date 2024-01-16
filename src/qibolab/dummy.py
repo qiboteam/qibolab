@@ -3,7 +3,6 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
-from qibolab.kernels import Kernels
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
 
@@ -22,7 +21,7 @@ def remove_couplers(runcard):
     return runcard
 
 
-def create_dummy(with_kernels: bool = True, with_couplers: bool = True):
+def create_dummy(with_couplers: bool = True):
     """Create a dummy platform using the dummy instrument.
 
     Args:
@@ -61,12 +60,7 @@ def create_dummy(with_kernels: bool = True, with_couplers: bool = True):
     channels["readout"].attenuation = 0
     channels["twpa"].local_oscillator = twpa_pump
 
-    qubits, couplers, pairs = load_qubits(runcard)
-    if with_kernels:
-        kernels = Kernels.load(path=extras_folder / "kernels.npz")
-        for q in kernels:
-            qubits[q].kernel = kernels[q]
-
+    qubits, couplers, pairs = load_qubits(runcard, extras_folder)
     settings = load_settings(runcard)
 
     # map channels to qubits

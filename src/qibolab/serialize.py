@@ -34,7 +34,9 @@ def load_settings(runcard: dict) -> Settings:
     return Settings(**runcard["settings"])
 
 
-def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
+def load_qubits(
+    runcard: dict, extras_folder: Path = None
+) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard to
@@ -47,6 +49,11 @@ def load_qubits(runcard: dict) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
         q: Qubit(q, **char)
         for q, char in runcard["characterization"]["single_qubit"].items()
     }
+
+    if (extras_folder / "kernels.npz").is_file():
+        kernels = Kernels.load(path=extras_folder / "kernels.npz")
+        for q in kernels:
+            qubits[q].kernel = kernels[q]
 
     couplers = {}
     pairs = {}
