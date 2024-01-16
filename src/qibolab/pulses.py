@@ -1234,15 +1234,19 @@ class PulseSequence(list):
     """
 
     def __add__(self, other):
+        """Return self+value."""
         return type(self)(super().__add__(other))
 
     def __mul__(self, other):
+        """Return self*value."""
         return type(self)(super().__mul__(other))
 
     def __repr__(self):
+        """Return repr(self)."""
         return f"{type(self).__name__}({super().__repr__()})"
 
     def copy(self):
+        """Return a shallow copy of the sequence."""
         return type(self)(super().copy())
 
     @property
