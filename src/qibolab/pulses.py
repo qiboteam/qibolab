@@ -391,23 +391,33 @@ class GaussianSquare(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
+
+            def gaussian(t, rel_sigma, gaussian_samples):
+                mu = (2 * gaussian_samples - 1) / 2
+                sigma = (2 * gaussian_samples) / rel_sigma
+                return np.exp(-0.5 * ((t - mu) / sigma) ** 2)
+
+            def fvec(t, gaussian_samples, rel_sigma, length=None):
+                if length is None:
+                    length = t.shape[0]
+
+                pulse = np.ones_like(t, dtype=float)
+                rise = t < gaussian_samples
+                fall = t > length - gaussian_samples - 1
+                pulse[rise] = gaussian(t[rise], rel_sigma, gaussian_samples)
+                pulse[fall] = gaussian(t[rise], rel_sigma, gaussian_samples)[::-1]
+                return pulse
+
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            flat_samples = int(np.rint(self.width * num_samples))
-            gaussian_samples = (num_samples - flat_samples) // 2
+            gaussian_samples = num_samples * (1 - self.width) // 2
+            t = np.arange(0, num_samples)
 
-            x = np.arange(0, 2 * gaussian_samples)
-
-            mu = (2 * gaussian_samples - 1) / 2
-            sigma = (2 * gaussian_samples) / self.rel_sigma
-            a = np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-
-            pulse = np.concatenate(
-                (a[:gaussian_samples], np.ones(flat_samples), a[gaussian_samples:])
-            )
+            pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
 
             waveform = Waveform(self.pulse.amplitude * pulse)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
+
         raise ShapeInitError
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
