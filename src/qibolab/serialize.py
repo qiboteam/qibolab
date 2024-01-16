@@ -50,7 +50,7 @@ def load_qubits(
         for q, char in runcard["characterization"]["single_qubit"].items()
     }
 
-    if (extras_folder / "kernels.npz").is_file():
+    if extras_folder is not None:
         kernels = Kernels.load(path=extras_folder / "kernels.npz")
         for q in kernels:
             qubits[q].kernel = kernels[q]
