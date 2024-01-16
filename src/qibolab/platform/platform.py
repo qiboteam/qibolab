@@ -47,7 +47,7 @@ def unroll_sequences(
         for pulse in sequence:
             new_pulse = pulse.copy()
             new_pulse.start += start
-            total_sequence.add(new_pulse)
+            total_sequence.append(new_pulse)
             if isinstance(pulse, ReadoutPulse):
                 readout_map[pulse.serial].append(new_pulse.serial)
         start = total_sequence.finish + relaxation_time

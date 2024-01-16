@@ -245,12 +245,12 @@ class NativeSequence:
 
         for pulse in self.pulses:
             if isinstance(pulse, NativePulse):
-                sequence.add(pulse.pulse(start=start))
+                sequence.append(pulse.pulse(start=start))
             else:
                 virtual_z_phases[pulse.qubit.name] += pulse.phase
 
         for coupler_pulse in self.coupler_pulses:
-            sequence.add(coupler_pulse.pulse(start=start))
+            sequence.append(coupler_pulse.pulse(start=start))
         # TODO: Maybe ``virtual_z_phases`` should be an attribute of ``PulseSequence``
         return sequence, virtual_z_phases
 
