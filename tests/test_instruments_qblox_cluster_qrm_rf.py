@@ -145,13 +145,13 @@ def test_connect(connected_qrm_rf: QrmRf):
 def test_pulse_sequence(connected_platform, connected_qrm_rf: QrmRf):
     ps = PulseSequence()
     for channel in connected_qrm_rf.channel_map:
-        ps.add(DrivePulse(0, 200, 1, 6.8e9, np.pi / 2, "Gaussian(5)", channel))
-        ps.add(
+        ps.append(DrivePulse(0, 200, 1, 6.8e9, np.pi / 2, "Gaussian(5)", channel))
+        ps.append(
             ReadoutPulse(
                 200, 2000, 1, 7.1e9, np.pi / 2, "Rectangular()", channel, qubit=0
             )
         )
-        ps.add(
+        ps.append(
             ReadoutPulse(
                 200, 2000, 1, 7.2e9, np.pi / 2, "Rectangular()", channel, qubit=1
             )
@@ -184,7 +184,7 @@ def test_sweepers(connected_platform, connected_qrm_rf: QrmRf):
         ro_pulses[1] = ReadoutPulse(
             200, 2000, 1, 7.2e9, np.pi / 2, "Rectangular()", channel, qubit=1
         )
-        ps.add(qd_pulses[0], ro_pulses[0], ro_pulses[1])
+        ps.append(qd_pulses[0], ro_pulses[0], ro_pulses[1])
 
     qubits = connected_platform.qubits
 
