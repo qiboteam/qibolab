@@ -30,7 +30,7 @@ def gpi2_rule(gate, platform):
     theta = gate.parameters[0]
     sequence = PulseSequence()
     pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
-    sequence.add(pulse)
+    sequence.append(pulse)
     return sequence, {}
 
 
@@ -47,7 +47,7 @@ def u3_rule(gate, platform):
         qubit, start=0, relative_phase=virtual_z_phases[qubit]
     )
     # apply RX(pi/2)
-    sequence.add(RX90_pulse_1)
+    sequence.append(RX90_pulse_1)
     # apply RZ(theta)
     virtual_z_phases[qubit] += theta
     # Fetch pi/2 pulse from calibration
@@ -57,7 +57,7 @@ def u3_rule(gate, platform):
         relative_phase=virtual_z_phases[qubit] - math.pi,
     )
     # apply RX(-pi/2)
-    sequence.add(RX90_pulse_2)
+    sequence.append(RX90_pulse_2)
     # apply RZ(phi)
     virtual_z_phases[qubit] += phi
 
@@ -83,5 +83,5 @@ def measurement_rule(gate, platform):
     sequence = PulseSequence()
     for qubit in gate.target_qubits:
         MZ_pulse = platform.create_MZ_pulse(qubit, start=0)
-        sequence.add(MZ_pulse)
+        sequence.append(MZ_pulse)
     return sequence, {}

@@ -1241,7 +1241,7 @@ class PulseSequence(list):
         """Returns a new PulseSequence containing only its readout pulses."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.type == PulseType.READOUT:
                 new_pc.append(pulse)
         return new_pc
