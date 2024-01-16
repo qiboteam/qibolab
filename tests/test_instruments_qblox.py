@@ -285,13 +285,13 @@ It supports:
 #     instrument_pulses[name] = PulseSequence()
 #     if "QCM" in instrument.__class__.__name__:
 #         for channel in instrument.channel_port_map:
-#             instrument_pulses[name].add(Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", str(channel)))
+#             instrument_pulses[name].append(Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", str(channel)))
 #         instrument.process_pulse_sequence(instrument_pulses[name], nshots=5, relaxation_time=relaxation_time)
 #         instrument.upload()
 #         instrument.play_sequence()
 #     if "QRM" in instrument.__class__.__name__:
 #         channel = instrument._port_channel_map["o1"]
-#         instrument_pulses[name].add(
+#         instrument_pulses[name].append(
 #             Pulse(0, 200, 1, 10e6, np.pi / 2, "Gaussian(5)", channel),
 #             ReadoutPulse(200, 2000, 1, 10e6, np.pi / 2, "Rectangular()", channel),
 #         )

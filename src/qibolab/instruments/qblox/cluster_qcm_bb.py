@@ -357,7 +357,7 @@ class ClusterQCM_BB(ClusterModule):
                             sequencer.waveforms_buffer.add_waveforms(
                                 pulse, self._ports[port].hardware_mod_en, sweepers
                             )
-                            sequencer.pulses.add(pulse)
+                            sequencer.pulses.append(pulse)
                             pulses_to_be_processed.remove(pulse)
 
                         # if there is not enough memory in the current sequencer, use another one
