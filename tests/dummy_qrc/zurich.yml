@@ -240,7 +240,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.8836
             iq_angle: -1.551
-            kernel_path: "kernel_q0.npz"
 
         1:
             readout_frequency: 4_931_000_000
@@ -250,7 +249,6 @@ characterization:
             sweetspot: 0.0
             mean_gnd_states: [0, 0]
             mean_exc_states: [0, 0]
-            kernel_path: "kernel_q1.npz"
         2:
             readout_frequency: 6.109e+9  #6_112_000_000
             drive_frequency: 4_300_587_281 # 4_401_600_000 #4_541_100_000
@@ -262,7 +260,6 @@ characterization:
             # parameters for single shot classification
             threshold: -0.0593
             iq_angle: -0.667
-            kernel_path: "kernel_q2.npz"
         3:
             readout_frequency: 5_783_000_000
             drive_frequency: 4_100_000_000
@@ -271,7 +268,6 @@ characterization:
             sweetspot: 0.0
             mean_gnd_states: [0, 0]
             mean_exc_states: [0, 0]
-            kernel_path: "kernel_q3.npz"
         4:
             readout_frequency: 5_515_000_000
             drive_frequency: 4_196_800_000
@@ -283,7 +279,6 @@ characterization:
             # parameters for single shot classification
             threshold: 0.233806 #0.370954 #0.350665
             iq_angle: 0.481 # -91.712 #191.016
-            kernel_path: "kernel_q4.npz"
     coupler:
         0:
             sweetspot: 0.0
