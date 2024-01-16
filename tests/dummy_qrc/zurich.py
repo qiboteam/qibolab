@@ -176,8 +176,8 @@ def create(runcard_path=RUNCARD, with_kernels: bool = True):
     qubits, couplers, pairs = load_qubits(runcard)
     if with_kernels and (FOLDER / "kernels.npz").is_file():
         kernels = Kernels.load(path=FOLDER / "kernels.npz")
-        for q, qubit in qubits.items():
-            qubit.kernel = kernels[str(q)]
+        for q in kernels.data.keys():
+            qubits[q].kernel = kernels[str(q)]
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)
