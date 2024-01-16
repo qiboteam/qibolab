@@ -5,7 +5,7 @@ from qibolab.pulses import Pulse, PulseSequence, ReadoutPulse
 # Define PulseSequence
 sequence = PulseSequence()
 # Add some pulses to the pulse sequence
-sequence.add(
+sequence.append(
     Pulse(
         start=0,
         amplitude=0.3,
@@ -18,7 +18,7 @@ sequence.add(
     )
 )
 
-sequence.add(
+sequence.append(
     ReadoutPulse(
         start=4004,
         amplitude=0.9,
