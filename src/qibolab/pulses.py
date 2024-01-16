@@ -1235,13 +1235,16 @@ class PulseSequence(list):
     """
 
     def __add__(self, other):
-        return PulseSequence(super().__add__(other))
+        return type(self)(super().__add__(other))
 
     def __mul__(self, other):
-        return PulseSequence(super().__mul__(other))
+        return type(self)(super().__mul__(other))
 
     def __repr__(self):
         return f"{type(self).__name__}({super().__repr__()})"
+
+    def copy(self):
+        return type(self)(super().copy())
 
     @property
     def ro_pulses(self):
