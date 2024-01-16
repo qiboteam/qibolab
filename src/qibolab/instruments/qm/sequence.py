@@ -266,9 +266,7 @@ class Sequence:
         # like we do for readout multiplex
         duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
         qmsequence = cls()
-        for pulse in sorted(
-            sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
-        ):
+        for pulse in sorted(sequence, key=lambda pulse: (pulse.start, pulse.duration)):
             config.register_element(
                 qubits[pulse.qubit], pulse, time_of_flight, smearing
             )
