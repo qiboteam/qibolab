@@ -177,7 +177,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     # define the pulse sequence
     sequence = PulseSequence()
     ro_pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    sequence.add(ro_pulse)
+    sequence.append(ro_pulse)
 
     # define a sweeper for a frequency scan
     sweeper = Sweeper(
