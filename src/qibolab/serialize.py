@@ -11,6 +11,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.couplers import Coupler
+from qibolab.kernels import Kernels
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
@@ -140,10 +141,14 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
     characterization = {
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
+
+    kernels = {}
     for q in qubits:
         qubit = characterization["single_qubit"][q]
         if qubit["kernel"] is not None:
-            del qubit["kernel"]
+            kernel = qubit.pop("kernel")
+            kernels[q] = kernel
+    kernels = Kernels(kernels)
 
     if couplers:
         characterization["coupler"] = {
@@ -176,6 +181,13 @@ def dump_runcard(platform: Platform, path: Path):
         platform (qibolab.platform.Platform): The platform to be serialized.
         path (pathlib.Path): Path that the yaml file will be saved.
     """
+
+    kernels = {}
+    for qubit in platform.qubits.values():
+        if qubit.kernel is not None:
+            kernels[str(qubit.name)] = qubit.kernel
+            qubit.kernel = None
+    Kernels(kernels).dump(Path(__file__).parent / "dummy/kernels.npz")
 
     settings = {
         "nqubits": platform.nqubits,
