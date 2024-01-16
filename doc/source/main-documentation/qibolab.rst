@@ -64,9 +64,9 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
    from qibolab.pulses import PulseSequence
 
    ps = PulseSequence()
-   ps.add(platform.create_RX_pulse(qubit=0, start=0))  # start time is in ns
-   ps.add(platform.create_RX_pulse(qubit=0, start=100))
-   ps.add(platform.create_MZ_pulse(qubit=0, start=200))
+   ps.append(platform.create_RX_pulse(qubit=0, start=0))  # start time is in ns
+   ps.append(platform.create_RX_pulse(qubit=0, start=100))
+   ps.append(platform.create_MZ_pulse(qubit=0, start=200))
 
 Now we can execute the sequence on hardware:
 
@@ -354,15 +354,15 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         channel="channel",
         qubit=0,
     )
-    sequence.add(pulse1)
-    sequence.add(pulse2)
-    sequence.add(pulse3)
-    sequence.add(pulse4)
+    sequence.append(pulse1)
+    sequence.append(pulse2)
+    sequence.append(pulse3)
+    sequence.append(pulse4)
 
     print(f"Total duration: {sequence.duration}")
 
     sequence_ch1 = sequence.get_channel_pulses("channel1")  # Selecting pulses on channel 1
-    print(f"We have {sequence_ch1.count} pulses on channel 1.")
+    print(f"We have {len(sequence_ch1)} pulses on channel 1.")
 
 .. testoutput:: python
     :hide:
@@ -390,8 +390,8 @@ Typical experiments may include both pre-defined pulses and new ones:
     from qibolab.pulses import Rectangular
 
     sequence = PulseSequence()
-    sequence.add(platform.create_RX_pulse(0))
-    sequence.add(
+    sequence.append(platform.create_RX_pulse(0))
+    sequence.append(
         DrivePulse(
             start=0,
             duration=10,
@@ -402,7 +402,7 @@ Typical experiments may include both pre-defined pulses and new ones:
             channel="0",
         )
     )
-    sequence.add(platform.create_MZ_pulse(0, start=0))
+    sequence.append(platform.create_MZ_pulse(0, start=0))
 
     results = platform.execute_pulse_sequence(sequence, options=options)
 
@@ -474,9 +474,15 @@ A tipical resonator spectroscopy experiment could be defined with:
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
     sequence = PulseSequence()
-    sequence.add(platform.create_MZ_pulse(0, start=0))  # readout pulse for qubit 0 at 4 GHz
-    sequence.add(platform.create_MZ_pulse(1, start=0))  # readout pulse for qubit 1 at 5 GHz
-    sequence.add(platform.create_MZ_pulse(2, start=0))  # readout pulse for qubit 2 at 6 GHz
+    sequence.append(
+        platform.create_MZ_pulse(0, start=0)
+    )  # readout pulse for qubit 0 at 4 GHz
+    sequence.append(
+        platform.create_MZ_pulse(1, start=0)
+    )  # readout pulse for qubit 1 at 5 GHz
+    sequence.append(
+        platform.create_MZ_pulse(2, start=0)
+    )  # readout pulse for qubit 2 at 6 GHz
 
     sweeper = Sweeper(
         parameter=Parameter.frequency,
@@ -511,8 +517,8 @@ For example:
 
     sequence = PulseSequence()
 
-    sequence.add(platform.create_RX_pulse(0))
-    sequence.add(platform.create_MZ_pulse(0, start=sequence[0].finish))
+    sequence.append(platform.create_RX_pulse(0))
+    sequence.append(platform.create_MZ_pulse(0, start=sequence[0].finish))
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
@@ -609,8 +615,8 @@ Let's now delve into a typical use case for result objects within the qibolab fr
     measurement_pulse = platform.create_qubit_readout_pulse(0, start=0)
 
     sequence = PulseSequence()
-    sequence.add(drive_pulse_1)
-    sequence.add(measurement_pulse)
+    sequence.append(drive_pulse_1)
+    sequence.append(measurement_pulse)
 
     options = ExecutionParameters(
         nshots=1000,
