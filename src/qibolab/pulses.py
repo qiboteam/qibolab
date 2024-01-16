@@ -882,7 +882,7 @@ class Pulse:
         if isinstance(other, Pulse):
             return PulseSequence(self, other)
         if isinstance(other, PulseSequence):
-            return PulseSequence(self, *other.pulses)
+            return PulseSequence(self, *other)
         raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
 
     def __mul__(self, n):
@@ -1235,16 +1235,7 @@ class PulseSequence(list):
     """
 
     def __repr__(self):
-        return self.serial
-
-    @property
-    def serial(self):
-        """Returns a string representation of the pulse sequence."""
-
-        return "PulseSequence\n" + "\n".join(f"{pulse.serial}" for pulse in self.pulses)
-
-    def __hash__(self):
-        return hash(self.serial)
+        return f"{type(self).__name__}({super().__repr__()})"
 
     @property
     def ro_pulses(self):
@@ -1253,7 +1244,7 @@ class PulseSequence(list):
         new_pc = PulseSequence()
         for pulse in self.pulses:
             if pulse.type == PulseType.READOUT:
-                new_pc.add(pulse)
+                new_pc.append(pulse)
         return new_pc
 
     @property
@@ -1262,9 +1253,9 @@ class PulseSequence(list):
         pulses."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.type == PulseType.DRIVE:
-                new_pc.add(pulse)
+                new_pc.append(pulse)
         return new_pc
 
     @property
@@ -1273,9 +1264,9 @@ class PulseSequence(list):
         pulses."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.type == PulseType.FLUX:
-                new_pc.add(pulse)
+                new_pc.append(pulse)
         return new_pc
 
     @property
@@ -1284,9 +1275,9 @@ class PulseSequence(list):
         pulses."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.type is PulseType.COUPLERFLUX:
-                new_pc.add(pulse)
+                new_pc.append(pulse)
         return new_pc
 
     def get_channel_pulses(self, *channels):
@@ -1294,9 +1285,9 @@ class PulseSequence(list):
         set of channels."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.channel in channels:
-                new_pc.add(pulse)
+                new_pc.append(pulse)
         return new_pc
 
     def get_qubit_pulses(self, *qubits):
@@ -1304,10 +1295,10 @@ class PulseSequence(list):
         set of qubits."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if not isinstance(pulse, CouplerFluxPulse):
                 if pulse.qubit in qubits:
-                    new_pc.add(pulse)
+                    new_pc.append(pulse)
         return new_pc
 
     def coupler_pulses(self, *couplers):
@@ -1315,10 +1306,10 @@ class PulseSequence(list):
         set of couplers."""
 
         new_pc = PulseSequence()
-        for pulse in self.pulses:
+        for pulse in self:
             if isinstance(pulse, CouplerFluxPulse):
                 if pulse.qubit in couplers:
-                    new_pc.add(pulse)
+                    new_pc.append(pulse)
         return new_pc
 
     @property
@@ -1326,7 +1317,7 @@ class PulseSequence(list):
         """Returns the time when the last pulse of the sequence finishes."""
 
         t: int = 0
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.finish > t:
                 t = pulse.finish
         return t
@@ -1336,7 +1327,7 @@ class PulseSequence(list):
         """Returns the start time of the first pulse of the sequence."""
 
         t = self.finish
-        for pulse in self.pulses:
+        for pulse in self:
             if pulse.start < t:
                 t = pulse.start
         return t
@@ -1353,7 +1344,7 @@ class PulseSequence(list):
         sequence."""
 
         channels = []
-        for pulse in self.pulses:
+        for pulse in self:
             if not pulse.channel in channels:
                 channels.append(pulse.channel)
         channels.sort()
@@ -1365,7 +1356,7 @@ class PulseSequence(list):
         sequence."""
 
         qubits = []
-        for pulse in self.pulses:
+        for pulse in self:
             if not pulse.qubit in qubits:
                 qubits.append(pulse.qubit)
         qubits.sort()
@@ -1376,7 +1367,7 @@ class PulseSequence(list):
         times) where pulses overlap."""
 
         times = []
-        for pulse in self.pulses:
+        for pulse in self:
             if not pulse.start in times:
                 times.append(pulse.start)
             if not pulse.finish in times:
@@ -1386,7 +1377,7 @@ class PulseSequence(list):
         overlaps = {}
         for n in range(len(times) - 1):
             overlaps[(times[n], times[n + 1])] = PulseSequence()
-            for pulse in self.pulses:
+            for pulse in self:
                 if (pulse.start <= times[n]) & (pulse.finish >= times[n + 1]):
                     overlaps[(times[n], times[n + 1])] += pulse
         return overlaps
@@ -1399,7 +1390,7 @@ class PulseSequence(list):
         # but it does not check if the frequencies of the pulses within a set have the same frequency
 
         separated_pulses = []
-        for new_pulse in self.pulses:
+        for new_pulse in self:
             stored = False
             for ps in separated_pulses:
                 overlaps = False
@@ -1411,7 +1402,7 @@ class PulseSequence(list):
                         overlaps = True
                         break
                 if not overlaps:
-                    ps.add(new_pulse)
+                    ps.append(new_pulse)
                     stored = True
                     break
             if not stored:
@@ -1437,14 +1428,14 @@ class PulseSequence(list):
             savefig_filename (str): a file path. If provided the plot is save to a file.
         """
 
-        if not self.is_empty:
+        if len(self) > 0:
             import matplotlib.pyplot as plt
             from matplotlib import gridspec
 
             fig = plt.figure(figsize=(14, 2 * self.count), dpi=200)
             gs = gridspec.GridSpec(ncols=1, nrows=self.count)
             vertical_lines = []
-            for pulse in self.pulses:
+            for pulse in self:
                 vertical_lines.append(pulse.start)
                 vertical_lines.append(pulse.finish)
 
