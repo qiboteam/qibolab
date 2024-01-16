@@ -69,7 +69,7 @@ class QibolabBackend(NumpyBackend):
                 containing the readout measurement shots. This is created in ``execute_circuit``.
         """
         for gate, sequence in measurement_map.items():
-            _samples = (readout[pulse.serial].samples for pulse in sequence.pulses)
+            _samples = (readout[pulse.serial].samples for pulse in sequence)
             samples = list(filter(lambda x: x is not None, _samples))
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
@@ -162,7 +162,7 @@ class QibolabBackend(NumpyBackend):
             )
             for gate, sequence in measurement_map.items():
                 samples = [
-                    readout[pulse.serial].popleft().samples for pulse in sequence.pulses
+                    readout[pulse.serial].popleft().samples for pulse in sequence
                 ]
                 gate.result.backend = self
                 gate.result.register_samples(np.array(samples).T)
