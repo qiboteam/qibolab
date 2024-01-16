@@ -396,13 +396,10 @@ class GaussianSquare(PulseShape):
             gaussian_samples = (num_samples - flat_samples) // 2
 
             x = np.arange(0, 2 * gaussian_samples)
-            a = np.exp(
-                -(1 / 2)
-                * (
-                    ((x - (2 * gaussian_samples - 1) / 2) ** 2)
-                    / (((2 * gaussian_samples) / self.rel_sigma) ** 2)
-                )
-            )
+
+            mu = (2 * gaussian_samples - 1) / 2
+            sigma = (2 * gaussian_samples) / self.rel_sigma
+            a = np.exp(-0.5 * ((x - mu) / sigma) ** 2)
 
             pulse = np.concatenate(
                 (a[:gaussian_samples], np.ones(flat_samples), a[gaussian_samples:])
