@@ -367,8 +367,8 @@ def test_qmopx_qubit_spectroscopy(mocker):
         ro_pulses[qubit] = platform.create_qubit_readout_pulse(
             qubit, start=qd_pulses[qubit].finish
         )
-        sequence.add(qd_pulses[qubit])
-        sequence.add(ro_pulses[qubit])
+        sequence.append(qd_pulses[qubit])
+        sequence.append(ro_pulses[qubit])
     options = ExecutionParameters(nshots=1024, relaxation_time=100000)
     result = opx.play(platform.qubits, platform.couplers, sequence, options)
 
@@ -382,8 +382,8 @@ def test_qmopx_duration_sweeper(mocker):
     qubit = 1
     sequence = PulseSequence()
     qd_pulse = platform.create_RX_pulse(qubit, start=0)
-    sequence.add(qd_pulse)
-    sequence.add(platform.create_MZ_pulse(qubit, start=qd_pulse.finish))
+    sequence.append(qd_pulse)
+    sequence.append(platform.create_MZ_pulse(qubit, start=qd_pulse.finish))
     sweeper = Sweeper(Parameter.duration, np.arange(2, 12, 2), pulses=[qd_pulse])
     options = ExecutionParameters(nshots=1024, relaxation_time=100000)
     result = opx.sweep(platform.qubits, platform.couplers, sequence, options, sweeper)
