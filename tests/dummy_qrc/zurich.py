@@ -17,7 +17,7 @@ from qibolab.serialize import (
 )
 
 RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
-FOLDER = pathlib.Path(__file__).parent / "zurich/"
+FOLDER = pathlib.Path(__file__).parent / "zurich"
 N_QUBITS = 5
 
 
