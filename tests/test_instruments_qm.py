@@ -316,8 +316,21 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
             },
         }
 
+<<<<<<< HEAD
     controller.config.register_element(
         platform.qubits[qubit], pulse, controller.time_of_flight, controller.smearing
+=======
+    opx.config.register_element(
+        platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing
+    )
+    opx.config.register_pulse(platform.qubits[qubit], pulse)
+    assert opx.config.pulses[str(pulse.id)] == target_pulse
+    assert target_pulse["waveforms"]["I"] in opx.config.waveforms
+    assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
+    assert (
+        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][str(pulse.id)]
+        == pulse.id
+>>>>>>> 5f1fb614 (Fix QM issues by stringifying pulses ID)
     )
     qmpulse = QMPulse(pulse)
     controller.config.register_pulse(platform.qubits[qubit], qmpulse)
@@ -338,11 +351,19 @@ def test_qm_register_flux_pulse(qmplatform):
         "length": pulse.duration,
         "waveforms": {"single": "constant_wf0.005"},
     }
+<<<<<<< HEAD
     qmpulse = QMPulse(pulse)
     controller.config.register_element(platform.qubits[qubit], pulse)
     controller.config.register_pulse(platform.qubits[qubit], qmpulse)
     assert controller.config.pulses[qmpulse.operation] == target_pulse
     assert target_pulse["waveforms"]["single"] in controller.config.waveforms
+=======
+    opx.config.register_element(platform.qubits[qubit], pulse)
+    opx.config.register_pulse(platform.qubits[qubit], pulse)
+    assert opx.config.pulses[str(pulse.id)] == target_pulse
+    assert target_pulse["waveforms"]["single"] in opx.config.waveforms
+    assert opx.config.elements[f"flux{qubit}"]["operations"][str(pulse.id)] == pulse.id
+>>>>>>> 5f1fb614 (Fix QM issues by stringifying pulses ID)
 
 
 @pytest.mark.parametrize("duration", [0, 30])
