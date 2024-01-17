@@ -29,4 +29,6 @@ class Kernels(dict[QubitId, np.ndarray]):
         The keys (QubitId) are serialized to strings and the values
         (numpy arrays) are kept as is.
         """
-        np.savez(path, **{json.dumps(key): value for key, value in self.items()})
+        np.savez(
+            path, **{json.dumps(qubit_id): value for qubit_id, value in self.items()}
+        )

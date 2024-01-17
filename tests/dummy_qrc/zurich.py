@@ -171,8 +171,8 @@ def create(runcard_path=RUNCARD):
         channels[ch].local_oscillator = local_oscillators[lo]
 
     # create qubit objects
-    runcard = load_runcard(runcard_path, FOLDER)
-    qubits, couplers, pairs = load_qubits(runcard)
+    runcard = load_runcard(runcard_path)
+    qubits, couplers, pairs = load_qubits(runcard, FOLDER)
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)

@@ -23,6 +23,8 @@ from qibolab.platform import (
 )
 from qibolab.qubits import Qubit, QubitPair
 
+KERNELS_FILE = "kernels.npz"
+
 
 def load_runcard(path: Path) -> dict:
     """Load runcard YAML to a dictionary."""
@@ -51,7 +53,7 @@ def load_qubits(
     }
 
     if extras_folder is not None:
-        kernels = Kernels.load(path=extras_folder / "kernels.npz")
+        kernels = Kernels.load(path=extras_folder / KERNELS_FILE)
         for q in kernels:
             qubits[q].kernel = kernels[q]
 
@@ -188,12 +190,12 @@ def dump_runcard(platform: Platform, path: Path):
         path (pathlib.Path): Path that the yaml file will be saved.
     """
 
-    kernels = {}
+    kernels = Kernels()
     for qubit in platform.qubits.values():
         if qubit.kernel is not None:
-            kernels[str(qubit.name)] = qubit.kernel
+            kernels[qubit.name] = qubit.kernel
             qubit.kernel = None
-    Kernels(kernels).dump(Path(__file__).parent / "dummy/kernels.npz")
+    Kernels(kernels).dump(Path(__file__).parent / "dummy" / KERNELS_FILE)
 
     settings = {
         "nqubits": platform.nqubits,
