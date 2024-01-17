@@ -1307,7 +1307,41 @@ class Zurich(Controller):
             else:
                 self.select_exp(exp, qubits, couplers, exp_options)
 
-    def sweep_recursion_nt(self, qubits, couplers, options, exp, exp_calib):
+    def find_instrument_address(
+        self, quantum_element: Union[Qubit, Coupler], parameter: str
+    ) -> str:
+        """Find path of the instrument connected to a specified line and
+        qubit/coupler.
+
+        Args:
+            quantum_element (Qubit | Coupler): qubits or couplers on which perform the near time sweep.
+            parameter (str): parameter on which perform the near time sweep.
+        """
+        line_names = {
+            "bias": "flux",
+            "amplitude": "drive",
+        }
+        line_name = line_names[parameter]
+        channel_uid = (
+            self.device_setup.logical_signal_groups[f"q{quantum_element.name}"]
+            .logical_signals[f"{line_name}_line"]
+            .physical_channel.uid
+        )
+        channel_name = channel_uid.split("/")[0]
+        instruments = self.device_setup.instruments
+        for instrument in instruments:
+            if instrument.uid == channel_name:
+                return instrument.address
+        raise NotImplementedError  # to be replaced with a different exception
+
+    def sweep_recursion_nt(
+        self,
+        qubits: Dict[str, Qubit],
+        couplers: Dict[str, Coupler],
+        options: ExecutionParameters,
+        exp: lo.Experiment,
+        exp_calib: lo.Calibration,
+    ):
         """Sweepers recursion for Near Time sweepers. Faster than regular
         software sweepers as they are executed on the actual device by
         (software ? or slower hardware ones)
@@ -1332,7 +1366,7 @@ class Zurich(Controller):
                         sweeper, qubit, self.sequence_qibo
                     ).zhsweeper
                     zhsweeper.uid = "bias"  # f"bias{i}"
-                    path = "DEV8660"
+                    path = self.find_instrument_address(qubit, "bias")  # "DEV8660"
 
                     parameter = copy.deepcopy(zhsweeper)
                     parameter.values += qubit.flux.offset
@@ -1354,13 +1388,15 @@ class Zurich(Controller):
                 sweeper.values *= aux_max
 
                 zhsweeper.uid = "amplitude"  # f"amplitude{i}"
-                path = "DEV12146"  # Hardcoded for SHFQC(SHFQA)
+                path = self.find_instrument_address(
+                    qubit, "amplitude"
+                )  # "DEV12146"  # Hardcoded for SHFQC(SHFQA)
                 parameter = zhsweeper
                 device_path = (
                     f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
                 )
 
-        elif parameter is None:
+        elif parameter is None:  # can it be accessed?
             parameter = ZhSweeper(
                 sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]
             ).zhsweeper
