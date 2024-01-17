@@ -1034,7 +1034,7 @@ class Zurich(Controller):
                     iq_angle_readout_schedule[i].append(iq_angle)
 
         weights = {}
-        for i, (pulses, qubits_r, iq_angles) in enumerate(
+        for i, (pulses, qubits_readout, iq_angles) in enumerate(
             zip(
                 readout_schedule.values(),
                 qubit_readout_schedule.values(),
