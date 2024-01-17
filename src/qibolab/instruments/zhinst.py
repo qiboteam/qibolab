@@ -1370,7 +1370,7 @@ class Zurich(Controller):
 
                 zhsweeper.uid = "amplitude"  # f"amplitude{i}"
                 path = self.find_instrument_address(
-                    qubit, "amplitude"
+                    qubits[sweeper.pulses[0].qubit], "amplitude"
                 )  # "DEV12146"  # Hardcoded for SHFQC(SHFQA)
                 parameter = zhsweeper
                 device_path = (
