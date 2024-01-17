@@ -29,7 +29,7 @@ def maximum_sweep_value(values, value0):
 
 def _update_baked_pulses(sweeper, qmsequence, config):
     """Updates baked pulse if duration sweeper is used."""
-    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
+    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].id]
     is_baked = isinstance(qmpulse, BakedPulse)
     for pulse in sweeper.pulses:
         qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
