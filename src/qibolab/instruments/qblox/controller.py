@@ -57,7 +57,6 @@ class QbloxController(Controller):
             # Connect modules
             for module in self.modules.values():
                 module.connect(self.cluster)
-                module.start()
             self.is_connected = True
             log.info("QbloxController: all modules connected.")
 
@@ -69,7 +68,6 @@ class QbloxController(Controller):
         """Disconnects all modules."""
         if self.is_connected:
             for module in self.modules.values():
-                module.stop()
                 module.disconnect()
             self.cluster.close()
             self.is_connected = False
@@ -85,11 +83,11 @@ class QbloxController(Controller):
         """Calls all modules to stop if the program receives a termination
         signal."""
 
-        log.warning("Termination signal received, stopping modules.")
+        log.warning("Termination signal received, disconnecting modules.")
         if self.is_connected:
             for name in self.modules:
-                self.modules[name].stop()
-        log.warning("QbloxController: all modules stopped.")
+                self.modules[name].disconnect()
+        log.warning("QbloxController: all modules are disconnected.")
         exit(0)
 
     def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
