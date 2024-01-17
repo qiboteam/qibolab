@@ -22,7 +22,7 @@ class Kernels(dict[QubitId, np.ndarray]):
         serialized QubitId and values are numpy arrays.
         """
         return cls(
-            {json.loads(key): value for key, value in dict(np.load(path)).items()}
+            {json.loads(key): value for key, value in np.load(path).items()}
         )
 
     def dump(self, path: Path):
