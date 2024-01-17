@@ -155,7 +155,6 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
         if qubit["kernel"] is not None:
             kernel = qubit.pop("kernel")
             kernels[q] = kernel
-    kernels = Kernels(kernels)
 
     if couplers:
         characterization["coupler"] = {
