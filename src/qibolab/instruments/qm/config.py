@@ -336,7 +336,7 @@ class QMConfig:
                 self.waveforms[serial] = {"type": "constant", "sample": pulse.amplitude}
         else:
             waveform = getattr(pulse, f"envelope_waveform_{mode}")(SAMPLING_RATE)
-            serial = waveform.serial
+            serial = hash(waveform)
             if serial not in self.waveforms:
                 self.waveforms[serial] = {
                     "type": "arbitrary",
