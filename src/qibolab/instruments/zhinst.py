@@ -640,12 +640,11 @@ class Zurich(Controller):
         # Mess that gets the sweeper and substitutes the pulse it sweeps in the right place
 
         def nt_loop(sweeper):
-            if len(sweepers) == 2:
-                if not self.nt_sweeps:
-                    self.nt_sweeps = [sweeper]
-                else:
-                    self.nt_sweeps.append(sweeper)
-                self.sweepers.remove(sweeper)
+            if not self.nt_sweeps:
+                self.nt_sweeps = [sweeper]
+            else:
+                self.nt_sweeps.append(sweeper)
+            self.sweepers.remove(sweeper)
 
         for sweeper in sweepers:
             if sweeper.parameter.name in SWEEPER_SET:
@@ -686,15 +685,7 @@ class Zurich(Controller):
                                     )
 
             if sweeper.parameter.name in SWEEPER_BIAS:
-
-                def bias_nt_loop(sweeper):  # duplicate code
-                    if not self.nt_sweeps:
-                        self.nt_sweeps = [sweeper]
-                    else:
-                        self.nt_sweeps.append(sweeper)
-                    self.sweepers.remove(sweeper)
-
-                bias_nt_loop(sweeper)
+                nt_loop(sweeper)
 
             # This may not place the Zhsweeper when the start occurs among different sections or lines
             if sweeper.parameter.name in SWEEPER_START:
