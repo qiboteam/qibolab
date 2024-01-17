@@ -149,7 +149,7 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
 
-    kernels = {}
+    kernels = Kernels()
     for q in qubits:
         qubit = characterization["single_qubit"][q]
         if qubit["kernel"] is not None:
