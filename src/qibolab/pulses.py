@@ -50,7 +50,6 @@ class Waveform:
         """Initialises the waveform with a of samples."""
 
         self.data: np.ndarray = np.array(data)
-        self.serial: str = ""
 
     def __len__(self):
         """Returns the length of the waveform, the number of samples."""
@@ -64,18 +63,7 @@ class Waveform:
         `Waveform.DECIMALS` decimal places, are all equal.
         """
 
-        return self.__hash__() == other.__hash__()
-
-    def __hash__(self):
-        """Returns a hash of the array of data, after rounding each sample to
-        `Waveform.DECIMALS` decimal places."""
-
-        return hash(str(np.around(self.data, Waveform.DECIMALS) + 0))
-
-    def __repr__(self):
-        """Returns the waveform serial as its string representation."""
-
-        return self.serial
+        return np.allclose(self.data, other.data)
 
     def plot(self, savefig_filename=None):
         """Plots the waveform.
@@ -93,7 +81,6 @@ class Waveform:
         plt.grid(
             visible=True, which="both", axis="both", color="#888888", linestyle="-"
         )
-        plt.suptitle(self.serial)
         if savefig_filename:
             plt.savefig(savefig_filename)
         else:
@@ -197,9 +184,7 @@ class PulseShape(ABC):
         mod_signals = np.array(result)
 
         modulated_waveform_i = Waveform(mod_signals[:, 0])
-        modulated_waveform_i.serial = f"Modulated_Waveform_I(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
         modulated_waveform_q = Waveform(mod_signals[:, 1])
-        modulated_waveform_q.serial = f"Modulated_Waveform_Q(num_samples = {num_samples}, amplitude = {format(pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {str(pulse.shape)}, frequency = {format(pulse._if, '_')}, phase = {format(global_phase + pulse.relative_phase, '.6f').rstrip('0').rstrip('.')})"
         return (modulated_waveform_i, modulated_waveform_q)
 
     def __eq__(self, item) -> bool:
@@ -235,7 +220,6 @@ class Rectangular(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             waveform = Waveform(self.pulse.amplitude * np.ones(num_samples))
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -245,7 +229,6 @@ class Rectangular(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -289,7 +272,6 @@ class Exponential(PulseShape):
                 / (1 + self.g)
             )
 
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -299,7 +281,6 @@ class Exponential(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -345,7 +326,6 @@ class Gaussian(PulseShape):
                     )
                 )
             )
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -355,7 +335,6 @@ class Gaussian(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -415,7 +394,6 @@ class GaussianSquare(PulseShape):
             pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
 
             waveform = Waveform(self.pulse.amplitude * pulse)
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
 
         raise ShapeInitError
@@ -426,7 +404,6 @@ class GaussianSquare(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -469,7 +446,6 @@ class Drag(PulseShape):
                 )
             )
             waveform = Waveform(i)
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -493,7 +469,6 @@ class Drag(PulseShape):
                 * sampling_rate
             )
             waveform = Waveform(q)
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -554,7 +529,6 @@ class IIR(PulseShape):
                 data = data / np.max(np.abs(data))
             data = np.abs(self.pulse.amplitude) * data
             waveform = Waveform(data)
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -576,7 +550,6 @@ class IIR(PulseShape):
                 data = data / np.max(np.abs(data))
             data = np.abs(self.pulse.amplitude) * data
             waveform = Waveform(data)
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -634,7 +607,6 @@ class SNZ(PulseShape):
                     )
                 )
             )
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -644,7 +616,6 @@ class SNZ(PulseShape):
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -685,7 +656,6 @@ class eCap(PulseShape):
                 * (1 + np.tanh(self.alpha * (1 - x / num_samples)))
                 / (1 + np.tanh(self.alpha / 2)) ** 2
             )
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -693,7 +663,6 @@ class eCap(PulseShape):
         if self.pulse:
             num_samples = int(self.pulse.duration * sampling_rate)
             waveform = Waveform(np.zeros(num_samples))
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -722,7 +691,6 @@ class Custom(PulseShape):
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
 
             waveform = Waveform(self.envelope_i * self.pulse.amplitude)
-            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -735,7 +703,6 @@ class Custom(PulseShape):
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
 
             waveform = Waveform(self.envelope_q * self.pulse.amplitude)
-            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
@@ -936,7 +903,6 @@ class Pulse:
                 self.qubit,
             )
         else:
-            # return eval(self.serial)
             return Pulse(
                 self.start,
                 self.duration,
