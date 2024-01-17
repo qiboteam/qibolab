@@ -40,8 +40,6 @@ class Waveform:
 
     Attributes:
         data (np.ndarray): a numpy array containing the samples.
-        serial (str): a string that can be used as a lable to identify the waveform. It is not automatically
-            generated, it must be set by the user.
     """
 
     DECIMALS = 5
@@ -757,6 +755,17 @@ class Pulse:
             self.shape = PulseShape.eval(self.shape)
         # TODO: drop the cyclic reference
         self.shape.pulse = self
+
+    def __hash__(self):
+        """Return hash(self).
+
+        .. todo::
+
+            this has to be replaced by turning :cls:`Pulse` into a _frozen_ dataclass
+        """
+        return hash(
+            tuple(getattr(self, f.name) for f in fields(self) if f.name != "shape")
+        )
 
     @property
     def finish(self) -> Optional[int]:
