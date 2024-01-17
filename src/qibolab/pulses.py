@@ -1231,8 +1231,7 @@ class PulseSequence(list):
 
     @property
     def ro_pulses(self):
-        """Returns a new PulseSequence containing only its readout pulses."""
-
+        """A new sequence containing only its readout pulses."""
         new_pc = PulseSequence()
         for pulse in self:
             if pulse.type == PulseType.READOUT:
@@ -1241,9 +1240,7 @@ class PulseSequence(list):
 
     @property
     def qd_pulses(self):
-        """Returns a new PulseSequence containing only its qubit drive
-        pulses."""
-
+        """A new sequence containing only its qubit drive pulses."""
         new_pc = PulseSequence()
         for pulse in self:
             if pulse.type == PulseType.DRIVE:
@@ -1252,9 +1249,7 @@ class PulseSequence(list):
 
     @property
     def qf_pulses(self):
-        """Returns a new PulseSequence containing only its qubit flux
-        pulses."""
-
+        """A new sequence containing only its qubit flux pulses."""
         new_pc = PulseSequence()
         for pulse in self:
             if pulse.type == PulseType.FLUX:
@@ -1263,9 +1258,7 @@ class PulseSequence(list):
 
     @property
     def cf_pulses(self):
-        """Returns a new PulseSequence containing only its coupler flux
-        pulses."""
-
+        """A new sequence containing only its coupler flux pulses."""
         new_pc = PulseSequence()
         for pulse in self:
             if pulse.type is PulseType.COUPLERFLUX:
@@ -1273,9 +1266,7 @@ class PulseSequence(list):
         return new_pc
 
     def get_channel_pulses(self, *channels):
-        """Returns a new PulseSequence containing only the pulses on a specific
-        set of channels."""
-
+        """Return a new sequence containing the pulses on some channels."""
         new_pc = PulseSequence()
         for pulse in self:
             if pulse.channel in channels:
@@ -1283,9 +1274,7 @@ class PulseSequence(list):
         return new_pc
 
     def get_qubit_pulses(self, *qubits):
-        """Returns a new PulseSequence containing only the pulses on a specific
-        set of qubits."""
-
+        """Return a new sequence containing the pulses on some qubits."""
         new_pc = PulseSequence()
         for pulse in self:
             if not isinstance(pulse, CouplerFluxPulse):
@@ -1294,9 +1283,7 @@ class PulseSequence(list):
         return new_pc
 
     def coupler_pulses(self, *couplers):
-        """Returns a new PulseSequence containing only the pulses on a specific
-        set of couplers."""
-
+        """Return a new sequence containing the pulses on some couplers."""
         new_pc = PulseSequence()
         for pulse in self:
             if isinstance(pulse, CouplerFluxPulse):
@@ -1306,8 +1293,7 @@ class PulseSequence(list):
 
     @property
     def finish(self) -> int:
-        """Returns the time when the last pulse of the sequence finishes."""
-
+        """The time when the last pulse of the sequence finishes."""
         t: int = 0
         for pulse in self:
             if pulse.finish > t:
@@ -1316,8 +1302,7 @@ class PulseSequence(list):
 
     @property
     def start(self) -> int:
-        """Returns the start time of the first pulse of the sequence."""
-
+        """The start time of the first pulse of the sequence."""
         t = self.finish
         for pulse in self:
             if pulse.start < t:
@@ -1326,15 +1311,12 @@ class PulseSequence(list):
 
     @property
     def duration(self) -> int:
-        """Returns duration of the sequence calculated as its finish - start times."""
-
+        """Duration of the sequence calculated as its finish - start times."""
         return self.finish - self.start
 
     @property
     def channels(self) -> list:
-        """Returns list containing the channels used by the pulses in the
-        sequence."""
-
+        """List containing the channels used by the pulses in the sequence."""
         channels = []
         for pulse in self:
             if not pulse.channel in channels:
@@ -1344,9 +1326,7 @@ class PulseSequence(list):
 
     @property
     def qubits(self) -> list:
-        """Returns list containing the qubits associated with the pulses in the
-        sequence."""
-
+        """The qubits associated with the pulses in the sequence."""
         qubits = []
         for pulse in self:
             if not pulse.qubit in qubits:
@@ -1355,9 +1335,8 @@ class PulseSequence(list):
         return qubits
 
     def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
-        """Returns a dictionary of slices of time (tuples with start and finish
+        """Return a dictionary of slices of time (tuples with start and finish
         times) where pulses overlap."""
-
         times = []
         for pulse in self:
             if not pulse.start in times:
@@ -1375,9 +1354,8 @@ class PulseSequence(list):
         return overlaps
 
     def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
-        """Separates a sequence of overlapping pulses into a list of non-
+        """Separate a sequence of overlapping pulses into a list of non-
         overlapping sequences."""
-
         # This routine separates the pulses of a sequence into non-overlapping sets
         # but it does not check if the frequencies of the pulses within a set have the same frequency
 
@@ -1405,8 +1383,7 @@ class PulseSequence(list):
 
     @property
     def pulses_overlap(self) -> bool:
-        """Returns True if any of the pulses in the sequence overlap."""
-
+        """Whether any of the pulses in the sequence overlap."""
         overlap = False
         for pc in self.get_pulse_overlaps().values():
             if len(pc) > 1:
@@ -1415,12 +1392,11 @@ class PulseSequence(list):
         return overlap
 
     def plot(self, savefig_filename=None, sampling_rate=SAMPLING_RATE):
-        """Plots the sequence of pulses.
+        """Plot the sequence of pulses.
 
         Args:
             savefig_filename (str): a file path. If provided the plot is save to a file.
         """
-
         if len(self) > 0:
             import matplotlib.pyplot as plt
             from matplotlib import gridspec
