@@ -53,7 +53,14 @@ class Waveform:
         return len(self.data)
 
     def __hash__(self):
-        """Hash the underlying data."""
+        """Hash the underlying data.
+
+        .. todo::
+
+            In order to make this reliable, we should set the data as immutable. This we
+            could by making both the class frozen and the contained array readonly
+            https://numpy.org/doc/stable/reference/generated/numpy.ndarray.flags.html#numpy.ndarray.flags
+        """
         return hash(self.data.tobytes())
 
     def __eq__(self, other):
