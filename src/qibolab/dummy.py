@@ -36,7 +36,7 @@ def create_dummy(with_couplers: bool = True):
     twpa_pump.power = 10
 
     runcard = load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
-    extras_folder = pathlib.Path(__file__).parent / "dummy/"
+    extras_folder = pathlib.Path(__file__).parent / "dummy"
     if not with_couplers:
         runcard = remove_couplers(runcard)
 
