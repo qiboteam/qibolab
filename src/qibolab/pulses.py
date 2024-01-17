@@ -45,31 +45,31 @@ class Waveform:
     DECIMALS = 5
 
     def __init__(self, data):
-        """Initialises the waveform with a of samples."""
-
+        """Initialise the waveform with a of samples."""
         self.data: np.ndarray = np.array(data)
 
     def __len__(self):
-        """Returns the length of the waveform, the number of samples."""
-
+        """Return the length of the waveform, the number of samples."""
         return len(self.data)
 
+    def __hash__(self):
+        """Hash the underlying data."""
+        return hash(self.data.tobytes())
+
     def __eq__(self, other):
-        """Compares two waveforms.
+        """Compare two waveforms.
 
         Two waveforms are considered equal if their samples, rounded to
         `Waveform.DECIMALS` decimal places, are all equal.
         """
-
         return np.allclose(self.data, other.data)
 
     def plot(self, savefig_filename=None):
-        """Plots the waveform.
+        """Plot the waveform.
 
         Args:
             savefig_filename (str): a file path. If provided the plot is save to a file.
         """
-
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=(14, 5), dpi=200)
