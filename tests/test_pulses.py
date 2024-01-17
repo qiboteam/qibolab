@@ -13,6 +13,7 @@ from qibolab.pulses import (
     DrivePulse,
     FluxPulse,
     Gaussian,
+    GaussianSquare,
     Pulse,
     PulseSequence,
     PulseShape,
@@ -20,7 +21,6 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
     ShapeInitError,
-    SplitPulse,
     Waveform,
     eCap,
 )
@@ -35,7 +35,7 @@ def test_pulses_plot_functions():
     p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
     p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
-    p6 = SplitPulse(p5, window_start=10, window_finish=30)
+    p6 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.DRIVE, 2)
     ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
     wf = p0.modulated_waveform_i()
 
@@ -46,10 +46,6 @@ def test_pulses_plot_functions():
     os.remove(plot_file)
 
     p0.plot(plot_file)
-    assert os.path.exists(plot_file)
-    os.remove(plot_file)
-
-    p6.plot(plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
 
@@ -170,7 +166,8 @@ def test_pulses_pulse_init():
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
     p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), 0, 200)
-    p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p13 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p14 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.READOUT, 2)
 
     # initialisation with float duration and start
     p12 = Pulse(
@@ -265,7 +262,9 @@ def test_pulses_pulse_serial():
     assert repr(p11) == p11.serial
 
 
-@pytest.mark.parametrize("shape", [Rectangular(), Gaussian(5), Drag(5, 1)])
+@pytest.mark.parametrize(
+    "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
+)
 def test_pulses_pulseshape_sampling_rate(shape):
     pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
     assert len(pulse.envelope_waveform_i(sampling_rate=1).data) == 40
@@ -289,6 +288,12 @@ def test_raise_shapeiniterror():
         shape.envelope_waveform_q()
 
     shape = Gaussian(0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i()
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q()
+
+    shape = GaussianSquare(0, 1)
     with pytest.raises(ShapeInitError):
         shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
@@ -400,35 +405,6 @@ def test_pulses_pulse_aliases():
         start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0
     )
     assert repr(fp) == "FluxPulse(0, 300, 0.9, Rectangular(), 0, 0)"
-
-
-def test_pulses_pulse_split_pulse():
-    dp = Pulse(
-        start=500,
-        duration=2000,
-        amplitude=0.9,
-        frequency=5_000_000,
-        relative_phase=0.0,
-        shape=Rectangular(),
-        channel=0,
-        type=PulseType.READOUT,
-        qubit=0,
-    )
-
-    sp = SplitPulse(dp)
-    sp.channel = 1
-    a = 720
-    b = 960
-    sp.window_start = sp.start + a
-    sp.window_finish = sp.start + b
-    assert sp.window_start == sp.start + a
-    assert sp.window_finish == sp.start + b
-    ps = PulseSequence(dp, sp)
-    # ps.plot()
-    assert len(sp.envelope_waveform_i()) == b - a
-    assert len(sp.envelope_waveform_q()) == b - a
-    assert len(sp.modulated_waveform_i()) == b - a
-    assert len(sp.modulated_waveform_q()) == b - a
 
 
 def test_pulses_pulsesequence_init():
@@ -586,21 +562,6 @@ def test_pulses_pulsesequence_pulses_overlap():
     assert ps.get_channel_pulses(10).pulses_overlap == False
     assert ps.get_channel_pulses(20).pulses_overlap == True
     assert ps.get_channel_pulses(30).pulses_overlap == True
-
-    channel10_ps = ps.get_channel_pulses(10)
-    channel20_ps = ps.get_channel_pulses(20)
-    channel30_ps = ps.get_channel_pulses(30)
-
-    split_pulses = PulseSequence()
-    overlaps = channel20_ps.get_pulse_overlaps()
-    n = 0
-    for section in overlaps.keys():
-        for pulse in overlaps[section]:
-            sp = SplitPulse(pulse, section[0], section[1])
-            sp.channel = n
-            split_pulses.add(sp)
-            n += 1
-    # split_pulses.plot()
 
 
 def test_pulses_pulsesequence_separate_overlapping_pulses():
@@ -877,6 +838,16 @@ def test_pulses_pulseshape_eq():
     shape3 = Gaussian(5)
     assert shape1 == shape2
     assert not shape1 == shape3
+
+    shape1 = GaussianSquare(4, 0.01)
+    shape2 = GaussianSquare(4, 0.01)
+    shape3 = GaussianSquare(5, 0.01)
+    shape4 = GaussianSquare(4, 0.05)
+    shape5 = GaussianSquare(5, 0.05)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
 
     shape1 = Drag(4, 0.01)
     shape2 = Drag(4, 0.01)

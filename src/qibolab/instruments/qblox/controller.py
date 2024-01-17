@@ -60,7 +60,6 @@ class QbloxController(Controller):
                     int(module.address.split(":")[1]) - 1
                 ]
                 module.connect()
-                module.start()
             self.is_connected = True
             log.info("QbloxController: all modules connected.")
 
