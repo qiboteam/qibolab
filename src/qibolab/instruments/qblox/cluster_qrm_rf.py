@@ -1013,18 +1013,23 @@ class ClusterQRM_RF(ClusterModule):
         # TODO: to be updated once the functionality of ExecutionResults is extended
         return {key: acquisition.data for key, acquisition in acquisitions.items()}
 
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-        pass
-
-    def stop(self):
-        """Stops all sequencers."""
-        try:
-            self.device.stop_sequencer()
-        except:
-            raise RuntimeError(f"Error stopping sequencer for {self.device.name}")
-
     def disconnect(self):
-        """Empty method to comply with Instrument interface."""
+        """Stops all sequencers, disconnect all the outputs from the AWG paths
+        of the sequencers and disconnect all the inputs from the acquisition
+        paths of the sequencers."""
+
+        if not self.is_connected:
+            return
+
+        for sequencer_number in self._used_sequencers_numbers:
+            state = self.device.get_sequencer_state(sequencer_number)
+            if state.status != "STOPPED":
+                log.warning(
+                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
+                )
+        self.device.stop_sequencer()
+        self.device.disconnect_outputs()
+        self.device.disconnect_inputs()
+
         self.is_connected = False
         self.device = None
