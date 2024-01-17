@@ -743,7 +743,8 @@ class ClusterQCM_BB(ClusterModule):
     def disconnect(self):
         """Stops all sequencers, disconnect all the outputs from the AWG paths
         of the sequencers."""
-
+        if not self.is_connected:
+            return
         for sequencer_number in self._used_sequencers_numbers:
             state = self.device.get_sequencer_state(sequencer_number)
             if state.status != "STOPPED":

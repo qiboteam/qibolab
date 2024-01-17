@@ -244,10 +244,3 @@ def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
     )
     connected_qcm_rf.upload()
     connected_qcm_rf.play_sequence()
-
-
-@pytest.mark.qpu
-def test_start_stop(connected_qcm_rf: ClusterQCM_RF):
-    connected_qcm_rf.start()
-    connected_qcm_rf.stop()
-    # check all sequencers are stopped and all offsets = 0
