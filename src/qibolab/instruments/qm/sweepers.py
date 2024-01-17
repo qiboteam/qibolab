@@ -182,7 +182,7 @@ def _sweep_start(sweepers, qubits, qmsequence, relaxation_time):
 
 def _sweep_duration(sweepers, qubits, qmsequence, relaxation_time):
     sweeper = sweepers[0]
-    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
+    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].id]
     if isinstance(qmpulse, BakedPulse):
         values = np.array(sweeper.values).astype(int)
     else:
