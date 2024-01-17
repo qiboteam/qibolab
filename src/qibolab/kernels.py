@@ -21,9 +21,7 @@ class Kernels(dict[QubitId, np.ndarray]):
         The file should contain a serialized dictionary where keys are
         serialized QubitId and values are numpy arrays.
         """
-        return cls(
-            {json.loads(key): value for key, value in np.load(path).items()}
-        )
+        return cls({json.loads(key): value for key, value in np.load(path).items()})
 
     def dump(self, path: Path):
         """Instance method to dump the kernels to a file.
