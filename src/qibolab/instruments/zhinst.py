@@ -1059,7 +1059,7 @@ class Zurich(Controller):
                 play_after = f"sequence_{latest_sequence['line']}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, q, iq_angle in zip(pulses, qubits_r, iq_angles):
+                for pulse, q, iq_angle in zip(pulses, qubits_readout, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
                     exp.delay(
