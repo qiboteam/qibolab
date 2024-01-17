@@ -256,17 +256,19 @@ class QMConfig:
             if pulse.type is PulseType.DRIVE:
                 serial_i = self.register_waveform(pulse, "i")
                 serial_q = self.register_waveform(pulse, "q")
-                self.pulses[pulse.id] = {
+                self.pulses[str(pulse.id)] = {
                     "operation": "control",
                     "length": pulse.duration,
                     "waveforms": {"I": serial_i, "Q": serial_q},
                 }
                 # register drive pulse in elements
-                self.elements[f"drive{qubit.name}"]["operations"][pulse.id] = pulse.id
+                self.elements[f"drive{qubit.name}"]["operations"][
+                    str(pulse.id)
+                ] = pulse.id
 
             elif pulse.type is PulseType.FLUX:
                 serial = self.register_waveform(pulse)
-                self.pulses[pulse.id] = {
+                self.pulses[str(pulse.id)] = {
                     "operation": "control",
                     "length": pulse.duration,
                     "waveforms": {
@@ -274,13 +276,15 @@ class QMConfig:
                     },
                 }
                 # register flux pulse in elements
-                self.elements[f"flux{qubit.name}"]["operations"][pulse.id] = pulse.id
+                self.elements[f"flux{qubit.name}"]["operations"][
+                    str(pulse.id)
+                ] = pulse.id
 
             elif pulse.type is PulseType.READOUT:
                 serial_i = self.register_waveform(pulse, "i")
                 serial_q = self.register_waveform(pulse, "q")
                 self.register_integration_weights(qubit, pulse.duration)
-                self.pulses[pulse.id] = {
+                self.pulses[str(pulse.id)] = {
                     "operation": "measurement",
                     "length": pulse.duration,
                     "waveforms": {
@@ -295,7 +299,9 @@ class QMConfig:
                     "digital_marker": "ON",
                 }
                 # register readout pulse in elements
-                self.elements[f"readout{qubit.name}"]["operations"][pulse.id] = pulse.id
+                self.elements[f"readout{qubit.name}"]["operations"][
+                    str(pulse.id)
+                ] = pulse.id
 
             else:
                 raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
