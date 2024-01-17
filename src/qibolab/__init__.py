@@ -3,6 +3,7 @@ import importlib.util
 import os
 from pathlib import Path
 
+from qibo import Circuit
 from qibo.config import raise_error
 
 from qibolab.execution_parameters import (
@@ -54,3 +55,27 @@ def create_platform(name, runcard=None):
     if runcard is None:
         return module.create()
     return module.create(runcard)
+
+
+def execute_qasm_circuit(
+    circuit: str, platform, runcard=None, initial_state=None, nshots=1000
+):
+    """Executes a QASM circuit.
+
+    Args:
+        circuit (str): the QASM circuit.
+        platform (str): the platform where to execute the circuit.
+        runcard (): the runcard used for the platform.
+        initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
+                If ``None`` the default ``|00...0>`` state is used.
+        nshots (int): Number of shots to sample from the experiment.
+
+    Returns:
+        ``MeasurementOutcomes`` object containing the results acquired from the execution.
+    """
+    from qibolab.backends import QibolabBackend
+
+    circuit = Circuit.from_qasm(circuit)
+    return QibolabBackend(platform, runcard).execute_circuit(
+        circuit, initial_state=initial_state, nshots=nshots
+    )
