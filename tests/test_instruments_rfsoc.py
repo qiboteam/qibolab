@@ -389,7 +389,7 @@ def test_play(mocker, dummy_qrc):
         averaging_mode=AveragingMode.SINGLESHOT,
     )
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
-    assert pulse.id in results.keys()
+    assert pulse1.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -397,7 +397,7 @@ def test_play(mocker, dummy_qrc):
         averaging_mode=AveragingMode.SINGLESHOT,
     )
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
-    assert pulse.id in results.keys()
+    assert pulse1.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -405,7 +405,7 @@ def test_play(mocker, dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
-    assert pulse.id in results.keys()
+    assert pulse1.id in results.keys()
 
 
 def test_sweep(mocker, dummy_qrc):
@@ -441,7 +441,7 @@ def test_sweep(mocker, dummy_qrc):
     results = instrument.sweep(
         platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1
     )
-    assert pulse.id in results.keys()
+    assert pulse1.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -451,7 +451,7 @@ def test_sweep(mocker, dummy_qrc):
     results = instrument.sweep(
         platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1
     )
-    assert pulse.id in results.keys()
+    assert pulse1.id in results.keys()
 
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -461,7 +461,7 @@ def test_sweep(mocker, dummy_qrc):
     results = instrument.sweep(
         platform.qubits, platform.couplers, seq, parameters, sweeper0, sweeper1
     )
-    assert pulse.id in results.keys()
+    assert pulse1.id in results.keys()
 
 
 def test_validate_input_command(dummy_qrc):
@@ -551,18 +551,22 @@ def test_merge_sweep_results(dummy_qrc):
 
     assert targ_dict.keys() == out_dict1.keys()
     assert (
-        out_dict1["serial1"].idize["MSR[V]"] == targ_dict["serial1"].idize["MSR[V]"]
+        out_dict1["serial1"].serialize["MSR[V]"]
+        == targ_dict["serial1"].serialize["MSR[V]"]
     ).all()
     assert (
-        out_dict1["serial1"].idize["MSR[V]"] == targ_dict["serial1"].idize["MSR[V]"]
+        out_dict1["serial1"].serialize["MSR[V]"]
+        == targ_dict["serial1"].serialize["MSR[V]"]
     ).all()
 
     assert dict_a.keys() == out_dict2.keys()
     assert (
-        out_dict2["serial1"].idize["MSR[V]"] == dict_a["serial1"].idize["MSR[V]"]
+        out_dict2["serial1"].serialize["MSR[V]"]
+        == dict_a["serial1"].serialize["MSR[V]"]
     ).all()
     assert (
-        out_dict2["serial1"].idize["MSR[V]"] == dict_a["serial1"].idize["MSR[V]"]
+        out_dict2["serial1"].serialize["MSR[V]"]
+        == dict_a["serial1"].serialize["MSR[V]"]
     ).all()
 
 
@@ -695,10 +699,18 @@ def test_convert_av_sweep_results(dummy_qrc):
         ),
     }
 
-    assert (out_dict[serial1].idize["i[V]"] == targ_dict[serial1].idize["i[V]"]).all()
-    assert (out_dict[serial1].idize["q[V]"] == targ_dict[serial1].idize["q[V]"]).all()
-    assert (out_dict[serial2].idize["i[V]"] == targ_dict[serial2].idize["i[V]"]).all()
-    assert (out_dict[serial2].idize["q[V]"] == targ_dict[serial2].idize["q[V]"]).all()
+    assert (
+        out_dict[serial1].serialize["i[V]"] == targ_dict[serial1].serialize["i[V]"]
+    ).all()
+    assert (
+        out_dict[serial1].serialize["q[V]"] == targ_dict[serial1].serialize["q[V]"]
+    ).all()
+    assert (
+        out_dict[serial2].serialize["i[V]"] == targ_dict[serial2].serialize["i[V]"]
+    ).all()
+    assert (
+        out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]
+    ).all()
 
 
 def test_convert_nav_sweep_results(dummy_qrc):
@@ -740,10 +752,18 @@ def test_convert_nav_sweep_results(dummy_qrc):
         ),
     }
 
-    assert (out_dict[serial1].idize["i[V]"] == targ_dict[serial1].idize["i[V]"]).all()
-    assert (out_dict[serial1].idize["q[V]"] == targ_dict[serial1].idize["q[V]"]).all()
-    assert (out_dict[serial2].idize["i[V]"] == targ_dict[serial2].idize["i[V]"]).all()
-    assert (out_dict[serial2].idize["q[V]"] == targ_dict[serial2].idize["q[V]"]).all()
+    assert (
+        out_dict[serial1].serialize["i[V]"] == targ_dict[serial1].serialize["i[V]"]
+    ).all()
+    assert (
+        out_dict[serial1].serialize["q[V]"] == targ_dict[serial1].serialize["q[V]"]
+    ).all()
+    assert (
+        out_dict[serial2].serialize["i[V]"] == targ_dict[serial2].serialize["i[V]"]
+    ).all()
+    assert (
+        out_dict[serial2].serialize["q[V]"] == targ_dict[serial2].serialize["q[V]"]
+    ).all()
 
 
 @pytest.fixture(scope="module")
