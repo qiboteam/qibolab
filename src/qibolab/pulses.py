@@ -1094,10 +1094,6 @@ class ReadoutPulse(Pulse):
         )
 
     @property
-    def serial(self):
-        return f"ReadoutPulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
-
-    @property
     def global_phase(self):
         # readout pulses should have zero global phase so that we can
         # calculate probabilities in the i-q plane
@@ -1148,10 +1144,6 @@ class DrivePulse(Pulse):
             qubit=qubit,
         )
 
-    @property
-    def serial(self):
-        return f"DrivePulse({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {format(self.frequency, '_')}, {format(self.relative_phase, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
-
 
 class FluxPulse(Pulse):
     """Describes a qubit flux pulse.
@@ -1185,10 +1177,6 @@ class FluxPulse(Pulse):
 
     def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         return self.shape.envelope_waveform_i(sampling_rate)
-
-    @property
-    def serial(self):
-        return f"{self.__class__.__name__}({self.start}, {self.duration}, {format(self.amplitude, '.6f').rstrip('0').rstrip('.')}, {self.shape}, {self.channel}, {self.qubit})"
 
 
 class CouplerFluxPulse(FluxPulse):
