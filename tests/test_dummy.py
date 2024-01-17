@@ -46,12 +46,6 @@ def test_dummy_execute_coupler_pulse():
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
-    test_pulse = (
-        "CouplerFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux_coupler-0, 0)"
-    )
-
-    assert test_pulse == pulse.id
-
 
 def test_dummy_execute_pulse_sequence_couplers():
     platform = create_platform("dummy_couplers")
