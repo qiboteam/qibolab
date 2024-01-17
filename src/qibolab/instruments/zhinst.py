@@ -1041,8 +1041,8 @@ class Zurich(Controller):
                 iq_angle_readout_schedule.values(),
             )
         ):
-            qd_finish = self.find_subsequence_finish(i, "drive", qubits_r)
-            qf_finish = self.find_subsequence_finish(i, "flux", qubits_r)
+            qd_finish = self.find_subsequence_finish(i, "drive", qubits_readout)
+            qf_finish = self.find_subsequence_finish(i, "flux", qubits_readout)
             cf_finish = self.find_subsequence_finish(i, "couplerflux", couplers)
             finish_times = np.array(
                 [
