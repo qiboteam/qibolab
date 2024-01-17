@@ -19,11 +19,7 @@ from .conftest import set_platform_profile
 def test_qmpulse():
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     qmpulse = QMPulse(pulse)
-<<<<<<< HEAD
     assert qmpulse.operation == "drive(40, 0.05, Rectangular())"
-=======
-    assert qmpulse.operation == pulse.id
->>>>>>> 337bff40 (Drop pulse.serial)
     assert qmpulse.relative_phase == 0
 
 
@@ -350,20 +346,8 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
             },
         }
 
-<<<<<<< HEAD
     controller.config.register_element(
         platform.qubits[qubit], pulse, controller.time_of_flight, controller.smearing
-=======
-    opx.config.register_element(
-        platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing
-    )
-    opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[pulse.id] == target_pulse
-    assert target_pulse["waveforms"]["I"] in opx.config.waveforms
-    assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
-    assert (
-        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.id] == pulse.id
->>>>>>> 337bff40 (Drop pulse.serial)
     )
     qmpulse = QMPulse(pulse)
     controller.config.register_pulse(platform.qubits[qubit], qmpulse)
@@ -389,19 +373,11 @@ def test_qm_register_flux_pulse(qmplatform):
         "length": pulse.duration,
         "waveforms": {"single": "constant_wf0.005"},
     }
-<<<<<<< HEAD
     qmpulse = QMPulse(pulse)
     controller.config.register_element(platform.qubits[qubit], pulse)
     controller.config.register_pulse(platform.qubits[qubit], qmpulse)
     assert controller.config.pulses[qmpulse.operation] == target_pulse
     assert target_pulse["waveforms"]["single"] in controller.config.waveforms
-=======
-    opx.config.register_element(platform.qubits[qubit], pulse)
-    opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[pulse.id] == target_pulse
-    assert target_pulse["waveforms"]["single"] in opx.config.waveforms
-    assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.id] == pulse.id
->>>>>>> 337bff40 (Drop pulse.serial)
 
 
 def test_qm_register_pulses_with_different_frequencies(qmplatform):
