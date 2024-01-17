@@ -13,6 +13,7 @@ from qibolab.pulses import (
     DrivePulse,
     FluxPulse,
     Gaussian,
+    GaussianSquare,
     Pulse,
     PulseSequence,
     PulseShape,
@@ -34,7 +35,8 @@ def test_pulses_plot_functions():
     p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
     p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
-    ps = p0 + p1 + p2 + p3 + p4 + p5
+    p6 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.DRIVE, 2)
+    ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
     wf = p0.modulated_waveform_i()
 
     plot_file = HERE / "test_plot.png"
@@ -164,7 +166,8 @@ def test_pulses_pulse_init():
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
     p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), 0, 200)
-    p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p13 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p14 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.READOUT, 2)
 
     # initialisation with float duration and start
     p12 = Pulse(
@@ -259,7 +262,9 @@ def test_pulses_pulse_serial():
     assert repr(p11) == p11.serial
 
 
-@pytest.mark.parametrize("shape", [Rectangular(), Gaussian(5), Drag(5, 1)])
+@pytest.mark.parametrize(
+    "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
+)
 def test_pulses_pulseshape_sampling_rate(shape):
     pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
     assert len(pulse.envelope_waveform_i(sampling_rate=1).data) == 40
@@ -283,6 +288,12 @@ def test_raise_shapeiniterror():
         shape.envelope_waveform_q()
 
     shape = Gaussian(0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i()
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q()
+
+    shape = GaussianSquare(0, 1)
     with pytest.raises(ShapeInitError):
         shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
@@ -827,6 +838,16 @@ def test_pulses_pulseshape_eq():
     shape3 = Gaussian(5)
     assert shape1 == shape2
     assert not shape1 == shape3
+
+    shape1 = GaussianSquare(4, 0.01)
+    shape2 = GaussianSquare(4, 0.01)
+    shape3 = GaussianSquare(5, 0.01)
+    shape4 = GaussianSquare(4, 0.05)
+    shape5 = GaussianSquare(5, 0.05)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
 
     shape1 = Drag(4, 0.01)
     shape2 = Drag(4, 0.01)
