@@ -281,11 +281,12 @@ def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
         platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing
     )
     opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[pulse.id] == target_pulse
+    assert opx.config.pulses[str(pulse.id)] == target_pulse
     assert target_pulse["waveforms"]["I"] in opx.config.waveforms
     assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
     assert (
-        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][pulse.id] == pulse.id
+        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][str(pulse.id)]
+        == pulse.id
     )
 
 
@@ -303,9 +304,9 @@ def test_qmopx_register_flux_pulse(dummy_qrc):
     }
     opx.config.register_element(platform.qubits[qubit], pulse)
     opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[pulse.id] == target_pulse
+    assert opx.config.pulses[str(pulse.id)] == target_pulse
     assert target_pulse["waveforms"]["single"] in opx.config.waveforms
-    assert opx.config.elements[f"flux{qubit}"]["operations"][pulse.id] == pulse.id
+    assert opx.config.elements[f"flux{qubit}"]["operations"][str(pulse.id)] == pulse.id
 
 
 @pytest.mark.parametrize("duration", [0, 30])
