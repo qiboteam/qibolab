@@ -297,8 +297,8 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
             "operation": "control",
             "length": pulse.duration,
             "waveforms": {
-                "I": pulse.envelope_waveform_i().serial,
-                "Q": pulse.envelope_waveform_q().serial,
+                "I": hash(pulse.envelope_waveform_i()),
+                "Q": hash(pulse.envelope_waveform_q()),
             },
         }
 
