@@ -764,17 +764,6 @@ class Pulse:
         # TODO: drop the cyclic reference
         self.shape.pulse = self
 
-    def __hash__(self):
-        """Return hash(self).
-
-        .. todo::
-
-            this has to be replaced by turning :cls:`Pulse` into a _frozen_ dataclass
-        """
-        return hash(
-            tuple(getattr(self, f.name) for f in fields(self) if f.name != "shape")
-        )
-
     @property
     def finish(self) -> Optional[int]:
         """Time when the pulse is scheduled to finish."""
