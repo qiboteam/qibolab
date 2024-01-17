@@ -585,13 +585,24 @@ class Zurich(Controller):
         self.create_sub_sequence("flux", qubits)
         self.create_sub_sequence("couplerflux", couplers)
 
-    def experiment_flow(self, qubits, couplers, sequence, options, sweepers=[]):
+    def experiment_flow(
+        self,
+        qubits: Dict[str, Qubit],
+        couplers: Dict[str, Coupler],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+    ):
         """Create the experiment object for the devices, following the steps
         separated one on each method:
 
         Translation, Calibration, Experiment Definition.
+
+        Args:
+            qubits (dict[str, Qubit]): qubits for the platform.
+            couplers (dict[str, Coupler]): couplers for the platform.
+            sequence (PulseSequence): sequence of pulses to be played in the experiment.
         """
-        self.sequence_zh(sequence, qubits, couplers, sweepers)
+        self.sequence_zh(sequence, qubits, couplers)
         self.create_sub_sequences(qubits, couplers)
         self.calibration_step(qubits, couplers, options)
         self.create_exp(qubits, couplers, options)
@@ -626,9 +637,8 @@ class Zurich(Controller):
         # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
-    def sequence_zh(self, sequence, qubits, couplers, sweepers):
+    def sequence_zh(self, sequence, qubits, couplers):
         """Qibo sequence to Zurich sequence."""
-
         # Define and assign the sequence
         zhsequence = defaultdict(list)
         self.sequence_qibo = sequence
@@ -646,7 +656,7 @@ class Zurich(Controller):
                 self.nt_sweeps.append(sweeper)
             self.sweepers.remove(sweeper)
 
-        for sweeper in sweepers:
+        for sweeper in self.sweepers:
             if sweeper.parameter.name in SWEEPER_SET:
                 for pulse in sweeper.pulses:
                     aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
@@ -1188,7 +1198,7 @@ class Zurich(Controller):
 
         self.frequency_from_pulses(qubits, sequence)
 
-        self.experiment_flow(qubits, couplers, sequence, options, sweepers)
+        self.experiment_flow(qubits, couplers, sequence, options)
         self.run_exp()
 
         #  Get the results back
