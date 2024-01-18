@@ -22,7 +22,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.instruments.unrolling import batch_max_sequences
-from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -235,7 +235,7 @@ class ZhSweeperLine:
         # Do something with the pulse coming here
         if sweeper.parameter is Parameter.bias:
             if isinstance(qubit, Qubit):
-                pulse = FluxPulse(
+                pulse = Pulse.flux(
                     start=0,
                     duration=sequence.duration + sequence.start,
                     amplitude=1,
@@ -245,7 +245,7 @@ class ZhSweeperLine:
                 )
                 self.signal = f"flux{qubit.name}"
             if isinstance(qubit, Coupler):
-                pulse = CouplerFluxPulse(
+                pulse = Pulse.flux(
                     start=0,
                     duration=sequence.duration + sequence.start,
                     amplitude=1,
@@ -253,6 +253,7 @@ class ZhSweeperLine:
                     channel=qubit.flux.name,
                     qubit=qubit.name,
                 )
+                pulse.type = PulseType.COUPLERFLUX
                 self.signal = f"couplerflux{qubit.name}"
 
             self.pulse = pulse
@@ -664,7 +665,7 @@ class Zurich(Controller):
                     for element in aux_list:
                         if pulse == element.pulse:
                             if isinstance(aux_list[aux_list.index(element)], ZhPulse):
-                                if isinstance(pulse, CouplerFluxPulse):
+                                if pulse.type is PulseType.COUPLERFLUX:
                                     aux_list[aux_list.index(element)] = ZhSweeper(
                                         pulse, sweeper, couplers[pulse.qubit]
                                     )
@@ -675,7 +676,7 @@ class Zurich(Controller):
                             elif isinstance(
                                 aux_list[aux_list.index(element)], ZhSweeper
                             ):
-                                if isinstance(pulse, CouplerFluxPulse):
+                                if pulse.type is PulseType.COUPLERFLUX:
                                     aux_list[aux_list.index(element)].add_sweeper(
                                         sweeper, couplers[pulse.qubit]
                                     )
