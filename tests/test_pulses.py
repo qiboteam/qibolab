@@ -632,10 +632,10 @@ def test_pulseshape_rectangular():
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i
+        pulse.shape.modulated_waveform_i(_if, sampling_rate).data, mod_i
     )
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q
+        pulse.shape.modulated_waveform_q(_if, sampling_rate).data, mod_q
     )
 
 
@@ -683,10 +683,10 @@ def test_pulseshape_gaussian():
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i
+        pulse.shape.modulated_waveform_i(_if, sampling_rate).data, mod_i
     )
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q
+        pulse.shape.modulated_waveform_q(_if, sampling_rate).data, mod_q
     )
 
 
@@ -740,10 +740,10 @@ def test_pulseshape_drag():
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(sampling_rate).data, mod_i
+        pulse.shape.modulated_waveform_i(_if, sampling_rate).data, mod_i
     )
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(sampling_rate).data, mod_q
+        pulse.shape.modulated_waveform_q(_if, sampling_rate).data, mod_q
     )
 
 
