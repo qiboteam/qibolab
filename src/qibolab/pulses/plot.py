@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .pulse import Pulse
+from .sequence import PulseSequence
 from .shape import SAMPLING_RATE
 from .waveform import Waveform
 
@@ -126,3 +127,71 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     else:
         plt.show()
     plt.close()
+
+
+def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
+    """Plot the sequence of pulses.
+
+    Args:
+        filename (str): a file path. If provided the plot is save to a file.
+    """
+    if len(ps) > 0:
+        import matplotlib.pyplot as plt
+        from matplotlib import gridspec
+
+        _ = plt.figure(figsize=(14, 2 * len(ps)), dpi=200)
+        gs = gridspec.GridSpec(ncols=1, nrows=len(ps))
+        vertical_lines = []
+        for pulse in ps:
+            vertical_lines.append(pulse.start)
+            vertical_lines.append(pulse.finish)
+
+        n = -1
+        for qubit in ps.qubits:
+            qubit_pulses = ps.get_qubit_pulses(qubit)
+            for channel in qubit_pulses.channels:
+                n += 1
+                channel_pulses = qubit_pulses.get_channel_pulses(channel)
+                ax = plt.subplot(gs[n])
+                ax.axis([0, ps.finish, -1, 1])
+                for pulse in channel_pulses:
+                    num_samples = len(pulse.shape.modulated_waveform_i(sampling_rate))
+                    time = pulse.start + np.arange(num_samples) / sampling_rate
+                    ax.plot(
+                        time,
+                        pulse.shape.modulated_waveform_q(sampling_rate).data,
+                        c="lightgrey",
+                    )
+                    ax.plot(
+                        time,
+                        pulse.shape.modulated_waveform_i(sampling_rate).data,
+                        c=f"C{str(n)}",
+                    )
+                    ax.plot(
+                        time,
+                        pulse.shape.envelope_waveform_i(sampling_rate).data,
+                        c=f"C{str(n)}",
+                    )
+                    ax.plot(
+                        time,
+                        -pulse.shape.envelope_waveform_i(sampling_rate).data,
+                        c=f"C{str(n)}",
+                    )
+                    # TODO: if they overlap use different shades
+                    ax.axhline(0, c="dimgrey")
+                    ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
+                    for vl in vertical_lines:
+                        ax.axvline(vl, c="slategrey", linestyle="--")
+                    ax.axis((0, ps.finish, -1, 1))
+                    ax.grid(
+                        visible=True,
+                        which="both",
+                        axis="both",
+                        color="#CCCCCC",
+                        linestyle="-",
+                    )
+        if filename:
+            plt.savefig(filename)
+        else:
+            plt.show()
+        plt.close()
