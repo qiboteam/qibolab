@@ -4,6 +4,11 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Optional
 
+import numpy as np
+
+from .shape import SAMPLING_RATE, PulseShape
+from .waveform import Waveform
+
 
 class PulseType(Enum):
     """An enumeration to distinguish different types of pulses.
