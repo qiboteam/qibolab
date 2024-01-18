@@ -1,5 +1,4 @@
 """Pulse class."""
-import copy
 from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Optional
@@ -172,23 +171,6 @@ class Pulse:
                 if f.name not in ("type", "shape")
             )
         )
-
-    def __add__(self, other):
-        if isinstance(other, Pulse):
-            return PulseSequence(self, other)
-        if isinstance(other, PulseSequence):
-            return PulseSequence(self, *other)
-        raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
-
-    def __mul__(self, n):
-        if not isinstance(n, int):
-            raise TypeError(f"Expected int; got {type(n).__name__}")
-        if n < 0:
-            raise TypeError(f"argument n should be >=0, got {n}")
-        return PulseSequence(*([copy.deepcopy(self)] * n))
-
-    def __rmul__(self, n):
-        return self.__mul__(n)
 
     def is_equal_ignoring_start(self, item) -> bool:
         """Check if two pulses are equal ignoring start time."""
