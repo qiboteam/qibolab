@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.pulses import CouplerFluxPulse, PulseSequence
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitPair
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
