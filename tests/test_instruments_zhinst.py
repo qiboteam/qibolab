@@ -6,7 +6,16 @@ import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
-from qibolab.pulses import IIR, SNZ, Drag, Gaussian, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import (
+    IIR,
+    SNZ,
+    Drag,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    PulseType,
+    Rectangular,
+)
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument
@@ -79,7 +88,17 @@ def test_zhinst_setup(dummy_qrc):
 
 def test_zhsequence(dummy_qrc):
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
-    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
     sequence = PulseSequence()
     sequence.append(qd_pulse)
     sequence.append(ro_pulse)
@@ -99,8 +118,19 @@ def test_zhsequence(dummy_qrc):
 
 def test_zhsequence_couplers(dummy_qrc):
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
-    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
-    qc_pulse = CouplerFluxPulse(0, 40, 0.05, Rectangular(), "ch_c0", qubit=3)
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
+    qc_pulse = Pulse.flux(0, 40, 0.05, Rectangular(), channel="ch_c0", qubit=3)
+    qc_pulse.type = PulseType.COUPLERFLUX
     sequence = PulseSequence()
     sequence.append(qd_pulse)
     sequence.append(ro_pulse)
@@ -121,7 +151,17 @@ def test_zhsequence_couplers(dummy_qrc):
 
 
 def test_zhsequence_couplers_sweeper(dummy_qrc):
-    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
     sequence = PulseSequence()
     sequence.append(ro_pulse)
     IQM5q = create_platform("zurich")
@@ -154,9 +194,29 @@ def test_zhsequence_multiple_ro(dummy_qrc):
     sequence = PulseSequence()
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
     sequence.append(qd_pulse)
-    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
     sequence.append(ro_pulse)
-    ro_pulse = ReadoutPulse(0, 5000, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    ro_pulse = Pulse(
+        0,
+        5000,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
     sequence.append(ro_pulse)
     platform = create_platform("zurich")
 
@@ -226,7 +286,7 @@ def test_experiment_execute_pulse_sequence(dummy_qrc):
     qf_pulses = {}
     for qubit in qubits.values():
         q = qubit.name
-        qf_pulses[q] = FluxPulse(
+        qf_pulses[q] = Pulse.flux(
             start=0,
             duration=500,
             amplitude=1,
@@ -265,7 +325,7 @@ def test_experiment_execute_pulse_sequence_coupler(dummy_qrc):
     qf_pulses = {}
     for qubit in qubits.values():
         q = qubit.name
-        qf_pulses[q] = FluxPulse(
+        qf_pulses[q] = Pulse.flux(
             start=0,
             duration=500,
             amplitude=1,
@@ -280,7 +340,7 @@ def test_experiment_execute_pulse_sequence_coupler(dummy_qrc):
     cf_pulses = {}
     for coupler in couplers.values():
         c = coupler.name
-        cf_pulses[c] = CouplerFluxPulse(
+        cf_pulses[c] = Pulse.flux(
             start=0,
             duration=500,
             amplitude=1,
@@ -288,6 +348,7 @@ def test_experiment_execute_pulse_sequence_coupler(dummy_qrc):
             channel=platform.couplers[c].flux.name,
             qubit=c,
         )
+        cf_pulses[c].type = PulseType.COUPLERFLUX
         sequence.append(cf_pulses[c])
 
     options = ExecutionParameters(
@@ -355,7 +416,7 @@ def test_experiment_execute_pulse_sequence(dummy_qrc, fast_reset):
             qubit, start=qd_pulses[qubit].finish
         )
         sequence.append(ro_pulses[qubit])
-        qf_pulses[qubit] = FluxPulse(
+        qf_pulses[qubit] = Pulse.flux(
             start=0,
             duration=ro_pulses[qubit].start,
             amplitude=1,
@@ -452,7 +513,7 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     cf_pulses = {}
     for coupler in couplers.values():
         c = coupler.name
-        cf_pulses[c] = CouplerFluxPulse(
+        cf_pulses[c] = Pulse.flux(
             start=0,
             duration=500,
             amplitude=1,
@@ -460,6 +521,7 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
             channel=platform.couplers[c].flux.name,
             qubit=c,
         )
+        cf_pulses[c].type = PulseType.COUPLERFLUX
         sequence.append(cf_pulses[c])
 
     parameter_range_1 = (
@@ -693,7 +755,7 @@ def test_sim(dummy_qrc):
             qubit, start=qd_pulses[qubit].finish
         )
         sequence.append(ro_pulses[qubit])
-        qf_pulses[qubit] = FluxPulse(
+        qf_pulses[qubit] = Pulse.flux(
             start=0,
             duration=500,
             amplitude=1,
@@ -745,7 +807,7 @@ def test_experiment_execute_pulse_sequence(connected_platform, instrument):
     qf_pulses = {}
     for qubit in qubits.values():
         q = qubit.name
-        qf_pulses[q] = FluxPulse(
+        qf_pulses[q] = Pulse.flux(
             start=0,
             duration=500,
             amplitude=1,
