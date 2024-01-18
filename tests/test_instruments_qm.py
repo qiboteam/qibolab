@@ -9,7 +9,7 @@ from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.instruments.qm.acquisition import Acquisition, declare_acquisitions
 from qibolab.instruments.qm.controller import controllers_config
 from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
-from qibolab.pulses import FluxPulse, Pulse, PulseSequence, ReadoutPulse, Rectangular
+from qibolab.pulses import Pulse, PulseType, PulseSequence, Rectangular
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -54,8 +54,8 @@ def test_qmpulse_declare_output(acquisition_type):
 
 
 def test_qmsequence():
-    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
-    ro_pulse = ReadoutPulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", qubit=0)
+    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", PulseType.DRIVE, qubit=0)
+    ro_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", PulseType.READOUT, qubit=0)
     qmsequence = Sequence()
     with pytest.raises(AttributeError):
         qmsequence.add("test")
@@ -80,7 +80,7 @@ def test_qmpulse_previous_and_next():
         qmsequence.add(qd_pulse)
     for qubit in range(nqubits):
         ro_pulse = QMPulse(
-            ReadoutPulse(
+            Pulse(
                 40,
                 100,
                 0.05,
@@ -88,6 +88,7 @@ def test_qmpulse_previous_and_next():
                 0.0,
                 Rectangular(),
                 f"readout{qubit}",
+                PulseType.READOUT,
                 qubit=qubit,
             )
         )
@@ -102,7 +103,7 @@ def test_qmpulse_previous_and_next():
 def test_qmpulse_previous_and_next_flux():
     y90_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive1", qubit=1)
     x_pulse_start = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
-    flux_pulse = FluxPulse(
+    flux_pulse = Pulse.flux(
         start=y90_pulse.finish,
         duration=30,
         amplitude=0.055,
@@ -113,11 +114,11 @@ def test_qmpulse_previous_and_next_flux():
     theta_pulse = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive1", qubit=1)
     x_pulse_end = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
 
-    measure_lowfreq = ReadoutPulse(
-        110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", qubit=1
+    measure_lowfreq = Pulse(
+        110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", PulseType.READOUT, qubit=1
     )
-    measure_highfreq = ReadoutPulse(
-        110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", qubit=2
+    measure_highfreq = Pulse(
+        110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", PulseType.READOUT, qubit=2
     )
 
     drive11 = QMPulse(y90_pulse)
@@ -325,21 +326,8 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
             },
         }
 
-<<<<<<< HEAD
     controller.config.register_element(
         platform.qubits[qubit], pulse, controller.time_of_flight, controller.smearing
-=======
-    opx.config.register_element(
-        platform.qubits[qubit], pulse, opx.time_of_flight, opx.smearing
-    )
-    opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[str(pulse.id)] == target_pulse
-    assert target_pulse["waveforms"]["I"] in opx.config.waveforms
-    assert target_pulse["waveforms"]["Q"] in opx.config.waveforms
-    assert (
-        opx.config.elements[f"{pulse_type}{qubit}"]["operations"][str(pulse.id)]
-        == pulse.id
->>>>>>> 5f1fb614 (Fix QM issues by stringifying pulses ID)
     )
     qmpulse = QMPulse(pulse)
     controller.config.register_pulse(platform.qubits[qubit], qmpulse)
@@ -352,7 +340,7 @@ def test_qm_register_flux_pulse(qmplatform):
     qubit = 2
     platform = qmplatform
     controller = platform.instruments["qm"]
-    pulse = FluxPulse(
+    pulse = Pulse.flux(
         0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit
     )
     target_pulse = {
@@ -360,19 +348,11 @@ def test_qm_register_flux_pulse(qmplatform):
         "length": pulse.duration,
         "waveforms": {"single": "constant_wf0.005"},
     }
-<<<<<<< HEAD
     qmpulse = QMPulse(pulse)
     controller.config.register_element(platform.qubits[qubit], pulse)
     controller.config.register_pulse(platform.qubits[qubit], qmpulse)
     assert controller.config.pulses[qmpulse.operation] == target_pulse
     assert target_pulse["waveforms"]["single"] in controller.config.waveforms
-=======
-    opx.config.register_element(platform.qubits[qubit], pulse)
-    opx.config.register_pulse(platform.qubits[qubit], pulse)
-    assert opx.config.pulses[str(pulse.id)] == target_pulse
-    assert target_pulse["waveforms"]["single"] in opx.config.waveforms
-    assert opx.config.elements[f"flux{qubit}"]["operations"][str(pulse.id)] == pulse.id
->>>>>>> 5f1fb614 (Fix QM issues by stringifying pulses ID)
 
 
 def test_qm_register_pulses_with_different_frequencies(qmplatform):
@@ -427,7 +407,7 @@ def test_qm_register_baked_pulse(qmplatform, duration):
     qubit = platform.qubits[3]
     controller = platform.instruments["qm"]
     controller.config.register_flux_element(qubit)
-    pulse = FluxPulse(
+    pulse = Pulse.flux(
         3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name
     )
     qmpulse = BakedPulse(pulse)
