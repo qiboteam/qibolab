@@ -761,6 +761,10 @@ class Pulse:
         # TODO: drop the cyclic reference
         self.shape.pulse = self
 
+    @classmethod
+    def flux(cls, start, duration, amplitude, shape, **kwargs):
+        return cls(start, duration, amplitude, 0, 0, shape, **kwargs)
+
     @property
     def finish(self) -> Optional[int]:
         """Time when the pulse is scheduled to finish."""
