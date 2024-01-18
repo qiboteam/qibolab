@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+includedir=@includedir@
+extraincludirs=@extraincludirs@
+libdir=@libdir@
+pythonlibs=@pythonlibs@
+
+Name: qibolab
+Description: The Qibolab C-API library
+Version: @VERSION@
+Cflags: -I@includedir@ @extraincludirs@
+Libs: -L@libdir@ -qibolab @pythonlibs@
+

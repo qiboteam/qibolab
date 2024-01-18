@@ -1,0 +1,38 @@
+cmake_minimum_required (VERSION 3.0.2...3.28.1)
+
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+project(libqibolab)
+
+set(VERSION "\"0.0.1\"")
+
+find_package(PythonInterp 3 REQUIRED)
+find_package(PythonLibs   3 REQUIRED)
+
+# running the cffi builder
+if (NOT EXISTS ${PROJECT_SOURCE_DIR/src/cqibolab.cc})
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/build.py WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
+endif()
+
+include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(src)
+add_library(qibolab SHARED ${PROJECT_SOURCE_DIR}/src/cqibolab.c)
+
+# pkg-config
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix "${prefix}")
+set(includedir "${prefix}/include")
+set(extraincludirs "-I${PYTHON_INCLUDE_DIR}")
+set(libdir "${prefix}/lib")
+set(pythonlibs "${PYTHON_LIBRARIES}")
+
+configure_file(
+  "${PROJECT_SOURCE_DIR}/src/qibolab.pc.in"
+  "${PROJECT_SOURCE_DIR}/src/qibolab.pc"
+  )
+
+install(FILES ${PROJECT_SOURCE_DIR}/src/qibolab.pc DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/pkgconfig)
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/src/qibolab DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+install(TARGETS qibolab LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
