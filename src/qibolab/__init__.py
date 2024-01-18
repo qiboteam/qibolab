@@ -57,9 +57,7 @@ def create_platform(name, runcard=None):
     return module.create(runcard)
 
 
-def execute_qasm(
-    circuit: str, platform, runcard=None, initial_state=None, nshots=1000
-):
+def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshots=1000):
     """Executes a QASM circuit.
 
     Args:
