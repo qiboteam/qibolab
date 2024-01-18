@@ -48,7 +48,7 @@ def unroll_sequences(
             new_pulse = pulse.copy()
             new_pulse.start += start
             total_sequence.append(new_pulse)
-            if isinstance(pulse, ReadoutPulse):
+            if pulse.type is PulseType.READOUT:
                 readout_map[pulse.id].append(new_pulse.id)
         start = total_sequence.finish + relaxation_time
     return total_sequence, readout_map
@@ -384,19 +384,6 @@ class Platform:
     def create_qubit_readout_pulse(self, qubit, start):
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
-
-    def create_qubit_flux_pulse(self, qubit, start, duration, amplitude=1):
-        qubit = self.get_qubit(qubit)
-        pulse = FluxPulse(
-            start=start,
-            duration=duration,
-            amplitude=amplitude,
-            shape="Rectangular",
-            channel=self.qubits[qubit].flux.name,
-            qubit=qubit,
-        )
-        pulse.duration = duration
-        return pulse
 
     def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
         coupler = self.get_coupler(coupler)
