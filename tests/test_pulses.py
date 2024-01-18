@@ -1,4 +1,5 @@
 """Tests ``pulses.py``."""
+import copy
 import os
 import pathlib
 
@@ -29,8 +30,10 @@ def test_plot_functions():
     p0 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p1 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p2 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
-    p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
-    p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
+    p3 = Pulse.flux(
+        0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), channel=0, qubit=200
+    )
+    p4 = Pulse.flux(0, 40, 0.9, SNZ(t_idling=10), channel=0, qubit=200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
     p6 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.DRIVE, 2)
     ps = PulseSequence([p0, p1, p2, p3, p4, p5, p6])
@@ -140,8 +143,12 @@ def test_pulse_init():
     p7 = Pulse(0, 40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
     p8 = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
-    p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
-    p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), 0, 200)
+    p10 = Pulse.flux(
+        0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), channel=0, qubit=200
+    )
+    p11 = Pulse.flux(
+        0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), channel=0, qubit=200
+    )
     p13 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
     p14 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.READOUT, 2)
 
@@ -174,7 +181,6 @@ def test_pulse_attributes():
         relative_phase=0.0,
         shape=Rectangular(),
         channel=channel,
-        type=PulseType.READOUT,
         qubit=qubit,
     )
 
@@ -333,27 +339,28 @@ def test_pulse_hash():
 
     t0 = 0
     p1 = Pulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    p2 = p1.shallow_copy()
-    p3 = p1.copy()
+    p2 = copy.copy(p1)
+    p3 = copy.deepcopy(p1)
     assert p1 == p2
     assert p1 == p3
 
 
 def test_pulse_aliases():
-    rop = ReadoutPulse(
+    rop = Pulse(
         start=0,
         duration=50,
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
         shape=Rectangular(),
+        type=PulseType.READOUT,
         channel=0,
         qubit=0,
     )
     assert rop.start == 0
     assert rop.qubit == 0
 
-    dp = DrivePulse(
+    dp = Pulse(
         start=0,
         duration=2000,
         amplitude=0.9,
@@ -366,7 +373,7 @@ def test_pulse_aliases():
     assert dp.amplitude == 0.9
     assert isinstance(dp.shape, Gaussian)
 
-    fp = FluxPulse(
+    fp = Pulse.flux(
         start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0
     )
     assert fp.channel == 0
@@ -401,9 +408,9 @@ def test_pulsesequence_init():
 
 def test_pulsesequence_operators():
     ps = PulseSequence()
-    ps += [ReadoutPulse(800, 200, 0.9, 20e6, 0, Rectangular(), 1)]
-    ps = ps + [ReadoutPulse(800, 200, 0.9, 20e6, 0, Rectangular(), 2)]
-    ps = [ReadoutPulse(800, 200, 0.9, 20e6, 0, Rectangular(), 3)] + ps
+    ps += [Pulse(800, 200, 0.9, 20e6, 0, Rectangular(), 1, type=PulseType.READOUT)]
+    ps = ps + [Pulse(800, 200, 0.9, 20e6, 0, Rectangular(), 2, type=PulseType.READOUT)]
+    ps = [Pulse(800, 200, 0.9, 20e6, 0, Rectangular(), 3, type=PulseType.READOUT)] + ps
 
     p4 = Pulse(100, 40, 0.9, 50e6, 0, Gaussian(5), 3, PulseType.DRIVE)
     p5 = Pulse(200, 40, 0.9, 50e6, 0, Gaussian(5), 2, PulseType.DRIVE)
@@ -452,12 +459,12 @@ def test_pulsesequence_start_finish():
 
 
 def test_pulsesequence_get_channel_pulses():
-    p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = DrivePulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = ReadoutPulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20)
-    p6 = DrivePulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
+    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
+    p2 = Pulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30, type=PulseType.READOUT)
+    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
+    p5 = Pulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20, type=PulseType.READOUT)
+    p6 = Pulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
     assert ps.channels == [10, 20, 30]
@@ -468,13 +475,33 @@ def test_pulsesequence_get_channel_pulses():
 
 
 def test_pulsesequence_get_qubit_pulses():
-    p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10, 0)
-    p2 = ReadoutPulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30, 0)
-    p3 = DrivePulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20, 1)
-    p4 = DrivePulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30, 1)
-    p5 = ReadoutPulse(500, 400, 0.9, 20e6, 0, Rectangular(), 30, 1)
-    p6 = FluxPulse(600, 400, 0.9, Rectangular(), 40, 1)
-    p7 = FluxPulse(900, 400, 0.9, Rectangular(), 40, 2)
+    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10, qubit=0)
+    p2 = Pulse(
+        100,
+        400,
+        0.9,
+        20e6,
+        0,
+        Rectangular(),
+        channel=30,
+        qubit=0,
+        type=PulseType.READOUT,
+    )
+    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20, qubit=1)
+    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30, qubit=1)
+    p5 = Pulse(
+        500,
+        400,
+        0.9,
+        20e6,
+        0,
+        Rectangular(),
+        channel=30,
+        qubit=1,
+        type=PulseType.READOUT,
+    )
+    p6 = Pulse.flux(600, 400, 0.9, Rectangular(), channel=40, qubit=1)
+    p7 = Pulse.flux(900, 400, 0.9, Rectangular(), channel=40, qubit=2)
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6, p7])
     assert ps.qubits == [0, 1, 2]
@@ -485,12 +512,12 @@ def test_pulsesequence_get_qubit_pulses():
 
 
 def test_pulsesequence_pulses_overlap():
-    p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = DrivePulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = ReadoutPulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20)
-    p6 = DrivePulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
+    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
+    p2 = Pulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30, type=PulseType.READOUT)
+    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
+    p5 = Pulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20, type=PulseType.READOUT)
+    p6 = Pulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
     assert ps.pulses_overlap
@@ -500,12 +527,12 @@ def test_pulsesequence_pulses_overlap():
 
 
 def test_pulsesequence_separate_overlapping_pulses():
-    p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = DrivePulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = ReadoutPulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20)
-    p6 = DrivePulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
+    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
+    p2 = Pulse(100, 400, 0.9, 20e6, 0, Rectangular(), qubit=30, type=PulseType.READOUT)
+    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
+    p5 = Pulse(500, 400, 0.9, 20e6, 0, Rectangular(), qubit=20, type=PulseType.READOUT)
+    p6 = Pulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
     n = 70
@@ -518,9 +545,18 @@ def test_pulsesequence_separate_overlapping_pulses():
 def test_pulse_pulse_order():
     t0 = 0
     t = 0
-    p1 = DrivePulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(p1.finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(p2.finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p1 = Pulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
+    p2 = Pulse(
+        p1.finish + t,
+        400,
+        0.9,
+        20e6,
+        0,
+        Rectangular(),
+        qubit=30,
+        type=PulseType.READOUT,
+    )
+    p3 = Pulse(p2.finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
     ps1 = PulseSequence([p1, p2, p3])
     ps2 = PulseSequence([p3, p1, p2])
 
@@ -791,7 +827,7 @@ def test_pulse():
 
 def test_readout_pulse():
     duration = 2000
-    pulse = ReadoutPulse(
+    pulse = Pulse(
         start=0,
         frequency=200_000_000,
         amplitude=1,
@@ -799,6 +835,7 @@ def test_readout_pulse():
         relative_phase=0,
         shape=f"Rectangular()",
         channel=11,
+        type=PulseType.READOUT,
     )
 
     assert pulse.duration == duration
@@ -832,7 +869,7 @@ def test_pulse_sequence_add_readout():
     )
 
     sequence.append(
-        ReadoutPulse(
+        Pulse(
             start=128,
             frequency=20_000_000,
             amplitude=0.9,
@@ -840,6 +877,7 @@ def test_pulse_sequence_add_readout():
             relative_phase=0,
             shape="Rectangular()",
             channel=11,
+            type=PulseType.READOUT,
         )
     )
     assert len(sequence) == 3
