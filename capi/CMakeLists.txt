@@ -8,16 +8,14 @@ project(libqibolab)
 
 set(VERSION "\"0.0.1\"")
 
-#find_package(PythonInterp REQUIRED)
-#find_package(PythonLibs   REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development)
 
 # running the cffi builder
 if (NOT EXISTS ${PROJECT_SOURCE_DIR/src/cqibolab.cc})
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/build.py WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
+  execute_process(COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/src/build.py WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
 endif()
 
-include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${Python3_INCLUDE_DIRS})
 include_directories(src)
 add_library(qibolab SHARED ${PROJECT_SOURCE_DIR}/src/cqibolab.c)
 
@@ -25,9 +23,9 @@ add_library(qibolab SHARED ${PROJECT_SOURCE_DIR}/src/cqibolab.c)
 set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "${prefix}")
 set(includedir "${prefix}/include")
-set(extraincludirs "-I${PYTHON_INCLUDE_DIR}")
+set(extraincludirs "-I${Python3_INCLUDE_DIR}")
 set(libdir "${prefix}/lib")
-set(pythonlibs "${PYTHON_LIBRARIES}")
+set(pythonlibs "${Python3_LIBRARIES}")
 
 configure_file(
   "${PROJECT_SOURCE_DIR}/src/qibolab.pc.in"
