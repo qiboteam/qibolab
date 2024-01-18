@@ -21,6 +21,7 @@ from qibolab.pulses import (
     ShapeInitError,
     Waveform,
     eCap,
+    plot,
 )
 
 HERE = pathlib.Path(__file__).parent
@@ -41,15 +42,15 @@ def test_plot_functions():
 
     plot_file = HERE / "test_plot.png"
 
-    wf.plot(plot_file)
+    plot.waveform(wf, plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
 
-    p0.plot(plot_file)
+    plot.pulse(p0, plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
 
-    ps.plot(plot_file)
+    plot.sequence(ps, plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
 
