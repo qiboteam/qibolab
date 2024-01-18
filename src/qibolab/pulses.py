@@ -144,13 +144,13 @@ class PulseShape(ABC):
         """The waveform of the i component of the pulse, modulated with its
         frequency."""
 
-        return self.modulated_waveforms(sampling_rate)[0]
+        return self.modulated_waveforms(_if, sampling_rate)[0]
 
     def modulated_waveform_q(self, _if: int, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The waveform of the q component of the pulse, modulated with its
         frequency."""
 
-        return self.modulated_waveforms(sampling_rate)[1]
+        return self.modulated_waveforms(_if, sampling_rate)[1]
 
     def modulated_waveforms(self, _if: int, sampling_rate=SAMPLING_RATE):
         """A tuple with the i and q waveforms of the pulse, modulated with its
