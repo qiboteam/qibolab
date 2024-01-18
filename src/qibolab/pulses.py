@@ -881,67 +881,6 @@ class Pulse:
     def __rmul__(self, n):
         return self.__mul__(n)
 
-    def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
-        """Returns a new Pulse object with the same attributes."""
-
-        if type(self) == ReadoutPulse:
-            return ReadoutPulse(
-                self.start,
-                self.duration,
-                self.amplitude,
-                self.frequency,
-                self.relative_phase,
-                repr(self.shape),  # self.shape,
-                self.channel,
-                self.qubit,
-            )
-        elif type(self) == DrivePulse:
-            return DrivePulse(
-                self.start,
-                self.duration,
-                self.amplitude,
-                self.frequency,
-                self.relative_phase,
-                repr(self.shape),  # self.shape,
-                self.channel,
-                self.qubit,
-            )
-
-        elif type(self) == FluxPulse:
-            return FluxPulse(
-                self.start,
-                self.duration,
-                self.amplitude,
-                self.shape,
-                self.channel,
-                self.qubit,
-            )
-        else:
-            return Pulse(
-                self.start,
-                self.duration,
-                self.amplitude,
-                self.frequency,
-                self.relative_phase,
-                repr(self.shape),  # self.shape,
-                self.channel,
-                self.type,
-                self.qubit,
-            )
-
-    def shallow_copy(self):  # -> Pulse:
-        return Pulse(
-            self.start,
-            self.duration,
-            self.amplitude,
-            self.frequency,
-            self.relative_phase,
-            self.shape,
-            self.channel,
-            self.type,
-            self.qubit,
-        )
-
     def is_equal_ignoring_start(self, item) -> bool:
         """Check if two pulses are equal ignoring start time."""
         return (
@@ -1135,7 +1074,7 @@ class PulseSequence(list):
         """Return a new sequence containing the pulses on some qubits."""
         new_pc = PulseSequence()
         for pulse in self:
-            if not isinstance(pulse, CouplerFluxPulse):
+            if pulse.type is not PulseType.COUPLERFLUX:
                 if pulse.qubit in qubits:
                     new_pc.append(pulse)
         return new_pc
@@ -1144,7 +1083,7 @@ class PulseSequence(list):
         """Return a new sequence containing the pulses on some couplers."""
         new_pc = PulseSequence()
         for pulse in self:
-            if isinstance(pulse, CouplerFluxPulse):
+            if pulse.type is not PulseType.COUPLERFLUX:
                 if pulse.qubit in couplers:
                     new_pc.append(pulse)
         return new_pc
