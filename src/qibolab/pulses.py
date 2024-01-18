@@ -763,7 +763,9 @@ class Pulse:
 
     @classmethod
     def flux(cls, start, duration, amplitude, shape, **kwargs):
-        return cls(start, duration, amplitude, 0, 0, shape, **kwargs)
+        return cls(
+            start, duration, amplitude, 0, 0, shape, type=PulseType.FLUX, **kwargs
+        )
 
     @property
     def finish(self) -> Optional[int]:
