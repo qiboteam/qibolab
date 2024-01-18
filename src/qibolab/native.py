@@ -157,11 +157,14 @@ class CouplerPulse:
         Returns:
             A :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
         """
-        return CouplerFluxPulse(
+        return Pulse(
             start + self.relative_start,
             self.duration,
             self.amplitude,
+            0,
+            0,
             self.shape,
+            type=PulseType.COUPLERFLUX,
             channel=self.coupler.flux.name,
             qubit=self.coupler.name,
         )
