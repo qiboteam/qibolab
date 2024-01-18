@@ -1,5 +1,5 @@
 """A platform for executing quantum algorithms."""
-
+import copy
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Tuple
@@ -44,7 +44,7 @@ def unroll_sequences(
     start = 0
     for sequence in sequences:
         for pulse in sequence:
-            new_pulse = pulse.copy()
+            new_pulse = copy.deepcopy(pulse)
             new_pulse.start += start
             total_sequence.append(new_pulse)
             if pulse.type is PulseType.READOUT:
