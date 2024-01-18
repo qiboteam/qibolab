@@ -21,7 +21,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.instruments.unrolling import batch_max_sequences
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -1258,7 +1258,7 @@ class Zurich(Controller):
                 )
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
-                pulse = pulse.copy()
+                pulse = copy.deepcopy(pulse)
                 pulse.amplitude *= max(abs(sweeper.values))
 
                 # Proper copy(sweeper) here if we want to keep the sweepers
@@ -1321,7 +1321,7 @@ class Zurich(Controller):
 
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
-                pulse = pulse.copy()
+                pulse = copy.deepcopy(pulse)
                 pulse.amplitude *= max(abs(sweeper.values))
 
                 # Proper copy(sweeper) here
