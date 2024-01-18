@@ -1,5 +1,5 @@
 """A platform for executing quantum algorithms."""
-
+import copy
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
 from typing import Dict, List, Optional, Tuple
