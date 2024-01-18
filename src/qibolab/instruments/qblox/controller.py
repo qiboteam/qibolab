@@ -111,7 +111,7 @@ class QbloxController(Controller):
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
-        **kwargs
+        **kwargs,
         # nshots=None,
         # navgs=None,
         # relaxation_time=None,
