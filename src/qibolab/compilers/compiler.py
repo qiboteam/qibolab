@@ -119,7 +119,7 @@ class Compiler:
         # shift start time and phase according to the global sequence
         for pulse in gate_sequence:
             pulse.start += start
-            if pulse is not PulseType.READOUT:
+            if pulse.type is not PulseType.READOUT:
                 pulse.relative_phase += virtual_z_phases[pulse.qubit]
             sequence.append(pulse)
 
