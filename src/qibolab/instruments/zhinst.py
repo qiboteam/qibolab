@@ -1413,7 +1413,7 @@ class Zurich(Controller):
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence."""
 
-        self.experiment_flow(qubits, sequence, options)
+        self.experiment_flow(qubits, sequence, options)  # missing couplers?
         self.run_sim(sim_time)
 
     def run_sim(self, sim_time):
