@@ -23,7 +23,7 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.pulses import SNZ, FluxPulse, PulseSequence, Rectangular
+from qibolab.pulses import Pulse, SNZ, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile
@@ -388,7 +388,7 @@ def test_qmsim_chevron(simulator, folder, sweep):
     lowfreq, highfreq = 1, 2
     initialize_1 = simulator.create_RX_pulse(lowfreq, start=0, relative_phase=0)
     initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
-    flux_pulse = FluxPulse(
+    flux_pulse = Pulse.flux(
         start=initialize_2.finish,
         duration=31,
         amplitude=0.05,
@@ -439,7 +439,7 @@ def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
     y90_pulse = simulator.create_RX90_pulse(lowfreq, start=0, relative_phase=np.pi / 2)
     x_pulse_start = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
     if use_flux_pulse:
-        flux_pulse = FluxPulse(
+        flux_pulse = Pulse.flux(
             start=y90_pulse.finish,
             duration=30,
             amplitude=0.055,
@@ -492,7 +492,7 @@ def test_qmsim_snz_pulse(simulator, folder, qubit):
     shape = SNZ(t_half_flux_pulse=duration // 2, b_amplitude=2)
     channel = simulator.qubits[qubit].flux.name
     qd_pulse = simulator.create_RX_pulse(qubit, start=0)
-    flux_pulse = FluxPulse(qd_pulse.finish, duration, amplitude, shape, channel, qubit)
+    flux_pulse = Pulse.flux(qd_pulse.finish, duration, amplitude, shape, channel, qubit)
     ro_pulse = simulator.create_MZ_pulse(qubit, start=flux_pulse.finish)
     sequence.append(qd_pulse)
     sequence.append(flux_pulse)
