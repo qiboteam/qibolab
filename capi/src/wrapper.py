@@ -10,4 +10,4 @@ def execute_qasm(circuit, platform, nshots):
     py_circuit = ffi.string(circuit).decode('utf-8')
     py_platform = ffi.string(platform).decode('utf-8')
     qasm_res = py_execute_qasm(py_circuit, py_platform, nshots)
-    return ffi.cast("int*", ffi.from_buffer(qasm_res.samples()))
+    return ffi.cast("int*", ffi.from_buffer(qasm_res.samples().flatten()))
