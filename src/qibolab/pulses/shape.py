@@ -2,8 +2,11 @@
 import re
 from abc import ABC, abstractmethod
 
+import numpy as np
 from qibo.config import log
 from scipy.signal import lfilter
+
+from .waveform import Waveform
 
 SAMPLING_RATE = 1
 """Default sampling rate in gigasamples per second (GSps).
@@ -133,7 +136,7 @@ class Rectangular(PulseShape):
 
     def __init__(self):
         self.name = "Rectangular"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
@@ -173,7 +176,7 @@ class Exponential(PulseShape):
 
     def __init__(self, tau: float, upsilon: float, g: float = 0.1):
         self.name = "Exponential"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.tau: float = float(tau)
         self.upsilon: float = float(upsilon)
         self.g: float = float(g)
@@ -222,7 +225,7 @@ class Gaussian(PulseShape):
 
     def __init__(self, rel_sigma: float):
         self.name = "Gaussian"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.rel_sigma: float = float(rel_sigma)
 
     def __eq__(self, item) -> bool:
@@ -277,7 +280,7 @@ class GaussianSquare(PulseShape):
 
     def __init__(self, rel_sigma: float, width: float):
         self.name = "GaussianSquare"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.rel_sigma: float = float(rel_sigma)
         self.width: float = float(width)
 
@@ -343,7 +346,7 @@ class Drag(PulseShape):
 
     def __init__(self, rel_sigma, beta):
         self.name = "Drag"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.rel_sigma = float(rel_sigma)
         self.beta = float(beta)
 
@@ -407,7 +410,7 @@ class IIR(PulseShape):
     def __init__(self, b, a, target: PulseShape):
         self.name = "IIR"
         self.target: PulseShape = target
-        self._pulse: Pulse = None
+        self._pulse: "Pulse" = None
         self.a: np.ndarray = np.array(a)
         self.b: np.ndarray = np.array(b)
         # Check len(a) = len(b) = 2
@@ -488,7 +491,7 @@ class SNZ(PulseShape):
 
     def __init__(self, t_idling, b_amplitude=None):
         self.name = "SNZ"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.t_idling: float = t_idling
         self.b_amplitude = b_amplitude
 
@@ -557,7 +560,7 @@ class eCap(PulseShape):
 
     def __init__(self, alpha: float):
         self.name = "eCap"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.alpha: float = float(alpha)
 
     def __eq__(self, item) -> bool:
@@ -595,7 +598,7 @@ class Custom(PulseShape):
 
     def __init__(self, envelope_i, envelope_q=None):
         self.name = "Custom"
-        self.pulse: Pulse = None
+        self.pulse: "Pulse" = None
         self.envelope_i: np.ndarray = np.array(envelope_i)
         if envelope_q is not None:
             self.envelope_q: np.ndarray = np.array(envelope_q)
