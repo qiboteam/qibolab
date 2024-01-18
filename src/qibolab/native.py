@@ -2,13 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
 from typing import List, Optional, Union
 
-from qibolab.pulses import (
-    CouplerFluxPulse,
-    FluxPulse,
-    PulseConstructor,
-    PulseSequence,
-    PulseType,
-)
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 
 
 @dataclass
@@ -79,7 +73,7 @@ class NativePulse:
             or :class:`qibolab.pulses.FluxPulse` with the pulse parameters of the gate.
         """
         if self.pulse_type is PulseType.FLUX:
-            return FluxPulse(
+            return Pulse.flux(
                 start + self.relative_start,
                 self.duration,
                 self.amplitude,
