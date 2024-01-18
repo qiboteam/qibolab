@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+<<<<<<< HEAD
 from qibolab.instruments.zhinst import (
     ProcessedSweeps,
     ZhPulse,
@@ -15,6 +16,9 @@ from qibolab.instruments.zhinst import (
     classify_sweepers,
     measure_channel_name,
 )
+=======
+from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
 from qibolab.pulses import (
     IIR,
     SNZ,
@@ -25,7 +29,11 @@ from qibolab.pulses import (
     PulseType,
     Rectangular,
 )
+<<<<<<< HEAD
 from qibolab.sweeper import Parameter, Sweeper
+=======
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
 from qibolab.unrolling import batch
 
 from .conftest import get_instrument
@@ -249,6 +257,24 @@ def test_zhinst_setup(dummy_qrc):
 
 
 def test_zhsequence(dummy_qrc):
+<<<<<<< HEAD
+=======
+    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
+    sequence = PulseSequence()
+    sequence.append(qd_pulse)
+    sequence.append(ro_pulse)
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
     IQM5q = create_platform("zurich")
     controller = IQM5q.instruments["EL_ZURO"]
 
@@ -283,6 +309,7 @@ def test_zhsequence(dummy_qrc):
 
 
 def test_zhsequence_couplers(dummy_qrc):
+<<<<<<< HEAD
     IQM5q = create_platform("zurich")
     controller = IQM5q.instruments["EL_ZURO"]
 
@@ -291,6 +318,9 @@ def test_zhsequence_couplers(dummy_qrc):
     )
     couplerflux_channel = IQM5q.couplers[0].flux.name
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
+=======
+    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
     ro_pulse = Pulse(
         0,
         40,
@@ -298,6 +328,7 @@ def test_zhsequence_couplers(dummy_qrc):
         int(3e9),
         0.0,
         Rectangular(),
+<<<<<<< HEAD
         readout_channel,
         PulseType.READOUT,
         qubit=0,
@@ -305,6 +336,13 @@ def test_zhsequence_couplers(dummy_qrc):
     qc_pulse = Pulse.flux(
         0, 40, 0.05, Rectangular(), channel=couplerflux_channel, qubit=3
     )
+=======
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
+    qc_pulse = Pulse.flux(0, 40, 0.05, Rectangular(), channel="ch_c0", qubit=3)
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
     qc_pulse.type = PulseType.COUPLERFLUX
     sequence = PulseSequence()
     sequence.append(qd_pulse)
@@ -314,7 +352,59 @@ def test_zhsequence_couplers(dummy_qrc):
     zhsequence = controller.sequence_zh(sequence, IQM5q.qubits)
 
     assert len(zhsequence) == 3
+<<<<<<< HEAD
     assert len(zhsequence[couplerflux_channel]) == 1
+=======
+    assert len(zhsequence["readout0"]) == 1
+    assert len(zhsequence["couplerflux3"]) == 1
+
+
+def test_zhsequence_couplers_sweeper(dummy_qrc):
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
+    sequence = PulseSequence()
+    sequence.append(ro_pulse)
+    IQM5q = create_platform("zurich")
+    controller = IQM5q.instruments["EL_ZURO"]
+
+    delta_bias_range = np.arange(-1, 1, 0.5)
+
+    sweeper = Sweeper(
+        Parameter.amplitude,
+        delta_bias_range,
+        pulses=[
+            CouplerFluxPulse(
+                start=0,
+                duration=sequence.duration + sequence.start,
+                amplitude=1,
+                shape="Rectangular",
+                qubit=IQM5q.couplers[0].name,
+            )
+        ],
+        type=SweeperType.ABSOLUTE,
+    )
+
+    controller.sweepers = [sweeper]
+    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers)
+    zhsequence = controller.sequence
+
+    with pytest.raises(AttributeError):
+        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers)
+        zhsequence = controller.sequence
+
+    assert len(zhsequence) == 2
+    assert len(zhsequence["readout0"]) == 1
+    assert len(zhsequence["couplerflux0"]) == 0  # is it correct?
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
 
 
 def test_zhsequence_multiple_ro(dummy_qrc):
@@ -330,9 +420,15 @@ def test_zhsequence_multiple_ro(dummy_qrc):
         int(3e9),
         0.0,
         Rectangular(),
+<<<<<<< HEAD
         readout_channel,
         PulseType.READOUT,
         qubit=0,
+=======
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
     )
     sequence.append(ro_pulse)
     ro_pulse = Pulse(
@@ -342,9 +438,15 @@ def test_zhsequence_multiple_ro(dummy_qrc):
         int(3e9),
         0.0,
         Rectangular(),
+<<<<<<< HEAD
         readout_channel,
         PulseType.READOUT,
         qubit=0,
+=======
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
     )
     sequence.append(ro_pulse)
     platform = create_platform("zurich")
@@ -499,9 +601,23 @@ def test_sweep_and_play_sim(dummy_qrc):
 
     ro_pulses = {}
     qf_pulses = {}
+<<<<<<< HEAD
     for qubit in qubits.values():
         q = qubit.name
         qf_pulses[q] = Pulse.flux(
+=======
+    fr_pulses = {}
+    for qubit in qubits:
+        if fast_reset:
+            fr_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.append(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
+            qubit, start=qd_pulses[qubit].finish
+        )
+        sequence.append(ro_pulses[qubit])
+        qf_pulses[qubit] = Pulse.flux(
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
             start=0,
             duration=500,
             amplitude=1,
@@ -813,8 +929,41 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
+<<<<<<< HEAD
     assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
     assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+=======
+    assert "measure0" in IQM5q.experiment.signals
+    assert "acquire0" in IQM5q.experiment.signals
+
+
+# TODO: Fix this
+def test_sim(dummy_qrc):
+    platform = create_platform("zurich")
+    IQM5q = platform.instruments["EL_ZURO"]
+    sequence = PulseSequence()
+    qubits = {0: platform.qubits[0]}
+    platform.qubits = qubits
+    ro_pulses = {}
+    qd_pulses = {}
+    qf_pulses = {}
+    for qubit in qubits:
+        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
+        sequence.append(qd_pulses[qubit])
+        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
+            qubit, start=qd_pulses[qubit].finish
+        )
+        sequence.append(ro_pulses[qubit])
+        qf_pulses[qubit] = Pulse.flux(
+            start=0,
+            duration=500,
+            amplitude=1,
+            shape=Rectangular(),
+            channel=platform.qubits[qubit].flux.name,
+            qubit=qubit,
+        )
+        sequence.append(qf_pulses[qubit])
+>>>>>>> 1b1e4cd4 (Fix Zurich tests)
 
 
 def test_batching(dummy_qrc):
