@@ -23,7 +23,7 @@ add_library(qibolab SHARED ${PROJECT_SOURCE_DIR}/src/cqibolab.c)
 set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix "${prefix}")
 set(includedir "${prefix}/include")
-set(extraincludirs "-I${Python3_INCLUDE_DIR}")
+set(extraincludirs "-I${Python3_INCLUDE_DIRS}")
 set(libdir "${prefix}/lib")
 set(pythonlibs "${Python3_LIBRARIES}")
 
