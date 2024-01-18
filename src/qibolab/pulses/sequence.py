@@ -1,6 +1,9 @@
 """PulseSequence class."""
 import numpy as np
 
+from .pulse import PulseType
+from .shape import SAMPLING_RATE
+
 
 class PulseSequence(list):
     """A collection of scheduled pulses.
