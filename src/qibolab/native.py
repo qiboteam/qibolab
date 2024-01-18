@@ -1,3 +1,4 @@
+import copy
 from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
 from typing import List, Optional, Union
@@ -39,7 +40,7 @@ class NativePulse:
             qubits (:class:`qibolab.platforms.abstract.Qubit`): Qubit that the
                 pulse is acting on
         """
-        kwargs = pulse.copy()
+        kwargs = copy.deepcopy(pulse)
         kwargs["pulse_type"] = PulseType(kwargs.pop("type"))
         kwargs["qubit"] = qubit
         return cls(name, **kwargs)
@@ -131,7 +132,7 @@ class CouplerPulse:
             coupler (:class:`qibolab.platforms.abstract.Coupler`): Coupler that the
                 pulse is acting on
         """
-        kwargs = pulse.copy()
+        kwargs = copy.deepcopy(pulse)
         kwargs["coupler"] = coupler
         kwargs.pop("type")
         return cls(**kwargs)
@@ -207,7 +208,7 @@ class NativeSequence:
             sequence = [sequence]
 
         for i, pulse in enumerate(sequence):
-            pulse = pulse.copy()
+            pulse = copy.deepcopy(pulse)
             pulse_type = pulse.pop("type")
             if pulse_type == "coupler":
                 pulse["coupler"] = couplers[pulse.pop("coupler")]
