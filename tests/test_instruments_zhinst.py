@@ -6,18 +6,7 @@ import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
-from qibolab.pulses import (
-    IIR,
-    SNZ,
-    CouplerFluxPulse,
-    Drag,
-    FluxPulse,
-    Gaussian,
-    Pulse,
-    PulseSequence,
-    ReadoutPulse,
-    Rectangular,
-)
+from qibolab.pulses import IIR, SNZ, Drag, Gaussian, Pulse, PulseSequence, Rectangular
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument
