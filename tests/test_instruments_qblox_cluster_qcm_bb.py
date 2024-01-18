@@ -6,7 +6,7 @@ import pytest
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.port import QbloxOutputPort
-from qibolab.pulses import FluxPulse, PulseSequence
+from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .qblox_fixtures import connected_controller, controller

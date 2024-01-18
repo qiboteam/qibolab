@@ -4,7 +4,7 @@ import pytest
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
-from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .qblox_fixtures import connected_controller, controller
