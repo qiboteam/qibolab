@@ -9,8 +9,12 @@ from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.instruments.qm.acquisition import Acquisition, declare_acquisitions
 from qibolab.instruments.qm.controller import controllers_config
 from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
+<<<<<<< HEAD
 from qibolab.pulses import Pulse, PulseType, PulseSequence, Rectangular
 from qibolab.qubits import Qubit
+=======
+from qibolab.pulses import Pulse, PulseSequence, PulseType, Rectangular
+>>>>>>> 552fc49f (Fix QM tests)
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile
@@ -54,8 +58,23 @@ def test_qmpulse_declare_output(acquisition_type):
 
 
 def test_qmsequence():
+<<<<<<< HEAD
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", PulseType.DRIVE, qubit=0)
     ro_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch1", PulseType.READOUT, qubit=0)
+=======
+    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "ch1",
+        qubit=0,
+        type=PulseType.READOUT,
+    )
+>>>>>>> 552fc49f (Fix QM tests)
     qmsequence = Sequence()
     with pytest.raises(AttributeError):
         qmsequence.add("test")
@@ -90,6 +109,7 @@ def test_qmpulse_previous_and_next():
                 f"readout{qubit}",
                 PulseType.READOUT,
                 qubit=qubit,
+                type=PulseType.READOUT,
             )
         )
         ro_qmpulses.append(ro_pulse)
@@ -115,10 +135,33 @@ def test_qmpulse_previous_and_next_flux():
     x_pulse_end = Pulse(70, 40, 0.05, int(3e9), 0.0, Rectangular(), f"drive2", qubit=2)
 
     measure_lowfreq = Pulse(
+<<<<<<< HEAD
         110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout1", PulseType.READOUT, qubit=1
     )
     measure_highfreq = Pulse(
         110, 100, 0.05, int(3e9), 0.0, Rectangular(), "readout2", PulseType.READOUT, qubit=2
+=======
+        110,
+        100,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "readout1",
+        qubit=1,
+        type=PulseType.READOUT,
+    )
+    measure_highfreq = Pulse(
+        110,
+        100,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        "readout2",
+        qubit=2,
+        type=PulseType.READOUT,
+>>>>>>> 552fc49f (Fix QM tests)
     )
 
     drive11 = QMPulse(y90_pulse)
@@ -338,10 +381,22 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
 
 def test_qm_register_flux_pulse(qmplatform):
     qubit = 2
+<<<<<<< HEAD
     platform = qmplatform
     controller = platform.instruments["qm"]
     pulse = Pulse.flux(
         0, 30, 0.005, Rectangular(), platform.qubits[qubit].flux.name, qubit
+=======
+    platform = create_platform("qm")
+    opx = platform.instruments["qmopx"]
+    pulse = Pulse.flux(
+        0,
+        30,
+        0.005,
+        Rectangular(),
+        channel=platform.qubits[qubit].flux.name,
+        qubit=qubit,
+>>>>>>> 552fc49f (Fix QM tests)
     )
     target_pulse = {
         "operation": "control",
@@ -405,10 +460,17 @@ def test_qm_register_pulses_with_different_frequencies(qmplatform):
 def test_qm_register_baked_pulse(qmplatform, duration):
     platform = qmplatform
     qubit = platform.qubits[3]
+<<<<<<< HEAD
     controller = platform.instruments["qm"]
     controller.config.register_flux_element(qubit)
     pulse = Pulse.flux(
         3, duration, 0.05, Rectangular(), qubit.flux.name, qubit=qubit.name
+=======
+    opx = platform.instruments["qmopx"]
+    opx.config.register_flux_element(qubit)
+    pulse = Pulse.flux(
+        3, duration, 0.05, Rectangular(), channel=qubit.flux.name, qubit=qubit.name
+>>>>>>> 552fc49f (Fix QM tests)
     )
     qmpulse = BakedPulse(pulse)
     config = controller.config
