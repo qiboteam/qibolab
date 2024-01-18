@@ -18,7 +18,7 @@ from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
-class ClusterQRM_RF(ClusterModule):
+class QrmRf(ClusterModule):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitrary wave generator, a digitizer,
@@ -132,9 +132,9 @@ class ClusterQRM_RF(ClusterModule):
         - cluster: The Cluster object to which the QRM-RF module is connected.
 
         Example:
-        To create a ClusterQRM_RF instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        To create a QrmRf instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
         >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
-        >>> qrm_module = ClusterQRM_RF(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
+        >>> qrm_module = QrmRf(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
 
         super().__init__(name, address)
