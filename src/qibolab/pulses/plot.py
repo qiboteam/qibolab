@@ -74,7 +74,7 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
 
     ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
     start = float(pulse_.start)
-    finish = float(pulse._finish) if pulse._finish is not None else 0.0
+    finish = float(pulse_.finish) if pulse_.finish is not None else 0.0
     ax1.axis((start, finish, -1.0, 1.0))
     ax1.legend()
 
