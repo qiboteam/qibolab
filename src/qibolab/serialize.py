@@ -61,12 +61,14 @@ def load_qubits(
         }
 
         for c, pair in runcard["topology"].items():
-            pair = tuple(sorted(pair))
-            pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], couplers[c])
+            q0, q1 = pair
+            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
+                qubits[q0], qubits[q1], couplers[c]
+            )
     else:
         for pair in runcard["topology"]:
-            pair = tuple(sorted(pair))
-            pairs[pair] = QubitPair(qubits[pair[0]], qubits[pair[1]], None)
+            q0, q1 = pair
+            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], None)
 
     qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
 
@@ -90,10 +92,15 @@ def register_gates(
         qubits[q].native_gates = SingleQubitNatives.from_dict(qubits[q], gates)
     for c, gates in native_gates.get("coupler", {}).items():
         couplers[c].native_pulse = CouplerNatives.from_dict(couplers[c], gates)
+
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
-        pair = tuple(sorted(int(q) if q.isdigit() else q for q in pair.split("-")))
-        pairs[pair].native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
+        q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
+        native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
+        coupler = pairs[(q0, q1)].coupler
+        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], coupler, native_gates)
+        if native_gates.symmetric:
+            pairs[(q1, q0)] = pairs[(q0, q1)]
 
     return qubits, pairs, couplers
 
@@ -107,12 +114,12 @@ def load_instrument_settings(
     return instruments
 
 
-def dump_qubits(
+def dump_native_gates(
     qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> dict:
-    """Dump qubit and pair objects to a dictionary following the runcard
-    format."""
-
+    """Dump native gates section to dictionary following the runcard format,
+    using qubit and pair objects."""
+    # single-qubit native gates
     native_gates = {
         "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}
     }
@@ -120,14 +127,21 @@ def dump_qubits(
         native_gates["coupler"] = {
             c: coupler.native_pulse.raw for c, coupler in couplers.items()
         }
-    native_gates["two_qubit"] = {}
 
-    # add two-qubit native gates
-    for p, pair in pairs.items():
+    # two-qubit native gates
+    native_gates["two_qubit"] = {}
+    for pair in pairs.values():
         natives = pair.native_gates.raw
         if len(natives) > 0:
-            native_gates["two_qubit"][f"{p[0]}-{p[1]}"] = natives
-    # add qubit characterization section
+            pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
+            native_gates["two_qubit"][pair_name] = natives
+
+    return native_gates
+
+
+def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict:
+    """Dump qubit characterization section to dictionary following the runcard
+    format, using qubit and pair objects."""
     characterization = {
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
@@ -141,11 +155,7 @@ def dump_qubits(
         characterization["coupler"] = {
             c.name: {"sweetspot": c.sweetspot} for c in couplers.values()
         }
-
-    return {
-        "native_gates": native_gates,
-        "characterization": characterization,
-    }
+    return characterization
 
 
 def dump_instruments(instruments: InstrumentMap) -> dict:
@@ -177,18 +187,24 @@ def dump_runcard(platform: Platform, path: Path):
         "nqubits": platform.nqubits,
         "settings": asdict(platform.settings),
         "qubits": list(platform.qubits),
-        "topology": [list(pair) for pair in platform.pairs],
+        "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
     }
 
     if platform.couplers:
         settings["couplers"] = list(platform.couplers)
         settings["topology"] = {
-            coupler: list(pair)
-            for pair, coupler in zip(platform.pairs, platform.couplers)
+            platform.pairs[pair].coupler.name: list(pair)
+            for pair in platform.ordered_pairs
         }
 
-    settings.update(dump_qubits(platform.qubits, platform.pairs, platform.couplers))
+    settings["native_gates"] = dump_native_gates(
+        platform.qubits, platform.pairs, platform.couplers
+    )
+    settings["characterization"] = dump_characterization(
+        platform.qubits, platform.couplers
+    )
+
     path.write_text(
         yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None)
     )

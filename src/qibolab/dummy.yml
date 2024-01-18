@@ -107,6 +107,11 @@ native_gates:
             - {type: virtual_z, phase: 0.0, qubit: 2}
             - {duration: 30, amplitude: 0.05, shape: 'GaussianSquare(5, 0.75)', coupler: 3, relative_start: 0,
                 type: coupler}
+            CNOT:
+            - {duration: 40, amplitude: 0.3, shape: 'Drag(5, -0.02)', frequency: 4150000000.0,
+                relative_start: 0, phase: 0, type: qd, qubit: 2}
+            - {type: virtual_z, phase: 0.0, qubit: 1}
+            - {type: virtual_z, phase: 0.0, qubit: 2}
         2-4:
             CZ:
             - {duration: 30, amplitude: 0.05, shape: 'GaussianSquare(5, 0.75)', qubit: 2, relative_start: 0,

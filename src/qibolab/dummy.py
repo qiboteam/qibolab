@@ -21,6 +21,11 @@ def remove_couplers(runcard):
     return runcard
 
 
+def load_dummy_runcard():
+    """Loads the runcard YAML of the dummy platform."""
+    return load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
+
+
 def create_dummy(with_couplers: bool = True):
     """Create a dummy platform using the dummy instrument.
 
@@ -35,7 +40,7 @@ def create_dummy(with_couplers: bool = True):
     twpa_pump.frequency = 1e9
     twpa_pump.power = 10
 
-    runcard = load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
+    runcard = load_dummy_runcard()
     if not with_couplers:
         runcard = remove_couplers(runcard)
 
