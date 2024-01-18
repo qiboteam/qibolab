@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import QubitPair
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
@@ -155,7 +155,7 @@ def test_dummy_single_sweep_coupler(
     platform = create_platform("dummy_couplers")
     sequence = PulseSequence()
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
-    coupler_pulse = CouplerFluxPulse(
+    coupler_pulse = Pulse.flux(
         start=0,
         duration=40,
         amplitude=0.5,
@@ -163,6 +163,7 @@ def test_dummy_single_sweep_coupler(
         channel="flux_coupler-0",
         qubit=0,
     )
+    coupler_pulse.type = PulseType.COUPLERFLUX
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
