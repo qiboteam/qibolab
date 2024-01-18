@@ -97,13 +97,11 @@ class QibolabBackend(NumpyBackend):
 
         if not self.platform.is_connected:
             self.platform.connect()
-            self.platform.setup()
-        self.platform.start()
+
         readout = self.platform.execute_pulse_sequence(
             sequence,
             ExecutionParameters(nshots=nshots),
         )
-        self.platform.stop()
         result = MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
         self.assign_measurements(measurement_map, readout)
         return result
@@ -145,13 +143,11 @@ class QibolabBackend(NumpyBackend):
 
         if not self.platform.is_connected:
             self.platform.connect()
-            self.platform.setup()
-        self.platform.start()
+
         readout = self.platform.execute_pulse_sequences(
             sequences,
             ExecutionParameters(nshots=nshots),
         )
-        self.platform.stop()
 
         results = []
         readout = {k: deque(v) for k, v in readout.items()}

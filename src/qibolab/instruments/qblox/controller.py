@@ -9,6 +9,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
 from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
 from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -38,6 +39,10 @@ class QbloxController(Controller):
         self._reference_clock = "internal" if internal_reference_clock else "external"
         signal.signal(signal.SIGTERM, self._termination_handler)
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         """Connects to the modules."""
 
@@ -59,43 +64,31 @@ class QbloxController(Controller):
             raise ConnectionError(f"Unable to connect:\n{str(exception)}\n")
             # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
 
+    def disconnect(self):
+        """Disconnects all modules."""
+        if self.is_connected:
+            for module in self.modules.values():
+                module.disconnect()
+            self.cluster.close()
+            self.is_connected = False
+
     def setup(self):
         """Empty method to comply with Instrument interface.
-        Setup of the modules happens in the create method:
 
-        >>> instruments = load_instrument_settings(runcard, instruments)
+        Setup of the modules happens in the platform ``create`` method
+        using :meth:`qibolab.serialize.load_instrument_settings`.
         """
-
-    def start(self):
-        """Starts all modules."""
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].start()
-
-    def stop(self):
-        """Stops all modules."""
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].stop()
 
     def _termination_handler(self, signum, frame):
         """Calls all modules to stop if the program receives a termination
         signal."""
 
-        log.warning("Termination signal received, stopping modules.")
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].stop()
-        log.warning("QbloxController: all modules stopped.")
-        exit(0)
-
-    def disconnect(self):
-        """Disconnects all modules."""
+        log.warning("Termination signal received, disconnecting modules.")
         if self.is_connected:
             for name in self.modules:
                 self.modules[name].disconnect()
-            self.cluster.close()
-            self.is_connected = False
+        log.warning("QbloxController: all modules are disconnected.")
+        exit(0)
 
     def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.
@@ -170,11 +163,6 @@ class QbloxController(Controller):
             module_channels = self._set_module_channel_map(module, qubits)
             module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
-            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF)):
-                for pulse in module_pulses[name]:
-                    pulse_channel = module.channel_map[pulse.channel]
-                    pulse._if = int(pulse.frequency - pulse_channel.lo_frequency)
-
             #  ask each module to generate waveforms & program and upload them to the device
             module.process_pulse_sequence(
                 qubits,
@@ -229,9 +217,6 @@ class QbloxController(Controller):
             acquisition = options.results_type(np.squeeze(_res))
             data[ro_pulse.serial] = data[ro_pulse.qubit] = acquisition
 
-            # data[ro_pulse.serial] = ExecutionResults.from_components(*acquisition_results[ro_pulse.serial])
-            # data[ro_pulse.serial] = IntegratedResults(acquisition_results[ro_pulse.serial])
-            # data[ro_pulse.qubit] = copy.copy(data[ro_pulse.serial])
         return data
 
     def play(self, qubits, couplers, sequence, options):
