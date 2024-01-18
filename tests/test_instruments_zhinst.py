@@ -680,7 +680,7 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     parameter_range_1 = (
         np.random.rand(swept_points)
-        if parameter1 is Parameter.amplitude or parameter1 is Parameter.bias
+        if parameter1 in [Parameter.amplitude, Parameter.bias]
         else np.random.randint(swept_points, size=swept_points)
     )
 
