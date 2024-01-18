@@ -37,7 +37,7 @@ def test_plot_functions():
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
     p6 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.DRIVE, 2)
     ps = PulseSequence([p0, p1, p2, p3, p4, p5, p6])
-    wf = p0.modulated_waveform_i()
+    wf = p0.modulated_waveform_i(0)
 
     plot_file = HERE / "test_plot.png"
 
@@ -619,8 +619,8 @@ def test_pulseshape_rectangular():
     assert repr(pulse.shape) == "Rectangular()"
     assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
     assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_i(_if), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_q(_if), Waveform)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -665,8 +665,8 @@ def test_pulseshape_gaussian():
     assert repr(pulse.shape) == "Gaussian(5)"
     assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
     assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_i(_if), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_q(_if), Waveform)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -717,8 +717,8 @@ def test_pulseshape_drag():
     assert repr(pulse.shape) == "Drag(5, 0.2)"
     assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
     assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q(), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_i(_if), Waveform)
+    assert isinstance(pulse.shape.modulated_waveform_q(_if), Waveform)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / 1 * sampling_rate)
