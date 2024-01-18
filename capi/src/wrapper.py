@@ -1,6 +1,6 @@
 # This file is part of
 from cqibolab import ffi
-import qibolab import execute_qasm as py_execute_qasm
+from qibolab import execute_qasm as py_execute_qasm
 import numpy as np
 
 

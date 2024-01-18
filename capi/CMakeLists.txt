@@ -8,8 +8,9 @@ project(libqibolab)
 
 set(VERSION "\"0.0.1\"")
 
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs   3 REQUIRED)
+#find_package(PythonInterp REQUIRED)
+#find_package(PythonLibs   REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development)
 
 # running the cffi builder
 if (NOT EXISTS ${PROJECT_SOURCE_DIR/src/cqibolab.cc})
