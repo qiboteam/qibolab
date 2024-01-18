@@ -63,7 +63,7 @@ def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshot
     Args:
         circuit (str): the QASM circuit.
         platform (str): the platform where to execute the circuit.
-        runcard (): the runcard used for the platform.
+        runcard (pathlib.Path): the path to the runcard used for the platform.
         initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
         nshots (int): Number of shots to sample from the experiment.
