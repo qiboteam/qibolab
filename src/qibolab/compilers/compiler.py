@@ -15,7 +15,7 @@ from qibolab.compilers.default import (
     u3_rule,
     z_rule,
 )
-from qibolab.pulses import PulseSequence, ReadoutPulse
+from qibolab.pulses import PulseSequence, PulseType
 
 
 @dataclass
@@ -119,7 +119,7 @@ class Compiler:
         # shift start time and phase according to the global sequence
         for pulse in gate_sequence:
             pulse.start += start
-            if not isinstance(pulse, ReadoutPulse):
+            if pulse is not PulseType.READOUT:
                 pulse.relative_phase += virtual_z_phases[pulse.qubit]
             sequence.append(pulse)
 
