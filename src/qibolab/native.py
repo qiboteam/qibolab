@@ -82,16 +82,16 @@ class NativePulse:
                 qubit=self.qubit.name,
             )
 
-        pulse_cls = PulseConstructor[self.pulse_type.name].value
         channel = getattr(self.qubit, self.pulse_type.name.lower()).name
-        return pulse_cls(
+        return Pulse(
             start + self.relative_start,
             self.duration,
             self.amplitude,
             self.frequency,
             relative_phase,
             self.shape,
-            channel,
+            type=self.pulse_type,
+            channel=channel,
             qubit=self.qubit.name,
         )
 
