@@ -1,5 +1,5 @@
 """Qblox Cluster QRM-RF driver."""
-
+import copy
 import json
 import time
 
@@ -434,7 +434,7 @@ class ClusterQRM_RF(ClusterModule):
                 self._sequencers[port].append(sequencer)
 
                 # make a temporary copy of the pulses to be processed
-                pulses_to_be_processed = non_overlapping_pulses.shallow_copy()
+                pulses_to_be_processed = copy.copy(non_overlapping_pulses)
                 while not pulses_to_be_processed.is_empty:
                     pulse: Pulse = pulses_to_be_processed[0]
                     # attempt to save the waveforms to the sequencer waveforms buffer
