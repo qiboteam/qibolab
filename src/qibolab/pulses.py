@@ -1,4 +1,5 @@
 """Pulse and PulseSequence classes."""
+import copy
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
@@ -876,7 +877,7 @@ class Pulse:
             raise TypeError(f"Expected int; got {type(n).__name__}")
         if n < 0:
             raise TypeError(f"argument n should be >=0, got {n}")
-        return PulseSequence(*([self.copy()] * n))
+        return PulseSequence(*([copy.deepcopy(self)] * n))
 
     def __rmul__(self, n):
         return self.__mul__(n)
