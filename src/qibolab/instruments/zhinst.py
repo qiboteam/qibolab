@@ -1154,7 +1154,7 @@ class Zurich(Controller):
         """Rearranges sweepers from qibocal based on device hardware
         limitations.
 
-        Frequency sweepers must be applied before bias or amplitude sweepers.
+        Frequency sweepers must be applied before bias or amplitude sweepers (on the outer loop).
 
         Args:
             sweepers (list[Sweeper]): list of sweepers used in the experiment.
