@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
@@ -48,7 +50,7 @@ class WaveformsBuffer:
         Raises:
             NotEnoughMemory: If the memory needed to store the waveforms in more than the memory avalible.
         """
-        pulse_copy = pulse.copy()
+        pulse_copy = copy.deepcopy(pulse)
         for sweeper in sweepers:
             if sweeper.pulses and sweeper.parameter == Parameter.amplitude:
                 if pulse in sweeper.pulses:
@@ -122,7 +124,7 @@ class WaveformsBuffer:
         """
         # In order to generate waveforms for each duration value, the pulse will need to be modified.
         # To avoid any conflicts, make a copy of the pulse first.
-        pulse_copy = pulse.copy()
+        pulse_copy = copy.deepcopy(pulse)
 
         # there may be other waveforms stored already, set first index as the next available
         first_idx = len(self.unique_waveforms)
