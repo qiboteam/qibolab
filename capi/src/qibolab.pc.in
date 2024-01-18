@@ -9,5 +9,5 @@ Name: qibolab
 Description: The Qibolab C-API library
 Version: @VERSION@
 Cflags: -I@includedir@ @extraincludirs@
-Libs: -L@libdir@ -qibolab @pythonlibs@
+Libs: -L@libdir@ -lqibolab @pythonlibs@
 
