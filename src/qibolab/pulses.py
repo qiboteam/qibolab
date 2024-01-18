@@ -140,36 +140,32 @@ class PulseShape(ABC):
             self.envelope_waveform_q(sampling_rate),
         )
 
-    def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+    def modulated_waveform_i(self, _if: int, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The waveform of the i component of the pulse, modulated with its
         frequency."""
 
         return self.modulated_waveforms(sampling_rate)[0]
 
-    def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+    def modulated_waveform_q(self, _if: int, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The waveform of the q component of the pulse, modulated with its
         frequency."""
 
         return self.modulated_waveforms(sampling_rate)[1]
 
-    def modulated_waveforms(self, sampling_rate=SAMPLING_RATE):
+    def modulated_waveforms(self, _if: int, sampling_rate=SAMPLING_RATE):
         """A tuple with the i and q waveforms of the pulse, modulated with its
         frequency."""
 
         pulse = self.pulse
-        if abs(pulse._if) * 2 > sampling_rate:
+        if abs(_if) * 2 > sampling_rate:
             log.info(
                 f"WARNING: The frequency of pulse {pulse.id} is higher than the nyqusit frequency ({int(sampling_rate // 2)}) for the device sampling rate: {int(sampling_rate)}"
             )
         num_samples = int(np.rint(pulse.duration * sampling_rate))
         time = np.arange(num_samples) / sampling_rate
         global_phase = pulse.global_phase
-        cosalpha = np.cos(
-            2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase
-        )
-        sinalpha = np.sin(
-            2 * np.pi * pulse._if * time + global_phase + pulse.relative_phase
-        )
+        cosalpha = np.cos(2 * np.pi * _if * time + global_phase + pulse.relative_phase)
+        sinalpha = np.sin(2 * np.pi * _if * time + global_phase + pulse.relative_phase)
 
         mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(
             2
@@ -753,7 +749,6 @@ class Pulse:
     """Pulse type, as an element of PulseType enumeration."""
     qubit: int = 0
     """Qubit or coupler addressed by the pulse."""
-    _if: int = 0
 
     def __post_init__(self):
         if isinstance(self.type, str):
