@@ -10,7 +10,7 @@ from qibo.config import log, raise_error
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import PulseSequence, ReadoutPulse
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
@@ -47,7 +47,7 @@ def unroll_sequences(
             new_pulse = pulse.copy()
             new_pulse.start += start
             total_sequence.append(new_pulse)
-            if isinstance(pulse, ReadoutPulse):
+            if pulse.type is PulseType.READOUT:
                 readout_map[pulse.id].append(new_pulse.id)
         start = total_sequence.finish + relaxation_time
     return total_sequence, readout_map
