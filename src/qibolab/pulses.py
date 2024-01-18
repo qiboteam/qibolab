@@ -1,6 +1,4 @@
 """Pulse and PulseSequence classes."""
-
-import copy
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
@@ -778,6 +776,10 @@ class Pulse:
         This phase is calculated from the pulse start time and frequency
         as `2 * pi * frequency * start`.
         """
+        if self.type is PulseType.READOUT:
+            # readout pulses should have zero global phase so that we can
+            # calculate probabilities in the i-q plane
+            return 0
 
         # pulse start, duration and finish are in ns
         return 2 * np.pi * self.frequency * self.start / 1e9
@@ -1051,141 +1053,6 @@ class Pulse:
         else:
             plt.show()
         plt.close()
-
-
-class ReadoutPulse(Pulse):
-    """Describes a readout pulse.
-
-    See
-    :class: `qibolab.pulses.Pulse` for argument desciption.
-    """
-
-    def __init__(
-        self,
-        start,
-        duration,
-        amplitude,
-        frequency,
-        relative_phase,
-        shape,
-        channel=0,
-        qubit=0,
-    ):
-        super().__init__(
-            start,
-            duration,
-            amplitude,
-            frequency,
-            relative_phase,
-            shape,
-            channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-
-    @property
-    def global_phase(self):
-        # readout pulses should have zero global phase so that we can
-        # calculate probabilities in the i-q plane
-        return 0
-
-    def copy(self):  # -> Pulse|ReadoutPulse|DrivePulse|FluxPulse:
-        """Returns a new Pulse object with the same attributes."""
-
-        return ReadoutPulse(
-            self.start,
-            self.duration,
-            self.amplitude,
-            self.frequency,
-            self.relative_phase,
-            copy.deepcopy(self.shape),  # self.shape,
-            self.channel,
-            self.qubit,
-        )
-
-
-class DrivePulse(Pulse):
-    """Describes a qubit drive pulse.
-
-    See
-    :class: `qibolab.pulses.Pulse` for argument desciption.
-    """
-
-    def __init__(
-        self,
-        start,
-        duration,
-        amplitude,
-        frequency,
-        relative_phase,
-        shape,
-        channel=0,
-        qubit=0,
-    ):
-        super().__init__(
-            start,
-            duration,
-            amplitude,
-            frequency,
-            relative_phase,
-            shape,
-            channel,
-            type=PulseType.DRIVE,
-            qubit=qubit,
-        )
-
-
-class FluxPulse(Pulse):
-    """Describes a qubit flux pulse.
-
-    Flux pulses have frequency and relative_phase equal to 0. Their i
-    and q components are equal. See
-    :class: `qibolab.pulses.Pulse` for argument desciption.
-    """
-
-    PULSE_TYPE = PulseType.FLUX
-
-    def __init__(self, start, duration, amplitude, shape, channel=0, qubit=0):
-        super().__init__(
-            start,
-            duration,
-            amplitude,
-            0,
-            0,
-            shape,
-            channel,
-            type=self.PULSE_TYPE,
-            qubit=qubit,
-        )
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """Flux pulses only have i component."""
-        return self.shape.envelope_waveform_i(sampling_rate)
-
-    def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        return self.shape.envelope_waveform_i(sampling_rate)
-
-    def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        return self.shape.envelope_waveform_i(sampling_rate)
-
-
-class CouplerFluxPulse(FluxPulse):
-    """Describes a coupler flux pulse.
-
-    See
-    :class: `qibolab.pulses.FluxPulse` for argument desciption.
-    """
-
-    PULSE_TYPE = PulseType.COUPLERFLUX
-
-
-class PulseConstructor(Enum):
-    """An enumeration to map each ``PulseType`` to the proper pulse
-    constructor."""
-
-    READOUT = ReadoutPulse
-    DRIVE = DrivePulse
-    FLUX = FluxPulse
 
 
 class PulseSequence(list):
