@@ -249,12 +249,6 @@ Pulses
 In Qibolab, an extensive API is available for working with pulses and pulse sequences, a fundamental aspect of quantum experiments.
 At the heart of this API is the :class:`qibolab.pulses.Pulse` object, which empowers users to define and customize pulses with specific parameters.
 
-The API provides specialized subclasses tailored to the main types of pulses typically used in quantum experiments:
-
-- Readout Pulses (:class:`qibolab.pulses.ReadoutPulse`)
-- Drive Pulses (:class:`qibolab.pulses.DrivePulse`)
-- Flux Pulses (:class:`qibolab.pulses.FluxPulse`)
-
 Each pulse is associated with a channel and a qubit.
 Additionally, pulses are defined by a shape, represented by a subclass of :class:`qibolab.pulses.PulseShape`.
 Qibolab offers a range of pre-defined pulse shapes:
@@ -287,13 +281,13 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
     )
 
 In this way, we defined a rectangular drive pulse using the generic Pulse object.
-Alternatively, you can achieve the same result using the dedicated :class:`qibolab.pulses.DrivePulse` object:
+Alternatively, you can achieve the same result using the dedicated :class:`qibolab.pulses.Pulse` object:
 
 .. testcode:: python
 
-    from qibolab.pulses import DrivePulse, Rectangular
+    from qibolab.pulses import Pulse, Rectangular
 
-    pulse = DrivePulse(
+    pulse = Pulse(
         start=0,  # timing, in all qibolab, is expressed in ns
         duration=40,
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
@@ -314,7 +308,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
 
     sequence = PulseSequence()
 
-    pulse1 = DrivePulse(
+    pulse1 = Pulse(
         start=0,  # timing, in all qibolab, is expressed in ns
         duration=40,
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
@@ -324,7 +318,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         channel="channel",
         qubit=0,
     )
-    pulse2 = DrivePulse(
+    pulse2 = Pulse(
         start=0,  # timing, in all qibolab, is expressed in ns
         duration=40,
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
@@ -334,7 +328,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         channel="channel",
         qubit=0,
     )
-    pulse3 = DrivePulse(
+    pulse3 = Pulse(
         start=0,  # timing, in all qibolab, is expressed in ns
         duration=40,
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
@@ -344,7 +338,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         channel="channel",
         qubit=0,
     )
-    pulse4 = DrivePulse(
+    pulse4 = Pulse(
         start=0,  # timing, in all qibolab, is expressed in ns
         duration=40,
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
@@ -392,7 +386,7 @@ Typical experiments may include both pre-defined pulses and new ones:
     sequence = PulseSequence()
     sequence.append(platform.create_RX_pulse(0))
     sequence.append(
-        DrivePulse(
+        Pulse(
             start=0,
             duration=10,
             amplitude=0.5,
