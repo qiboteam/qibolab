@@ -308,8 +308,8 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
             "length": pulse.duration,
             "digital_marker": "ON",
             "waveforms": {
-                "I": hash(pulse.envelope_waveform_i()),
-                "Q": hash(pulse.envelope_waveform_q()),
+                "I": hash(pulse.envelope_waveform_i().tobytes()),
+                "Q": hash(pulse.envelope_waveform_q().tobytes()),
             },
         }
 
