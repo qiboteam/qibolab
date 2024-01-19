@@ -19,7 +19,6 @@ from qibolab.pulses import (
     PulseType,
     Rectangular,
     ShapeInitError,
-    Waveform,
     eCap,
     plot,
 )
@@ -237,8 +236,8 @@ def test_is_equal_ignoring_start():
 )
 def test_pulseshape_sampling_rate(shape):
     pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
-    assert len(pulse.envelope_waveform_i(sampling_rate=1).data) == 40
-    assert len(pulse.envelope_waveform_i(sampling_rate=100).data) == 4000
+    assert len(pulse.envelope_waveform_i(sampling_rate=1)) == 40
+    assert len(pulse.envelope_waveform_i(sampling_rate=100)) == 4000
 
 
 def testhape_eval():
@@ -297,7 +296,7 @@ def test_raise_shapeiniterror():
 def test_pulseshape_drag_shape():
     pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
     # envelope i & envelope q should cross nearly at 0 and at 2
-    waveform = pulse.envelope_waveform_i(sampling_rate=10).data
+    waveform = pulse.envelope_waveform_i(sampling_rate=10)
     target_waveform = np.array(
         [
             0.63683161,
@@ -567,15 +566,6 @@ def test_pulse_pulse_order():
     assert sortseq(ps1) == sortseq(ps2)
 
 
-def test_waveform():
-    wf1 = Waveform(np.ones(100))
-    wf2 = Waveform(np.zeros(100))
-    wf3 = Waveform(np.ones(100))
-    assert wf1 != wf2
-    assert wf1 == wf3
-    np.testing.assert_allclose(wf1.data, wf3.data)
-
-
 def modulate(
     i: np.ndarray,
     q: np.ndarray,
@@ -612,10 +602,6 @@ def test_pulseshape_rectangular():
     assert isinstance(pulse.shape, Rectangular)
     assert pulse.shape.name == "Rectangular"
     assert repr(pulse.shape) == "Rectangular()"
-    assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
-    assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i(_if), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q(_if), Waveform)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -630,13 +616,13 @@ def test_pulseshape_rectangular():
         i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
     )
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate).data, mod_i
+        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
     )
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate).data, mod_q
+        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
     )
 
 
@@ -658,10 +644,6 @@ def test_pulseshape_gaussian():
     assert pulse.shape.name == "Gaussian"
     assert pulse.shape.rel_sigma == 5
     assert repr(pulse.shape) == "Gaussian(5)"
-    assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
-    assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i(_if), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q(_if), Waveform)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -681,13 +663,13 @@ def test_pulseshape_gaussian():
         i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
     )
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate).data, mod_i
+        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
     )
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate).data, mod_q
+        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
     )
 
 
@@ -710,10 +692,6 @@ def test_pulseshape_drag():
     assert pulse.shape.rel_sigma == 5
     assert pulse.shape.beta == 0.2
     assert repr(pulse.shape) == "Drag(5, 0.2)"
-    assert isinstance(pulse.shape.envelope_waveform_i(), Waveform)
-    assert isinstance(pulse.shape.envelope_waveform_q(), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_i(_if), Waveform)
-    assert isinstance(pulse.shape.modulated_waveform_q(_if), Waveform)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / 1 * sampling_rate)
@@ -738,13 +716,13 @@ def test_pulseshape_drag():
         i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
     )
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate).data, i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate).data, q)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate).data, mod_i
+        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
     )
     np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate).data, mod_q
+        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
     )
 
 
@@ -912,9 +890,6 @@ def test_envelope_waveform_i_q():
 
     custom_shape_pulse.pulse = pulse
     custom_shape_pulse_old_behaviour.pulse = pulse
-    assert isinstance(custom_shape_pulse.envelope_waveform_i(), Waveform)
-    assert isinstance(custom_shape_pulse.envelope_waveform_q(), Waveform)
-    assert isinstance(custom_shape_pulse_old_behaviour.envelope_waveform_q(), Waveform)
     pulse.duration = 2000
     with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
