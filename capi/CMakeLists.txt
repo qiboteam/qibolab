@@ -18,6 +18,7 @@ endif()
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(src)
 add_library(qibolab SHARED ${PROJECT_SOURCE_DIR}/src/cqibolab.c)
+target_link_libraries(qibolab ${Python3_LIBRARIES})
 
 # pkg-config
 set(prefix ${CMAKE_INSTALL_PREFIX})
