@@ -336,7 +336,7 @@ class QMConfig:
             if serial not in self.waveforms:
                 self.waveforms[serial] = {
                     "type": "arbitrary",
-                    "samples": waveform.data.tolist(),
+                    "samples": waveform.tolist(),
                 }
         return serial
 
