@@ -25,13 +25,13 @@ jobs:
         run: |
           python -m venv env
       - name: Build & install library
-        working-directory: ./capi
+        working-directory: capi
         run: |
           cmake -S . -B build  -DCMAKE_INSTALL_PREFIX=$(realpath ../env)
           cmake --build build
           cmake --install build
       - name: Build & run example
-        working-directory: ./capi/example
+        working-directory: capi/examples
         run: |
           . ../../env/bin/activate
           export PKG_CONFIG_PATH=${VIRTUAL_ENV}/lib/pkgconfig/:${PKG_CONFIG_PATH}:
