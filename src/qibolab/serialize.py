@@ -152,11 +152,9 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
     }
 
     kernels = Kernels()
-    for q in qubits:
-        qubit = characterization["single_qubit"][q]
-        if qubit["kernel"] is not None:
-            kernel = qubit.pop("kernel")
-            kernels[q] = kernel
+    for qubit in qubits.values():
+        if qubit.kernel is not None:
+            kernels[qubit.name] = qubit.kernel
 
     if couplers:
         characterization["coupler"] = {
@@ -195,7 +193,10 @@ def dump_runcard(platform: Platform, path: Path):
         if qubit.kernel is not None:
             kernels[qubit.name] = qubit.kernel
             qubit.kernel = None
-    Kernels(kernels).dump(Path(__file__).parent / "dummy" / KERNELS_FILE)
+    name = platform.name
+    if platform.name == "dummy_couplers":
+        name = "dummy"
+    Kernels(kernels).dump(Path(__file__).parent / name / KERNELS_FILE)
 
     settings = {
         "nqubits": platform.nqubits,

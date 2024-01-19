@@ -15,7 +15,7 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "_flux")
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "kernels", "_flux")
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
