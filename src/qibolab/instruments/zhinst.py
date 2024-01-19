@@ -106,18 +106,18 @@ def select_pulse(pulse, pulse_type):
                 zero_boundaries=False,
             )
 
-    if np.all(pulse.envelope_waveform_q(SAMPLING_RATE).data == 0):
+    if np.all(pulse.envelope_waveform_q(SAMPLING_RATE) == 0):
         return sampled_pulse_real(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
-            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data,
+            samples=pulse.envelope_waveform_i(SAMPLING_RATE),
             can_compress=True,
         )
     else:
         # Test this when we have pulses that use it
         return sampled_pulse_complex(
             uid=(f"{pulse_type}_{pulse.qubit}_"),
-            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data
-            + (1j * pulse.envelope_waveform_q(SAMPLING_RATE).data),
+            samples=pulse.envelope_waveform_i(SAMPLING_RATE)
+            + (1j * pulse.envelope_waveform_q(SAMPLING_RATE)),
             can_compress=True,
         )
 
