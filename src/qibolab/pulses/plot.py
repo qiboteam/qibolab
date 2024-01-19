@@ -4,8 +4,7 @@ import numpy as np
 
 from .pulse import Pulse
 from .sequence import PulseSequence
-from .shape import SAMPLING_RATE
-from .waveform import Waveform
+from .shape import SAMPLING_RATE, Waveform
 
 
 def waveform(wf: Waveform, filename=None):
@@ -15,7 +14,7 @@ def waveform(wf: Waveform, filename=None):
         filename (str): a file path. If provided the plot is save to a file.
     """
     plt.figure(figsize=(14, 5), dpi=200)
-    plt.plot(wf.data, c="C0", linestyle="dashed")
+    plt.plot(wf, c="C0", linestyle="dashed")
     plt.xlabel("Sample Number")
     plt.ylabel("Amplitude")
     plt.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
