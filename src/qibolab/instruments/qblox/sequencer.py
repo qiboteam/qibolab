@@ -143,7 +143,7 @@ class WaveformsBuffer:
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration
                 padding = np.zeros(padded_duration - duration)
-                waveform.data = np.append(waveform.data, padding)
+                waveform = np.append(waveform, padding)
 
                 if self.available_memory >= memory_needed:
                     self.unique_waveforms.append(waveform)
@@ -168,8 +168,8 @@ class WaveformsBuffer:
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration * 2
                 padding = np.zeros(padded_duration - duration)
-                waveform_i.data = np.append(waveform_i.data, padding)
-                waveform_q.data = np.append(waveform_q.data, padding)
+                waveform_i = np.append(waveform_i, padding)
+                waveform_q = np.append(waveform_q, padding)
 
                 if self.available_memory >= memory_needed:
                     self.unique_waveforms.append(waveform_i)
