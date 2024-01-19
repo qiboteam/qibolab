@@ -609,7 +609,7 @@ class QrmRf(ClusterModule):
                     sequencer.waveforms_buffer.unique_waveforms
                 ):
                     sequencer.waveforms[waveform.serial] = {
-                        "data": waveform.data.tolist(),
+                        "data": waveform.tolist(),
                         "index": index,
                     }
 
