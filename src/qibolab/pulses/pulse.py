@@ -5,8 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from .shape import SAMPLING_RATE, PulseShape
-from .waveform import Waveform
+from .shape import SAMPLING_RATE, PulseShape, Waveform
 
 
 class PulseType(Enum):
@@ -121,9 +120,7 @@ class Pulse:
 
         return self.shape.envelope_waveform_q(sampling_rate)
 
-    def envelope_waveforms(
-        self, sampling_rate=SAMPLING_RATE
-    ):  #  -> tuple[Waveform, Waveform]:
+    def envelope_waveforms(self, sampling_rate=SAMPLING_RATE):
         """A tuple with the i and q envelope waveforms of the pulse."""
 
         return (
@@ -143,7 +140,7 @@ class Pulse:
 
         return self.shape.modulated_waveform_q(sampling_rate)
 
-    def modulated_waveforms(self, sampling_rate):  #  -> tuple[Waveform, Waveform]:
+    def modulated_waveforms(self, sampling_rate):
         """A tuple with the i and q waveforms of the pulse, modulated with its
         frequency."""
 
