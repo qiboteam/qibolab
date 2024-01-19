@@ -11,6 +11,6 @@ from .shape import (
     PulseShape,
     Rectangular,
     ShapeInitError,
+    Waveform,
     eCap,
 )
-from .waveform import Waveform
