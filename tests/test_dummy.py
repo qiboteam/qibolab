@@ -36,6 +36,21 @@ def test_dummy_execute_pulse_sequence(name, acquisition):
         assert result[0].magnitude.shape == (nshots * ro_pulse.duration,)
 
 
+def test_dummy_execute_flux_pulse():
+    platform = create_platform("dummy")
+    sequence = PulseSequence()
+
+    pulse = platform.create_qubit_flux_pulse(qubit=0, start=0, duration=50)
+    sequence.add(pulse)
+
+    options = ExecutionParameters(nshots=None)
+    _ = platform.execute_pulse_sequence(sequence, options)
+
+    test_pulse = "FluxPulse(0, 50, 1, Rectangular(), flux-0, 0)"
+
+    assert test_pulse == pulse.serial
+
+
 def test_dummy_execute_coupler_pulse():
     platform = create_platform("dummy_couplers")
     sequence = PulseSequence()
