@@ -15,15 +15,17 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - name: Prepare virtual environment
+        run: |
+          python -m venv env
       - name: Install dependencies
         run: |
           # build dependencies
           pip install cffi
           # runtime dependencies
+          . env/bin/activate
+          pip install cffi  # also a runtime dep
           pip install .
-      - name: Prepare virtual environment
-        run: |
-          python -m venv env
       - name: Build & install library
         working-directory: capi
         run: |
