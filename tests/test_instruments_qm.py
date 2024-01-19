@@ -285,8 +285,8 @@ def test_qmopx_register_pulse(dummy_qrc, pulse_type, qubit):
             "operation": "control",
             "length": pulse.duration,
             "waveforms": {
-                "I": hash(pulse.envelope_waveform_i()),
-                "Q": hash(pulse.envelope_waveform_q()),
+                "I": hash(pulse.envelope_waveform_i().tobytes()),
+                "Q": hash(pulse.envelope_waveform_q().tobytes()),
             },
         }
 
