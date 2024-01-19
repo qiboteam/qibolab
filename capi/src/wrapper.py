@@ -11,4 +11,4 @@ def execute_qasm(circuit, platform, nshots):
     py_circuit = ffi.string(circuit).decode("utf-8")
     py_platform = ffi.string(platform).decode("utf-8")
     qasm_res = py_execute_qasm(circuit=py_circuit, platform=py_platform, nshots=nshots)
-    return ffi.cast("int*", ffi.from_buffer(qasm_res.samples().flatten()))
+    return ffi.cast("int*", ffi.from_buffer(qasm_res.samples().ravel()))
