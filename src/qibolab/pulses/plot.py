@@ -44,31 +44,31 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     ax1 = plt.subplot(gs[0])
     ax1.plot(
         time,
-        waveform_i.data,
+        waveform_i,
         label="envelope i",
         c="C0",
         linestyle="dashed",
     )
     ax1.plot(
         time,
-        waveform_q.data,
+        waveform_q,
         label="envelope q",
         c="C1",
         linestyle="dashed",
     )
     ax1.plot(
         time,
-        pulse_.shape.modulated_waveform_i(sampling_rate).data,
+        pulse_.shape.modulated_waveform_i(sampling_rate),
         label="modulated i",
         c="C0",
     )
     ax1.plot(
         time,
-        pulse_.shape.modulated_waveform_q(sampling_rate).data,
+        pulse_.shape.modulated_waveform_q(sampling_rate),
         label="modulated q",
         c="C1",
     )
-    ax1.plot(time, -waveform_i.data, c="silver", linestyle="dashed")
+    ax1.plot(time, -waveform_i, c="silver", linestyle="dashed")
     ax1.set_xlabel("Time [ns]")
     ax1.set_ylabel("Amplitude")
 
@@ -78,8 +78,8 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     ax1.axis((start, finish, -1.0, 1.0))
     ax1.legend()
 
-    modulated_i = pulse_.shape.modulated_waveform_i(sampling_rate).data
-    modulated_q = pulse_.shape.modulated_waveform_q(sampling_rate).data
+    modulated_i = pulse_.shape.modulated_waveform_i(sampling_rate)
+    modulated_q = pulse_.shape.modulated_waveform_q(sampling_rate)
     ax2 = plt.subplot(gs[1])
     ax2.plot(
         modulated_i,
@@ -88,8 +88,8 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
         c="C3",
     )
     ax2.plot(
-        waveform_i.data,
-        waveform_q.data,
+        waveform_i,
+        waveform_q,
         label="envelope",
         c="C2",
     )
@@ -158,22 +158,22 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
                     time = pulse.start + np.arange(num_samples) / sampling_rate
                     ax.plot(
                         time,
-                        pulse.shape.modulated_waveform_q(sampling_rate).data,
+                        pulse.shape.modulated_waveform_q(sampling_rate),
                         c="lightgrey",
                     )
                     ax.plot(
                         time,
-                        pulse.shape.modulated_waveform_i(sampling_rate).data,
+                        pulse.shape.modulated_waveform_i(sampling_rate),
                         c=f"C{str(n)}",
                     )
                     ax.plot(
                         time,
-                        pulse.shape.envelope_waveform_i(sampling_rate).data,
+                        pulse.shape.envelope_waveform_i(sampling_rate),
                         c=f"C{str(n)}",
                     )
                     ax.plot(
                         time,
-                        -pulse.shape.envelope_waveform_i(sampling_rate).data,
+                        -pulse.shape.envelope_waveform_i(sampling_rate),
                         c=f"C{str(n)}",
                     )
                     # TODO: if they overlap use different shades
