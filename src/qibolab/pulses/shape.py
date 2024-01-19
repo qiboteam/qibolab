@@ -100,8 +100,8 @@ class PulseShape(ABC):
         for n, t, ii, qq in zip(
             np.arange(num_samples),
             time,
-            envelope_waveform_i.data,
-            envelope_waveform_q.data,
+            envelope_waveform_i,
+            envelope_waveform_q,
         ):
             result.append(mod_matrix[:, :, n] @ np.array([ii, qq]))
         mod_signals = np.array(result)
@@ -430,7 +430,7 @@ class IIR(PulseShape):
             data = lfilter(
                 b=self.b,
                 a=self.a,
-                x=self.target.envelope_waveform_i(sampling_rate).data,
+                x=self.target.envelope_waveform_i(sampling_rate),
             )
             if not np.max(np.abs(data)) == 0:
                 data = data / np.max(np.abs(data))
@@ -449,7 +449,7 @@ class IIR(PulseShape):
             data = lfilter(
                 b=self.b,
                 a=self.a,
-                x=self.target.envelope_waveform_q(sampling_rate).data,
+                x=self.target.envelope_waveform_q(sampling_rate),
             )
             if not np.max(np.abs(data)) == 0:
                 data = data / np.max(np.abs(data))
