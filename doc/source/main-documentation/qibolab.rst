@@ -647,7 +647,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 
-.. _main_doc_transpiler:
+.. _main_doc_compiler:
 
 Transpiler and Compiler
 -----------------------
