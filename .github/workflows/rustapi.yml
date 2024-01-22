@@ -34,6 +34,6 @@ jobs:
       - name: Build & run example
         working-directory: crate
         run: |
-          export PYTHONPATH=$(realpath ../env/lib/python3.10/site-packages/):$PYTHONPATH
-          export PYTHONPATH=$(realpath ../src/):$PYTHONPATH
+          #export PYTHONPATH=$(realpath ../env/lib/python3.10/site-packages/):$PYTHONPATH
+          #export PYTHONPATH=$(realpath ../src/):$PYTHONPATH
           cargo run --example example
