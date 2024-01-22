@@ -1,5 +1,5 @@
-# Test Qibolab C API
-name: C API
+# Test Qibolab Rust API
+name: Rust API
 
 on:
   push:
