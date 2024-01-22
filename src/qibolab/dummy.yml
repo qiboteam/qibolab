@@ -136,10 +136,8 @@ characterization:
             drive_frequency: 4000000000.0
             anharmonicity: 0
             sweetspot: 0.0
-            flux_to_bias: 0.0
             asymmetry: 0.0
-            bare_resonator_frequency_sweetspot: 0.0
-            ssf_brf: 0.0
+            crosstalk_matrix: {0: 1}
             Ec: 0.0
             Ej: 0.0
             g: 0.0
@@ -165,10 +163,8 @@ characterization:
             drive_frequency: 4200000000.0
             anharmonicity: 0
             sweetspot: 0.0
-            flux_to_bias: 0.0
             asymmetry: 0.0
-            bare_resonator_frequency_sweetspot: 0.0
-            ssf_brf: 0.0
+            crosstalk_matrix: {1: 1}
             Ec: 0.0
             Ej: 0.0
             g: 0.0
@@ -194,10 +190,8 @@ characterization:
             drive_frequency: 4500000000.0
             anharmonicity: 0
             sweetspot: 0.0
-            flux_to_bias: 0.0
             asymmetry: 0.0
-            bare_resonator_frequency_sweetspot: 0.0
-            ssf_brf: 0.0
+            crosstalk_matrix: {2: 1}
             Ec: 0.0
             Ej: 0.0
             g: 0.0
@@ -223,10 +217,8 @@ characterization:
             drive_frequency: 4150000000.0
             anharmonicity: 0
             sweetspot: 0.0
-            flux_to_bias: 0.0
             asymmetry: 0.0
-            bare_resonator_frequency_sweetspot: 0.0
-            ssf_brf: 0.0
+            crosstalk_matrix: {3: 1}
             Ec: 0.0
             Ej: 0.0
             g: 0.0
@@ -252,10 +244,8 @@ characterization:
             drive_frequency: 4100000000.0
             anharmonicity: 0
             sweetspot: 0.0
-            flux_to_bias: 0.0
             asymmetry: 0.0
-            bare_resonator_frequency_sweetspot: 0.0
-            ssf_brf: 0.0
+            crosstalk_matrix: {4: 1}
             Ec: 0.0
             Ej: 0.0
             g: 0.0
