@@ -21,6 +21,7 @@ jobs:
       - name: Prepare virtual environment
         run: |
           python -m venv env
+          pip install .
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -33,5 +34,6 @@ jobs:
       - name: Build & run example
         working-directory: crate
         run: |
-          export PYTHONPATH=$(realpath ../src/):$(realpath ../env/lib/python3.10/site-packages/):$PYTHONPATH
+          export PYTHONPATH=$(realpath ../env/lib/python3.10/site-packages/):$PYTHONPATH
+          export PYTHONPATH=$(realpath ../src/):$PYTHONPATH
           cargo run --example example
