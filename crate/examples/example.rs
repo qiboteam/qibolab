@@ -15,8 +15,17 @@ measure q[2] -> a[1];
 "#;
 
 fn main() -> Result<()> {
-    let res = execute_qasm(CODE.to_owned(), "dummy".to_owned(), 10)?;
-    println!("{:?}", res);
+    let circuit = CODE.to_owned();
+    let platform = "dummy".to_owned();
+    let nshots = 10;
+
+    println!(
+        "---\nExecuting:\n'''{}'''\n\non: {}\nwith: {} shots\n---\n",
+        circuit, platform, nshots
+    );
+
+    let res = execute_qasm(circuit, platform, nshots)?;
+    println!("\n{:?}", res);
 
     Ok(())
 }
