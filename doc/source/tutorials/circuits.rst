@@ -157,3 +157,10 @@ can be executed by passing it together with the platform name to the :func:`qibo
    from qibolab import execute_qasm
 
    result = execute_qasm(circuit, platform="dummy")
+
+
+C-API
+-----
+
+Qibolab also supports the execution of circuits starting from a QASM string using a C-API.
+Please refer to the `C-API documentation <https://github.com/qiboteam/qibolab/tree/main/capi>`_.
