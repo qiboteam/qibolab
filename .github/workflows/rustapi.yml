@@ -31,14 +31,6 @@ jobs:
         run: |
           cargo check
           cargo clippy --all-targets
-      - name: Set Python path
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          site=$(python3 -c '
-          from pathlib import Path;
-          print(Path("../.venv/lib/python3.11/site-packages/").resolve())
-          ')
-          echo "PYTHONPATH=$site:$PYTHONPATH" >> "$GITHUB_ENV"
       - name: Build & run example
         working-directory: crate
         run: |
