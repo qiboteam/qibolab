@@ -32,10 +32,10 @@ def create(runcard_path=RUNCARD):
     channels |= Channel("L3-25_b", port=controller.ports((("con2", 10), ("con2", 9))))
     # feedback
     channels |= Channel(
-        "L2-5_a", port=controller.ports((("con1", 2), ("con1", 1)), input=True)
+        "L2-5_a", port=controller.ports((("con1", 2), ("con1", 1)), output=False)
     )
     channels |= Channel(
-        "L2-5_b", port=controller.ports((("con2", 2), ("con2", 1)), input=True)
+        "L2-5_b", port=controller.ports((("con2", 2), ("con2", 1)), output=False)
     )
     # drive
     channels |= (

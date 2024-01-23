@@ -144,7 +144,7 @@ class QMController(Controller):
         if not isinstance(self.octaves, dict):
             self.octaves = {instr.name: instr for instr in self.octaves}
 
-    def ports(self, name, input=False):
+    def ports(self, name, output=True):
         """Provides instrument ports to the user.
 
         Note that individual ports can also be accessed from the corresponding devices
@@ -155,16 +155,17 @@ class QMController(Controller):
                 For example ``((conX, Y),)`` returns port-Y of OPX+ controller X.
                 ``((conX, Y), (conX, Z))`` returns port-Y and Z of OPX+ controller X
                 as an :class:`qibolab.instruments.qm.ports.OPXIQ` port pair.
-            input (bool): ``True`` for obtaining an input port, otherwise an
-                output port is returned. Default is ``False``.
+            output (bool): ``True`` for obtaining an output port, otherwise an
+                input port is returned. Default is ``True``.
         """
         if len(name) == 1:
             con, port = name[0]
-            return self.opxs[con].ports(port, input)
+            return self.opxs[con].ports(port, output)
         elif len(name) == 2:
             (con1, port1), (con2, port2) = name
             return OPXIQ(
-                self.opxs[con1].ports(port1, input), self.opxs[con2].ports(port2, input)
+                self.opxs[con1].ports(port1, output),
+                self.opxs[con2].ports(port2, output),
             )
         else:
             raise ValueError(f"Invalid port {name} for Quantum Machines controller.")
