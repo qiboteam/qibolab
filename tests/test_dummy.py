@@ -14,9 +14,6 @@ PLATFORM_NAMES = ["dummy", "dummy_couplers"]
 def test_dummy_initialization(name):
     platform = create_platform(name)
     platform.connect()
-    platform.setup()
-    platform.start()
-    platform.stop()
     platform.disconnect()
 
 
@@ -49,7 +46,9 @@ def test_dummy_execute_coupler_pulse():
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
-    test_pulse = "CouplerFluxPulse(0, 30, 0.05, Rectangular(), flux_coupler-0, 0)"
+    test_pulse = (
+        "CouplerFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux_coupler-0, 0)"
+    )
 
     assert test_pulse == pulse.serial
 
@@ -73,7 +72,7 @@ def test_dummy_execute_pulse_sequence_couplers():
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
-    test_pulses = "PulseSequence\nFluxPulse(0, 30, 0.05, Rectangular(), flux-2, 2)\nCouplerFluxPulse(0, 30, 0.05, Rectangular(), flux_coupler-1, 1)"
+    test_pulses = "PulseSequence\nFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux-2, 2)\nCouplerFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux_coupler-1, 1)"
     test_phases = {1: 0.0, 2: 0.0}
 
     assert test_pulses == cz.serial
@@ -153,7 +152,7 @@ def test_dummy_single_sweep_coupler(
         start=0,
         duration=40,
         amplitude=0.5,
-        shape="Rectangular()",
+        shape="GaussianSquare(5, 0.75)",
         channel="flux_coupler-0",
         qubit=0,
     )

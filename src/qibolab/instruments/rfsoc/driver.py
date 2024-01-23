@@ -66,12 +66,6 @@ class RFSoC(Controller):
     def connect(self):
         """Empty method to comply with Instrument interface."""
 
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-
-    def stop(self):
-        """Empty method to comply with Instrument interface."""
-
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
 

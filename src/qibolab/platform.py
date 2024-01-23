@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 from qibo.config import log, raise_error
-from qibo.transpiler import NativeGates
 
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
@@ -85,7 +84,7 @@ class Platform:
     """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit`
     objects."""
     pairs: QubitPairMap
-    """Dictionary mapping sorted tuples of qubit names to
+    """Dictionary mapping tuples of qubit names to
     :class:`qibolab.qubits.QubitPair` objects."""
     instruments: InstrumentMap
     """Dictionary mapping instrument names to
@@ -105,11 +104,7 @@ class Platform:
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
-    two_qubit_native_types: NativeGates = field(default_factory=lambda: NativeGates(0))
-    """Types of two qubit native gates.
 
-    Used by the transpiler.
-    """
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
 
@@ -117,12 +112,6 @@ class Platform:
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
-
-        for pair in self.pairs.values():
-            self.two_qubit_native_types |= pair.native_gates.types
-        if self.two_qubit_native_types is NativeGates(0):
-            # dummy value to avoid transpiler failure for single qubit devices
-            self.two_qubit_native_types = NativeGates.CZ
 
         self.topology.add_nodes_from(self.qubits.keys())
         self.topology.add_edges_from(
@@ -134,15 +123,13 @@ class Platform:
 
     @property
     def nqubits(self) -> int:
-        """Total number of usable qubits in the QPU.."""
-        # TODO: Seperate couplers from qubits (PR #508)
-        return len(
-            [
-                qubit
-                for qubit in self.qubits
-                if not (isinstance(qubit, str) and "c" in qubit)
-            ]
-        )
+        """Total number of usable qubits in the QPU."""
+        return len(self.qubits)
+
+    @property
+    def ordered_pairs(self):
+        """List of qubit pairs that are connected in the QPU."""
+        return sorted({tuple(sorted(pair)) for pair in self.pairs})
 
     @property
     def sampling_rate(self):
@@ -165,32 +152,6 @@ class Platform:
                         f"Cannot establish connection to {instrument} instruments. Error captured: '{exception}'",
                     )
         self.is_connected = True
-
-    def setup(self):
-        """Prepares instruments to execute experiments.
-
-        Sets flux port offsets to the qubit sweetspots.
-        """
-        for instrument in self.instruments.values():
-            instrument.setup()
-        for qubit in self.qubits.values():
-            if qubit.flux is not None and qubit.sweetspot != 0:
-                qubit.flux.offset = qubit.sweetspot
-        for coupler in self.couplers.values():
-            if coupler.flux is not None and coupler.sweetspot != 0:
-                coupler.flux.offset = coupler.sweetspot
-
-    def start(self):
-        """Starts all the instruments."""
-        if self.is_connected:
-            for instrument in self.instruments.values():
-                instrument.start()
-
-    def stop(self):
-        """Starts all the instruments."""
-        if self.is_connected:
-            for instrument in self.instruments.values():
-                instrument.stop()
 
     def disconnect(self):
         """Disconnects from instruments."""
@@ -389,8 +350,7 @@ class Platform:
         return self.qubits[qubit].native_gates.RX12.pulse(start, relative_phase)
 
     def create_CZ_pulse_sequence(self, qubits, start=0):
-        # Check in the settings if qubits[0]-qubits[1] is a key
-        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
+        pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
             raise_error(
                 ValueError,
@@ -399,14 +359,22 @@ class Platform:
         return self.pairs[pair].native_gates.CZ.sequence(start)
 
     def create_iSWAP_pulse_sequence(self, qubits, start=0):
-        # Check in the settings if qubits[0]-qubits[1] is a key
-        pair = tuple(sorted(self.get_qubit(q) for q in qubits))
+        pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.iSWAP is None:
             raise_error(
                 ValueError,
                 f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
         return self.pairs[pair].native_gates.iSWAP.sequence(start)
+
+    def create_CNOT_pulse_sequence(self, qubits, start=0):
+        pair = tuple(self.get_qubit(q) for q in qubits)
+        if pair not in self.pairs or self.pairs[pair].native_gates.CNOT is None:
+            raise_error(
+                ValueError,
+                f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
+            )
+        return self.pairs[pair].native_gates.CNOT.sequence(start)
 
     def create_MZ_pulse(self, qubit, start):
         qubit = self.get_qubit(qubit)
@@ -447,117 +415,3 @@ class Platform:
         if beta is not None:
             pulse.shape = "Drag(5," + str(beta) + ")"
         return pulse
-
-    def set_lo_drive_frequency(self, qubit, freq):
-        """Set frequency of the qubit drive local oscillator.
-
-        Args:
-            qubit (int): qubit whose local oscillator will be modified.
-            freq (int): new value of the frequency in Hz.
-        """
-        self.qubits[qubit].drive.lo_frequency = freq
-
-    def get_lo_drive_frequency(self, qubit):
-        """Get frequency of the qubit drive local oscillator in Hz."""
-        return self.qubits[qubit].drive.lo_frequency
-
-    def set_lo_readout_frequency(self, qubit, freq):
-        """Set frequency of the qubit drive local oscillator.
-
-        Args:
-            qubit (int): qubit whose local oscillator will be modified.
-            freq (int): new value of the frequency in Hz.
-        """
-        self.qubits[qubit].readout.lo_frequency = freq
-
-    def get_lo_readout_frequency(self, qubit):
-        """Get frequency of the qubit readout local oscillator in Hz."""
-        return self.qubits[qubit].readout.lo_frequency
-
-    def set_lo_twpa_frequency(self, qubit, freq):
-        """Set frequency of the local oscillator of the TWPA to which the
-        qubit's feedline is connected to.
-
-        Args:
-            qubit (int): qubit whose local oscillator will be modified.
-            freq (int): new value of the frequency in Hz.
-        """
-        self.qubits[qubit].twpa.lo_frequency = freq
-
-    def get_lo_twpa_frequency(self, qubit):
-        """Get frequency of the local oscillator of the TWPA to which the
-        qubit's feedline is connected to in Hz."""
-        return self.qubits[qubit].twpa.lo_frequency
-
-    def set_lo_twpa_power(self, qubit, power):
-        """Set power of the local oscillator of the TWPA to which the qubit's
-        feedline is connected to.
-
-        Args:
-            qubit (int): qubit whose local oscillator will be modified.
-            power (int): new value of the power in dBm.
-        """
-        self.qubits[qubit].twpa.lo_power = power
-
-    def get_lo_twpa_power(self, qubit):
-        """Get power of the local oscillator of the TWPA to which the qubit's
-        feedline is connected to in dBm."""
-        return self.qubits[qubit].twpa.lo_power
-
-    def set_attenuation(self, qubit, att):
-        """Set attenuation value. Usefeul for calibration routines such as
-        punchout.
-
-        Args:
-            qubit (int): qubit whose attenuation will be modified.
-            att (int): new value of the attenuation (dB).
-        Returns:
-            None
-        """
-        self.qubits[qubit].readout.attenuation = att
-
-    def get_attenuation(self, qubit):
-        """Get attenuation value.
-
-        Usefeul for calibration routines such as punchout.
-        """
-        return self.qubits[qubit].readout.attenuation
-
-    def set_gain(self, qubit, gain):
-        """Set gain value. Usefeul for calibration routines such as Rabi
-        oscillations.
-
-        Args:
-            qubit (int): qubit whose attenuation will be modified.
-            gain (int): new value of the gain (dimensionless).
-        Returns:
-            None
-        """
-        raise_error(NotImplementedError, f"{self.name} does not support gain.")
-
-    def get_gain(self, qubit):
-        """Get gain value.
-
-        Usefeul for calibration routines such as Rabi oscillations.
-        """
-        raise_error(NotImplementedError, f"{self.name} does not support gain.")
-
-    def set_bias(self, qubit, bias):
-        """Set bias value. Usefeul for calibration routines involving flux.
-
-        Args:
-            qubit (int): qubit whose attenuation will be modified.
-            bias (int): new value of the bias (V).
-        Returns:
-            None
-        """
-        if self.qubits[qubit].flux is None:
-            raise_error(NotImplementedError, f"{self.name} does not have flux.")
-        self.qubits[qubit].flux.offset = bias
-
-    def get_bias(self, qubit):
-        """Get bias value.
-
-        Usefeul for calibration routines involving flux.
-        """
-        return self.qubits[qubit].flux.offset

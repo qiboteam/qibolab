@@ -39,6 +39,14 @@
             {
               packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
 
+              languages.c = {
+                enable = true;
+              };
+
+              languages.cplusplus = {
+                enable = true;
+              };
+
               languages.python = {
                 enable = true;
                 poetry = {

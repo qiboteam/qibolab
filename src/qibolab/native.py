@@ -2,8 +2,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field, fields, replace
 from typing import List, Optional, Union
 
-from qibo.transpiler import NativeGates
-
 from qibolab.pulses import (
     CouplerFluxPulse,
     FluxPulse,
@@ -348,8 +346,18 @@ class TwoQubitNatives:
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Optional[NativeSequence] = None
-    iSWAP: Optional[NativeSequence] = None
+    CZ: Optional[NativeSequence] = field(default=None, metadata={"symmetric": True})
+    CNOT: Optional[NativeSequence] = field(default=None, metadata={"symmetric": False})
+    iSWAP: Optional[NativeSequence] = field(default=None, metadata={"symmetric": True})
+
+    @property
+    def symmetric(self):
+        """Check if the defined two-qubit gates are symmetric between target
+        and control qubits."""
+        return all(
+            fld.metadata["symmetric"] or getattr(self, fld.name) is None
+            for fld in fields(self)
+        )
 
     @classmethod
     def from_dict(cls, qubits, couplers, native_gates):
@@ -367,12 +375,3 @@ class TwoQubitNatives:
             if gate is not None:
                 data[fld.name] = gate.raw
         return data
-
-    @property
-    def types(self):
-        gate_types = NativeGates(0)
-        for fld in fields(self):
-            gate = fld.name
-            if getattr(self, gate) is not None:
-                gate_types |= NativeGates[gate]
-        return gate_types

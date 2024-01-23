@@ -127,12 +127,9 @@ class ChannelMap:
     def add(self, *items):
         """Add multiple items to the channel map.
 
-        If
-        :class: `qibolab.channels.Channel` objects are given they are
-                added to the channel map.         If a different type is
-                given, a
-        :class: `qibolab.channels.Channel` with the corresponding name
-                is created and added to the channel map.
+        If :class: `qibolab.channels.Channel` objects are given they are dded to the channel map.
+        If a different type is given, a :class: `qibolab.channels.Channel` with the corresponding name
+        is created and added to the channel map.
         """
         for item in items:
             if isinstance(item, Channel):
