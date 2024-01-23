@@ -19,7 +19,7 @@ from .ports import OPXIQ
 from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
-OCTAVE_ADDRESS = 11000
+OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
 
@@ -33,35 +33,32 @@ def declare_octaves(octaves, host, calibration_path=None):
         host (str): IP of the Quantum Machines controller.
         calibration_path (str): Path to the JSON file with the mixer calibration.
     """
-    config = None
-    if len(octaves) > 0:
-        config = QmOctaveConfig()
-        if calibration_path is not None:
-            config.set_calibration_db(calibration_path)
-        for octave in octaves.values():
-            config.add_device_info(octave.name, host, OCTAVE_ADDRESS + octave.port)
+    if len(octaves) == 0:
+        return None
+
+    config = QmOctaveConfig()
+    if calibration_path is not None:
+        config.set_calibration_db(calibration_path)
+    for octave in octaves.values():
+        config.add_device_info(octave.name, host, OCTAVE_ADDRESS_OFFSET + octave.port)
     return config
 
 
-def find_duration_sweeper_pulses(sweepers):
-    """Find all pulses that require baking because we are sweeping their
-    duration.
+def find_baking_pulses(sweepers):
+    """Find pulses that require baking because we are sweeping their duration.
 
     Args:
         sweepers (list): List of :class:`qibolab.sweeper.Sweeper` objects.
     """
-    duration_sweep_pulses = set()
+    to_bake = set()
     for sweeper in sweepers:
-        try:
-            step = sweeper.values[1] - sweeper.values[0]
-        except IndexError:
-            step = sweeper.values[0]
-
+        values = sweeper.values
+        step = values[1] - values[0] if len(values) > 0 else values[0]
         if sweeper.parameter is Parameter.duration and step % 4 != 0:
             for pulse in sweeper.pulses:
-                duration_sweep_pulses.add(pulse.serial)
+                to_bake.add(pulse.serial)
 
-    return duration_sweep_pulses
+    return to_bake
 
 
 def controllers_config(qubits, time_of_flight, smearing=0):
@@ -81,11 +78,11 @@ def controllers_config(qubits, time_of_flight, smearing=0):
         if qubit.readout is not None:
             config.register_port(qubit.readout.port)
             config.register_readout_element(
-                qubit, qubit.mz_frequencies[1], time_of_flight, smearing
+                qubit, qubit.mixer_frequencies["MZ"][1], time_of_flight, smearing
             )
         if qubit.drive is not None:
             config.register_port(qubit.drive.port)
-            config.register_drive_element(qubit, qubit.rx_frequencies[1])
+            config.register_drive_element(qubit, qubit.mixer_frequencies["RX"][1])
     return config
 
 
@@ -169,7 +166,7 @@ class QMController(Controller):
             # convert simulation duration from ns to clock cycles
             self.simulation_duration //= 4
 
-    def ports(self, name, input=False):
+    def ports(self, name, output=True):
         """Provides instrument ports to the user.
 
         Note that individual ports can also be accessed from the corresponding devices
@@ -180,16 +177,17 @@ class QMController(Controller):
                 For example ``((conX, Y),)`` returns port-Y of OPX+ controller X.
                 ``((conX, Y), (conX, Z))`` returns port-Y and Z of OPX+ controller X
                 as an :class:`qibolab.instruments.qm.ports.OPXIQ` port pair.
-            input (bool): ``True`` for obtaining an input port, otherwise an
-                output port is returned. Default is ``False``.
+            output (bool): ``True`` for obtaining an output port, otherwise an
+                input port is returned. Default is ``True``.
         """
         if len(name) == 1:
             con, port = name[0]
-            return self.opxs[con].ports(port, input)
+            return self.opxs[con].ports(port, output)
         elif len(name) == 2:
             (con1, port1), (con2, port2) = name
             return OPXIQ(
-                self.opxs[con1].ports(port1, input), self.opxs[con2].ports(port2, input)
+                self.opxs[con1].ports(port1, output),
+                self.opxs[con2].ports(port2, output),
             )
         else:
             raise ValueError(f"Invalid port {name} for Quantum Machines controller.")
@@ -212,23 +210,11 @@ class QMController(Controller):
 
     def setup(self):
         """Deprecated method."""
-        # controllers are defined when registering pulses
-        pass
-
-    def start(self):
-        # TODO: Start the OPX flux offsets?
-        pass
-
-    def stop(self):
-        """Close all running Quantum Machines."""
-        # TODO: Use logging
-        # log.warn("Closing all Quantum Machines.")
-        print("Closing all Quantum Machines.")
-        self.manager.close_all_quantum_machines()
 
     def disconnect(self):
         """Disconnect from QM manager."""
         if self.is_connected:
+            self.manager.close_all_quantum_machines()
             self.manager.close()
             self.is_connected = False
 
@@ -247,10 +233,10 @@ class QMController(Controller):
         for qubit in qubits:
             print(f"Calibrating mixers for qubit {qubit.name}")
             if qubit.readout is not None:
-                _lo, _if = qubit.mz_frequencies
+                _lo, _if = qubit.mixer_frequencies["MZ"]
                 machine.calibrate_element(f"readout{qubit.name}", {_lo: (_if,)})
             if qubit.drive is not None:
-                _lo, _if = qubit.rx_frequencies
+                _lo, _if = qubit.mixer_frequencies["RX"]
                 machine.calibrate_element(f"drive{qubit.name}", {_lo: (_if,)})
 
     def execute_program(self, program):
@@ -292,12 +278,13 @@ class QMController(Controller):
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
 
-        duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
+        pulses_to_bake = find_baking_pulses(sweepers)
 
         qmsequence = Sequence()
         ro_pulses = []
-        sort_key = lambda pulse: (pulse.start, pulse.duration)
-        for pulse in sorted(sequence.pulses, key=sort_key):
+        for pulse in sorted(
+            sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
+        ):
             qubit = qubits[pulse.qubit]
 
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
@@ -310,7 +297,7 @@ class QMController(Controller):
             if (
                 pulse.duration % 4 != 0
                 or pulse.duration < 16
-                or pulse.serial in duration_sweep_pulses
+                or pulse.serial in pulses_to_bake
             ):
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(self.config, durations=[pulse.duration])

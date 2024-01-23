@@ -40,8 +40,8 @@ def create(runcard_path=RUNCARD):
     channels |= Channel("L3-25_a", port=octave1.ports(5))
     channels |= Channel("L3-25_b", port=octave2.ports(5))
     # feedback
-    channels |= Channel("L2-5_a", port=octave1.ports(1, input=True))
-    channels |= Channel("L2-5_b", port=octave2.ports(1, input=True))
+    channels |= Channel("L2-5_a", port=octave1.ports(1, output=False))
+    channels |= Channel("L2-5_b", port=octave2.ports(1, output=False))
     # drive
     channels |= (Channel(f"L3-1{i}", port=octave1.ports(i)) for i in range(1, 5))
     channels |= Channel("L3-15", port=octave3.ports(1))

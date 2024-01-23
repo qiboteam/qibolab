@@ -300,11 +300,8 @@ def fetch_results(result, acquisitions):
     Returns:
         Dictionary with the results in the format required by the platform.
     """
-    # TODO: Update result asynchronously instead of waiting
-    # for all values, in order to allow live plotting
-    # using ``handles.is_processing()``
     handles = result.result_handles
-    handles.wait_for_all_values()
+    handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
     results = {}
     for acquisition in acquisitions.values():
         data = acquisition.fetch(handles)

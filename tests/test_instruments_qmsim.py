@@ -48,7 +48,6 @@ def simulator(request):
     # controller.cloud = True
 
     platform.connect()
-    platform.setup()
     yield platform
     platform.disconnect()
 

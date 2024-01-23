@@ -200,12 +200,8 @@ def test_controllers_config(qmplatform):
 
 def test_qm_setup(qmplatform):
     platform = qmplatform
-    platform.setup()
     controller = platform.instruments["qm"]
     assert controller.time_of_flight == 280
-
-
-# TODO: Test start/stop
 
 
 def test_qm_register_drive_element(qmplatform):
@@ -392,7 +388,6 @@ def test_qm_register_baked_pulse(qmplatform, duration):
 @patch("qibolab.instruments.qm.QMController.execute_program")
 def test_qm_qubit_spectroscopy(mocker, qmplatform):
     platform = qmplatform
-    platform.setup()
     controller = platform.instruments["qm"]
     # disable program dump otherwise it will fail if we don't connect
     controller.script_file_name = None
@@ -415,7 +410,6 @@ def test_qm_qubit_spectroscopy(mocker, qmplatform):
 @patch("qibolab.instruments.qm.QMController.execute_program")
 def test_qm_duration_sweeper(mocker, qmplatform):
     platform = qmplatform
-    platform.setup()
     controller = platform.instruments["qm"]
     # disable program dump otherwise it will fail if we don't connect
     controller.script_file_name = None

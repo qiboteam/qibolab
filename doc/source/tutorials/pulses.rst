@@ -66,18 +66,9 @@ pulse sequence according to the number of shots ``nshots`` specified.
     # Connects to lab instruments using the details specified in the calibration settings.
     platform.connect()
 
-    # Configures instruments using the loaded calibration settings.
-    platform.setup()
-
-    # Turns on the local oscillators
-    platform.start()
-
     # Executes a pulse sequence.
     options = ExecutionParameters(nshots=1000, relaxation_time=100)
     results = platform.execute_pulse_sequence(sequence, options=options)
-
-    # Turn off lab instruments
-    platform.stop()
 
     # Disconnect from the instruments
     platform.disconnect()

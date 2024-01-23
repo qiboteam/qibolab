@@ -21,6 +21,11 @@ def remove_couplers(runcard):
     return runcard
 
 
+def load_dummy_runcard():
+    """Loads the runcard YAML of the dummy platform."""
+    return load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
+
+
 def create_dummy(with_couplers: bool = True):
     """Create a dummy platform using the dummy instrument.
 
@@ -35,24 +40,25 @@ def create_dummy(with_couplers: bool = True):
     twpa_pump.frequency = 1e9
     twpa_pump.power = 10
 
-    runcard = load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
+    runcard = load_dummy_runcard()
     if not with_couplers:
         runcard = remove_couplers(runcard)
 
     # Create channel objects
     nqubits = runcard["nqubits"]
     channels = ChannelMap()
-    channels |= Channel("readout", port=instrument["readout"])
+    channels |= Channel("readout", port=instrument.ports("readout"))
     channels |= (
-        Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits)
+        Channel(f"drive-{i}", port=instrument.ports(f"drive-{i}"))
+        for i in range(nqubits)
     )
     channels |= (
-        Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits)
+        Channel(f"flux-{i}", port=instrument.ports(f"flux-{i}")) for i in range(nqubits)
     )
     channels |= Channel("twpa", port=None)
     if with_couplers:
         channels |= (
-            Channel(f"flux_coupler-{c}", port=instrument[f"flux_coupler-{c}"])
+            Channel(f"flux_coupler-{c}", port=instrument.ports(f"flux_coupler-{c}"))
             for c in itertools.chain(range(0, 2), range(3, 5))
         )
     channels["readout"].attenuation = 0

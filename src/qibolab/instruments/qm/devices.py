@@ -43,27 +43,20 @@ class QMDevice(Instrument):
     inputs: Dict[int, QMInput] = field(init=False)
     """Dictionary containing the instrument's input ports."""
 
-    def ports(self, number, input=False):
+    def ports(self, number, output=True):
         """Provides instrument's ports to the user.
 
         Args:
             number (int): Port number.
                 Can be 1 to 10 for :class:`qibolab.instruments.qm.devices.OPXplus`
                 and 1 to 5 for :class:`qibolab.instruments.qm.devices.Octave`.
-            input (bool): ``True`` for obtaining an input port, otherwise an
-                output port is returned. Default is ``False``.
+            output (bool): ``True`` for obtaining an output port, otherwise an
+                input port is returned. Default is ``True``.
         """
-        if input:
-            return self.inputs[number]
-        else:
-            return self.outputs[number]
+        ports_ = self.outputs if output else self.inputs
+        return ports_[number]
 
     def connect(self):
-        """Only applicable for
-        :class:`qibolab.instruments.qm.controller.QMController`, not individual
-        devices."""
-
-    def start(self):
         """Only applicable for
         :class:`qibolab.instruments.qm.controller.QMController`, not individual
         devices."""
@@ -79,11 +72,6 @@ class QMDevice(Instrument):
                 raise ValueError(
                     f"Invalid port name {name} in instrument settings for {self.name}."
                 )
-
-    def stop(self):
-        """Only applicable for
-        :class:`qibolab.instruments.qm.controller.QMController`, not individual
-        devices."""
 
     def disconnect(self):
         """Only applicable for
@@ -119,15 +107,15 @@ class Octave(QMDevice):
         self.outputs = PortsDefaultdict(lambda n: OctaveOutput(self.name, n))
         self.inputs = PortsDefaultdict(lambda n: OctaveInput(self.name, n))
 
-    def ports(self, number, input=False):
+    def ports(self, number, output=True):
         """Provides Octave ports.
 
         Extension of the abstract :meth:`qibolab.instruments.qm.devices.QMDevice.ports`
         because Octave ports are used for mixing two existing (I, Q) OPX+ ports.
         """
-        port = super().ports(number, input)
+        port = super().ports(number, output)
         if port.opx_port is None:
-            iport = self.connectivity.ports(2 * number - 1, input)
-            qport = self.connectivity.ports(2 * number, input)
+            iport = self.connectivity.ports(2 * number - 1, output)
+            qport = self.connectivity.ports(2 * number, output)
             port.opx_port = OPXIQ(iport, qport)
         return port

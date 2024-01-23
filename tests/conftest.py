@@ -6,7 +6,15 @@ import pytest
 from qibolab import PLATFORMS, create_platform
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
-DUMMY_PLATFORM_NAMES = ["qm", "qm_octave", "qblox", "rfsoc", "zurich"]
+TESTING_PLATFORM_NAMES = [
+    "dummy_couplers",
+    "qm",
+    "qm_octave",
+    "qblox",
+    "rfsoc",
+    "zurich",
+]
+"""Platforms used for testing without access to real instruments."""
 
 
 def pytest_addoption(parser):
@@ -70,7 +78,7 @@ def get_instrument(platform, instrument_type):
     return instrument
 
 
-@pytest.fixture(scope="module", params=DUMMY_PLATFORM_NAMES)
+@pytest.fixture(scope="module", params=TESTING_PLATFORM_NAMES)
 def platform(request):
     """Dummy platform to be used when there is no access to QPU.
 
@@ -97,6 +105,5 @@ def connected_platform(request):
     name = request.config.getoption("--platform")
     platform = create_platform(name)
     platform.connect()
-    platform.setup()
     yield platform
     platform.disconnect()

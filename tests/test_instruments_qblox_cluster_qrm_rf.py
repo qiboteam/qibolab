@@ -60,9 +60,6 @@ def test_instrument_interface(qrm_rf: ClusterQRM_RF):
         "name",
         "address",
         "is_connected",
-        "signature",
-        "tmp_folder",
-        "data_folder",
     ]:
         assert hasattr(qrm_rf, attribute)
 
@@ -227,10 +224,3 @@ def test_sweepers(connected_platform, connected_qrm_rf: ClusterQRM_RF):
 
 def test_process_acquisition_results():
     pass
-
-
-@pytest.mark.qpu
-def test_start_stop(connected_qrm_rf: ClusterQRM_RF):
-    connected_qrm_rf.start()
-    connected_qrm_rf.stop()
-    # check all sequencers are stopped and all offsets = 0
