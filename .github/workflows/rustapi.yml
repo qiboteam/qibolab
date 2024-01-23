@@ -20,7 +20,6 @@ jobs:
           python-version: "3.10"
       - name: Prepare virtual environment
         run: |
-          python -m venv env
           pip install .
       - name: Install Rust
         uses: actions-rs/toolchain@v1
