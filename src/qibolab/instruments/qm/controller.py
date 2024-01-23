@@ -76,11 +76,11 @@ def controllers_config(qubits, time_of_flight, smearing=0):
         if qubit.readout is not None:
             config.register_port(qubit.readout.port)
             config.register_readout_element(
-                qubit, qubit.mz_frequencies[1], time_of_flight, smearing
+                qubit, qubit.mixer_frequencies["MZ"][1], time_of_flight, smearing
             )
         if qubit.drive is not None:
             config.register_port(qubit.drive.port)
-            config.register_drive_element(qubit, qubit.rx_frequencies[1])
+            config.register_drive_element(qubit, qubit.mixer_frequencies["RX"][1])
     return config
 
 
@@ -205,10 +205,10 @@ class QMController(Controller):
         for qubit in qubits:
             print(f"Calibrating mixers for qubit {qubit.name}")
             if qubit.readout is not None:
-                _lo, _if = qubit.mz_frequencies
+                _lo, _if = qubit.mixer_frequencies["MZ"]
                 machine.calibrate_element(f"readout{qubit.name}", {_lo: (_if,)})
             if qubit.drive is not None:
-                _lo, _if = qubit.rx_frequencies
+                _lo, _if = qubit.mixer_frequencies["RX"]
                 machine.calibrate_element(f"drive{qubit.name}", {_lo: (_if,)})
 
     def execute_program(self, program):
