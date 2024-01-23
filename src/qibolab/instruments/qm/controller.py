@@ -17,7 +17,7 @@ from .ports import OPXIQ
 from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
-OCTAVE_ADDRESS = 11000
+OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
 
@@ -31,35 +31,32 @@ def declare_octaves(octaves, host, calibration_path=None):
         host (str): IP of the Quantum Machines controller.
         calibration_path (str): Path to the JSON file with the mixer calibration.
     """
-    config = None
-    if len(octaves) > 0:
-        config = QmOctaveConfig()
-        if calibration_path is not None:
-            config.set_calibration_db(calibration_path)
-        for octave in octaves.values():
-            config.add_device_info(octave.name, host, OCTAVE_ADDRESS + octave.port)
+    if len(octaves) == 0:
+        return None
+
+    config = QmOctaveConfig()
+    if calibration_path is not None:
+        config.set_calibration_db(calibration_path)
+    for octave in octaves.values():
+        config.add_device_info(octave.name, host, OCTAVE_ADDRESS_OFFSET + octave.port)
     return config
 
 
-def find_duration_sweeper_pulses(sweepers):
-    """Find all pulses that require baking because we are sweeping their
-    duration.
+def find_baking_pulses(sweepers):
+    """Find pulses that require baking because we are sweeping their duration.
 
     Args:
         sweepers (list): List of :class:`qibolab.sweeper.Sweeper` objects.
     """
-    duration_sweep_pulses = set()
+    to_bake = set()
     for sweeper in sweepers:
-        try:
-            step = sweeper.values[1] - sweeper.values[0]
-        except IndexError:
-            step = sweeper.values[0]
-
+        values = sweeper.values
+        step = values[1] - values[0] if len(values) > 0 else values[0]
         if sweeper.parameter is Parameter.duration and step % 4 != 0:
             for pulse in sweeper.pulses:
-                duration_sweep_pulses.add(pulse.serial)
+                to_bake.add(pulse.serial)
 
-    return duration_sweep_pulses
+    return to_bake
 
 
 def controllers_config(qubits, time_of_flight, smearing=0):
@@ -233,11 +230,8 @@ class QMController(Controller):
         Defined as ``@staticmethod`` because it is overwritten
         in :class:`qibolab.instruments.qm.simulator.QMSim`.
         """
-        # TODO: Update result asynchronously instead of waiting
-        # for all values, in order to allow live plotting
-        # using ``handles.is_processing()``
         handles = result.result_handles
-        handles.wait_for_all_values()
+        handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
         results = {}
         for qmpulse in ro_pulses:
             pulse = qmpulse.pulse
@@ -262,11 +256,12 @@ class QMController(Controller):
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
 
-        duration_sweep_pulses = find_duration_sweeper_pulses(sweepers)
+        pulses_to_bake = find_baking_pulses(sweepers)
 
         qmsequence = Sequence()
-        sort_key = lambda pulse: (pulse.start, pulse.duration)
-        for pulse in sorted(sequence.pulses, key=sort_key):
+        for pulse in sorted(
+            sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
+        ):
             qubit = qubits[pulse.qubit]
 
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
@@ -279,7 +274,7 @@ class QMController(Controller):
             if (
                 pulse.duration % 4 != 0
                 or pulse.duration < 16
-                or pulse.serial in duration_sweep_pulses
+                or pulse.serial in pulses_to_bake
             ):
                 qmpulse = BakedPulse(pulse)
                 qmpulse.bake(self.config, durations=[pulse.duration])

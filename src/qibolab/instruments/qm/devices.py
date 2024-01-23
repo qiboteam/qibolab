@@ -53,17 +53,10 @@ class QMDevice(Instrument):
             input (bool): ``True`` for obtaining an input port, otherwise an
                 output port is returned. Default is ``False``.
         """
-        if input:
-            return self.inputs[number]
-        else:
-            return self.outputs[number]
+        ports_ = self.inputs if input else self.outputs
+        return ports_[number]
 
     def connect(self):
-        """Only applicable for
-        :class:`qibolab.instruments.qm.controller.QMController`, not individual
-        devices."""
-
-    def start(self):
         """Only applicable for
         :class:`qibolab.instruments.qm.controller.QMController`, not individual
         devices."""
@@ -79,11 +72,6 @@ class QMDevice(Instrument):
                 raise ValueError(
                     f"Invalid port name {name} in instrument settings for {self.name}."
                 )
-
-    def stop(self):
-        """Only applicable for
-        :class:`qibolab.instruments.qm.controller.QMController`, not individual
-        devices."""
 
     def disconnect(self):
         """Only applicable for
