@@ -34,9 +34,11 @@ jobs:
       - name: Set Python path
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
-          PYTHONPATH=$(realpath ../env/lib/python3.10/site-packages/):$PYTHONPATH
-          PYTHONPATH=$(realpath ../src/):$PYTHONPATH
-          echo "PYTHONPATH=$PYTHONPATH" >> "$GITHUB_ENV"
+          site=$(python3 -c '
+          from pathlib import Path;
+          print(Path("../.venv/lib/python3.11/site-packages/").resolve())
+          ')
+          echo "PYTHONPATH=$site:$PYTHONPATH" >> "$GITHUB_ENV"
       - name: Build & run example
         working-directory: crate
         run: |
