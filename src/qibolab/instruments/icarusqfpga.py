@@ -202,6 +202,19 @@ class RFSOC_RO(RFSOC):
         Parameter.start,
     }
 
+    def __init__(
+        self,
+        name,
+        address,
+        delay_samples_offset_dac: int = 0,
+        delay_samples_offset_adc: int = 0,
+        adcs_to_read: List[int] = [],
+    ):
+        super().__init__(
+            name, address, delay_samples_offset_dac, delay_samples_offset_adc
+        )
+        self.adcs_to_read = adcs_to_read
+
     def connect(self):
         super().connect()
         self.device.init_qunit()
