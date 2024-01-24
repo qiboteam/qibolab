@@ -21,6 +21,7 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 DAC_SAMPLNG_RATE_MHZ = 5898.24
 ADC_SAMPLNG_RATE_MHZ = 1966.08
+ICARUSQ_PORT = 8080
 
 
 @dataclass
@@ -39,32 +40,25 @@ class RFSOC(Controller):
         self,
         name,
         address,
-        port=8080,
-        dac_sampling_rate=DAC_SAMPLNG_RATE_MHZ,
-        adc_sampling_rate=ADC_SAMPLNG_RATE_MHZ,
         delay_samples_offset_dac: int = 0,
         delay_samples_offset_adc: int = 0,
-        analog_settings: List[Dict[str, int]] = [],
     ):
         super().__init__(name, address)
-        self.device = IcarusQRFSoC(address, port)
-
-        self.device.dac_sampling_rate = dac_sampling_rate
-        self.device.adc_sampling_rate = adc_sampling_rate
 
         self.channel_delay_offset_dac = delay_samples_offset_dac
         self.channel_delay_offset_adc = delay_samples_offset_adc
 
+    def connect(self):
+        self.device = IcarusQRFSoC(self.address, ICARUSQ_PORT)
+
         for dac in range(self.device.dac_nchannels):
-            self.device.dac[dac].delay = delay_samples_offset_dac
+            self.device.dac[dac].delay = self.channel_delay_offset_dac
         for adc in range(self.device.adc_nchannels):
-            self.device.adc[adc].delay = delay_samples_offset_adc
-        self.device.set_adc_trigger_mode(TRIGGER_MODE.SLAVE)
-
-        for channel_settings in analog_settings:
-            self.device.set_channel_analog_settings(**channel_settings)
+            self.device.adc[adc].delay = self.channel_delay_offset_adc
 
         self.device.set_adc_trigger_mode(TRIGGER_MODE.SLAVE)
+        ver = self.device.get_server_version()
+        log.info(f"Connected to {self.name}, version: {ver}")
 
     def setup(self):
         pass
@@ -189,15 +183,9 @@ class RFSOC(Controller):
         ]
         self.device.upload_waveform(payload)
 
-    def connect(self):
-        """Currently we only connect to the board when we have to send a
-        command."""
-        # Request the version from the board
-        ver = self.device.get_server_version()
-        log.info(f"Connected to {self.name}, version: {ver}")
-
     def disconnect(self):
-        pass
+        if self.is_connected:
+            self.device.sock.close()
 
     def sweep(self):
         pass
@@ -214,28 +202,8 @@ class RFSOC_RO(RFSOC):
         Parameter.start,
     }
 
-    def __init__(
-        self,
-        name,
-        address,
-        dac_sampling_rate=5898.24,
-        adc_sampling_rate=1966.08,
-        delay_samples_offset_dac: int = 0,
-        delay_samples_offset_adc: int = 0,
-        analog_settings: List["dict[str, int]"] = [],
-    ):
-        super().__init__(
-            name,
-            address,
-            dac_sampling_rate=dac_sampling_rate,
-            adc_sampling_rate=adc_sampling_rate,
-            delay_samples_offset_dac=delay_samples_offset_dac,
-            delay_samples_offset_adc=delay_samples_offset_adc,
-            analog_settings=analog_settings,
-        )
-
-        self.adcs_to_read: List[int] = None
-
+    def connect(self):
+        super().connect()
         self.device.init_qunit()
         self.device.set_adc_trigger_mode(TRIGGER_MODE.MASTER)
 
