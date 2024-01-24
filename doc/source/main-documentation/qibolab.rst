@@ -213,14 +213,14 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
     from pathlib import Path
     from qibolab.serialize import load_qubits, load_runcard
 
-    runcard_path = Path.cwd().parent / "src" / "qibolab" / "dummy.yml"
+    path = Path.cwd().parent / "src" / "qibolab" / "dummy"
 
     ch_map = ChannelMap()
     ch_map |= channel1
     ch_map |= channel2
     ch_map |= channel3
 
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(path / "dummy.yml")
     qubits, couplers, pairs = load_qubits(runcard)
 
     qubits[0].drive = channel1
