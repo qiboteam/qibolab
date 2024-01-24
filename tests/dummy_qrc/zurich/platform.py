@@ -9,7 +9,7 @@ from qibolab import Platform
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.zhinst import Zurich
-from qibolab.kernels import KERNELS_FILE, Kernels
+from qibolab.kernels import Kernels
 from qibolab.serialize import (
     load_instrument_settings,
     load_qubits,
@@ -17,7 +17,6 @@ from qibolab.serialize import (
     load_settings,
 )
 
-RUNCARD = "zurich.yml"
 FOLDER = pathlib.Path(__file__).parent
 N_QUBITS = 5
 
@@ -172,8 +171,8 @@ def create(path: pathlib.Path = FOLDER):
         channels[ch].local_oscillator = local_oscillators[lo]
 
     # create qubit objects
-    runcard = load_runcard(FOLDER / RUNCARD)
-    kernels = Kernels.load(FOLDER / KERNELS_FILE)
+    runcard = load_runcard(path)
+    kernels = Kernels.load(path)
     qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
@@ -195,7 +194,7 @@ def create(path: pathlib.Path = FOLDER):
     instruments.update({lo.name: lo for lo in local_oscillators})
     instruments = load_instrument_settings(runcard, instruments)
     return Platform(
-        "zurich",
+        str(FOLDER),
         qubits,
         pairs,
         instruments,

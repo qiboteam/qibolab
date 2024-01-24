@@ -1,6 +1,5 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`."""
-import os
 import pathlib
 import pickle
 import warnings
@@ -11,7 +10,7 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.dummy import DUMMY_FOLDER, DUMMY_RUNCARD
+from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
@@ -61,17 +60,12 @@ def test_platform_pickle(platform):
 
 
 def test_dump_runcard(platform, tmp_path):
-    path = tmp_path / "test.yml"
-    dump_runcard(platform, path)
-    final_runcard = load_runcard(path)
+    dump_runcard(platform, tmp_path)
+    final_runcard = load_runcard(tmp_path)
     if platform.name == "dummy" or platform.name == "dummy_couplers":
-        target_runcard = load_runcard(DUMMY_FOLDER / DUMMY_RUNCARD)
+        target_runcard = load_runcard(FOLDER)
     else:
-        target_path = (
-            pathlib.Path(__file__).parent
-            / "dummy_qrc"
-            / f"{platform.name}/{platform.name}.yml"
-        )
+        target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
         target_runcard = load_runcard(target_path)
     # for the characterization section the dumped runcard may contain
     # some default ``Qubit`` parameters
@@ -85,7 +79,6 @@ def test_dump_runcard(platform, tmp_path):
     target_instruments = target_runcard.pop("instruments")
     final_instruments = final_runcard.pop("instruments")
     assert final_instruments == target_instruments
-    os.remove(path)
 
 
 @pytest.fixture(scope="module")

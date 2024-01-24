@@ -5,7 +5,7 @@ import numpy as np
 
 from qibolab.qubits import QubitId
 
-KERNELS_FILE = "kernels.npz"
+KERNELS = "kernels.npz"
 
 
 class Kernels(dict[QubitId, np.ndarray]):
@@ -23,7 +23,9 @@ class Kernels(dict[QubitId, np.ndarray]):
         The file should contain a serialized dictionary where keys are
         serialized QubitId and values are numpy arrays.
         """
-        return cls({json.loads(key): value for key, value in np.load(path).items()})
+        return cls(
+            {json.loads(key): value for key, value in np.load(path / KERNELS).items()}
+        )
 
     def dump(self, path: Path):
         """Instance method to dump the kernels to a file.
@@ -32,6 +34,6 @@ class Kernels(dict[QubitId, np.ndarray]):
         (numpy arrays) are kept as is.
         """
         np.savez(
-            path / KERNELS_FILE,
+            path / KERNELS,
             **{json.dumps(qubit_id): value for qubit_id, value in self.items()}
         )

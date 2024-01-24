@@ -11,7 +11,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.couplers import Coupler
-from qibolab.kernels import Kernels
+from qibolab.kernels import KERNELS, Kernels
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
@@ -23,12 +23,13 @@ from qibolab.platform import (
 )
 from qibolab.qubits import Qubit, QubitPair
 
-KERNELS_FILE = "kernels.npz"
+RUNCARD = "parameters.yml"
+PLATFORM = "platform.py"
 
 
 def load_runcard(path: Path) -> dict:
     """Load runcard YAML to a dictionary."""
-    return yaml.safe_load(path.read_text())
+    return yaml.safe_load((path / RUNCARD).read_text())
 
 
 def load_settings(runcard: dict) -> Settings:
@@ -204,7 +205,7 @@ def dump_runcard(platform: Platform, path: Path):
         platform.qubits, platform.couplers
     )
 
-    path.write_text(
+    (path / RUNCARD).write_text(
         yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None)
     )
 
@@ -223,7 +224,7 @@ def dump_kernels(platform: Platform, path: Path):
         if qubit.kernel is not None:
             kernels[qubit.name] = qubit.kernel
 
-    kernels.dump(path / KERNELS_FILE)
+    kernels.dump(path / KERNELS)
 
 
 def dump_platform(platform: Platform, path: Path):

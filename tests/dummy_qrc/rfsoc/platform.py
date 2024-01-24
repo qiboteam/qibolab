@@ -13,7 +13,6 @@ from qibolab.serialize import (
 )
 
 FOLDER = pathlib.Path(__file__).parent
-RUNCARD = "rfsoc.yml"
 
 
 def create(folder: pathlib.Path = FOLDER):
@@ -35,7 +34,7 @@ def create(folder: pathlib.Path = FOLDER):
     lo_era = ERA("ErasynthLO", "192.168.0.212", ethernet=True)
     channels["L3-18_ro"].local_oscillator = lo_era
 
-    runcard = load_runcard(FOLDER / RUNCARD)
+    runcard = load_runcard(FOLDER)
     qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
@@ -47,4 +46,6 @@ def create(folder: pathlib.Path = FOLDER):
     instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
     instruments = load_instrument_settings(runcard, instruments)
-    return Platform("rfsoc", qubits, pairs, instruments, settings, resonator_type="3D")
+    return Platform(
+        str(FOLDER), qubits, pairs, instruments, settings, resonator_type="3D"
+    )

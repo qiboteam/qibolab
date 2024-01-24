@@ -12,6 +12,7 @@ from qibolab.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab.platform import Platform
+from qibolab.serialize import PLATFORM
 
 __version__ = im.version(__package__)
 
@@ -41,7 +42,7 @@ def create_platform(name, path: Path = None) -> Platform:
         The plaform class.
     """
     if name == "dummy" or name == "dummy_couplers":
-        from qibolab.dummy import create_dummy
+        from qibolab.dummy.platform import create_dummy
 
         return create_dummy(with_couplers=name == "dummy_couplers")
 
@@ -49,7 +50,7 @@ def create_platform(name, path: Path = None) -> Platform:
     if not platform.exists():
         raise_error(ValueError, f"Platform {name} does not exist.")
 
-    spec = importlib.util.spec_from_file_location("platform", platform / f"{name}.py")
+    spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

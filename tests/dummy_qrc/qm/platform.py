@@ -12,7 +12,6 @@ from qibolab.serialize import (
 )
 
 FOLDER = pathlib.Path(__file__).parent
-RUNCARD = "qm.yml"
 
 
 def create(folder: pathlib.Path = FOLDER):
@@ -70,7 +69,7 @@ def create(folder: pathlib.Path = FOLDER):
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
     # create qubit objects
-    runcard = load_runcard(FOLDER / RUNCARD)
+    runcard = load_runcard(folder)
     qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
@@ -102,4 +101,6 @@ def create(folder: pathlib.Path = FOLDER):
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
     instruments = load_instrument_settings(runcard, instruments)
-    return Platform("qm", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        str(FOLDER), qubits, pairs, instruments, settings, resonator_type="2D"
+    )

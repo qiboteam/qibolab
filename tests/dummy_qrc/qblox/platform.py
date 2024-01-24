@@ -14,11 +14,9 @@ from qibolab.serialize import (
     load_settings,
 )
 
-NAME = "qblox"
 ADDRESS = "192.168.0.6"
 TIME_OF_FLIGHT = 500
 FOLDER = pathlib.Path(__file__).parent
-RUNCARD = "qblox.yml"
 
 
 def create(folder: pathlib.Path = FOLDER):
@@ -28,7 +26,7 @@ def create(folder: pathlib.Path = FOLDER):
         runcard_path (str): Path to the runcard file.
     """
 
-    runcard = load_runcard(folder / RUNCARD)
+    runcard = load_runcard(folder)
     modules = {}
 
     # DEBUG: debug folder = report folder
@@ -112,4 +110,6 @@ def create(folder: pathlib.Path = FOLDER):
 
     settings = load_settings(runcard)
 
-    return Platform("qblox", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        str(FOLDER), qubits, pairs, instruments, settings, resonator_type="2D"
+    )

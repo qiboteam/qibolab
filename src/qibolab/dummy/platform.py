@@ -5,10 +5,9 @@ from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform
-from qibolab.serialize import KERNELS_FILE, load_qubits, load_runcard, load_settings
+from qibolab.serialize import load_qubits, load_runcard, load_settings
 
-DUMMY_FOLDER = pathlib.Path(__file__).parent / "dummy"
-DUMMY_RUNCARD = "dummy.yml"
+FOLDER = pathlib.Path(__file__).parent
 
 
 def remove_couplers(runcard):
@@ -39,8 +38,8 @@ def create_dummy(with_couplers: bool = True):
     twpa_pump.frequency = 1e9
     twpa_pump.power = 10
 
-    runcard = load_runcard(DUMMY_FOLDER / "dummy.yml")
-    kernels = Kernels.load(DUMMY_FOLDER / KERNELS_FILE)
+    runcard = load_runcard(FOLDER)
+    kernels = Kernels.load(FOLDER)
 
     if not with_couplers:
         runcard = remove_couplers(runcard)
