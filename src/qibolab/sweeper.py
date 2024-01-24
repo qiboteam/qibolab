@@ -55,7 +55,7 @@ class Sweeper:
         .. testcode::
 
             import numpy as np
-            from qibolab.dummy import create_dummy
+            from qibolab.dummy.platform import create_dummy
             from qibolab.sweeper import Sweeper, Parameter
             from qibolab.pulses import PulseSequence
             from qibolab import ExecutionParameters

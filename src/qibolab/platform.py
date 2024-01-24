@@ -265,7 +265,7 @@ class Platform:
             .. testcode::
 
                 import numpy as np
-                from qibolab.dummy import create_dummy
+                from qibolab.dummy.platform import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
                 from qibolab.pulses import PulseSequence
                 from qibolab.execution_parameters import ExecutionParameters

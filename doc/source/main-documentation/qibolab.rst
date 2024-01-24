@@ -220,7 +220,7 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
     ch_map |= channel2
     ch_map |= channel3
 
-    runcard = load_runcard(path / "dummy.yml")
+    runcard = load_runcard(path)
     qubits, couplers, pairs = load_qubits(runcard)
 
     qubits[0].drive = channel1
