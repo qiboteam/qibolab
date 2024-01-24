@@ -11,7 +11,7 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.dummy import load_dummy_runcard
+from qibolab.dummy import DUMMY_FOLDER, DUMMY_RUNCARD
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
@@ -60,15 +60,17 @@ def test_platform_pickle(platform):
     assert new_platform.is_connected == platform.is_connected
 
 
-def test_dump_runcard(platform):
-    path = pathlib.Path(__file__).parent / "test.yml"
+def test_dump_runcard(platform, tmp_path):
+    path = tmp_path / "test.yml"
     dump_runcard(platform, path)
     final_runcard = load_runcard(path)
     if platform.name == "dummy" or platform.name == "dummy_couplers":
-        target_runcard = load_dummy_runcard()
+        target_runcard = load_runcard(DUMMY_FOLDER / DUMMY_RUNCARD)
     else:
         target_path = (
-            pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}.yml"
+            pathlib.Path(__file__).parent
+            / "dummy_qrc"
+            / f"{platform.name}/{platform.name}.yml"
         )
         target_runcard = load_runcard(target_path)
     # for the characterization section the dumped runcard may contain

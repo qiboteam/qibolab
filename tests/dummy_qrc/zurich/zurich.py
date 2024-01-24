@@ -9,6 +9,7 @@ from qibolab import Platform
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.zhinst import Zurich
+from qibolab.kernels import KERNELS_FILE, Kernels
 from qibolab.serialize import (
     load_instrument_settings,
     load_qubits,
@@ -16,16 +17,16 @@ from qibolab.serialize import (
     load_settings,
 )
 
-RUNCARD = pathlib.Path(__file__).parent / "zurich.yml"
-FOLDER = pathlib.Path(__file__).parent / "zurich"
+RUNCARD = "zurich.yml"
+FOLDER = pathlib.Path(__file__).parent
 N_QUBITS = 5
 
 
-def create(runcard_path=RUNCARD):
-    """IQM 5q-chip controlled Zurich Instrumetns (Zh) SHFQC, HDAWGs and PQSC.
+def create(path: pathlib.Path = FOLDER):
+    """IQM 5q-chip controlled Zurich Instruments (Zh) SHFQC, HDAWGs and PQSC.
 
     Args:
-        runcard_path (str): Path to the runcard file.
+        path (str): Path to configuration folder.
     """
 
     device_setup = DeviceSetup("EL_ZURO")
@@ -171,8 +172,9 @@ def create(runcard_path=RUNCARD):
         channels[ch].local_oscillator = local_oscillators[lo]
 
     # create qubit objects
-    runcard = load_runcard(runcard_path)
-    qubits, couplers, pairs = load_qubits(runcard, FOLDER)
+    runcard = load_runcard(FOLDER / RUNCARD)
+    kernels = Kernels.load(FOLDER / KERNELS_FILE)
+    qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
     # assign channels to qubits and sweetspots(operating points)

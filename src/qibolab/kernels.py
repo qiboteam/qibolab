@@ -5,6 +5,8 @@ import numpy as np
 
 from qibolab.qubits import QubitId
 
+KERNELS_FILE = "kernels.npz"
+
 
 class Kernels(dict[QubitId, np.ndarray]):
     """A dictionary subclass for handling Qubit Kernels.
@@ -30,5 +32,6 @@ class Kernels(dict[QubitId, np.ndarray]):
         (numpy arrays) are kept as is.
         """
         np.savez(
-            path, **{json.dumps(qubit_id): value for qubit_id, value in self.items()}
+            path / KERNELS_FILE,
+            **{json.dumps(qubit_id): value for qubit_id, value in self.items()}
         )

@@ -12,10 +12,11 @@ from qibolab.serialize import (
     load_settings,
 )
 
-RUNCARD = pathlib.Path(__file__).parent / "rfsoc.yml"
+FOLDER = pathlib.Path(__file__).parent
+RUNCARD = "rfsoc.yml"
 
 
-def create(runcard_path=RUNCARD):
+def create(folder: pathlib.Path = FOLDER):
     """Dummy platform using QICK project on the RFSoC4x2 board.
 
     Used in ``test_instruments_rfsoc.py``.
@@ -34,7 +35,7 @@ def create(runcard_path=RUNCARD):
     lo_era = ERA("ErasynthLO", "192.168.0.212", ethernet=True)
     channels["L3-18_ro"].local_oscillator = lo_era
 
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(FOLDER / RUNCARD)
     qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits

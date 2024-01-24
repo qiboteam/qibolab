@@ -37,7 +37,7 @@ def load_settings(runcard: dict) -> Settings:
 
 
 def load_qubits(
-    runcard: dict, extras_folder: Path = None
+    runcard: dict, kernels: Kernels = None
 ) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
@@ -52,8 +52,7 @@ def load_qubits(
         for q, char in runcard["characterization"]["single_qubit"].items()
     }
 
-    if extras_folder is not None:
-        kernels = Kernels.load(path=extras_folder / KERNELS_FILE)
+    if kernels is not None:
         for q in kernels:
             qubits[q].kernel = kernels[q]
 
@@ -151,11 +150,6 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
 
-    kernels = Kernels()
-    for qubit in qubits.values():
-        if qubit.kernel is not None:
-            kernels[qubit.name] = qubit.kernel
-
     if couplers:
         characterization["coupler"] = {
             c.name: {"sweetspot": c.sweetspot} for c in couplers.values()
@@ -188,16 +182,6 @@ def dump_runcard(platform: Platform, path: Path):
         path (pathlib.Path): Path that the yaml file will be saved.
     """
 
-    kernels = Kernels()
-    for qubit in platform.qubits.values():
-        if qubit.kernel is not None:
-            kernels[qubit.name] = qubit.kernel
-            qubit.kernel = None
-    name = platform.name
-    if platform.name == "dummy_couplers":
-        name = "dummy"
-    Kernels(kernels).dump(Path(__file__).parent / name / KERNELS_FILE)
-
     settings = {
         "nqubits": platform.nqubits,
         "settings": asdict(platform.settings),
@@ -223,3 +207,32 @@ def dump_runcard(platform: Platform, path: Path):
     path.write_text(
         yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None)
     )
+
+
+def dump_kernels(platform: Platform, path: Path):
+    """Creates Kernels instance from platform and dumps as npz.
+
+    Args:
+        platform (qibolab.platform.Platform): The platform to be serialized.
+        path (pathlib.Path): Path that the kernels file will be saved.
+    """
+
+    # create and dump kernels
+    kernels = Kernels()
+    for qubit in platform.qubits.values():
+        if qubit.kernel is not None:
+            kernels[qubit.name] = qubit.kernel
+
+    kernels.dump(path / KERNELS_FILE)
+
+
+def dump_platform(platform: Platform, path: Path):
+    """Platform serialization as runcard (yaml) and kernels (npz).
+
+    Args:
+        platform (qibolab.platform.Platform): The platform to be serialized.
+        path (pathlib.Path): Path where yaml and npz will be dumped.
+    """
+
+    dump_kernels(platform=platform, path=path)
+    dump_runcard(platform=platform, path=path)

@@ -3,8 +3,12 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
+from qibolab.kernels import Kernels
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
+from qibolab.serialize import KERNELS_FILE, load_qubits, load_runcard, load_settings
+
+DUMMY_FOLDER = pathlib.Path(__file__).parent / "dummy"
+DUMMY_RUNCARD = "dummy.yml"
 
 
 def remove_couplers(runcard):
@@ -35,8 +39,9 @@ def create_dummy(with_couplers: bool = True):
     twpa_pump.frequency = 1e9
     twpa_pump.power = 10
 
-    runcard = load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
-    extras_folder = pathlib.Path(__file__).parent / "dummy"
+    runcard = load_runcard(DUMMY_FOLDER / "dummy.yml")
+    kernels = Kernels.load(DUMMY_FOLDER / KERNELS_FILE)
+
     if not with_couplers:
         runcard = remove_couplers(runcard)
 
@@ -60,7 +65,7 @@ def create_dummy(with_couplers: bool = True):
     channels["readout"].attenuation = 0
     channels["twpa"].local_oscillator = twpa_pump
 
-    qubits, couplers, pairs = load_qubits(runcard, extras_folder)
+    qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
     # map channels to qubits
