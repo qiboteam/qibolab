@@ -69,6 +69,7 @@ class RFSOC(Controller):
     def setup(self):
         pass
 
+    @property
     def sampling_rate(self):
         return self.device.dac_sampling_rate / 1e3  # MHz to GHz
 
