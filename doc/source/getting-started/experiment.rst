@@ -11,10 +11,10 @@ To define a platform the user needs to provide a folder with the following struc
 
     my_platform/
         platform.py
-        parameters.yml
+        parameters.json
         kernels.npz # (optional)
 
-where ``platform.py`` contains instruments information, ``parameters.yml``
+where ``platform.py`` contains instruments information, ``parameters.json``
 includes calibration parameters and ``kernels.npz`` is an optional
 file with additional calibration parameters.
 
@@ -78,7 +78,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         def create(folder: Path) -> Platform:
             """Function that generates Qibolab platform."""
 
-And the we can define the runcard ``my_platform/parameters.yml``:
+And the we can define the runcard ``my_platform/parameters.json``:
 
 .. code-block:: json
 
@@ -188,7 +188,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         AcquisitionType,
     )
 
-    # load the platform from ``dummy.py`` and ``dummy.yml``
+    # load the platform from ``dummy.py`` and ``dummy.json``
     platform = create_platform("dummy")
 
     # define the pulse sequence
