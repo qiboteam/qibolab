@@ -1,9 +1,9 @@
 import pathlib
 
 from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
-from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
-from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
+from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
+from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
@@ -39,13 +39,13 @@ def create(runcard_path=RUNCARD):
     #     modules[name]._debug_folder = folder
 
     modules = {
-        "qcm_bb0": ClusterQCM_BB("qcm_bb0", f"{ADDRESS}:2"),
-        "qcm_bb1": ClusterQCM_BB("qcm_bb1", f"{ADDRESS}:4"),
-        "qcm_rf0": ClusterQCM_RF("qcm_rf0", f"{ADDRESS}:6"),
-        "qcm_rf1": ClusterQCM_RF("qcm_rf1", f"{ADDRESS}:8"),
-        "qcm_rf2": ClusterQCM_RF("qcm_rf2", f"{ADDRESS}:10"),
-        "qrm_rf_a": ClusterQRM_RF("qrm_rf_a", f"{ADDRESS}:16"),
-        "qrm_rf_b": ClusterQRM_RF("qrm_rf_b", f"{ADDRESS}:18"),
+        "qcm_bb0": QcmBb("qcm_bb0", f"{ADDRESS}:2"),
+        "qcm_bb1": QcmBb("qcm_bb1", f"{ADDRESS}:4"),
+        "qcm_rf0": QcmRf("qcm_rf0", f"{ADDRESS}:6"),
+        "qcm_rf1": QcmRf("qcm_rf1", f"{ADDRESS}:8"),
+        "qcm_rf2": QcmRf("qcm_rf2", f"{ADDRESS}:10"),
+        "qrm_rf_a": QrmRf("qrm_rf_a", f"{ADDRESS}:16"),
+        "qrm_rf_b": QrmRf("qrm_rf_b", f"{ADDRESS}:18"),
     }
 
     controller = QbloxController("qblox_controller", ADDRESS, modules)
