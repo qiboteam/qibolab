@@ -36,14 +36,14 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     from qibolab.serialize import load_qubits, load_runcard, load_settings
 
     NAME = "my_platform"  # name of the platform
-    ADDRESS = "192.168.0.1"  # ip adress of the controller
+    ADDRESS = "192.168.0.1"  # ip address of the controller
     PORT = 6000  # port of the controller
 
-    # path to runcard file with calibration parameter
-    RUNCARD = pathlib.Path.cwd() / "my_platform.yml"
+    # folder containing runcard with calibration parameters
+    FOLDER = pathlib.Path.cwd()
 
 
-    def create(runcard_path=RUNCARD):
+    def create(folder=FOLDER):
         # Instantiate controller instruments
         controller = RFSoC(NAME, ADDRESS, PORT)
 
@@ -54,7 +54,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         channels |= Channel("drive", port=controller[0])
 
         # create qubit objects
-        runcard = load_runcard(runcard_path)
+        runcard = load_runcard(folder)
         qubits, pairs = load_qubits(runcard)
         # assign channels to qubits
         qubits[0].readout = channels["L3-22_ro"]
