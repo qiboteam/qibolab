@@ -5,7 +5,19 @@ Define the platform
 -------------------
 
 To launch experiments on quantum hardware, users have first to define their platform.
-A platform is composed of a python file, with instruments information, and of a runcard file, with calibration parameters.
+To define a platform the user needs to provide a folder with the following structure:
+
+.. code-block:: bash
+
+    my_platform/
+        platform.py
+        parameters.json
+        kernels.npz # (optional)
+
+where ``platform.py`` contains instruments information, ``parameters.json``
+includes calibration parameters and ``kernels.npz`` is an optional
+file with additional calibration parameters.
+
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
@@ -13,7 +25,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
 
 .. testcode:: python
 
-    # my_platform.py
+    # my_platform/platform.py
 
     import pathlib
 
@@ -53,7 +65,20 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         settings = load_settings(runcard)
         return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="3D")
 
-And the we can define the runcard:
+.. note::
+
+    The ``platform.py`` file must contain a ``create_function`` with the following signature:
+
+    .. code-block:: python
+
+        import pathlib
+        from qibolab.platform import Platform
+
+
+        def create(folder: Path) -> Platform:
+            """Function that generates Qibolab platform."""
+
+And the we can define the runcard ``my_platform/parameters.json``:
 
 .. code-block:: yaml
 

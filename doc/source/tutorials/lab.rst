@@ -408,7 +408,7 @@ the above runcard:
     from qibolab.instruments.dummy import DummyInstrument
 
 
-    def create():
+    def create(folder: Path):
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
@@ -422,7 +422,7 @@ the above runcard:
         channels |= Channel("chf2", port=instrument["o5"])
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
+        runcard = load_runcard(folder)
         qubits, couplers, pairs = load_qubits(runcard)
 
         # assign channels to the qubit
@@ -444,7 +444,7 @@ With the following additions for coupler architectures:
 
 .. testcode::  python
 
-    def create():
+    def create(folder):
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
@@ -459,7 +459,7 @@ With the following additions for coupler architectures:
         channels |= Channel("chfc0", port=instrument["o6"])
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
+        runcard = load_runcard(folder)
         qubits, couplers, pairs = load_qubits(runcard)
 
         # assign channels to the qubit
@@ -486,8 +486,8 @@ With the following additions for coupler architectures:
             couplers=couplers,
         )
 
-Note that this assumes that the runcard is saved as ``my_platform.yml`` in the
-same directory with the Python file that contains ``create()``.
+Note that this assumes that the runcard is saved as ``<folder>/parameters.json`` where ``<folder>``
+is the directory containing ``platform.py``.
 
 
 Instrument settings
@@ -612,7 +612,7 @@ in this case ``"twpa_pump"``.
     from qibolab.instruments.oscillator import LocalOscillator
 
 
-    def create():
+    def create(folder: Path):
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
         twpa = LocalOscillator("twpa_pump", "0.0.0.1")
@@ -625,7 +625,7 @@ in this case ``"twpa_pump"``.
         channels |= Channel("ch1in", port=instrument["i1"])
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(Path(__file__).parent / "my_platform.yml")
+        runcard = load_runcard(folder)
         qubits, pairs = load_qubits(runcard)
 
         # assign channels to the qubit
