@@ -7,6 +7,10 @@
       url = "github:cachix/nixpkgs-python";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -56,6 +60,11 @@
                   install.allExtras = true;
                 };
                 version = "3.11";
+              };
+
+              languages.rust = {
+                enable = true;
+                channel = "stable";
               };
             }
           ];
