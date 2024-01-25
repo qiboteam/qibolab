@@ -26,14 +26,6 @@ RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
 
 
-def load(key):
-    """JSON deserialization.
-
-    Useful to convert string to numbers.
-    """
-    return json.loads(key)
-
-
 def load_runcard(path: Path) -> dict:
     """Load runcard JSON to a dictionary."""
     return json.loads((path / RUNCARD).read_text())
@@ -56,7 +48,7 @@ def load_qubits(
     objects.
     """
     qubits = {
-        load(q): Qubit(load(q), **char)
+        json.loads(q): Qubit(json.loads(q), **char)
         for q, char in runcard["characterization"]["single_qubit"].items()
     }
     if kernels is not None:
@@ -67,14 +59,14 @@ def load_qubits(
     pairs = {}
     if "coupler" in runcard["characterization"]:
         couplers = {
-            load(c): Coupler(load(c), **char)
+            json.loads(c): Coupler(json.loads(c), **char)
             for c, char in runcard["characterization"]["coupler"].items()
         }
 
         for c, pair in runcard["topology"].items():
             q0, q1 = pair
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], couplers[load(c)]
+                qubits[q0], qubits[q1], couplers[json.loads(c)]
             )
     else:
         for pair in runcard["topology"]:
@@ -100,13 +92,13 @@ def register_gates(
 
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
-        qubits[load(q)].native_gates = SingleQubitNatives.from_dict(
-            qubits[load(q)], gates
+        qubits[json.loads(q)].native_gates = SingleQubitNatives.from_dict(
+            qubits[json.loads(q)], gates
         )
 
     for c, gates in native_gates.get("coupler", {}).items():
-        couplers[load(c)].native_pulse = CouplerNatives.from_dict(
-            couplers[load(c)], gates
+        couplers[json.loads(c)].native_pulse = CouplerNatives.from_dict(
+            couplers[json.loads(c)], gates
         )
 
     # register two-qubit native gates to ``QubitPair`` objects
@@ -137,11 +129,13 @@ def dump_native_gates(
     using qubit and pair objects."""
     # single-qubit native gates
     native_gates = {
-        "single_qubit": {q: qubit.native_gates.raw for q, qubit in qubits.items()}
+        "single_qubit": {
+            json.dumps(q): qubit.native_gates.raw for q, qubit in qubits.items()
+        }
     }
     if couplers:
         native_gates["coupler"] = {
-            c: coupler.native_pulse.raw for c, coupler in couplers.items()
+            json.dumps(c): coupler.native_pulse.raw for c, coupler in couplers.items()
         }
 
     # two-qubit native gates
@@ -159,12 +153,14 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
     characterization = {
-        "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
+        "single_qubit": {
+            json.dumps(q): qubit.characterization for q, qubit in qubits.items()
+        },
     }
 
     if couplers:
         characterization["coupler"] = {
-            c.name: {"sweetspot": c.sweetspot} for c in couplers.values()
+            json.dumps(c.name): {"sweetspot": c.sweetspot} for c in couplers.values()
         }
     return characterization
 
