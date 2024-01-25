@@ -131,19 +131,20 @@ And the we can define the runcard ``my_platform/parameters.json``:
 Setting up the environment
 --------------------------
 
-After defining the platform, we must instruct ``qibolab`` of the location of the create file.
+After defining the platform, we must instruct ``qibolab`` of the location of the platform(s).
+We need to define the path that contains platform folders.
 This can be done using an environment variable:
 for Unix based systems:
 
 .. code-block:: bash
 
-    export QIBOLAB_PLATFORMS=<path-to-create-file>
+    export QIBOLAB_PLATFORMS=<path-platform-folders>
 
 for Windows:
 
 .. code-block:: bash
 
-    $env:QIBOLAB_PLATFORMS="<path-to-create-file>"
+    $env:QIBOLAB_PLATFORMS="<path-to-platform-folders>"
 
 To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
 
