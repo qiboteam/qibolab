@@ -7,16 +7,25 @@ import warnings
 import numpy as np
 import pytest
 from qibo.models import Circuit
+from qibo.result import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
+from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.pulses import PulseSequence, Rectangular
-from qibolab.serialize import dump_runcard, load_runcard
+from qibolab.serialize import (
+    dump_kernels,
+    dump_platform,
+    dump_runcard,
+    load_runcard,
+    load_settings,
+)
 
 from .conftest import find_instrument
 
@@ -79,6 +88,46 @@ def test_dump_runcard(platform, tmp_path):
     target_instruments = target_runcard.pop("instruments")
     final_instruments = final_runcard.pop("instruments")
     assert final_instruments == target_instruments
+
+
+@pytest.mark.parametrize("has_kernels", [False, True])
+def test_kernels(tmp_path, has_kernels):
+    """Test dumping and loading of `Kernels`."""
+
+    platform = create_dummy()
+    if has_kernels:
+        for qubit in platform.qubits:
+            platform.qubits[qubit].kernel = np.random.rand(10)
+
+    dump_kernels(platform, tmp_path)
+
+    if has_kernels:
+        kernels = Kernels.load(tmp_path)
+        for qubit in platform.qubits:
+            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+    else:
+        with pytest.raises(FileNotFoundError):
+            Kernels.load(tmp_path)
+
+
+@pytest.mark.parametrize("has_kernels", [False, True])
+def test_dump_platform(tmp_path, has_kernels):
+    """Test platform dump and loading runcard and kernels."""
+
+    platform = create_dummy()
+    if has_kernels:
+        for qubit in platform.qubits:
+            platform.qubits[qubit].kernel = np.random.rand(10)
+
+    dump_platform(platform, tmp_path)
+
+    settings = load_settings(load_runcard(tmp_path))
+    if has_kernels:
+        kernels = Kernels.load(tmp_path)
+        for qubit in platform.qubits:
+            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+
+    assert settings == platform.settings
 
 
 @pytest.fixture(scope="module")
