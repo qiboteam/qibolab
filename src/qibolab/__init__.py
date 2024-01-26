@@ -30,7 +30,7 @@ def get_platforms_path():
     return Path(profiles)
 
 
-def create_platform(name, path: Path = None) -> Platform:
+def create_platform(name) -> Platform:
     """A platform for executing quantum algorithms.
 
     It consists of a quantum processor QPU and a set of controlling instruments.
@@ -53,10 +53,7 @@ def create_platform(name, path: Path = None) -> Platform:
     spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-
-    if path is None:
-        return module.create()
-    return module.create(path)
+    return module.create()
 
 
 def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshots=1000):

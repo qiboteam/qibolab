@@ -40,10 +40,10 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     PORT = 6000  # port of the controller
 
     # folder containing runcard with calibration parameters
-    FOLDER = pathlib.Path.cwd()
+    FOLDER = pathlib.Path(__file__)
 
 
-    def create(folder=FOLDER):
+    def create():
         # Instantiate controller instruments
         controller = RFSoC(NAME, ADDRESS, PORT)
 
@@ -54,7 +54,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         channels |= Channel("drive", port=controller[0])
 
         # create qubit objects
-        runcard = load_runcard(folder)
+        runcard = load_runcard(FOLDER)
         qubits, pairs = load_qubits(runcard)
         # assign channels to qubits
         qubits[0].readout = channels["L3-22_ro"]
@@ -75,7 +75,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         from qibolab.platform import Platform
 
 
-        def create(folder: Path) -> Platform:
+        def create() -> Platform:
             """Function that generates Qibolab platform."""
 
 And the we can define the runcard ``my_platform/parameters.yml``:

@@ -228,15 +228,17 @@ platform available as
 
 .. code-block::  python
 
-    from qibolab import Platform
+    from qibolab import create_platform
 
     # Define platform and load specific runcard
-    platform = Platform("my_platform")
+    platform = create_platform("my_platform")
 
 
-To do so, ``create()`` needs to be saved in a module called ``my_platform.py``
-and the environment flag ``QIBOLAB_PLATFORMS`` needs to point to the directory
-that contains this module. Examples of advanced platforms are available at `this
+To do so, ``create()`` needs to be saved in a module called ``platform.py`` inside
+a folder with the name of this platform (in this case ``my_platform``).
+Moreover, the environment flag ``QIBOLAB_PLATFORMS`` needs to point to the directory
+that contains this folder.
+Examples of advanced platforms are available at `this
 repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 .. _using_runcards:
@@ -256,6 +258,8 @@ file with a specific format. We call such file a runcard. Here is a runcard for
 a two-qubit system:
 
 .. code-block::  yaml
+
+    # my_platform / parameters.yml
 
     nqubits: 2
 
@@ -396,10 +400,13 @@ should be a subset of :class:`qibolab.qubits.Qubit` attributes.
 Providing the above runcard is not sufficient to instantiate a
 :class:`qibolab.platform.Platform`. This should still be done using a
 ``create()`` method, however this is significantly simplified by
-``qibolab.serialize``. Here is the ``create()`` method that loads the parameters of
+``qibolab.serialize``. The ``create()`` method should be put
+Here is the ``create()`` method that loads the parameters of
 the above runcard:
 
 .. testcode::  python
+
+    # my_platform / platform.py
 
     from pathlib import Path
     from qibolab import Platform
@@ -407,8 +414,11 @@ the above runcard:
     from qibolab.serialize import load_runcard, load_qubits, load_settings
     from qibolab.instruments.dummy import DummyInstrument
 
+    FOLDER = Path(__file__).parent
+    # assumes runcard is storred in the same folder as platform.py
 
-    def create(folder: Path):
+
+    def create():
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
@@ -444,7 +454,10 @@ With the following additions for coupler architectures:
 
 .. testcode::  python
 
-    def create(folder):
+    # my_platform / platform.py
+
+
+    def create():
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
@@ -459,7 +472,7 @@ With the following additions for coupler architectures:
         channels |= Channel("chfc0", port=instrument["o6"])
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
+        runcard = load_runcard(FOLDER)
         qubits, couplers, pairs = load_qubits(runcard)
 
         # assign channels to the qubit
@@ -501,6 +514,8 @@ such as the one used to pump a traveling wave parametric amplifier (TWPA).
 The runcard can contain an ``instruments`` section that provides these parameters
 
 .. code-block::  yaml
+
+    # my_platform / parameters.yml
 
     nqubits: 2
 
@@ -599,6 +614,8 @@ in this case ``"twpa_pump"``.
 
 .. testcode::  python
 
+    # my_platform / platform.py
+
     from pathlib import Path
     from qibolab import Platform
     from qibolab.channels import ChannelMap, Channel
@@ -611,8 +628,10 @@ in this case ``"twpa_pump"``.
     from qibolab.instruments.dummy import DummyInstrument
     from qibolab.instruments.oscillator import LocalOscillator
 
+    FOLDER = Path(__file__).parent
 
-    def create(folder: Path):
+
+    def create():
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
         twpa = LocalOscillator("twpa_pump", "0.0.0.1")
@@ -625,7 +644,7 @@ in this case ``"twpa_pump"``.
         channels |= Channel("ch1in", port=instrument["i1"])
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
+        runcard = load_runcard(FOLDER)
         qubits, pairs = load_qubits(runcard)
 
         # assign channels to the qubit
