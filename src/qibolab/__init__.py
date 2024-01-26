@@ -42,7 +42,7 @@ def create_platform(name, path: Path = None) -> Platform:
         The plaform class.
     """
     if name == "dummy" or name == "dummy_couplers":
-        from qibolab.dummy.platform import create_dummy
+        from qibolab.dummy import create_dummy
 
         return create_dummy(with_couplers=name == "dummy_couplers")
 
