@@ -11,7 +11,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.couplers import Coupler
-from qibolab.kernels import KERNELS, Kernels
+from qibolab.kernels import Kernels
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
@@ -218,13 +218,15 @@ def dump_kernels(platform: Platform, path: Path):
         path (pathlib.Path): Path that the kernels file will be saved.
     """
 
-    # create and dump kernels
+    # create kernels
     kernels = Kernels()
     for qubit in platform.qubits.values():
         if qubit.kernel is not None:
             kernels[qubit.name] = qubit.kernel
 
-    kernels.dump(path / KERNELS)
+    # dump only if not None
+    if kernels:
+        kernels.dump(path)
 
 
 def dump_platform(platform: Platform, path: Path):
