@@ -16,13 +16,13 @@ from qibolab.platform import Platform
 
 
 class QibolabBackend(NumpyBackend):
-    def __init__(self, platform, runcard=None):
+    def __init__(self, platform):
         super().__init__()
         self.name = "qibolab"
         if isinstance(platform, Platform):
             self.platform = platform
         else:
-            self.platform = create_platform(platform, runcard)
+            self.platform = create_platform(platform)
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,
