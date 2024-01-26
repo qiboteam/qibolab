@@ -11,6 +11,7 @@ from typing import Tuple
 import yaml
 
 from qibolab.couplers import Coupler
+from qibolab.kernels import Kernels
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
@@ -22,10 +23,13 @@ from qibolab.platform import (
 )
 from qibolab.qubits import Qubit, QubitPair
 
+RUNCARD = "parameters.yml"
+PLATFORM = "platform.py"
+
 
 def load_runcard(path: Path) -> dict:
     """Load runcard YAML to a dictionary."""
-    return yaml.safe_load(path.read_text())
+    return yaml.safe_load((path / RUNCARD).read_text())
 
 
 def load_settings(runcard: dict) -> Settings:
@@ -34,7 +38,7 @@ def load_settings(runcard: dict) -> Settings:
 
 
 def load_qubits(
-    runcard: dict, extras_folder: Path = None
+    runcard: dict, kernels: Kernels = None
 ) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
@@ -48,10 +52,11 @@ def load_qubits(
         q: Qubit(q, **char)
         for q, char in runcard["characterization"]["single_qubit"].items()
     }
-    if extras_folder is not None:
-        single_qubit = runcard["characterization"]["single_qubit"]
-        for qubit in qubits.values():
-            qubit.kernel_path = extras_folder / single_qubit[qubit.name]["kernel_path"]
+
+    if kernels is not None:
+        for q in kernels:
+            qubits[q].kernel = kernels[q]
+
     couplers = {}
     pairs = {}
     if "coupler" in runcard["characterization"]:
@@ -145,11 +150,6 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
     characterization = {
         "single_qubit": {q: qubit.characterization for q, qubit in qubits.items()},
     }
-    for q in qubits:
-        qubit = characterization["single_qubit"][q]
-        kernel_path = qubit["kernel_path"]
-        if kernel_path is not None:
-            qubit["kernel_path"] = kernel_path.name
 
     if couplers:
         characterization["coupler"] = {
@@ -205,6 +205,37 @@ def dump_runcard(platform: Platform, path: Path):
         platform.qubits, platform.couplers
     )
 
-    path.write_text(
+    (path / RUNCARD).write_text(
         yaml.dump(settings, sort_keys=False, indent=4, default_flow_style=None)
     )
+
+
+def dump_kernels(platform: Platform, path: Path):
+    """Creates Kernels instance from platform and dumps as npz.
+
+    Args:
+        platform (qibolab.platform.Platform): The platform to be serialized.
+        path (pathlib.Path): Path that the kernels file will be saved.
+    """
+
+    # create kernels
+    kernels = Kernels()
+    for qubit in platform.qubits.values():
+        if qubit.kernel is not None:
+            kernels[qubit.name] = qubit.kernel
+
+    # dump only if not None
+    if kernels:
+        kernels.dump(path)
+
+
+def dump_platform(platform: Platform, path: Path):
+    """Platform serialization as runcard (yaml) and kernels (npz).
+
+    Args:
+        platform (qibolab.platform.Platform): The platform to be serialized.
+        path (pathlib.Path): Path where yaml and npz will be dumped.
+    """
+
+    dump_kernels(platform=platform, path=path)
+    dump_runcard(platform=platform, path=path)

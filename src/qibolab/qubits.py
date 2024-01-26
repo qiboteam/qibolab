@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field, fields
-from pathlib import Path
 from typing import List, Optional, Tuple, Union
+
+import numpy as np
 
 from qibolab.channels import Channel
 from qibolab.couplers import Coupler
@@ -14,7 +15,7 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "_flux")
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "kernel", "_flux")
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
@@ -75,7 +76,7 @@ class Qubit:
     # parameters for single shot classification
     threshold: Optional[float] = None
     iq_angle: float = 0.0
-    kernel_path: Optional[Path] = None
+    kernel: Optional[np.ndarray] = field(default=None, repr=False)
     # required for mixers (not sure if it should be here)
     mixer_drive_g: float = 0.0
     mixer_drive_phi: float = 0.0

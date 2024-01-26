@@ -5,7 +5,19 @@ Define the platform
 -------------------
 
 To launch experiments on quantum hardware, users have first to define their platform.
-A platform is composed of a python file, with instruments information, and of a runcard file, with calibration parameters.
+To define a platform the user needs to provide a folder with the following structure:
+
+.. code-block:: bash
+
+    my_platform/
+        platform.py
+        parameters.yml
+        kernels.npz # (optional)
+
+where ``platform.py`` contains instruments information, ``parameters.yml``
+includes calibration parameters and ``kernels.npz`` is an optional
+file with additional calibration parameters.
+
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
@@ -13,7 +25,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
 
 .. testcode:: python
 
-    # my_platform.py
+    # my_platform/platform.py
 
     import pathlib
 
@@ -24,14 +36,14 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     from qibolab.serialize import load_qubits, load_runcard, load_settings
 
     NAME = "my_platform"  # name of the platform
-    ADDRESS = "192.168.0.1"  # ip adress of the controller
+    ADDRESS = "192.168.0.1"  # ip address of the controller
     PORT = 6000  # port of the controller
 
-    # path to runcard file with calibration parameter
-    RUNCARD = pathlib.Path.cwd() / "my_platform.yml"
+    # folder containing runcard with calibration parameters
+    FOLDER = pathlib.Path.cwd()
 
 
-    def create(runcard_path=RUNCARD):
+    def create(folder=FOLDER):
         # Instantiate controller instruments
         controller = RFSoC(NAME, ADDRESS, PORT)
 
@@ -42,7 +54,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         channels |= Channel("drive", port=controller[0])
 
         # create qubit objects
-        runcard = load_runcard(runcard_path)
+        runcard = load_runcard(folder)
         qubits, pairs = load_qubits(runcard)
         # assign channels to qubits
         qubits[0].readout = channels["L3-22_ro"]
@@ -53,7 +65,20 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         settings = load_settings(runcard)
         return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="3D")
 
-And the we can define the runcard:
+.. note::
+
+    The ``platform.py`` file must contain a ``create_function`` with the following signature:
+
+    .. code-block:: python
+
+        import pathlib
+        from qibolab.platform import Platform
+
+
+        def create(folder: Path) -> Platform:
+            """Function that generates Qibolab platform."""
+
+And the we can define the runcard ``my_platform/parameters.yml``:
 
 .. code-block:: yaml
 
@@ -106,19 +131,20 @@ And the we can define the runcard:
 Setting up the environment
 --------------------------
 
-After defining the platform, we must instruct ``qibolab`` of the location of the create file.
+After defining the platform, we must instruct ``qibolab`` of the location of the platform(s).
+We need to define the path that contains platform folders.
 This can be done using an environment variable:
 for Unix based systems:
 
 .. code-block:: bash
 
-    export QIBOLAB_PLATFORMS=<path-to-create-file>
+    export QIBOLAB_PLATFORMS=<path-platform-folders>
 
 for Windows:
 
 .. code-block:: bash
 
-    $env:QIBOLAB_PLATFORMS="<path-to-create-file>"
+    $env:QIBOLAB_PLATFORMS="<path-to-platform-folders>"
 
 To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
 

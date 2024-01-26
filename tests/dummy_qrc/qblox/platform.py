@@ -14,20 +14,19 @@ from qibolab.serialize import (
     load_settings,
 )
 
-NAME = "qblox"
 ADDRESS = "192.168.0.6"
 TIME_OF_FLIGHT = 500
-RUNCARD = pathlib.Path(__file__).parent / "qblox.yml"
+FOLDER = pathlib.Path(__file__).parent
 
 
-def create(runcard_path=RUNCARD):
+def create(folder: pathlib.Path = FOLDER):
     """QuantWare 5q-chip controlled using qblox cluster.
 
     Args:
         runcard_path (str): Path to the runcard file.
     """
 
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(folder)
     modules = {}
 
     # DEBUG: debug folder = report folder
@@ -111,4 +110,6 @@ def create(runcard_path=RUNCARD):
 
     settings = load_settings(runcard)
 
-    return Platform("qblox", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        str(FOLDER), qubits, pairs, instruments, settings, resonator_type="2D"
+    )

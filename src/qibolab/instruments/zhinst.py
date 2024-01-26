@@ -4,7 +4,6 @@ import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import laboneq._token
@@ -318,7 +317,6 @@ class Zurich(Controller):
         self.smearing = smearing
         self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
-        self.kernels = defaultdict(Path)
 
         self.exp = None
         self.experiment = None
@@ -442,9 +440,6 @@ class Zurich(Controller):
             f"q{q}"
         ].logical_signals["acquire_line"]
 
-        if qubit.kernel_path:
-            self.kernels[q] = qubit.kernel_path
-
         oscillator = lo.Oscillator(
             frequency=intermediate_frequency,
             modulation_type=lo.ModulationType.SOFTWARE,
@@ -452,7 +447,7 @@ class Zurich(Controller):
         threshold = None
 
         if options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            if self.kernels[q].is_file():
+            if qubit.kernel is not None:
                 # Kernels don't work with the software modulation on the acquire signal
                 oscillator = None
             else:
@@ -1039,15 +1034,15 @@ class Zurich(Controller):
                     iq_angle_readout_schedule[i].append(iq_angle)
 
         weights = {}
-        for i, (pulses, qubits, iq_angles) in enumerate(
+        for i, (pulses, qubits_readout, iq_angles) in enumerate(
             zip(
                 readout_schedule.values(),
                 qubit_readout_schedule.values(),
                 iq_angle_readout_schedule.values(),
             )
         ):
-            qd_finish = self.find_subsequence_finish(i, "drive", qubits)
-            qf_finish = self.find_subsequence_finish(i, "flux", qubits)
+            qd_finish = self.find_subsequence_finish(i, "drive", qubits_readout)
+            qf_finish = self.find_subsequence_finish(i, "flux", qubits_readout)
             cf_finish = self.find_subsequence_finish(i, "couplerflux", couplers)
             finish_times = np.array(
                 [
@@ -1064,7 +1059,7 @@ class Zurich(Controller):
                 play_after = f"sequence_{latest_sequence['line']}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
+                for pulse, q, iq_angle in zip(pulses, qubits_readout, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
                     exp.delay(
@@ -1073,13 +1068,13 @@ class Zurich(Controller):
                     )
 
                     if (
-                        self.kernels[q].is_file()
+                        qubits[q].kernel is not None
                         and acquisition_type == lo.AcquisitionType.DISCRIMINATION
                     ):
-                        kernels = np.load(self.kernels[q])
+                        kernel = qubits[q].kernel
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
-                            samples=kernels[str(q)] * np.exp(1j * iq_angle),
+                            samples=kernel * np.exp(1j * iq_angle),
                         )
 
                     else:
