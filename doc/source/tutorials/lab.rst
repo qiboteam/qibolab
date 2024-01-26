@@ -414,7 +414,7 @@ the above runcard:
     from qibolab.serialize import load_runcard, load_qubits, load_settings
     from qibolab.instruments.dummy import DummyInstrument
 
-    FOLDER = Path(__file__).parent
+    FOLDER = Path.cwd()
     # assumes runcard is storred in the same folder as platform.py
 
 
@@ -628,7 +628,7 @@ in this case ``"twpa_pump"``.
     from qibolab.instruments.dummy import DummyInstrument
     from qibolab.instruments.oscillator import LocalOscillator
 
-    FOLDER = Path(__file__).parent
+    FOLDER = Path.cwd()
 
 
     def create():

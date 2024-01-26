@@ -40,7 +40,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     PORT = 6000  # port of the controller
 
     # folder containing runcard with calibration parameters
-    FOLDER = pathlib.Path(__file__)
+    FOLDER = pathlib.Path.cwd()
 
 
     def create():
