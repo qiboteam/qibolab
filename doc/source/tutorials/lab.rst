@@ -486,7 +486,7 @@ With the following additions for coupler architectures:
             couplers=couplers,
         )
 
-Note that this assumes that the runcard is saved as ``<folder>/parameters.json`` where ``<folder>``
+Note that this assumes that the runcard is saved as ``<folder>/parameters.yml`` where ``<folder>``
 is the directory containing ``platform.py``.
 
 
