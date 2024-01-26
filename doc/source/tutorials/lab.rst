@@ -400,7 +400,8 @@ should be a subset of :class:`qibolab.qubits.Qubit` attributes.
 Providing the above runcard is not sufficient to instantiate a
 :class:`qibolab.platform.Platform`. This should still be done using a
 ``create()`` method, however this is significantly simplified by
-``qibolab.serialize``. The ``create()`` method should be put
+``qibolab.serialize``. The ``create()`` method should be put in a
+file named ``platform.py`` inside the ``my_platform`` directory.
 Here is the ``create()`` method that loads the parameters of
 the above runcard:
 
