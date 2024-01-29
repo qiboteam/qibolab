@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import numpy.typing as npt
-from qibo.config import log
 from scipy.signal import lfilter
 
 SAMPLING_RATE = 1
@@ -15,7 +14,69 @@ Used for generating waveform envelopes if the instruments do not provide
 a different value.
 """
 
+# TODO: they could be distinguished among them, and distinguished from generic float
+# arrays, using the NewType pattern -> but this require some more effort to encforce
+# types throughout the whole code base
 Waveform = npt.NDArray[np.float64]
+""""""
+IqWaveform = npt.NDArray[np.float64]
+""""""
+
+
+def modulate(
+    envelope: IqWaveform,
+    freq: float,
+    rate: float = SAMPLING_RATE,
+    phase: float = 0.0,
+) -> IqWaveform:
+    """Modulate the envelope waveform with a carrier.
+
+    `envelope` is a `(2, n)`-shaped array of I and Q (first dimension) envelope signals,
+    as a function of time (second dimension), and `freq` the frequency of the carrier to
+    modulate with (usually the IF) in GHz.
+    `rate` is an optional sampling rate, in Gs/s, to sample the carrier.
+
+    .. note::
+
+        Only the combination `freq / rate` is actually relevant, but it is frequently
+        convenient to specify one in GHz and the other in Gs/s. Thus the two arguments
+        are provided for the simplicity of their interpretation.
+
+    `phase` is an optional initial phase for the carrier.
+    """
+    samples = np.arange(envelope.shape[1])
+    phases = (2 * np.pi * freq / rate) * samples + phase
+    cos = np.cos(phases)
+    sin = np.sin(phases)
+    mod = np.array([[cos, -sin], [sin, cos]])
+
+    # the normalization is related to `mod`, but only applied at the end for the sake of
+    # performances
+    return np.einsum("ijt,jt->it", mod, envelope) / np.sqrt(2)
+
+
+def demodulate(
+    modulated: IqWaveform,
+    freq: float,
+    rate: float = SAMPLING_RATE,
+) -> IqWaveform:
+    """Demodulate the acquired pulse.
+
+    The role of the arguments is the same of the corresponding ones in :func:`modulate`,
+    which is essentially the inverse of this function.
+    """
+    # in case the offsets have not been removed in hardware
+    modulated = modulated - np.mean(modulated)
+
+    samples = np.arange(modulated.shape[1])
+    phases = (2 * np.pi * freq / rate) * samples
+    cos = np.cos(phases)
+    sin = np.sin(phases)
+    demod = np.array([[cos, sin], [-sin, cos]])
+
+    # the normalization is related to `demod`, but only applied at the end for the sake
+    # of performances
+    return np.sqrt(2) * np.einsum("ijt,jt->it", demod, modulated)
 
 
 class ShapeInitError(RuntimeError):
@@ -62,54 +123,6 @@ class PulseShape(ABC):
             self.envelope_waveform_i(sampling_rate),
             self.envelope_waveform_q(sampling_rate),
         )
-
-    def modulated_waveform_i(self, _if: int, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The waveform of the i component of the pulse, modulated with its
-        frequency."""
-
-        return self.modulated_waveforms(_if, sampling_rate)[0]
-
-    def modulated_waveform_q(self, _if: int, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The waveform of the q component of the pulse, modulated with its
-        frequency."""
-
-        return self.modulated_waveforms(_if, sampling_rate)[1]
-
-    def modulated_waveforms(self, _if: int, sampling_rate=SAMPLING_RATE):
-        """A tuple with the i and q waveforms of the pulse, modulated with its
-        frequency."""
-
-        pulse = self.pulse
-        if abs(_if) * 2 > sampling_rate:
-            log.info(
-                f"WARNING: The frequency of pulse {pulse.id} is higher than the nyqusit frequency ({int(sampling_rate // 2)}) for the device sampling rate: {int(sampling_rate)}"
-            )
-        num_samples = int(np.rint(pulse.duration * sampling_rate))
-        time = np.arange(num_samples) / sampling_rate
-        global_phase = pulse.global_phase
-        cosalpha = np.cos(2 * np.pi * _if * time + global_phase + pulse.relative_phase)
-        sinalpha = np.sin(2 * np.pi * _if * time + global_phase + pulse.relative_phase)
-
-        mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(
-            2
-        )
-
-        (envelope_waveform_i, envelope_waveform_q) = self.envelope_waveforms(
-            sampling_rate
-        )
-        result = []
-        for n, t, ii, qq in zip(
-            np.arange(num_samples),
-            time,
-            envelope_waveform_i,
-            envelope_waveform_q,
-        ):
-            result.append(mod_matrix[:, :, n] @ np.array([ii, qq]))
-        mod_signals = np.array(result)
-
-        modulated_waveform_i = mod_signals[:, 0]
-        modulated_waveform_q = mod_signals[:, 1]
-        return (modulated_waveform_i, modulated_waveform_q)
 
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
