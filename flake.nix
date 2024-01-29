@@ -49,7 +49,7 @@
               config,
               ...
             }: {
-              packages = with pkgs; [pre-commit poethepoet jupyter zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
