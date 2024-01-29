@@ -989,9 +989,9 @@ class QrmRf(ClusterModule):
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-                        acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
-                        ] = AveragedAcquisition(scope, duration, frequency)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
+                            AveragedAcquisition(scope, duration, frequency)
+                        )
                     else:
                         raise RuntimeError(
                             "Software Demodulation only supports one acquisition per channel. "
@@ -1001,9 +1001,9 @@ class QrmRf(ClusterModule):
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
                         bins = results[pulse.serial]["acquisition"]["bins"]
-                        acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
-                        ] = DemodulatedAcquisition(bins, duration)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
+                            DemodulatedAcquisition(bins, duration)
+                        )
 
                     # Provide Scope Data for verification (assuming memory reseet is being done)
                     if len(sequencer.pulses.ro_pulses) == 1:

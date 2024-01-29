@@ -156,9 +156,7 @@ class QbloxSweeper:
                 )
             ),
             QbloxSweeperType.relative_phase: (lambda v: True),
-            QbloxSweeperType.start: (
-                lambda v: all((4 <= x and x < 2**16) for x in v)
-            ),
+            QbloxSweeperType.start: (lambda v: all((4 <= x and x < 2**16) for x in v)),
             QbloxSweeperType.duration: (
                 lambda v: all((0 <= x and x < 2**16) for x in v)
             ),
@@ -187,10 +185,7 @@ class QbloxSweeper:
         self._con_step = convert[type](self._abs_step)
         self._con_stop = (self._con_start + self._con_step * (self._n) + 1) % 2**32
         self._con_values = np.array(
-            [
-                (self._con_start + self._con_step * m) % 2**32
-                for m in range(self._n + 1)
-            ]
+            [(self._con_start + self._con_step * m) % 2**32 for m in range(self._n + 1)]
         )
 
         # log.info(f"Qblox sweeper converted values: {self._con_values}")

@@ -1,5 +1,6 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`."""
+
 import pathlib
 import pickle
 import warnings

@@ -1,4 +1,5 @@
 """Pulse and PulseSequence classes."""
+
 import copy
 import re
 from abc import ABC, abstractmethod

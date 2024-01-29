@@ -122,9 +122,9 @@ class QcmBb(ClusterModule):
         self.channel_map: dict = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[
-            int
-        ] = []  # TODO: we can create only list and put three flags: free, used, unused
+        self._free_sequencers_numbers: list[int] = (
+            []
+        )  # TODO: we can create only list and put three flags: free, used, unused
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
 
