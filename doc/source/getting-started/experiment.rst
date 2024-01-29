@@ -11,10 +11,10 @@ To define a platform the user needs to provide a folder with the following struc
 
     my_platform/
         platform.py
-        parameters.yml
+        parameters.json
         kernels.npz # (optional)
 
-where ``platform.py`` contains instruments information, ``parameters.yml``
+where ``platform.py`` contains instruments information, ``parameters.json``
 includes calibration parameters and ``kernels.npz`` is an optional
 file with additional calibration parameters.
 
@@ -78,54 +78,71 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         def create(folder: Path) -> Platform:
             """Function that generates Qibolab platform."""
 
-And the we can define the runcard ``my_platform/parameters.yml``:
+And the we can define the runcard ``my_platform/parameters.json``:
 
-.. code-block:: yaml
+.. code-block:: json
 
-    # my_platform.yml
-
-    nqubits: 1
-    qubits: [0]
-    topology: []
-    settings: {nshots: 1024, relaxation_time: 70000, sampling_rate: 9830400000}
-
-    native_gates:
-        single_qubit:
-            0:
-                RX:  # pi-pulse for X gate
-                    duration: 40
-                    amplitude: 0.5
-                    frequency: 5_500_000_000
-                    shape: Gaussian(3)
-                    type: qd
-                    start: 0
-                    phase: 0
-
-                MZ:  # measurement pulse
-                    duration: 2000
-                    amplitude: 0.02
-                    frequency: 7_370_000_000
-                    shape: Rectangular()
-                    type: ro
-                    start: 0
-                    phase: 0
-
-        two_qubits: {}
-    characterization:
-        single_qubit:
-            0:
-                readout_frequency: 7370000000
-                drive_frequency: 5500000000
-                anharmonicity: 0
-                Ec: 0
-                Ej: 0
-                g: 0
-                T1: 0.0
-                T2: 0.0
-                threshold: 0.0
-                iq_angle: 0.0
-                mean_gnd_states: [0.0, 0.0]
-                mean_exc_states: [0.0, 0.0]
+    {
+    "nqubits": 1,
+    "qubits": [
+        0
+    ],
+    "topology": [],
+    "settings": {
+        "nshots": 1024,
+        "relaxation_time": 70000,
+        "sampling_rate": 9830400000
+    },
+    "native_gates": {
+        "single_qubit": {
+            "0": {
+                "RX": {
+                    "duration": 40,
+                    "amplitude": 0.5,
+                    "frequency": 5500000000,
+                    "shape": "Gaussian(3)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 2000,
+                    "amplitude": 0.02,
+                    "frequency": 7370000000,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": 0
+                }
+            }
+        },
+        "two_qubits": {}
+    },
+    "characterization": {
+        "single_qubit": {
+            "0": {
+                "readout_frequency": 7370000000,
+                "drive_frequency": 5500000000,
+                "anharmonicity": 0,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "T1": 0.0,
+                "T2": 0.0,
+                "threshold": 0.0,
+                "iq_angle": 0.0,
+                "mean_gnd_states": [
+                    0.0,
+                    0.0
+                ],
+                "mean_exc_states": [
+                    0.0,
+                    0.0
+                ]
+            }
+        }
+    }
+    }
 
 
 Setting up the environment
@@ -171,7 +188,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         AcquisitionType,
     )
 
-    # load the platform from ``dummy.py`` and ``dummy.yml``
+    # load the platform from ``dummy.py`` and ``dummy.json``
     platform = create_platform("dummy")
 
     # define the pulse sequence
