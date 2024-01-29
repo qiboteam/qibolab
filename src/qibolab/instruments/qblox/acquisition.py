@@ -3,24 +3,9 @@ from typing import List, Optional
 
 import numpy as np
 
+from ...pulses.shape import demodulate
+
 SAMPLING_RATE = 1
-
-
-def demodulate(input_i, input_q, frequency):
-    """Demodulates and integrates the acquired pulse."""
-    # DOWN Conversion
-    # qblox does not remove the offsets in hardware
-    modulated_i = input_i - np.mean(input_i)
-    modulated_q = input_q - np.mean(input_q)
-
-    num_samples = modulated_i.shape[0]
-    time = np.arange(num_samples)
-    phase = 2 * np.pi * frequency * time / SAMPLING_RATE
-    cosalpha = np.cos(phase)
-    sinalpha = np.sin(phase)
-    demod_matrix = np.sqrt(2) * np.array([[cosalpha, sinalpha], [-sinalpha, cosalpha]])
-    result = np.einsum("ijt,jt->i", demod_matrix, np.stack([modulated_i, modulated_q]))
-    return np.sqrt(2) * result / num_samples
 
 
 @dataclass
@@ -73,7 +58,9 @@ class AveragedAcquisition:
         """
         # TODO: to be updated once the functionality of ExecutionResults is extended
         if self.i is None or self.q is None:
-            self.i, self.q = demodulate(self.raw_i, self.raw_q, self.frequency)
+            self.i, self.q = demodulate(
+                np.array((self.raw_i, self.raw_q)), self.frequency
+            ).mean(axis=1)
         return (self.i, self.q)
 
 
