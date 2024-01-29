@@ -1,5 +1,7 @@
 """PulseSequence class."""
 
+from collections import defaultdict
+
 from .pulse import PulseType
 
 
@@ -94,11 +96,12 @@ class PulseSequence(list):
     @property
     def finish(self) -> int:
         """The time when the last pulse of the sequence finishes."""
-        t: int = 0
+        channel_pulses = defaultdict(list)
         for pulse in self:
-            if pulse.finish > t:
-                t = pulse.finish
-        return t
+            channel_pulses[pulse.channel].append(pulse)
+        return max(
+            sum(p.duration for p in pulses) for pulses in channel_pulses.values()
+        )
 
     @property
     def start(self) -> int:
