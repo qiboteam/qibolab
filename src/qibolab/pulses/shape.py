@@ -91,11 +91,9 @@ class ShapeInitError(RuntimeError):
 
 
 class PulseShape(ABC):
-    """Abstract class for pulse shapes.
+    """Pulse envelopes.
 
-    This object is responsible for generating envelope and modulated
-    waveforms from a set of pulse parameters and its type. Generates
-    both i (in-phase) and q (quadrature) components.
+    Generates both i (in-phase) and q (quadrature) components.
     """
 
     pulse = None
