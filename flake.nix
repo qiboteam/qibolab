@@ -42,10 +42,17 @@
           inherit inputs pkgs;
 
           modules = [
-            ({lib, ...}: {
-              packages = with pkgs; [pre-commit poethepoet jupyter];
+            ({
+              lib,
+              pkgs,
+              config,
+              ...
+            }: {
+              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
 
-              env.QIBOLAB_PLATFORMS = platforms;
+              env = {
+                QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
+              };
 
               languages.c = {
                 enable = true;
