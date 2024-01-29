@@ -1,8 +1,11 @@
 # Qibolab
-
-![Tests](https://github.com/qiboteam/qibolab/workflows/Tests/badge.svg)
+[![tests](https://github.com/qiboteam/qibolab/actions/workflows/rules.yml/badge.svg)](https://github.com/qiboteam/qibolab/actions/workflows/rules.yml/badge.svg)
+[![docs](https://github.com/qiboteam/qibolab/actions/workflows/publish.yml/badge.svg)](https://qibo.science/qibolab/stable/)
 [![codecov](https://codecov.io/gh/qiboteam/qibolab/branch/main/graph/badge.svg?token=11UENAPBPH)](https://codecov.io/gh/qiboteam/qibolab)
-[![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![CodeFactor](https://www.codefactor.io/repository/github/qiboteam/qibolab/badge)](https://www.codefactor.io/repository/github/qiboteam/qibolab)
+[![arXiv](https://img.shields.io/badge/arXiv-2308.06313-b31b1b.svg)](https://arxiv.org/abs/2308.06313)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10572987.svg)](https://doi.org/10.5281/zenodo.10572987)
 
 Qibolab is the dedicated [Qibo](https://github.com/qiboteam/qibo) backend for
 the automatic deployment of quantum circuits on quantum hardware.
