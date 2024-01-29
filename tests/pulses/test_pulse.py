@@ -55,7 +55,7 @@ def test_plot_functions():
     os.remove(plot_file)
 
 
-def test_pulse_init():
+def test_init():
     # standard initialisation
     p0 = Pulse(
         start=0,
@@ -170,7 +170,7 @@ def test_pulse_init():
     assert p12.finish == 5.5 + 34.33
 
 
-def test_pulse_attributes():
+def test_attributes():
     channel = 0
     qubit = 0
 
@@ -232,100 +232,7 @@ def test_is_equal_ignoring_start():
     assert not p1.is_equal_ignoring_start(p4)
 
 
-@pytest.mark.parametrize(
-    "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
-)
-def test_pulseshape_sampling_rate(shape):
-    pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
-    assert len(pulse.envelope_waveform_i(sampling_rate=1)) == 40
-    assert len(pulse.envelope_waveform_i(sampling_rate=100)) == 4000
-
-
-def testhape_eval():
-    shape = PulseShape.eval("Rectangular()")
-    assert isinstance(shape, Rectangular)
-    shape = PulseShape.eval("Drag(5, 1)")
-    assert isinstance(shape, Drag)
-    with pytest.raises(ValueError):
-        shape = PulseShape.eval("Ciao()")
-
-
-def test_raise_shapeiniterror():
-    shape = Rectangular()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = Gaussian(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = GaussianSquare(0, 1)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = Drag(0, 0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = IIR([0], [0], None)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = SNZ(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = eCap(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-
-def test_pulseshape_drag_shape():
-    pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
-    # envelope i & envelope q should cross nearly at 0 and at 2
-    waveform = pulse.envelope_waveform_i(sampling_rate=10)
-    target_waveform = np.array(
-        [
-            0.63683161,
-            0.69680478,
-            0.7548396,
-            0.80957165,
-            0.85963276,
-            0.90370708,
-            0.94058806,
-            0.96923323,
-            0.98881304,
-            0.99875078,
-            0.99875078,
-            0.98881304,
-            0.96923323,
-            0.94058806,
-            0.90370708,
-            0.85963276,
-            0.80957165,
-            0.7548396,
-            0.69680478,
-            0.63683161,
-        ]
-    )
-    np.testing.assert_allclose(waveform, target_waveform)
-
-
-def test_pulse_hash():
+def test_hash():
     rp = Pulse(0, 40, 0.9, 100e6, 0, Rectangular(), 0, PulseType.DRIVE)
     dp = Pulse(0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
     hash(rp)
@@ -346,7 +253,7 @@ def test_pulse_hash():
     assert p1 == p3
 
 
-def test_pulse_aliases():
+def test_aliases():
     rop = Pulse(
         start=0,
         duration=50,
@@ -380,7 +287,7 @@ def test_pulse_aliases():
     assert fp.channel == 0
 
 
-def test_pulse_pulse_order():
+def test_pulse_order():
     t0 = 0
     t = 0
     p1 = Pulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
@@ -402,230 +309,6 @@ def test_pulse_pulse_order():
         return sorted(sequence, key=lambda item: (item.start, item.channel))
 
     assert sortseq(ps1) == sortseq(ps2)
-
-
-def modulate(
-    i: np.ndarray,
-    q: np.ndarray,
-    num_samples: int,
-    frequency: int,
-    phase: float,
-    sampling_rate: float,
-):  #  -> tuple[np.ndarray, np.ndarray]:
-    time = np.arange(num_samples) / sampling_rate
-    cosalpha = np.cos(2 * np.pi * frequency * time + phase)
-    sinalpha = np.sin(2 * np.pi * frequency * time + phase)
-    mod_matrix = np.array([[cosalpha, -sinalpha], [sinalpha, cosalpha]]) / np.sqrt(2)
-    result = []
-    for n, t, ii, qq in zip(np.arange(num_samples), time, i, q):
-        result.append(mod_matrix[:, :, n] @ np.array([ii, qq]))
-    mod_signals = np.array(result)
-    return mod_signals[:, 0], mod_signals[:, 1]
-
-
-def test_pulseshape_rectangular():
-    pulse = Pulse(
-        start=0,
-        duration=50,
-        amplitude=1,
-        frequency=200_000_000,
-        relative_phase=0,
-        shape=Rectangular(),
-        channel=1,
-        qubit=0,
-    )
-    _if = 0
-
-    assert pulse.duration == 50
-    assert isinstance(pulse.shape, Rectangular)
-    assert pulse.shape.name == "Rectangular"
-    assert repr(pulse.shape) == "Rectangular()"
-
-    sampling_rate = 1
-    num_samples = int(pulse.duration / sampling_rate)
-    i, q = (
-        pulse.amplitude * np.ones(num_samples),
-        pulse.amplitude * np.zeros(num_samples),
-    )
-    global_phase = (
-        2 * np.pi * _if * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
-    )
-
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
-    )
-
-
-def test_pulseshape_gaussian():
-    pulse = Pulse(
-        start=0,
-        duration=50,
-        amplitude=1,
-        frequency=200_000_000,
-        relative_phase=0,
-        shape=Gaussian(5),
-        channel=1,
-        qubit=0,
-    )
-    _if = 0
-
-    assert pulse.duration == 50
-    assert isinstance(pulse.shape, Gaussian)
-    assert pulse.shape.name == "Gaussian"
-    assert pulse.shape.rel_sigma == 5
-    assert repr(pulse.shape) == "Gaussian(5)"
-
-    sampling_rate = 1
-    num_samples = int(pulse.duration / sampling_rate)
-    x = np.arange(0, num_samples, 1)
-    i = pulse.amplitude * np.exp(
-        -(1 / 2)
-        * (
-            ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
-        )
-    )
-    q = pulse.amplitude * np.zeros(num_samples)
-    global_phase = (
-        2 * np.pi * pulse.frequency * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
-    )
-
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
-    )
-
-
-def test_pulseshape_drag():
-    pulse = Pulse(
-        start=0,
-        duration=50,
-        amplitude=1,
-        frequency=200_000_000,
-        relative_phase=0,
-        shape=Drag(5, 0.2),
-        channel=1,
-        qubit=0,
-    )
-    _if = 0
-
-    assert pulse.duration == 50
-    assert isinstance(pulse.shape, Drag)
-    assert pulse.shape.name == "Drag"
-    assert pulse.shape.rel_sigma == 5
-    assert pulse.shape.beta == 0.2
-    assert repr(pulse.shape) == "Drag(5, 0.2)"
-
-    sampling_rate = 1
-    num_samples = int(pulse.duration / 1 * sampling_rate)
-    x = np.arange(0, num_samples, 1)
-    i = pulse.amplitude * np.exp(
-        -(1 / 2)
-        * (
-            ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
-        )
-    )
-    q = (
-        pulse.shape.beta
-        * (-(x - (num_samples - 1) / 2) / ((num_samples / pulse.shape.rel_sigma) ** 2))
-        * i
-        * sampling_rate
-    )
-    global_phase = (
-        2 * np.pi * _if * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
-    )
-
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
-    )
-
-
-def test_pulseshape_eq():
-    """Checks == operator for pulse shapes."""
-
-    shape1 = Rectangular()
-    shape2 = Rectangular()
-    shape3 = Gaussian(5)
-    assert shape1 == shape2
-    assert not shape1 == shape3
-
-    shape1 = Gaussian(4)
-    shape2 = Gaussian(4)
-    shape3 = Gaussian(5)
-    assert shape1 == shape2
-    assert not shape1 == shape3
-
-    shape1 = GaussianSquare(4, 0.01)
-    shape2 = GaussianSquare(4, 0.01)
-    shape3 = GaussianSquare(5, 0.01)
-    shape4 = GaussianSquare(4, 0.05)
-    shape5 = GaussianSquare(5, 0.05)
-    assert shape1 == shape2
-    assert not shape1 == shape3
-    assert not shape1 == shape4
-    assert not shape1 == shape5
-
-    shape1 = Drag(4, 0.01)
-    shape2 = Drag(4, 0.01)
-    shape3 = Drag(5, 0.01)
-    shape4 = Drag(4, 0.05)
-    shape5 = Drag(5, 0.05)
-    assert shape1 == shape2
-    assert not shape1 == shape3
-    assert not shape1 == shape4
-    assert not shape1 == shape5
-
-    shape1 = IIR([-0.5, 2], [1], Rectangular())
-    shape2 = IIR([-0.5, 2], [1], Rectangular())
-    shape3 = IIR([-0.5, 4], [1], Rectangular())
-    shape4 = IIR([-0.4, 2], [1], Rectangular())
-    shape5 = IIR([-0.5, 2], [2], Rectangular())
-    shape6 = IIR([-0.5, 2], [2], Gaussian(5))
-    assert shape1 == shape2
-    assert not shape1 == shape3
-    assert not shape1 == shape4
-    assert not shape1 == shape5
-    assert not shape1 == shape6
-
-    shape1 = SNZ(5)
-    shape2 = SNZ(5)
-    shape3 = SNZ(2)
-    shape4 = SNZ(2, 0.1)
-    shape5 = SNZ(2, 0.1)
-    assert shape1 == shape2
-    assert not shape1 == shape3
-    assert not shape1 == shape4
-    assert not shape1 == shape5
-
-    shape1 = eCap(4)
-    shape2 = eCap(4)
-    shape3 = eCap(5)
-    assert shape1 == shape2
-    assert not shape1 == shape3
 
 
 def test_pulse():
