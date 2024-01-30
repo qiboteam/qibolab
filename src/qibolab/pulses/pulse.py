@@ -19,11 +19,12 @@ class PulseType(Enum):
     DRIVE = "qd"
     FLUX = "qf"
     COUPLERFLUX = "cf"
+    DELAY = "dl"
 
 
 @dataclass
 class Pulse:
-    """Representation of a pulse to be sent to the QPU."""
+    """A pulse to be sent to the QPU."""
 
     duration: int
     """Pulse duration in ns."""
@@ -118,10 +119,12 @@ class Pulse:
 
 @dataclass
 class Delay:
-    """Representation of a wait instruction during which we are not sending any
-    pulses to the QPU."""
+    """A wait instruction during which we are not sending any pulses to the
+    QPU."""
 
     duration: int
     """Delay duration in ns."""
     channel: str
     """Channel on which the delay should be implemented."""
+    type: PulseType = PulseType.DELAY
+    """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
