@@ -165,7 +165,6 @@ def test_dummy_single_sweep_coupler(
         sweeper = Sweeper(parameter, parameter_range, couplers=[platform.couplers[0]])
     else:
         sweeper = Sweeper(parameter, parameter_range, pulses=[coupler_pulse])
-    print(sweeper)
     options = ExecutionParameters(
         nshots=nshots,
         averaging_mode=average,

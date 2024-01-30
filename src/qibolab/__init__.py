@@ -12,6 +12,7 @@ from qibolab.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab.platform import Platform
+from qibolab.serialize import PLATFORM
 
 __version__ = im.version(__package__)
 
@@ -29,13 +30,14 @@ def get_platforms_path():
     return Path(profiles)
 
 
-def create_platform(name, runcard=None):
+def create_platform(name, path: Path = None) -> Platform:
     """A platform for executing quantum algorithms.
 
     It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
         name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
+        path (pathlib.Path): path with platform serialization
     Returns:
         The plaform class.
     """
@@ -44,17 +46,17 @@ def create_platform(name, runcard=None):
 
         return create_dummy(with_couplers=name == "dummy_couplers")
 
-    platform = get_platforms_path() / f"{name}.py"
+    platform = get_platforms_path() / f"{name}"
     if not platform.exists():
         raise_error(ValueError, f"Platform {name} does not exist.")
 
-    spec = importlib.util.spec_from_file_location("platform", platform)
+    spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    if runcard is None:
+    if path is None:
         return module.create()
-    return module.create(runcard)
+    return module.create(path)
 
 
 def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshots=1000):

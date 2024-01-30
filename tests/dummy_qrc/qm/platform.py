@@ -11,10 +11,10 @@ from qibolab.serialize import (
     load_settings,
 )
 
-RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
+FOLDER = pathlib.Path(__file__).parent
 
 
-def create(runcard_path=RUNCARD):
+def create(folder: pathlib.Path = FOLDER):
     """Dummy platform using Quantum Machines (QM) OPXs and Rohde Schwarz local
     oscillators.
 
@@ -70,7 +70,7 @@ def create(runcard_path=RUNCARD):
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
     # create qubit objects
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(folder)
     qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits

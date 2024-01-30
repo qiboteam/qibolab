@@ -5,7 +5,7 @@ from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
 
 
 class ClusterModule(Instrument):
-    """This class defines common features shared by all Qblox modules (QCM- BB,
+    """This class defines common features shared by all Qblox modules (QCM-BB,
     QCM-RF, QRM-RF).
 
     It serves as a foundational class, unifying the behavior of the
@@ -43,7 +43,7 @@ class ClusterModule(Instrument):
         Returns this port object.
 
         Example:
-        >>> qrm_module = ClusterQRM_RF("qrm_rf", f"{IP_ADDRESS}:{SLOT_IDX}")
+        >>> qrm_module = QrmRf("qrm_rf", f"{IP_ADDRESS}:{SLOT_IDX}")
         >>> output_port = qrm_module.add_port("o1")
         >>> input_port = qrm_module.add_port("i1", out=False)
         >>> qrm_module.ports

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
+from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.pulses import FluxPulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -21,8 +21,8 @@ PORT_SETTINGS = ["o1", "o2", "o3", "o4"]
 
 def get_qcm_bb(controller):
     for module in controller.modules.values():
-        if isinstance(module, ClusterQCM_BB):
-            return ClusterQCM_BB(module.name, module.address)
+        if isinstance(module, QcmBb):
+            return QcmBb(module.name, module.address)
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +41,7 @@ def connected_qcm_bb(connected_controller):
     connected_controller.disconnect()
 
 
-def test_instrument_interface(qcm_bb: ClusterQCM_BB):
+def test_instrument_interface(qcm_bb: QcmBb):
     # Test compliance with :class:`qibolab.instruments.abstract.Instrument` interface
     for abstract_method in Instrument.__abstractmethods__:
         assert hasattr(qcm_bb, abstract_method)
@@ -54,16 +54,16 @@ def test_instrument_interface(qcm_bb: ClusterQCM_BB):
         assert hasattr(qcm_bb, attribute)
 
 
-def test_init(qcm_bb: ClusterQCM_BB):
+def test_init(qcm_bb: QcmBb):
     assert qcm_bb.device == None
 
 
-def test_setup(qcm_bb: ClusterQCM_BB):
+def test_setup(qcm_bb: QcmBb):
     qcm_bb.setup()
 
 
 @pytest.mark.qpu
-def test_connect(connected_qcm_bb: ClusterQCM_BB):
+def test_connect(connected_qcm_bb: QcmBb):
     qcm_bb = connected_qcm_bb
 
     assert qcm_bb.is_connected
@@ -134,7 +134,7 @@ def test_connect(connected_qcm_bb: ClusterQCM_BB):
 
 
 @pytest.mark.qpu
-def test_pulse_sequence(connected_platform, connected_qcm_bb: ClusterQCM_BB):
+def test_pulse_sequence(connected_platform, connected_qcm_bb: QcmBb):
     ps = PulseSequence()
     ps.add(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
     ps.add(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
@@ -153,7 +153,7 @@ def test_pulse_sequence(connected_platform, connected_qcm_bb: ClusterQCM_BB):
 
 
 @pytest.mark.qpu
-def test_sweepers(connected_platform, connected_qcm_bb: ClusterQCM_BB):
+def test_sweepers(connected_platform, connected_qcm_bb: QcmBb):
     ps = PulseSequence()
     ps.add(FluxPulse(40, 70, 0.5, "Rectangular", O1_OUTPUT_CHANNEL))
     ps.add(FluxPulse(0, 50, 0.3, "Rectangular", O2_OUTPUT_CHANNEL))
