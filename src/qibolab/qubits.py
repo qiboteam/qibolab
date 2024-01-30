@@ -77,11 +77,6 @@ class Qubit:
     threshold: Optional[float] = None
     iq_angle: float = 0.0
     kernel: Optional[np.ndarray] = field(default=None, repr=False)
-    # required for mixers (not sure if it should be here)
-    mixer_drive_g: float = 0.0
-    mixer_drive_phi: float = 0.0
-    mixer_readout_g: float = 0.0
-    mixer_readout_phi: float = 0.0
 
     readout: Optional[Channel] = None
     feedback: Optional[Channel] = None
