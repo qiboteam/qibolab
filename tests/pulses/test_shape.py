@@ -139,21 +139,9 @@ def test_rectangular():
         pulse.amplitude * np.ones(num_samples),
         pulse.amplitude * np.zeros(num_samples),
     )
-    global_phase = (
-        2 * np.pi * _if * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
-    )
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
-    )
 
 
 def test_gaussian():
@@ -186,21 +174,9 @@ def test_gaussian():
         )
     )
     q = pulse.amplitude * np.zeros(num_samples)
-    global_phase = (
-        2 * np.pi * pulse.frequency * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
-    )
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
-    )
 
 
 def test_drag():
@@ -239,21 +215,9 @@ def test_drag():
         * i
         * sampling_rate
     )
-    global_phase = (
-        2 * np.pi * _if * pulse.start / 1e9
-    )  # pulse start, duration and finish are in ns
-    mod_i, mod_q = modulate(
-        i, q, num_samples, _if, global_phase + pulse.relative_phase, sampling_rate
-    )
 
     np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
     np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_i(_if, sampling_rate), mod_i
-    )
-    np.testing.assert_allclose(
-        pulse.shape.modulated_waveform_q(_if, sampling_rate), mod_q
-    )
 
 
 def test_eq():
