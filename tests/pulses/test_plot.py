@@ -1,6 +1,8 @@
 import os
 import pathlib
 
+import numpy as np
+
 from qibolab.pulses import (
     IIR,
     SNZ,
@@ -14,6 +16,7 @@ from qibolab.pulses import (
     eCap,
     plot,
 )
+from qibolab.pulses.shape import modulate
 
 HERE = pathlib.Path(__file__).parent
 
@@ -29,7 +32,8 @@ def test_plot_functions():
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
     p6 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.DRIVE, 2)
     ps = PulseSequence([p0, p1, p2, p3, p4, p5, p6])
-    wf = p0.modulated_waveform_i(0)
+    envelope = p0.envelope_waveforms()
+    wf = modulate(np.array(envelope), 0.0)
 
     plot_file = HERE / "test_plot.png"
 
