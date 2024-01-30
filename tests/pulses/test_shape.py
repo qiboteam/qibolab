@@ -14,6 +14,7 @@ from qibolab.pulses import (
     ShapeInitError,
     eCap,
 )
+from qibolab.pulses.shape import demodulate, modulate
 
 
 @pytest.mark.parametrize(
@@ -282,3 +283,21 @@ def test_eq():
     shape3 = eCap(5)
     assert shape1 == shape2
     assert not shape1 == shape3
+
+
+def test_demodulation():
+    signal = np.ones((2, 100))
+    freq = 0.15
+    mod = modulate(signal, freq)
+
+    demod = demodulate(mod, freq)
+    np.testing.assert_allclose(demod, signal)
+
+    mod1 = modulate(demod, freq * 3.0, rate=3.0)
+    np.testing.assert_allclose(mod1, mod)
+
+    mod2 = modulate(signal, freq, phase=2 * np.pi)
+    np.testing.assert_allclose(mod2, mod)
+
+    demod1 = demodulate(mod + np.ones_like(mod), freq)
+    np.testing.assert_allclose(demod1, demod)
