@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
 
 from qibolab.channels import Channel
-from qibolab.native import CouplerNatives
+from qibolab.native import SingleQubitNatives
 
 QubitId = Union[str, int]
 """Type for Coupler names."""
@@ -22,7 +22,7 @@ class Coupler:
 
     sweetspot: float = 0
     "Coupler sweetspot to center it's flux dependence if needed."
-    native_pulse: CouplerNatives = field(default_factory=CouplerNatives)
+    native_pulse: SingleQubitNatives = field(default_factory=SingleQubitNatives)
     "For now this only contains the calibrated pulse to activate the coupler."
 
     _flux: Optional[Channel] = None
