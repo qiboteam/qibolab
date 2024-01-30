@@ -14,7 +14,6 @@ class Parameter(Enum):
     amplitude = auto()
     duration = auto()
     relative_phase = auto()
-    start = auto()
 
     attenuation = auto()
     gain = auto()
@@ -26,7 +25,6 @@ FREQUENCY = Parameter.frequency
 AMPLITUDE = Parameter.amplitude
 DURATION = Parameter.duration
 RELATIVE_PHASE = Parameter.relative_phase
-START = Parameter.start
 ATTENUATION = Parameter.attenuation
 GAIN = Parameter.gain
 BIAS = Parameter.bias
@@ -64,7 +62,7 @@ class Sweeper:
             platform = create_dummy()
             sequence = PulseSequence()
             parameter = Parameter.frequency
-            pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+            pulse = platform.create_qubit_readout_pulse(qubit=0)
             sequence.append(pulse)
             parameter_range = np.random.randint(10, size=10)
             sweeper = Sweeper(parameter, parameter_range, [pulse])
