@@ -1,4 +1,4 @@
-from .pulse import Pulse, PulseType
+from .pulse import Delay, Pulse, PulseType
 from .sequence import PulseSequence
 from .shape import (
     IIR,
