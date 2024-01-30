@@ -274,7 +274,7 @@ class Platform:
                 platform = create_dummy()
                 sequence = PulseSequence()
                 parameter = Parameter.frequency
-                pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+                pulse = platform.create_qubit_readout_pulse(qubit=0)
                 sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
@@ -333,62 +333,68 @@ class Platform:
         except KeyError:
             return list(self.couplers.keys())[coupler]
 
-    def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
+    def create_RX90_pulse(self, qubit, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX90
+        pulse.relative_phase = relative_phase
+        return pulse
 
-    def create_RX_pulse(self, qubit, start=0, relative_phase=0):
+    def create_RX_pulse(self, qubit, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX
+        pulse.relative_phase = relative_phase
+        return pulse
 
-    def create_RX12_pulse(self, qubit, start=0, relative_phase=0):
+    def create_RX12_pulse(self, qubit, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.RX12.pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX12
+        pulse.relative_phase = relative_phase
+        return pulse
 
-    def create_CZ_pulse_sequence(self, qubits, start=0):
+    def create_CZ_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
             raise_error(
                 ValueError,
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.pairs[pair].native_gates.CZ.sequence(start)
+        return self.pairs[pair].native_gates.CZ
 
-    def create_iSWAP_pulse_sequence(self, qubits, start=0):
+    def create_iSWAP_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.iSWAP is None:
             raise_error(
                 ValueError,
                 f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.pairs[pair].native_gates.iSWAP.sequence(start)
+        return self.pairs[pair].native_gates.iSWAP
 
-    def create_CNOT_pulse_sequence(self, qubits, start=0):
+    def create_CNOT_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q) for q in qubits)
         if pair not in self.pairs or self.pairs[pair].native_gates.CNOT is None:
             raise_error(
                 ValueError,
                 f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.pairs[pair].native_gates.CNOT.sequence(start)
+        return self.pairs[pair].native_gates.CNOT
 
-    def create_MZ_pulse(self, qubit, start):
+    def create_MZ_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.MZ.pulse(start)
+        return self.qubits[qubit].native_gates.MZ
 
-    def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
+    def create_qubit_drive_pulse(self, qubit, duration, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
+        pulse = self.qubits[qubit].native_gates.RX
+        pulse.relative_phase = relative_phase
         pulse.duration = duration
         return pulse
 
-    def create_qubit_readout_pulse(self, qubit, start):
-        qubit = self.get_qubit(qubit)
-        return self.create_MZ_pulse(qubit, start)
+    def create_qubit_readout_pulse(self, qubit):
+        return self.create_MZ_pulse(qubit)
 
-    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
+    def create_coupler_pulse(self, coupler, duration=None, amplitude=None):
         coupler = self.get_coupler(coupler)
-        pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
+        pulse = self.couplers[coupler].native_pulse.CP
         if duration is not None:
             pulse.duration = duration
         if amplitude is not None:
