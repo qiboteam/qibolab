@@ -1005,9 +1005,9 @@ class QrmRf(ClusterModule):
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
                         bins = results[pulse.id]["acquisition"]["bins"]
-                        acquisitions[pulse.qubit] = acquisitions[pulse.id] = (
-                            DemodulatedAcquisition(scope, bins, duration)
-                        )
+                        acquisitions[pulse.qubit] = acquisitions[
+                            pulse.id
+                        ] = DemodulatedAcquisition(scope, bins, duration)
 
         # TODO: to be updated once the functionality of ExecutionResults is extended
         return {key: acquisition for key, acquisition in acquisitions.items()}
