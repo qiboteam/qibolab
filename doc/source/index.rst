@@ -15,9 +15,8 @@ circuits on quantum hardware. Qibolab includes:
 1. :ref:`Platform API <main_doc_platform>`: support custom allocation of quantum hardware platforms / lab setup.
 2. :ref:`Drivers <main_doc_instruments>`: supports commercial and open-source firmware for hardware control.
 3. :ref:`Arbitrary pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
-4. :ref:`Transpiler <main_doc_transpiler>`: compiles quantum circuits into pulse sequences matching chip topology.
-5. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on
-   quantum hardware.
+4. :ref:`Compiler <main_doc_compiler>`: compiles quantum circuits into pulse sequences.
+5. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on quantum hardware.
 
 Components
 ----------
