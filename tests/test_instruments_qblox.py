@@ -27,7 +27,6 @@ It supports:
     - safe disconnection of offsets on termination
 """
 
-
 # from .conftest import load_from_platform
 
 # INSTRUMENTS_LIST = ["Cluster", "ClusterQRM_RF", "ClusterQCM_RF"]

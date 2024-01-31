@@ -1,4 +1,5 @@
 """Plotting tools for pulses and related entities."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
