@@ -204,7 +204,7 @@ class QbloxController(Controller):
                 i_raw = acquisition_results[ro_pulse.serial].raw_i
                 q_raw = acquisition_results[ro_pulse.serial].raw_q
                 _res = i_raw + 1j * q_raw
-            else:
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
                 ires = acquisition_results[ro_pulse.serial].shots_i
                 qres = acquisition_results[ro_pulse.serial].shots_q
                 _res = ires + 1j * qres

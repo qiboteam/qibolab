@@ -135,13 +135,3 @@ class DemodulatedAcquisition:
         """List with the results of demodulating, integrating and classifying
         every shot."""
         return np.array(self.bins["threshold"])
-
-    @property
-    def data(self):
-        """Acquisition data to be returned to the platform.
-
-        Ignores the data available in acquisition results and returns
-        only i and q voltages.
-        """
-        # TODO: to be updated once the functionality of ExecutionResults is extended
-        return (self.shots_i, self.shots_q, self.classified)
