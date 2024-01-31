@@ -359,9 +359,6 @@ class Zurich(Controller):
             self.device = self.session.disconnect()
             self.is_connected = False
 
-    def setup(self, *args, **kwargs):
-        """Empty method to comply with Instrument interface."""
-
     def calibration_step(self, qubits, couplers, options):
         """Zurich general pre experiment calibration definitions.
 
