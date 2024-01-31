@@ -10,7 +10,7 @@ from qibo.config import log, raise_error
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import PulseSequence, ReadoutPulse
+from qibolab.pulses import FluxPulse, PulseSequence, ReadoutPulse
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 
@@ -389,6 +389,19 @@ class Platform:
     def create_qubit_readout_pulse(self, qubit, start):
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
+
+    def create_qubit_flux_pulse(self, qubit, start, duration, amplitude=1):
+        qubit = self.get_qubit(qubit)
+        pulse = FluxPulse(
+            start=start,
+            duration=duration,
+            amplitude=amplitude,
+            shape="Rectangular",
+            channel=self.qubits[qubit].flux.name,
+            qubit=qubit,
+        )
+        pulse.duration = duration
+        return pulse
 
     def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
         coupler = self.get_coupler(coupler)

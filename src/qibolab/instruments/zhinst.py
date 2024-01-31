@@ -420,20 +420,20 @@ class Zurich(Controller):
         self.signal_map[f"measure{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["measure_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/measure_line"
-        ] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.SOFTWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqa_m" + str(q),
-                frequency=int(qubit.readout.local_oscillator.frequency),
-            ),
-            range=qubit.readout.power_range,
-            port_delay=None,
-            delay_signal=0,
+        self.calibration[f"/logical_signal_groups/q{q}/measure_line"] = (
+            lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.SOFTWARE,
+                ),
+                local_oscillator=lo.Oscillator(
+                    uid="lo_shfqa_m" + str(q),
+                    frequency=int(qubit.readout.local_oscillator.frequency),
+                ),
+                range=qubit.readout.power_range,
+                port_delay=None,
+                delay_signal=0,
+            )
         )
 
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[
@@ -454,13 +454,13 @@ class Zurich(Controller):
                 # To keep compatibility with angle and threshold discrimination (Remove when possible)
                 threshold = qubit.threshold
 
-        self.calibration[
-            f"/logical_signal_groups/q{q}/acquire_line"
-        ] = lo.SignalCalibration(
-            oscillator=oscillator,
-            range=qubit.feedback.power_range,
-            port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            threshold=threshold,
+        self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = (
+            lo.SignalCalibration(
+                oscillator=oscillator,
+                range=qubit.feedback.power_range,
+                port_delay=self.time_of_flight * NANO_TO_SECONDS,
+                threshold=threshold,
+            )
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -469,20 +469,20 @@ class Zurich(Controller):
         self.signal_map[f"drive{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["drive_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/drive_line"
-        ] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.HARDWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqc" + str(q),
-                frequency=int(qubit.drive.local_oscillator.frequency),
-            ),
-            range=qubit.drive.power_range,
-            port_delay=None,
-            delay_signal=0,
+        self.calibration[f"/logical_signal_groups/q{q}/drive_line"] = (
+            lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.HARDWARE,
+                ),
+                local_oscillator=lo.Oscillator(
+                    uid="lo_shfqc" + str(q),
+                    frequency=int(qubit.drive.local_oscillator.frequency),
+                ),
+                range=qubit.drive.power_range,
+                port_delay=None,
+                delay_signal=0,
+            )
         )
 
     def register_flux_line(self, qubit):
@@ -491,13 +491,13 @@ class Zurich(Controller):
         self.signal_map[f"flux{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["flux_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/flux_line"
-        ] = lo.SignalCalibration(
-            range=qubit.flux.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=qubit.flux.offset,
+        self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = (
+            lo.SignalCalibration(
+                range=qubit.flux.power_range,
+                port_delay=None,
+                delay_signal=0,
+                voltage_offset=qubit.flux.offset,
+            )
         )
 
     def register_couplerflux_line(self, coupler):
@@ -506,13 +506,13 @@ class Zurich(Controller):
         self.signal_map[f"couplerflux{c}"] = self.device_setup.logical_signal_groups[
             f"qc{c}"
         ].logical_signals["flux_line"]
-        self.calibration[
-            f"/logical_signal_groups/qc{c}/flux_line"
-        ] = lo.SignalCalibration(
-            range=coupler.flux.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=coupler.flux.offset,
+        self.calibration[f"/logical_signal_groups/qc{c}/flux_line"] = (
+            lo.SignalCalibration(
+                range=coupler.flux.power_range,
+                port_delay=None,
+                delay_signal=0,
+                voltage_offset=coupler.flux.offset,
+            )
         )
 
     def run_exp(self):

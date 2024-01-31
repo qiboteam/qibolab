@@ -4,6 +4,7 @@ The format of runcards in the ``qiboteam/qibolab_platforms_qrc``
 repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
+
 import json
 from dataclasses import asdict
 from pathlib import Path

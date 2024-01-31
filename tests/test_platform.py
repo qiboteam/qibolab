@@ -1,5 +1,6 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`."""
+
 import pathlib
 import pickle
 import warnings
@@ -167,6 +168,20 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
     )
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
     assert len(sequence.cf_pulses) > 0
+
+
+@pytest.mark.qpu
+def test_platform_execute_one_flux_pulse(qpu_platform):
+    # One flux pulse
+    platform = qpu_platform
+    qubit = next(iter(platform.qubits))
+    sequence = PulseSequence()
+    sequence.add(
+        platform.create_qubit_flux_pulse(qubit, start=0, duration=200, amplitude=1)
+    )
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    assert len(sequence.qf_pulses) == 1
+    assert len(sequence) == 1
 
 
 @pytest.mark.qpu
