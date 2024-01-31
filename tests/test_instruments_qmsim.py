@@ -11,6 +11,7 @@ will be raised if there is disagreement.
 If an error is raised or a waveform is generated for the first time, a plot will also be
 created so that the user can check if the waveform looks as expected.
 """
+
 import os
 
 import h5py

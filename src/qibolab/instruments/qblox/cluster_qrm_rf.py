@@ -18,7 +18,7 @@ from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
-class ClusterQRM_RF(ClusterModule):
+class QrmRf(ClusterModule):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitrary wave generator, a digitizer,
@@ -132,9 +132,9 @@ class ClusterQRM_RF(ClusterModule):
         - cluster: The Cluster object to which the QRM-RF module is connected.
 
         Example:
-        To create a ClusterQRM_RF instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        To create a QrmRf instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
         >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
-        >>> qrm_module = ClusterQRM_RF(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
+        >>> qrm_module = QrmRf(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
 
         super().__init__(name, address)
@@ -989,9 +989,9 @@ class ClusterQRM_RF(ClusterModule):
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-                        acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
-                        ] = AveragedAcquisition(scope, duration, frequency)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
+                            AveragedAcquisition(scope, duration, frequency)
+                        )
                     else:
                         raise RuntimeError(
                             "Software Demodulation only supports one acquisition per channel. "
@@ -1001,9 +1001,9 @@ class ClusterQRM_RF(ClusterModule):
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
                         bins = results[pulse.serial]["acquisition"]["bins"]
-                        acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
-                        ] = DemodulatedAcquisition(bins, duration)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
+                            DemodulatedAcquisition(bins, duration)
+                        )
 
                     # Provide Scope Data for verification (assuming memory reseet is being done)
                     if len(sequencer.pulses.ro_pulses) == 1:

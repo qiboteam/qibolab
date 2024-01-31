@@ -1,4 +1,5 @@
 """Tests ``pulses.py``."""
+
 import os
 import pathlib
 

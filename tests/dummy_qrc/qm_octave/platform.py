@@ -11,7 +11,7 @@ from qibolab.serialize import (
     load_settings,
 )
 
-RUNCARD = pathlib.Path(__file__).parent / "qm_octave.yml"
+RUNCARD = pathlib.Path(__file__).parent
 
 
 def create(runcard_path=RUNCARD):

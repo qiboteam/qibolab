@@ -5,7 +5,19 @@ Define the platform
 -------------------
 
 To launch experiments on quantum hardware, users have first to define their platform.
-A platform is composed of a python file, with instruments information, and of a runcard file, with calibration parameters.
+To define a platform the user needs to provide a folder with the following structure:
+
+.. code-block:: bash
+
+    my_platform/
+        platform.py
+        parameters.json
+        kernels.npz # (optional)
+
+where ``platform.py`` contains instruments information, ``parameters.json``
+includes calibration parameters and ``kernels.npz`` is an optional
+file with additional calibration parameters.
+
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
@@ -13,7 +25,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
 
 .. testcode:: python
 
-    # my_platform.py
+    # my_platform/platform.py
 
     import pathlib
 
@@ -24,14 +36,14 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     from qibolab.serialize import load_qubits, load_runcard, load_settings
 
     NAME = "my_platform"  # name of the platform
-    ADDRESS = "192.168.0.1"  # ip adress of the controller
+    ADDRESS = "192.168.0.1"  # ip address of the controller
     PORT = 6000  # port of the controller
 
-    # path to runcard file with calibration parameter
-    RUNCARD = pathlib.Path.cwd() / "my_platform.yml"
+    # folder containing runcard with calibration parameters
+    FOLDER = pathlib.Path.cwd()
 
 
-    def create(runcard_path=RUNCARD):
+    def create(folder=FOLDER):
         # Instantiate controller instruments
         controller = RFSoC(NAME, ADDRESS, PORT)
 
@@ -42,7 +54,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         channels |= Channel("drive", port=controller[0])
 
         # create qubit objects
-        runcard = load_runcard(runcard_path)
+        runcard = load_runcard(folder)
         qubits, pairs = load_qubits(runcard)
         # assign channels to qubits
         qubits[0].readout = channels["L3-22_ro"]
@@ -53,72 +65,103 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
         settings = load_settings(runcard)
         return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="3D")
 
-And the we can define the runcard:
+.. note::
 
-.. code-block:: yaml
+    The ``platform.py`` file must contain a ``create_function`` with the following signature:
 
-    # my_platform.yml
+    .. code-block:: python
 
-    nqubits: 1
-    qubits: [0]
-    topology: []
-    settings: {nshots: 1024, relaxation_time: 70000, sampling_rate: 9830400000}
+        import pathlib
+        from qibolab.platform import Platform
 
-    native_gates:
-        single_qubit:
-            0:
-                RX:  # pi-pulse for X gate
-                    duration: 40
-                    amplitude: 0.5
-                    frequency: 5_500_000_000
-                    shape: Gaussian(3)
-                    type: qd
-                    start: 0
-                    phase: 0
 
-                MZ:  # measurement pulse
-                    duration: 2000
-                    amplitude: 0.02
-                    frequency: 7_370_000_000
-                    shape: Rectangular()
-                    type: ro
-                    start: 0
-                    phase: 0
+        def create(folder: Path) -> Platform:
+            """Function that generates Qibolab platform."""
 
-        two_qubits: {}
-    characterization:
-        single_qubit:
-            0:
-                readout_frequency: 7370000000
-                drive_frequency: 5500000000
-                anharmonicity: 0
-                Ec: 0
-                Ej: 0
-                g: 0
-                T1: 0.0
-                T2: 0.0
-                threshold: 0.0
-                iq_angle: 0.0
-                mean_gnd_states: [0.0, 0.0]
-                mean_exc_states: [0.0, 0.0]
+And the we can define the runcard ``my_platform/parameters.json``:
+
+.. code-block:: json
+
+    {
+    "nqubits": 1,
+    "qubits": [
+        0
+    ],
+    "topology": [],
+    "settings": {
+        "nshots": 1024,
+        "relaxation_time": 70000,
+        "sampling_rate": 9830400000
+    },
+    "native_gates": {
+        "single_qubit": {
+            "0": {
+                "RX": {
+                    "duration": 40,
+                    "amplitude": 0.5,
+                    "frequency": 5500000000,
+                    "shape": "Gaussian(3)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 2000,
+                    "amplitude": 0.02,
+                    "frequency": 7370000000,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": 0
+                }
+            }
+        },
+        "two_qubits": {}
+    },
+    "characterization": {
+        "single_qubit": {
+            "0": {
+                "readout_frequency": 7370000000,
+                "drive_frequency": 5500000000,
+                "anharmonicity": 0,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "T1": 0.0,
+                "T2": 0.0,
+                "threshold": 0.0,
+                "iq_angle": 0.0,
+                "mean_gnd_states": [
+                    0.0,
+                    0.0
+                ],
+                "mean_exc_states": [
+                    0.0,
+                    0.0
+                ]
+            }
+        }
+    }
+    }
 
 
 Setting up the environment
 --------------------------
 
-After defining the platform, we must instruct ``qibolab`` of the location of the create file.
+After defining the platform, we must instruct ``qibolab`` of the location of the platform(s).
+We need to define the path that contains platform folders.
 This can be done using an environment variable:
 for Unix based systems:
 
 .. code-block:: bash
 
-    export QIBOLAB_PLATFORMS=<path-to-create-file>
+    export QIBOLAB_PLATFORMS=<path-platform-folders>
 
 for Windows:
 
 .. code-block:: bash
 
-    $env:QIBOLAB_PLATFORMS="<path-to-create-file>"
+    $env:QIBOLAB_PLATFORMS="<path-to-platform-folders>"
 
 To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
 
@@ -145,7 +188,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         AcquisitionType,
     )
 
-    # load the platform from ``dummy.py`` and ``dummy.yml``
+    # load the platform from ``dummy.py`` and ``dummy.json``
     platform = create_platform("dummy")
 
     # define the pulse sequence
