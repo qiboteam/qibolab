@@ -16,7 +16,7 @@ from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
-class ClusterQCM_BB(ClusterModule):
+class QcmBb(ClusterModule):
     """Qblox Cluster Qubit Control Module Baseband driver.
 
     Qubit Control Module (QCM) is an arbitratry wave generator with two DACs connected to
@@ -104,9 +104,9 @@ class ClusterQCM_BB(ClusterModule):
         - cluster: The Cluster object to which the QCM baseband module is connected.
 
         Example:
-        To create a ClusterQCM_BB instance named 'qcm_bb' connected to slot 2 of a Cluster at address '192.168.0.100':
+        To create a QcmBb instance named 'qcm_bb' connected to slot 2 of a Cluster at address '192.168.0.100':
         >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
-        >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
+        >>> qcm_module = QcmBb(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
 

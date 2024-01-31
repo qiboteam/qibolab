@@ -1,0 +1,45 @@
+# Test Qibolab C API
+name: C API
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Prepare virtual environment
+        run: |
+          python -m venv env
+      - name: Install dependencies
+        run: |
+          # build dependencies
+          pip install cffi
+          # runtime dependencies
+          . env/bin/activate
+          pip install cffi  # also a runtime dep
+          pip install .
+      - name: Build & install library
+        working-directory: capi
+        run: |
+          cmake -S . -B build  -DCMAKE_INSTALL_PREFIX=$(realpath ../env)
+          cmake --build build
+          cmake --install build
+      - name: Build & run example
+        working-directory: capi/examples
+        run: |
+          . ../../env/bin/activate
+          export PKG_CONFIG_PATH=${VIRTUAL_ENV}/lib/pkgconfig/:${PKG_CONFIG_PATH}:
+          export LD_LIBRARY_PATH=${VIRTUAL_ENV}/lib/:${LD_LIBRARY_PATH}:
+          make
+          ./example

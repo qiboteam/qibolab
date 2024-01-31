@@ -6,9 +6,9 @@ from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
-from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
-from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
+from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
+from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
@@ -80,7 +80,7 @@ class QbloxController(Controller):
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
-        **kwargs
+        **kwargs,
         # nshots=None,
         # navgs=None,
         # relaxation_time=None,
@@ -142,13 +142,13 @@ class QbloxController(Controller):
 
         # play the sequence or sweep
         for module in self.modules.values():
-            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
+            if isinstance(module, (QrmRf, QcmRf, QcmBb)):
                 module.play_sequence()
 
         # retrieve the results
         acquisition_results = {}
-        for module in self.modules.values():
-            if isinstance(module, ClusterQRM_RF):
+        for name, module in self.modules.items():
+            if isinstance(module, QrmRf):
                 results = module.acquire()
                 existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():

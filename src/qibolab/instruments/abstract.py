@@ -9,12 +9,12 @@ InstrumentId = str
 
 @dataclass
 class InstrumentSettings:
-    """Container of settings that are dumped in the platform runcard yaml."""
+    """Container of settings that are dumped in the platform runcard json."""
 
     def dump(self):
         """Dictionary containing the settings.
 
-        Useful when dumping the instruments to the runcard YAML.
+        Useful when dumping the instruments to the runcard JSON.
         """
         return asdict(self)
 

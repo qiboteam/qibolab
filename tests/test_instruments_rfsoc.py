@@ -107,20 +107,79 @@ def test_convert_pulse(dummy_qrc):
     qubit.feedback.port = controller.ports(1)
     qubit.readout.local_oscillator.frequency = 1e6
 
-    pulse = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 0)
+    pulse = Pulse(
+        start=0,
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        relative_phase=0,
+        shape=Drag(5, 2),
+        channel=0,
+        type=PulseType.DRIVE,
+        qubit=0,
+    )
     targ = rfsoc_pulses.Drag(
-        50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=5, beta=2
+        type="drive",
+        frequency=50,
+        amplitude=0.9,
+        start_delay=0,
+        duration=0.04,
+        adc=None,
+        dac=4,
+        name=pulse.serial,
+        relative_phase=0,
+        rel_sigma=5,
+        beta=2,
     )
     assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
-    pulse = Pulse(0, 40, 0.9, 50e6, 0, Gaussian(2), 0, PulseType.DRIVE, 0)
+    pulse = Pulse(
+        start=0,
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        relative_phase=0,
+        shape=Gaussian(2),
+        channel=0,
+        type=PulseType.DRIVE,
+        qubit=0,
+    )
     targ = rfsoc_pulses.Gaussian(
-        50, 0.9, 0, 0, 0.04, pulse.serial, "drive", 4, None, rel_sigma=2
+        frequency=50,
+        amplitude=0.9,
+        start_delay=0,
+        relative_phase=0,
+        duration=0.04,
+        name=pulse.serial,
+        type="drive",
+        dac=4,
+        adc=None,
+        rel_sigma=2,
     )
     assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
-    pulse = Pulse(0, 40, 0.9, 50e6, 0, Rectangular(), 0, PulseType.READOUT, 0)
-    targ = rfsoc_pulses.Rectangular(49, 0.9, 0, 0, 0.04, pulse.serial, "readout", 2, 1)
+    pulse = Pulse(
+        start=0,
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        relative_phase=0,
+        shape=Rectangular(),
+        channel=0,
+        type=PulseType.READOUT,
+        qubit=0,
+    )
+    targ = rfsoc_pulses.Rectangular(
+        frequency=49,
+        amplitude=0.9,
+        start_delay=0,
+        relative_phase=0,
+        duration=0.04,
+        name=pulse.serial,
+        type="readout",
+        dac=2,
+        adc=1,
+    )
     assert convert(pulse, platform.qubits, 0, sampling_rate=1) == targ
 
 

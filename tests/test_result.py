@@ -1,4 +1,5 @@
 """Testing result.py."""
+
 import numpy as np
 import pytest
 

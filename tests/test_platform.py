@@ -1,6 +1,6 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`."""
-import os
+
 import pathlib
 import pickle
 import warnings
@@ -8,15 +8,25 @@ import warnings
 import numpy as np
 import pytest
 from qibo.models import Circuit
+from qibo.result import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.dummy import create_dummy
+from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
+from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.pulses import PulseSequence, Rectangular
-from qibolab.serialize import dump_runcard, load_runcard
+from qibolab.serialize import (
+    dump_kernels,
+    dump_platform,
+    dump_runcard,
+    load_runcard,
+    load_settings,
+)
 
 from .conftest import find_instrument
 
@@ -59,12 +69,14 @@ def test_platform_pickle(platform):
     assert new_platform.is_connected == platform.is_connected
 
 
-def test_dump_runcard(platform):
-    path = pathlib.Path(__file__).parent / "test.yml"
-    dump_runcard(platform, path)
-    final_runcard = load_runcard(path)
-    target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}.yml"
-    target_runcard = load_runcard(target_path)
+def test_dump_runcard(platform, tmp_path):
+    dump_runcard(platform, tmp_path)
+    final_runcard = load_runcard(tmp_path)
+    if platform.name == "dummy" or platform.name == "dummy_couplers":
+        target_runcard = load_runcard(FOLDER)
+    else:
+        target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
+        target_runcard = load_runcard(target_path)
     # for the characterization section the dumped runcard may contain
     # some default ``Qubit`` parameters
     target_char = target_runcard.pop("characterization")["single_qubit"]
@@ -77,7 +89,46 @@ def test_dump_runcard(platform):
     target_instruments = target_runcard.pop("instruments")
     final_instruments = final_runcard.pop("instruments")
     assert final_instruments == target_instruments
-    os.remove(path)
+
+
+@pytest.mark.parametrize("has_kernels", [False, True])
+def test_kernels(tmp_path, has_kernels):
+    """Test dumping and loading of `Kernels`."""
+
+    platform = create_dummy()
+    if has_kernels:
+        for qubit in platform.qubits:
+            platform.qubits[qubit].kernel = np.random.rand(10)
+
+    dump_kernels(platform, tmp_path)
+
+    if has_kernels:
+        kernels = Kernels.load(tmp_path)
+        for qubit in platform.qubits:
+            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+    else:
+        with pytest.raises(FileNotFoundError):
+            Kernels.load(tmp_path)
+
+
+@pytest.mark.parametrize("has_kernels", [False, True])
+def test_dump_platform(tmp_path, has_kernels):
+    """Test platform dump and loading runcard and kernels."""
+
+    platform = create_dummy()
+    if has_kernels:
+        for qubit in platform.qubits:
+            platform.qubits[qubit].kernel = np.random.rand(10)
+
+    dump_platform(platform, tmp_path)
+
+    settings = load_settings(load_runcard(tmp_path))
+    if has_kernels:
+        kernels = Kernels.load(tmp_path)
+        for qubit in platform.qubits:
+            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+
+    assert settings == platform.settings
 
 
 @pytest.fixture(scope="module")
@@ -117,6 +168,20 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
     )
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
     assert len(sequence.cf_pulses) > 0
+
+
+@pytest.mark.qpu
+def test_platform_execute_one_flux_pulse(qpu_platform):
+    # One flux pulse
+    platform = qpu_platform
+    qubit = next(iter(platform.qubits))
+    sequence = PulseSequence()
+    sequence.add(
+        platform.create_qubit_flux_pulse(qubit, start=0, duration=200, amplitude=1)
+    )
+    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    assert len(sequence.qf_pulses) == 1
+    assert len(sequence) == 1
 
 
 @pytest.mark.qpu

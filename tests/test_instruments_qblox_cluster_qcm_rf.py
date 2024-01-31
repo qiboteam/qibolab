@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
+from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.port import QbloxOutputPort
 from qibolab.pulses import DrivePulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -30,8 +30,8 @@ SETTINGS = {
 
 def get_qcm_rf(controller):
     for module in controller.modules.values():
-        if isinstance(module, ClusterQCM_RF):
-            return ClusterQCM_RF(module.name, module.address)
+        if isinstance(module, QcmRf):
+            return QcmRf(module.name, module.address)
 
 
 @pytest.fixture(scope="module")
@@ -52,7 +52,7 @@ def connected_qcm_rf(connected_controller):
     connected_controller.disconnect()
 
 
-def test_instrument_interface(qcm_rf: ClusterQCM_RF):
+def test_instrument_interface(qcm_rf: QcmRf):
     # Test compliance with :class:`qibolab.instruments.abstract.Instrument` interface
     for abstract_method in Instrument.__abstractmethods__:
         assert hasattr(qcm_rf, abstract_method)
@@ -65,18 +65,18 @@ def test_instrument_interface(qcm_rf: ClusterQCM_RF):
         assert hasattr(qcm_rf, attribute)
 
 
-def test_init(qcm_rf: ClusterQCM_RF):
+def test_init(qcm_rf: QcmRf):
     assert qcm_rf.device == None
     assert type(qcm_rf._ports) == dict
 
 
-def test_setup(qcm_rf: ClusterQCM_RF):
+def test_setup(qcm_rf: QcmRf):
     qcm_rf.setup(**SETTINGS)
     assert qcm_rf.settings == SETTINGS
 
 
 @pytest.mark.qpu
-def test_connect(connected_qcm_rf: ClusterQCM_RF):
+def test_connect(connected_qcm_rf: QcmRf):
     qcm_rf = connected_qcm_rf
 
     assert qcm_rf.is_connected
@@ -149,7 +149,7 @@ def test_connect(connected_qcm_rf: ClusterQCM_RF):
 
 
 @pytest.mark.qpu
-def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
+def test_pulse_sequence(connected_platform, connected_qcm_rf: QcmRf):
     ps = PulseSequence()
     ps.add(
         DrivePulse(
@@ -187,7 +187,7 @@ def test_pulse_sequence(connected_platform, connected_qcm_rf: ClusterQCM_RF):
 
 
 @pytest.mark.qpu
-def test_sweepers(connected_platform, connected_qcm_rf: ClusterQCM_RF):
+def test_sweepers(connected_platform, connected_qcm_rf: QcmRf):
     ps = PulseSequence()
     ps.add(
         DrivePulse(
