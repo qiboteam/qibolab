@@ -1174,10 +1174,8 @@ class Zurich(Controller):
                         not sweepers[0].parameter is Parameter.amplitude
                         and sweepers[0].pulses[0].type is not PulseType.READOUT
                     ):
-                        rearranging_axes[:] = [sweepers.index(sweepers[1]), 0]
-                        sweeper_changed = sweepers[1]
-                        sweepers.remove(sweeper_changed)
-                        sweepers.insert(0, sweeper_changed)
+                        rearranging_axes[:] = [1, 0]
+                        sweepers = sweepers[::-1]
                         log.warning("Sweepers were reordered")
         return rearranging_axes, sweepers
 
@@ -1356,8 +1354,8 @@ class Zurich(Controller):
                     zhsweeper = ZhSweeperLine(
                         sweeper, qubit, self.sequence_qibo
                     ).zhsweeper
-                    zhsweeper.uid = "bias"  # f"bias{i}"
-                    path = self.find_instrument_address(qubit, "bias")  # "DEV8660"
+                    zhsweeper.uid = "bias"
+                    path = self.find_instrument_address(qubit, "bias")
 
                     parameter = copy.deepcopy(zhsweeper)
                     parameter.values += qubit.flux.offset
@@ -1378,10 +1376,10 @@ class Zurich(Controller):
                 ).zhsweeper
                 sweeper.values *= aux_max
 
-                zhsweeper.uid = "amplitude"  # f"amplitude{i}"
+                zhsweeper.uid = "amplitude" 
                 path = self.find_instrument_address(
                     qubits[sweeper.pulses[0].qubit], "amplitude"
-                )  # "DEV12146"  # Hardcoded for SHFQC(SHFQA)
+                )
                 parameter = zhsweeper
                 device_path = (
                     f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
