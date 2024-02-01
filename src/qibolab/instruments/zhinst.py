@@ -1376,7 +1376,7 @@ class Zurich(Controller):
                 ).zhsweeper
                 sweeper.values *= aux_max
 
-                zhsweeper.uid = "amplitude" 
+                zhsweeper.uid = "amplitude"
                 path = self.find_instrument_address(
                     qubits[sweeper.pulses[0].qubit], "amplitude"
                 )
