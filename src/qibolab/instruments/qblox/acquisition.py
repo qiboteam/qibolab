@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import numpy as np
 
-from ...pulses.shape import demodulate
+from qibolab.pulses.shape import demodulate
 
 SAMPLING_RATE = 1
 
