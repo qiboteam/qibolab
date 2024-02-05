@@ -198,11 +198,6 @@ class ShotsAcquisition(Acquisition):
     """Stream to collect multiple shots."""
 
     def __post_init__(self):
-        if self.threshold is None or self.angle is None:
-            raise ValueError(
-                "Cannot use ``AcquisitionType.DISCRIMINATION`` "
-                "if threshold and angle are not given."
-            )
         self.cos = np.cos(self.angle)
         self.sin = np.sin(self.angle)
 
