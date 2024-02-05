@@ -31,7 +31,6 @@ def create(runcard_path=RUNCARD):
         opxs=opxs,
         octaves=[octave1, octave2, octave3],
         time_of_flight=280,
-        calibration_path=str(runcard_path.parent),
     )
 
     # Create channel objects and map controllers to channels
