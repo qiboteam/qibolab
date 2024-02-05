@@ -1321,7 +1321,9 @@ class Zurich(Controller):
         for instrument in instruments:
             if instrument.uid == channel_name:
                 return instrument.address
-        raise RuntimeError(f"Could not find instrument for {quantum_element} {line_name}")
+        raise RuntimeError(
+            f"Could not find instrument for {quantum_element} {line_name}"
+        )
 
     def sweep_recursion_nt(
         self,
