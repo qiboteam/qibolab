@@ -35,10 +35,6 @@ class Acquisition(ABC):
     instruments."""
     qubit: QubitId
     average: bool
-    threshold: Optional[float] = None
-    """Threshold to be used for classification of single shots."""
-    angle: Optional[float] = None
-    """Angle in the IQ plane to be used for classification of single shots."""
 
     keys: List[str] = field(default_factory=list)
 
@@ -188,6 +184,11 @@ class ShotsAcquisition(Acquisition):
     Threshold and angle must be given in order to classify shots.
     """
 
+    threshold: Optional[float] = None
+    """Threshold to be used for classification of single shots."""
+    angle: Optional[float] = None
+    """Angle in the IQ plane to be used for classification of single shots."""
+
     I: _Variable = field(default_factory=lambda: declare(fixed))
     Q: _Variable = field(default_factory=lambda: declare(fixed))
     """Variables to save the (I, Q) values acquired from a single shot."""
@@ -277,11 +278,17 @@ def declare_acquisitions(ro_pulses, qubits, options):
         qubit = qmpulse.pulse.qubit
         name = f"{qmpulse.operation}_{qubit}"
         if name not in acquisitions:
-            threshold = qubits[qubit].threshold
-            iq_angle = qubits[qubit].iq_angle
             average = options.averaging_mode is AveragingMode.CYCLIC
             acquisition_cls = ACQUISITION_TYPES[options.acquisition_type]
-            acquisition = acquisition_cls(name, qubit, average, threshold, iq_angle)
+            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                threshold = qubits[qubit].threshold
+                iq_angle = qubits[qubit].iq_angle
+                acquisition = acquisition_cls(
+                    name, qubit, average, threshold=threshold, angle=iq_angle
+                )
+            else:
+                acquisition = acquisition_cls(name, qubit, average)
+
             acquisition.assign_element(qmpulse.element)
             acquisitions[name] = acquisition
 
