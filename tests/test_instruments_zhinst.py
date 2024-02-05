@@ -141,12 +141,6 @@ def test_zhsequence_couplers_sweeper(dummy_qrc):
 
     delta_bias_range = np.arange(-1, 1, 0.5)
 
-    # sweeper = Sweeper(
-    #     Parameter.bias,
-    #     delta_bias_range,
-    #     couplers=[IQM5q.couplers[0]],
-    #     type=SweeperType.ABSOLUTE,
-    # )
     sweeper = Sweeper(
         Parameter.amplitude,
         delta_bias_range,
