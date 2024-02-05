@@ -62,10 +62,6 @@ class Acquisition(ABC):
         """
 
     @abstractmethod
-    def save(self):
-        """Save acquired results from variables to streams."""
-
-    @abstractmethod
     def download(self, *dimensions):
         """Save streams to prepare for fetching from host device.
 
@@ -92,9 +88,6 @@ class RawAcquisition(Acquisition):
 
     def measure(self, operation, element):
         qua.measure(operation, element, self.adc_stream)
-
-    def save(self):
-        pass
 
     def download(self, *dimensions):
         i_stream = self.adc_stream.input1()
@@ -138,8 +131,6 @@ class IntegratedAcquisition(Acquisition):
             qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
             qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
         )
-
-    def save(self):
         qua.save(self.I, self.I_stream)
         qua.save(self.Q, self.Q_stream)
 
@@ -216,8 +207,6 @@ class ShotsAcquisition(Acquisition):
             self.shot,
             qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > self.threshold),
         )
-
-    def save(self):
         qua.save(self.shot, self.shots)
 
     def download(self, *dimensions):

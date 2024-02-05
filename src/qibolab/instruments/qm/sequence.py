@@ -259,9 +259,7 @@ class Sequence:
             if qmpulse.wait_cycles is not None:
                 qua.wait(qmpulse.wait_cycles, qmpulse.element)
             if pulse.type is PulseType.READOUT:
-                # Save data to the stream processing
                 qmpulse.acquisition.measure(qmpulse.operation, qmpulse.element)
-                qmpulse.acquisition.save()
             else:
                 if (
                     not isinstance(qmpulse.relative_phase, float)
