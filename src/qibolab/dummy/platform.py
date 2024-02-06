@@ -3,8 +3,11 @@ import pathlib
 
 from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
+from qibolab.kernels import Kernels
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
+
+FOLDER = pathlib.Path(__file__).parent
 
 
 def remove_couplers(runcard):
@@ -35,30 +38,33 @@ def create_dummy(with_couplers: bool = True):
     twpa_pump.frequency = 1e9
     twpa_pump.power = 10
 
-    runcard = load_runcard(pathlib.Path(__file__).parent / "dummy.yml")
+    runcard = load_runcard(FOLDER)
+    kernels = Kernels.load(FOLDER)
+
     if not with_couplers:
         runcard = remove_couplers(runcard)
 
     # Create channel objects
     nqubits = runcard["nqubits"]
     channels = ChannelMap()
-    channels |= Channel("readout", port=instrument["readout"])
+    channels |= Channel("readout", port=instrument.ports("readout"))
     channels |= (
-        Channel(f"drive-{i}", port=instrument[f"drive-{i}"]) for i in range(nqubits)
+        Channel(f"drive-{i}", port=instrument.ports(f"drive-{i}"))
+        for i in range(nqubits)
     )
     channels |= (
-        Channel(f"flux-{i}", port=instrument[f"flux-{i}"]) for i in range(nqubits)
+        Channel(f"flux-{i}", port=instrument.ports(f"flux-{i}")) for i in range(nqubits)
     )
     channels |= Channel("twpa", port=None)
     if with_couplers:
         channels |= (
-            Channel(f"flux_coupler-{c}", port=instrument[f"flux_coupler-{c}"])
+            Channel(f"flux_coupler-{c}", port=instrument.ports(f"flux_coupler-{c}"))
             for c in itertools.chain(range(0, 2), range(3, 5))
         )
     channels["readout"].attenuation = 0
     channels["twpa"].local_oscillator = twpa_pump
 
-    qubits, couplers, pairs = load_qubits(runcard)
+    qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
     # map channels to qubits

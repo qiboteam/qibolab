@@ -11,6 +11,7 @@ will be raised if there is disagreement.
 If an error is raised or a waveform is generated for the first time, a plot will also be
 created so that the user can check if the waveform looks as expected.
 """
+
 import os
 
 import h5py
@@ -48,7 +49,6 @@ def simulator(request):
     controller.time_of_flight = 280
     platform.instruments["qmopx"] = controller
     platform.connect()
-    platform.setup()
     yield platform
     platform.disconnect()
 
@@ -440,7 +440,7 @@ def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
     x_pulse_start = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
     if use_flux_pulse:
         flux_pulse = FluxPulse(
-            start=y90_pulse.se_finish,
+            start=y90_pulse.finish,
             duration=30,
             amplitude=0.055,
             shape=Rectangular(),
@@ -448,24 +448,24 @@ def test_qmsim_tune_landscape(simulator, folder, qubits, use_flux_pulse):
             qubit=highfreq,
         )
         theta_pulse = simulator.create_RX90_pulse(
-            lowfreq, start=flux_pulse.se_finish, relative_phase=np.pi / 3
+            lowfreq, start=flux_pulse.finish, relative_phase=np.pi / 3
         )
         x_pulse_end = simulator.create_RX_pulse(
-            highfreq, start=flux_pulse.se_finish, relative_phase=0
+            highfreq, start=flux_pulse.finish, relative_phase=0
         )
     else:
         theta_pulse = simulator.create_RX90_pulse(
-            lowfreq, start=y90_pulse.se_finish, relative_phase=np.pi / 3
+            lowfreq, start=y90_pulse.finish, relative_phase=np.pi / 3
         )
         x_pulse_end = simulator.create_RX_pulse(
-            highfreq, start=x_pulse_start.se_finish, relative_phase=0
+            highfreq, start=x_pulse_start.finish, relative_phase=0
         )
 
     measure_lowfreq = simulator.create_qubit_readout_pulse(
-        lowfreq, start=theta_pulse.se_finish
+        lowfreq, start=theta_pulse.finish
     )
     measure_highfreq = simulator.create_qubit_readout_pulse(
-        highfreq, start=x_pulse_end.se_finish
+        highfreq, start=x_pulse_end.finish
     )
 
     sequence = x_pulse_start + y90_pulse

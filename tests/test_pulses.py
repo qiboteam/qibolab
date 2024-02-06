@@ -1,4 +1,5 @@
 """Tests ``pulses.py``."""
+
 import os
 import pathlib
 
@@ -13,6 +14,7 @@ from qibolab.pulses import (
     DrivePulse,
     FluxPulse,
     Gaussian,
+    GaussianSquare,
     Pulse,
     PulseSequence,
     PulseShape,
@@ -20,11 +22,9 @@ from qibolab.pulses import (
     ReadoutPulse,
     Rectangular,
     ShapeInitError,
-    SplitPulse,
     Waveform,
     eCap,
 )
-from qibolab.symbolic import intSymbolicExpression as se_int
 
 HERE = pathlib.Path(__file__).parent
 
@@ -36,7 +36,7 @@ def test_pulses_plot_functions():
     p3 = FluxPulse(0, 40, 0.9, IIR([-0.5, 2], [1], Rectangular()), 0, 200)
     p4 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10), 0, 200)
     p5 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
-    p6 = SplitPulse(p5, window_start=10, window_finish=30)
+    p6 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.DRIVE, 2)
     ps = p0 + p1 + p2 + p3 + p4 + p5 + p6
     wf = p0.modulated_waveform_i()
 
@@ -47,10 +47,6 @@ def test_pulses_plot_functions():
     os.remove(plot_file)
 
     p0.plot(plot_file)
-    assert os.path.exists(plot_file)
-    os.remove(plot_file)
-
-    p6.plot(plot_file)
     assert os.path.exists(plot_file)
     os.remove(plot_file)
 
@@ -77,12 +73,9 @@ def test_pulses_pulse_init():
         == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
     )
 
-    # initialisation with Symbolic Expressions
-    t1 = se_int(100, "t1")
-    d1 = se_int(50, "d1")
     p1 = Pulse(
-        start=t1,
-        duration=d1,
+        start=100,
+        duration=50,
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
@@ -101,7 +94,7 @@ def test_pulses_pulse_init():
         start=0,
         duration=50,
         amplitude=0.9,
-        frequency=20e6,
+        frequency=int(20e6),
         relative_phase=0,
         shape=Rectangular(),
         channel=0,
@@ -112,7 +105,7 @@ def test_pulses_pulse_init():
         repr(p2)
         == "Pulse(0, 50, 0.9, 20_000_000, 0, Rectangular(), 0, PulseType.READOUT, 0)"
     )
-    assert type(p2.frequency) == int and p2.frequency == 20_000_000
+    assert isinstance(p2.frequency, int) and p2.frequency == 20_000_000
 
     # initialisation with non float (int) relative_phase
     p3 = Pulse(
@@ -120,7 +113,7 @@ def test_pulses_pulse_init():
         duration=50,
         amplitude=0.9,
         frequency=20_000_000,
-        relative_phase=1,
+        relative_phase=1.0,
         shape=Rectangular(),
         channel=0,
         type=PulseType.READOUT,
@@ -130,7 +123,7 @@ def test_pulses_pulse_init():
         repr(p3)
         == "Pulse(0, 50, 0.9, 20_000_000, 1, Rectangular(), 0, PulseType.READOUT, 0)"
     )
-    assert type(p3.relative_phase) == float and p3.relative_phase == 1.0
+    assert isinstance(p3.relative_phase, float) and p3.relative_phase == 1.0
 
     # initialisation with str shape
     p4 = Pulse(
@@ -174,7 +167,8 @@ def test_pulses_pulse_init():
     p9 = Pulse(0, 40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p10 = FluxPulse(0, 40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), 0, 200)
     p11 = FluxPulse(0, 40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), 0, 200)
-    p11 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p13 = Pulse(0, 40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p14 = Pulse(0, 40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.READOUT, 2)
 
     # initialisation with float duration and start
     p12 = Pulse(
@@ -223,83 +217,7 @@ def test_pulses_pulse_attributes():
     assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
     assert type(p10.channel) == type(channel) and p10.channel == channel
     assert type(p10.qubit) == type(qubit) and p10.qubit == qubit
-    assert type(p10.finish) == int and p10.finish == 60
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=-10,  # Start should be >= 0
-            duration=50,
-            amplitude=0.9,
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape=Rectangular(),
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=0,
-            duration=-1,  # duration should be > 0
-            amplitude=0.9,
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape=Rectangular(),
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=0,
-            duration=50,
-            amplitude=1.1,  # amplitude should be >= 0 & <= 1
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape=Rectangular(),
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
-
-    ValueError_raised = False
-    try:
-        p10 = Pulse(
-            start=0,
-            duration=50,
-            amplitude=0.9,
-            frequency=20_000_000,
-            relative_phase=0.0,
-            shape="NonImplementedShape()",
-            channel=channel,
-            type=PulseType.READOUT,
-            qubit=qubit,
-        )
-    except ValueError:
-        ValueError_raised = True
-    except:
-        assert False
-    assert ValueError_raised
+    assert isinstance(p10.finish, int) and p10.finish == 60
 
     p0 = Pulse(
         start=0,
@@ -345,11 +263,22 @@ def test_pulses_pulse_serial():
     assert repr(p11) == p11.serial
 
 
-@pytest.mark.parametrize("shape", [Rectangular(), Gaussian(5), Drag(5, 1)])
+@pytest.mark.parametrize(
+    "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
+)
 def test_pulses_pulseshape_sampling_rate(shape):
     pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
     assert len(pulse.envelope_waveform_i(sampling_rate=1).data) == 40
     assert len(pulse.envelope_waveform_i(sampling_rate=100).data) == 4000
+
+
+def test_pulseshape_eval():
+    shape = PulseShape.eval("Rectangular()")
+    assert isinstance(shape, Rectangular)
+    shape = PulseShape.eval("Drag(5, 1)")
+    assert isinstance(shape, Drag)
+    with pytest.raises(ValueError):
+        shape = PulseShape.eval("Ciao()")
 
 
 def test_raise_shapeiniterror():
@@ -360,6 +289,12 @@ def test_raise_shapeiniterror():
         shape.envelope_waveform_q()
 
     shape = Gaussian(0)
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_i()
+    with pytest.raises(ShapeInitError):
+        shape.envelope_waveform_q()
+
+    shape = GaussianSquare(0, 1)
     with pytest.raises(ShapeInitError):
         shape.envelope_waveform_i()
     with pytest.raises(ShapeInitError):
@@ -434,24 +369,12 @@ def test_pulses_pulse_hash():
 
     assert p1 == p2
 
-    t0 = se_int(0, "t0")
-    t1 = se_int(0, "t1")
-    p1 = Pulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    p2 = Pulse(t1, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    assert p1 == p2
-    t0 += 100
-    assert p1 != p2
-
-    t0 = se_int(0, "t0")
+    t0 = 0
     p1 = Pulse(t0, 40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
     p2 = p1.shallow_copy()
     p3 = p1.copy()
     assert p1 == p2
     assert p1 == p3
-
-    t0 += 100
-    assert p1 == p2
-    assert p1 != p3
 
 
 def test_pulses_pulse_aliases():
@@ -483,35 +406,6 @@ def test_pulses_pulse_aliases():
         start=0, duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0
     )
     assert repr(fp) == "FluxPulse(0, 300, 0.9, Rectangular(), 0, 0)"
-
-
-def test_pulses_pulse_split_pulse():
-    dp = Pulse(
-        start=500,
-        duration=2000,
-        amplitude=0.9,
-        frequency=5_000_000,
-        relative_phase=0.0,
-        shape=Rectangular(),
-        channel=0,
-        type=PulseType.READOUT,
-        qubit=0,
-    )
-
-    sp = SplitPulse(dp)
-    sp.channel = 1
-    a = 720
-    b = 960
-    sp.window_start = sp.start + a
-    sp.window_finish = sp.start + b
-    assert sp.window_start == sp.start + a
-    assert sp.window_finish == sp.start + b
-    ps = PulseSequence(dp, sp)
-    # ps.plot()
-    assert len(sp.envelope_waveform_i()) == b - a
-    assert len(sp.envelope_waveform_q()) == b - a
-    assert len(sp.modulated_waveform_i()) == b - a
-    assert len(sp.modulated_waveform_q()) == b - a
 
 
 def test_pulses_pulsesequence_init():
@@ -617,6 +511,11 @@ def test_pulses_pulsesequence_start_finish():
     assert ps.start == p1.start
     assert ps.finish == p2.finish
 
+    p1.start = None
+    assert p1.finish is None
+    p2.duration = None
+    assert p2.finish is None
+
 
 def test_pulses_pulsesequence_get_channel_pulses():
     p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
@@ -665,21 +564,6 @@ def test_pulses_pulsesequence_pulses_overlap():
     assert ps.get_channel_pulses(20).pulses_overlap == True
     assert ps.get_channel_pulses(30).pulses_overlap == True
 
-    channel10_ps = ps.get_channel_pulses(10)
-    channel20_ps = ps.get_channel_pulses(20)
-    channel30_ps = ps.get_channel_pulses(30)
-
-    split_pulses = PulseSequence()
-    overlaps = channel20_ps.get_pulse_overlaps()
-    n = 0
-    for section in overlaps.keys():
-        for pulse in overlaps[section]:
-            sp = SplitPulse(pulse, section[0], section[1])
-            sp.channel = n
-            split_pulses.add(sp)
-            n += 1
-    # split_pulses.plot()
-
 
 def test_pulses_pulsesequence_separate_overlapping_pulses():
     p1 = DrivePulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
@@ -695,39 +579,14 @@ def test_pulses_pulsesequence_separate_overlapping_pulses():
         n += 1
         for pulse in segregated_ps:
             pulse.channel = n
-    # ps.plot()
-
-
-def test_pulses_pulse_symbolic_expressions():
-    t0 = se_int(0, "t0")
-    t = se_int(0, "t")
-    p1 = DrivePulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(p1.se_finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(p2.se_finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    ps = p1 + p2 + p3
-
-    assert p1.start == 0 and p1.finish == 400
-    assert p2.start == 400 and p2.finish == 800
-    assert p3.start == 800 and p3.finish == 1200
-    assert ps.start == 0 and ps.finish == 1200
-
-    def update(start=0, t_between=0):
-        t.value = t_between
-        t0.value = start
-
-    update(50, 100)
-    assert p1.start == 50 and p1.finish == 450
-    assert p2.start == 550 and p2.finish == 950
-    assert p3.start == 950 and p3.finish == 1350
-    assert ps.start == 50 and ps.finish == 1350
 
 
 def test_pulses_pulse_pulse_order():
-    t0 = se_int(0, "t0")
-    t = se_int(0, "t")
+    t0 = 0
+    t = 0
     p1 = DrivePulse(t0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = ReadoutPulse(p1.se_finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
-    p3 = DrivePulse(p2.se_finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p2 = ReadoutPulse(p1.finish + t, 400, 0.9, 20e6, 0, Rectangular(), 30)
+    p3 = DrivePulse(p2.finish, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
     ps1 = p1 + p2 + p3
     ps2 = p3 + p1 + p2
     assert ps1 == ps2
@@ -788,8 +647,9 @@ def test_pulses_pulseshape_rectangular():
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
-    i, q = pulse.amplitude * np.ones(num_samples), pulse.amplitude * np.zeros(
-        num_samples
+    i, q = (
+        pulse.amplitude * np.ones(num_samples),
+        pulse.amplitude * np.zeros(num_samples),
     )
     global_phase = (
         2 * np.pi * pulse._if * pulse.start / 1e9
@@ -979,6 +839,16 @@ def test_pulses_pulseshape_eq():
     shape3 = Gaussian(5)
     assert shape1 == shape2
     assert not shape1 == shape3
+
+    shape1 = GaussianSquare(4, 0.01)
+    shape2 = GaussianSquare(4, 0.01)
+    shape3 = GaussianSquare(5, 0.01)
+    shape4 = GaussianSquare(4, 0.05)
+    shape5 = GaussianSquare(5, 0.05)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
 
     shape1 = Drag(4, 0.01)
     shape2 = Drag(4, 0.01)
@@ -1225,34 +1095,3 @@ def test_envelope_waveform_i_q():
     with pytest.raises(ValueError):
         custom_shape_pulse.pulse = pulse
         custom_shape_pulse.envelope_waveform_q()
-
-
-@pytest.mark.parametrize("start", [0, 10, se_int(0, "t00"), se_int(10, "t10")])
-@pytest.mark.parametrize(
-    "duration", [100, 500, se_int(100, "d100"), se_int(500, "d500")]
-)
-def test_pulse_properties(start, duration):
-    def check_properties(pulse):
-        assert isinstance(pulse.start, int)
-        assert isinstance(pulse.se_start, se_int)
-        assert isinstance(pulse.duration, int)
-        assert isinstance(pulse.se_duration, se_int)
-        assert isinstance(pulse.finish, int)
-        assert isinstance(pulse.se_finish, se_int)
-
-    p0 = Pulse(start, duration, 0.9, 0, 0, Rectangular(), 0)
-    # Check the getters
-    check_properties(p0)
-    # Check the setters
-    p0.start = start + 10
-    p0.duration = duration + 10
-    check_properties(p0)
-
-
-def test_pulse_setter_errors():
-    faulty_duration = "hello"
-    faulty_start = "hello"
-    with pytest.raises(TypeError):
-        p0 = Pulse(faulty_start, 100, 0.9, 0, 0, Rectangular(), 0)
-    with pytest.raises(TypeError):
-        p0 = Pulse(0, faulty_duration, 0.9, 0, 0, Rectangular(), 0)

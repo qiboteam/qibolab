@@ -4,7 +4,6 @@ import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import laboneq._token
@@ -82,11 +81,12 @@ def select_pulse(pulse, pulse_type):
 
         if "GaussianSquare" in str(pulse.shape):
             sigma = pulse.shape.rel_sigma
+            width = pulse.shape.width
             can_compress = pulse.type is not PulseType.READOUT
             return lo.pulse_library.gaussian_square(
                 uid=(f"{pulse_type}_{pulse.qubit}_"),
                 length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                width=round(pulse.duration * NANO_TO_SECONDS, 9) * 0.9,  # 90% Flat
+                width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,
                 amplitude=pulse.amplitude,
                 can_compress=can_compress,
                 sigma=2 / sigma,
@@ -317,7 +317,6 @@ class Zurich(Controller):
         self.smearing = smearing
         self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
-        self.kernels = defaultdict(Path)
 
         self.exp = None
         self.experiment = None
@@ -343,6 +342,10 @@ class Zurich(Controller):
         self._ports = {}
         self.settings = None
 
+    @property
+    def sampling_rate(self):
+        return SAMPLING_RATE
+
     def connect(self):
         if self.is_connected is False:
             # To fully remove logging #configure_logging=False
@@ -350,12 +353,6 @@ class Zurich(Controller):
             self.session = lo.Session(self.device_setup, log_level=20)
             self.device = self.session.connect(do_emulation=self.emulation)
             self.is_connected = True
-
-    def start(self):
-        """Empty method to comply with Instrument interface."""
-
-    def stop(self):
-        """Empty method to comply with Instrument interface."""
 
     def disconnect(self):
         if self.is_connected:
@@ -423,28 +420,25 @@ class Zurich(Controller):
         self.signal_map[f"measure{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["measure_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/measure_line"
-        ] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.SOFTWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqa_m" + str(q),
-                frequency=int(qubit.readout.local_oscillator.frequency),
-            ),
-            range=qubit.readout.power_range,
-            port_delay=None,
-            delay_signal=0,
+        self.calibration[f"/logical_signal_groups/q{q}/measure_line"] = (
+            lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.SOFTWARE,
+                ),
+                local_oscillator=lo.Oscillator(
+                    uid="lo_shfqa_m" + str(q),
+                    frequency=int(qubit.readout.local_oscillator.frequency),
+                ),
+                range=qubit.readout.power_range,
+                port_delay=None,
+                delay_signal=0,
+            )
         )
 
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["acquire_line"]
-
-        if qubit.kernel_path:
-            self.kernels[q] = qubit.kernel_path
 
         oscillator = lo.Oscillator(
             frequency=intermediate_frequency,
@@ -453,20 +447,20 @@ class Zurich(Controller):
         threshold = None
 
         if options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            if self.kernels[q].is_file():
+            if qubit.kernel is not None:
                 # Kernels don't work with the software modulation on the acquire signal
                 oscillator = None
             else:
                 # To keep compatibility with angle and threshold discrimination (Remove when possible)
                 threshold = qubit.threshold
 
-        self.calibration[
-            f"/logical_signal_groups/q{q}/acquire_line"
-        ] = lo.SignalCalibration(
-            oscillator=oscillator,
-            range=qubit.feedback.power_range,
-            port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            threshold=threshold,
+        self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = (
+            lo.SignalCalibration(
+                oscillator=oscillator,
+                range=qubit.feedback.power_range,
+                port_delay=self.time_of_flight * NANO_TO_SECONDS,
+                threshold=threshold,
+            )
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -475,20 +469,20 @@ class Zurich(Controller):
         self.signal_map[f"drive{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["drive_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/drive_line"
-        ] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.HARDWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqc" + str(q),
-                frequency=int(qubit.drive.local_oscillator.frequency),
-            ),
-            range=qubit.drive.power_range,
-            port_delay=None,
-            delay_signal=0,
+        self.calibration[f"/logical_signal_groups/q{q}/drive_line"] = (
+            lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.HARDWARE,
+                ),
+                local_oscillator=lo.Oscillator(
+                    uid="lo_shfqc" + str(q),
+                    frequency=int(qubit.drive.local_oscillator.frequency),
+                ),
+                range=qubit.drive.power_range,
+                port_delay=None,
+                delay_signal=0,
+            )
         )
 
     def register_flux_line(self, qubit):
@@ -497,13 +491,13 @@ class Zurich(Controller):
         self.signal_map[f"flux{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["flux_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/flux_line"
-        ] = lo.SignalCalibration(
-            range=qubit.flux.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=qubit.flux.offset,
+        self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = (
+            lo.SignalCalibration(
+                range=qubit.flux.power_range,
+                port_delay=None,
+                delay_signal=0,
+                voltage_offset=qubit.flux.offset,
+            )
         )
 
     def register_couplerflux_line(self, coupler):
@@ -512,13 +506,13 @@ class Zurich(Controller):
         self.signal_map[f"couplerflux{c}"] = self.device_setup.logical_signal_groups[
             f"qc{c}"
         ].logical_signals["flux_line"]
-        self.calibration[
-            f"/logical_signal_groups/qc{c}/flux_line"
-        ] = lo.SignalCalibration(
-            range=coupler.flux.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=coupler.flux.offset,
+        self.calibration[f"/logical_signal_groups/qc{c}/flux_line"] = (
+            lo.SignalCalibration(
+                range=coupler.flux.power_range,
+                port_delay=None,
+                delay_signal=0,
+                voltage_offset=coupler.flux.offset,
+            )
         )
 
     def run_exp(self):
@@ -872,109 +866,118 @@ class Zurich(Controller):
                     exp, qubit, pulse, section, parameters, partial_sweep
                 )
 
-    def couplerflux(self, exp, couplers):
-        """Coupler flux for bias sweep or pulses."""
+    def couplerflux(self, exp: lo.Experiment, couplers: Dict[str, Coupler]):
+        """Coupler flux for bias sweep or pulses.
+
+        Args:
+            exp (lo.Experiment): laboneq experiment on which register sequences.
+            couplers (dict[str, Coupler]): coupler on which pulses are played.
+        """
         for coupler in couplers.values():
             c = coupler.name  # pylint: disable=C0103
-            with exp.section(uid=f"sequence_bias_coupler{c}"):
-                i = 0
-                time = 0
-                for pulse in self.sequence[f"couplerflux{c}"]:
-                    pulse.zhpulse.uid += str(i)
-                    exp.delay(
-                        signal=f"couplerflux{c}",
-                        time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                    )
-                    time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                        pulse.pulse.start * NANO_TO_SECONDS, 9
-                    )
-                    if isinstance(pulse, ZhSweeperLine):
-                        self.play_sweep(exp, coupler, pulse, section="couplerflux")
-                    elif isinstance(pulse, ZhSweeper):
-                        self.play_sweep(exp, coupler, pulse, section="couplerflux")
-                    elif isinstance(pulse, ZhPulse):
-                        exp.play(signal=f"couplerflux{c}", pulse=pulse.zhpulse)
-                    i += 1
+            time = 0
+            previous_section = None
+            for i, sequence in enumerate(self.sub_sequences[f"couplerflux{c}"]):
+                section_uid = f"sequence_couplerflux{c}_{i}"
+                with exp.section(uid=section_uid, play_after=previous_section):
+                    for j, pulse in enumerate(sequence):
+                        pulse.zhpulse.uid += f"{i}_{j}"
+                        exp.delay(
+                            signal=f"couplerflux{c}",
+                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                        )
+                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                            pulse.pulse.start * NANO_TO_SECONDS, 9
+                        )
+                        if isinstance(pulse, ZhSweeperLine):
+                            self.play_sweep(exp, coupler, pulse, section="couplerflux")
+                        elif isinstance(pulse, ZhSweeper):
+                            self.play_sweep(exp, coupler, pulse, section="couplerflux")
+                        elif isinstance(pulse, ZhPulse):
+                            exp.play(signal=f"couplerflux{c}", pulse=pulse.zhpulse)
+                previous_section = section_uid
 
-    def flux(self, exp, qubits):
-        """Qubit flux for bias sweep or pulses."""
+    def flux(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
+        """Qubit flux for bias sweep or pulses.
+
+        Args:
+            exp (lo.Experiment): laboneq experiment on which register sequences.
+            qubits (dict[str, Qubit]): qubits on which pulses are played.
+        """
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             time = 0
-            i = 0
-            if len(self.sequence[f"flux{q}"]) != 0:
-                play_after = None
-                for j, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
-                    with exp.section(
-                        uid=f"sequence_bias{q}_{j}", play_after=play_after
-                    ):
-                        for pulse in sequence:
-                            if not isinstance(pulse, ZhSweeperLine):
-                                pulse.zhpulse.uid += str(i)
-                                exp.delay(
-                                    signal=f"flux{q}",
-                                    time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                                    - time,
-                                )
-                                time = round(
-                                    pulse.pulse.duration * NANO_TO_SECONDS, 9
-                                ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                            if isinstance(pulse, ZhSweeperLine):
-                                self.play_sweep(exp, qubit, pulse, section="flux")
-                            elif isinstance(pulse, ZhSweeper):
-                                self.play_sweep(exp, qubit, pulse, section="flux")
-                            elif isinstance(pulse, ZhPulse):
-                                exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
-                            i += 1
-                    play_after = f"sequence_bias{q}_{j}"
+            previous_section = None
+            for i, sequence in enumerate(self.sub_sequences[f"flux{q}"]):
+                section_uid = f"sequence_flux{q}_{i}"
+                with exp.section(uid=section_uid, play_after=previous_section):
+                    for j, pulse in enumerate(sequence):
+                        if not isinstance(pulse, ZhSweeperLine):
+                            pulse.zhpulse.uid += f"{i}_{j}"
+                            exp.delay(
+                                signal=f"flux{q}",
+                                time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                                - time,
+                            )
+                            time = round(
+                                pulse.pulse.duration * NANO_TO_SECONDS, 9
+                            ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                        if isinstance(pulse, ZhSweeperLine):
+                            self.play_sweep(exp, qubit, pulse, section="flux")
+                        elif isinstance(pulse, ZhSweeper):
+                            self.play_sweep(exp, qubit, pulse, section="flux")
+                        elif isinstance(pulse, ZhPulse):
+                            exp.play(signal=f"flux{q}", pulse=pulse.zhpulse)
+                previous_section = section_uid
 
-    def drive(self, exp, qubits):
-        """Qubit driving pulses."""
+    def drive(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
+        """Qubit driving pulses.
+
+        Args:
+            exp (lo.Experiment): laboneq experiment on which register sequences.
+            qubits (dict[str, Qubit]): qubits on which pulses are played.
+        """
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
             time = 0
-            i = 0
-            if len(self.sequence[f"drive{q}"]) != 0:
-                play_after = None
-                for j, sequence in enumerate(self.sub_sequences[f"drive{q}"]):
-                    with exp.section(
-                        uid=f"sequence_drive{q}_{j}", play_after=play_after
-                    ):
-                        for pulse in sequence:
-                            if not isinstance(pulse, ZhSweeperLine):
-                                exp.delay(
-                                    signal=f"drive{q}",
-                                    time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                                    - time,
-                                )
-                                time = round(
-                                    pulse.pulse.duration * NANO_TO_SECONDS, 9
-                                ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                                pulse.zhpulse.uid += str(i)
-                                if isinstance(pulse, ZhSweeper):
-                                    self.play_sweep(exp, qubit, pulse, section="drive")
-                                elif isinstance(pulse, ZhPulse):
-                                    exp.play(
-                                        signal=f"drive{q}",
-                                        pulse=pulse.zhpulse,
-                                        phase=pulse.pulse.relative_phase,
-                                    )
-                                    i += 1
-                            elif isinstance(pulse, ZhSweeperLine):
-                                exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
-
-                        if len(self.sequence[f"readout{q}"]) > 0 and isinstance(
-                            self.sequence[f"readout{q}"][0], ZhSweeperLine
-                        ):
+            previous_section = None
+            for i, sequence in enumerate(self.sub_sequences[f"drive{q}"]):
+                section_uid = f"sequence_drive{q}_{i}"
+                with exp.section(uid=section_uid, play_after=previous_section):
+                    for j, pulse in enumerate(sequence):
+                        if not isinstance(pulse, ZhSweeperLine):
                             exp.delay(
                                 signal=f"drive{q}",
-                                time=self.sequence[f"readout{q}"][0].zhsweeper,
+                                time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                                - time,
                             )
-                            self.sequence[f"readout{q}"].remove(
-                                self.sequence[f"readout{q}"][0]
-                            )
+                            time = round(
+                                pulse.pulse.duration * NANO_TO_SECONDS, 9
+                            ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                            pulse.zhpulse.uid += f"{i}_{j}"
+                            if isinstance(pulse, ZhSweeper):
+                                self.play_sweep(exp, qubit, pulse, section="drive")
+                            elif isinstance(pulse, ZhPulse):
+                                exp.play(
+                                    signal=f"drive{q}",
+                                    pulse=pulse.zhpulse,
+                                    phase=pulse.pulse.relative_phase,
+                                )
+                        elif isinstance(pulse, ZhSweeperLine):
+                            exp.delay(signal=f"drive{q}", time=pulse.zhsweeper)
 
-                    play_after = f"sequence_drive{q}_{j}"
+                    if len(self.sequence[f"readout{q}"]) > 0 and isinstance(
+                        self.sequence[f"readout{q}"][0], ZhSweeperLine
+                    ):
+                        exp.delay(
+                            signal=f"drive{q}",
+                            time=self.sequence[f"readout{q}"][0].zhsweeper,
+                        )
+                        self.sequence[f"readout{q}"].remove(
+                            self.sequence[f"readout{q}"][0]
+                        )
+
+                previous_section = section_uid
 
     def find_subsequence_finish(
         self,
@@ -1031,15 +1034,15 @@ class Zurich(Controller):
                     iq_angle_readout_schedule[i].append(iq_angle)
 
         weights = {}
-        for i, (pulses, qubits, iq_angles) in enumerate(
+        for i, (pulses, qubits_readout, iq_angles) in enumerate(
             zip(
                 readout_schedule.values(),
                 qubit_readout_schedule.values(),
                 iq_angle_readout_schedule.values(),
             )
         ):
-            qd_finish = self.find_subsequence_finish(i, "drive", qubits)
-            qf_finish = self.find_subsequence_finish(i, "flux", qubits)
+            qd_finish = self.find_subsequence_finish(i, "drive", qubits_readout)
+            qf_finish = self.find_subsequence_finish(i, "flux", qubits_readout)
             cf_finish = self.find_subsequence_finish(i, "couplerflux", couplers)
             finish_times = np.array(
                 [
@@ -1047,7 +1050,7 @@ class Zurich(Controller):
                     qf_finish,
                     cf_finish,
                 ],
-                dtype=[("finish", "i4"), ("line", "U10")],
+                dtype=[("finish", "i4"), ("line", "U15")],
             )
             latest_sequence = finish_times[finish_times["finish"].argmax()]
             if latest_sequence["line"] == "None":
@@ -1056,7 +1059,7 @@ class Zurich(Controller):
                 play_after = f"sequence_{latest_sequence['line']}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
+                for pulse, q, iq_angle in zip(pulses, qubits_readout, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
                     exp.delay(
@@ -1065,13 +1068,13 @@ class Zurich(Controller):
                     )
 
                     if (
-                        self.kernels[q].is_file()
+                        qubits[q].kernel is not None
                         and acquisition_type == lo.AcquisitionType.DISCRIMINATION
                     ):
-                        kernels = np.load(self.kernels[q])
+                        kernel = qubits[q].kernel
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
-                            samples=kernels[str(q)] * np.exp(1j * iq_angle),
+                            samples=kernel * np.exp(1j * iq_angle),
                         )
 
                     else:

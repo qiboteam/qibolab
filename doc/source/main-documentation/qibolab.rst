@@ -14,7 +14,7 @@ The API reference section provides a description of all the attributes and metho
 In the platform, the main methods can be divided in different sections:
 
 - functions save and change qubit parameters (``dump``, ``update``)
-- functions to coordinate the instruments (``connect``, ``setup``, ``start``, ``stop``, ``disconnect``)
+- functions to coordinate the instruments (``connect``, ``setup``, ``disconnect``)
 - functions to execute experiments (``execute_pulse_sequence``, ``execute_pulse_sequences``, ``sweep``)
 - functions to initialize gates (``create_RX90_pulse``, ``create_RX_pulse``, ``create_CZ_pulse``, ``create_MZ_pulse``, ``create_qubit_drive_pulse``, ``create_qubit_readout_pulse``, ``create_RX90_drag_pulse``, ``create_RX_drag_pulse``)
 - setters and getters of channel/qubit parameters (local oscillator parameters, attenuations, gain and biases)
@@ -29,13 +29,11 @@ For example, let's first define a platform (that we consider to be a single qubi
 
     platform = create_platform("dummy")
 
-Now we connect and start the instruments (note that we, the user, do not need to know which instruments are connected).
+Now we connect to the instruments (note that we, the user, do not need to know which instruments are connected).
 
 .. testcode::  python
 
     platform.connect()
-    platform.setup()
-    platform.start()
 
 We can easily print some of the parameters of the channels (similarly we can set those, if needed):
 
@@ -93,7 +91,6 @@ Finally, we can stop instruments and close connections.
 
 .. testcode::  python
 
-    platform.stop()
     platform.disconnect()
 
 
@@ -204,9 +201,9 @@ Note that while channels are defined in a device-independent manner, the port pa
     from qibolab.instruments.rfsoc import RFSoC
 
     controller = RFSoC(name="dummy", address="192.168.0.10", port="6000")
-    channel1 = Channel("my_channel_name_1", port=controller[1])
-    channel2 = Channel("my_channel_name_2", port=controller[2])
-    channel3 = Channel("my_channel_name_3", port=controller[3])
+    channel1 = Channel("my_channel_name_1", port=controller.ports(1))
+    channel2 = Channel("my_channel_name_2", port=controller.ports(2))
+    channel3 = Channel("my_channel_name_3", port=controller.ports(3))
 
 Channels are then organized in :class:`qibolab.channels.ChannelMap` to be passed as a single argument to the platform.
 Following the tutorial in :doc:`/tutorials/lab`, we can continue the initialization:
@@ -216,14 +213,14 @@ Following the tutorial in :doc:`/tutorials/lab`, we can continue the initializat
     from pathlib import Path
     from qibolab.serialize import load_qubits, load_runcard
 
-    runcard_path = Path.cwd().parent / "src" / "qibolab" / "dummy.yml"
+    path = Path.cwd().parent / "src" / "qibolab" / "dummy"
 
     ch_map = ChannelMap()
     ch_map |= channel1
     ch_map |= channel2
     ch_map |= channel3
 
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(path)
     qubits, couplers, pairs = load_qubits(runcard)
 
     qubits[0].drive = channel1
@@ -650,7 +647,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 
-.. _main_doc_transpiler:
+.. _main_doc_compiler:
 
 Transpiler and Compiler
 -----------------------
@@ -707,20 +704,17 @@ Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
     - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
     - Quantum Machines: :class:`qibolab.instruments.qm.driver.QMOPX`
-    - Qblox: :class:`qibolab.instruments.qblox.cluster.Cluster`
+    - Qblox: :class:`qibolab.instruments.qblox.controller.QbloxCluster`
     - Xilinx RFSoCs: :class:`qibolab.instruments.rfsoc.driver.RFSoC`
 
 Other Instruments (subclasses of :class:`qibolab.instruments.abstract.Instrument`):
     - Erasynth++: :class:`qibolab.instruments.erasynth.ERA`
     - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
-    - Qutech SPI rack: :class:`qibolab.instruments.qutech.SPI`
 
 Instruments all implement a set of methods:
 
 - connect
 - setup
-- start
-- stop
 - disconnect
 
 While the controllers, the main instruments in a typical setup, add other two methods:

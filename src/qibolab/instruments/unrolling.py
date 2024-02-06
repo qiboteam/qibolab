@@ -2,6 +2,7 @@
 
 May be reused by different instruments.
 """
+
 from more_itertools import chunked
 
 

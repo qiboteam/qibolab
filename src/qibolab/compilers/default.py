@@ -2,6 +2,7 @@
 
 Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
+
 import math
 
 from qibolab.pulses import PulseSequence
@@ -71,6 +72,11 @@ def cz_rule(gate, platform):
     gate is not directly acting on.
     """
     return platform.create_CZ_pulse_sequence(gate.qubits)
+
+
+def cnot_rule(gate, platform):
+    """CNOT applied as defined in the platform runcard."""
+    return platform.create_CNOT_pulse_sequence(gate.qubits)
 
 
 def measurement_rule(gate, platform):

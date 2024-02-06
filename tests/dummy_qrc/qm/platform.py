@@ -11,10 +11,10 @@ from qibolab.serialize import (
     load_settings,
 )
 
-RUNCARD = pathlib.Path(__file__).parent / "qm.yml"
+FOLDER = pathlib.Path(__file__).parent
 
 
-def create(runcard_path=RUNCARD):
+def create(folder: pathlib.Path = FOLDER):
     """Dummy platform using Quantum Machines (QM) OPXs and Rohde Schwarz local
     oscillators.
 
@@ -29,20 +29,22 @@ def create(runcard_path=RUNCARD):
     # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels |= Channel("L3-25_a", port=controller[(("con1", 10), ("con1", 9))])
-    channels |= Channel("L3-25_b", port=controller[(("con2", 10), ("con2", 9))])
+    channels |= Channel("L3-25_a", port=controller.ports((("con1", 10), ("con1", 9))))
+    channels |= Channel("L3-25_b", port=controller.ports((("con2", 10), ("con2", 9))))
     # feedback
-    channels |= Channel("L2-5_a", port=controller[(("con1", 2), ("con1", 1))])
-    channels |= Channel("L2-5_b", port=controller[(("con2", 2), ("con2", 1))])
+    channels |= Channel("L2-5_a", port=controller.ports((("con1", 2), ("con1", 1))))
+    channels |= Channel("L2-5_b", port=controller.ports((("con2", 2), ("con2", 1))))
     # drive
     channels |= (
-        Channel(f"L3-1{i}", port=controller[(("con1", 2 * i), ("con1", 2 * i - 1))])
+        Channel(
+            f"L3-1{i}", port=controller.ports((("con1", 2 * i), ("con1", 2 * i - 1)))
+        )
         for i in range(1, 5)
     )
-    channels |= Channel("L3-15", port=controller[(("con3", 2), ("con3", 1))])
+    channels |= Channel("L3-15", port=controller.ports((("con3", 2), ("con3", 1))))
     # flux
     channels |= (
-        Channel(f"L4-{i}", port=controller[(("con2", i),)]) for i in range(1, 6)
+        Channel(f"L4-{i}", port=controller.ports((("con2", i),))) for i in range(1, 6)
     )
     # TWPA
     channels |= "L4-26"
@@ -67,7 +69,7 @@ def create(runcard_path=RUNCARD):
     channels["L4-26"].local_oscillator = local_oscillators[5]
 
     # create qubit objects
-    runcard = load_runcard(runcard_path)
+    runcard = load_runcard(folder)
     qubits, couplers, pairs = load_qubits(runcard)
 
     # assign channels to qubits
@@ -99,4 +101,6 @@ def create(runcard_path=RUNCARD):
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
     instruments = load_instrument_settings(runcard, instruments)
-    return Platform("qm", qubits, pairs, instruments, settings, resonator_type="2D")
+    return Platform(
+        str(FOLDER), qubits, pairs, instruments, settings, resonator_type="2D"
+    )
