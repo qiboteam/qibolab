@@ -650,7 +650,7 @@ class Zurich(Controller):
                 self.nt_sweeps.append(sweeper)
             self.sweepers.remove(sweeper)
 
-        for sweeper in self.sweepers:
+        for sweeper in self.sweepers.copy():
             if sweeper.parameter.name in SWEEPER_SET:
                 for pulse in sweeper.pulses:
                     aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
