@@ -368,13 +368,6 @@ class Zurich(Controller):
                     - qubit.readout.local_oscillator.frequency,
                     options=options,
                 )
-                if options.fast_reset is not False:
-                    if len(self.sequence[f"drive{qubit.name}"]) == 0:
-                        self.register_drive_line(
-                            qubit=qubit,
-                            intermediate_frequency=qubit.drive_frequency
-                            - qubit.drive.local_oscillator.frequency,
-                        )
         self.device_setup.set_calibration(self.calibration)
 
     def register_readout_line(self, qubit, intermediate_frequency, options):
@@ -698,9 +691,6 @@ class Zurich(Controller):
             if len(self.sequence[f"readout{q}"]) != 0:
                 signals.append(lo.ExperimentSignal(f"measure{q}"))
                 signals.append(lo.ExperimentSignal(f"acquire{q}"))
-                if options.fast_reset is not False:
-                    if len(self.sequence[f"drive{q}"]) == 0:
-                        signals.append(lo.ExperimentSignal(f"drive{q}"))
 
         exp = lo.Experiment(
             uid="Sequence",
@@ -760,8 +750,6 @@ class Zurich(Controller):
             exp_options.relaxation_time,
             exp_options.acquisition_type,
         )
-        if exp_options.fast_reset is not False:
-            self.fast_reset(exp, qubits, exp_options.fast_reset)
 
     @staticmethod
     def play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep):
@@ -1105,25 +1093,6 @@ class Zurich(Controller):
                         acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
                         reset_delay=reset_delay,
                     )
-
-    def fast_reset(self, exp, qubits, fast_reset):
-        """
-        Conditional fast reset after readout - small delay for signal processing
-        This is a very naive approach that can be improved by repeating this step until
-        we reach non fast reset fidelity
-        https://quantum-computing.ibm.com/lab/docs/iql/manage/systems/reset/backend_reset
-        """
-        log.warning("Im fast resetting")
-        for qubit_name in self.sequence_qibo.qubits:
-            qubit = qubits[qubit_name]
-            q = qubit.name  # pylint: disable=C0103
-            with exp.section(uid=f"fast_reset{q}", play_after=f"sequence_measure"):
-                with exp.match_local(handle=f"sequence{q}"):
-                    with exp.case(state=0):
-                        pass
-                    with exp.case(state=1):
-                        pulse = ZhPulse(qubit.native_gates.RX.pulse(0, 0))
-                        exp.play(signal=f"drive{q}", pulse=pulse.zhpulse)
 
     @staticmethod
     def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[np.ndarray, List[Sweeper]]:
