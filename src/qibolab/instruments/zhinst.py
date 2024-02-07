@@ -9,7 +9,6 @@ from typing import Dict, List, Tuple, Union
 import laboneq._token
 import laboneq.simple as lo
 import numpy as np
-from laboneq.contrib.example_helpers.plotting.plot_helpers import plot_simulation
 from laboneq.dsl.experiment.pulse_library import (
     sampled_pulse_complex,
     sampled_pulse_real,
@@ -291,13 +290,11 @@ class Zurich(Controller):
     PortType = ZhPort
 
     def __init__(
-        self, name, device_setup, use_emulation=False, time_of_flight=0.0, smearing=0.0
+        self, name, device_setup, time_of_flight=0.0, smearing=0.0
     ):
         self.name = name
         "Setup name (str)"
 
-        self.emulation = use_emulation
-        "Enable emulation mode (bool)"
         self.is_connected = False
         "Is the device connected ? (bool)"
 
@@ -355,7 +352,7 @@ class Zurich(Controller):
             # To fully remove logging #configure_logging=False
             # I strongly advise to set it to 20 to have time estimates of the experiment duration!
             self.session = lo.Session(self.device_setup, log_level=20)
-            self.device = self.session.connect(do_emulation=self.emulation)
+            self.device = self.session.connect()
             self.is_connected = True
 
     def disconnect(self):
@@ -1404,31 +1401,5 @@ class Zurich(Controller):
             else:
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
 
-    def play_sim(self, qubits, sequence, options, sim_time):
-        """Play pulse sequence."""
-
-        self.experiment_flow(qubits, sequence, options)  # missing couplers?
-        self.run_sim(sim_time)
-
-    def run_sim(self, sim_time):
-        """Run the simulation.
-
-        Args:
-            sim_time (float): Time[s] to simulate starting from 0
-        """
-        # create a session
-        self.sim_session = lo.Session(self.device_setup)
-        # connect to session
-        self.sim_device = self.sim_session.connect(do_emulation=True)
-        self.exp = self.sim_session.compile(
-            self.experiment, compiler_settings=COMPILER_SETTINGS
-        )
-
-        # Plot simulated output signals with helper function
-        plot_simulation(
-            self.exp,
-            start_time=0,
-            length=sim_time,
-            plot_width=10,
-            plot_height=3,
-        )
+    def split_batches(self, sequences):
+        return batch_max_sequences(sequences, MAX_SEQUENCES)
