@@ -289,18 +289,14 @@ class Zurich(Controller):
 
         self.device_setup = device_setup
         self.session = None
-        self.device = None
         "Zurich device parameters for connection"
 
         self.time_of_flight = time_of_flight
         self.smearing = smearing
-        self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
 
         self.exp = None
         self.experiment = None
-        self.exp_options = ExecutionParameters()
-        self.exp_calib = lo.Calibration()
         self.results = None
         "Zurich experiment definitions"
 
@@ -323,8 +319,6 @@ class Zurich(Controller):
         self.nt_sweeps = None
         "Storing sweepers"
         # Improve the storing of multiple sweeps
-        self._ports = {}
-        self.settings = None
 
     @property
     def sampling_rate(self):
@@ -335,12 +329,12 @@ class Zurich(Controller):
             # To fully remove logging #configure_logging=False
             # I strongly advise to set it to 20 to have time estimates of the experiment duration!
             self.session = lo.Session(self.device_setup, log_level=20)
-            self.device = self.session.connect()
+            _ = self.session.connect()
             self.is_connected = True
 
     def disconnect(self):
         if self.is_connected:
-            self.device = self.session.disconnect()
+            _ = self.session.disconnect()
             self.is_connected = False
 
     def calibration_step(self, qubits, couplers, options):
