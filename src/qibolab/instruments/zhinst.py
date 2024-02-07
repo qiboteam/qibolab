@@ -4,7 +4,6 @@ import copy
 import os
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import laboneq._token
@@ -318,7 +317,6 @@ class Zurich(Controller):
         self.smearing = smearing
         self.chip = "iqm5q"
         "Parameters read from the runcard not part of ExecutionParameters"
-        self.kernels = defaultdict(Path)
 
         self.exp = None
         self.experiment = None
@@ -422,28 +420,25 @@ class Zurich(Controller):
         self.signal_map[f"measure{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["measure_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/measure_line"
-        ] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.SOFTWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqa_m" + str(q),
-                frequency=int(qubit.readout.local_oscillator.frequency),
-            ),
-            range=qubit.readout.power_range,
-            port_delay=None,
-            delay_signal=0,
+        self.calibration[f"/logical_signal_groups/q{q}/measure_line"] = (
+            lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.SOFTWARE,
+                ),
+                local_oscillator=lo.Oscillator(
+                    uid="lo_shfqa_m" + str(q),
+                    frequency=int(qubit.readout.local_oscillator.frequency),
+                ),
+                range=qubit.readout.power_range,
+                port_delay=None,
+                delay_signal=0,
+            )
         )
 
         self.signal_map[f"acquire{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["acquire_line"]
-
-        if qubit.kernel_path:
-            self.kernels[q] = qubit.kernel_path
 
         oscillator = lo.Oscillator(
             frequency=intermediate_frequency,
@@ -452,20 +447,20 @@ class Zurich(Controller):
         threshold = None
 
         if options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            if self.kernels[q].is_file():
+            if qubit.kernel is not None:
                 # Kernels don't work with the software modulation on the acquire signal
                 oscillator = None
             else:
                 # To keep compatibility with angle and threshold discrimination (Remove when possible)
                 threshold = qubit.threshold
 
-        self.calibration[
-            f"/logical_signal_groups/q{q}/acquire_line"
-        ] = lo.SignalCalibration(
-            oscillator=oscillator,
-            range=qubit.feedback.power_range,
-            port_delay=self.time_of_flight * NANO_TO_SECONDS,
-            threshold=threshold,
+        self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = (
+            lo.SignalCalibration(
+                oscillator=oscillator,
+                range=qubit.feedback.power_range,
+                port_delay=self.time_of_flight * NANO_TO_SECONDS,
+                threshold=threshold,
+            )
         )
 
     def register_drive_line(self, qubit, intermediate_frequency):
@@ -474,20 +469,20 @@ class Zurich(Controller):
         self.signal_map[f"drive{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["drive_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/drive_line"
-        ] = lo.SignalCalibration(
-            oscillator=lo.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=lo.ModulationType.HARDWARE,
-            ),
-            local_oscillator=lo.Oscillator(
-                uid="lo_shfqc" + str(q),
-                frequency=int(qubit.drive.local_oscillator.frequency),
-            ),
-            range=qubit.drive.power_range,
-            port_delay=None,
-            delay_signal=0,
+        self.calibration[f"/logical_signal_groups/q{q}/drive_line"] = (
+            lo.SignalCalibration(
+                oscillator=lo.Oscillator(
+                    frequency=intermediate_frequency,
+                    modulation_type=lo.ModulationType.HARDWARE,
+                ),
+                local_oscillator=lo.Oscillator(
+                    uid="lo_shfqc" + str(q),
+                    frequency=int(qubit.drive.local_oscillator.frequency),
+                ),
+                range=qubit.drive.power_range,
+                port_delay=None,
+                delay_signal=0,
+            )
         )
 
     def register_flux_line(self, qubit):
@@ -496,13 +491,13 @@ class Zurich(Controller):
         self.signal_map[f"flux{q}"] = self.device_setup.logical_signal_groups[
             f"q{q}"
         ].logical_signals["flux_line"]
-        self.calibration[
-            f"/logical_signal_groups/q{q}/flux_line"
-        ] = lo.SignalCalibration(
-            range=qubit.flux.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=qubit.flux.offset,
+        self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = (
+            lo.SignalCalibration(
+                range=qubit.flux.power_range,
+                port_delay=None,
+                delay_signal=0,
+                voltage_offset=qubit.flux.offset,
+            )
         )
 
     def register_couplerflux_line(self, coupler):
@@ -511,13 +506,13 @@ class Zurich(Controller):
         self.signal_map[f"couplerflux{c}"] = self.device_setup.logical_signal_groups[
             f"qc{c}"
         ].logical_signals["flux_line"]
-        self.calibration[
-            f"/logical_signal_groups/qc{c}/flux_line"
-        ] = lo.SignalCalibration(
-            range=coupler.flux.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=coupler.flux.offset,
+        self.calibration[f"/logical_signal_groups/qc{c}/flux_line"] = (
+            lo.SignalCalibration(
+                range=coupler.flux.power_range,
+                port_delay=None,
+                delay_signal=0,
+                voltage_offset=coupler.flux.offset,
+            )
         )
 
     def run_exp(self):
@@ -584,13 +579,24 @@ class Zurich(Controller):
         self.create_sub_sequence("flux", qubits)
         self.create_sub_sequence("couplerflux", couplers)
 
-    def experiment_flow(self, qubits, couplers, sequence, options, sweepers=[]):
+    def experiment_flow(
+        self,
+        qubits: Dict[str, Qubit],
+        couplers: Dict[str, Coupler],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+    ):
         """Create the experiment object for the devices, following the steps
         separated one on each method:
 
         Translation, Calibration, Experiment Definition.
+
+        Args:
+            qubits (dict[str, Qubit]): qubits for the platform.
+            couplers (dict[str, Coupler]): couplers for the platform.
+            sequence (PulseSequence): sequence of pulses to be played in the experiment.
         """
-        self.sequence_zh(sequence, qubits, couplers, sweepers)
+        self.sequence_zh(sequence, qubits, couplers)
         self.create_sub_sequences(qubits, couplers)
         self.calibration_step(qubits, couplers, options)
         self.create_exp(qubits, couplers, options)
@@ -625,9 +631,8 @@ class Zurich(Controller):
         # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
-    def sequence_zh(self, sequence, qubits, couplers, sweepers):
+    def sequence_zh(self, sequence, qubits, couplers):
         """Qibo sequence to Zurich sequence."""
-
         # Define and assign the sequence
         zhsequence = defaultdict(list)
         self.sequence_qibo = sequence
@@ -639,14 +644,13 @@ class Zurich(Controller):
         # Mess that gets the sweeper and substitutes the pulse it sweeps in the right place
 
         def nt_loop(sweeper):
-            if len(sweepers) == 2:
-                if not self.nt_sweeps:
-                    self.nt_sweeps = [sweeper]
-                else:
-                    self.nt_sweeps.append(sweeper)
-                self.sweepers.remove(sweeper)
+            if not self.nt_sweeps:
+                self.nt_sweeps = [sweeper]
+            else:
+                self.nt_sweeps.append(sweeper)
+            self.sweepers.remove(sweeper)
 
-        for sweeper in sweepers:
+        for sweeper in self.sweepers.copy():
             if sweeper.parameter.name in SWEEPER_SET:
                 for pulse in sweeper.pulses:
                     aux_list = zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"]
@@ -685,16 +689,7 @@ class Zurich(Controller):
                                     )
 
             if sweeper.parameter.name in SWEEPER_BIAS:
-                if sweeper.qubits:
-                    for qubit in sweeper.qubits:
-                        zhsequence[f"flux{qubit.name}"] = [
-                            ZhSweeperLine(sweeper, qubit, sequence)
-                        ]
-                if sweeper.couplers:
-                    for coupler in sweeper.couplers:
-                        zhsequence[f"couplerflux{coupler.name}"] = [
-                            ZhSweeperLine(sweeper, coupler, sequence)
-                        ]
+                nt_loop(sweeper)
 
             # This may not place the Zhsweeper when the start occurs among different sections or lines
             if sweeper.parameter.name in SWEEPER_START:
@@ -1039,15 +1034,15 @@ class Zurich(Controller):
                     iq_angle_readout_schedule[i].append(iq_angle)
 
         weights = {}
-        for i, (pulses, qubits, iq_angles) in enumerate(
+        for i, (pulses, qubits_readout, iq_angles) in enumerate(
             zip(
                 readout_schedule.values(),
                 qubit_readout_schedule.values(),
                 iq_angle_readout_schedule.values(),
             )
         ):
-            qd_finish = self.find_subsequence_finish(i, "drive", qubits)
-            qf_finish = self.find_subsequence_finish(i, "flux", qubits)
+            qd_finish = self.find_subsequence_finish(i, "drive", qubits_readout)
+            qf_finish = self.find_subsequence_finish(i, "flux", qubits_readout)
             cf_finish = self.find_subsequence_finish(i, "couplerflux", couplers)
             finish_times = np.array(
                 [
@@ -1064,7 +1059,7 @@ class Zurich(Controller):
                 play_after = f"sequence_{latest_sequence['line']}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, q, iq_angle in zip(pulses, qubits, iq_angles):
+                for pulse, q, iq_angle in zip(pulses, qubits_readout, iq_angles):
                     pulse.zhpulse.uid += str(i)
 
                     exp.delay(
@@ -1073,13 +1068,13 @@ class Zurich(Controller):
                     )
 
                     if (
-                        self.kernels[q].is_file()
+                        qubits[q].kernel is not None
                         and acquisition_type == lo.AcquisitionType.DISCRIMINATION
                     ):
-                        kernels = np.load(self.kernels[q])
+                        kernel = qubits[q].kernel
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
-                            samples=kernels[str(q)] * np.exp(1j * iq_angle),
+                            samples=kernel * np.exp(1j * iq_angle),
                         )
 
                     else:
@@ -1162,7 +1157,7 @@ class Zurich(Controller):
         """Rearranges sweepers from qibocal based on device hardware
         limitations.
 
-        Frequency sweepers must be applied before bias or amplitude sweepers.
+        Frequency sweepers must be applied before (on the outer loop) bias or amplitude sweepers.
 
         Args:
             sweepers (list[Sweeper]): list of sweepers used in the experiment.
@@ -1177,15 +1172,14 @@ class Zurich(Controller):
         rearranging_axes = np.zeros(2, dtype=int)
         if len(sweepers) == 2:
             if sweepers[1].parameter is Parameter.frequency:
-                if (sweepers[0].parameter is Parameter.bias) or (
-                    not sweepers[0].parameter is Parameter.amplitude
-                    and sweepers[0].pulses[0].type is not PulseType.READOUT
-                ):
-                    rearranging_axes[:] = [sweepers.index(sweepers[1]), 0]
-                    sweeper_changed = sweepers[1]
-                    sweepers.remove(sweeper_changed)
-                    sweepers.insert(0, sweeper_changed)
-                    log.warning("Sweepers were reordered")
+                if not sweepers[0].pulses is None:
+                    if (sweepers[0].parameter is Parameter.bias) or (
+                        not sweepers[0].parameter is Parameter.amplitude
+                        and sweepers[0].pulses[0].type is not PulseType.READOUT
+                    ):
+                        rearranging_axes[:] = [1, 0]
+                        sweepers = sweepers[::-1]
+                        log.warning("Sweepers were reordered")
         return rearranging_axes, sweepers
 
     def offsets_off(self):
@@ -1205,7 +1199,7 @@ class Zurich(Controller):
 
         self.frequency_from_pulses(qubits, sequence)
 
-        self.experiment_flow(qubits, couplers, sequence, options, sweepers)
+        self.experiment_flow(qubits, couplers, sequence, options)
         self.run_exp()
 
         #  Get the results back
@@ -1305,7 +1299,43 @@ class Zurich(Controller):
             else:
                 self.select_exp(exp, qubits, couplers, exp_options)
 
-    def sweep_recursion_nt(self, qubits, couplers, options, exp, exp_calib):
+    def find_instrument_address(
+        self, quantum_element: Union[Qubit, Coupler], parameter: str
+    ) -> str:
+        """Find path of the instrument connected to a specified line and
+        qubit/coupler.
+
+        Args:
+            quantum_element (Qubit | Coupler): qubits or couplers on which perform the near time sweep.
+            parameter (str): parameter on which perform the near time sweep.
+        """
+        line_names = {
+            "bias": "flux",
+            "amplitude": "drive",
+        }
+        line_name = line_names[parameter]
+        channel_uid = (
+            self.device_setup.logical_signal_groups[f"q{quantum_element.name}"]
+            .logical_signals[f"{line_name}_line"]
+            .physical_channel.uid
+        )
+        channel_name = channel_uid.split("/")[0]
+        instruments = self.device_setup.instruments
+        for instrument in instruments:
+            if instrument.uid == channel_name:
+                return instrument.address
+        raise RuntimeError(
+            f"Could not find instrument for {quantum_element} {line_name}"
+        )
+
+    def sweep_recursion_nt(
+        self,
+        qubits: Dict[str, Qubit],
+        couplers: Dict[str, Coupler],
+        options: ExecutionParameters,
+        exp: lo.Experiment,
+        exp_calib: lo.Calibration,
+    ):
         """Sweepers recursion for Near Time sweepers. Faster than regular
         software sweepers as they are executed on the actual device by
         (software ? or slower hardware ones)
@@ -1323,7 +1353,20 @@ class Zurich(Controller):
 
         parameter = None
 
-        if sweeper.parameter is Parameter.amplitude:
+        if sweeper.parameter is Parameter.bias:
+            if sweeper.qubits:
+                for qubit in sweeper.qubits:
+                    zhsweeper = ZhSweeperLine(
+                        sweeper, qubit, self.sequence_qibo
+                    ).zhsweeper
+                    zhsweeper.uid = "bias"
+                    path = self.find_instrument_address(qubit, "bias")
+
+                    parameter = copy.deepcopy(zhsweeper)
+                    parameter.values += qubit.flux.offset
+                    device_path = f"{path}/sigouts/0/offset"
+
+        elif sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 pulse = pulse.copy()
                 pulse.amplitude *= max(abs(sweeper.values))
@@ -1338,21 +1381,27 @@ class Zurich(Controller):
                 ).zhsweeper
                 sweeper.values *= aux_max
 
-                zhsweeper.uid = "amplitude"  # f"amplitude{i}"
-                path = "DEV12146"  # Hardcoded for SHFQC(SHFQA)
+                zhsweeper.uid = "amplitude"
+                path = self.find_instrument_address(
+                    qubits[sweeper.pulses[0].qubit], "amplitude"
+                )
                 parameter = zhsweeper
+                device_path = (
+                    f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
+                )
 
-        elif parameter is None:
+        elif parameter is None:  # can it be accessed?
             parameter = ZhSweeper(
                 sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]
             ).zhsweeper
+            device_path = f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
 
         with exp.sweep(
             uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
             parameter=parameter,
         ):
             exp.set_node(
-                path=f"/{path}/qachannels/*/oscs/0/gain",  # Hardcoded SHFQA device
+                path=device_path,
                 value=parameter,
             )
 
@@ -1367,7 +1416,7 @@ class Zurich(Controller):
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence."""
 
-        self.experiment_flow(qubits, sequence, options)
+        self.experiment_flow(qubits, sequence, options)  # missing couplers?
         self.run_sim(sim_time)
 
     def run_sim(self, sim_time):

@@ -16,7 +16,7 @@ from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
-class ClusterQCM_RF(ClusterModule):
+class QcmRf(ClusterModule):
     """Qblox Cluster Qubit Control Module RF driver.
 
     Qubit Control Module RF (QCM-RF) is an instrument that integrates an arbitratry
@@ -121,9 +121,9 @@ class ClusterQCM_RF(ClusterModule):
         - cluster: The Cluster object to which the QCM-RF module is connected.
 
         Example:
-        To create a ClusterQCM_RF instance named 'qcm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        To create a QcmRf instance named 'qcm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
         >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
-        >>> qcm_module = ClusterQCM_RF(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
+        >>> qcm_module = QcmRf(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None

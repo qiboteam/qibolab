@@ -7,9 +7,9 @@ from qibo.config import log, raise_error
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.qblox.cluster_qcm_bb import ClusterQCM_BB
-from qibolab.instruments.qblox.cluster_qcm_rf import ClusterQCM_RF
-from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
+from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
+from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
@@ -111,12 +111,12 @@ class QbloxController(Controller):
                 for port_name, port in module._ports.items()
             }
             for module in self.modules.values()
-            if not isinstance(module, ClusterQCM_BB)
+            if not isinstance(module, QcmBb)
         }
 
         return data
 
-    def _set_module_channel_map(self, module: ClusterQRM_RF, qubits: dict):
+    def _set_module_channel_map(self, module: QrmRf, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
         This method updates the `channel_port_map` attribute of the
@@ -137,7 +137,7 @@ class QbloxController(Controller):
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
-        **kwargs
+        **kwargs,
         # nshots=None,
         # navgs=None,
         # relaxation_time=None,
@@ -204,36 +204,32 @@ class QbloxController(Controller):
 
         # play the sequence or sweep
         for module in self.modules.values():
-            if isinstance(module, (ClusterQRM_RF, ClusterQCM_RF, ClusterQCM_BB)):
+            if isinstance(module, (QrmRf, QcmRf, QcmBb)):
                 module.play_sequence()
 
         # retrieve the results
         acquisition_results = {}
         for name, module in self.modules.items():
-            if (
-                isinstance(module, ClusterQRM_RF)
-                and not module_pulses[name].ro_pulses.is_empty
-            ):
+            if isinstance(module, QrmRf) and not module_pulses[name].ro_pulses.is_empty:
                 results = module.acquire()
-                existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
-                    if key in existing_keys:
-                        acquisition_results[key].update(value)
-                    else:
-                        acquisition_results[key] = value
-
+                    acquisition_results[key] = value
         # TODO: move to QRM_RF.acquire()
         shape = tuple(len(sweeper.values) for sweeper in reversed(sweepers))
         shots_shape = (nshots,) + shape
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                _res = acquisition_results[ro_pulse.serial][2]
+                _res = acquisition_results[ro_pulse.serial].classified
                 _res = np.reshape(_res, shots_shape)
                 if options.averaging_mode is not AveragingMode.SINGLESHOT:
                     _res = np.mean(_res, axis=0)
-            else:
-                ires = acquisition_results[ro_pulse.serial][0]
-                qres = acquisition_results[ro_pulse.serial][1]
+            elif options.acquisition_type is AcquisitionType.RAW:
+                i_raw = acquisition_results[ro_pulse.serial].raw_i
+                q_raw = acquisition_results[ro_pulse.serial].raw_q
+                _res = i_raw + 1j * q_raw
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
+                ires = acquisition_results[ro_pulse.serial].shots_i
+                qres = acquisition_results[ro_pulse.serial].shots_q
                 _res = ires + 1j * qres
                 if options.averaging_mode is AveragingMode.SINGLESHOT:
                     _res = np.reshape(_res, shots_shape)

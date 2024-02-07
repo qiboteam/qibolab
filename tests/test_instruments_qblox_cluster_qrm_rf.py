@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.cluster_qrm_rf import ClusterQRM_RF
+from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
 from qibolab.pulses import DrivePulse, PulseSequence, ReadoutPulse
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -29,8 +29,8 @@ SETTINGS = {
 
 def get_qrm_rf(controller):
     for module in controller.modules.values():
-        if isinstance(module, ClusterQRM_RF):
-            return ClusterQRM_RF(module.name, module.address)
+        if isinstance(module, QrmRf):
+            return QrmRf(module.name, module.address)
 
 
 @pytest.fixture(scope="module")
@@ -51,7 +51,7 @@ def connected_qrm_rf(connected_controller):
     connected_controller.disconnect()
 
 
-def test_instrument_interface(qrm_rf: ClusterQRM_RF):
+def test_instrument_interface(qrm_rf: QrmRf):
     # Test compliance with :class:`qibolab.instruments.abstract.Instrument` interface
     for abstract_method in Instrument.__abstractmethods__:
         assert hasattr(qrm_rf, abstract_method)
@@ -64,17 +64,17 @@ def test_instrument_interface(qrm_rf: ClusterQRM_RF):
         assert hasattr(qrm_rf, attribute)
 
 
-def test_init(qrm_rf: ClusterQRM_RF):
+def test_init(qrm_rf: QrmRf):
     assert qrm_rf.device == None
 
 
-def test_setup(qrm_rf: ClusterQRM_RF):
+def test_setup(qrm_rf: QrmRf):
     qrm_rf.setup(**SETTINGS)
     assert qrm_rf.settings == SETTINGS
 
 
 @pytest.mark.qpu
-def test_connect(connected_qrm_rf: ClusterQRM_RF):
+def test_connect(connected_qrm_rf: QrmRf):
     qrm_rf = connected_qrm_rf
 
     assert qrm_rf.is_connected
@@ -142,7 +142,7 @@ def test_connect(connected_qrm_rf: ClusterQRM_RF):
 
 
 @pytest.mark.qpu
-def test_pulse_sequence(connected_platform, connected_qrm_rf: ClusterQRM_RF):
+def test_pulse_sequence(connected_platform, connected_qrm_rf: QrmRf):
     ps = PulseSequence()
     for channel in connected_qrm_rf.channel_map:
         ps.add(DrivePulse(0, 200, 1, 6.8e9, np.pi / 2, "Gaussian(5)", channel))
@@ -170,7 +170,7 @@ def test_pulse_sequence(connected_platform, connected_qrm_rf: ClusterQRM_RF):
 
 
 @pytest.mark.qpu
-def test_sweepers(connected_platform, connected_qrm_rf: ClusterQRM_RF):
+def test_sweepers(connected_platform, connected_qrm_rf: QrmRf):
     ps = PulseSequence()
     qd_pulses = {}
     ro_pulses = {}

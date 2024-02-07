@@ -7,6 +7,10 @@
       url = "github:cachix/nixpkgs-python";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -39,6 +43,14 @@
             {
               packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
 
+              languages.c = {
+                enable = true;
+              };
+
+              languages.cplusplus = {
+                enable = true;
+              };
+
               languages.python = {
                 enable = true;
                 poetry = {
@@ -48,6 +60,11 @@
                   install.allExtras = true;
                 };
                 version = "3.11";
+              };
+
+              languages.rust = {
+                enable = true;
+                channel = "stable";
               };
             }
           ];

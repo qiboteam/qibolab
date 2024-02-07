@@ -19,7 +19,7 @@ from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
-class ClusterQRM_RF(ClusterModule):
+class QrmRf(ClusterModule):
     """Qblox Cluster Qubit Readout Module RF driver.
 
     Qubit Readout Module RF (QRM-RF) is an instrument that integrates an arbitrary wave generator, a digitizer,
@@ -133,9 +133,9 @@ class ClusterQRM_RF(ClusterModule):
         - cluster: The Cluster object to which the QRM-RF module is connected.
 
         Example:
-        To create a ClusterQRM_RF instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
+        To create a QrmRf instance named 'qrm_rf' connected to slot 2 of a Cluster at address '192.168.0.100':
         >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
-        >>> qrm_module = ClusterQRM_RF(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
+        >>> qrm_module = QrmRf(name="qrm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
 
         super().__init__(name, address)
@@ -973,6 +973,7 @@ class ClusterQRM_RF(ClusterModule):
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
+                # TODO: Maybe this store_scope can be done only if needed to optimize the process!
                 if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
                     self.device.store_scope_acquisition(
                         sequencer.number, "scope_acquisition"
@@ -980,14 +981,13 @@ class ClusterQRM_RF(ClusterModule):
                     scope = self.device.get_acquisitions(sequencer.number)[
                         "scope_acquisition"
                     ]
-
                 if not hardware_demod_enabled:  # Software Demodulation
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
                         frequency = self.get_if(pulse)
-                        acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
-                        ] = AveragedAcquisition(scope, duration, frequency)
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
+                            AveragedAcquisition(scope, duration, frequency)
+                        )
                     else:
                         raise RuntimeError(
                             "Software Demodulation only supports one acquisition per channel. "
@@ -997,21 +997,12 @@ class ClusterQRM_RF(ClusterModule):
                     results = self.device.get_acquisitions(sequencer.number)
                     for pulse in sequencer.pulses.ro_pulses:
                         bins = results[pulse.serial]["acquisition"]["bins"]
-                        acquisitions[pulse.qubit] = acquisitions[
-                            pulse.serial
-                        ] = DemodulatedAcquisition(bins, duration)
-
-                    # Provide Scope Data for verification (assuming memory reseet is being done)
-                    if len(sequencer.pulses.ro_pulses) == 1:
-                        pulse = sequencer.pulses.ro_pulses[0]
-                        frequency = self.get_if(pulse)
-                        acquisitions[pulse.serial].averaged = AveragedAcquisition(
-                            scope, duration, frequency
+                        acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
+                            DemodulatedAcquisition(scope, bins, duration)
                         )
 
-        # grab only the data required by the platform
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        return {key: acquisition.data for key, acquisition in acquisitions.items()}
+        return {key: acquisition for key, acquisition in acquisitions.items()}
 
     def disconnect(self):
         """Stops all sequencers, disconnect all the outputs from the AWG paths

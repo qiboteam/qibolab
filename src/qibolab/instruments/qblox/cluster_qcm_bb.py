@@ -16,7 +16,7 @@ from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
-class ClusterQCM_BB(ClusterModule):
+class QcmBb(ClusterModule):
     """Qblox Cluster Qubit Control Module Baseband driver.
 
     Qubit Control Module (QCM) is an arbitratry wave generator with two DACs connected to
@@ -105,9 +105,9 @@ class ClusterQCM_BB(ClusterModule):
         - cluster: The Cluster object to which the QCM baseband module is connected.
 
         Example:
-        To create a ClusterQCM_BB instance named 'qcm_bb' connected to slot 2 of a Cluster at address '192.168.0.100':
+        To create a QcmBb instance named 'qcm_bb' connected to slot 2 of a Cluster at address '192.168.0.100':
         >>> cluster_instance = Cluster("cluster","192.168.1.100", settings)
-        >>> qcm_module = ClusterQCM_BB(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
+        >>> qcm_module = QcmBb(name="qcm_bb", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
         self._ports: dict = {}
@@ -118,9 +118,9 @@ class ClusterQCM_BB(ClusterModule):
         self.channel_map: dict = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[
-            int
-        ] = []  # TODO: we can create only list and put three flags: free, used, unused
+        self._free_sequencers_numbers: list[int] = (
+            []
+        )  # TODO: we can create only list and put three flags: free, used, unused
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
 

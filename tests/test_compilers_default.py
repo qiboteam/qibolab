@@ -5,6 +5,7 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 from qibo.transpiler import Passes
 
+from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.pulses import PulseSequence
 
@@ -178,6 +179,17 @@ def test_cz_to_sequence(platform):
     sequence = compile_circuit(circuit, platform)
     test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
     assert len(sequence.pulses) == len(test_sequence) + 2
+
+
+def test_cnot_to_sequence():
+    platform = create_platform("dummy")
+    circuit = Circuit(4)
+    circuit.add(gates.CNOT(2, 3))
+
+    sequence = compile_circuit(circuit, platform)
+    test_sequence, virtual_z_phases = platform.create_CNOT_pulse_sequence((2, 3))
+    assert len(sequence) == len(test_sequence)
+    assert sequence.pulses[0] == test_sequence.pulses[0]
 
 
 def test_add_measurement_to_sequence(platform):
