@@ -150,25 +150,24 @@ class QbloxController(Controller):
         for name, module in self.modules.items():
             if isinstance(module, QrmRf):
                 results = module.acquire()
-                existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
-                    if key in existing_keys:
-                        acquisition_results[key].update(value)
-                    else:
-                        acquisition_results[key] = value
-
+                    acquisition_results[key] = value
         # TODO: move to QRM_RF.acquire()
         shape = tuple(len(sweeper.values) for sweeper in reversed(sweepers))
         shots_shape = (nshots,) + shape
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                _res = acquisition_results[ro_pulse.serial][2]
+                _res = acquisition_results[ro_pulse.serial].classified
                 _res = np.reshape(_res, shots_shape)
                 if options.averaging_mode is not AveragingMode.SINGLESHOT:
                     _res = np.mean(_res, axis=0)
-            else:
-                ires = acquisition_results[ro_pulse.serial][0]
-                qres = acquisition_results[ro_pulse.serial][1]
+            elif options.acquisition_type is AcquisitionType.RAW:
+                i_raw = acquisition_results[ro_pulse.serial].raw_i
+                q_raw = acquisition_results[ro_pulse.serial].raw_q
+                _res = i_raw + 1j * q_raw
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
+                ires = acquisition_results[ro_pulse.serial].shots_i
+                qres = acquisition_results[ro_pulse.serial].shots_q
                 _res = ires + 1j * qres
                 if options.averaging_mode is AveragingMode.SINGLESHOT:
                     _res = np.reshape(_res, shots_shape)
