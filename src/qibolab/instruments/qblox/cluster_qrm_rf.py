@@ -221,7 +221,6 @@ class QrmRf(ClusterModule):
                 input_port.upload_settings(
                     "hardware_demod_en", "acquisition_hold_off", "acquisition_duration"
                 )
-
             self.is_connected = True
 
     def setup(self, **settings):
@@ -701,14 +700,16 @@ class QrmRf(ClusterModule):
                             )
 
                     if pulses[n].type == PulseType.READOUT:
-                        delay_after_play = self._ports["i1"].acquisition_hold_off
+                        delay_after_play = self._ports[
+                            "i1"
+                        ]._settings.acquisition_hold_off
 
                         if len(pulses) > n + 1:
                             # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
                             delay_after_acquire = (
                                 pulses[n + 1].start
                                 - pulses[n].start
-                                - self._ports["i1"].acquisition_hold_off
+                                - self._ports["i1"]._settings.acquisition_hold_off
                             )
                         else:
                             delay_after_acquire = (
@@ -717,7 +718,7 @@ class QrmRf(ClusterModule):
                             time_between_repetitions = (
                                 repetition_duration
                                 - sequence_total_duration
-                                - self._ports["i1"].acquisition_hold_off
+                                - self._ports["i1"]._settings.acquisition_hold_off
                             )
                             assert time_between_repetitions > 0
 

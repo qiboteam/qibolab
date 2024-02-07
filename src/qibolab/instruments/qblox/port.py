@@ -242,7 +242,14 @@ class QbloxInputPort(QbloxPort):
         super().__init__(module, QbloxInputPort_Settings(), port_number, port_name)
         self.output_sequencer_number: int = 0
         self.input_sequencer_number: int = 0
-        self.acquisition_hold_off = 4  # To be discontinued
+
+    @property
+    def acquisition_hold_off(self):
+        return self._settings.acquisition_hold_off
+
+    @acquisition_hold_off.setter
+    def acquisition_hold_off(self, value):
+        self._settings.acquisition_hold_off = value
 
     @property
     def hardware_demod_en(self):

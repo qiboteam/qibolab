@@ -42,9 +42,9 @@ def qcm_rf(controller):
 @pytest.fixture(scope="module")
 def connected_qcm_rf(connected_controller):
     qcm_rf = get_qcm_rf(connected_controller)
-    qcm_rf.setup(**SETTINGS)
     for port in SETTINGS:
         qcm_rf.ports(port)
+    qcm_rf.setup(**SETTINGS)
     qcm_rf.connect(connected_controller.cluster)
     yield qcm_rf
 
@@ -139,7 +139,7 @@ def test_connect(connected_qcm_rf: QcmRf):
     assert qcm_rf._ports["o2"].nco_freq == 0
     assert qcm_rf._ports["o2"].nco_phase_offs == 0
 
-    for port in qcm_rf.settings:
+    for port in SETTINGS:
         assert type(qcm_rf._ports[port]) == QbloxOutputPort
         assert type(qcm_rf._sequencers[port]) == list
     o1_output_port: QbloxOutputPort = qcm_rf._ports["o1"]
