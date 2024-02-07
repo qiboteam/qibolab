@@ -117,17 +117,6 @@ def select_pulse(pulse, pulse_type):
             can_compress=True,
         )
 
-    # Implement Slepian shaped flux pulse https://arxiv.org/pdf/0909.5368.pdf
-
-    # """
-    # Typically, the sampler function should discard ``length`` and ``amplitude``, and
-    # instead assume that the pulse extends from -1 to 1, and that it has unit
-    # amplitude. LabOne Q will automatically rescale the sampler's output to the correct
-    # amplitude and length.
-
-    # They don't even do that on their notebooks
-    # and just use lenght and amplitude but we have to check
-
 
 @dataclass
 class ZhPort(Port):
@@ -218,17 +207,12 @@ class ZhSweeper:
 class ZhSweeperLine:
     """Zurich sweeper from qibolab sweeper for non pulse parameters Bias, Delay
     (, power_range, local_oscillator frequency, offset ???)
-
-    For now Parameter.bias sweepers are implemented as
-    Parameter.Amplitude on a flux pulse. We may want to keep this class
-    separate for future Near Time sweeps
     """
 
     def __init__(self, sweeper, qubit=None, sequence=None, pulse=None):
         self.sweeper = sweeper
         """Qibolab sweeper."""
 
-        # Do something with the pulse coming here
         if sweeper.parameter is Parameter.bias:
             if isinstance(qubit, Qubit):
                 pulse = FluxPulse(
@@ -332,7 +316,6 @@ class Zurich(Controller):
         self.sequence = defaultdict(list)
         "Zurich pulse sequence"
         self.sequence_qibo = None
-        # Remove if able
         self.sub_sequences = {}
         "Sub sequences between each measurement"
 
@@ -524,13 +507,11 @@ class Zurich(Controller):
         self.exp = self.session.compile(
             self.experiment, compiler_settings=COMPILER_SETTINGS
         )
-        # self.exp.save_compiled_experiment("saved_exp")
         self.results = self.session.run(self.exp)
 
     @staticmethod
     def frequency_from_pulses(qubits, sequence):
         """Gets the frequencies from the pulses to the qubits."""
-        # Implement Dual drive frequency experiments, we don't have any for now
         for pulse in sequence:
             qubit = qubits[pulse.qubit]
             if pulse.type is PulseType.READOUT:
@@ -625,8 +606,6 @@ class Zurich(Controller):
                     qubit = ropulse.pulse.qubit
                     results[serial] = results[qubit] = options.results_type(data)
 
-        # html containing the pulse sequence schedule
-        # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
     def sequence_zh(self, sequence, qubits, couplers):
@@ -638,8 +617,6 @@ class Zurich(Controller):
         # Fill the sequences with pulses according to their lines in temporal order
         for pulse in sequence:
             zhsequence[f"{pulse.type.name.lower()}{pulse.qubit}"].append(ZhPulse(pulse))
-
-        # Mess that gets the sweeper and substitutes the pulse it sweeps in the right place
 
         def nt_loop(sweeper):
             if not self.nt_sweeps:
@@ -809,8 +786,7 @@ class Zurich(Controller):
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
-                phase=pulse.zhsweeper,  # I believe this is the global phase sweep
-                # increment_oscillator_phase=pulse.zhsweeper, # I believe this is the relative phase sweep
+                phase=pulse.zhsweeper,
             )
         elif "frequency" in partial_sweep.uid or partial_sweep.uid == "start":
             exp.play(
@@ -1111,8 +1087,7 @@ class Zurich(Controller):
                     if i == len(self.sequence[f"readout{q}"]) - 1:
                         reset_delay = relaxation_time * NANO_TO_SECONDS
                     else:
-                        # Here time of flight or not ?
-                        reset_delay = 0  # self.time_of_flight * NANO_TO_SECONDS
+                        reset_delay = 0
 
                     exp.measure(
                         acquire_signal=f"acquire{q}",
@@ -1219,8 +1194,6 @@ class Zurich(Controller):
                     qubit = ropulse.pulse.qubit
                     results[serial] = results[qubit] = options.results_type(data)
 
-        # html containing the pulse sequence schedule
-        # lo.show_pulse_sheet("pulses", self.exp)
         return results
 
     def sweep_recursion(self, qubits, couplers, exp, exp_calib, exp_options):
@@ -1250,8 +1223,6 @@ class Zurich(Controller):
                 pulse = pulse.copy()
                 pulse.amplitude *= max(abs(sweeper.values))
 
-                # Proper copy(sweeper) here if we want to keep the sweepers
-                # sweeper_aux = copy.copy(sweeper)
                 aux_max = max(abs(sweeper.values))
 
                 sweeper.values /= aux_max
@@ -1281,9 +1252,9 @@ class Zurich(Controller):
             ).zhsweeper
 
         with exp.sweep(
-            uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",  # This uid trouble double freq ???
+            uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
             parameter=parameter,
-            reset_oscillator_phase=True,  # Should we reset this phase ???
+            reset_oscillator_phase=True,
         ):
             if len(self.sweepers) > 0:
                 self.sweep_recursion(qubits, couplers, exp, exp_calib, exp_options)
@@ -1362,8 +1333,6 @@ class Zurich(Controller):
                 pulse = pulse.copy()
                 pulse.amplitude *= max(abs(sweeper.values))
 
-                # Proper copy(sweeper) here
-                # sweeper_aux = copy.copy(sweeper)
                 aux_max = max(abs(sweeper.values))
 
                 sweeper.values /= aux_max
@@ -1381,7 +1350,7 @@ class Zurich(Controller):
                     f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
                 )
 
-        elif parameter is None:  # can it be accessed?
+        elif parameter is None:
             parameter = ZhSweeper(
                 sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]
             ).zhsweeper
