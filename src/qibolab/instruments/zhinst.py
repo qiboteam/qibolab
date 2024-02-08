@@ -113,13 +113,6 @@ def select_pulse(pulse, pulse_type):
         )
 
 
-@dataclass
-class ZhPort(Port):
-    name: Tuple[str, str]
-    offset: float = 0.0
-    power_range: int = 0
-
-
 class ZhPulse:
     """Zurich pulse from qibolab pulse translation."""
 
@@ -261,6 +254,12 @@ class ZhSweeperLine:
                 uid=sweeper.parameter.name,
                 values=sweeper.values * NANO_TO_SECONDS,
             )
+
+
+# FIXME: not needed for any logic inside the driver. Only needed to meet the expectations set by parent class Controller.
+@dataclass
+class ZhPort:
+    name: str
 
 
 class Zurich(Controller):
