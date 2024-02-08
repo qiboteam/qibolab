@@ -21,9 +21,9 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.instruments.unrolling import batch_max_sequences
-from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
+from qibolab.pulses import CouplerFluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -172,16 +172,13 @@ class ZhSweeper:
 
         self.zhsweepers = [self.select_sweeper(pulse.type, sweeper, qubit)]
         """Zurich sweepers, Need something better to store multiple sweeps on
-        the same pulse.
-
-        Not properly implemented as it was only used on Rabi amplitude
-        vs lenght and it was an unused routine.
-        """
+        the same pulse."""
 
     @staticmethod  # pylint: disable=R0903
     def select_sweeper(ptype, sweeper, qubit):
         """Sweeper translation."""
 
+        # ADD offset for the flux pulse
         if sweeper.parameter is Parameter.amplitude:
             return lo.SweepParameter(
                 uid=sweeper.parameter.name,
@@ -231,36 +228,15 @@ class ZhSweeperLine:
         self.sweeper = sweeper
         """Qibolab sweeper."""
 
+        # TODO: Remove this
         # Do something with the pulse coming here
         if sweeper.parameter is Parameter.bias:
             if isinstance(qubit, Qubit):
-                pulse = FluxPulse(
-                    start=0,
-                    duration=sequence.duration + sequence.start,
-                    amplitude=1,
-                    shape="Rectangular",
-                    channel=qubit.flux.name,
-                    qubit=qubit.name,
-                )
                 self.signal = f"flux{qubit.name}"
             if isinstance(qubit, Coupler):
-                pulse = CouplerFluxPulse(
-                    start=0,
-                    duration=sequence.duration + sequence.start,
-                    amplitude=1,
-                    shape="Rectangular",
-                    channel=qubit.flux.name,
-                    qubit=qubit.name,
-                )
                 self.signal = f"couplerflux{qubit.name}"
 
-            self.pulse = pulse
-
-            self.zhpulse = lo.pulse_library.const(
-                uid=(f"{pulse.type.name.lower()}_{pulse.qubit}_"),
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-            )
+            self.zhpulse = None
 
         elif sweeper.parameter is Parameter.start:
             if pulse:
@@ -792,8 +768,15 @@ class Zurich(Controller):
     def play_sweep_select_single(exp, qubit, pulse, section, parameters, partial_sweep):
         """Play Zurich pulse when a single sweeper is involved."""
         if any("amplitude" in param for param in parameters):
-            pulse.zhpulse.amplitude *= max(pulse.zhsweeper.values)
-            pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
+
+            if pulse.sweeper.type is SweeperType.OFFSET:
+                offset = 0.1
+                pulse.zhsweeper.values += offset
+
+            else:
+                pulse.zhpulse.amplitude += max(pulse.zhsweeper.values)
+                pulse.zhsweeper.values /= max(pulse.zhsweeper.values)
+
             exp.play(
                 signal=f"{section}{qubit.name}",
                 pulse=pulse.zhpulse,
@@ -826,6 +809,7 @@ class Zurich(Controller):
     def play_sweep_select_dual(exp, qubit, pulse, section, parameters):
         """Play Zurich pulse when two sweepers are involved on the same
         pulse."""
+        # This would need fixing
         if "amplitude" in parameters and "duration" in parameters:
             for sweeper in pulse.zhsweepers:
                 if sweeper.uid == "amplitude":
@@ -1257,17 +1241,27 @@ class Zurich(Controller):
         if sweeper.parameter is Parameter.amplitude:
             for pulse in sweeper.pulses:
                 pulse = pulse.copy()
-                pulse.amplitude *= max(abs(sweeper.values))
 
-                # Proper copy(sweeper) here if we want to keep the sweepers
-                # sweeper_aux = copy.copy(sweeper)
-                aux_max = max(abs(sweeper.values))
+                if sweeper.type is SweeperType.OFFSET:
+                    offset = 0.1
+                    sweeper.values += offset
 
-                sweeper.values /= aux_max
-                parameter = ZhSweeper(
-                    pulse, sweeper, qubits[sweeper.pulses[0].qubit]
-                ).zhsweeper
-                sweeper.values *= aux_max
+                    parameter = ZhSweeper(
+                        pulse, sweeper, qubits[sweeper.pulses[0].qubit]
+                    ).zhsweeper
+
+                else:
+                    pulse.amplitude *= max(abs(sweeper.values))
+                    # Proper copy(sweeper) here if we want to keep the sweepers
+                    # sweeper_aux = copy.copy(sweeper)
+                    aux_max = max(abs(sweeper.values))
+
+                    sweeper.values /= aux_max
+
+                    parameter = ZhSweeper(
+                        pulse, sweeper, qubits[sweeper.pulses[0].qubit]
+                    ).zhsweeper
+                    sweeper.values *= aux_max
 
         if sweeper.parameter is Parameter.bias:
             if sweeper.qubits:
