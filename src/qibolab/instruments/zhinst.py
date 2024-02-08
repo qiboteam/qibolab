@@ -663,19 +663,7 @@ class Zurich(Controller):
         """Zurich experiment initialization using their Experiment class."""
 
         # Setting experiment signal lines
-        signals = []
-        for coupler in couplers.values():
-            signals.append(lo.ExperimentSignal(f"couplerflux{coupler.name}"))
-
-        for qubit in qubits.values():
-            q = qubit.name  # pylint: disable=C0103
-            if len(self.sequence[f"drive{q}"]) != 0:
-                signals.append(lo.ExperimentSignal(f"drive{q}"))
-            if qubit.flux is not None:
-                signals.append(lo.ExperimentSignal(f"flux{q}"))
-            if len(self.sequence[f"readout{q}"]) != 0:
-                signals.append(lo.ExperimentSignal(f"measure{q}"))
-                signals.append(lo.ExperimentSignal(f"acquire{q}"))
+        signals = [lo.ExperimentSignal(name) for name in self.signal_map.keys()]
 
         exp = lo.Experiment(
             uid="Sequence",
