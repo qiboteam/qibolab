@@ -271,11 +271,7 @@ class Zurich(Controller):
     def __init__(
         self, name, device_setup, time_of_flight=0.0, smearing=0.0
     ):
-        self.name = name
-        "Setup name (str)"
-
-        self.is_connected = False
-        "Is the device connected ? (bool)"
+        super().__init__(name, None)
 
         self.signal_map = {}
         "Signals to lines mapping"
