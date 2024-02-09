@@ -135,14 +135,11 @@ class QrmRf(ClusterModule):
         """
 
         super().__init__(name, address)
-        self.classification_parameters: dict = {}
-        self.settings: dict = {}
+        self.classification_parameters = {}
+        self.settings = {}
 
-        self._debug_folder: str = ""
         self._input_ports_keys = ["i1"]
         self._output_ports_keys = ["o1"]
-        self._sequencers: dict[Sequencer] = {"o1": []}
-        self._device_num_output_ports = 1
         self._execution_time: float = 0
 
     def _set_default_values(self):
@@ -172,47 +169,24 @@ class QrmRf(ClusterModule):
         target.set("connect_out0", "IQ")
         target.set("connect_acq", "in0")
 
-    def connect(self):
-        """Connects to the instrument using the instrument settings in the
-        runcard.
+    def _setup_ports(self):
+        if "o1" in self.settings:
+            self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
+            if self.settings["o1"]["lo_frequency"]:
+                self._ports["o1"].lo_enabled = True
+                self._ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
+            self._ports["o1"].hardware_mod_en = True
+            self._ports["o1"].nco_freq = 0
+            self._ports["o1"].nco_phase_offs = 0
 
-        Once connected, it creates port classes with properties mapped
-        to various instrument parameters, and initialises the the
-        underlying device parameters. It uploads to the module the port
-        settings loaded from the runcard.
-        """
-        if self.is_connected:
-            return
-        # test connection with module. self.device is initialized in QbloxController connect()
-        if not self.device.present():
-            raise ConnectionError(f"Module {self.device.name} not present")
-        # once connected, initialise the parameters of the device to the default values
-        self._device_num_sequencers = len(self.device.sequencers)
-        self._set_default_values()
-        # then set the value loaded from the runcard
-        try:
-            if "o1" in self.settings:
-                self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
-                if self.settings["o1"]["lo_frequency"]:
-                    self._ports["o1"].lo_enabled = True
-                    self._ports["o1"].lo_frequency = self.settings["o1"]["lo_frequency"]
-                self._ports["o1"].hardware_mod_en = True
-                self._ports["o1"].nco_freq = 0
-                self._ports["o1"].nco_phase_offs = 0
-
-            if "i1" in self.settings:
-                self._ports["i1"].hardware_demod_en = True
-                self._ports["i1"].acquisition_hold_off = self.settings["i1"][
-                    "acquisition_hold_off"
-                ]
-                self._ports["i1"].acquisition_duration = self.settings["i1"][
-                    "acquisition_duration"
-                ]
-        except Exception as error:
-            raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}: {error}"
-            )
-        self.is_connected = True
+        if "i1" in self.settings:
+            self._ports["i1"].hardware_demod_en = True
+            self._ports["i1"].acquisition_hold_off = self.settings["i1"][
+                "acquisition_hold_off"
+            ]
+            self._ports["i1"].acquisition_duration = self.settings["i1"][
+                "acquisition_duration"
+            ]
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
@@ -352,7 +326,7 @@ class QrmRf(ClusterModule):
         self._free_sequencers_numbers = [*range(self._device_num_sequencers)]
 
         # split the collection of instruments pulses by ports
-        port_pulses = self.filter_port_pulse(sequence, qubits, self.ports[port])
+        port_pulses = self.filter_port_pulse(sequence, qubits, self._ports[port])
 
         # initialise the list of sequencers required by the port
         self._sequencers[port] = []

@@ -1,12 +1,16 @@
 """Qblox Cluster QCM driver."""
 
+from abc import abstractmethod
+
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-from qibolab.instruments.qblox.port import QbloxInputPort, QbloxOutputPort
 from qibolab.pulses import Pulse, PulseSequence
 from qibolab.qubits import Qubit
+
+from .port import QbloxInputPort, QbloxOutputPort
+from .sequencer import Sequencer
 
 
 class ClusterModule(Instrument):
@@ -45,6 +49,8 @@ class ClusterModule(Instrument):
         self._free_sequencers_numbers: list[int] = []
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
+        self._debug_folder: str = ""
+        self._sequencers: dict[str, list[Sequencer]] = {}
 
     def ports(self, name: str, out: bool = True):
         """Adds an entry to the dictionary `self._ports` with key 'name' and
@@ -72,6 +78,36 @@ class ClusterModule(Instrument):
         port_cls = QbloxOutputPort if out else QbloxInputPort
         self._ports[name] = port_cls(self, port_number=count(port_cls), port_name=name)
         return self._ports[name]
+
+    @abstractmethod
+    def _setup_ports(self):
+        pass
+
+    def connect(self):
+        """Connects to the instrument using the instrument settings in the
+        runcard.
+
+        Once connected, it creates port classes with properties mapped
+        to various instrument parameters, and initialises the the
+        underlying device parameters. It uploads to the module the port
+        settings loaded from the runcard.
+        """
+        if self.is_connected:
+            return
+        # test connection with module. self.device is initialized in QbloxController connect()
+        if not self.device.present():
+            raise ConnectionError(f"Module {self.device.name} not present")
+        # once connected, initialise the parameters of the device to the default values
+        self._device_num_sequencers = len(self.device.sequencers)
+        self._set_default_values()
+        # then set the value loaded from the runcard
+        try:
+            self._setup_ports()
+        except Exception as error:
+            raise RuntimeError(
+                f"Unable to initialize port parameters on module {self.name}: {error}"
+            )
+        self.is_connected = True
 
     def clone_sequencer_params(self, first_sequencer: int, next_sequencer: int):
         """Clone the values of all writable parameters from the first_sequencer

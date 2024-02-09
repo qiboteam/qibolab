@@ -110,10 +110,6 @@ class QcmBb(ClusterModule):
         """
         super().__init__(name, address)
 
-        self._debug_folder: str = ""
-        self._sequencers: dict[Sequencer] = {}
-        self._device_num_output_ports = 2
-
     def _set_default_values(self):
         # disable all sequencer connections
         self.device.disconnect_outputs()
@@ -135,35 +131,12 @@ class QcmBb(ClusterModule):
         for port_num, value in self.OUT_PORT_PATH.items():
             self.device.sequencers[port_num].set(f"connect_out{port_num}", value)
 
-    def connect(self):
-        """Connects to the instrument using the instrument settings in the
-        runcard.
-
-        Once connected, it creates port classes with properties mapped
-        to various instrument parameters, and initialises the the
-        underlying device parameters. It uploads to the module the port
-        settings loaded from the runcard.
-        """
-        if self.is_connected:
-            return
-        # test connection with module. self.device is initialized in QbloxController connect()
-        if not self.device.present():
-            raise ConnectionError(f"Module {self.device.name} not present")
-        # once connected, initialise the parameters of the device to the default values
-        self._device_num_sequencers = len(self.device.sequencers)
-        self._set_default_values()
-        # then set the value loaded from the runcard
-        try:
-            for port in self._ports:
-                self._sequencers[port] = []
-                self._ports[port].hardware_mod_en = True
-                self._ports[port].nco_freq = 0
-                self._ports[port].nco_phase_offs = 0
-        except Exception as error:
-            raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}: {error}"
-            )
-        self.is_connected = True
+    def _setup_ports(self):
+        for port in self._ports:
+            self._sequencers[port] = []
+            self._ports[port].hardware_mod_en = True
+            self._ports[port].nco_freq = 0
+            self._ports[port].nco_phase_offs = 0
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
@@ -194,7 +167,7 @@ class QcmBb(ClusterModule):
         # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux is not None and _qubit.flux.port == self.ports(port):
+            if _qubit.flux is not None and _qubit.flux.port == self._ports[port]:
                 qubit = _qubit
 
         # select a new sequencer and configure it as required

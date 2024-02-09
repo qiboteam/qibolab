@@ -125,11 +125,7 @@ class QcmRf(ClusterModule):
         >>> qcm_module = QcmRf(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.settings = {}
-
-        self._debug_folder: str = ""
-        self._sequencers: dict[Sequencer] = {}
-        self._device_num_output_ports = 2
+        self.settings: dict = {}
 
     def _set_default_values(self):
         # disable all sequencer connections
@@ -154,39 +150,16 @@ class QcmRf(ClusterModule):
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
 
-    def connect(self):
-        """Connects to the instrument using the instrument settings in the
-        runcard.
-
-        Once connected, it creates port classes with properties mapped
-        to various instrument parameters, and initialises the the
-        underlying device parameters. It uploads to the module the port
-        settings loaded from the runcard.
-        """
-        if self.is_connected:
-            return
-        # test connection with module. self.device is initialized in QbloxController connect()
-        if not self.device.present():
-            raise ConnectionError(f"Module {self.device.name} not present")
-        # once connected, initialise the parameters of the device to the default values
-        self._device_num_sequencers = len(self.device.sequencers)
-        self._set_default_values()
-        # then set the value loaded from the runcard
-        try:
-            for port in self.settings:
-                self._sequencers[port] = []
-                if self.settings[port]["lo_frequency"]:
-                    self._ports[port].lo_enabled = True
-                    self._ports[port].lo_frequency = self.settings[port]["lo_frequency"]
-                self._ports[port].attenuation = self.settings[port]["attenuation"]
-                self._ports[port].hardware_mod_en = True
-                self._ports[port].nco_freq = 0
-                self._ports[port].nco_phase_offs = 0
-        except Exception as error:
-            raise RuntimeError(
-                f"Unable to initialize port parameters on module {self.name}: {error}"
-            )
-        self.is_connected = True
+    def _setup_ports(self):
+        for port in self.settings:
+            self._sequencers[port] = []
+            if self.settings[port]["lo_frequency"]:
+                self._ports[port].lo_enabled = True
+                self._ports[port].lo_frequency = self.settings[port]["lo_frequency"]
+            self._ports[port].attenuation = self.settings[port]["attenuation"]
+            self._ports[port].hardware_mod_en = True
+            self._ports[port].nco_freq = 0
+            self._ports[port].nco_phase_offs = 0
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
