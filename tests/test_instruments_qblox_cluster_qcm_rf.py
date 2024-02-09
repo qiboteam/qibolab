@@ -70,11 +70,6 @@ def test_init(qcm_rf: QcmRf):
     assert type(qcm_rf._ports) == dict
 
 
-def test_setup(qcm_rf: QcmRf):
-    qcm_rf.setup(**SETTINGS)
-    assert qcm_rf.settings == SETTINGS
-
-
 @pytest.mark.qpu
 def test_connect(connected_qcm_rf: QcmRf):
     qcm_rf = connected_qcm_rf

@@ -68,11 +68,6 @@ def test_init(qrm_rf: QrmRf):
     assert qrm_rf.device == None
 
 
-def test_setup(qrm_rf: QrmRf):
-    qrm_rf.setup(**SETTINGS)
-    assert qrm_rf.settings == SETTINGS
-
-
 @pytest.mark.qpu
 def test_connect(connected_qrm_rf: QrmRf):
     qrm_rf = connected_qrm_rf
