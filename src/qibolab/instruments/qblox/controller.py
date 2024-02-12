@@ -79,7 +79,7 @@ class QbloxController(Controller):
         qubits: dict,
         sequence: PulseSequence,
         options: ExecutionParameters,
-        sweepers: list() = [],  # list(Sweeper) = []
+        sweepers: list = [],  # list(Sweeper) = []
         **kwargs,
         # nshots=None,
         # navgs=None,

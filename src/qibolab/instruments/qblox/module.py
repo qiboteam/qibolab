@@ -80,6 +80,10 @@ class ClusterModule(Instrument):
         return self._ports[name]
 
     @abstractmethod
+    def _set_default_values(self):
+        pass
+
+    @abstractmethod
     def _setup_ports(self):
         pass
 
