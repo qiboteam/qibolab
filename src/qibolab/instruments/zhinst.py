@@ -1147,6 +1147,11 @@ class Zurich(Controller):
         sweepers = list(sweepers)
         rearranging_axes, sweepers = self.rearrange_sweepers(sweepers)
         self.sweepers = sweepers
+        # if using singleshot, the first axis contains shots,
+        # i.e.: (nshots, sweeper_1, sweeper_2)
+        # if using integration: (sweeper_1, sweeper_2)
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            rearranging_axes += 1
 
         self.frequency_from_pulses(qubits, sequence)
 
@@ -1159,11 +1164,7 @@ class Zurich(Controller):
             q = qubit.name  # pylint: disable=C0103
             for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
                 exp_res = self.results.get_data(f"sequence{q}_{i}")
-                # if using singleshot, the first axis contains shots,
-                # i.e.: (nshots, sweeper_1, sweeper_2)
-                # if using integration: (sweeper_1, sweeper_2)
-                if options.averaging_mode is AveragingMode.SINGLESHOT:
-                    rearranging_axes += 1
+
                 # Reorder dimensions
                 data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
