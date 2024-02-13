@@ -606,16 +606,15 @@ class Zurich(Controller):
         results = {}
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
-            if len(self.sequence[measure_signal_name(qubit)]) != 0:
-                for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
-                    data = np.array(self.results.get_data(f"sequence{q}_{i}"))
-                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        data = (
-                            np.ones(data.shape) - data.real
-                        )  # Probability inversion patch
-                    serial = ropulse.pulse.serial
-                    qubit = ropulse.pulse.qubit
-                    results[serial] = results[qubit] = options.results_type(data)
+            for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
+                data = np.array(self.results.get_data(f"sequence{q}_{i}"))
+                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    data = (
+                        np.ones(data.shape) - data.real
+                    )  # Probability inversion patch
+                serial = ropulse.pulse.serial
+                qubit = ropulse.pulse.qubit
+                results[serial] = results[qubit] = options.results_type(data)
 
         return results
 
@@ -1005,11 +1004,10 @@ class Zurich(Controller):
         for qubit in qubits.values():
             iq_angle = qubit.iq_angle
             channel_name = measure_signal_name(qubit)
-            if len(self.sequence[channel_name]) != 0:
-                for i, pulse in enumerate(self.sequence[channel_name]):
-                    readout_schedule[i].append(pulse)
-                    qubit_readout_schedule[i].append(qubit)
-                    iq_angle_readout_schedule[i].append(iq_angle)
+            for i, pulse in enumerate(self.sequence[channel_name]):
+                readout_schedule[i].append(pulse)
+                qubit_readout_schedule[i].append(qubit)
+                iq_angle_readout_schedule[i].append(iq_angle)
 
         weights = {}
         for i, (pulses, qubits_readout, iq_angles) in enumerate(
@@ -1159,26 +1157,23 @@ class Zurich(Controller):
         results = {}
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
-            if len(self.sequence[measure_signal_name(qubit)]) != 0:
-                for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
-                    exp_res = self.results.get_data(f"sequence{q}_{i}")
-                    # if using singleshot, the first axis contains shots,
-                    # i.e.: (nshots, sweeper_1, sweeper_2)
-                    # if using integration: (sweeper_1, sweeper_2)
-                    if options.averaging_mode is AveragingMode.SINGLESHOT:
-                        rearranging_axes += 1
-                    # Reorder dimensions
-                    data = np.moveaxis(
-                        exp_res, rearranging_axes[0], rearranging_axes[1]
-                    )
-                    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                        data = (
-                            np.ones(data.shape) - data.real
-                        )  # Probability inversion patch
+            for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
+                exp_res = self.results.get_data(f"sequence{q}_{i}")
+                # if using singleshot, the first axis contains shots,
+                # i.e.: (nshots, sweeper_1, sweeper_2)
+                # if using integration: (sweeper_1, sweeper_2)
+                if options.averaging_mode is AveragingMode.SINGLESHOT:
+                    rearranging_axes += 1
+                # Reorder dimensions
+                data = np.moveaxis(exp_res, rearranging_axes[0], rearranging_axes[1])
+                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    data = (
+                        np.ones(data.shape) - data.real
+                    )  # Probability inversion patch
 
-                    serial = ropulse.pulse.serial
-                    qubit = ropulse.pulse.qubit
-                    results[serial] = results[qubit] = options.results_type(data)
+                serial = ropulse.pulse.serial
+                qubit = ropulse.pulse.qubit
+                results[serial] = results[qubit] = options.results_type(data)
 
         return results
 
