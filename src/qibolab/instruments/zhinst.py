@@ -1000,21 +1000,17 @@ class Zurich(Controller):
         """Qubit readout pulse, data acquisition and qubit relaxation."""
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
-        iq_angle_readout_schedule = defaultdict(list)
         for qubit in qubits.values():
-            iq_angle = qubit.iq_angle
             channel_name = measure_signal_name(qubit)
             for i, pulse in enumerate(self.sequence[channel_name]):
                 readout_schedule[i].append(pulse)
                 qubit_readout_schedule[i].append(qubit)
-                iq_angle_readout_schedule[i].append(iq_angle)
 
         weights = {}
-        for i, (pulses, qubits_readout, iq_angles) in enumerate(
+        for i, (pulses, qubits_readout) in enumerate(
             zip(
                 readout_schedule.values(),
                 qubit_readout_schedule.values(),
-                iq_angle_readout_schedule.values(),
             )
         ):
             qd_finish = self.find_subsequence_finish(i, "drive", qubits_readout)
@@ -1035,7 +1031,7 @@ class Zurich(Controller):
                 play_after = f"sequence_{latest_sequence['line']}_{i}"
             # Section on the outside loop allows for multiplex
             with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, qubit, iq_angle in zip(pulses, qubits_readout, iq_angles):
+                for pulse, qubit in zip(pulses, qubits_readout):
                     q = qubit.name
                     pulse.zhpulse.uid += str(i)
 
@@ -1045,13 +1041,12 @@ class Zurich(Controller):
                     )
 
                     if (
-                        qubits[q].kernel is not None
+                        qubit.kernel is not None
                         and acquisition_type == lo.AcquisitionType.DISCRIMINATION
                     ):
-                        kernel = qubits[q].kernel
                         weight = lo.pulse_library.sampled_pulse_complex(
                             uid="weight" + str(q),
-                            samples=kernel * np.exp(1j * iq_angle),
+                            samples=qubit.kernel * np.exp(1j * qubit.iq_angle),
                         )
 
                     else:
@@ -1066,7 +1061,7 @@ class Zurich(Controller):
                                             )
                                         ]
                                     )
-                                    * np.exp(1j * iq_angle),
+                                    * np.exp(1j * qubit.iq_angle),
                                     uid="weights" + str(q),
                                 )
                                 weights[q] = weight
