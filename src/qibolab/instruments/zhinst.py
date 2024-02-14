@@ -144,8 +144,6 @@ class ZhPulse:
         """Zurich pulse from qibolab pulse."""
         self.pulse = pulse
         """Qibolab pulse."""
-        self.signal = f"{pulse.type.name.lower()}{pulse.qubit}"
-        """Line associated with the pulse."""
         self.zhpulse = select_pulse(pulse, pulse.type.name.lower())
         """Zurich pulse."""
 
@@ -160,8 +158,7 @@ class ZhSweeper:
 
         self.pulse = pulse
         """Qibolab pulse associated to the sweeper."""
-        self.signal = f"{pulse.type.name.lower()}{pulse.qubit}"
-        """Line associated with the pulse."""
+
         self.zhpulse = ZhPulse(pulse).zhpulse
         """Zurich pulse associated to the sweeper."""
 
@@ -234,7 +231,6 @@ class ZhSweeperLine:
                     channel=qubit.flux.name,
                     qubit=qubit.name,
                 )
-                self.signal = qubit.flux.name
             if isinstance(qubit, Coupler):
                 pulse = CouplerFluxPulse(
                     start=0,
@@ -244,7 +240,6 @@ class ZhSweeperLine:
                     channel=qubit.flux.name,
                     qubit=qubit.name,
                 )
-                self.signal = qubit.flux.name
 
             self.pulse = pulse
 
@@ -257,8 +252,6 @@ class ZhSweeperLine:
         elif sweeper.parameter is Parameter.start:
             if pulse:
                 self.pulse = pulse
-                self.signal = qubit.flux.name
-
                 self.zhpulse = ZhPulse(pulse).zhpulse
 
         # Need something better to store multiple sweeps on the same pulse
