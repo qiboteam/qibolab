@@ -48,8 +48,8 @@ SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
 
-def measure_signal_name(qubit: Qubit) -> str:
-    """Construct and return a name for qubit's measure signal (logical) line.
+def measure_channel_name(qubit: Qubit) -> str:
+    """Construct and return a name for qubit's measure channel.
 
     FIXME: We cannot use channel name directly, because currently channels are named after wires, and due to multiplexed readout
     multiple qubits have the same channel name for their readout. Should be fixed once channels are refactored.
@@ -57,8 +57,8 @@ def measure_signal_name(qubit: Qubit) -> str:
     return f"{qubit.readout.name}_{qubit.name}"
 
 
-def acquire_signal_name(qubit: Qubit) -> str:
-    """Construct and return a name for qubit's acquire signal (logical) line.
+def acquire_channel_name(qubit: Qubit) -> str:
+    """Construct and return a name for qubit's acquire channel.
 
     FIXME: We cannot use acquire channel name, because qibolab does not have a concept of acquire channel. This function shall be removed
     once all channel refactoring is done.
@@ -360,7 +360,7 @@ class Zurich(Controller):
                     intermediate_frequency=qubit.drive_frequency
                     - qubit.drive.local_oscillator.frequency,
                 )
-            if len(self.sequence[measure_signal_name(qubit)]) != 0:
+            if len(self.sequence[measure_channel_name(qubit)]) != 0:
                 self.register_readout_line(
                     qubit=qubit,
                     intermediate_frequency=qubit.readout_frequency
@@ -390,7 +390,7 @@ class Zurich(Controller):
         """
 
         q = qubit.name  # pylint: disable=C0103
-        self.signal_map[measure_signal_name(qubit)] = (
+        self.signal_map[measure_channel_name(qubit)] = (
             self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
                 "measure_line"
             ]
@@ -411,7 +411,7 @@ class Zurich(Controller):
             )
         )
 
-        self.signal_map[acquire_signal_name(qubit)] = (
+        self.signal_map[acquire_channel_name(qubit)] = (
             self.device_setup.logical_signal_groups[f"q{q}"].logical_signals[
                 "acquire_line"
             ]
@@ -541,7 +541,7 @@ class Zurich(Controller):
                 )
                 measurements = self.sequence[ch]
             else:
-                measurements = self.sequence[measure_signal_name(quantum_element)]
+                measurements = self.sequence[measure_channel_name(quantum_element)]
 
             channel_name = getattr(quantum_element, line_name).name
             pulses = self.sequence[channel_name]
@@ -606,7 +606,7 @@ class Zurich(Controller):
         results = {}
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
-            for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
+            for i, ropulse in enumerate(self.sequence[measure_channel_name(qubit)]):
                 data = np.array(self.results.get_data(f"sequence{q}_{i}"))
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     data = (
@@ -627,7 +627,7 @@ class Zurich(Controller):
         # Fill the sequences with pulses according to their lines in temporal order
         for pulse in sequence:
             if pulse.type == PulseType.READOUT:
-                zhsequence[measure_signal_name(qubits[pulse.qubit])].append(
+                zhsequence[measure_channel_name(qubits[pulse.qubit])].append(
                     ZhPulse(pulse)
                 )
             else:
@@ -644,7 +644,7 @@ class Zurich(Controller):
             if sweeper.parameter.name in SWEEPER_SET:
                 for pulse in sweeper.pulses:
                     if pulse.type == PulseType.READOUT:
-                        aux_list = zhsequence[measure_signal_name(qubits[pulse.qubit])]
+                        aux_list = zhsequence[measure_channel_name(qubits[pulse.qubit])]
                     else:
                         aux_list = zhsequence[pulse.channel]
                     if (
@@ -689,7 +689,7 @@ class Zurich(Controller):
                 pulse = sweeper.pulses[0]
 
                 if pulse.type == PulseType.READOUT:
-                    aux_list = zhsequence[measure_signal_name(qubits[pulse.qubit])]
+                    aux_list = zhsequence[measure_channel_name(qubits[pulse.qubit])]
                 else:
                     aux_list = zhsequence[pulse.channel]
                 for element in aux_list:
@@ -823,7 +823,7 @@ class Zurich(Controller):
         """Takes care of playing the sweepers and involved pulses for different
         options."""
         if section == "readout":
-            channel_name = measure_signal_name(qubit)
+            channel_name = measure_channel_name(qubit)
         else:
             channel_name = getattr(qubit, section).name
         if isinstance(pulse, ZhSweeperLine):
@@ -947,16 +947,18 @@ class Zurich(Controller):
                             exp.delay(signal=qubit.drive.name, time=pulse.zhsweeper)
 
                     if len(
-                        self.sequence[measure_signal_name(qubit)]
+                        self.sequence[measure_channel_name(qubit)]
                     ) > 0 and isinstance(
-                        self.sequence[measure_signal_name(qubit)][0], ZhSweeperLine
+                        self.sequence[measure_channel_name(qubit)][0], ZhSweeperLine
                     ):
                         exp.delay(
                             signal=qubit.drive.name,
-                            time=self.sequence[measure_signal_name(qubit)][0].zhsweeper,
+                            time=self.sequence[measure_channel_name(qubit)][
+                                0
+                            ].zhsweeper,
                         )
-                        self.sequence[measure_signal_name(qubit)].remove(
-                            self.sequence[measure_signal_name(qubit)][0]
+                        self.sequence[measure_channel_name(qubit)].remove(
+                            self.sequence[measure_channel_name(qubit)][0]
                         )
 
                 previous_section = section_uid
@@ -1001,7 +1003,7 @@ class Zurich(Controller):
         readout_schedule = defaultdict(list)
         qubit_readout_schedule = defaultdict(list)
         for qubit in qubits.values():
-            channel_name = measure_signal_name(qubit)
+            channel_name = measure_channel_name(qubit)
             for i, pulse in enumerate(self.sequence[channel_name]):
                 readout_schedule[i].append(pulse)
                 qubit_readout_schedule[i].append(qubit)
@@ -1036,7 +1038,7 @@ class Zurich(Controller):
                     pulse.zhpulse.uid += str(i)
 
                     exp.delay(
-                        signal=acquire_signal_name(qubit),
+                        signal=acquire_channel_name(qubit),
                         time=self.smearing * NANO_TO_SECONDS,
                     )
 
@@ -1082,18 +1084,18 @@ class Zurich(Controller):
 
                     measure_pulse_parameters = {"phase": 0}
 
-                    if i == len(self.sequence[measure_signal_name(qubit)]) - 1:
+                    if i == len(self.sequence[measure_channel_name(qubit)]) - 1:
                         reset_delay = relaxation_time * NANO_TO_SECONDS
                     else:
                         reset_delay = 0
 
                     exp.measure(
-                        acquire_signal=acquire_signal_name(qubit),
+                        acquire_signal=acquire_channel_name(qubit),
                         handle=f"sequence{q}_{i}",
                         integration_kernel=weight,
                         integration_kernel_parameters=None,
                         integration_length=None,
-                        measure_signal=measure_signal_name(qubit),
+                        measure_signal=measure_channel_name(qubit),
                         measure_pulse=pulse.zhpulse,
                         measure_pulse_length=round(
                             pulse.pulse.duration * NANO_TO_SECONDS, 9
@@ -1157,7 +1159,7 @@ class Zurich(Controller):
         results = {}
         for qubit in qubits.values():
             q = qubit.name  # pylint: disable=C0103
-            for i, ropulse in enumerate(self.sequence[measure_signal_name(qubit)]):
+            for i, ropulse in enumerate(self.sequence[measure_channel_name(qubit)]):
                 exp_res = self.results.get_data(f"sequence{q}_{i}")
 
                 # Reorder dimensions
@@ -1190,7 +1192,7 @@ class Zurich(Controller):
                 ).zhsweeper
                 zhsweeper.uid = "frequency"  # Changing the name from "frequency" breaks it f"frequency_{i}
                 if line == "readout":
-                    channel_name = measure_signal_name(qubits[pulse.qubit])
+                    channel_name = measure_channel_name(qubits[pulse.qubit])
                 else:
                     channel_name = getattr(qubits[pulse.qubit], line).name
                 exp_calib[channel_name] = lo.SignalCalibration(
