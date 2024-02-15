@@ -623,7 +623,7 @@ class QrmRf(ClusterModule):
                 # Add scope_acquisition to default sequencer
                 if (
                     sequencer.number == self.DEFAULT_SEQUENCERS[port]
-                    and not pulse == None
+                    and pulse is not None
                 ):
                     sequencer.acquisitions["scope_acquisition"] = {
                         "num_bins": 1,
