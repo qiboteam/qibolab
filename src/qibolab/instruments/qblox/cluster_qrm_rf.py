@@ -613,6 +613,7 @@ class QrmRf(ClusterModule):
                     }
 
                 # Acquisitions
+                pulse = None
                 for acquisition_index, pulse in enumerate(sequencer.pulses.ro_pulses):
                     sequencer.acquisitions[pulse.serial] = {
                         "num_bins": num_bins,
@@ -620,7 +621,10 @@ class QrmRf(ClusterModule):
                     }
 
                 # Add scope_acquisition to default sequencer
-                if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
+                if (
+                    sequencer.number == self.DEFAULT_SEQUENCERS[port]
+                    and pulse is not None
+                ):
                     sequencer.acquisitions["scope_acquisition"] = {
                         "num_bins": 1,
                         "index": acquisition_index + 1,
@@ -977,6 +981,7 @@ class QrmRf(ClusterModule):
         for port in self._output_ports_keys:
             for sequencer in self._sequencers[port]:
                 # Store scope acquisition data on 'scope_acquisition' acquisition of the default sequencer
+                # TODO: Maybe this store_scope can be done only if needed to optimize the process!
                 if sequencer.number == self.DEFAULT_SEQUENCERS[port]:
                     self.device.store_scope_acquisition(
                         sequencer.number, "scope_acquisition"
@@ -984,7 +989,6 @@ class QrmRf(ClusterModule):
                     scope = self.device.get_acquisitions(sequencer.number)[
                         "scope_acquisition"
                     ]
-
                 if not hardware_demod_enabled:  # Software Demodulation
                     if len(sequencer.pulses.ro_pulses) == 1:
                         pulse = sequencer.pulses.ro_pulses[0]
@@ -1002,20 +1006,11 @@ class QrmRf(ClusterModule):
                     for pulse in sequencer.pulses.ro_pulses:
                         bins = results[pulse.serial]["acquisition"]["bins"]
                         acquisitions[pulse.qubit] = acquisitions[pulse.serial] = (
-                            DemodulatedAcquisition(bins, duration)
+                            DemodulatedAcquisition(scope, bins, duration)
                         )
 
-                    # Provide Scope Data for verification (assuming memory reseet is being done)
-                    if len(sequencer.pulses.ro_pulses) == 1:
-                        pulse = sequencer.pulses.ro_pulses[0]
-                        frequency = self.get_if(pulse)
-                        acquisitions[pulse.serial].averaged = AveragedAcquisition(
-                            scope, duration, frequency
-                        )
-
-        # grab only the data required by the platform
         # TODO: to be updated once the functionality of ExecutionResults is extended
-        return {key: acquisition.data for key, acquisition in acquisitions.items()}
+        return {key: acquisition for key, acquisition in acquisitions.items()}
 
     def disconnect(self):
         """Stops all sequencers, disconnect all the outputs from the AWG paths
