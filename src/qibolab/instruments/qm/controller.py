@@ -9,6 +9,7 @@ from qualang_tools.simulator_tools import create_simulator_controller_connection
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 
@@ -22,6 +23,7 @@ from .sweepers import sweep
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
+MAX_BATCH_SIZE = 30
 
 
 def declare_octaves(octaves, host, calibration_path=None):
@@ -363,4 +365,4 @@ class QMController(Controller):
             return fetch_results(result, acquisitions)
 
     def split_batches(self, sequences):
-        return [sequences]
+        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
