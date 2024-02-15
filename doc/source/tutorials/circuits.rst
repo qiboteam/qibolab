@@ -71,6 +71,7 @@ results:
 
     import matplotlib.pyplot as plt
     import numpy as np
+    import qibo
     from qibo import Circuit, gates
 
 
