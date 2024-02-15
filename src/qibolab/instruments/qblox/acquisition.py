@@ -93,10 +93,16 @@ class DemodulatedAcquisition:
     It is advisable to have a power level at least higher than 5mV.
     """
 
+    scope: dict
+    """Data returned by scope qblox acquisition."""
     bins: dict
     """Binned acquisition data returned by qblox."""
     duration: int
     """Duration of the readout pulse."""
+
+    @property
+    def raw(self):
+        return self.scope["acquisition"]["scope"]
 
     @property
     def integration(self):
@@ -115,29 +121,17 @@ class DemodulatedAcquisition:
         return np.array(self.integration["path1"]) / self.duration
 
     @property
-    def averaged_i(self):
-        """I-component after demodulating and integrating every shot waveform
-        and then averaging over shots."""
-        return np.mean(self.shots_i)
+    def raw_i(self):
+        """Average of the raw i waveforms for every readout pulse."""
+        return np.array(self.raw["path0"]["data"][0 : self.duration])
 
     @property
-    def averaged_q(self):
-        """Q-component after demodulating and integrating every shot waveform
-        and then averaging over shots."""
-        return np.mean(self.shots_q)
+    def raw_q(self):
+        """Average of the raw q waveforms for every readout pulse."""
+        return np.array(self.raw["path1"]["data"][0 : self.duration])
 
     @property
     def classified(self):
         """List with the results of demodulating, integrating and classifying
         every shot."""
         return np.array(self.bins["threshold"])
-
-    @property
-    def data(self):
-        """Acquisition data to be returned to the platform.
-
-        Ignores the data available in acquisition results and returns
-        only i and q voltages.
-        """
-        # TODO: to be updated once the functionality of ExecutionResults is extended
-        return (self.shots_i, self.shots_q, self.classified)
