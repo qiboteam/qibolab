@@ -55,7 +55,6 @@ def create(folder: pathlib.Path = FOLDER):
         twpa_pump.name: twpa_pump,
     }
     instruments.update(modules)
-    instruments = load_instrument_settings(runcard, instruments)
 
     # Create channel objects
     channels = ChannelMap()
@@ -109,6 +108,7 @@ def create(folder: pathlib.Path = FOLDER):
         qubits[q].flux.max_bias = 2.5
 
     settings = load_settings(runcard)
+    instruments = load_instrument_settings(runcard, instruments)
 
     return Platform(
         str(FOLDER), qubits, pairs, instruments, settings, resonator_type="2D"

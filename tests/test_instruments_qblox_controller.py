@@ -13,7 +13,7 @@ def test_init(controller: QbloxController):
 
 
 @pytest.mark.qpu
-def connect(connected_controller: QbloxController):
+def test_connect(connected_controller: QbloxController):
     connected_controller.connect()
     assert connected_controller.is_connected
     for module in connected_controller.modules.values():
@@ -21,7 +21,7 @@ def connect(connected_controller: QbloxController):
 
 
 @pytest.mark.qpu
-def disconnect(connected_controller: QbloxController):
+def test_disconnect(connected_controller: QbloxController):
     connected_controller.connect()
     connected_controller.disconnect()
     assert connected_controller.is_connected is False

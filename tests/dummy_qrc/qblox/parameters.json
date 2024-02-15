@@ -37,39 +37,33 @@
         "qcm_rf0": {
             "o1": {
                 "attenuation": 20,
-                "lo_frequency": 5252833073,
-                "gain": 0.47
+                "lo_frequency": 5252833073
             },
             "o2": {
                 "attenuation": 20,
-                "lo_frequency": 5652833073,
-                "gain": 0.57
+                "lo_frequency": 5652833073
             }
         },
         "qcm_rf1": {
             "o1": {
                 "attenuation": 20,
-                "lo_frequency": 5995371914,
-                "gain": 0.55
+                "lo_frequency": 5995371914
             },
             "o2": {
                 "attenuation": 20,
-                "lo_frequency": 6961018001,
-                "gain": 0.596
+                "lo_frequency": 6961018001
             }
         },
         "qcm_rf2": {
             "o1": {
                 "attenuation": 20,
-                "lo_frequency": 6786543060,
-                "gain": 0.47
+                "lo_frequency": 6786543060
             }
         },
         "qrm_rf_a": {
             "o1": {
                 "attenuation": 36,
-                "lo_frequency": 7300000000,
-                "gain": 0.6
+                "lo_frequency": 7300000000
             },
             "i1": {
                 "acquisition_hold_off": 500,
@@ -79,8 +73,7 @@
         "qrm_rf_b": {
             "o1": {
                 "attenuation": 36,
-                "lo_frequency": 7850000000,
-                "gain": 0.6
+                "lo_frequency": 7850000000
             },
             "i1": {
                 "acquisition_hold_off": 500,

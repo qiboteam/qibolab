@@ -6,18 +6,14 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
 
-from qibolab.instruments.qblox.module import ClusterModule
-from qibolab.instruments.qblox.q1asm import (
-    Block,
-    Register,
-    convert_phase,
-    loop_block,
-    wait_block,
-)
-from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
-from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+from .module import ClusterModule
+from .port import QbloxPort
+from .q1asm import Block, Register, convert_phase, loop_block, wait_block
+from .sequencer import Sequencer, WaveformsBuffer
+from .sweeper import QbloxSweeper, QbloxSweeperType
 
 
 class QcmBb(ClusterModule):
@@ -172,19 +168,14 @@ class QcmBb(ClusterModule):
             self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
-            try:
-                for port in self._ports:
-                    self._sequencers[port] = []
-                    self._ports[port].hardware_mod_en = True
-                    self._ports[port].nco_freq = 0
-                    self._ports[port].nco_phase_offs = 0
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
-                )
+            for port in self._ports.values():
+                port: QbloxPort
+                self._sequencers[port.name] = []
+                port.upload_settings("hardware_mod_en", "nco_freq", "nco_phase_offs")
+
             self.is_connected = True
 
-    def setup(self, **settings):
+    def setup(self):
         """Cache the settings of the runcard and instantiate the ports of the
         module.
 
@@ -213,7 +204,7 @@ class QcmBb(ClusterModule):
         # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux is not None and _qubit.flux.port == self.ports(port):
+            if _qubit.flux is not None and _qubit.flux.port == self._ports[port]:
                 qubit = _qubit
 
         # select a new sequencer and configure it as required
@@ -726,7 +717,7 @@ class QcmBb(ClusterModule):
         # self.device.print_readable_snapshot(update=True)
 
         # DEBUG: QCM Save Readable Snapshot
-        from qibolab.instruments.qblox.debug import print_readable_snapshot
+        from .debug import print_readable_snapshot
 
         if self._debug_folder != "":
             filename = self._debug_folder + f"Z_{self.name}_snapshot.json"

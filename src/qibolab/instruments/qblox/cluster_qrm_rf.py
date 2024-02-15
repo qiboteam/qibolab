@@ -13,6 +13,7 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .acquisition import AveragedAcquisition, DemodulatedAcquisition
 from .module import ClusterModule
+from .port import QbloxPort
 from .q1asm import Block, Register, convert_phase, loop_block, wait_block
 from .sequencer import Sequencer, WaveformsBuffer
 from .sweeper import QbloxSweeper, QbloxSweeperType
@@ -140,7 +141,6 @@ class QrmRf(ClusterModule):
         super().__init__(name, address)
         self.device: QbloxQrmQcm = None
         self.classification_parameters: dict = {}
-        self.settings: dict = {}
 
         self._debug_folder: str = ""
         self._input_ports_keys = ["i1"]
@@ -204,29 +204,22 @@ class QrmRf(ClusterModule):
             self._device_num_sequencers = len(self.device.sequencers)
             self._set_default_values()
             # then set the value loaded from the runcard
-            try:
-                if "o1" in self.settings:
-                    self._ports["o1"].attenuation = self.settings["o1"]["attenuation"]
-                    if self.settings["o1"]["lo_frequency"]:
-                        self._ports["o1"].lo_enabled = True
-                        self._ports["o1"].lo_frequency = self.settings["o1"][
-                            "lo_frequency"
-                        ]
-                    self._ports["o1"].hardware_mod_en = True
-                    self._ports["o1"].nco_freq = 0
-                    self._ports["o1"].nco_phase_offs = 0
 
-                if "i1" in self.settings:
-                    self._ports["i1"].hardware_demod_en = True
-                    self._ports["i1"].acquisition_hold_off = self.settings["i1"][
-                        "acquisition_hold_off"
-                    ]
-                    self._ports["i1"].acquisition_duration = self.settings["i1"][
-                        "acquisition_duration"
-                    ]
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
+            if "o1" in self._ports:
+                out_port: QbloxPort = self._ports["o1"]
+                out_port.upload_settings(
+                    "attenuation",
+                    "lo_enabled",
+                    "lo_frequency",
+                    "hardware_mod_en",
+                    "nco_freq",
+                    "nco_phase_offs",
+                )
+
+            if "i1" in self._ports:
+                input_port: QbloxPort = self._ports["i1"]
+                input_port.upload_settings(
+                    "hardware_demod_en", "acquisition_hold_off", "acquisition_duration"
                 )
             self.is_connected = True
 
@@ -258,7 +251,9 @@ class QrmRf(ClusterModule):
                 - settings['i1']['acquisition_duration'] (int): [0 to 8192 ns] the duration of the acquisition. It is limited by
                   the amount of memory available in the fpga to store i q samples.
         """
-        self.settings = settings if settings else self.settings
+        for port, settings in settings.items():
+            for setting_name, value in settings.items():
+                setattr(self._ports[port]._settings, setting_name, value)
 
     def _get_next_sequencer(self, port: str, frequency: int, qubits: dict, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
@@ -705,14 +700,16 @@ class QrmRf(ClusterModule):
                             )
 
                     if pulses[n].type == PulseType.READOUT:
-                        delay_after_play = self._ports["i1"].acquisition_hold_off
+                        delay_after_play = self._ports[
+                            "i1"
+                        ]._settings.acquisition_hold_off
 
                         if len(pulses) > n + 1:
                             # If there are more pulses to be played, the delay is the time between the pulse end and the next pulse start
                             delay_after_acquire = (
                                 pulses[n + 1].start
                                 - pulses[n].start
-                                - self._ports["i1"].acquisition_hold_off
+                                - self._ports["i1"]._settings.acquisition_hold_off
                             )
                         else:
                             delay_after_acquire = (
@@ -721,7 +718,7 @@ class QrmRf(ClusterModule):
                             time_between_repetitions = (
                                 repetition_duration
                                 - sequence_total_duration
-                                - self._ports["i1"].acquisition_hold_off
+                                - self._ports["i1"]._settings.acquisition_hold_off
                             )
                             assert time_between_repetitions > 0
 

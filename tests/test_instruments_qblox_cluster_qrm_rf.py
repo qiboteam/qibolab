@@ -41,9 +41,9 @@ def qrm_rf(controller):
 @pytest.fixture(scope="module")
 def connected_qrm_rf(connected_controller):
     qrm_rf = get_qrm_rf(connected_controller)
-    qrm_rf.setup(**SETTINGS)
     qrm_rf.ports("o1")
     qrm_rf.ports("i1", out=False)
+    qrm_rf.setup(**SETTINGS)
     qrm_rf.connect(connected_controller.cluster)
 
     yield qrm_rf
@@ -66,11 +66,6 @@ def test_instrument_interface(qrm_rf: QrmRf):
 
 def test_init(qrm_rf: QrmRf):
     assert qrm_rf.device == None
-
-
-def test_setup(qrm_rf: QrmRf):
-    qrm_rf.setup(**SETTINGS)
-    assert qrm_rf.settings == SETTINGS
 
 
 @pytest.mark.qpu

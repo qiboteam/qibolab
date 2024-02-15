@@ -1,4 +1,5 @@
 import signal
+from dataclasses import asdict
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
@@ -18,6 +19,12 @@ MAX_BATCH_SIZE = 30
 """Maximum number of sequences that can be unrolled in a single one
 (independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
+PARAMS_TO_DUMP = [
+    "attenuation",
+    "lo_frequency",
+    "acquisition_hold_off",
+    "acquisition_duration",
+]
 
 
 class QbloxController(Controller):
@@ -89,6 +96,25 @@ class QbloxController(Controller):
                 self.modules[name].disconnect()
         log.warning("QbloxController: all modules are disconnected.")
         exit(0)
+
+    def dump(self):
+        def get_settings(port):
+            return {
+                setting: value
+                for setting, value in asdict(port._settings).items()
+                if setting in PARAMS_TO_DUMP
+            }
+
+        data = {
+            module.name: {
+                port_name: get_settings(port)
+                for port_name, port in module._ports.items()
+            }
+            for module in self.modules.values()
+            if not isinstance(module, QcmBb)
+        }
+
+        return data
 
     def _set_module_channel_map(self, module: QrmRf, qubits: dict):
         """Retrieve all the channels connected to a specific Qblox module.

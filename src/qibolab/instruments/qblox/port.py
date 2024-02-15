@@ -18,27 +18,42 @@ class QbloxOutputPort_Settings:
     nco_freq: int = 0
     nco_phase_offs: float = 0
     lo_enabled: bool = True
-    lo_frequency: int = 2_000_000_000
+    lo_frequency: int = 0
 
 
 @dataclass
 class QbloxInputPort_Settings:
-    channel: str = None
     acquisition_hold_off: int = 0
     acquisition_duration: int = 1000
     hardware_demod_en: bool = True
 
 
-class QbloxOutputPort(Port):
+class QbloxPort(Port):
+    def __init__(self, module, settings_class, port_number: int, port_name: str = None):
+        self.name = port_name
+        self.module = module
+        self.port_number: int = port_number
+        self._settings = settings_class
+
+    def upload_settings(self, *settings):
+        """Upload to the instrument the requested settings cached in
+        `self._settings`."""
+        for setting in settings:
+            try:
+                setattr(self, setting, getattr(self, setting))
+            except Exception as error:
+                raise RuntimeError(
+                    f"Unable to initialize port parameters '{setting}' on module {self.name}: {error}"
+                )
+
+
+class QbloxOutputPort(QbloxPort):
     """qibolab.instruments.port.Port interface implementation for Qblox
     instruments."""
 
     def __init__(self, module, port_number: int, port_name: str = None):
-        self.name = port_name
-        self.module = module
+        super().__init__(module, QbloxOutputPort_Settings(), port_number, port_name)
         self.sequencer_number: int = port_number
-        self.port_number: int = port_number
-        self._settings = QbloxOutputPort_Settings()
 
     @property
     def attenuation(self) -> str:
@@ -222,17 +237,19 @@ class QbloxOutputPort(Port):
                 self.module.device.set(f"out{self.port_number}_lo_freq", value=value)
 
 
-class QbloxInputPort:
+class QbloxInputPort(QbloxPort):
     def __init__(self, module, port_number: int, port_name: str = None):
-        self.name = port_name
-        self.module = module
-        self.output_sequencer_number: int = 0  # output_sequencer_number
-        self.input_sequencer_number: int = 0  # input_sequencer_number
-        self.port_number: int = port_number
+        super().__init__(module, QbloxInputPort_Settings(), port_number, port_name)
+        self.output_sequencer_number: int = 0
+        self.input_sequencer_number: int = 0
 
-        self.acquisition_hold_off = 4  # To be discontinued
+    @property
+    def acquisition_hold_off(self):
+        return self._settings.acquisition_hold_off
 
-        self._settings = QbloxInputPort_Settings()
+    @acquisition_hold_off.setter
+    def acquisition_hold_off(self, value):
+        self._settings.acquisition_hold_off = value
 
     @property
     def hardware_demod_en(self):
