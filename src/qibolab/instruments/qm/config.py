@@ -127,9 +127,10 @@ class QMConfig:
             self.elements[f"drive{qubit.name}"][
                 "intermediate_frequency"
             ] = intermediate_frequency
-            self.mixers[f"mixer_drive{qubit.name}"][0][
-                "intermediate_frequency"
-            ] = intermediate_frequency
+            if isinstance(qubit.drive.port, OPXIQ):
+                self.mixers[f"mixer_drive{qubit.name}"][0][
+                    "intermediate_frequency"
+                ] = intermediate_frequency
 
     def register_readout_element(
         self, qubit, intermediate_frequency=0, time_of_flight=0, smearing=0
@@ -183,9 +184,10 @@ class QMConfig:
             self.elements[f"readout{qubit.name}"][
                 "intermediate_frequency"
             ] = intermediate_frequency
-            self.mixers[f"mixer_readout{qubit.name}"][0][
-                "intermediate_frequency"
-            ] = intermediate_frequency
+            if isinstance(qubit.readout.port, OPXIQ):
+                self.mixers[f"mixer_readout{qubit.name}"][0][
+                    "intermediate_frequency"
+                ] = intermediate_frequency
 
     def register_flux_element(self, qubit, intermediate_frequency=0):
         """Register qubit flux elements and controllers in the QM config.
