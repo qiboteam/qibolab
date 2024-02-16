@@ -341,19 +341,27 @@ class QMConfig:
             readout_len (int): Duration of the readout pulse in ns.
         """
         angle = 0
+        cos, sin = np.cos(angle), np.sin(angle)
+        if qubit.kernel is None:
+            convert = lambda x: [(x, readout_len)]
+        else:
+            cos = qubit.kernel * cos
+            sin = qubit.kernel * sin
+            convert = lambda x: x
+
         self.integration_weights.update(
             {
                 f"cosine_weights{qubit.name}": {
-                    "cosine": [(np.cos(angle), readout_len)],
-                    "sine": [(-np.sin(angle), readout_len)],
+                    "cosine": convert(cos),
+                    "sine": convert(-sin),
                 },
                 f"sine_weights{qubit.name}": {
-                    "cosine": [(np.sin(angle), readout_len)],
-                    "sine": [(np.cos(angle), readout_len)],
+                    "cosine": convert(sin),
+                    "sine": convert(cos),
                 },
                 f"minus_sine_weights{qubit.name}": {
-                    "cosine": [(-np.sin(angle), readout_len)],
-                    "sine": [(-np.cos(angle), readout_len)],
+                    "cosine": convert(-sin),
+                    "sine": convert(-cos),
                 },
             }
         )
