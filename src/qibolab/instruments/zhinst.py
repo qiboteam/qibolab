@@ -163,23 +163,11 @@ class ZhPulse:
         """Qibolab pulse."""
         self.zhpulse = select_pulse(pulse, pulse.type.name.lower())
         """Zurich pulse."""
+        self.zhsweepers = []
 
-
-class ZhSweeper:
-    """Zurich sweeper from qibolab sweeper for pulse parameters Amplitude,
-    Duration, Frequency (and maybe Phase)"""
-
-    def __init__(self, pulse, sweeper, qubit):
-        p = ZhPulse(pulse)
-
-        self.pulse = p.pulse
-        """Qibolab pulse associated to the sweeper."""
-
-        self.zhpulse = p.zhpulse
-        """Zurich pulse associated to the sweeper."""
-
-        self.zhsweepers = [self.select_sweeper(pulse.type, sweeper, qubit)]
-        """Zurich sweepers."""
+    def add_sweeper(self, sweeper, qubit):
+        """Add sweeper to list of sweepers associated with this pulse."""
+        self.zhsweepers.append(self.select_sweeper(self.pulse.type, sweeper, qubit))
 
     @staticmethod  # pylint: disable=R0903
     def select_sweeper(ptype, sweeper, qubit):
@@ -215,10 +203,6 @@ class ZhSweeper:
                 stop=sweeper.values[-1] + intermediate_frequency,
                 count=len(sweeper.values),
             )
-
-    def add_sweeper(self, sweeper, qubit):
-        """Add sweeper to list of sweepers."""
-        self.zhsweepers.append(self.select_sweeper(self.pulse.type, sweeper, qubit))
 
 
 class ZhSweeperLine:
@@ -625,11 +609,10 @@ class Zurich(Controller):
         # Fill the sequences with pulses according to their lines in temporal order
         for pulse in sequence:
             if pulse.type == PulseType.READOUT:
-                zhsequence[measure_channel_name(qubits[pulse.qubit])].append(
-                    ZhPulse(pulse)
-                )
+                ch = measure_channel_name(qubits[pulse.qubit])
             else:
-                zhsequence[pulse.channel].append(ZhPulse(pulse))
+                ch = pulse.channel
+            zhsequence[ch].append(ZhPulse(pulse))
 
         for sweeper in self.sweepers:
             if sweeper.parameter.name in SWEEPER_SET:
@@ -652,17 +635,6 @@ class Zurich(Controller):
                     for element in aux_list:
                         if pulse == element.pulse:
                             if isinstance(aux_list[aux_list.index(element)], ZhPulse):
-                                if isinstance(pulse, CouplerFluxPulse):
-                                    aux_list[aux_list.index(element)] = ZhSweeper(
-                                        pulse, sweeper, couplers[pulse.qubit]
-                                    )
-                                else:
-                                    aux_list[aux_list.index(element)] = ZhSweeper(
-                                        pulse, sweeper, qubits[pulse.qubit]
-                                    )
-                            elif isinstance(
-                                aux_list[aux_list.index(element)], ZhSweeper
-                            ):
                                 if isinstance(pulse, CouplerFluxPulse):
                                     aux_list[aux_list.index(element)].add_sweeper(
                                         sweeper, couplers[pulse.qubit]
@@ -857,10 +829,12 @@ class Zurich(Controller):
                         time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
                             pulse.pulse.start * NANO_TO_SECONDS, 9
                         )
-                        if isinstance(pulse, ZhPulse):
-                            exp.play(signal=channel_name, pulse=pulse.zhpulse)
-                        else:
+                        if isinstance(pulse, ZhSweeperLine):
                             self.play_sweep(exp, coupler, pulse, section="flux")
+                        elif isinstance(pulse, ZhPulse) and pulse.zhsweepers:
+                            self.play_sweep(exp, coupler, pulse, section="flux")
+                        elif isinstance(pulse, ZhPulse):
+                            exp.play(signal=channel_name, pulse=pulse.zhpulse)
 
                 previous_section = section_uid
 
@@ -890,10 +864,12 @@ class Zurich(Controller):
                             time = round(
                                 pulse.pulse.duration * NANO_TO_SECONDS, 9
                             ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                        if isinstance(pulse, ZhPulse):
-                            exp.play(signal=qubit.flux.name, pulse=pulse.zhpulse)
-                        else:
+                        if isinstance(pulse, ZhSweeperLine):
                             self.play_sweep(exp, qubit, pulse, section="flux")
+                        elif isinstance(pulse, ZhPulse) and pulse.zhsweepers:
+                            self.play_sweep(exp, qubit, pulse, section="flux")
+                        elif isinstance(pulse, ZhPulse):
+                            exp.play(signal=qubit.flux.name, pulse=pulse.zhpulse)
                 previous_section = section_uid
 
     def drive(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
@@ -911,7 +887,9 @@ class Zurich(Controller):
                 section_uid = f"sequence_{channel_name}_{i}"
                 with exp.section(uid=section_uid, play_after=previous_section):
                     for j, pulse in enumerate(sequence):
-                        if not isinstance(pulse, ZhSweeperLine):
+                        if isinstance(pulse, ZhSweeperLine):
+                            exp.delay(signal=qubit.drive.name, time=pulse.zhsweepers[0])
+                        else:
                             exp.delay(
                                 signal=qubit.drive.name,
                                 time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
@@ -921,16 +899,14 @@ class Zurich(Controller):
                                 pulse.pulse.duration * NANO_TO_SECONDS, 9
                             ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
                             pulse.zhpulse.uid += f"{i}_{j}"
-                            if isinstance(pulse, ZhSweeper):
+                            if pulse.zhsweepers:
                                 self.play_sweep(exp, qubit, pulse, section="drive")
-                            elif isinstance(pulse, ZhPulse):
+                            else:
                                 exp.play(
                                     signal=qubit.drive.name,
                                     pulse=pulse.zhpulse,
                                     phase=pulse.pulse.relative_phase,
                                 )
-                        else:
-                            exp.delay(signal=qubit.drive.name, time=pulse.zhsweepers[0])
 
                     if len(
                         self.sequence[measure_channel_name(qubit)]
@@ -1173,7 +1149,7 @@ class Zurich(Controller):
         if sweeper.parameter is Parameter.frequency:
             for pulse in sweeper.pulses:
                 line = "drive" if pulse.type is PulseType.DRIVE else "readout"
-                zhsweeper = ZhSweeper.select_sweeper(
+                zhsweeper = ZhPulse.select_sweeper(
                     pulse.type, sweeper, qubits[sweeper.pulses[0].qubit]
                 )
                 zhsweeper.uid = "frequency"  # Changing the name from "frequency" breaks it f"frequency_{i}
@@ -1195,7 +1171,7 @@ class Zurich(Controller):
                 aux_max = max(abs(sweeper.values))
 
                 sweeper.values /= aux_max
-                parameter = ZhSweeper.select_sweeper(
+                parameter = ZhPulse.select_sweeper(
                     pulse.type, sweeper, qubits[sweeper.pulses[0].qubit]
                 )
                 sweeper.values *= aux_max
@@ -1207,7 +1183,7 @@ class Zurich(Controller):
             parameter = ZhSweeperLine.select_sweeper(sweeper)
 
         elif parameter is None:
-            parameter = ZhSweeper.select_sweeper(
+            parameter = ZhPulse.select_sweeper(
                 sweeper.pulses[0].type, sweeper, qubits[sweeper.pulses[0].qubit]
             )
 
@@ -1278,9 +1254,7 @@ class Zurich(Controller):
         if sweeper.parameter is Parameter.bias:
             if sweeper.qubits:
                 for qubit in sweeper.qubits:
-                    zhsweeper = ZhSweeperLine.select_sweeper(
-                        sweeper, qubit, self.sequence_qibo
-                    )
+                    zhsweeper = ZhSweeperLine.select_sweeper(sweeper)
                     zhsweeper.uid = "bias"
                     path = self.find_instrument_address(qubit, "bias")
 
@@ -1296,9 +1270,9 @@ class Zurich(Controller):
                 aux_max = max(abs(sweeper.values))
 
                 sweeper.values /= aux_max
-                zhsweeper = ZhSweeper(
+                zhsweeper = ZhPulse.select_sweeper(
                     pulse, sweeper, qubits[sweeper.pulses[0].qubit]
-                ).zhsweeper
+                )
                 sweeper.values *= aux_max
 
                 zhsweeper.uid = "amplitude"
@@ -1311,9 +1285,9 @@ class Zurich(Controller):
                 )
 
         elif parameter is None:
-            parameter = ZhSweeper(
+            parameter = ZhPulse.select_sweeper(
                 sweeper.pulses[0], sweeper, qubits[sweeper.pulses[0].qubit]
-            ).zhsweeper
+            )
             device_path = f"/{path}/qachannels/*/oscs/0/gain"  # Hardcoded SHFQA device
 
         with exp.sweep(
