@@ -122,7 +122,7 @@ class QMController(Controller):
     """Smearing used for hardware signal integration."""
     calibration_path: Optional[str] = None
     """Path to the JSON file that contains the mixer calibration."""
-    script_file_name: Optional[str] = "qua_script.py"
+    script_file_name: Optional[str] = None
     """Name of the file that the QUA program will dumped in that after every
     execution.
 
