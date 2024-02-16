@@ -1,5 +1,5 @@
 import urllib3
-from icarusq_rfsoc_driver.quicsyn import QuicSyn as LO_QuicSyn  # pylint: disable=E0401
+from qcodes_contrib_drivers.drivers.Valon.Valon_5015 import Valon5015 as Valon5015_LO
 
 from qibolab.instruments.abstract import Instrument
 from qibolab.instruments.oscillator import LocalOscillator
@@ -29,11 +29,18 @@ class MCAttenuator(Instrument):
         pass
 
 
-class QuicSyn(LocalOscillator):
-    """Driver for the National Instrument QuicSyn Lite local oscillator."""
+class Valon5015(LocalOscillator):
+    """Driver for the Valon 5015 local oscillator."""
 
     def create(self):
-        return LO_QuicSyn(self.name, self.address)
+        device = Valon5015_LO(
+            self.name, address=f"TCPIP0::{self.address}::23::SOCKET", visalib="@py"
+        )
+        # The native qcodes driver does not have on/off functions required for the device class.
+        # Here we add some lambda functions that corresponds to on/off.
+        device.on = lambda: device.buffer_amplifiers_enabled(True)
+        device.off = lambda: device.buffer_amplifiers_enabled(False)
+        return device
 
     def __del__(self):
         self.disconnect()
