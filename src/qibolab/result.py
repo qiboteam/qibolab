@@ -108,7 +108,7 @@ class SampleResults:
     """
 
     def __init__(self, data: np.ndarray):
-        self.samples: npt.NDArray[np.uint32] = np.array(data).astype(int)
+        self.samples: npt.NDArray[np.uint32] = np.array(data).astype(np.uint32)
 
     def __add__(self, data):
         return self.__class__(np.append(self.samples, data.samples))
