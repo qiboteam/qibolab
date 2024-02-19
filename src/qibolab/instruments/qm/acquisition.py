@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 from qm import qua
@@ -36,7 +36,7 @@ class Acquisition(ABC):
     qubit: QubitId
     average: bool
 
-    keys: List[str] = field(default_factory=list)
+    keys: list[str] = field(default_factory=list)
 
     @property
     def npulses(self):
@@ -90,13 +90,13 @@ class RawAcquisition(Acquisition):
         qua.measure(operation, element, self.adc_stream)
 
     def download(self, *dimensions):
-        i_stream = self.adc_stream.input1()
-        q_stream = self.adc_stream.input2()
+        istream = self.adc_stream.input1()
+        qstream = self.adc_stream.input2()
         if self.average:
-            i_stream = i_stream.average()
-            q_stream = q_stream.average()
-        i_stream.save(f"{self.name}_I")
-        q_stream.save(f"{self.name}_Q")
+            istream = istream.average()
+            qstream = qstream.average()
+        istream.save(f"{self.name}_I")
+        qstream.save(f"{self.name}_Q")
 
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
@@ -113,41 +113,41 @@ class RawAcquisition(Acquisition):
 class IntegratedAcquisition(Acquisition):
     """QUA variables used for integrated acquisition."""
 
-    I: _Variable = field(default_factory=lambda: declare(fixed))
-    Q: _Variable = field(default_factory=lambda: declare(fixed))
+    i: _Variable = field(default_factory=lambda: declare(fixed))
+    q: _Variable = field(default_factory=lambda: declare(fixed))
     """Variables to save the (I, Q) values acquired from a single shot."""
-    I_stream: _ResultSource = field(default_factory=lambda: declare_stream())
-    Q_stream: _ResultSource = field(default_factory=lambda: declare_stream())
+    istream: _ResultSource = field(default_factory=lambda: declare_stream())
+    qstream: _ResultSource = field(default_factory=lambda: declare_stream())
     """Streams to collect the results of all shots."""
 
     def assign_element(self, element):
-        assign_variables_to_element(element, self.I, self.Q)
+        assign_variables_to_element(element, self.i, self.q)
 
     def measure(self, operation, element):
         qua.measure(
             operation,
             element,
             None,
-            qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
-            qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
+            qua.dual_demod.full("cos", "out1", "sin", "out2", self.i),
+            qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.q),
         )
-        qua.save(self.I, self.I_stream)
-        qua.save(self.Q, self.Q_stream)
+        qua.save(self.I, self.istream)
+        qua.save(self.Q, self.qstream)
 
     def download(self, *dimensions):
-        Istream = self.I_stream
-        Qstream = self.Q_stream
+        istream = self.istream
+        qstream = self.qstream
         if self.npulses > 1:
-            Istream = Istream.buffer(self.npulses)
-            Qstream = Qstream.buffer(self.npulses)
+            istream = istream.buffer(self.npulses)
+            qstream = qstream.buffer(self.npulses)
         for dim in dimensions:
-            Istream = Istream.buffer(dim)
-            Qstream = Qstream.buffer(dim)
+            istream = istream.buffer(dim)
+            qstream = qstream.buffer(dim)
         if self.average:
-            Istream = Istream.average()
-            Qstream = Qstream.average()
-        Istream.save(f"{self.name}_I")
-        Qstream.save(f"{self.name}_Q")
+            istream = istream.average()
+            qstream = qstream.average()
+        istream.save(f"{self.name}_I")
+        qstream.save(f"{self.name}_Q")
 
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
@@ -180,8 +180,8 @@ class ShotsAcquisition(Acquisition):
     angle: Optional[float] = None
     """Angle in the IQ plane to be used for classification of single shots."""
 
-    I: _Variable = field(default_factory=lambda: declare(fixed))
-    Q: _Variable = field(default_factory=lambda: declare(fixed))
+    i: _Variable = field(default_factory=lambda: declare(fixed))
+    q: _Variable = field(default_factory=lambda: declare(fixed))
     """Variables to save the (I, Q) values acquired from a single shot."""
     shot: _Variable = field(default_factory=lambda: declare(int))
     """Variable for calculating an individual shots."""
@@ -193,19 +193,19 @@ class ShotsAcquisition(Acquisition):
         self.sin = np.sin(self.angle)
 
     def assign_element(self, element):
-        assign_variables_to_element(element, self.I, self.Q, self.shot)
+        assign_variables_to_element(element, self.i, self.q, self.shot)
 
     def measure(self, operation, element):
         qua.measure(
             operation,
             element,
             None,
-            qua.dual_demod.full("cos", "out1", "sin", "out2", self.I),
-            qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.Q),
+            qua.dual_demod.full("cos", "out1", "sin", "out2", self.i),
+            qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.q),
         )
         qua.assign(
             self.shot,
-            qua.Cast.to_int(self.I * self.cos - self.Q * self.sin > self.threshold),
+            qua.Cast.to_int(self.i * self.cos - self.q * self.sin > self.threshold),
         )
         qua.save(self.shot, self.shots)
 

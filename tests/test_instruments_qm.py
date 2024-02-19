@@ -47,8 +47,8 @@ def test_qmpulse_declare_output(acquisition_type):
         elif acquisition_type is AcquisitionType.INTEGRATION:
             assert isinstance(acquisition.I, qua._dsl._Variable)
             assert isinstance(acquisition.Q, qua._dsl._Variable)
-            assert isinstance(acquisition.I_stream, qua._dsl._ResultSource)
-            assert isinstance(acquisition.Q_stream, qua._dsl._ResultSource)
+            assert isinstance(acquisition.istream, qua._dsl._ResultSource)
+            assert isinstance(acquisition.qstream, qua._dsl._ResultSource)
         elif acquisition_type is AcquisitionType.RAW:
             assert isinstance(acquisition.adc_stream, qua._dsl._ResultSource)
 
