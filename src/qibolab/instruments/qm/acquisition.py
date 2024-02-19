@@ -244,15 +244,13 @@ def declare_acquisitions(ro_pulses, qubits, options):
         name = f"{qmpulse.operation}_{qubit}"
         if name not in acquisitions:
             average = options.averaging_mode is AveragingMode.CYCLIC
-            acquisition_cls = ACQUISITION_TYPES[options.acquisition_type]
+            kwargs = {}
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                threshold = qubits[qubit].threshold
-                iq_angle = qubits[qubit].iq_angle
-                acquisition = acquisition_cls(
-                    name, qubit, average, threshold=threshold, angle=iq_angle
-                )
-            else:
-                acquisition = acquisition_cls(name, qubit, average)
+                kwargs["threshold"] = qubits[qubit].threshold
+                kwargs["angle"] = qubits[qubit].iq_angle
+            acquisition = ACQUISITION_TYPES[options.acquisition_type](
+                name, qubit, average, **kwargs
+            )
 
             acquisition.assign_element(qmpulse.element)
             acquisitions[name] = acquisition
