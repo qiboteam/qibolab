@@ -307,7 +307,7 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
         target_pulse = {
             "operation": "measurement",
             "length": pulse.duration,
-            "waveforms": {"I": "constant_wf0.003575", "Q": "constant_wf0.003575"},
+            "waveforms": {"I": "constant_wf0.003575", "Q": "zero_wf"},
             "digital_marker": "ON",
             "integration_weights": {
                 "cos": "cosine_weights1",
