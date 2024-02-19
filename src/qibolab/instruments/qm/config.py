@@ -312,12 +312,12 @@ class QMConfig:
             serial (str): String with a serialization of the waveform.
                 Used as key to identify the waveform in the config.
         """
-        # Maybe need to force zero q waveforms
-        # if pulse.type.name == "READOUT" and mode == "q":
-        #    serial = "zero_wf"
-        #    if serial not in self.waveforms:
-        #        self.waveforms[serial] = {"type": "constant", "sample": 0.0}
-        if isinstance(pulse.shape, Rectangular):
+        if pulse.type is PulseType.READOUT and mode == "q":
+            # Force zero q waveforms for readout
+            serial = "zero_wf"
+            if serial not in self.waveforms:
+                self.waveforms[serial] = {"type": "constant", "sample": 0.0}
+        elif isinstance(pulse.shape, Rectangular):
             serial = f"constant_wf{pulse.amplitude}"
             if serial not in self.waveforms:
                 self.waveforms[serial] = {"type": "constant", "sample": pulse.amplitude}
