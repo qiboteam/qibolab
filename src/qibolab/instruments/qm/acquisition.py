@@ -96,8 +96,8 @@ class RawAcquisition(Acquisition):
     )
     """Stream to collect raw ADC data."""
 
-    _result_cls = RawWaveformResults
-    _averaged_result_cls = AveragedRawWaveformResults
+    RESULT_CLS = RawWaveformResults
+    AVERAGED_RESULT_CLS = AveragedRawWaveformResults
 
     def assign_element(self, element):
         pass
@@ -134,8 +134,8 @@ class IntegratedAcquisition(Acquisition):
     qstream: _ResultSource = field(default_factory=lambda: declare_stream())
     """Streams to collect the results of all shots."""
 
-    _result_cls = IntegratedResults
-    _averaged_result_cls = AveragedIntegratedResults
+    RESULT_CLS = IntegratedResults
+    AVERAGED_RESULT_CLS = AveragedIntegratedResults
 
     def assign_element(self, element):
         assign_variables_to_element(element, self.i, self.q)
@@ -192,8 +192,8 @@ class ShotsAcquisition(Acquisition):
     shots: _ResultSource = field(default_factory=lambda: declare_stream())
     """Stream to collect multiple shots."""
 
-    _result_cls = SampleResults
-    _averaged_result_cls = AveragedSampleResults
+    RESULT_CLS = SampleResults
+    AVERAGED_RESULT_CLS = AveragedSampleResults
 
     def __post_init__(self):
         self.cos = np.cos(self.angle)
