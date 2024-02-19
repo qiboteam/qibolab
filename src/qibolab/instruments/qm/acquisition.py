@@ -131,8 +131,8 @@ class IntegratedAcquisition(Acquisition):
             qua.dual_demod.full("cos", "out1", "sin", "out2", self.i),
             qua.dual_demod.full("minus_sin", "out1", "cos", "out2", self.q),
         )
-        qua.save(self.I, self.istream)
-        qua.save(self.Q, self.qstream)
+        qua.save(self.i, self.istream)
+        qua.save(self.q, self.qstream)
 
     def download(self, *dimensions):
         istream = self.istream
@@ -153,19 +153,10 @@ class IntegratedAcquisition(Acquisition):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
         signal = ires + 1j * qres
+        res_cls = AveragedIntegratedResults if self.average else IntegratedResults
         if self.npulses > 1:
-            if self.average:
-                # TODO: calculate std
-                return [
-                    AveragedIntegratedResults(signal[..., i])
-                    for i in range(self.npulses)
-                ]
-            return [IntegratedResults(signal[..., i]) for i in range(self.npulses)]
-        else:
-            if self.average:
-                # TODO: calculate std
-                return [AveragedIntegratedResults(signal)]
-            return [IntegratedResults(signal)]
+            return [res_cls(signal[..., i]) for i in range(self.npulses)]
+        return [res_cls(signal)]
 
 
 @dataclass
@@ -221,20 +212,10 @@ class ShotsAcquisition(Acquisition):
 
     def fetch(self, handles):
         shots = handles.get(f"{self.name}_shots").fetch_all()
+        res_cls = AveragedSampleResults if self.average else SampleResults
         if self.npulses > 1:
-            if self.average:
-                # TODO: calculate std
-                return [
-                    AveragedSampleResults(shots[..., i]) for i in range(self.npulses)
-                ]
-            return [
-                SampleResults(shots[..., i].astype(int)) for i in range(self.npulses)
-            ]
-        else:
-            if self.average:
-                # TODO: calculate std
-                return [AveragedSampleResults(shots)]
-            return [SampleResults(shots.astype(int))]
+            return [res_cls(shots[..., i]) for i in range(self.npulses)]
+        return [res_cls(shots.astype(int))]
 
 
 ACQUISITION_TYPES = {
