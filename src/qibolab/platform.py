@@ -171,9 +171,6 @@ class Platform:
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
-                elif new_result is not None:
-                    # currently the result of QMSim is not a dict
-                    result = new_result
 
         return result
 
@@ -304,10 +301,6 @@ class Platform:
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
-                elif new_result is not None:
-                    # currently the result of QMSim is not a dict
-                    result = new_result
-
         return result
 
     def __call__(self, sequence, options):

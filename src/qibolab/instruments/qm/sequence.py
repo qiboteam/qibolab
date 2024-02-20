@@ -4,19 +4,12 @@ from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
 from numpy import typing as npt
-from qibo.config import raise_error
 from qm import qua
 from qm.qua._dsl import _Variable  # for type declaration only
 from qualang_tools.bakery import baking
 from qualang_tools.bakery.bakery import Baking
 
-from qibolab import AcquisitionType, AveragingMode
-from qibolab.instruments.qm.acquisition import (
-    Acquisition,
-    IntegratedAcquisition,
-    RawAcquisition,
-    ShotsAcquisition,
-)
+from qibolab.instruments.qm.acquisition import Acquisition
 from qibolab.pulses import Pulse, PulseType
 
 from .config import SAMPLING_RATE, QMConfig
@@ -36,7 +29,7 @@ class QMPulse:
     """
 
     pulse: Pulse
-    """:class:`qibolab.pulses.Pulse` implemting the current pulse."""
+    """:class:`qibolab.pulses.Pulse` corresponding to the ``QMPulse``."""
     element: Optional[str] = None
     """Element that the pulse will be played on, as defined in the QM
     config."""
@@ -73,8 +66,12 @@ class QMPulse:
     elements_to_align: Set[str] = field(default_factory=set)
 
     def __post_init__(self):
-        self.element: str = f"{self.pulse.type.name.lower()}{self.pulse.qubit}"
-        self.operation: str = self.pulse.serial
+        pulse_type = self.pulse.type.name.lower()
+        amplitude = format(self.pulse.amplitude, ".6f").rstrip("0").rstrip(".")
+        self.element: str = f"{pulse_type}{self.pulse.qubit}"
+        self.operation: str = (
+            f"{pulse_type}({self.pulse.duration}, {amplitude}, {self.pulse.shape})"
+        )
         self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
         self.elements_to_align.add(self.element)
 
@@ -111,27 +108,6 @@ class QMPulse:
         Relevant only in the context of a QUA program.
         """
         qua.play(self.operation, self.element, duration=self.swept_duration)
-
-    def declare_output(self, options, threshold=None, angle=None):
-        average = options.averaging_mode is AveragingMode.CYCLIC
-        acquisition_type = options.acquisition_type
-        if acquisition_type is AcquisitionType.RAW:
-            self.acquisition = RawAcquisition(self.pulse.serial, average)
-        elif acquisition_type is AcquisitionType.INTEGRATION:
-            self.acquisition = IntegratedAcquisition(self.pulse.serial, average)
-        elif acquisition_type is AcquisitionType.DISCRIMINATION:
-            if threshold is None or angle is None:
-                raise_error(
-                    ValueError,
-                    "Cannot use ``AcquisitionType.DISCRIMINATION`` "
-                    "if threshold and angle are not given.",
-                )
-            self.acquisition = ShotsAcquisition(
-                self.pulse.serial, average, threshold, angle
-            )
-        else:
-            raise_error(ValueError, f"Invalid acquisition type {acquisition_type}.")
-        self.acquisition.assign_element(self.element)
 
 
 @dataclass
@@ -185,8 +161,8 @@ class BakedPulse(QMPulse):
                         self.calculate_waveform(waveform_i, t),
                         self.calculate_waveform(waveform_q, t),
                     ]
-                segment.add_op(self.pulse.serial, self.element, waveform)
-                segment.play(self.pulse.serial, self.element)
+                segment.add_op(self.operation, self.element, waveform)
+                segment.play(self.operation, self.element)
             self.segments.append(segment)
 
     @property
@@ -218,8 +194,6 @@ class Sequence:
     qmpulses: List[QMPulse] = field(default_factory=list)
     """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to
     the original pulses."""
-    ro_pulses: List[QMPulse] = field(default_factory=list)
-    """List of readout pulses used for registering outputs."""
     pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
     """Map from qibolab pulses to QMPulses (useful when sweeping)."""
     clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
@@ -247,8 +221,6 @@ class Sequence:
     def add(self, qmpulse: QMPulse):
         pulse = qmpulse.pulse
         self.pulse_to_qmpulse[pulse.serial] = qmpulse
-        if pulse.type is PulseType.READOUT:
-            self.ro_pulses.append(qmpulse)
 
         previous = self._find_previous(pulse)
         if previous is not None:
@@ -304,7 +276,3 @@ class Sequence:
 
         if relaxation_time > 0:
             qua.wait(relaxation_time // 4)
-
-        # Save data to the stream processing
-        for qmpulse in self.ro_pulses:
-            qmpulse.acquisition.save()
