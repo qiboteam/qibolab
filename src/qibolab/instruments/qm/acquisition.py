@@ -249,7 +249,7 @@ def declare_acquisitions(ro_pulses, qubits, options):
             options containing acquisition type and averaging mode.
 
     Returns:
-        Dictionary containing the different :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
+        List of all :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
     """
     acquisitions = {}
     for qmpulse in ro_pulses:
@@ -261,16 +261,16 @@ def declare_acquisitions(ro_pulses, qubits, options):
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 kwargs["threshold"] = qubits[qubit].threshold
                 kwargs["angle"] = qubits[qubit].iq_angle
+
             acquisition = ACQUISITION_TYPES[options.acquisition_type](
                 name, qubit, average, **kwargs
             )
-
             acquisition.assign_element(qmpulse.element)
             acquisitions[name] = acquisition
 
         acquisitions[name].keys.append(qmpulse.pulse.serial)
         qmpulse.acquisition = acquisitions[name]
-    return acquisitions
+    return list(acquisitions.values())
 
 
 def fetch_results(result, acquisitions):
@@ -286,7 +286,7 @@ def fetch_results(result, acquisitions):
     handles = result.result_handles
     handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
     results = {}
-    for acquisition in acquisitions.values():
+    for acquisition in acquisitions:
         data = acquisition.fetch(handles)
         for serial, result in zip(acquisition.keys, data):
             results[acquisition.qubit] = results[serial] = result
