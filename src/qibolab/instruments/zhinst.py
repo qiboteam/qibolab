@@ -652,9 +652,11 @@ class Zurich(Controller):
 
     def select_exp(self, exp, qubits, couplers, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
-        self.drive(exp, qubits)
-        self.flux(exp, qubits)
-        self.couplerflux(exp, couplers)
+        self.drive(
+            exp, [(q.drive.name, measure_channel_name(q)) for q in qubits.values()]
+        )
+        self.flux(exp, [q.flux.name for q in qubits.values()])
+        self.flux(exp, [c.flux.name for c in couplers.values()])
         self.measure_relax(
             exp,
             qubits,
@@ -664,9 +666,7 @@ class Zurich(Controller):
         )
 
     @staticmethod
-    def play_sweep_select_single(
-        exp, qubit, pulse, channel_name, parameters, partial_sweep
-    ):
+    def play_sweep_select_single(exp, pulse, channel_name, parameters, partial_sweep):
         """Play Zurich pulse when a single sweeper is involved."""
         if any("amplitude" in param for param in parameters):
             pulse.zhpulse.amplitude *= max(pulse.zhsweepers[0].values)
@@ -699,7 +699,7 @@ class Zurich(Controller):
 
     # Hardcoded for the flux pulse for 2q gates
     @staticmethod
-    def play_sweep_select_dual(exp, qubit, pulse, channel_name, parameters):
+    def play_sweep_select_dual(exp, pulse, channel_name, parameters):
         """Play Zurich pulse when two sweepers are involved on the same
         pulse."""
         if "amplitude" in parameters and "duration" in parameters:
@@ -719,75 +719,39 @@ class Zurich(Controller):
                 length=pulse.zhsweepers[sweeper_dur_index],
             )
 
-    def play_sweep(self, exp, qubit, pulse, section):
+    def play_sweep(self, exp, channel_name, pulse):
         """Takes care of playing the sweepers and involved pulses for different
         options."""
-        if section == "readout":
-            channel_name = measure_channel_name(qubit)
-        else:
-            channel_name = getattr(qubit, section).name
         if not isinstance(pulse, ZhSweeperLine):
             parameters = []
             for partial_sweep in pulse.zhsweepers:
                 parameters.append(partial_sweep.uid)
             # Recheck partial sweeps
             if len(parameters) == 2:
-                self.play_sweep_select_dual(exp, qubit, pulse, channel_name, parameters)
+                self.play_sweep_select_dual(exp, pulse, channel_name, parameters)
             else:
                 self.play_sweep_select_single(
-                    exp, qubit, pulse, channel_name, parameters, partial_sweep
+                    exp, pulse, channel_name, parameters, partial_sweep
                 )
 
-    def couplerflux(self, exp: lo.Experiment, couplers: Dict[str, Coupler]):
-        """Coupler flux for bias sweep or pulses.
+    def flux(self, exp: lo.Experiment, channels: list[str]):
+        """Qubit flux for bias sweep or pulses.
 
         Args:
             exp (lo.Experiment): laboneq experiment on which register sequences.
-            couplers (dict[str, Coupler]): coupler on which pulses are played.
+            channels: list of qubit flux channel names.
         """
-        for coupler in couplers.values():
-            channel_name = coupler.flux.name
+        for channel_name in channels:
             time = 0
             previous_section = None
             for i, sequence in enumerate(self.sub_sequences[channel_name]):
                 section_uid = f"sequence_{channel_name}_{i}"
                 with exp.section(uid=section_uid, play_after=previous_section):
                     for j, pulse in enumerate(sequence):
-                        pulse.zhpulse.uid += f"{i}_{j}"
-                        exp.delay(
-                            signal=channel_name,
-                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                        )
-                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                            pulse.pulse.start * NANO_TO_SECONDS, 9
-                        )
-                        if pulse.zhsweepers:
-                            self.play_sweep(exp, coupler, pulse, section="flux")
-                        else:
-                            exp.play(signal=channel_name, pulse=pulse.zhpulse)
-
-                previous_section = section_uid
-
-    def flux(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
-        """Qubit flux for bias sweep or pulses.
-
-        Args:
-            exp (lo.Experiment): laboneq experiment on which register sequences.
-            qubits (dict[str, Qubit]): qubits on which pulses are played.
-        """
-        for qubit in qubits.values():
-            q = qubit.name  # pylint: disable=C0103
-            channel_name = qubit.flux.name
-            time = 0
-            previous_section = None
-            for i, sequence in enumerate(self.sub_sequences[qubit.flux.name]):
-                section_uid = f"sequence_{channel_name}_{i}"
-                with exp.section(uid=section_uid, play_after=previous_section):
-                    for j, pulse in enumerate(sequence):
                         if not isinstance(pulse, ZhSweeperLine):
                             pulse.zhpulse.uid += f"{i}_{j}"
                             exp.delay(
-                                signal=qubit.flux.name,
+                                signal=channel_name,
                                 time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
                                 - time,
                             )
@@ -795,31 +759,31 @@ class Zurich(Controller):
                                 pulse.pulse.duration * NANO_TO_SECONDS, 9
                             ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
                         if pulse.zhsweepers:
-                            self.play_sweep(exp, qubit, pulse, section="flux")
+                            self.play_sweep(exp, channel_name, pulse)
                         else:
-                            exp.play(signal=qubit.flux.name, pulse=pulse.zhpulse)
+                            exp.play(signal=channel_name, pulse=pulse.zhpulse)
+
                 previous_section = section_uid
 
-    def drive(self, exp: lo.Experiment, qubits: Dict[str, Qubit]):
+    def drive(self, exp: lo.Experiment, channels: list[tuple[str, str]]):
         """Qubit driving pulses.
 
         Args:
             exp (lo.Experiment): laboneq experiment on which register sequences.
-            qubits (dict[str, Qubit]): qubits on which pulses are played.
+            channels: list of (drive channel name, measure channel name) pairs.  # FIXME: remove measure channel
         """
-        for qubit in qubits.values():
-            channel_name = qubit.drive.name
+        for channel_name, channel_name_measure in channels:
             time = 0
             previous_section = None
-            for i, sequence in enumerate(self.sub_sequences[qubit.drive.name]):
+            for i, sequence in enumerate(self.sub_sequences[channel_name]):
                 section_uid = f"sequence_{channel_name}_{i}"
                 with exp.section(uid=section_uid, play_after=previous_section):
                     for j, pulse in enumerate(sequence):
                         if isinstance(pulse, ZhSweeperLine):
-                            exp.delay(signal=qubit.drive.name, time=pulse.zhsweepers[0])
+                            exp.delay(signal=channel_name, time=pulse.zhsweepers[0])
                         else:
                             exp.delay(
-                                signal=qubit.drive.name,
+                                signal=channel_name,
                                 time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
                                 - time,
                             )
@@ -828,27 +792,23 @@ class Zurich(Controller):
                             ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
                             pulse.zhpulse.uid += f"{i}_{j}"
                             if pulse.zhsweepers:
-                                self.play_sweep(exp, qubit, pulse, section="drive")
+                                self.play_sweep(exp, channel_name, pulse)
                             else:
                                 exp.play(
-                                    signal=qubit.drive.name,
+                                    signal=channel_name,
                                     pulse=pulse.zhpulse,
                                     phase=pulse.pulse.relative_phase,
                                 )
 
-                    if len(
-                        self.sequence[measure_channel_name(qubit)]
-                    ) > 0 and isinstance(
-                        self.sequence[measure_channel_name(qubit)][0], ZhSweeperLine
+                    if len(self.sequence[channel_name_measure]) > 0 and isinstance(
+                        self.sequence[channel_name_measure][0], ZhSweeperLine
                     ):
                         exp.delay(
-                            signal=qubit.drive.name,
-                            time=self.sequence[measure_channel_name(qubit)][
-                                0
-                            ].zhsweepers[0],
+                            signal=channel_name,
+                            time=self.sequence[channel_name_measure][0].zhsweepers[0],
                         )
-                        self.sequence[measure_channel_name(qubit)].remove(
-                            self.sequence[measure_channel_name(qubit)][0]
+                        self.sequence[channel_name_measure].remove(
+                            self.sequence[channel_name_measure][0]
                         )
 
                 previous_section = section_uid
