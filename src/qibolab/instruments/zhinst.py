@@ -17,7 +17,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 
 from qibolab.instruments.unrolling import batch_max_sequences
-from qibolab.pulses import CouplerFluxPulse, PulseSequence, PulseType
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -574,53 +574,35 @@ class Zurich(Controller):
                 ch = pulse.channel
             zhsequence[ch].append(ZhPulse(pulse))
 
-        for sweeper in self.sweepers:
-            if sweeper.parameter.name in SWEEPER_SET:
-                for pulse in sweeper.pulses:
-                    if pulse.type == PulseType.READOUT:
-                        aux_list = zhsequence[measure_channel_name(qubits[pulse.qubit])]
-                    else:
-                        aux_list = zhsequence[pulse.channel]
-                    if (
-                        sweeper.parameter is Parameter.frequency
-                        and pulse.type is PulseType.READOUT
-                    ):
-                        self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
-                    if (
-                        sweeper.parameter is Parameter.amplitude
-                        and pulse.type is PulseType.READOUT
-                    ):
-                        self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
-
-                    for element in aux_list:
-                        if pulse == element.pulse:
-                            if isinstance(aux_list[aux_list.index(element)], ZhPulse):
-                                if isinstance(pulse, CouplerFluxPulse):
-                                    aux_list[aux_list.index(element)].add_sweeper(
-                                        sweeper, couplers[pulse.qubit]
-                                    )
-                                else:
-                                    aux_list[aux_list.index(element)].add_sweeper(
-                                        sweeper, qubits[pulse.qubit]
-                                    )
-
-            # This may not place the Zhsweeper when the start occurs among different sections or lines
-            if sweeper.parameter.name in SWEEPER_START:
-                pulse = sweeper.pulses[0]
-
-                if pulse.type == PulseType.READOUT:
-                    aux_list = zhsequence[measure_channel_name(qubits[pulse.qubit])]
-                else:
-                    aux_list = zhsequence[pulse.channel]
-                for element in aux_list:
-                    if pulse == element.pulse:
-                        aux_list.insert(
-                            aux_list.index(element),
-                            ZhSweeperLine(sweeper, pulse),
-                        )
+        def get_sweeps(pulse: ZhPulse):
+            sweepers_for_pulse = []
+            for sweeper in self.sweepers:
+                for p in sweeper.pulses:
+                    if p == pulse:
+                        sweepers_for_pulse.append(sweeper)
                         break
+            return sweepers_for_pulse
+
+        for ch, zhpulses in zhsequence.items():
+            for i, zhpulse in enumerate(zhpulses):
+                for s in get_sweeps(zhpulse.pulse):
+                    if s.parameter in SWEEPER_SET:
+                        zhpulse.add_sweeper(s, qubits[zhpulse.pulse.qubit])
+                    if s.parameter in SWEEPER_START:
+                        zhpulses.insert(i, ZhSweeperLine(s, zhpulse.pulse))
 
         self.sequence = zhsequence
+
+        def set_acquisition_type():
+            for sweeper in self.sweepers:
+                if sweeper.parameter.name in {Parameter.frequency, Parameter.amplitude}:
+                    for pulse in sweeper.pulses:
+                        if pulse.type is PulseType.READOUT:
+                            # FIXME: case of multiple pulses
+                            self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
+
+        set_acquisition_type()
+
         self.nt_sweeps, self.sweepers = classify_sweepers(self.sweepers)
 
     def create_exp(self, qubits, couplers, options):
