@@ -322,9 +322,7 @@ class QMController(Controller):
 
         qmsequence = Sequence()
         ro_pulses = []
-        for pulse in sorted(
-            sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
-        ):
+        for pulse in sorted(sequence, key=lambda pulse: (pulse.start, pulse.duration)):
             qubit = qubits[pulse.qubit]
 
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
