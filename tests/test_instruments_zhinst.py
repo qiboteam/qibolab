@@ -382,10 +382,13 @@ def test_zhsequence_couplers_sweeper(dummy_qrc):
         Parameter.amplitude,
         delta_bias_range,
         pulses=[
-            CouplerFluxPulse(
+            Pulse(
                 start=0,
                 duration=sequence.duration + sequence.start,
                 amplitude=1,
+                frequency=0,
+                relative_phase=0,
+                type=PulseType.COUPLERFLUX,
                 shape="Rectangular",
                 qubit=IQM5q.couplers[0].name,
             )
