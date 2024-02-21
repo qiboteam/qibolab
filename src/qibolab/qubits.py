@@ -121,6 +121,22 @@ class Qubit:
             if fld.name not in EXCLUDED_FIELDS
         }
 
+    @property
+    def mixer_frequencies(self):
+        """Get local oscillator and intermediate frequencies of native gates.
+
+        Assumes RF = LO + IF.
+        """
+        freqs = {}
+        for gate in fields(self.native_gates):
+            native = getattr(self.native_gates, gate.name)
+            if native is not None:
+                channel_type = native.pulse_type.name.lower()
+                _lo = getattr(self, channel_type).lo_frequency
+                _if = native.frequency - _lo
+                freqs[gate.name] = _lo, _if
+        return freqs
+
 
 QubitPairId = Tuple[QubitId, QubitId]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""

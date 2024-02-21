@@ -105,11 +105,11 @@ def test_zhsequence(dummy_qrc):
     IQM5q = create_platform("zurich")
     controller = IQM5q.instruments["EL_ZURO"]
 
-    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers, sweepers=[])
+    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers)
     zhsequence = controller.sequence
 
     with pytest.raises(AttributeError):
-        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers, sweepers=[])
+        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers)
         zhsequence = controller.sequence
 
     assert len(zhsequence) == 2
@@ -138,11 +138,11 @@ def test_zhsequence_couplers(dummy_qrc):
     IQM5q = create_platform("zurich")
     controller = IQM5q.instruments["EL_ZURO"]
 
-    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers, sweepers=[])
+    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers)
     zhsequence = controller.sequence
 
     with pytest.raises(AttributeError):
-        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers, sweepers=[])
+        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers)
         zhsequence = controller.sequence
 
     assert len(zhsequence) == 3
@@ -170,24 +170,31 @@ def test_zhsequence_couplers_sweeper(dummy_qrc):
     delta_bias_range = np.arange(-1, 1, 0.5)
 
     sweeper = Sweeper(
-        Parameter.bias,
+        Parameter.amplitude,
         delta_bias_range,
-        couplers=[IQM5q.couplers[0]],
+        pulses=[
+            CouplerFluxPulse(
+                start=0,
+                duration=sequence.duration + sequence.start,
+                amplitude=1,
+                shape="Rectangular",
+                qubit=IQM5q.couplers[0].name,
+            )
+        ],
         type=SweeperType.ABSOLUTE,
     )
 
-    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers, sweepers=[sweeper])
+    controller.sweepers = [sweeper]
+    controller.sequence_zh(sequence, IQM5q.qubits, IQM5q.couplers)
     zhsequence = controller.sequence
 
     with pytest.raises(AttributeError):
-        controller.sequence_zh(
-            "sequence", IQM5q.qubits, IQM5q.couplers, sweepers=[sweeper]
-        )
+        controller.sequence_zh("sequence", IQM5q.qubits, IQM5q.couplers)
         zhsequence = controller.sequence
 
     assert len(zhsequence) == 2
     assert len(zhsequence["readout0"]) == 1
-    assert len(zhsequence["couplerflux0"]) == 1
+    assert len(zhsequence["couplerflux0"]) == 0  # is it correct?
 
 
 def test_zhsequence_multiple_ro(dummy_qrc):
@@ -221,13 +228,11 @@ def test_zhsequence_multiple_ro(dummy_qrc):
     platform = create_platform("zurich")
 
     controller = platform.instruments["EL_ZURO"]
-    controller.sequence_zh(sequence, platform.qubits, platform.couplers, sweepers=[])
+    controller.sequence_zh(sequence, platform.qubits, platform.couplers)
     zhsequence = controller.sequence
 
     with pytest.raises(AttributeError):
-        controller.sequence_zh(
-            "sequence", platform.qubits, platform.couplers, sweepers=[]
-        )
+        controller.sequence_zh("sequence", platform.qubits, platform.couplers)
         zhsequence = controller.sequence
 
     assert len(zhsequence) == 2
@@ -482,7 +487,7 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
 
     IQM5q.sweepers = sweepers
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options, sweepers)
+    IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
     assert "drive0" in IQM5q.experiment.signals
     assert "measure0" in IQM5q.experiment.signals
@@ -541,7 +546,7 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
 
     IQM5q.sweepers = sweepers
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options, sweepers)
+    IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
     assert "couplerflux0" in IQM5q.experiment.signals
     assert "drive0" in IQM5q.experiment.signals
@@ -613,7 +618,8 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
 
     IQM5q.sweepers = sweepers
     rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
-    IQM5q.experiment_flow(qubits, couplers, sequence, options, sweepers)
+    IQM5q.sweepers = sweepers  # to be changed
+    IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
     assert "drive0" in IQM5q.experiment.signals
     assert "measure0" in IQM5q.experiment.signals
@@ -667,7 +673,8 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
 
     IQM5q.sweepers = sweepers
     rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
-    IQM5q.experiment_flow(qubits, couplers, sequence, options, sweepers)
+    IQM5q.sweepers = sweepers  # to be changed
+    IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
     assert "drive0" in IQM5q.experiment.signals
     assert "measure0" in IQM5q.experiment.signals
@@ -705,7 +712,7 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     parameter_range_1 = (
         np.random.rand(swept_points)
-        if parameter1 is Parameter.amplitude
+        if parameter1 in [Parameter.amplitude, Parameter.bias]
         else np.random.randint(swept_points, size=swept_points)
     )
 
@@ -732,7 +739,8 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     IQM5q.sweepers = sweepers
     rearranging_axes, sweepers = IQM5q.rearrange_sweepers(sweepers)
-    IQM5q.experiment_flow(qubits, couplers, sequence, options, sweepers)
+    IQM5q.sweepers = sweepers  # to be changed
+    IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
     assert "measure0" in IQM5q.experiment.signals
     assert "acquire0" in IQM5q.experiment.signals

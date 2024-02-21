@@ -1,3 +1,2 @@
-from .config import QMPort
-from .driver import QMOPX
-from .simulator import QMSim
+from .controller import QMController
+from .devices import Octave, OPXplus
