@@ -358,13 +358,15 @@ def test_qm_register_flux_pulse(qmplatform):
     platform = qmplatform
     controller = platform.instruments["qm"]
     pulse = Pulse(
-        0,
-        30,
-        0.005,
-        Rectangular(),
-        platform.qubits[qubit].flux.name,
-        PulseType.FLUX,
-        qubit,
+        start=0,
+        duration=30,
+        amplitude=0.005,
+        frequency=0,
+        relative_phase=0,
+        shape=Rectangular(),
+        channel=platform.qubits[qubit].flux.name,
+        type=PulseType.FLUX,
+        qubit=qubit,
     )
     target_pulse = {
         "operation": "control",
@@ -385,12 +387,14 @@ def test_qm_register_baked_pulse(qmplatform, duration):
     controller = platform.instruments["qm"]
     controller.config.register_flux_element(qubit)
     pulse = Pulse(
-        3,
-        duration,
-        0.05,
-        Rectangular(),
-        qubit.flux.name,
-        PulseType.FLUX,
+        start=3,
+        duration=duration,
+        amplitude=0.05,
+        frequency=0,
+        relative_phase=0,
+        shape=Rectangular(),
+        channel=qubit.flux.name,
+        type=PulseType.FLUX,
         qubit=qubit.name,
     )
     qmpulse = BakedPulse(pulse)
