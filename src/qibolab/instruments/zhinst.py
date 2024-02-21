@@ -17,7 +17,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 
 from qibolab.instruments.unrolling import batch_max_sequences
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -210,6 +210,12 @@ class ZhPulse:
 
     def add_delay_sweeper(self, sweeper):
         self.delay_sweeper = select_sweeper(sweeper)
+
+
+@dataclass
+class SubSequence:
+    measurements: list[str, Pulse]
+    control_sequence: dict[str, list[Pulse]]
 
 
 class Zurich(Controller):
@@ -448,59 +454,45 @@ class Zurich(Controller):
             if pulse.type is PulseType.DRIVE:
                 qubit.drive_frequency = pulse.frequency
 
-    def create_sub_sequence(
-        self,
-        line_name: str,
-        quantum_elements: Union[Dict[str, Qubit], Dict[str, Coupler]],
-    ):
-        """Create a list of sequences for each measurement.
-
-        Args:
-            line_name (str): Name of the line from which extract the sequence.
-            quantum_elements (dict[str, Qubit]|dict[str, Coupler]): qubits or couplers for the platform.
-        """
-        for quantum_element in quantum_elements.values():
-            if isinstance(quantum_element, Coupler):
-                # Find arbitrary measurement from sequence and split coupler sequence based on that
-                # FIXME: neither the previous nor this way of doing this is not right - division into subsequences should happen
-                # for the entire sequence as a whole and not channel by channel (which is the source of prblem here, that we need to
-                # decide which qubit's measurement to take as baseline in splitting)
-                ch = next(
-                    iter(
-                        ch
-                        for ch, pulses in self.sequence.items()
-                        if any(p.pulse.type == PulseType.READOUT for p in pulses)
-                    )
-                )
-                measurements = self.sequence[ch]
-            else:
-                measurements = self.sequence[measure_channel_name(quantum_element)]
-
-            channel_name = getattr(quantum_element, line_name).name
-            pulses = self.sequence[channel_name]
-            pulse_sequences = [[] for _ in measurements]
-            pulse_sequences.append([])
-            measurement_index = 0
-            for pulse in pulses:
-                if measurement_index < len(measurements):
-                    if pulse.pulse.finish > measurements[measurement_index].pulse.start:
-                        measurement_index += 1
-                pulse_sequences[measurement_index].append(pulse)
-            self.sub_sequences[channel_name] = pulse_sequences
-
-    def create_sub_sequences(
-        self, qubits: Dict[str, Qubit], couplers: Dict[str, Coupler]
-    ):
+    def create_sub_sequences(self, qubits: list[Qubit]) -> list[SubSequence]:
         """Create subsequences for different lines (drive, flux, coupler flux).
 
         Args:
             qubits (dict[str, Qubit]): qubits for the platform.
             couplers (dict[str, Coupler]): couplers for the platform.
         """
-        self.sub_sequences = {}
-        self.create_sub_sequence("drive", qubits)
-        self.create_sub_sequence("flux", qubits)
-        self.create_sub_sequence("flux", couplers)
+        # collect and group all measurements. In one sequence, qubits may be measured multiple times (e.g. when the sequence was unrolled
+        # at platform level), however it is assumed that 1. all qubits are measured the same number of times, 2. each time all qubits are
+        # measured simultaneously.
+        measure_channels = {measure_channel_name(qb) for qb in qubits}
+        other_channels = set(self.sequence.keys()) - measure_channels
+
+        measurement_groups = defaultdict(list)
+        for ch in measure_channels:
+            for i, pulse in enumerate(self.sequence[ch]):
+                measurement_groups[i].append((ch, pulse))
+
+        measurement_starts = {}
+        for i, group in measurement_groups.items():
+            starts = np.array([meas.pulse.start for _, meas in group])
+            # TODO: validate that all start times are equal
+            measurement_starts[i] = max(starts)
+
+        # split all non-measurement channels according to the locations of the measurements
+        sub_sequences = defaultdict(lambda: defaultdict(list))
+        for ch in other_channels:
+            measurement_index = 0
+            for pulse in self.sequence[ch]:
+                if pulse.pulse.finish > measurement_starts[measurement_index]:
+                    measurement_index += 1
+                sub_sequences[measurement_index][ch].append(pulse)
+        if len(sub_sequences) > len(measurement_groups):
+            log.warning("There are control pulses after the last measurement start.")
+
+        return [
+            SubSequence(measurement_groups[i], sub_sequences[i])
+            for i in range(len(measurement_groups))
+        ]
 
     def experiment_flow(
         self,
@@ -520,7 +512,7 @@ class Zurich(Controller):
             sequence (PulseSequence): sequence of pulses to be played in the experiment.
         """
         self.sequence_zh(sequence, qubits, couplers)
-        self.create_sub_sequences(qubits, couplers)
+        self.sub_sequences = self.create_sub_sequences(list(qubits.values()))
         self.calibration_step(qubits, couplers, options)
         self.create_exp(qubits, couplers, options)
 
@@ -565,10 +557,10 @@ class Zurich(Controller):
                 ch = pulse.channel
             zhsequence[ch].append(ZhPulse(pulse))
 
-        def get_sweeps(pulse: ZhPulse):
+        def get_sweeps(pulse: Pulse):
             sweepers_for_pulse = []
             for sweeper in self.sweepers:
-                for p in sweeper.pulses:
+                for p in sweeper.pulses or []:
                     if p == pulse:
                         sweepers_for_pulse.append(sweeper)
                         break
@@ -577,9 +569,9 @@ class Zurich(Controller):
         for ch, zhpulses in zhsequence.items():
             for i, zhpulse in enumerate(zhpulses):
                 for s in get_sweeps(zhpulse.pulse):
-                    if s.parameter in SWEEPER_SET:
+                    if s.parameter.name in SWEEPER_SET:
                         zhpulse.add_sweeper(s, qubits[zhpulse.pulse.qubit])
-                    if s.parameter in SWEEPER_START:
+                    if s.parameter.name in SWEEPER_START:
                         zhpulse.add_delay_sweeper(s)
 
         self.sequence = zhsequence
@@ -643,18 +635,124 @@ class Zurich(Controller):
 
     def select_exp(self, exp, qubits, couplers, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
-        self.drive(
-            exp, [(q.drive.name, measure_channel_name(q)) for q in qubits.values()]
-        )
-        self.flux(exp, [q.flux.name for q in qubits.values()])
-        self.flux(exp, [c.flux.name for c in couplers.values()])
-        self.measure_relax(
-            exp,
-            qubits,
-            couplers,
-            exp_options.relaxation_time,
-            exp_options.acquisition_type,
-        )
+        weights = {}
+        previous_section = None
+        for i, seq in enumerate(self.sub_sequences):
+            section_uid = f"control_{i}"
+            with exp.section(uid=section_uid, play_after=previous_section):
+                for ch, pulses in seq.control_sequence.items():
+                    time = 0
+                    for j, pulse in enumerate(pulses):
+                        if pulse.delay_sweeper:
+                            exp.delay(signal=ch, time=pulse.delay_sweeper)
+                        exp.delay(
+                            signal=ch,
+                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                        )
+                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                            pulse.pulse.start * NANO_TO_SECONDS, 9
+                        )
+                        pulse.zhpulse.uid += (
+                            f"{i}_{j}"  # FIXME: is this actually needed?
+                        )
+                        if pulse.zhsweepers:
+                            self.play_sweep(exp, ch, pulse)
+                        else:
+                            exp.play(
+                                signal=ch,
+                                pulse=pulse.zhpulse,
+                                phase=pulse.pulse.relative_phase,
+                            )
+            previous_section = section_uid
+
+            if any(m.delay_sweeper is not None for _, m in seq.measurements):
+                section_uid = f"measurement_delay_{i}"
+                with exp.section(uid=section_uid, play_after=previous_section):
+                    for ch, m in seq.measurements:
+                        if m.delay_sweeper:
+                            exp.delay(signal=ch, time=m.delay_sweeper)
+                previous_section = section_uid
+
+            section_uid = f"measure_{i}"
+            with exp.section(uid=section_uid, play_after=previous_section):
+                for ch, pulse in seq.measurements:
+                    qubit = qubits[pulse.pulse.qubit]
+                    q = qubit.name
+                    pulse.zhpulse.uid += str(i)
+
+                    exp.delay(
+                        signal=acquire_channel_name(qubit),
+                        time=self.smearing * NANO_TO_SECONDS,
+                    )
+
+                    if (
+                        qubit.kernel is not None
+                        and exp_options.acquisition_type
+                        == lo.AcquisitionType.DISCRIMINATION
+                    ):
+                        weight = lo.pulse_library.sampled_pulse_complex(
+                            uid="weight" + str(q),
+                            samples=qubit.kernel * np.exp(1j * qubit.iq_angle),
+                        )
+
+                    else:
+                        if i == 0:
+                            if (
+                                exp_options.acquisition_type
+                                == lo.AcquisitionType.DISCRIMINATION
+                            ):
+                                weight = lo.pulse_library.sampled_pulse_complex(
+                                    samples=np.ones(
+                                        [
+                                            int(
+                                                pulse.pulse.duration * 2
+                                                - 3 * self.smearing * NANO_TO_SECONDS
+                                            )
+                                        ]
+                                    )
+                                    * np.exp(1j * qubit.iq_angle),
+                                    uid="weights" + str(q),
+                                )
+                                weights[q] = weight
+                            else:
+                                # TODO: Patch for multiple readouts: Remove different uids
+                                weight = lo.pulse_library.const(
+                                    uid="weight" + str(q),
+                                    length=round(
+                                        pulse.pulse.duration * NANO_TO_SECONDS, 9
+                                    )
+                                    - 1.5 * self.smearing * NANO_TO_SECONDS,
+                                    amplitude=1,
+                                )
+
+                                weights[q] = weight
+                        elif i != 0:
+                            weight = weights[q]
+
+                    measure_pulse_parameters = {"phase": 0}
+
+                    if i == len(self.sequence[measure_channel_name(qubit)]) - 1:
+                        reset_delay = exp_options.relaxation_time * NANO_TO_SECONDS
+                    else:
+                        reset_delay = 0
+
+                    exp.measure(
+                        acquire_signal=acquire_channel_name(qubit),
+                        handle=f"sequence{q}_{i}",
+                        integration_kernel=weight,
+                        integration_kernel_parameters=None,
+                        integration_length=None,
+                        measure_signal=measure_channel_name(qubit),
+                        measure_pulse=pulse.zhpulse,
+                        measure_pulse_length=round(
+                            pulse.pulse.duration * NANO_TO_SECONDS, 9
+                        ),
+                        measure_pulse_parameters=measure_pulse_parameters,
+                        measure_pulse_amplitude=None,
+                        acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
+                        reset_delay=reset_delay,
+                    )
+            previous_section = section_uid
 
     @staticmethod
     def play_sweep_select_single(exp, pulse, channel_name, parameters, partial_sweep):
@@ -723,224 +821,6 @@ class Zurich(Controller):
             self.play_sweep_select_single(
                 exp, pulse, channel_name, parameters, partial_sweep
             )
-
-    def flux(self, exp: lo.Experiment, channels: list[str]):
-        """Qubit flux for bias sweep or pulses.
-
-        Args:
-            exp (lo.Experiment): laboneq experiment on which register sequences.
-            channels: list of qubit flux channel names.
-        """
-        for channel_name in channels:
-            time = 0
-            previous_section = None
-            for i, sequence in enumerate(self.sub_sequences[channel_name]):
-                section_uid = f"sequence_{channel_name}_{i}"
-                with exp.section(uid=section_uid, play_after=previous_section):
-                    for j, pulse in enumerate(sequence):
-                        if pulse.delay_sweeper:
-                            exp.delay(signal=channel_name, time=pulse.delay_sweeper)
-                        pulse.zhpulse.uid += f"{i}_{j}"
-                        exp.delay(
-                            signal=channel_name,
-                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                        )
-                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                            pulse.pulse.start * NANO_TO_SECONDS, 9
-                        )
-                        if pulse.zhsweepers:
-                            self.play_sweep(exp, channel_name, pulse)
-                        else:
-                            exp.play(signal=channel_name, pulse=pulse.zhpulse)
-
-                previous_section = section_uid
-
-    def drive(self, exp: lo.Experiment, channels: list[tuple[str, str]]):
-        """Qubit driving pulses.
-
-        Args:
-            exp (lo.Experiment): laboneq experiment on which register sequences.
-            channels: list of (drive channel name, measure channel name) pairs.  # FIXME: remove measure channel
-        """
-        for channel_name, channel_name_measure in channels:
-            time = 0
-            previous_section = None
-            for i, sequence in enumerate(self.sub_sequences[channel_name]):
-                section_uid = f"sequence_{channel_name}_{i}"
-                with exp.section(uid=section_uid, play_after=previous_section):
-                    for j, pulse in enumerate(sequence):
-                        if pulse.delay_sweeper:
-                            exp.delay(signal=channel_name, time=pulse.delay_sweeper)
-                        exp.delay(
-                            signal=channel_name,
-                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
-                        )
-                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
-                            pulse.pulse.start * NANO_TO_SECONDS, 9
-                        )
-                        pulse.zhpulse.uid += f"{i}_{j}"
-                        if pulse.zhsweepers:
-                            self.play_sweep(exp, channel_name, pulse)
-                        else:
-                            exp.play(
-                                signal=channel_name,
-                                pulse=pulse.zhpulse,
-                                phase=pulse.pulse.relative_phase,
-                            )
-
-                    if (
-                        len(self.sequence[channel_name_measure]) > 0
-                        and self.sequence[channel_name_measure][0].delay_sweeper
-                    ):
-                        exp.delay(
-                            signal=channel_name,
-                            time=self.sequence[channel_name_measure][0].zhsweepers[0],
-                        )
-
-                previous_section = section_uid
-
-    def find_subsequence_finish(
-        self,
-        measurement_number: int,
-        line: str,
-        quantum_elements: Union[Qubit, Coupler],
-    ) -> Tuple[int, str]:
-        """Find the finishing time and qubit for a given sequence.
-
-        Args:
-            measurement_number (int): number of the measure pulse.
-            line (str): line from which measure the finishing time.
-                e.g.: "drive", "flux"
-            quantum_elements: qubits or couplers from which to measure the finishing time.
-
-        Returns:
-            time_finish (int): Finish time of the last pulse of the subsequence
-                before the measurement.
-            sequence_finish (str): Name of the last subsequence before measurement. If
-                there are no sequences after the previous measurement, use "None".
-        """
-        time_finish = 0
-        sequence_finish = "None"
-        for quantum_element in quantum_elements:
-            channel_name = getattr(quantum_element, line).name
-            if len(self.sub_sequences[channel_name]) <= measurement_number:
-                continue
-            for pulse in self.sub_sequences[channel_name][measurement_number]:
-                if pulse.pulse.finish > time_finish:
-                    time_finish = pulse.pulse.finish
-                    sequence_finish = channel_name
-        return time_finish, sequence_finish
-
-    # For pulsed spectroscopy, set integration_length and either measure_pulse or measure_pulse_length.
-    # For CW spectroscopy, set only integration_length and do not specify the measure signal.
-    # For all other measurements, set either length or pulse for both the measure pulse and integration kernel.
-    def measure_relax(self, exp, qubits, couplers, relaxation_time, acquisition_type):
-        """Qubit readout pulse, data acquisition and qubit relaxation."""
-        readout_schedule = defaultdict(list)
-        qubit_readout_schedule = defaultdict(list)
-        for qubit in qubits.values():
-            channel_name = measure_channel_name(qubit)
-            for i, pulse in enumerate(self.sequence[channel_name]):
-                readout_schedule[i].append(pulse)
-                qubit_readout_schedule[i].append(qubit)
-
-        weights = {}
-        for i, (pulses, qubits_readout) in enumerate(
-            zip(
-                readout_schedule.values(),
-                qubit_readout_schedule.values(),
-            )
-        ):
-            qd_finish = self.find_subsequence_finish(i, "drive", qubits_readout)
-            qf_finish = self.find_subsequence_finish(i, "flux", qubits_readout)
-            cf_finish = self.find_subsequence_finish(i, "flux", couplers.values())
-            finish_times = np.array(
-                [
-                    qd_finish,
-                    qf_finish,
-                    cf_finish,
-                ],
-                dtype=[("finish", "i4"), ("line", "U15")],
-            )
-            latest_sequence = finish_times[finish_times["finish"].argmax()]
-            if latest_sequence["line"] == "None":
-                play_after = None
-            else:
-                play_after = f"sequence_{latest_sequence['line']}_{i}"
-            # Section on the outside loop allows for multiplex
-            with exp.section(uid=f"sequence_measure_{i}", play_after=play_after):
-                for pulse, qubit in zip(pulses, qubits_readout):
-                    q = qubit.name
-                    pulse.zhpulse.uid += str(i)
-
-                    exp.delay(
-                        signal=acquire_channel_name(qubit),
-                        time=self.smearing * NANO_TO_SECONDS,
-                    )
-
-                    if (
-                        qubit.kernel is not None
-                        and acquisition_type == lo.AcquisitionType.DISCRIMINATION
-                    ):
-                        weight = lo.pulse_library.sampled_pulse_complex(
-                            uid="weight" + str(q),
-                            samples=qubit.kernel * np.exp(1j * qubit.iq_angle),
-                        )
-
-                    else:
-                        if i == 0:
-                            if acquisition_type == lo.AcquisitionType.DISCRIMINATION:
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    samples=np.ones(
-                                        [
-                                            int(
-                                                pulse.pulse.duration * 2
-                                                - 3 * self.smearing * NANO_TO_SECONDS
-                                            )
-                                        ]
-                                    )
-                                    * np.exp(1j * qubit.iq_angle),
-                                    uid="weights" + str(q),
-                                )
-                                weights[q] = weight
-                            else:
-                                # TODO: Patch for multiple readouts: Remove different uids
-                                weight = lo.pulse_library.const(
-                                    uid="weight" + str(q),
-                                    length=round(
-                                        pulse.pulse.duration * NANO_TO_SECONDS, 9
-                                    )
-                                    - 1.5 * self.smearing * NANO_TO_SECONDS,
-                                    amplitude=1,
-                                )
-
-                                weights[q] = weight
-                        elif i != 0:
-                            weight = weights[q]
-
-                    measure_pulse_parameters = {"phase": 0}
-
-                    if i == len(self.sequence[measure_channel_name(qubit)]) - 1:
-                        reset_delay = relaxation_time * NANO_TO_SECONDS
-                    else:
-                        reset_delay = 0
-
-                    exp.measure(
-                        acquire_signal=acquire_channel_name(qubit),
-                        handle=f"sequence{q}_{i}",
-                        integration_kernel=weight,
-                        integration_kernel_parameters=None,
-                        integration_length=None,
-                        measure_signal=measure_channel_name(qubit),
-                        measure_pulse=pulse.zhpulse,
-                        measure_pulse_length=round(
-                            pulse.pulse.duration * NANO_TO_SECONDS, 9
-                        ),
-                        measure_pulse_parameters=measure_pulse_parameters,
-                        measure_pulse_amplitude=None,
-                        acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
-                        reset_delay=reset_delay,
-                    )
 
     @staticmethod
     def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[np.ndarray, List[Sweeper]]:
