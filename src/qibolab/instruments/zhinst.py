@@ -201,24 +201,15 @@ class ZhPulse:
         """Zurich pulse."""
         self.zhsweepers = []
 
+        self.delay_sweeper = None
+
     # pylint: disable=R0903
     def add_sweeper(self, sweeper, qubit):
         """Add sweeper to list of sweepers associated with this pulse."""
         self.zhsweepers.append(select_sweeper(sweeper, self.pulse.type, qubit))
 
-
-class ZhSweeperLine:
-    """Zurich sweeper from qibolab sweeper for non pulse parameters Bias, Delay
-    (, power_range, local_oscillator frequency, offset ???)"""
-
-    # pylint: disable=R0903
-    def __init__(self, sweeper, pulse=None):
-        if pulse:
-            self.pulse = pulse
-            self.zhpulse = ZhPulse(pulse).zhpulse
-
-        # Need something better to store multiple sweeps on the same pulse
-        self.zhsweepers = [select_sweeper(sweeper)]
+    def add_delay_sweeper(self, sweeper):
+        self.delay_sweeper = select_sweeper(sweeper)
 
 
 class Zurich(Controller):
@@ -589,7 +580,7 @@ class Zurich(Controller):
                     if s.parameter in SWEEPER_SET:
                         zhpulse.add_sweeper(s, qubits[zhpulse.pulse.qubit])
                     if s.parameter in SWEEPER_START:
-                        zhpulses.insert(i, ZhSweeperLine(s, zhpulse.pulse))
+                        zhpulse.add_delay_sweeper(s)
 
         self.sequence = zhsequence
 
@@ -722,17 +713,16 @@ class Zurich(Controller):
     def play_sweep(self, exp, channel_name, pulse):
         """Takes care of playing the sweepers and involved pulses for different
         options."""
-        if not isinstance(pulse, ZhSweeperLine):
-            parameters = []
-            for partial_sweep in pulse.zhsweepers:
-                parameters.append(partial_sweep.uid)
-            # Recheck partial sweeps
-            if len(parameters) == 2:
-                self.play_sweep_select_dual(exp, pulse, channel_name, parameters)
-            else:
-                self.play_sweep_select_single(
-                    exp, pulse, channel_name, parameters, partial_sweep
-                )
+        parameters = []
+        for partial_sweep in pulse.zhsweepers:
+            parameters.append(partial_sweep.uid)
+        # Recheck partial sweeps
+        if len(parameters) == 2:
+            self.play_sweep_select_dual(exp, pulse, channel_name, parameters)
+        else:
+            self.play_sweep_select_single(
+                exp, pulse, channel_name, parameters, partial_sweep
+            )
 
     def flux(self, exp: lo.Experiment, channels: list[str]):
         """Qubit flux for bias sweep or pulses.
@@ -748,16 +738,16 @@ class Zurich(Controller):
                 section_uid = f"sequence_{channel_name}_{i}"
                 with exp.section(uid=section_uid, play_after=previous_section):
                     for j, pulse in enumerate(sequence):
-                        if not isinstance(pulse, ZhSweeperLine):
-                            pulse.zhpulse.uid += f"{i}_{j}"
-                            exp.delay(
-                                signal=channel_name,
-                                time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                                - time,
-                            )
-                            time = round(
-                                pulse.pulse.duration * NANO_TO_SECONDS, 9
-                            ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
+                        if pulse.delay_sweeper:
+                            exp.delay(signal=channel_name, time=pulse.delay_sweeper)
+                        pulse.zhpulse.uid += f"{i}_{j}"
+                        exp.delay(
+                            signal=channel_name,
+                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                        )
+                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                            pulse.pulse.start * NANO_TO_SECONDS, 9
+                        )
                         if pulse.zhsweepers:
                             self.play_sweep(exp, channel_name, pulse)
                         else:
@@ -779,36 +769,32 @@ class Zurich(Controller):
                 section_uid = f"sequence_{channel_name}_{i}"
                 with exp.section(uid=section_uid, play_after=previous_section):
                     for j, pulse in enumerate(sequence):
-                        if isinstance(pulse, ZhSweeperLine):
-                            exp.delay(signal=channel_name, time=pulse.zhsweepers[0])
+                        if pulse.delay_sweeper:
+                            exp.delay(signal=channel_name, time=pulse.delay_sweeper)
+                        exp.delay(
+                            signal=channel_name,
+                            time=round(pulse.pulse.start * NANO_TO_SECONDS, 9) - time,
+                        )
+                        time = round(pulse.pulse.duration * NANO_TO_SECONDS, 9) + round(
+                            pulse.pulse.start * NANO_TO_SECONDS, 9
+                        )
+                        pulse.zhpulse.uid += f"{i}_{j}"
+                        if pulse.zhsweepers:
+                            self.play_sweep(exp, channel_name, pulse)
                         else:
-                            exp.delay(
+                            exp.play(
                                 signal=channel_name,
-                                time=round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                                - time,
+                                pulse=pulse.zhpulse,
+                                phase=pulse.pulse.relative_phase,
                             )
-                            time = round(
-                                pulse.pulse.duration * NANO_TO_SECONDS, 9
-                            ) + round(pulse.pulse.start * NANO_TO_SECONDS, 9)
-                            pulse.zhpulse.uid += f"{i}_{j}"
-                            if pulse.zhsweepers:
-                                self.play_sweep(exp, channel_name, pulse)
-                            else:
-                                exp.play(
-                                    signal=channel_name,
-                                    pulse=pulse.zhpulse,
-                                    phase=pulse.pulse.relative_phase,
-                                )
 
-                    if len(self.sequence[channel_name_measure]) > 0 and isinstance(
-                        self.sequence[channel_name_measure][0], ZhSweeperLine
+                    if (
+                        len(self.sequence[channel_name_measure]) > 0
+                        and self.sequence[channel_name_measure][0].delay_sweeper
                     ):
                         exp.delay(
                             signal=channel_name,
                             time=self.sequence[channel_name_measure][0].zhsweepers[0],
-                        )
-                        self.sequence[channel_name_measure].remove(
-                            self.sequence[channel_name_measure][0]
                         )
 
                 previous_section = section_uid
