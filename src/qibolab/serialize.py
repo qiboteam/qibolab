@@ -172,12 +172,19 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     # Qblox modules settings are dictionaries and not dataclasses
     data = {}
     for name, instrument in instruments.items():
-        settings = instrument.settings
-        if settings is not None:
-            if isinstance(settings, dict):
+        try:
+            settings = instrument.settings
+            if settings is not None:
+                if isinstance(settings, dict):
+                    data[name] = settings
+                else:
+                    data[name] = settings.dump()
+        except AttributeError:
+            # TODO: Migrate all instruments to this approach
+            # (I think it is also useful for qblox)
+            settings = instrument.dump()
+            if len(settings) > 0:
                 data[name] = settings
-            else:
-                data[name] = settings.dump()
     return data
 
 

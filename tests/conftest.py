@@ -6,7 +6,14 @@ import pytest
 from qibolab import PLATFORMS, create_platform
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
-TESTING_PLATFORM_NAMES = ["dummy_couplers", "qm", "qblox", "rfsoc", "zurich"]
+TESTING_PLATFORM_NAMES = [
+    "dummy_couplers",
+    "qm",
+    "qm_octave",
+    "qblox",
+    "rfsoc",
+    "zurich",
+]
 """Platforms used for testing without access to real instruments."""
 
 

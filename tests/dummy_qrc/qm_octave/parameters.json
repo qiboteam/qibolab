@@ -31,38 +31,60 @@
     ],
     "instruments": {
         "con1": {
-            "i1": {"gain": 0},
-            "i2": {"gain": 0}
+            "i1": {
+                "gain": 0
+            },
+            "i2": {
+                "gain": 0
+            }
         },
         "con2": {
-            "o2": {
-                "filter": {
-                    "feedforward": [1.0684635881381783, -1.0163217174522334],
-                    "feedback": [0.947858129314055]
-                }
+            "i1": {
+                "gain": 0
             },
-            "i1": {"gain": 0},
-            "i2": {"gain": 0}
+            "i2": {
+                "gain": 0
+            }
         },
-        "lo_readout_a": {
-            "frequency": 7300000000,
-            "power": 18
+        "octave1": {
+            "o1": {
+                "lo_frequency": 4700000000,
+                "gain": 0
+            },
+            "o2": {
+                "lo_frequency": 5600000000,
+                "gain": 0
+            },
+            "o3": {
+                "lo_frequency": 6500000000,
+                "gain": 0
+            },
+            "o4": {
+                "lo_frequency": 6500000000,
+                "gain": 0
+            },
+            "o5": {
+                "lo_frequency": 7300000000,
+                "gain": 0
+            },
+            "i1": {
+                "lo_frequency": 7300000000
+            }
         },
-        "lo_readout_b": {
-            "frequency": 7900000000,
-            "power": 15
+        "octave2": {
+            "o5": {
+                "lo_frequency": 7900000000,
+                "gain": 0
+            },
+            "i1": {
+                "lo_frequency": 7900000000
+            }
         },
-        "lo_drive_low": {
-            "frequency": 4700000000,
-            "power": 16
-        },
-        "lo_drive_mid": {
-            "frequency": 5600000000,
-            "power": 16
-        },
-        "lo_drive_high": {
-            "frequency": 6500000000,
-            "power": 16
+        "octave3": {
+            "o1": {
+                "lo_frequency": 4700000000,
+                "gain": 0
+            }
         },
         "twpa_a": {
             "frequency": 6511000000,
