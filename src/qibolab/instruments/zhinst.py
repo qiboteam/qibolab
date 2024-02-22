@@ -1182,12 +1182,6 @@ class Zurich(Controller):
                         log.warning("Sweepers were reordered")
         return rearranging_axes, sweepers
 
-    def offsets_off(self):
-        """Sets the offsets from the HDAWGs to 0 after each experiment."""
-        for sigout in range(0, 8):
-            self.session.devices["device_hdawg"].awgs[0].sigouts[sigout].offset = 0
-        self.session.devices["device_hdawg2"].awgs[0].sigouts[0].offset = 0
-
     def sweep(self, qubits, couplers, sequence: PulseSequence, options, *sweepers):
         """Play pulse and sweepers sequence."""
 
@@ -1227,7 +1221,6 @@ class Zurich(Controller):
                     qubit = ropulse.pulse.qubit
                     results[serial] = results[qubit] = options.results_type(data)
 
-        self.offsets_off()
         # html containing the pulse sequence schedule
         # lo.show_pulse_sheet("pulses", self.exp)
         return results
