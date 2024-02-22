@@ -48,10 +48,14 @@ def load_qubits(
     :class: `qibolab.qubits.QubitPair`
     objects.
     """
-    qubits = {
-        json.loads(q): Qubit(json.loads(q), **char)
-        for q, char in runcard["characterization"]["single_qubit"].items()
-    }
+    qubits = {}
+    for q, char in runcard["characterization"]["single_qubit"].items():
+        raw_qubit = Qubit(json.loads(q), **char)
+        raw_qubit.crosstalk_matrix = {
+            json.loads(key): value for key, value in raw_qubit.crosstalk_matrix.items()
+        }
+        qubits[json.loads(q)] = raw_qubit
+
     if kernels is not None:
         for q in kernels:
             qubits[q].kernel = kernels[q]
