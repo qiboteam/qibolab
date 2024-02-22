@@ -754,72 +754,22 @@ class Zurich(Controller):
             previous_section = section_uid
 
     @staticmethod
-    def play_sweep_select_single(exp, pulse, channel_name, parameters, partial_sweep):
+    def play_sweep(exp, channel_name, pulse):
         """Play Zurich pulse when a single sweeper is involved."""
-        if any("amplitude" in param for param in parameters):
-            pulse.zhpulse.amplitude *= max(pulse.zhsweepers[0].values)
-            pulse.zhsweepers[0].values /= max(pulse.zhsweepers[0].values)
-            exp.play(
-                signal=channel_name,
-                pulse=pulse.zhpulse,
-                amplitude=pulse.zhsweepers[0],
-                phase=pulse.pulse.relative_phase,
-            )
-        elif any("duration" in param for param in parameters):
-            exp.play(
-                signal=channel_name,
-                pulse=pulse.zhpulse,
-                length=pulse.zhsweepers[0],
-                phase=pulse.pulse.relative_phase,
-            )
-        elif any("relative_phase" in param for param in parameters):
-            exp.play(
-                signal=channel_name,
-                pulse=pulse.zhpulse,
-                phase=pulse.zhsweepers[0],
-            )
-        elif "frequency" in partial_sweep.uid or partial_sweep.uid == "start":
-            exp.play(
-                signal=channel_name,
-                pulse=pulse.zhpulse,
-                phase=pulse.pulse.relative_phase,
-            )
+        play_parameters = {}
+        for zhs in pulse.zhsweepers:
+            if zhs.uid == "amplitude":
+                pulse.zhpulse.amplitude *= max(zhs.values)
+                zhs.values /= max(zhs.values)
+                play_parameters["amplitude"] = zhs
+            if zhs.uid == "duration":
+                play_parameters["length"] = zhs
+            if zhs.uid == "relative_phase":
+                play_parameters["phase"] = zhs
+        if "phase" not in play_parameters:
+            play_parameters["phase"] = pulse.pulse.relative_phase
 
-    # Hardcoded for the flux pulse for 2q gates
-    @staticmethod
-    def play_sweep_select_dual(exp, pulse, channel_name, parameters):
-        """Play Zurich pulse when two sweepers are involved on the same
-        pulse."""
-        if "amplitude" in parameters and "duration" in parameters:
-            for sweeper in pulse.zhsweepers:
-                if sweeper.uid == "amplitude":
-                    sweeper_amp_index = pulse.zhsweepers.index(sweeper)
-                    sweeper.values = sweeper.values.copy()
-                    pulse.zhpulse.amplitude *= max(abs(sweeper.values))
-                    sweeper.values /= max(abs(sweeper.values))
-                else:
-                    sweeper_dur_index = pulse.zhsweepers.index(sweeper)
-
-            exp.play(
-                signal=channel_name,
-                pulse=pulse.zhpulse,
-                amplitude=pulse.zhsweepers[sweeper_amp_index],
-                length=pulse.zhsweepers[sweeper_dur_index],
-            )
-
-    def play_sweep(self, exp, channel_name, pulse):
-        """Takes care of playing the sweepers and involved pulses for different
-        options."""
-        parameters = []
-        for partial_sweep in pulse.zhsweepers:
-            parameters.append(partial_sweep.uid)
-        # Recheck partial sweeps
-        if len(parameters) == 2:
-            self.play_sweep_select_dual(exp, pulse, channel_name, parameters)
-        else:
-            self.play_sweep_select_single(
-                exp, pulse, channel_name, parameters, partial_sweep
-            )
+        exp.play(signal=channel_name, pulse=pulse.zhpulse, **play_parameters)
 
     @staticmethod
     def rearrange_sweepers(sweepers: List[Sweeper]) -> Tuple[np.ndarray, List[Sweeper]]:
