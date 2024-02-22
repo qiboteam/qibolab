@@ -261,6 +261,7 @@ class Zurich(Controller):
 
         self.sweepers = []
         self.nt_sweeps = []
+        self.rt_sweeps = []
         "Storing sweepers"
         # Improve the storing of multiple sweeps
 
@@ -586,8 +587,6 @@ class Zurich(Controller):
 
         set_acquisition_type()
 
-        self.nt_sweeps, self.sweepers = classify_sweepers(self.sweepers)
-
     def create_exp(self, qubits, couplers, options):
         """Zurich experiment initialization using their Experiment class."""
 
@@ -625,7 +624,7 @@ class Zurich(Controller):
             averaging_mode=exp_options.averaging_mode,
         ):
             # Recursion loop for sweepers or just play a sequence
-            if len(self.sweepers) > 0:
+            if len(self.rt_sweeps) > 0:
                 self.sweep_recursion(qubits, couplers, exp, exp_calib, exp_options)
             else:
                 self.select_exp(exp, qubits, couplers, exp_options)
@@ -856,9 +855,8 @@ class Zurich(Controller):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}
-        self.nt_sweeps = []
-        sweepers = list(sweepers)
-        rearranging_axes, sweepers = self.rearrange_sweepers(sweepers)
+        self.nt_sweeps, self.rt_sweeps = classify_sweepers(self.sweepers)
+        rearranging_axes, sweepers = self.rearrange_sweepers(list(sweepers))
         self.sweepers = sweepers
         # if using singleshot, the first axis contains shots,
         # i.e.: (nshots, sweeper_1, sweeper_2)
@@ -894,10 +892,10 @@ class Zurich(Controller):
     def sweep_recursion(self, qubits, couplers, exp, exp_calib, exp_options):
         """Sweepers recursion for multiple nested Real Time sweepers."""
 
-        sweeper = self.sweepers[0]
+        sweeper = self.rt_sweeps[0]
 
-        i = len(self.sweepers) - 1
-        self.sweepers.remove(sweeper)
+        i = len(self.rt_sweeps) - 1
+        self.rt_sweeps.remove(sweeper)
         parameter = None
 
         if sweeper.parameter is Parameter.frequency:
@@ -906,7 +904,6 @@ class Zurich(Controller):
                 zhsweeper = select_sweeper(
                     sweeper, pulse.type, qubits[sweeper.pulses[0].qubit]
                 )
-                zhsweeper.uid = "frequency"  # Changing the name from "frequency" breaks it f"frequency_{i}
                 if line == "readout":
                     channel_name = measure_channel_name(qubits[pulse.qubit])
                 else:
@@ -944,7 +941,7 @@ class Zurich(Controller):
             parameter=parameter,
             reset_oscillator_phase=True,
         ):
-            if len(self.sweepers) > 0:
+            if len(self.rt_sweeps) > 0:
                 self.sweep_recursion(qubits, couplers, exp, exp_calib, exp_options)
             else:
                 self.select_exp(exp, qubits, couplers, exp_options)
