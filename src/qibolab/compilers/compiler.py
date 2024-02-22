@@ -8,6 +8,7 @@ from qibolab.compilers.default import (
     cnot_rule,
     cz_rule,
     gpi2_rule,
+    gpi_rule,
     identity_rule,
     measurement_rule,
     rz_rule,
@@ -52,6 +53,7 @@ class Compiler:
                 gates.CZ: cz_rule,
                 gates.CNOT: cnot_rule,
                 gates.GPI2: gpi2_rule,
+                gates.GPI: gpi_rule,
                 gates.M: measurement_rule,
             }
         )

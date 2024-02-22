@@ -23,8 +23,7 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.instruments.qm import QMSim
-from qibolab.pulses import SNZ, PulseSequence, Rectangular
+from qibolab.pulses import SNZ, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile
@@ -44,10 +43,11 @@ def simulator(request):
         pytest.skip("Skipping QM simulator tests because address was not provided.")
 
     platform = create_platform("qm")
-    duration = request.config.getoption("--simulation-duration")
-    controller = QMSim("qmopx", address, simulation_duration=duration, cloud=True)
+    controller = platform.instruments["qm"]
+    controller.simulation_duration = request.config.getoption("--simulation-duration")
     controller.time_of_flight = 280
-    platform.instruments["qmopx"] = controller
+    # controller.cloud = True
+
     platform.connect()
     yield platform
     platform.disconnect()
@@ -388,12 +388,13 @@ def test_qmsim_chevron(simulator, folder, sweep):
     lowfreq, highfreq = 1, 2
     initialize_1 = simulator.create_RX_pulse(lowfreq, start=0, relative_phase=0)
     initialize_2 = simulator.create_RX_pulse(highfreq, start=0, relative_phase=0)
-    flux_pulse = FluxPulse(
+    flux_pulse = Pulse(
         start=initialize_2.finish,
         duration=31,
         amplitude=0.05,
         shape=Rectangular(),
         channel=simulator.qubits[highfreq].flux.name,
+        type=PulseType.FLUX,
         qubit=highfreq,
     )
     measure_lowfreq = simulator.create_qubit_readout_pulse(

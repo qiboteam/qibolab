@@ -30,10 +30,10 @@ qblox-instruments = { version = "0.11.0", optional = true }
 qcodes = { version = "^0.37.0", optional = true }
 qcodes_contrib_drivers = { version = "0.18.0", optional = true }
 pyvisa-py = { version = "0.5.3", optional = true }
-qm-qua = { version = "==1.1.1", optional = true }
-qualang-tools = { version = "==0.14.0", optional = true }
+qm-qua = { version = "^1.1.6", optional = true }
+qualang-tools = { version = "^0.15.0", optional = true}
 setuptools = { version = ">67.0.0", optional = true }
-laboneq = { version = "==2.21.0", optional = true }
+laboneq = { version = "==2.24.0", optional = true }
 qibosoq = { version = ">=0.0.4,<0.2", optional = true }
 
 [tool.poetry.group.dev]
@@ -60,8 +60,8 @@ qblox-instruments = "0.11.0"
 qcodes = "^0.37.0"
 qcodes_contrib_drivers = "0.18.0"
 qibosoq = ">=0.0.4,<0.2"
-qualang-tools = "==0.14.0"
-laboneq = "==2.21.0"
+qualang-tools = "^0.15.0"
+laboneq = "==2.24.0"
 
 [tool.poetry.group.tests]
 optional = true

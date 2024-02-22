@@ -73,9 +73,9 @@ def _sweep_frequency(sweepers, qubits, qmsequence, relaxation_time):
     for pulse in sweeper.pulses:
         qubit = qubits[pulse.qubit]
         if pulse.type is PulseType.DRIVE:
-            lo_frequency = math.floor(qubit.drive.local_oscillator.frequency)
+            lo_frequency = math.floor(qubit.drive.lo_frequency)
         elif pulse.type is PulseType.READOUT:
-            lo_frequency = math.floor(qubit.readout.local_oscillator.frequency)
+            lo_frequency = math.floor(qubit.readout.lo_frequency)
         else:
             raise_error(
                 NotImplementedError,
