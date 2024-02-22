@@ -206,7 +206,9 @@ class ZhPulse:
     # pylint: disable=R0903
     def add_sweeper(self, sweeper, qubit):
         """Add sweeper to list of sweepers associated with this pulse."""
-        self.zhsweepers.append(select_sweeper(sweeper, self.pulse.type, qubit))
+        self.zhsweepers.append(
+            (sweeper.parameter, select_sweeper(sweeper, self.pulse.type, qubit))
+        )
 
     def add_delay_sweeper(self, sweeper):
         self.delay_sweeper = select_sweeper(sweeper)
@@ -757,14 +759,14 @@ class Zurich(Controller):
     def play_sweep(exp, channel_name, pulse):
         """Play Zurich pulse when a single sweeper is involved."""
         play_parameters = {}
-        for zhs in pulse.zhsweepers:
-            if zhs.uid == "amplitude":
+        for p, zhs in pulse.zhsweepers:
+            if p is Parameter.amplitude:
                 pulse.zhpulse.amplitude *= max(zhs.values)
                 zhs.values /= max(zhs.values)
                 play_parameters["amplitude"] = zhs
-            if zhs.uid == "duration":
+            if p is Parameter.duration:
                 play_parameters["length"] = zhs
-            if zhs.uid == "relative_phase":
+            if p is Parameter.relative_phase:
                 play_parameters["phase"] = zhs
         if "phase" not in play_parameters:
             play_parameters["phase"] = pulse.pulse.relative_phase
