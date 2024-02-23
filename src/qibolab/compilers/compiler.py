@@ -15,7 +15,7 @@ from qibolab.compilers.default import (
     u3_rule,
     z_rule,
 )
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import Delay, PulseSequence, PulseType
 
 
 @dataclass
@@ -98,33 +98,6 @@ class Compiler:
 
         return inner
 
-    def _compile_gate(
-        self, gate, platform, sequence, virtual_z_phases, moment_start, delays
-    ):
-        """Adds a single gate to the pulse sequence."""
-        rule = self[gate.__class__]
-        # get local sequence and phases for the current gate
-        gate_sequence, gate_phases = rule(gate, platform)
-
-        # update global pulse sequence
-        # determine the right start time based on the availability of the qubits involved
-        all_qubits = {*gate_sequence.qubits, *gate.qubits}
-        start = max(
-            *[
-                sequence.get_qubit_pulses(qubit).finish + delays[qubit]
-                for qubit in all_qubits
-            ],
-            moment_start,
-        )
-        # shift start time and phase according to the global sequence
-        for pulse in gate_sequence:
-            pulse.start += start
-            if pulse.type is not PulseType.READOUT:
-                pulse.relative_phase += virtual_z_phases[pulse.qubit]
-            sequence.append(pulse)
-
-        return gate_sequence, gate_phases
-
     def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
 
@@ -144,20 +117,33 @@ class Compiler:
         virtual_z_phases = defaultdict(int)
 
         measurement_map = {}
+        qubit_clock = defaultdict(int)
+        channel_clock = defaultdict(int)
         # process circuit gates
-        delays = defaultdict(int)
         for moment in circuit.queue.moments:
-            moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
                 if isinstance(gate, gates.Align):
                     for qubit in gate.qubits:
-                        delays[qubit] += gate.delay
+                        # TODO: do something
+                        pass
                     continue
-                gate_sequence, gate_phases = self._compile_gate(
-                    gate, platform, sequence, virtual_z_phases, moment_start, delays
-                )
-                for qubit in gate.qubits:
-                    delays[qubit] = 0
+
+                rule = self[gate.__class__]
+                # get local sequence and phases for the current gate
+                gate_sequence, gate_phases = rule(gate, platform)
+                for pulse in gate_sequence:
+                    if pulse.type is not PulseType.READOUT:
+                        pulse.relative_phase += virtual_z_phases[pulse.qubit]
+
+                    if qubit_clock[pulse.qubit] > channel_clock[pulse.qubit]:
+                        delay = qubit_clock[pulse.qubit] - channel_clock[pulse.channel]
+                        sequence.append(Delay(delay, pulse.channel))
+                        channel_clock[pulse.channel] += delay
+
+                    sequence.append(pulse)
+                    # update clocks
+                    qubit_clock[pulse.qubit] += pulse.duration
+                    channel_clock[pulse.channel] += pulse.duration
 
                 # update virtual Z phases
                 for qubit, phase in gate_phases.items():
