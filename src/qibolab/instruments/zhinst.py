@@ -806,9 +806,9 @@ class Zurich(Controller):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}
+        self.sweepers = list(sweepers)
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(self.sweepers)
         swapped_axis_pair, self.rt_sweeps = self.rearrange_sweepers(self.rt_sweeps)
-        self.sweepers = list(sweepers)
         swapped_axis_pair += len(self.nt_sweeps)
         # if using singleshot, the first axis contains shots,
         # i.e.: (nshots, sweeper_1, sweeper_2)
