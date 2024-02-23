@@ -100,25 +100,18 @@ class Shape(ABC):
 
 
 @dataclass(frozen=True)
-class Rectangular(PulseShape):
-    """Rectangular pulse shape."""
+class Rectangular(Shape):
+    """Rectangular envelope."""
 
-    def __init__(self):
-        self.name = "Rectangular"
-        self.pulse: "Pulse" = None
+    amplitude: float
 
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        return self.pulse.amplitude * np.ones(num_samples)
+    def i(self, times: Times) -> Waveform:
+        """Generate a rectangular envelope."""
+        return self.amplitude * np.ones_like(times)
 
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        return np.zeros(num_samples)
-
-    def __repr__(self):
-        return f"{self.name}()"
+    def q(self, times: Times) -> Waveform:
+        """Generate an identically null signal."""
+        return np.zeros_like(times)
 
 
 class Exponential(PulseShape):
