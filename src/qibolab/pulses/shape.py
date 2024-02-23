@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 import numpy.typing as npt
@@ -112,6 +113,12 @@ class Rectangular(Shape):
     def q(self, times: Times) -> Waveform:
         """Generate an identically null signal."""
         return np.zeros_like(times)
+
+
+class Shapes(Enum):
+    """Available pulse shapes."""
+
+    rectangular = Rectangular
 
 
 class Exponential(PulseShape):
