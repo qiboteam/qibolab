@@ -1,6 +1,5 @@
 """A platform for executing quantum algorithms."""
 
-import copy
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Tuple
@@ -43,15 +42,23 @@ def unroll_sequences(
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
+    clock = defaultdict(int)
     start = 0
     for sequence in sequences:
         for pulse in sequence:
-            new_pulse = copy.deepcopy(pulse)
-            new_pulse.start += start
-            total_sequence.append(new_pulse)
+            if clock[pulse.channel] < start:
+                delay = start - clock[pulse.channel]
+                total_sequence.append(Delay(delay, pulse.channel))
+
+            total_sequence.append(pulse)
+            clock[pulse.channel] += pulse.duration
+
             if pulse.type is PulseType.READOUT:
-                readout_map[pulse.id].append(new_pulse.id)
-        start = total_sequence.finish + relaxation_time
+                # TODO: Fix unrolling results
+                readout_map[pulse.id].append(pulse.id)
+
+        start = sequence.duration + relaxation_time
+
     return total_sequence, readout_map
 
 
