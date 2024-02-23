@@ -38,7 +38,7 @@ class Pulse:
 
     The value has to be in the range [10e6 to 300e6].
     """
-    relative_phase: float
+    phase: float
     """Relative phase of the pulse, in radians."""
     shape: PulseShape
     """Pulse shape, as a PulseShape object.

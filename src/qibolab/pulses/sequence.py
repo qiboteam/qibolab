@@ -94,14 +94,21 @@ class PulseSequence(list):
         return new_pc
 
     @property
+    def pulses_per_channel(self):
+        """Return a dictionary with the sequence per channel."""
+        sequences = defaultdict(self.__class__)
+        for pulse in self:
+            sequences[pulse.channel].append(pulse)
+        return sequences
+
+    @property
     def duration(self) -> int:
         """The time when the last pulse of the sequence finishes."""
-        channel_pulses = defaultdict(list)
-        for pulse in self:
-            channel_pulses[pulse.channel].append(pulse)
-        return max(
-            sum(p.duration for p in pulses) for pulses in channel_pulses.values()
-        )
+        channel_pulses = self.pulses_per_channel
+        if len(channel_pulses) == 1:
+            pulses = next(iter(channel_pulses.values()))
+            return sum(pulse.duration for pulse in pulses)
+        return max(sequence.duration for sequence in channel_pulses.values())
 
     @property
     def channels(self) -> list:

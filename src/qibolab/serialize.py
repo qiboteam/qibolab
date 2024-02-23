@@ -99,13 +99,18 @@ def load_qubits(
 
 
 def _load_pulse(pulse_kwargs, qubit=None):
-    _type = pulse_kwargs["type"]
+    pulse_type = pulse_kwargs.pop("type")
     q = pulse_kwargs.pop("qubit", qubit.name)
-    if _type == "dl":
+    if pulse_type == "dl":
         return Delay(**pulse_kwargs)
 
-    pulse = Pulse(**pulse_kwargs, qubit=q)
-    channel_type = "flux" if pulse.type is PulseType.COUPLERFLUX else pulse.type.lower()
+    if pulse_type == "qf" or pulse_type == "cf":
+        pulse = Pulse.flux(**pulse_kwargs, qubit=q)
+    else:
+        pulse = Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
+    channel_type = (
+        "flux" if pulse.type is PulseType.COUPLERFLUX else pulse.type.name.lower()
+    )
     pulse.channel = getattr(qubit, channel_type)
     return pulse
 
@@ -127,7 +132,7 @@ def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
 def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
     sequences = {}
     for name, seq_kwargs in gates.items():
-        if isinstance(sequence, dict):
+        if isinstance(seq_kwargs, dict):
             seq_kwargs = [seq_kwargs]
 
         sequence = PulseSequence()
