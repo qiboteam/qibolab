@@ -581,7 +581,7 @@ class Zurich(Controller):
 
         def set_acquisition_type():
             for sweeper in self.sweepers:
-                if sweeper.parameter.name in {Parameter.frequency, Parameter.amplitude}:
+                if sweeper.parameter in {Parameter.frequency, Parameter.amplitude}:
                     for pulse in sweeper.pulses:
                         if pulse.type is PulseType.READOUT:
                             # FIXME: case of multiple pulses
