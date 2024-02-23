@@ -15,66 +15,64 @@ def identity_rule(gate, platform):
 
 def z_rule(gate, platform):
     """Z gate applied virtually."""
-    qubit = gate.target_qubits[0]
-    return PulseSequence(), {qubit: math.pi}
+    qubit = platform.get_qubit(gate.target_qubits[0])
+    return PulseSequence(), {qubit.name: math.pi}
 
 
 def rz_rule(gate, platform):
     """RZ gate applied virtually."""
-    qubit = gate.target_qubits[0]
-    return PulseSequence(), {qubit: gate.parameters[0]}
+    qubit = platform.get_qubit(gate.target_qubits[0])
+    return PulseSequence(), {qubit.name: gate.parameters[0]}
 
 
 def gpi2_rule(gate, platform):
     """Rule for GPI2."""
-    qubit = gate.target_qubits[0]
+    qubit = platform.get_qubit(gate.target_qubits[0])
     theta = gate.parameters[0]
     sequence = PulseSequence()
-    pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
+    pulse = qubit.native_gates.RX90
+    pulse.relative_phase = theta
     sequence.append(pulse)
     return sequence, {}
 
 
 def gpi_rule(gate, platform):
     """Rule for GPI."""
-    qubit = gate.target_qubits[0]
+    qubit = platform.get_qubit(gate.target_qubits[0])
     theta = gate.parameters[0]
     sequence = PulseSequence()
     # the following definition has a global phase difference compare to
     # to the matrix representation. See
     # https://github.com/qiboteam/qibolab/pull/804#pullrequestreview-1890205509
     # for more detail.
-    pulse = platform.create_RX_pulse(qubit, start=0, relative_phase=theta)
+    pulse = qubit.native_gates.RX
+    pulse.relative_phase = theta
     sequence.append(pulse)
     return sequence, {}
 
 
 def u3_rule(gate, platform):
     """U3 applied as RZ-RX90-RZ-RX90-RZ."""
-    qubit = gate.target_qubits[0]
+    qubit = platform.get_qubit(gate.target_qubits[0])
     # Transform gate to U3 and add pi/2-pulses
     theta, phi, lam = gate.parameters
     # apply RZ(lam)
-    virtual_z_phases = {qubit: lam}
+    virtual_z_phases = {qubit.name: lam}
     sequence = PulseSequence()
     # Fetch pi/2 pulse from calibration
-    RX90_pulse_1 = platform.create_RX90_pulse(
-        qubit, start=0, relative_phase=virtual_z_phases[qubit]
-    )
+    rx90_pulse1 = qubit.native_gates.RX90
+    rx90_pulse1.relative_phase = virtual_z_phases[qubit.name]
     # apply RX(pi/2)
-    sequence.append(RX90_pulse_1)
+    sequence.append(rx90_pulse1)
     # apply RZ(theta)
-    virtual_z_phases[qubit] += theta
+    virtual_z_phases[qubit.name] += theta
     # Fetch pi/2 pulse from calibration
-    RX90_pulse_2 = platform.create_RX90_pulse(
-        qubit,
-        start=RX90_pulse_1.finish,
-        relative_phase=virtual_z_phases[qubit] - math.pi,
-    )
+    rx90_pulse2 = qubit.native_gates.RX90
+    rx90_pulse2.relative_phase = (virtual_z_phases[qubit.name] - math.pi,)
     # apply RX(-pi/2)
-    sequence.append(RX90_pulse_2)
+    sequence.append(rx90_pulse2)
     # apply RZ(phi)
-    virtual_z_phases[qubit] += phi
+    virtual_z_phases[qubit.name] += phi
 
     return sequence, virtual_z_phases
 
@@ -85,18 +83,19 @@ def cz_rule(gate, platform):
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    return platform.create_CZ_pulse_sequence(gate.qubits)
+    pair = platform.pairs[tuple(platform.get_qubit(q) for q in gate.qubits)]
+    return pair.native_gates.CZ
 
 
 def cnot_rule(gate, platform):
     """CNOT applied as defined in the platform runcard."""
-    return platform.create_CNOT_pulse_sequence(gate.qubits)
+    pair = platform.pairs[tuple(platform.get_qubit(q) for q in gate.qubits)]
+    return pair.native_gates.CNOT
 
 
 def measurement_rule(gate, platform):
     """Measurement gate applied using the platform readout pulse."""
-    sequence = PulseSequence()
-    for qubit in gate.target_qubits:
-        MZ_pulse = platform.create_MZ_pulse(qubit, start=0)
-        sequence.append(MZ_pulse)
+    sequence = PulseSequence(
+        [platform.get_qubit(q).native_gates.MZ for q in gate.qubits]
+    )
     return sequence, {}
