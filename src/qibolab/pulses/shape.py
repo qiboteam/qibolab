@@ -1,7 +1,7 @@
 """PulseShape class."""
 
-import re
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
@@ -14,6 +14,7 @@ Used for generating waveform envelopes if the instruments do not provide
 a different value.
 """
 
+Times = npt.NDArray[np.float64]
 # TODO: they could be distinguished among them, and distinguished from generic float
 # arrays, using the NewType pattern -> but this require some more effort to encforce
 # types throughout the whole code base
@@ -79,58 +80,26 @@ def demodulate(
     return np.sqrt(2) * np.einsum("ijt,jt->it", demod, modulated)
 
 
-class PulseShape(ABC):
+class Shape(ABC):
     """Pulse envelopes.
 
     Generates both i (in-phase) and q (quadrature) components.
     """
 
-    pulse = None
-    """Pulse (Pulse): the pulse associated with it.
-
-    Its parameters are used to generate pulse waveforms.
-    """
+    @abstractmethod
+    def i(self, times: Times) -> Waveform:
+        """In-phase envelope."""
 
     @abstractmethod
-    def envelope_waveform_i(
-        self, sampling_rate=SAMPLING_RATE
-    ) -> Waveform:  # pragma: no cover
-        raise NotImplementedError
+    def q(self, times: Times) -> Waveform:
+        """Quadrature envelope."""
 
-    @abstractmethod
-    def envelope_waveform_q(
-        self, sampling_rate=SAMPLING_RATE
-    ) -> Waveform:  # pragma: no cover
-        raise NotImplementedError
-
-    def envelope_waveforms(self, sampling_rate=SAMPLING_RATE):
-        """A tuple with the i and q envelope waveforms of the pulse."""
-
-        return (
-            self.envelope_waveform_i(sampling_rate),
-            self.envelope_waveform_q(sampling_rate),
-        )
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        return isinstance(item, type(self))
-
-    @staticmethod
-    def eval(value: str) -> "PulseShape":
-        """Deserialize string representation.
-
-        .. todo::
-
-            To be replaced by proper serialization.
-        """
-        shape_name = re.findall(r"(\w+)", value)[0]
-        if shape_name not in globals():
-            raise ValueError(f"shape {value} not found")
-        shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
-        # TODO: create multiple tests to prove regex working correctly
-        return globals()[shape_name](*shape_parameters)
+    def envelopes(self, times: Times) -> IqWaveform:
+        """Stacked i and q envelope waveforms of the pulse."""
+        return np.array(self.i(times), self.q(times))
 
 
+@dataclass(frozen=True)
 class Rectangular(PulseShape):
     """Rectangular pulse shape."""
 
