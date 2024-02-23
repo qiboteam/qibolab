@@ -79,17 +79,6 @@ def demodulate(
     return np.sqrt(2) * np.einsum("ijt,jt->it", demod, modulated)
 
 
-class ShapeInitError(RuntimeError):
-    """Error raised when a pulse has not been fully defined."""
-
-    default_msg = "PulseShape attribute pulse must be initialised in order to be able to generate pulse waveforms"
-
-    def __init__(self, msg=None, *args):
-        if msg is None:
-            msg = self.default_msg
-        super().__init__(msg, *args)
-
-
 class PulseShape(ABC):
     """Pulse envelopes.
 
@@ -151,19 +140,13 @@ class Rectangular(PulseShape):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            return self.pulse.amplitude * np.ones(num_samples)
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        return self.pulse.amplitude * np.ones(num_samples)
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            return np.zeros(num_samples)
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        return np.zeros(num_samples)
 
     def __repr__(self):
         return f"{self.name}()"
@@ -192,28 +175,21 @@ class Exponential(PulseShape):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            x = np.arange(0, num_samples, 1)
-            return (
-                self.pulse.amplitude
-                * (
-                    (np.ones(num_samples) * np.exp(-x / self.upsilon))
-                    + self.g * np.exp(-x / self.tau)
-                )
-                / (1 + self.g)
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        x = np.arange(0, num_samples, 1)
+        return (
+            self.pulse.amplitude
+            * (
+                (np.ones(num_samples) * np.exp(-x / self.upsilon))
+                + self.g * np.exp(-x / self.tau)
             )
-
-        raise ShapeInitError
+            / (1 + self.g)
+        )
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            return np.zeros(num_samples)
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        return np.zeros(num_samples)
 
     def __repr__(self):
         return f"{self.name}({format(self.tau, '.3f').rstrip('0').rstrip('.')}, {format(self.upsilon, '.3f').rstrip('0').rstrip('.')}, {format(self.g, '.3f').rstrip('0').rstrip('.')})"
@@ -258,11 +234,8 @@ class Gaussian(PulseShape):
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            return np.zeros(num_samples)
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        return np.zeros(num_samples)
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')})"
@@ -295,41 +268,34 @@ class GaussianSquare(PulseShape):
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
-        if self.pulse:
+        def gaussian(t, rel_sigma, gaussian_samples):
+            mu = (2 * gaussian_samples - 1) / 2
+            sigma = (2 * gaussian_samples) / rel_sigma
+            return np.exp(-0.5 * ((t - mu) / sigma) ** 2)
 
-            def gaussian(t, rel_sigma, gaussian_samples):
-                mu = (2 * gaussian_samples - 1) / 2
-                sigma = (2 * gaussian_samples) / rel_sigma
-                return np.exp(-0.5 * ((t - mu) / sigma) ** 2)
+        def fvec(t, gaussian_samples, rel_sigma, length=None):
+            if length is None:
+                length = t.shape[0]
 
-            def fvec(t, gaussian_samples, rel_sigma, length=None):
-                if length is None:
-                    length = t.shape[0]
+            pulse = np.ones_like(t, dtype=float)
+            rise = t < gaussian_samples
+            fall = t > length - gaussian_samples - 1
+            pulse[rise] = gaussian(t[rise], rel_sigma, gaussian_samples)
+            pulse[fall] = gaussian(t[rise], rel_sigma, gaussian_samples)[::-1]
+            return pulse
 
-                pulse = np.ones_like(t, dtype=float)
-                rise = t < gaussian_samples
-                fall = t > length - gaussian_samples - 1
-                pulse[rise] = gaussian(t[rise], rel_sigma, gaussian_samples)
-                pulse[fall] = gaussian(t[rise], rel_sigma, gaussian_samples)[::-1]
-                return pulse
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        gaussian_samples = num_samples * (1 - self.width) // 2
+        t = np.arange(0, num_samples)
 
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            gaussian_samples = num_samples * (1 - self.width) // 2
-            t = np.arange(0, num_samples)
+        pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
 
-            pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
-
-            return self.pulse.amplitude * pulse
-
-        raise ShapeInitError
+        return self.pulse.amplitude * pulse
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            return np.zeros(num_samples)
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        return np.zeros(num_samples)
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.width, '.6f').rstrip('0').rstrip('.')})"
@@ -358,39 +324,33 @@ class Drag(PulseShape):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            x = np.arange(0, num_samples, 1)
-            return self.pulse.amplitude * np.exp(
-                -(1 / 2)
-                * (
-                    ((x - (num_samples - 1) / 2) ** 2)
-                    / (((num_samples) / self.rel_sigma) ** 2)
-                )
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        x = np.arange(0, num_samples, 1)
+        return self.pulse.amplitude * np.exp(
+            -(1 / 2)
+            * (
+                ((x - (num_samples - 1) / 2) ** 2)
+                / (((num_samples) / self.rel_sigma) ** 2)
             )
-        raise ShapeInitError
+        )
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            x = np.arange(0, num_samples, 1)
-            i = self.pulse.amplitude * np.exp(
-                -(1 / 2)
-                * (
-                    ((x - (num_samples - 1) / 2) ** 2)
-                    / (((num_samples) / self.rel_sigma) ** 2)
-                )
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        x = np.arange(0, num_samples, 1)
+        i = self.pulse.amplitude * np.exp(
+            -(1 / 2)
+            * (
+                ((x - (num_samples - 1) / 2) ** 2)
+                / (((num_samples) / self.rel_sigma) ** 2)
             )
-            return (
-                self.beta
-                * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
-                * i
-                * sampling_rate
-            )
-        raise ShapeInitError
+        )
+        return (
+            self.beta
+            * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
+            * i
+            * sampling_rate
+        )
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
@@ -433,41 +393,35 @@ class IIR(PulseShape):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            self.a = self.a / self.a[0]
-            gain = np.sum(self.b) / np.sum(self.a)
-            if not gain == 0:
-                self.b = self.b / gain
-            data = lfilter(
-                b=self.b,
-                a=self.a,
-                x=self.target.envelope_waveform_i(sampling_rate),
-            )
-            if not np.max(np.abs(data)) == 0:
-                data = data / np.max(np.abs(data))
-            return np.abs(self.pulse.amplitude) * data
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        self.a = self.a / self.a[0]
+        gain = np.sum(self.b) / np.sum(self.a)
+        if not gain == 0:
+            self.b = self.b / gain
+        data = lfilter(
+            b=self.b,
+            a=self.a,
+            x=self.target.envelope_waveform_i(sampling_rate),
+        )
+        if not np.max(np.abs(data)) == 0:
+            data = data / np.max(np.abs(data))
+        return np.abs(self.pulse.amplitude) * data
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            self.a = self.a / self.a[0]
-            gain = np.sum(self.b) / np.sum(self.a)
-            if not gain == 0:
-                self.b = self.b / gain
-            data = lfilter(
-                b=self.b,
-                a=self.a,
-                x=self.target.envelope_waveform_q(sampling_rate),
-            )
-            if not np.max(np.abs(data)) == 0:
-                data = data / np.max(np.abs(data))
-            return np.abs(self.pulse.amplitude) * data
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        self.a = self.a / self.a[0]
+        gain = np.sum(self.b) / np.sum(self.a)
+        if not gain == 0:
+            self.b = self.b / gain
+        data = lfilter(
+            b=self.b,
+            a=self.a,
+            x=self.target.envelope_waveform_q(sampling_rate),
+        )
+        if not np.max(np.abs(data)) == 0:
+            data = data / np.max(np.abs(data))
+        return np.abs(self.pulse.amplitude) * data
 
     def __repr__(self):
         formatted_b = [round(b, 3) for b in self.b]
@@ -498,38 +452,32 @@ class SNZ(PulseShape):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-
-        if self.pulse:
-            if self.t_idling > self.pulse.duration:
-                raise ValueError(
-                    f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}."
-                )
-            if self.b_amplitude is None:
-                self.b_amplitude = self.pulse.amplitude / 2
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            half_pulse_duration = (self.pulse.duration - self.t_idling) / 2
-            half_flux_pulse_samples = int(
-                np.rint(num_samples * half_pulse_duration / self.pulse.duration)
+        if self.t_idling > self.pulse.duration:
+            raise ValueError(
+                f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}."
             )
-            idling_samples = num_samples - 2 * half_flux_pulse_samples
-            return np.concatenate(
-                (
-                    self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
-                    np.array([self.b_amplitude]),
-                    np.zeros(idling_samples),
-                    -np.array([self.b_amplitude]),
-                    -self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
-                )
+        if self.b_amplitude is None:
+            self.b_amplitude = self.pulse.amplitude / 2
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        half_pulse_duration = (self.pulse.duration - self.t_idling) / 2
+        half_flux_pulse_samples = int(
+            np.rint(num_samples * half_pulse_duration / self.pulse.duration)
+        )
+        idling_samples = num_samples - 2 * half_flux_pulse_samples
+        return np.concatenate(
+            (
+                self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
+                np.array([self.b_amplitude]),
+                np.zeros(idling_samples),
+                -np.array([self.b_amplitude]),
+                -self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
             )
-        raise ShapeInitError
+        )
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            return np.zeros(num_samples)
-        raise ShapeInitError
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+        return np.zeros(num_samples)
 
     def __repr__(self):
         return f"{self.name}({self.t_idling})"
@@ -559,22 +507,18 @@ class eCap(PulseShape):
         return False
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        if self.pulse:
-            num_samples = int(self.pulse.duration * sampling_rate)
-            x = np.arange(0, num_samples, 1)
-            return (
-                self.pulse.amplitude
-                * (1 + np.tanh(self.alpha * x / num_samples))
-                * (1 + np.tanh(self.alpha * (1 - x / num_samples)))
-                / (1 + np.tanh(self.alpha / 2)) ** 2
-            )
-        raise ShapeInitError
+        num_samples = int(self.pulse.duration * sampling_rate)
+        x = np.arange(0, num_samples, 1)
+        return (
+            self.pulse.amplitude
+            * (1 + np.tanh(self.alpha * x / num_samples))
+            * (1 + np.tanh(self.alpha * (1 - x / num_samples)))
+            / (1 + np.tanh(self.alpha / 2)) ** 2
+        )
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        if self.pulse:
-            num_samples = int(self.pulse.duration * sampling_rate)
-            return np.zeros(num_samples)
-        raise ShapeInitError
+        num_samples = int(self.pulse.duration * sampling_rate)
+        return np.zeros(num_samples)
 
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
@@ -594,25 +538,19 @@ class Custom(PulseShape):
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
+        if self.pulse.duration != len(self.envelope_i):
+            raise ValueError("Length of envelope_i must be equal to pulse duration")
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
 
-        if self.pulse:
-            if self.pulse.duration != len(self.envelope_i):
-                raise ValueError("Length of envelope_i must be equal to pulse duration")
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-
-            return self.envelope_i * self.pulse.amplitude
-        raise ShapeInitError
+        return self.envelope_i * self.pulse.amplitude
 
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
+        if self.pulse.duration != len(self.envelope_q):
+            raise ValueError("Length of envelope_q must be equal to pulse duration")
+        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
 
-        if self.pulse:
-            if self.pulse.duration != len(self.envelope_q):
-                raise ValueError("Length of envelope_q must be equal to pulse duration")
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-
-            return self.envelope_q * self.pulse.amplitude
-        raise ShapeInitError
+        return self.envelope_q * self.pulse.amplitude
 
     def __repr__(self):
         return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
