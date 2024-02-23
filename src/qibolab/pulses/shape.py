@@ -115,53 +115,41 @@ class Rectangular(Shape):
         return np.zeros_like(times)
 
 
-class Shapes(Enum):
-    """Available pulse shapes."""
-
-    rectangular = Rectangular
-
-
-class Exponential(PulseShape):
-    r"""Exponential pulse shape (Square pulse with an exponential decay).
-
-    Args:
-        tau (float): Parameter that controls the decay of the first exponential function
-        upsilon (float): Parameter that controls the decay of the second exponential function
-        g (float): Parameter that weights the second exponential function
-
+@dataclass(frozen=True)
+class Exponential(Shape):
+    r"""Exponential shape, i.e. square pulse with an exponential decay.
 
     .. math::
 
         A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
     """
 
-    def __init__(self, tau: float, upsilon: float, g: float = 0.1):
-        self.name = "Exponential"
-        self.pulse: "Pulse" = None
-        self.tau: float = float(tau)
-        self.upsilon: float = float(upsilon)
-        self.g: float = float(g)
+    amplitude: float
+    tau: float
+    """The decay rate of the first exponential function."""
+    upsilon: float
+    """The decay rate of the second exponential function."""
+    g: float = 0.1
+    """Weight of the second exponential function."""
 
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        x = np.arange(0, num_samples, 1)
+    def i(self, times: Times) -> Waveform:
+        """Generate a combination of two exponential decays."""
         return (
-            self.pulse.amplitude
-            * (
-                (np.ones(num_samples) * np.exp(-x / self.upsilon))
-                + self.g * np.exp(-x / self.tau)
-            )
+            self.amplitude
+            * (np.exp(-times / self.upsilon) + self.g * np.exp(-times / self.tau))
             / (1 + self.g)
         )
 
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        return np.zeros(num_samples)
+    def q(self, times: Times) -> Waveform:
+        """Generate an identically null signal."""
+        return np.zeros_like(times)
 
-    def __repr__(self):
-        return f"{self.name}({format(self.tau, '.3f').rstrip('0').rstrip('.')}, {format(self.upsilon, '.3f').rstrip('0').rstrip('.')}, {format(self.g, '.3f').rstrip('0').rstrip('.')})"
+
+class Shapes(Enum):
+    """Available pulse shapes."""
+
+    rectangular = Rectangular
+    exponential = Exponential
 
 
 class Gaussian(PulseShape):
