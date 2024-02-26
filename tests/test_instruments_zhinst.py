@@ -4,13 +4,7 @@ import re
 import numpy as np
 import pytest
 
-from qibolab import (
-    AcquisitionType,
-    AveragingMode,
-    BatchingMode,
-    ExecutionParameters,
-    create_platform,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ZhPulse, ZhSweeperLine, Zurich
 from qibolab.pulses import (
     IIR,
@@ -729,8 +723,7 @@ def test_sim(dummy_qrc):
         sequence.add(qf_pulses[qubit])
 
 
-@pytest.mark.parametrize("batching", [BatchingMode.DURATION, BatchingMode.SEQUENCES])
-def test_split_batches(dummy_qrc, batching):
+def test_split_batches(dummy_qrc):
     platform = create_platform("zurich")
     instrument = platform.instruments["EL_ZURO"]
 
@@ -741,10 +734,10 @@ def test_split_batches(dummy_qrc, batching):
     sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
     sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
 
-    batches = list(instrument.split_batches(200 * [sequence], batching))
-    assert len(batches) == 2
-    assert len(batches[0]) == 150
-    assert len(batches[1]) == 50
+    batches = list(instrument.split_batches(200 * [sequence]))
+    assert len(batches) == 3
+    assert len(batches[0]) == 75
+    assert len(batches[1]) == 75
 
 
 @pytest.fixture(scope="module")

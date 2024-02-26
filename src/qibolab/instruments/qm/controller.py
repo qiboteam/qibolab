@@ -11,7 +11,7 @@ from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
-from qibolab.unrolling import batch_max_sequences
+from qibolab.unrolling import Bounds, batch
 
 from .acquisition import declare_acquisitions, fetch_results
 from .config import SAMPLING_RATE, QMConfig
@@ -23,7 +23,19 @@ from .sweepers import sweep
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
-MAX_BATCH_SIZE = 30
+
+MAX_DURATION = int(4e4)
+"""Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
+MAX_READOUT = int(30)
+"""Maximum number of readout pulses [Not estimated]."""
+MAX_INSTRUCTIONS = int(1e6)
+"""Maximum instructions size [Not estimated]."""
+
+BOUNDS = Bounds(
+    waveforms=MAX_DURATION,
+    readout=MAX_READOUT,
+    instructions=MAX_READOUT,
+)
 
 
 def declare_octaves(octaves, host, calibration_path=None):
@@ -364,5 +376,5 @@ class QMController(Controller):
             result = self.execute_program(experiment)
             return fetch_results(result, acquisitions)
 
-    def split_batches(self, sequences):
-        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
+    def split_batches(self, sequences, bounds=BOUNDS):
+        return batch(sequences, bounds)

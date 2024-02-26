@@ -56,7 +56,7 @@ SWEEPER_START = {"start"}
 
 MAX_DURATION = int(4e4)
 """Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
-MAX_READOUT = int(1e6)
+MAX_READOUT = 150
 """Maximum number of readout pulses [Not estimated]."""
 MAX_INSTRUCTIONS = int(1e6)
 """Maximum instructions size [Not estimated]."""
@@ -64,7 +64,7 @@ MAX_INSTRUCTIONS = int(1e6)
 BOUNDS = Bounds(
     waveforms=MAX_DURATION,
     readout=MAX_READOUT,
-    instructions=MAX_READOUT,
+    instructions=MAX_INSTRUCTIONS,
 )
 
 

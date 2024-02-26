@@ -5,64 +5,7 @@ May be reused by different instruments.
 
 from dataclasses import asdict, dataclass, field, fields
 
-from more_itertools import chunked
-
 from .pulses import PulseSequence
-
-
-def batch_max_sequences(sequences, max_size):
-    """Split a list of sequences to batches with a maximum number of sequences
-    in each.
-
-    Args:
-        sequences (list): List of :class:`qibolab.pulses.PulseSequence` objects.
-        max_size (int): Maximum number of sequences in a single batch.
-    """
-    return chunked(sequences, max_size)
-
-
-def batch_max_duration(sequences, max_duration):
-    """Split a list of sequences to batches with a trying to get an waveform
-    memory for the control pulses estimate using the duration of the sequence.
-
-    Args:
-        sequences (list): List of :class:`qibolab.pulses.PulseSequence` objects.
-        max_duration (int): Maximum number of readout pulses in a single batch.
-    """
-    batch_duration, batch = 0, []
-    for sequence in sequences:
-        duration = sequence.duration - sequence.ro_pulses.duration
-        if duration + batch_duration > max_duration:
-            yield batch
-            batch_duration, batch = duration, [sequence]
-        else:
-            batch.append(sequence)
-            batch_duration += duration
-    yield batch
-
-
-def batch_max_readout(sequences, max_measurements):
-    """Split a list of sequences to batches with a maximum number of readout
-    pulses in each.
-
-    Useful for sequence unrolling on instruments that support a maximum number of readout pulses
-    in a single sequence due to memory limitations.
-
-    Args:
-        sequences (list): List of :class:`qibolab.pulses.PulseSequence` objects.
-        max_measurements (int): Maximum number of readout pulses in a single batch.
-    """
-
-    batch_measurements, batch = 0, []
-    for sequence in sequences:
-        nmeasurements = len(sequence.ro_pulses)
-        if nmeasurements + batch_measurements > max_measurements:
-            yield batch
-            batch_measurements, batch = nmeasurements, [sequence]
-        else:
-            batch.append(sequence)
-            batch_measurements += nmeasurements
-    yield batch
 
 
 def _waveform(sequence: PulseSequence):
@@ -70,6 +13,7 @@ def _waveform(sequence: PulseSequence):
     # TODO: count Rectangular and delays separately (Zurich Instruments supports this)
     # TODO: Any constant part of a pulse should be counted only once (Zurich Instruments supports this)
     # TODO: check if readout duration is faithful for the readout pulse (I would only check the control pulses)
+    # TODO: Handle multiple qubits or do all devices have the same memory for each channel ?
     return sequence.duration - sequence.ro_pulses.duration
 
 
