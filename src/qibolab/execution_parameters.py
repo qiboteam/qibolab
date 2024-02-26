@@ -37,16 +37,6 @@ class AveragingMode(Enum):
     """SEQUENTIAL: Worse averaging for noise[Avoid]"""
 
 
-class BatchingMode(Enum):
-    """Data acquisition from hardware."""
-
-    SEQUENCES = auto()
-    """Demodulate, integrate the waveform and discriminate among states based
-    on the voltages."""
-    DURATION = auto()
-    """Demodulate and integrate the waveform."""
-
-
 RESULTS_TYPE = {
     AveragingMode.CYCLIC: {
         AcquisitionType.INTEGRATION: AveragedIntegratedResults,
@@ -82,8 +72,6 @@ class ExecutionParameters:
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    batching_mode: BatchingMode = BatchingMode.SEQUENCES
-    """Unrolling batching mode."""
 
     @property
     def results_type(self):

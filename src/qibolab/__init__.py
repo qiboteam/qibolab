@@ -9,7 +9,6 @@ from qibo.config import raise_error
 from qibolab.execution_parameters import (
     AcquisitionType,
     AveragingMode,
-    BatchingMode,
     ExecutionParameters,
 )
 from qibolab.platform import Platform
