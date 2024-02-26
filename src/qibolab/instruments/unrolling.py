@@ -66,10 +66,11 @@ def batch_max_readout(sequences, max_measurements):
 
 
 def _waveform(sequence: PulseSequence):
-    # TODO: deduplicate pulses
-    # TODO: count Rectangular and delays separately
-    # TODO: check if readout duration is faithful for the readout pulse
-    return sequence.duration
+    # TODO: deduplicate pulses (Not yet as drivers may not support it yet)
+    # TODO: count Rectangular and delays separately (Zurich Instruments supports this)
+    # TODO: Any constant part of a pulse should be counted only once (Zurich Instruments supports this)
+    # TODO: check if readout duration is faithful for the readout pulse (I would only check the control pulses)
+    return sequence.duration - sequence.ro_pulses.duration
 
 
 def _readout(sequence: PulseSequence):
@@ -80,7 +81,7 @@ def _instructions(sequence: PulseSequence):
     return len(sequence)
 
 
-@dataclass(frozen=True, order=True)
+@dataclass(frozen=True, order=False)
 class Bounds:
     """Instument memory limitations proxies."""
 
@@ -89,7 +90,7 @@ class Bounds:
     readout: int = field(metadata={"count": _readout})
     """Number of readouts."""
     instructions: int = field(metadata={"count": _instructions})
-    """Number of readouts."""
+    """Instructions estimated size."""
 
     @classmethod
     def update(cls, sequence: PulseSequence):
@@ -105,6 +106,14 @@ class Bounds:
             new[k] = x + y
 
         return type(self)(**new)
+
+    def __lt__(self, other: "Bounds") -> bool:
+        return any(getattr(self, f.name) < getattr(other, f.name) for f in fields(self))
+
+    def __ge__(self, other: "Bounds") -> bool:
+        return all(
+            getattr(self, f.name) >= getattr(other, f.name) for f in fields(self)
+        )
 
 
 def batch(sequences: list[PulseSequence], bounds: Bounds):
