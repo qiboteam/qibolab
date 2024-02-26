@@ -9,9 +9,9 @@ from qualang_tools.simulator_tools import create_simulator_controller_connection
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
+from qibolab.unrolling import batch_max_sequences
 
 from .acquisition import declare_acquisitions, fetch_results
 from .config import SAMPLING_RATE, QMConfig
