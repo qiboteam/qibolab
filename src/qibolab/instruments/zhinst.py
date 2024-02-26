@@ -20,14 +20,10 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.unrolling import (
-    Bounds,
-    batch,
-)
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
-from qibolab.unrolling import batch_max_duration, batch_max_sequences
+from qibolab.unrolling import Bounds, batch
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -1420,10 +1416,6 @@ class Zurich(Controller):
 
     def split_batches(self, sequences, bounds=BOUNDS):
         return batch(sequences, bounds)
-
-        # if batching_mode is BatchingMode.DURATION:
-        #     return batch_max_duration(sequences, MAX_DURATION)
-        # return batch_max_sequences(sequences, MAX_SEQUENCES)
 
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence."""
