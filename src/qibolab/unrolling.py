@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field, fields
 
 from more_itertools import chunked
 
-from qibolab.pulses import PulseSequence
+from .pulses import PulseSequence
 
 
 def batch_max_sequences(sequences, max_size):

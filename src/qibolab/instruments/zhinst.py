@@ -20,13 +20,14 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.instruments.unrolling import (
+from qibolab.unrolling import (
     Bounds,
     batch,
 )
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
+from qibolab.unrolling import batch_max_duration, batch_max_sequences
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
