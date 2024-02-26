@@ -19,6 +19,7 @@ from qibolab.pulses import (
     Rectangular,
 )
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+from qibolab.unrolling import batch
 
 from .conftest import get_instrument
 
@@ -723,7 +724,7 @@ def test_sim(dummy_qrc):
         sequence.add(qf_pulses[qubit])
 
 
-def test_split_batches(dummy_qrc):
+def test_batching(dummy_qrc):
     platform = create_platform("zurich")
     instrument = platform.instruments["EL_ZURO"]
 
@@ -734,7 +735,7 @@ def test_split_batches(dummy_qrc):
     sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
     sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
 
-    batches = list(instrument.split_batches(200 * [sequence]))
+    batches = list(batch(200 * [sequence], instrument.BOUNDS))
     assert len(batches) == 3
     assert len(batches[0]) == 75
     assert len(batches[1]) == 75

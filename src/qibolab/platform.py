@@ -7,12 +7,13 @@ from typing import Dict, List, Optional, Tuple
 import networkx as nx
 from qibo.config import log, raise_error
 
-from qibolab.couplers import Coupler
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import FluxPulse, PulseSequence, ReadoutPulse
-from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
-from qibolab.sweeper import Sweeper
+from .couplers import Coupler
+from .execution_parameters import ExecutionParameters
+from .instruments.abstract import Controller, Instrument, InstrumentId
+from .pulses import FluxPulse, PulseSequence, ReadoutPulse
+from .qubits import Qubit, QubitId, QubitPair, QubitPairId
+from .sweeper import Sweeper
+from .unrolling import batch
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
@@ -239,7 +240,8 @@ class Platform:
         }
 
         results = defaultdict(list)
-        for batch in self._controller.split_batches(sequences):
+        bounds = kwargs.get("bounds", self._controller.BOUNDS)
+        for batch in batch(sequences, bounds):
             sequence, readouts = unroll_sequences(batch, options.relaxation_time)
             result = self._execute(sequence, options, **kwargs)
             for serial, new_serials in readouts.items():

@@ -18,12 +18,13 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
-from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
-from qibolab.unrolling import Bounds, batch
+from qibolab.unrolling import Bounds
+
+from .abstract import Controller
+from .port import Port
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -60,12 +61,6 @@ MAX_READOUT = 250
 """Maximum number of readout pulses [Not estimated]."""
 MAX_INSTRUCTIONS = int(1e6)
 """Maximum instructions size [Not estimated]."""
-
-BOUNDS = Bounds(
-    waveforms=MAX_DURATION,
-    readout=MAX_READOUT,
-    instructions=MAX_INSTRUCTIONS,
-)
 
 
 def select_pulse(pulse, pulse_type):
@@ -302,6 +297,12 @@ class Zurich(Controller):
     """Zurich driver main class."""
 
     PortType = ZhPort
+
+    BOUNDS = Bounds(
+        waveforms=MAX_DURATION,
+        readout=MAX_READOUT,
+        instructions=MAX_INSTRUCTIONS,
+    )
 
     def __init__(
         self, name, device_setup, use_emulation=False, time_of_flight=0.0, smearing=0.0
@@ -1413,9 +1414,6 @@ class Zurich(Controller):
                 self.sweep_recursion_nt(qubits, couplers, options, exp, exp_calib)
             else:
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
-
-    def split_batches(self, sequences, bounds=BOUNDS):
-        return batch(sequences, bounds)
 
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence."""
