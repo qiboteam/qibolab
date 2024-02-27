@@ -47,6 +47,7 @@ class Bounds:
         return cls(**up)
 
     def __add__(self, other: "Bounds") -> "Bounds":
+        """Sum bounds element by element."""
         new = {}
         for (k, x), (_, y) in zip(asdict(self).items(), asdict(other).items()):
             new[k] = x + y
@@ -54,6 +55,7 @@ class Bounds:
         return type(self)(**new)
 
     def __gt__(self, other: "Bounds") -> bool:
+        """Define ordering as exceeding any bound."""
         return any(getattr(self, f.name) > getattr(other, f.name) for f in fields(self))
 
 
@@ -66,11 +68,11 @@ def batch(sequences: list[PulseSequence], bounds: Bounds):
     counters = Bounds(0, 0, 0)
     batch = []
     for sequence in sequences:
-        update_ = Bounds.update(sequence)
-        if counters + update_ > bounds:
+        update = Bounds.update(sequence)
+        if counters + update > bounds:
             yield batch
-            counters, batch = update_, [sequence]
+            counters, batch = update, [sequence]
         else:
             batch.append(sequence)
-            counters += update_
+            counters += update
     yield batch
