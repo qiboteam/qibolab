@@ -56,21 +56,16 @@ class QbloxController(Controller):
             self.cluster.set("reference_source", self._reference_clock)
             # Connect modules
             for module in self.modules.values():
-                module.connect(self.cluster)
+                module.device = self.cluster.modules[
+                    int(module.address.split(":")[1]) - 1
+                ]
+                module.connect()
             self.is_connected = True
             log.info("QbloxController: all modules connected.")
 
         except Exception as exception:
             raise ConnectionError(f"Unable to connect:\n{str(exception)}\n")
             # TODO: check for exception 'The module qrm_rf0 does not have parameters in0_att' and reboot the cluster
-
-    def disconnect(self):
-        """Disconnects all modules."""
-        if self.is_connected:
-            for module in self.modules.values():
-                module.disconnect()
-            self.cluster.close()
-            self.is_connected = False
 
     def setup(self):
         """Empty method to comply with Instrument interface.
@@ -79,38 +74,12 @@ class QbloxController(Controller):
         using :meth:`qibolab.serialize.load_instrument_settings`.
         """
 
-    def _termination_handler(self, signum, frame):
-        """Calls all modules to stop if the program receives a termination
-        signal."""
-
-        log.warning("Termination signal received, disconnecting modules.")
-        if self.is_connected:
-            for name in self.modules:
-                self.modules[name].disconnect()
-        log.warning("QbloxController: all modules are disconnected.")
-        exit(0)
-
-    def _set_module_channel_map(self, module: QrmRf, qubits: dict):
-        """Retrieve all the channels connected to a specific Qblox module.
-
-        This method updates the `channel_port_map` attribute of the
-        specified Qblox module based on the information contained in the
-        provided qubits dictionary (dict of `qubit` objects).
-
-        Return the list of channels connected to module_name
-        """
-        for qubit in qubits.values():
-            for channel in qubit.channels:
-                if channel.port and channel.port.module.name == module.name:
-                    module.channel_map[channel.name] = channel
-        return list(module.channel_map)
-
     def _execute_pulse_sequence(
         self,
         qubits: dict,
         sequence: PulseSequence,
         options: ExecutionParameters,
-        sweepers: list() = [],  # list(Sweeper) = []
+        sweepers: list = [],  # list(Sweeper) = []
         **kwargs,
         # nshots=None,
         # navgs=None,
@@ -156,17 +125,12 @@ class QbloxController(Controller):
         #                 print(f"type: {module.module_type}, sequencer: {sequencer.name}, sync_en: True")
 
         # Process Pulse Sequence. Assign pulses to modules and generate waveforms & program
-        module_pulses = {}
         data = {}
-        for name, module in self.modules.items():
-            # from the pulse sequence, select those pulses to be synthesised by the module
-            module_channels = self._set_module_channel_map(module, qubits)
-            module_pulses[name] = sequence.get_channel_pulses(*module_channels)
-
+        for module in self.modules.values():
             #  ask each module to generate waveforms & program and upload them to the device
             module.process_pulse_sequence(
                 qubits,
-                module_pulses[name],
+                sequence,
                 navgs,
                 nshots,
                 repetition_duration,
@@ -184,7 +148,7 @@ class QbloxController(Controller):
         # retrieve the results
         acquisition_results = {}
         for name, module in self.modules.items():
-            if isinstance(module, QrmRf) and not module_pulses[name].ro_pulses.is_empty:
+            if isinstance(module, QrmRf):
                 results = module.acquire()
                 for key, value in results.items():
                     acquisition_results[key] = value
@@ -538,3 +502,22 @@ class QbloxController(Controller):
                                     *((split_sweeper,) + sweepers[1:]),
                                     results=results,
                                 )
+
+    def _termination_handler(self):
+        """Calls all modules to stop if the program receives a termination
+        signal."""
+
+        log.warning("Termination signal received, disconnecting modules.")
+        if self.is_connected:
+            for name in self.modules:
+                self.modules[name].disconnect()
+        log.warning("QbloxController: all modules disconnected.")
+        exit(0)
+
+    def disconnect(self):
+        """Disconnects all modules."""
+        if self.is_connected:
+            for name in self.modules:
+                self.modules[name].disconnect()
+            self.cluster.close()
+            self.is_connected = False

@@ -2,10 +2,6 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
-from qibo.config import log
-
 from qibolab.instruments.qblox.module import ClusterModule
 from qibolab.instruments.qblox.q1asm import (
     Block,
@@ -114,7 +110,6 @@ class QcmRf(ClusterModule):
     """
 
     DEFAULT_SEQUENCERS = {"o1": 0, "o2": 1}
-    FREQUENCY_LIMIT = 500e6
 
     def __init__(self, name: str, address: str):
         """Initialize a Qblox QCM-RF module.
@@ -130,17 +125,7 @@ class QcmRf(ClusterModule):
         >>> qcm_module = QcmRf(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.device: QbloxQrmQcm = None
-        self.settings = {}
-
-        self._debug_folder: str = ""
-        self._sequencers: dict[Sequencer] = {}
-        self.channel_map: dict = {}
-        self._device_num_output_ports = 2
-        self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[int] = []
-        self._used_sequencers_numbers: list[int] = []
-        self._unused_sequencers_numbers: list[int] = []
+        self.settings: dict = {}
 
     def _set_default_values(self):
         # disable all sequencer connections
@@ -165,46 +150,16 @@ class QcmRf(ClusterModule):
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
 
-    def connect(self, cluster: QbloxCluster = None):
-        """Connects to the instrument using the instrument settings in the
-        runcard.
-
-        Once connected, it creates port classes with properties mapped
-        to various instrument parameters, and initialises the the
-        underlying device parameters. It uploads to the module the port
-        settings loaded from the runcard.
-        """
-        if self.is_connected:
-            return
-
-        elif cluster is not None:
-            self.device = cluster.modules[int(self.address.split(":")[1]) - 1]
-            # test connection with module
-            if not self.device.present():
-                raise ConnectionError(
-                    f"Module {self.device.name} not connected to cluster {cluster.name}"
-                )
-            # once connected, initialise the parameters of the device to the default values
-            self._device_num_sequencers = len(self.device.sequencers)
-            self._set_default_values()
-            # then set the value loaded from the runcard
-            try:
-                for port in self.settings:
-                    self._sequencers[port] = []
-                    if self.settings[port]["lo_frequency"]:
-                        self._ports[port].lo_enabled = True
-                        self._ports[port].lo_frequency = self.settings[port][
-                            "lo_frequency"
-                        ]
-                    self._ports[port].attenuation = self.settings[port]["attenuation"]
-                    self._ports[port].hardware_mod_en = True
-                    self._ports[port].nco_freq = 0
-                    self._ports[port].nco_phase_offs = 0
-            except Exception as error:
-                raise RuntimeError(
-                    f"Unable to initialize port parameters on module {self.name}: {error}"
-                )
-            self.is_connected = True
+    def _setup_ports(self):
+        for port in self.settings:
+            self._sequencers[port] = []
+            if self.settings[port]["lo_frequency"]:
+                self._ports[port].lo_enabled = True
+                self._ports[port].lo_frequency = self.settings[port]["lo_frequency"]
+            self._ports[port].attenuation = self.settings[port]["attenuation"]
+            self._ports[port].hardware_mod_en = True
+            self._ports[port].nco_freq = 0
+            self._ports[port].nco_phase_offs = 0
 
     def setup(self, **settings):
         """Cache the settings of the runcard and instantiate the ports of the
@@ -230,35 +185,17 @@ class QcmRf(ClusterModule):
     def _get_next_sequencer(self, port, frequency, qubit: None):
         """Retrieves and configures the next avaliable sequencer.
 
-        The parameters of the new sequencer are copied from those of the default sequencer, except for the
-        intermediate frequency and classification parameters.
-        Args:
-            port (str):
-            frequency ():
-            qubit ():
-        Raises:
-            Exception = If attempting to set a parameter without a connection to the instrument.
+        The parameters of the new sequencer are copied from those of the
+        default sequencer of the port.
         """
-
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
-        if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
-            for parameter in self.device.sequencers[
-                self.DEFAULT_SEQUENCERS[port]
-            ].parameters:
-                # exclude read-only parameter `sequence`
-                if parameter not in ["sequence"]:
-                    value = self.device.sequencers[self.DEFAULT_SEQUENCERS[port]].get(
-                        param_name=parameter
-                    )
-                    if value:
-                        target = self.device.sequencers[next_sequencer_number]
-                        target.set(parameter, value)
-
-        # if hardware modulation is enabled configure nco_frequency
+        default_sequencer_number = self.DEFAULT_SEQUENCERS[port]
+        if next_sequencer_number != default_sequencer_number:
+            self.clone_sequencer_params(default_sequencer_number, next_sequencer_number)
         if self._ports[port].hardware_mod_en:
             self.device.sequencers[next_sequencer_number].set("nco_freq", frequency)
-            # Assumes all pulses in non_overlapping_pulses set
+            # It's assuming that all pulses in non_overlapping_pulses set
             # have the same frequency. Non-overlapping pulses of different frequencies on the same
             # qubit channel with hardware_demod_en would lead to wrong results.
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
@@ -269,26 +206,10 @@ class QcmRf(ClusterModule):
         sequencer.qubit = qubit
         return sequencer
 
-    def get_if(self, pulse):
-        """Returns the intermediate frequency needed to synthesise a pulse
-        based on the port lo frequency."""
-
-        _rf = pulse.frequency
-        _lo = self.channel_map[pulse.channel].lo_frequency
-        _if = _rf - _lo
-        if abs(_if) > self.FREQUENCY_LIMIT:
-            raise Exception(
-                f"""
-            Pulse frequency {_rf:_} cannot be synthesised with current lo frequency {_lo:_}.
-            The intermediate frequency {_if:_} would exceed the maximum frequency of {self.FREQUENCY_LIMIT:_}
-            """
-            )
-        return _if
-
     def process_pulse_sequence(
         self,
         qubits: dict,
-        instrument_pulses: PulseSequence,
+        sequence: PulseSequence,
         navgs: int,
         nshots: int,
         repetition_duration: int,
@@ -334,16 +255,9 @@ class QcmRf(ClusterModule):
         self._free_sequencers_numbers = list(range(len(self._ports), 6))
 
         # process the pulses for every port
-        for port in self._ports:
+        for port, port_obj in self._ports.items():
             # split the collection of instruments pulses by ports
-            port_channel = [
-                chan.name
-                for chan in self.channel_map.values()
-                if chan.port.name == port
-            ]
-            port_pulses: PulseSequence = instrument_pulses.get_channel_pulses(
-                *port_channel
-            )
+            port_pulses = self.filter_port_pulse(sequence, qubits, port_obj)
 
             # initialise the list of sequencers required by the port
             self._sequencers[port] = []
@@ -729,31 +643,3 @@ class QcmRf(ClusterModule):
             filename = self._debug_folder + f"Z_{self.name}_snapshot.json"
             with open(filename, "w", encoding="utf-8") as file:
                 print_readable_snapshot(self.device, file, update=True)
-
-    def play_sequence(self):
-        """Plays the sequence of pulses.
-
-        Starts the sequencers needed to play the sequence of pulses.
-        """
-
-        for sequencer_number in self._used_sequencers_numbers:
-            # Start used sequencers
-            self.device.start_sequencer(sequencer_number)
-
-    def disconnect(self):
-        """Stops all sequencers, disconnect all the outputs from the AWG paths
-        of the sequencers."""
-        if not self.is_connected:
-            return
-        for sequencer_number in self._used_sequencers_numbers:
-            state = self.device.get_sequencer_state(sequencer_number)
-            if state.status != "STOPPED":
-                log.warning(
-                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
-                )
-
-        self.device.stop_sequencer()
-        self.device.disconnect_outputs()
-
-        self.is_connected = False
-        self.device = None
