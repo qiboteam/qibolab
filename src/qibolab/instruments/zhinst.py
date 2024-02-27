@@ -1,5 +1,6 @@
 """Instrument for using the Zurich Instruments (Zhinst) devices."""
 
+import re
 from collections import defaultdict
 from copy import copy
 from dataclasses import dataclass, replace
@@ -215,6 +216,20 @@ class ProcessedSweeps:
                         values=sweeper.values + intermediate_frequency
                     )
                     channel_sweeps.append((ch, sweeper.parameter, sweep_param))
+                elif (
+                    pulse.type is PulseType.READOUT
+                    and sweeper.parameter is Parameter.amplitude
+                ):
+                    sweep_param = lo.SweepParameter(
+                        values=sweeper.values / max(sweeper.values)
+                    )
+                    channel_sweeps.append(
+                        (
+                            measure_channel_name(qubits[pulse.qubit]),
+                            sweeper.parameter,
+                            sweep_param,
+                        )
+                    )
                 else:
                     sweep_param = lo.SweepParameter(values=copy(sweeper.values))
                     pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
@@ -662,22 +677,46 @@ class Zurich(Controller):
             self.experiment = exp
 
     def set_calibration(self, exp):
-        calib = lo.Calibration()
         if self.processed_sweeps:
             for ch in (
                 set(self.sequence.keys()) | self.processed_sweeps.channels_with_sweeps()
             ):
                 for param, sweep_param in self.processed_sweeps.sweeps_for_channel(ch):
                     if param is Parameter.frequency:
-                        calib[ch] = lo.SignalCalibration(
-                            oscillator=lo.Oscillator(
-                                frequency=sweep_param,
-                                modulation_type=lo.ModulationType.HARDWARE,
+                        exp.set_calibration(
+                            lo.Calibration(
+                                {
+                                    ch: lo.SignalCalibration(
+                                        oscillator=lo.Oscillator(
+                                            frequency=sweep_param,
+                                            modulation_type=lo.ModulationType.HARDWARE,
+                                        )
+                                    )
+                                }
                             )
                         )
+
+                    # for the remaining cases we can only achieve our goal by manipulating the instrument node directly
+                    channel_node_path = None
+                    logical_signal = self.signal_map[ch]
+                    for instrument in self.device_setup.instruments:
+                        for conn in instrument.connections:
+                            if conn.remote_path == logical_signal.path:
+                                channel_node_path = (
+                                    f"{instrument.address}/{conn.local_port}"
+                                )
+                                break
+                    if channel_node_path is None:
+                        raise RuntimeError(
+                            f"Could not find instrument node corresponding to {param.name} of channel {ch}"
+                        )
                     if param is Parameter.bias:
-                        calib[ch] = lo.SignalCalibration(voltage_offset=sweep_param)
-                exp.set_calibration(calib)
+                        offset_node_path = f"{channel_node_path}/offset"
+                        exp.set_node(path=offset_node_path, value=sweep_param)
+                    if param is Parameter.amplitude:
+                        a, b = re.match(r"(.*)/(\d)/.*", channel_node_path).groups()
+                        gain_node_path = f"{a}/{b}/oscs/{b}/gain"
+                        exp.set_node(path=gain_node_path, value=sweep_param)
 
     def select_exp(self, exp, qubits, couplers, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
@@ -776,15 +815,6 @@ class Zurich(Controller):
                             weight = weights[q]
 
                     measure_pulse_parameters = {"phase": 0}
-                    amplitude = None
-                    if self.processed_sweeps:
-                        for param, sweep in self.processed_sweeps.sweeps_for_pulse(
-                            pulse.pulse
-                        ):
-                            if param is Parameter.amplitude:
-                                pulse.zhpulse.amplitude *= max(sweep.values)
-                                sweep.values /= max(sweep.values)
-                                amplitude = sweep
 
                     if i == len(self.sequence[measure_channel_name(qubit)]) - 1:
                         reset_delay = exp_options.relaxation_time * NANO_TO_SECONDS
@@ -803,7 +833,7 @@ class Zurich(Controller):
                             pulse.pulse.duration * NANO_TO_SECONDS, 9
                         ),
                         measure_pulse_parameters=measure_pulse_parameters,
-                        measure_pulse_amplitude=amplitude,
+                        measure_pulse_amplitude=None,
                         acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
                         reset_delay=reset_delay,
                     )
