@@ -6,6 +6,7 @@ from pathlib import Path
 from qibo import Circuit
 from qibo.config import raise_error
 
+from qibolab.backends import QibolabBackend
 from qibolab.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -79,3 +80,38 @@ def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshot
     return QibolabBackend(platform, runcard).execute_circuit(
         circuit, initial_state=initial_state, nshots=nshots
     )
+
+
+class MetaBackend:
+    """Meta-backend class which takes care of loading the qibolab backend."""
+
+    @staticmethod
+    def load(platform: str) -> QibolabBackend:
+        """Loads the backend.
+
+        Args:
+            platform (str): Name of the platform to load.
+        Returns:
+            qibo.backends.abstract.Backend: The loaded backend.
+        """
+
+        PLATFORMS = os.environ.get(PLATFORMS)
+        if platform in PLATFORMS:
+            return QibolabBackend(platform=platform)
+        else:
+            raise_error(
+                ValueError,
+                f"Unsupported platform, please use one among {PLATFORMS}.",
+            )
+
+    def list_available(self) -> dict:
+        """Lists all the available qibolab platforms."""
+        available_backends = {}
+        for platform in os.environ.get(PLATFORMS):
+            try:
+                MetaBackend.load(platform=platform)
+                available = True
+            except:
+                available = False
+            available_backends[platform] = available
+        return available_backends
