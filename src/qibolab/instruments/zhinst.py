@@ -272,6 +272,13 @@ class ProcessedSweeps:
     def sweeps_for_sweeper(self, sweeper: Sweeper):
         return [item[1] for item in self._parallel_sweeps if item[0] == sweeper]
 
+    def channel_sweeps_for_sweeper(self, sweeper: Sweeper):
+        return [
+            item
+            for item in self._channel_sweeps
+            if item[2] in self.sweeps_for_sweeper(sweeper)
+        ]
+
     def channels_with_sweeps(self):
         return {ch for ch, _, _ in self._channel_sweeps}
 
@@ -672,51 +679,51 @@ class Zurich(Controller):
                 self.sweep_recursion(qubits, couplers, exp, exp_options)
             else:
                 self.select_exp(exp, qubits, couplers, exp_options)
-            self.set_calibration(exp)
+            self.set_calibration_for_rt_sweep(exp)
             exp.set_signal_map(self.signal_map)
             self.experiment = exp
 
-    def set_calibration(self, exp):
+    def set_calibration_for_rt_sweep(self, exp):
         if self.processed_sweeps:
+            calib = lo.Calibration()
             for ch in (
                 set(self.sequence.keys()) | self.processed_sweeps.channels_with_sweeps()
             ):
                 for param, sweep_param in self.processed_sweeps.sweeps_for_channel(ch):
                     if param is Parameter.frequency:
-                        exp.set_calibration(
-                            lo.Calibration(
-                                {
-                                    ch: lo.SignalCalibration(
-                                        oscillator=lo.Oscillator(
-                                            frequency=sweep_param,
-                                            modulation_type=lo.ModulationType.HARDWARE,
-                                        )
-                                    )
-                                }
+                        calib[ch] = lo.SignalCalibration(
+                            oscillator=lo.Oscillator(
+                                frequency=sweep_param,
+                                modulation_type=lo.ModulationType.HARDWARE,
                             )
                         )
+            exp.set_calibration(calib)
 
-                    # for the remaining cases we can only achieve our goal by manipulating the instrument node directly
-                    channel_node_path = None
-                    logical_signal = self.signal_map[ch]
-                    for instrument in self.device_setup.instruments:
-                        for conn in instrument.connections:
-                            if conn.remote_path == logical_signal.path:
-                                channel_node_path = (
-                                    f"{instrument.address}/{conn.local_port}"
-                                )
-                                break
-                    if channel_node_path is None:
-                        raise RuntimeError(
-                            f"Could not find instrument node corresponding to {param.name} of channel {ch}"
-                        )
-                    if param is Parameter.bias:
-                        offset_node_path = f"{channel_node_path}/offset"
-                        exp.set_node(path=offset_node_path, value=sweep_param)
-                    if param is Parameter.amplitude:
-                        a, b = re.match(r"(.*)/(\d)/.*", channel_node_path).groups()
-                        gain_node_path = f"{a}/{b}/oscs/{b}/gain"
-                        exp.set_node(path=gain_node_path, value=sweep_param)
+    def set_instrument_nodes_for_nt_sweep(
+        self, exp: lo.Experiment, sweeper: Sweeper
+    ) -> None:
+        for ch, param, sweep_param in self.processed_sweeps.channel_sweeps_for_sweeper(
+            sweeper
+        ):
+            # for the remaining cases we can only achieve our goal by manipulating the instrument node directly
+            channel_node_path = None
+            logical_signal = self.signal_map[ch]
+            for instrument in self.device_setup.instruments:
+                for conn in instrument.connections:
+                    if conn.remote_path == logical_signal.path:
+                        channel_node_path = f"{instrument.address}/{conn.local_port}"
+                        break
+            if channel_node_path is None:
+                raise RuntimeError(
+                    f"Could not find instrument node corresponding to {param.name} of channel {ch}"
+                )
+            if param is Parameter.bias:
+                offset_node_path = f"{channel_node_path}/offset"
+                exp.set_node(path=offset_node_path, value=sweep_param)
+            if param is Parameter.amplitude:
+                a, b = re.match(r"(.*)/(\d)/.*", channel_node_path).groups()
+                gain_node_path = f"{a}/{b}/oscs/{b}/gain"
+                exp.set_node(path=gain_node_path, value=sweep_param)
 
     def select_exp(self, exp, qubits, couplers, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
@@ -982,6 +989,7 @@ class Zurich(Controller):
                 for sweep_param in self.processed_sweeps.sweeps_for_sweeper(sweeper)
             ],
         ):
+            self.set_instrument_nodes_for_nt_sweep(exp, sweeper)
             if len(self.nt_sweeps) > 0:
                 self.sweep_recursion_nt(qubits, couplers, options, exp)
             else:
