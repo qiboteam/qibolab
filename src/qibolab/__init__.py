@@ -111,12 +111,4 @@ class MetaBackend:
 
     def list_available(self) -> dict:
         """Lists all the available qibolab platforms."""
-        available_backends = {}
-        for platform in os.environ.get(PLATFORMS):
-            try:
-                MetaBackend.load(platform=platform)
-                available = True
-            except:
-                available = False
-            available_backends[platform] = available
-        return available_backends
+        return {platform: True for platform in os.environ.get(PLATFORMS)}
