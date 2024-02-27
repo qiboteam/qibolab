@@ -95,7 +95,8 @@ class MetaBackend:
         """
         from qibolab.backends import QibolabBackend
 
-        PLATFORMS = os.environ.get(PLATFORMS)
+        platformsdir = Path(os.environ.get(PLATFORMS))
+        platforms = [d.name for d in platforms.iterdir() if d.is_dir() and not d.name.startswith("_")]
         if platform in PLATFORMS:
             return QibolabBackend(platform=platform)
         else:
