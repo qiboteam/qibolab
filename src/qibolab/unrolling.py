@@ -4,7 +4,6 @@ May be reused by different instruments.
 """
 
 from dataclasses import asdict, dataclass, field, fields
-from functools import total_ordering
 
 from .pulses import PulseSequence
 
@@ -26,8 +25,7 @@ def _instructions(sequence: PulseSequence):
     return len(sequence)
 
 
-@total_ordering
-@dataclass(frozen=True, eq=True)
+@dataclass(frozen=True, order=False)
 class Bounds:
     """Instument memory limitations proxies."""
 
@@ -55,6 +53,11 @@ class Bounds:
 
     def __lt__(self, other: "Bounds") -> bool:
         return any(getattr(self, f.name) < getattr(other, f.name) for f in fields(self))
+
+    def __ge__(self, other: "Bounds") -> bool:
+        return all(
+            getattr(self, f.name) >= getattr(other, f.name) for f in fields(self)
+        )
 
 
 def batch(sequences: list[PulseSequence], bounds: Bounds):

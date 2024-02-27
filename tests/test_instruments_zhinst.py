@@ -735,10 +735,11 @@ def test_batching(dummy_qrc):
     sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
     sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
 
-    batches = list(batch(200 * [sequence], instrument.BOUNDS))
-    assert len(batches) == 3
-    assert len(batches[0]) == 75
-    assert len(batches[1]) == 75
+    batches = list(batch(600 * [sequence], instrument.BOUNDS))
+    # These sequences get limited by the number of measuraments (600/250/2)
+    assert len(batches) == 5
+    assert len(batches[0]) == 125
+    assert len(batches[1]) == 125
 
 
 @pytest.fixture(scope="module")

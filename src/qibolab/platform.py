@@ -241,8 +241,8 @@ class Platform:
 
         results = defaultdict(list)
         bounds = kwargs.get("bounds", self._controller.BOUNDS)
-        for batch in batch(sequences, bounds):
-            sequence, readouts = unroll_sequences(batch, options.relaxation_time)
+        for b in batch(sequences, bounds):
+            sequence, readouts = unroll_sequences(b, options.relaxation_time)
             result = self._execute(sequence, options, **kwargs)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
