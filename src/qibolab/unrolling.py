@@ -53,8 +53,8 @@ class Bounds:
 
         return type(self)(**new)
 
-    def __lt__(self, other: "Bounds") -> bool:
-        return any(getattr(self, f.name) < getattr(other, f.name) for f in fields(self))
+    def __gt__(self, other: "Bounds") -> bool:
+        return any(getattr(self, f.name) > getattr(other, f.name) for f in fields(self))
 
 
 def batch(sequences: list[PulseSequence], bounds: Bounds):
