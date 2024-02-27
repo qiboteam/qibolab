@@ -213,7 +213,9 @@ class QcmBb(ClusterModule):
         # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux is not None and _qubit.flux.port == self.ports(port):
+            name = _qubit.flux.port.name
+            module = _qubit.flux.port.module
+            if _qubit.flux is not None and (name, module) == (port, self):
                 qubit = _qubit
 
         # select a new sequencer and configure it as required
@@ -488,9 +490,7 @@ class QcmBb(ClusterModule):
                             )
 
                     else:  # qubit_sweeper_parameters
-                        if sweeper.qubits and sequencer.qubit in [
-                            _.name for _ in sweeper.qubits
-                        ]:
+                        if sequencer.qubit in [qubit.name for qubit in sweeper.qubits]:
                             # plays an active role
                             if sweeper.parameter == Parameter.bias:
                                 reference_value = self._ports[port].offset
