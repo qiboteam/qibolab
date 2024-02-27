@@ -79,3 +79,36 @@ def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshot
     return QibolabBackend(platform, runcard).execute_circuit(
         circuit, initial_state=initial_state, nshots=nshots
     )
+
+
+class MetaBackend:
+    """Meta-backend class which takes care of loading the qibolab backend."""
+
+    @staticmethod
+    def load(platform: str):
+        """Loads the backend.
+
+        Args:
+            platform (str): Name of the platform to load.
+        Returns:
+            qibo.backends.abstract.Backend: The loaded backend.
+        """
+        from qibolab.backends import QibolabBackend
+
+        platformsdir = Path(os.environ.get(PLATFORMS))
+        platforms = [
+            d.name
+            for d in platforms.iterdir()
+            if d.is_dir() and not d.name.startswith("_")
+        ]
+        if platform in PLATFORMS:
+            return QibolabBackend(platform=platform)
+        else:
+            raise_error(
+                ValueError,
+                f"Unsupported platform, please use one among {PLATFORMS}.",
+            )
+
+    def list_available(self) -> dict:
+        """Lists all the available qibolab platforms."""
+        return {platform: True for platform in os.environ.get(PLATFORMS)}
