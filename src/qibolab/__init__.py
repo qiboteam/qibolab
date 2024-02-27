@@ -6,7 +6,6 @@ from pathlib import Path
 from qibo import Circuit
 from qibo.config import raise_error
 
-from qibolab.backends import QibolabBackend
 from qibolab.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -86,7 +85,7 @@ class MetaBackend:
     """Meta-backend class which takes care of loading the qibolab backend."""
 
     @staticmethod
-    def load(platform: str) -> QibolabBackend:
+    def load(platform: str):
         """Loads the backend.
 
         Args:
@@ -94,6 +93,7 @@ class MetaBackend:
         Returns:
             qibo.backends.abstract.Backend: The loaded backend.
         """
+        from qibolab.backends import QibolabBackend
 
         PLATFORMS = os.environ.get(PLATFORMS)
         if platform in PLATFORMS:
