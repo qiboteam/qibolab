@@ -1,6 +1,6 @@
 """PulseShape class."""
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
 
@@ -137,6 +137,11 @@ class Exponential(Shape):
         )
 
 
+def _gaussian(t, mu, sigma):
+    """Gaussian function, normalized to be 1 at the max."""
+    return np.exp(-(((t - mu) / sigma) ** 2) / 2)
+
+
 @dataclass(frozen=True)
 class Gaussian(Shape):
     r"""Gaussian pulse shape.
@@ -157,7 +162,36 @@ class Gaussian(Shape):
 
     def i(self, times: Times) -> Waveform:
         """Generate a Gaussian window."""
-        return self.amplitude * np.exp(-(((times - self.mu) / self.sigma) ** 2) / 2)
+        return self.amplitude * _gaussian(times, self.mu, self.sigma)
+
+
+@dataclass(frozen=True)
+class GaussianSquare(Shape):
+    r"""GaussianSquare pulse shape.
+
+    .. math::
+
+        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
+    """
+
+    amplitude: float
+    mu: float
+    """Gaussian mean."""
+    sigma: float
+    """Gaussian standard deviation."""
+    width: float
+    """Length of the flat portion."""
+
+    def i(self, times: Times) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+
+        pulse = np.ones_like(times)
+        u, hw = self.mu, self.width / 2
+        tails = (times < (u - hw)) | ((u + hw) < times)
+        pulse[tails] = _gaussian(times[tails], self.mu, self.sigma)
+
+        return self.amplitude * pulse
+
 
 class Shapes(Enum):
     """Available pulse shapes."""
@@ -165,66 +199,7 @@ class Shapes(Enum):
     RECTANGULAR = Rectangular
     EXPONENTIAL = Exponential
     GAUSSIAN = Gaussian
-
-
-class GaussianSquare(Shape):
-    r"""GaussianSquare pulse shape.
-
-    Args:
-        rel_sigma (float): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
-        width (float): Percentage of the pulse that is flat
-
-    .. math::
-
-        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
-    """
-
-    def __init__(self, rel_sigma: float, width: float):
-        self.name = "GaussianSquare"
-        self.pulse: "Pulse" = None
-        self.rel_sigma: float = float(rel_sigma)
-        self.width: float = float(width)
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        if super().__eq__(item):
-            return self.rel_sigma == item.rel_sigma and self.width == item.width
-        return False
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-
-        def gaussian(t, rel_sigma, gaussian_samples):
-            mu = (2 * gaussian_samples - 1) / 2
-            sigma = (2 * gaussian_samples) / rel_sigma
-            return np.exp(-0.5 * ((t - mu) / sigma) ** 2)
-
-        def fvec(t, gaussian_samples, rel_sigma, length=None):
-            if length is None:
-                length = t.shape[0]
-
-            pulse = np.ones_like(t, dtype=float)
-            rise = t < gaussian_samples
-            fall = t > length - gaussian_samples - 1
-            pulse[rise] = gaussian(t[rise], rel_sigma, gaussian_samples)
-            pulse[fall] = gaussian(t[rise], rel_sigma, gaussian_samples)[::-1]
-            return pulse
-
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        gaussian_samples = num_samples * (1 - self.width) // 2
-        t = np.arange(0, num_samples)
-
-        pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
-
-        return self.pulse.amplitude * pulse
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        return np.zeros(num_samples)
-
-    def __repr__(self):
-        return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.width, '.6f').rstrip('0').rstrip('.')})"
+    GAUSSIAN_SQUARE = GaussianSquare
 
 
 class Drag(PulseShape):
