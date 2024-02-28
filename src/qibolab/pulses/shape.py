@@ -227,6 +227,39 @@ class Drag(Shape):
         return self.beta * (-(times - self.mu) / (self.sigma**2)) * i
 
 
+@dataclass(frozen=True)
+class Iir(Shape):
+    """IIR Filter using scipy.signal lfilter."""
+
+    # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
+    # p = [A, tau_iir]
+    # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
+    # p = [b0, b1, a0, a1]
+
+    amplitude: float
+    a: npt.NDArray
+    b: npt.NDArray
+    target: Shape
+
+    def _data(self, target):
+        a = self.a / self.a[0]
+        gain = np.sum(self.b) / np.sum(a)
+        b = self.b / gain if gain != 0 else self.b
+
+        data = lfilter(b=b, a=a, x=target)
+        if np.max(np.abs(data)) != 0:
+            data = data / np.max(np.abs(data))
+        return data
+
+    def i(self, times: Times) -> Waveform:
+        """.. todo::"""
+        return self.amplitude * self._data(self.target.i(times))
+
+    def q(self, times: Times) -> Waveform:
+        """.. todo::"""
+        return self.amplitude * self._data(self.target.q(times))
+
+
 class Shapes(Enum):
     """Available pulse shapes."""
 
@@ -235,79 +268,7 @@ class Shapes(Enum):
     GAUSSIAN = Gaussian
     GAUSSIAN_SQUARE = GaussianSquare
     DRAG = Drag
-
-
-class IIR(PulseShape):
-    """IIR Filter using scipy.signal lfilter."""
-
-    # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
-    # p = [A, tau_iir]
-    # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
-    # p = [b0, b1, a0, a1]
-
-    def __init__(self, b, a, target: PulseShape):
-        self.name = "IIR"
-        self.target: PulseShape = target
-        self._pulse: "Pulse" = None
-        self.a: np.ndarray = np.array(a)
-        self.b: np.ndarray = np.array(b)
-        # Check len(a) = len(b) = 2
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        if super().__eq__(item):
-            return (
-                self.target == item.target
-                and (self.a == item.a).all()
-                and (self.b == item.b).all()
-            )
-        return False
-
-    @property
-    def pulse(self):
-        return self._pulse
-
-    @pulse.setter
-    def pulse(self, value):
-        self._pulse = value
-        self.target.pulse = value
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        self.a = self.a / self.a[0]
-        gain = np.sum(self.b) / np.sum(self.a)
-        if not gain == 0:
-            self.b = self.b / gain
-        data = lfilter(
-            b=self.b,
-            a=self.a,
-            x=self.target.envelope_waveform_i(sampling_rate),
-        )
-        if not np.max(np.abs(data)) == 0:
-            data = data / np.max(np.abs(data))
-        return np.abs(self.pulse.amplitude) * data
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        self.a = self.a / self.a[0]
-        gain = np.sum(self.b) / np.sum(self.a)
-        if not gain == 0:
-            self.b = self.b / gain
-        data = lfilter(
-            b=self.b,
-            a=self.a,
-            x=self.target.envelope_waveform_q(sampling_rate),
-        )
-        if not np.max(np.abs(data)) == 0:
-            data = data / np.max(np.abs(data))
-        return np.abs(self.pulse.amplitude) * data
-
-    def __repr__(self):
-        formatted_b = [round(b, 3) for b in self.b]
-        formatted_a = [round(a, 3) for a in self.a]
-        return f"{self.name}({formatted_b}, {formatted_a}, {self.target})"
+    IIR = Iir
 
 
 class SNZ(PulseShape):
