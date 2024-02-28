@@ -139,6 +139,9 @@ class Exponential(Shape):
 
 def _gaussian(t, mu, sigma):
     """Gaussian function, normalized to be 1 at the max."""
+    # TODO: if a centered Gaussian has to be used, and we agree that `Times` should
+    # always be the full window, just use `scipy.signal.gaussian`, that is exactly this
+    # function, autcomputing the mean from the number of points
     return np.exp(-(((t - mu) / sigma) ** 2) / 2)
 
 
@@ -183,7 +186,7 @@ class GaussianSquare(Shape):
     """Length of the flat portion."""
 
     def i(self, times: Times) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
+        """Generate a Gaussian envelope, with a flat central window."""
 
         pulse = np.ones_like(times)
         u, hw = self.mu, self.width / 2
@@ -193,6 +196,37 @@ class GaussianSquare(Shape):
         return self.amplitude * pulse
 
 
+@dataclass(frozen=True)
+class Drag(Shape):
+    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
+
+    .. todo::
+
+        - add expression
+        - add reference
+    """
+
+    amplitude: float
+    mu: float
+    """Gaussian mean."""
+    sigma: float
+    """Gaussian standard deviation."""
+    beta: float
+    """.. todo::"""
+
+    def i(self, times: Times) -> Waveform:
+        """Generate a Gaussian envelope."""
+        return self.amplitude * _gaussian(times, self.mu, self.sigma)
+
+    def q(self, times: Times) -> Waveform:
+        """Generate ...
+
+        .. todo::
+        """
+        i = self.amplitude * _gaussian(times, self.mu, self.sigma)
+        return self.beta * (-(times - self.mu) / (self.sigma**2)) * i
+
+
 class Shapes(Enum):
     """Available pulse shapes."""
 
@@ -200,61 +234,7 @@ class Shapes(Enum):
     EXPONENTIAL = Exponential
     GAUSSIAN = Gaussian
     GAUSSIAN_SQUARE = GaussianSquare
-
-
-class Drag(PulseShape):
-    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
-
-    Args:
-        rel_sigma (float): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
-        beta (float): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
-    .. math::
-    """
-
-    def __init__(self, rel_sigma, beta):
-        self.name = "Drag"
-        self.pulse: "Pulse" = None
-        self.rel_sigma = float(rel_sigma)
-        self.beta = float(beta)
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        if super().__eq__(item):
-            return self.rel_sigma == item.rel_sigma and self.beta == item.beta
-        return False
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        x = np.arange(0, num_samples, 1)
-        return self.pulse.amplitude * np.exp(
-            -(1 / 2)
-            * (
-                ((x - (num_samples - 1) / 2) ** 2)
-                / (((num_samples) / self.rel_sigma) ** 2)
-            )
-        )
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        x = np.arange(0, num_samples, 1)
-        i = self.pulse.amplitude * np.exp(
-            -(1 / 2)
-            * (
-                ((x - (num_samples - 1) / 2) ** 2)
-                / (((num_samples) / self.rel_sigma) ** 2)
-            )
-        )
-        return (
-            self.beta
-            * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
-            * i
-            * sampling_rate
-        )
-
-    def __repr__(self):
-        return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
+    DRAG = Drag
 
 
 class IIR(PulseShape):
