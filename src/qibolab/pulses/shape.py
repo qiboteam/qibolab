@@ -327,6 +327,29 @@ class ECap(Shape):
         )
 
 
+@dataclass(frozen=True)
+class Custom(Shape):
+    """Arbitrary shape.
+
+    .. todo::
+
+        - expand description
+        - add attribute docstrings
+    """
+
+    amplitude: float
+    custom_i: npt.NDArray
+    custom_q: npt.NDArray
+
+    def i(self, times: Times) -> Waveform:
+        """.. todo::"""
+        return self.amplitude * self.custom_i
+
+    def envelope_waveform_q(self, times: Times) -> Waveform:
+        """.. todo::"""
+        return self.amplitude * self.custom_q
+
+
 class Shapes(Enum):
     """Available pulse shapes."""
 
@@ -338,35 +361,4 @@ class Shapes(Enum):
     IIR = Iir
     SNZ = Snz
     ECAP = ECap
-
-
-class Custom(PulseShape):
-    """Arbitrary shape."""
-
-    def __init__(self, envelope_i, envelope_q=None):
-        self.name = "Custom"
-        self.pulse: "Pulse" = None
-        self.envelope_i: np.ndarray = np.array(envelope_i)
-        if envelope_q is not None:
-            self.envelope_q: np.ndarray = np.array(envelope_q)
-        else:
-            self.envelope_q = self.envelope_i
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-        if self.pulse.duration != len(self.envelope_i):
-            raise ValueError("Length of envelope_i must be equal to pulse duration")
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-
-        return self.envelope_i * self.pulse.amplitude
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        if self.pulse.duration != len(self.envelope_q):
-            raise ValueError("Length of envelope_q must be equal to pulse duration")
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-
-        return self.envelope_q * self.pulse.amplitude
-
-    def __repr__(self):
-        return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
+    CUSTOM = Custom
