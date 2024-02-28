@@ -95,7 +95,7 @@ def test_multiple_measurements():
     res2 = circuit.add(gates.M(1))
     result = backend.execute_circuit(circuit, nshots=50)
 
-    samples = [getattr(res, "samples")()[:, 0] for res in [res0, res1, res2]]
+    samples = [res.samples()[:, 0] for res in [res0, res1, res2]]
     final_samples = np.array(samples).T
     target_samples = result.samples()
     np.testing.assert_allclose(final_samples, target_samples)
