@@ -5,10 +5,20 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 
 from qibolab.instruments.qblox.q1asm import Program
 from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses.shape import modulate
 from qibolab.sweeper import Parameter, Sweeper
 
 SAMPLING_RATE = 1
 """Sampling rate for qblox instruments in GSps."""
+
+
+def _modulated_waveforms(pulse: Pulse, hardware: bool = True):
+    envelopes = pulse.envelope_waveforms(SAMPLING_RATE)
+    return (
+        envelopes
+        if hardware
+        else modulate(np.array(envelopes), pulse.frequency, SAMPLING_RATE)
+    )
 
 
 class WaveformsBuffer:
@@ -64,10 +74,7 @@ class WaveformsBuffer:
                     values = sweeper.get_values(pulse.duration)
 
         if not baking_required:
-            if hardware_mod_en:
-                waveform_i, waveform_q = pulse_copy.envelope_waveforms(SAMPLING_RATE)
-            else:
-                waveform_i, waveform_q = pulse_copy.modulated_waveforms(SAMPLING_RATE)
+            waveform_i, waveform_q = _modulated_waveforms(pulse_copy, hardware_mod_en)
 
             pulse.waveform_i = waveform_i
             pulse.waveform_q = waveform_q
@@ -135,10 +142,7 @@ class WaveformsBuffer:
 
             for duration in values:
                 pulse_copy.duration = duration
-                if hardware_mod_en:
-                    waveform = pulse_copy.envelope_waveform_i(SAMPLING_RATE)
-                else:
-                    waveform = pulse_copy.modulated_waveform_i(SAMPLING_RATE)
+                waveform = _modulated_waveforms(pulse_copy, hardware_mod_en)
 
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration
@@ -156,14 +160,9 @@ class WaveformsBuffer:
 
             for duration in values:
                 pulse_copy.duration = duration
-                if hardware_mod_en:
-                    waveform_i, waveform_q = pulse_copy.envelope_waveforms(
-                        SAMPLING_RATE
-                    )
-                else:
-                    waveform_i, waveform_q = pulse_copy.modulated_waveforms(
-                        SAMPLING_RATE
-                    )
+                waveform_i, waveform_q = _modulated_waveforms(
+                    pulse_copy, hardware_mod_en
+                )
 
                 padded_duration = int(np.ceil(duration / 4)) * 4
                 memory_needed = padded_duration * 2

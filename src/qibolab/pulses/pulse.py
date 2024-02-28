@@ -129,24 +129,6 @@ class Pulse:
             self.shape.envelope_waveform_q(sampling_rate),
         )
 
-    def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The waveform of the i component of the pulse, modulated with its
-        frequency."""
-
-        return self.shape.modulated_waveform_i(sampling_rate)
-
-    def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The waveform of the q component of the pulse, modulated with its
-        frequency."""
-
-        return self.shape.modulated_waveform_q(sampling_rate)
-
-    def modulated_waveforms(self, sampling_rate):
-        """A tuple with the i and q waveforms of the pulse, modulated with its
-        frequency."""
-
-        return self.shape.modulated_waveforms(sampling_rate)
-
     def __hash__(self):
         """Hash the content.
 
