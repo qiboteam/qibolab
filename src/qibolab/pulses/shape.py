@@ -260,6 +260,45 @@ class Iir(Shape):
         return self.amplitude * self._data(self.target.q(times))
 
 
+@dataclass(frozen=True)
+class Snz(Shape):
+    """Sudden variant Net Zero.
+
+    https://arxiv.org/abs/2008.07411
+    (Supplementary materials: FIG. S1.)
+
+    .. todo::
+
+        - expression
+    """
+
+    amplitude: float
+    width: float
+    """Essentially, the pulse duration...
+
+    .. todo::
+
+        - reset to duration, if decided so
+    """
+    t_idling: float
+    b_amplitude: float = 0.5
+    """Relative B amplitude (wrt A)."""
+
+    def i(self, times: Times) -> Waveform:
+        """.. todo::"""
+        # convert timings to samples
+        half_pulse_duration = (self.width - self.t_idling) / 2
+        aspan = np.sum(times < half_pulse_duration)
+        idle = len(times) - 2 * (aspan + 1)
+
+        pulse = np.ones_like(times)
+        # the aspan + 1 sample is B (and so the aspan + 1 + idle + 1), indexes are 0-based
+        pulse[aspan] = pulse[aspan + 1 + idle] = self.b_amplitude
+        # set idle time to 0
+        pulse[aspan + 1 : aspan + 1 + idle] = 0
+        return self.amplitude * pulse
+
+
 class Shapes(Enum):
     """Available pulse shapes."""
 
@@ -269,60 +308,7 @@ class Shapes(Enum):
     GAUSSIAN_SQUARE = GaussianSquare
     DRAG = Drag
     IIR = Iir
-
-
-class SNZ(PulseShape):
-    """Sudden variant Net Zero.
-
-    https://arxiv.org/abs/2008.07411
-    (Supplementary materials: FIG. S1.)
-    """
-
-    def __init__(self, t_idling, b_amplitude=None):
-        self.name = "SNZ"
-        self.pulse: "Pulse" = None
-        self.t_idling: float = t_idling
-        self.b_amplitude = b_amplitude
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        if super().__eq__(item):
-            return (
-                self.t_idling == item.t_idling and self.b_amplitude == item.b_amplitude
-            )
-        return False
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
-        if self.t_idling > self.pulse.duration:
-            raise ValueError(
-                f"Cannot put idling time {self.t_idling} higher than duration {self.pulse.duration}."
-            )
-        if self.b_amplitude is None:
-            self.b_amplitude = self.pulse.amplitude / 2
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        half_pulse_duration = (self.pulse.duration - self.t_idling) / 2
-        half_flux_pulse_samples = int(
-            np.rint(num_samples * half_pulse_duration / self.pulse.duration)
-        )
-        idling_samples = num_samples - 2 * half_flux_pulse_samples
-        return np.concatenate(
-            (
-                self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
-                np.array([self.b_amplitude]),
-                np.zeros(idling_samples),
-                -np.array([self.b_amplitude]),
-                -self.pulse.amplitude * np.ones(half_flux_pulse_samples - 1),
-            )
-        )
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        return np.zeros(num_samples)
-
-    def __repr__(self):
-        return f"{self.name}({self.t_idling})"
+    SNZ = Snz
 
 
 class eCap(PulseShape):
