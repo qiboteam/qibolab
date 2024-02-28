@@ -80,12 +80,12 @@ for mod in controller.modules.values():
     mod._device_num_sequencers = 0
 # end mock
 
-for name, mod in controller.modules.items():
-    if "qcm_rf" in name:
-        continue
-    channels = controller._set_module_channel_map(mod, qubits)
-    pulses = sequence.get_channel_pulses(*channels)
-    mod.process_pulse_sequence(
-        qubits, pulses, navgs, nshots, repetition_duration, sweepers
-    )
-    print(mod._sequencers["o1"][0].program)
+# for name, mod in controller.modules.items():
+#     if "qcm_rf" in name:
+#         continue
+
+mod = controller.modules["qcm_bb0"]
+channels = controller._set_module_channel_map(mod, qubits)
+pulses = sequence.get_channel_pulses(*channels)
+mod.process_pulse_sequence(qubits, pulses, navgs, nshots, repetition_duration, sweepers)
+print(mod._sequencers["o1"][0].program)
