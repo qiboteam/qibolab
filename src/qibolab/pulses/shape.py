@@ -87,13 +87,13 @@ class Shape(ABC):
     Generates both i (in-phase) and q (quadrature) components.
     """
 
-    @abstractmethod
     def i(self, times: Times) -> Waveform:
         """In-phase envelope."""
+        return np.zeros_like(times)
 
-    @abstractmethod
     def q(self, times: Times) -> Waveform:
         """Quadrature envelope."""
+        return np.zeros_like(times)
 
     def envelopes(self, times: Times) -> IqWaveform:
         """Stacked i and q envelope waveforms of the pulse."""
@@ -109,10 +109,6 @@ class Rectangular(Shape):
     def i(self, times: Times) -> Waveform:
         """Generate a rectangular envelope."""
         return self.amplitude * np.ones_like(times)
-
-    def q(self, times: Times) -> Waveform:
-        """Generate an identically null signal."""
-        return np.zeros_like(times)
 
 
 @dataclass(frozen=True)
@@ -140,10 +136,6 @@ class Exponential(Shape):
             / (1 + self.g)
         )
 
-    def q(self, times: Times) -> Waveform:
-        """Generate an identically null signal."""
-        return np.zeros_like(times)
-
 
 @dataclass(frozen=True)
 class Gaussian(Shape):
@@ -159,21 +151,13 @@ class Gaussian(Shape):
 
     amplitude: float
     mu: float
+    """Gaussian mean."""
     sigma: float
-    """Relative standard deviation.
-
-    The pulse standard deviation will then be `sigma = duration /
-    rel_sigma`.
-    """
+    """Gaussian standard deviation."""
 
     def i(self, times: Times) -> Waveform:
         """Generate a Gaussian window."""
         return self.amplitude * np.exp(-(((times - self.mu) / self.sigma) ** 2) / 2)
-
-    def q(self, times: Times) -> Waveform:
-        """Generate an indentically null signal."""
-        return np.zeros_like(times)
-
 
 class Shapes(Enum):
     """Available pulse shapes."""
