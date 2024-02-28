@@ -299,6 +299,34 @@ class Snz(Shape):
         return self.amplitude * pulse
 
 
+@dataclass(frozen=True)
+class ECap(Shape):
+    r"""ECap pulse shape.
+
+    .. todo::
+
+        - add reference
+
+    .. math::
+
+        e_{\cap(t,\alpha)} &=& A[1 + \tanh(\alpha t/t_\theta)][1 + \tanh(\alpha (1 - t/t_\theta))]\\
+        &\times& [1 + \tanh(\alpha/2)]^{-2}
+    """
+
+    amplitude: float
+    alpha: float
+
+    def i(self, times: Times) -> Waveform:
+        """.. todo::"""
+        x = times / len(times)
+        return (
+            self.amplitude
+            * (1 + np.tanh(self.alpha * times))
+            * (1 + np.tanh(self.alpha * (1 - x)))
+            / (1 + np.tanh(self.alpha / 2)) ** 2
+        )
+
+
 class Shapes(Enum):
     """Available pulse shapes."""
 
@@ -309,47 +337,7 @@ class Shapes(Enum):
     DRAG = Drag
     IIR = Iir
     SNZ = Snz
-
-
-class eCap(PulseShape):
-    r"""ECap pulse shape.
-
-    Args:
-        alpha (float):
-
-    .. math::
-
-        e_{\cap(t,\alpha)} &=& A[1 + \tanh(\alpha t/t_\theta)][1 + \tanh(\alpha (1 - t/t_\theta))]\\
-        &\times& [1 + \tanh(\alpha/2)]^{-2}
-    """
-
-    def __init__(self, alpha: float):
-        self.name = "eCap"
-        self.pulse: "Pulse" = None
-        self.alpha: float = float(alpha)
-
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        if super().__eq__(item):
-            return self.alpha == item.alpha
-        return False
-
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        num_samples = int(self.pulse.duration * sampling_rate)
-        x = np.arange(0, num_samples, 1)
-        return (
-            self.pulse.amplitude
-            * (1 + np.tanh(self.alpha * x / num_samples))
-            * (1 + np.tanh(self.alpha * (1 - x / num_samples)))
-            / (1 + np.tanh(self.alpha / 2)) ** 2
-        )
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        num_samples = int(self.pulse.duration * sampling_rate)
-        return np.zeros(num_samples)
-
-    def __repr__(self):
-        return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
+    ECAP = ECap
 
 
 class Custom(PulseShape):
