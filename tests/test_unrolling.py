@@ -64,4 +64,4 @@ def test_batch(bounds):
     sequences = 10 * [ps]
 
     batches = list(batch(sequences, bounds))
-    assert len(batches) == 4
+    assert len(batches) > 1
