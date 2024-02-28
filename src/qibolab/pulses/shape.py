@@ -8,6 +8,16 @@ import numpy as np
 import numpy.typing as npt
 from scipy.signal import lfilter
 
+__all__ = [
+    "Times",
+    "Waveform",
+    "IqWaveform",
+    "modulate",
+    "demodulate",
+    "Shape",
+    "Shapes",
+]
+
 SAMPLING_RATE = 1
 """Default sampling rate in gigasamples per second (GSps).
 
