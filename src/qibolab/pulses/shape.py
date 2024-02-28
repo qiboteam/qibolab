@@ -145,60 +145,45 @@ class Exponential(Shape):
         return np.zeros_like(times)
 
 
-class Shapes(Enum):
-    """Available pulse shapes."""
-
-    rectangular = Rectangular
-    exponential = Exponential
-
-
-class Gaussian(PulseShape):
+@dataclass(frozen=True)
+class Gaussian(Shape):
     r"""Gaussian pulse shape.
 
     Args:
-        rel_sigma (float): relative sigma so that the pulse standard deviation (sigma) = duration / rel_sigma
+        rel_sigma (float):
 
     .. math::
 
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
     """
 
-    def __init__(self, rel_sigma: float):
-        self.name = "Gaussian"
-        self.pulse: "Pulse" = None
-        self.rel_sigma: float = float(rel_sigma)
+    amplitude: float
+    mu: float
+    sigma: float
+    """Relative standard deviation.
 
-    def __eq__(self, item) -> bool:
-        """Overloads == operator."""
-        if super().__eq__(item):
-            return self.rel_sigma == item.rel_sigma
-        return False
+    The pulse standard deviation will then be `sigma = duration /
+    rel_sigma`.
+    """
 
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
+    def i(self, times: Times) -> Waveform:
+        """Generate a Gaussian window."""
+        return self.amplitude * np.exp(-(((times - self.mu) / self.sigma) ** 2) / 2)
 
-        if self.pulse:
-            num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            x = np.arange(0, num_samples, 1)
-            return self.pulse.amplitude * np.exp(
-                -(1 / 2)
-                * (
-                    ((x - (num_samples - 1) / 2) ** 2)
-                    / (((num_samples) / self.rel_sigma) ** 2)
-                )
-            )
-        raise ShapeInitError
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
-        num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-        return np.zeros(num_samples)
-
-    def __repr__(self):
-        return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')})"
+    def q(self, times: Times) -> Waveform:
+        """Generate an indentically null signal."""
+        return np.zeros_like(times)
 
 
-class GaussianSquare(PulseShape):
+class Shapes(Enum):
+    """Available pulse shapes."""
+
+    RECTANGULAR = Rectangular
+    EXPONENTIAL = Exponential
+    GAUSSIAN = Gaussian
+
+
+class GaussianSquare(Shape):
     r"""GaussianSquare pulse shape.
 
     Args:
