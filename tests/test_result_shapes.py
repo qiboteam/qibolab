@@ -29,8 +29,8 @@ def execute(platform, acquisition_type, averaging_mode, sweep=False):
         nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode
     )
     if sweep:
-        amp_values = np.arange(0.01, 0.06, 0.01)
-        freq_values = np.arange(-4e6, 4e6, 1e6)
+        amp_values = np.linspace(0.01, 0.06, NSWEEP1)
+        freq_values = np.linspace(-4e6, 4e6, NSWEEP2)
         sweeper1 = Sweeper(Parameter.bias, amp_values, qubits=[platform.qubits[qubit]])
         # sweeper1 = Sweeper(Parameter.amplitude, amp_values, pulses=[qd_pulse])
         sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[ro_pulse])
