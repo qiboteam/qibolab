@@ -84,7 +84,7 @@ The following example shows how to modify the compiler in order to execute a cir
         """X gate applied with a single pi-pulse."""
         qubit = gate.target_qubits[0]
         sequence = PulseSequence()
-        sequence.append(platform.create_RX_pulse(qubit, start=0))
+        sequence.append(platform.create_RX_pulse(qubit))
         return sequence, {}
 
 

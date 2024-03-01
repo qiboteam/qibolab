@@ -61,12 +61,13 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
 .. testcode::  python
 
-   from qibolab.pulses import PulseSequence
+   from qibolab.pulses import PulseSequence, Delay
 
    ps = PulseSequence()
-   ps.append(platform.create_RX_pulse(qubit=0, start=0))  # start time is in ns
-   ps.append(platform.create_RX_pulse(qubit=0, start=100))
-   ps.append(platform.create_MZ_pulse(qubit=0, start=200))
+   ps.append(platform.create_RX_pulse(qubit=0))
+   ps.append(platform.create_RX_pulse(qubit=0))
+   ps.append(Delay(200, platform.qubits[0].readout.name))
+   ps.append(platform.create_MZ_pulse(qubit=0))
 
 Now we can execute the sequence on hardware:
 
@@ -295,7 +296,6 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
     from qibolab.pulses import Pulse, Rectangular
 
     pulse = Pulse(
-        start=0,  # Timing, always in nanoseconds (ns)
         duration=40,  # Pulse duration in ns
         amplitude=0.5,  # Amplitude relative to instrument range
         frequency=1e8,  # Frequency in Hz
@@ -314,8 +314,7 @@ Alternatively, you can achieve the same result using the dedicated :class:`qibol
     from qibolab.pulses import Pulse, Rectangular
 
     pulse = Pulse(
-        start=0,  # timing, in all qibolab, is expressed in ns
-        duration=40,
+        duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
@@ -335,8 +334,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
     sequence = PulseSequence()
 
     pulse1 = Pulse(
-        start=0,  # timing, in all qibolab, is expressed in ns
-        duration=40,
+        duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
@@ -345,8 +343,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         qubit=0,
     )
     pulse2 = Pulse(
-        start=0,  # timing, in all qibolab, is expressed in ns
-        duration=40,
+        duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
@@ -355,8 +352,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         qubit=0,
     )
     pulse3 = Pulse(
-        start=0,  # timing, in all qibolab, is expressed in ns
-        duration=40,
+        duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
@@ -365,8 +361,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         qubit=0,
     )
     pulse4 = Pulse(
-        start=0,  # timing, in all qibolab, is expressed in ns
-        duration=40,
+        duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
@@ -387,12 +382,9 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
 .. testoutput:: python
     :hide:
 
-    Total duration: 40
+    Total duration: 160
     We have 0 pulses on channel 1.
 
-.. warning::
-
-    Pulses in PulseSequences are ordered automatically following the start time (and the channel if needed). Not by the definition order.
 
 When conducting experiments on quantum hardware, pulse sequences are vital. Assuming you have already initialized a platform, executing an experiment is as simple as:
 
@@ -413,7 +405,6 @@ Typical experiments may include both pre-defined pulses and new ones:
     sequence.append(platform.create_RX_pulse(0))
     sequence.append(
         Pulse(
-            start=0,
             duration=10,
             amplitude=0.5,
             frequency=2500000000,
@@ -422,7 +413,7 @@ Typical experiments may include both pre-defined pulses and new ones:
             channel="0",
         )
     )
-    sequence.append(platform.create_MZ_pulse(0, start=0))
+    sequence.append(platform.create_MZ_pulse(0))
 
     results = platform.execute_pulse_sequence(sequence, options=options)
 
@@ -494,15 +485,9 @@ A tipical resonator spectroscopy experiment could be defined with:
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
     sequence = PulseSequence()
-    sequence.append(
-        platform.create_MZ_pulse(0, start=0)
-    )  # readout pulse for qubit 0 at 4 GHz
-    sequence.append(
-        platform.create_MZ_pulse(1, start=0)
-    )  # readout pulse for qubit 1 at 5 GHz
-    sequence.append(
-        platform.create_MZ_pulse(2, start=0)
-    )  # readout pulse for qubit 2 at 6 GHz
+    sequence.append(platform.create_MZ_pulse(0))  # readout pulse for qubit 0 at 4 GHz
+    sequence.append(platform.create_MZ_pulse(1))  # readout pulse for qubit 1 at 5 GHz
+    sequence.append(platform.create_MZ_pulse(2))  # readout pulse for qubit 2 at 6 GHz
 
     sweeper = Sweeper(
         parameter=Parameter.frequency,
@@ -535,10 +520,13 @@ For example:
 
 .. testcode:: python
 
+    from qibolab.pulses import PulseSequence, Delay
+
     sequence = PulseSequence()
 
     sequence.append(platform.create_RX_pulse(0))
-    sequence.append(platform.create_MZ_pulse(0, start=sequence[0].finish))
+    sequence.append(Delay(sequence.duration, platform.qubits[0].readout.name))
+    sequence.append(platform.create_MZ_pulse(0))
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
@@ -631,8 +619,8 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 
 .. testcode:: python
 
-    drive_pulse_1 = platform.create_MZ_pulse(0, start=0)
-    measurement_pulse = platform.create_qubit_readout_pulse(0, start=0)
+    drive_pulse_1 = platform.create_RX_pulse(0)
+    measurement_pulse = platform.create_MZ_pulse(0)
 
     sequence = PulseSequence()
     sequence.append(drive_pulse_1)
@@ -709,7 +697,7 @@ If this set is universal any circuit can be transpiled and compiled to a pulse s
 Every :class:`qibolab.qubits.Qubit` object contains a :class:`qibolab.native.SingleQubitNatives` object which holds the parameters of its native single-qubit gates,
 while each :class:`qibolab.qubits.QubitPair` objects contains a :class:`qibolab.native.TwoQubitNatives` object which holds the parameters of the native two-qubit gates acting on the pair.
 
-Each native gate is represented by a :class:`qibolab.native.NativePulse` or :class:`qibolab.native.NativeSequence` which contain all the calibrated parameters and can be converted to an actual :class:`qibolab.pulses.PulseSequence` that is then executed in the platform.
+Each native gate is represented by a :class:`qibolab.pulses.Pulse` or :class:`qibolab.pulses.PulseSequence` which contain all the calibrated parameters.
 Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate, implemented via a pulse sent in the readout line followed by an acquisition.
 For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required, which is implemented by halving the amplitude of the calibrated pi-pulse.
 U3, the most general single-qubit gate can be implemented using two RX90 pi-pulses and some virtual Z-phases which are included in the phase of later pulses.
@@ -766,7 +754,6 @@ The most important instruments are the controller, the following is a table of t
     "RTS frequency",                "yes","yes","yes","yes"
     "RTS amplitude",                "yes","yes","yes","yes"
     "RTS duration",                 "yes","yes","yes","yes"
-    "RTS start",                    "yes","yes","yes","yes"
     "RTS relative phase",           "yes","yes","yes","yes"
     "RTS 2D any combination",       "yes","yes","yes","yes"
     "Sequence unrolling",           "dev","dev","dev","dev"
