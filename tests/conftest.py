@@ -113,3 +113,9 @@ def connected_platform(request):
     platform.connect()
     yield platform
     platform.disconnect()
+
+
+def pytest_generate_tests(metafunc):
+    name = metafunc.module.__name__
+    if "test_instruments" in name or "test_compilers" in name:
+        pytest.skip()

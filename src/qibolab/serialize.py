@@ -98,21 +98,16 @@ def load_qubits(
     return qubits, couplers, pairs
 
 
-def _load_pulse(pulse_kwargs, qubit=None):
+def _load_pulse(pulse_kwargs, qubit):
     pulse_type = pulse_kwargs.pop("type")
-    q = pulse_kwargs.pop("qubit", qubit.name)
+    if "coupler" in pulse_kwargs:
+        q = pulse_kwargs.pop("coupler", qubit.name)
+    else:
+        q = pulse_kwargs.pop("qubit", qubit.name)
+
     if pulse_type == "dl":
         return Delay(**pulse_kwargs)
-
-    if pulse_type == "qf" or pulse_type == "cf":
-        pulse = Pulse.flux(**pulse_kwargs, qubit=q)
-    else:
-        pulse = Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
-    channel_type = (
-        "flux" if pulse.type is PulseType.COUPLERFLUX else pulse.type.name.lower()
-    )
-    pulse.channel = getattr(qubit, channel_type)
-    return pulse
+    return Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
 
 
 def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
@@ -139,11 +134,14 @@ def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
         virtual_z_phases = defaultdict(int)
         for kwargs in seq_kwargs:
             _type = kwargs["type"]
-            q = kwargs["qubit"]
             if _type == "virtual_z":
+                q = kwargs["qubit"]
                 virtual_z_phases[q] += kwargs["phase"]
             else:
-                qubit = couplers[q] if _type == "cf" else qubits[q]
+                if "coupler" in kwargs:
+                    qubit = couplers[kwargs["coupler"]]
+                else:
+                    qubit = qubits[kwargs["qubit"]]
                 sequence.append(_load_pulse(kwargs, qubit))
 
         sequences[name] = (sequence, virtual_z_phases)
@@ -163,14 +161,12 @@ def register_gates(
 
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
-        qubits[load_qubit_name(q)].native_gates = _load_single_qubit_natives(
-            qubits[load_qubit_name(q)], gates
-        )
+        qubit = qubits[load_qubit_name(q)]
+        qubit.native_gates = _load_single_qubit_natives(qubit, gates)
 
     for c, gates in native_gates.get("coupler", {}).items():
-        couplers[load_qubit_name(c)].native_pulse = _load_single_qubit_natives(
-            couplers[load_qubit_name(c)], gates
-        )
+        coupler = couplers[load_qubit_name(c)]
+        coupler.native_gates = _load_single_qubit_natives(coupler, gates)
 
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
@@ -204,8 +200,10 @@ def _dump_pulse(pulse: Pulse):
     data = asdict(pulse)
     if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
         del data["frequency"]
-        del data["relative_phase"]
+    data["shape"] = str(pulse.shape)
     data["type"] = data["type"].value
+    del data["channel"]
+    del data["relative_phase"]
     return data
 
 
@@ -225,7 +223,12 @@ def _dump_two_qubit_natives(natives: TwoQubitNatives):
         if getattr(natives, fld.name) is None:
             continue
         sequence, virtual_z_phases = getattr(natives, fld.name)
-        data[fld.name] = [_dump_pulse(pulse) for pulse in sequence]
+        data[fld.name] = []
+        for pulse in sequence:
+            pulse_serial = _dump_pulse(pulse)
+            if pulse.type == PulseType.COUPLERFLUX:
+                pulse_serial["coupler"] = pulse_serial["qubit"]
+            data[fld.name].append(pulse_serial)
         data[fld.name].extend(
             {"type": "virtual_z", "phase": phase, "qubit": q}
             for q, phase in virtual_z_phases.items()
@@ -248,7 +251,7 @@ def dump_native_gates(
 
     if couplers:
         native_gates["coupler"] = {
-            dump_qubit_name(c): _dump_two_qubit_natives(coupler.native_gates)
+            dump_qubit_name(c): _dump_single_qubit_natives(coupler.native_gates)
             for c, coupler in couplers.items()
         }
 
