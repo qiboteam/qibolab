@@ -24,9 +24,9 @@ using different Qibolab primitives.
 
     from qibolab import Platform
     from qibolab.qubits import Qubit
-    from qibolab.pulses import PulseType
+    from qibolab.pulses import Pulse, PulseType
     from qibolab.channels import ChannelMap, Channel
-    from qibolab.native import NativePulse, SingleQubitNatives
+    from qibolab.native import SingleQubitNatives
     from qibolab.instruments.dummy import DummyInstrument
 
 
@@ -45,21 +45,19 @@ using different Qibolab primitives.
 
         # assign native gates to the qubit
         qubit.native_gates = SingleQubitNatives(
-            RX=NativePulse(
-                name="RX",
+            RX=Pulse(
                 duration=40,
                 amplitude=0.05,
                 shape="Gaussian(5)",
-                pulse_type=PulseType.DRIVE,
+                type=PulseType.DRIVE,
                 qubit=qubit,
                 frequency=int(4.5e9),
             ),
-            MZ=NativePulse(
-                name="MZ",
+            MZ=Pulse(
                 duration=1000,
                 amplitude=0.005,
                 shape="Rectangular()",
-                pulse_type=PulseType.READOUT,
+                type=PulseType.READOUT,
                 qubit=qubit,
                 frequency=int(7e9),
             ),
@@ -99,10 +97,8 @@ hold the parameters of the two-qubit gates.
 .. testcode::  python
 
     from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import PulseType
+    from qibolab.pulses import PulseType, Pulse, PulseSequence
     from qibolab.native import (
-        NativePulse,
-        NativeSequence,
         SingleQubitNatives,
         TwoQubitNatives,
     )
@@ -113,41 +109,37 @@ hold the parameters of the two-qubit gates.
 
     # assign single-qubit native gates to each qubit
     qubit0.native_gates = SingleQubitNatives(
-        RX=NativePulse(
-            name="RX",
+        RX=Pulse(
             duration=40,
             amplitude=0.05,
             shape="Gaussian(5)",
-            pulse_type=PulseType.DRIVE,
+            type=PulseType.DRIVE,
             qubit=qubit0,
             frequency=int(4.7e9),
         ),
-        MZ=NativePulse(
-            name="MZ",
+        MZ=Pulse(
             duration=1000,
             amplitude=0.005,
             shape="Rectangular()",
-            pulse_type=PulseType.READOUT,
+            type=PulseType.READOUT,
             qubit=qubit0,
             frequency=int(7e9),
         ),
     )
     qubit1.native_gates = SingleQubitNatives(
-        RX=NativePulse(
-            name="RX",
+        RX=Pulse(
             duration=40,
             amplitude=0.05,
             shape="Gaussian(5)",
-            pulse_type=PulseType.DRIVE,
+            type=PulseType.DRIVE,
             qubit=qubit1,
             frequency=int(5.1e9),
         ),
-        MZ=NativePulse(
-            name="MZ",
+        MZ=Pulse(
             duration=1000,
             amplitude=0.005,
             shape="Rectangular()",
-            pulse_type=PulseType.READOUT,
+            type=PulseType.READOUT,
             qubit=qubit1,
             frequency=int(7.5e9),
         ),
@@ -156,15 +148,13 @@ hold the parameters of the two-qubit gates.
     # define the pair of qubits
     pair = QubitPair(qubit0, qubit1)
     pair.native_gates = TwoQubitNatives(
-        CZ=NativeSequence(
-            name="CZ",
-            pulses=[
-                NativePulse(
-                    name="CZ1",
+        CZ=PulseSequence(
+            [
+                Pulse(
                     duration=30,
                     amplitude=0.005,
                     shape="Rectangular()",
-                    pulse_type=PulseType.FLUX,
+                    type=PulseType.FLUX,
                     qubit=qubit1,
                 )
             ],
@@ -182,10 +172,8 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
 
     from qibolab.couplers import Coupler
     from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import PulseType
+    from qibolab.pulses import PulseType, Pulse, PulseSequence
     from qibolab.native import (
-        NativePulse,
-        NativeSequence,
         SingleQubitNatives,
         TwoQubitNatives,
     )
@@ -201,15 +189,13 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # define the pair of qubits
     pair = QubitPair(qubit0, qubit1, coupler_01)
     pair.native_gates = TwoQubitNatives(
-        CZ=NativeSequence(
-            name="CZ",
-            pulses=[
-                NativePulse(
-                    name="CZ1",
+        CZ=PulseSequence(
+            [
+                Pulse(
                     duration=30,
                     amplitude=0.005,
                     shape="Rectangular()",
-                    pulse_type=PulseType.FLUX,
+                    type=PulseType.FLUX,
                     qubit=qubit1,
                 )
             ],
@@ -285,8 +271,6 @@ a two-qubit system:
                         "frequency": 4855663000,
                         "shape": "Drag(5, -0.02)",
                         "type": "qd",
-                        "start": 0,
-                        "phase": 0
                     },
                     "MZ": {
                         "duration": 620,
@@ -294,8 +278,6 @@ a two-qubit system:
                         "frequency": 7453265000,
                         "shape": "Rectangular()",
                         "type": "ro",
-                        "start": 0,
-                        "phase": 0
                     }
                 },
                 "1": {
@@ -305,8 +287,6 @@ a two-qubit system:
                         "frequency": 5800563000,
                         "shape": "Drag(5, -0.04)",
                         "type": "qd",
-                        "start": 0,
-                        "phase": 0
                     },
                     "MZ": {
                         "duration": 960,
@@ -314,8 +294,6 @@ a two-qubit system:
                         "frequency": 7655107000,
                         "shape": "Rectangular()",
                         "type": "ro",
-                        "start": 0,
-                        "phase": 0
                     }
                 }
             },
@@ -327,7 +305,6 @@ a two-qubit system:
                             "amplitude": 0.055,
                             "shape": "Rectangular()",
                             "qubit": 1,
-                            "relative_start": 0,
                             "type": "qf"
                         },
                         {
@@ -396,7 +373,6 @@ we need the following changes to the previous runcard:
                             "amplitude": 0.6025,
                             "shape": "Rectangular()",
                             "qubit": 1,
-                            "relative_start": 0,
                             "type": "qf"
                         },
                         {
@@ -410,12 +386,11 @@ we need the following changes to the previous runcard:
                             "qubit": 1
                         },
                         {
-                            "type": "coupler",
+                            "type": "cf",
                             "duration": 40,
                             "amplitude": 0.1,
                             "shape": "Rectangular()",
                             "coupler": 0,
-                            "relative_start": 0
                         }
                     ]
                 }
@@ -591,8 +566,6 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         "frequency": 4855663000,
                         "shape": "Drag(5, -0.02)",
                         "type": "qd",
-                        "start": 0,
-                        "phase": 0
                     },
                     "MZ": {
                         "duration": 620,
@@ -600,8 +573,6 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         "frequency": 7453265000,
                         "shape": "Rectangular()",
                         "type": "ro",
-                        "start": 0,
-                        "phase": 0
                     }
                 },
                 "1": {
@@ -611,8 +582,6 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         "frequency": 5800563000,
                         "shape": "Drag(5, -0.04)",
                         "type": "qd",
-                        "start": 0,
-                        "phase": 0
                     },
                     "MZ": {
                         "duration": 960,
@@ -620,8 +589,6 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         "frequency": 7655107000,
                         "shape": "Rectangular()",
                         "type": "ro",
-                        "start": 0,
-                        "phase": 0
                     }
                 }
             },
@@ -633,7 +600,6 @@ The runcard can contain an ``instruments`` section that provides these parameter
                             "amplitude": 0.055,
                             "shape": "Rectangular()",
                             "qubit": 1,
-                            "relative_start": 0,
                             "type": "qf"
                         },
                         {
