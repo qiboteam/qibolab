@@ -33,14 +33,14 @@ class Pulse:
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: int
+    frequency: int = 0
     """Pulse Intermediate Frequency in Hz.
 
     The value has to be in the range [10e6 to 300e6].
     """
-    phase: float
+    relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
-    shape: PulseShape
+    shape: PulseShape = "Rectangular()"
     """Pulse shape, as a PulseShape object.
 
     See
