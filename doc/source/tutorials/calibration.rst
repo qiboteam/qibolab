@@ -43,7 +43,7 @@ around the pre-defined frequency.
 
     # create pulse sequence and add pulse
     sequence = PulseSequence()
-    readout_pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    readout_pulse = platform.create_MZ_pulse(qubit=0)
     sequence.append(readout_pulse)
 
     # allocate frequency sweeper
@@ -110,7 +110,7 @@ complex pulse sequence. Therefore with start with that:
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
+    from qibolab.pulses import PulseSequence, Delay
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -123,11 +123,12 @@ complex pulse sequence. Therefore with start with that:
 
     # create pulse sequence and add pulses
     sequence = PulseSequence()
-    drive_pulse = platform.create_RX_pulse(qubit=0, start=0)
+    drive_pulse = platform.create_RX_pulse(qubit=0)
     drive_pulse.duration = 2000
     drive_pulse.amplitude = 0.01
-    readout_pulse = platform.create_MZ_pulse(qubit=0, start=drive_pulse.finish)
+    readout_pulse = platform.create_MZ_pulse(qubit=0)
     sequence.append(drive_pulse)
+    sequence.append(Delay(drive_pulse.duration, readout_pulse.channel))
     sequence.append(readout_pulse)
 
     # allocate frequency sweeper
@@ -205,7 +206,7 @@ and its impact on qubit states in the IQ plane.
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
+    from qibolab.pulses import PulseSequence, Delay
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -218,14 +219,15 @@ and its impact on qubit states in the IQ plane.
 
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()
-    drive_pulse = platform.create_RX_pulse(qubit=0, start=0)
-    readout_pulse1 = platform.create_MZ_pulse(qubit=0, start=drive_pulse.finish)
+    drive_pulse = platform.create_RX_pulse(qubit=0)
+    readout_pulse1 = platform.create_MZ_pulse(qubit=0)
     one_sequence.append(drive_pulse)
+    one_sequence.append(Delay(drive_pulse.duration, readout_pulse1.channel))
     one_sequence.append(readout_pulse1)
 
     # create pulse sequence 2 and add pulses
     zero_sequence = PulseSequence()
-    readout_pulse2 = platform.create_MZ_pulse(qubit=0, start=0)
+    readout_pulse2 = platform.create_MZ_pulse(qubit=0)
     zero_sequence.append(readout_pulse2)
 
     options = ExecutionParameters(
