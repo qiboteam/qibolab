@@ -199,7 +199,6 @@ class RFSOC_RO(RFSOC):
         Parameter.duration,
         Parameter.frequency,
         Parameter.relative_phase,
-        Parameter.start,
     }
 
     def __init__(
