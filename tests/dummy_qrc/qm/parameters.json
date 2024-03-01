@@ -84,9 +84,7 @@
                     "amplitude": 0.005,
                     "frequency": 4700000000,
                     "shape": "Gaussian(5)",
-                    "type": "qd",
-                    "phase": 0
-                },
+                    "type": "qd"},
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.005,
