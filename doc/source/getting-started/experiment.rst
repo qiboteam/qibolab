@@ -102,8 +102,6 @@ And the we can define the runcard ``my_platform/parameters.json``:
                     "frequency": 5500000000,
                     "shape": "Gaussian(3)",
                     "type": "qd",
-                    "start": 0,
-                    "phase": 0
                 },
                 "MZ": {
                     "duration": 2000,
@@ -111,8 +109,6 @@ And the we can define the runcard ``my_platform/parameters.json``:
                     "frequency": 7370000000,
                     "shape": "Rectangular()",
                     "type": "ro",
-                    "start": 0,
-                    "phase": 0
                 }
             }
         },
@@ -193,7 +189,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     # define the pulse sequence
     sequence = PulseSequence()
-    ro_pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    ro_pulse = platform.create_MZ_pulse(qubit=0)
     sequence.append(ro_pulse)
 
     # define a sweeper for a frequency scan
