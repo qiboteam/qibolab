@@ -33,24 +33,21 @@
                     "amplitude": 0.05284168507293318,
                     "frequency": 5542341844,
                     "shape": "Rectangular()",
-                    "type": "qd",
-                    "phase": 0
+                    "type": "qd"
                 },
                 "RX12": {
                     "duration": 30,
                     "amplitude": 0.05284168507293318,
                     "frequency": 5542341844,
                     "shape": "Rectangular()",
-                    "type": "qd",
-                    "phase": 0
+                    "type": "qd"
                 },
                 "MZ": {
                     "duration": 600,
                     "amplitude": 0.03,
                     "frequency": 7371258599,
                     "shape": "Rectangular()",
-                    "type": "ro",
-                    "phase": 0
+                    "type": "ro"
                 }
             }
         }
