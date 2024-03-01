@@ -56,7 +56,6 @@
                     "amplitude": 0.1,
                     "shape": "Gaussian(5)",
                     "frequency": 4000000000.0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -64,7 +63,6 @@
                     "amplitude": 0.005,
                     "shape": "Gaussian(5)",
                     "frequency": 4700000000,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -72,7 +70,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5200000000.0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -82,7 +79,6 @@
                     "amplitude": 0.3,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 4200000000.0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -90,7 +86,6 @@
                     "amplitude": 0.0484,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 4855663000,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -98,7 +93,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 4900000000.0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -108,7 +102,6 @@
                     "amplitude": 0.3,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 4500000000.0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -116,7 +109,6 @@
                     "amplitude": 0.005,
                     "shape": "Gaussian(5)",
                     "frequency": 2700000000,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -124,7 +116,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 6100000000.0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -134,7 +125,6 @@
                     "amplitude": 0.3,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 4150000000.0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -142,7 +132,6 @@
                     "amplitude": 0.0484,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 5855663000,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -150,7 +139,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5800000000.0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -160,7 +148,6 @@
                     "amplitude": 0.3,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 4155663000,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -168,7 +155,6 @@
                     "amplitude": 0.0484,
                     "shape": "Drag(5, -0.02)",
                     "frequency": 5855663000,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -176,7 +162,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5500000000.0,
-                    "phase": 0,
                     "type": "ro"
                 }
             }
@@ -387,7 +372,6 @@
                         "amplitude": 0.3,
                         "shape": "Drag(5, -0.02)",
                         "frequency": 4150000000.0,
-                            "phase": 0,
                         "type": "qd",
                         "qubit": 2
                     },
