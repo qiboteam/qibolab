@@ -162,38 +162,34 @@
         "coupler": {
             "0": {
                 "CP": {
-                    "type": "coupler",
+                    "type": "cf",
                     "duration": 1000,
                     "amplitude": 0.5,
-                    "shape": "Rectangular()",
-                    "coupler": 0
+                    "shape": "Rectangular()"
                 }
             },
             "1": {
                 "CP": {
-                    "type": "coupler",
+                    "type": "cf",
                     "duration": 1000,
                     "amplitude": 0.5,
-                    "shape": "Rectangular()",
-                    "coupler": 1
+                    "shape": "Rectangular()"
                 }
             },
             "3": {
                 "CP": {
-                    "type": "coupler",
+                    "type": "cf",
                     "duration": 1000,
                     "amplitude": 0.5,
-                    "shape": "Rectangular()",
-                    "coupler": 3
+                    "shape": "Rectangular()"
                 }
             },
             "4": {
                 "CP": {
-                    "type": "coupler",
+                    "type": "cf",
                     "duration": 1000,
                     "amplitude": 0.5,
-                    "shape": "Rectangular()",
-                    "coupler": 4
+                    "shape": "Rectangular()"
                 }
             }
         },
