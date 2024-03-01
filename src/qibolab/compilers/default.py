@@ -83,13 +83,13 @@ def cz_rule(gate, platform):
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    pair = platform.pairs[tuple(platform.get_qubit(q) for q in gate.qubits)]
+    pair = platform.pairs[tuple(platform.get_qubit(q).name for q in gate.qubits)]
     return pair.native_gates.CZ
 
 
 def cnot_rule(gate, platform):
     """CNOT applied as defined in the platform runcard."""
-    pair = platform.pairs[tuple(platform.get_qubit(q) for q in gate.qubits)]
+    pair = platform.pairs[tuple(platform.get_qubit(q).name for q in gate.qubits)]
     return pair.native_gates.CNOT
 
 
