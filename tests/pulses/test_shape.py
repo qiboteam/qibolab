@@ -21,7 +21,7 @@ from qibolab.pulses.shape import IqWaveform, demodulate, modulate
     "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
 )
 def test_sampling_rate(shape):
-    pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
+    pulse = Pulse(40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
     assert len(pulse.envelope_waveform_i(sampling_rate=1)) == 40
     assert len(pulse.envelope_waveform_i(sampling_rate=100)) == 4000
 
@@ -80,7 +80,7 @@ def test_raise_shapeiniterror():
 
 
 def test_drag_shape():
-    pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
+    pulse = Pulse(2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
     # envelope i & envelope q should cross nearly at 0 and at 2
     waveform = pulse.envelope_waveform_i(sampling_rate=10)
     target_waveform = np.array(
@@ -112,7 +112,6 @@ def test_drag_shape():
 
 def test_rectangular():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
@@ -141,7 +140,6 @@ def test_rectangular():
 
 def test_gaussian():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
@@ -176,7 +174,6 @@ def test_gaussian():
 
 def test_drag():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
@@ -281,7 +278,6 @@ def test_eq():
 
 def test_modulation():
     rect = Pulse(
-        start=0,
         duration=30,
         amplitude=0.9,
         frequency=20_000_000,
@@ -318,7 +314,6 @@ def test_modulation():
     # fmt: on
 
     gauss = Pulse(
-        start=5,
         duration=20,
         amplitude=3.5,
         frequency=2_000_000,
