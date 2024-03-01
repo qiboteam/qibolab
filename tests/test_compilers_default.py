@@ -57,6 +57,8 @@ def test_compile(platform, gateargs):
         nseq = 0
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = compile_circuit(circuit, platform)
+    for pulse in sequence:
+        print(pulse)
     assert len(sequence) == (nseq + 1) * nqubits
 
 

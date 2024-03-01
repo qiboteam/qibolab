@@ -172,8 +172,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "type": "coupler",
-                    "coupler": 0
+                    "type": "cf"
                 }
             },
             "1": {
@@ -181,8 +180,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "type": "coupler",
-                    "coupler": 1
+                    "type": "cf"
                 }
             },
             "3": {
@@ -190,8 +188,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "type": "coupler",
-                    "coupler": 3
+                    "type": "cf"
                 }
             },
             "4": {
@@ -199,8 +196,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "type": "coupler",
-                    "coupler": 4
+                    "type": "cf"
                 }
             }
         },
@@ -229,7 +225,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -255,7 +251,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ]
             },
@@ -283,7 +279,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 1,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -309,7 +305,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 1,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ]
             },
@@ -337,7 +333,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 3,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -363,7 +359,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 3,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "CNOT": [
@@ -411,7 +407,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 4,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -437,7 +433,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 4,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ]
             }

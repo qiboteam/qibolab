@@ -9,7 +9,7 @@ import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape
-from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
+from qibolab.sweeper import BIAS, DURATION, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3

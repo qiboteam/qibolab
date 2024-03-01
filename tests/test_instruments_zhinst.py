@@ -540,7 +540,7 @@ def test_sweep_and_play_sim(dummy_qrc):
     assert all(qubit in res for qubit in qubits)
 
 
-@pytest.mark.parametrize("parameter1", [Parameter.start, Parameter.duration])
+@pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single(dummy_qrc, parameter1):
     platform = create_platform("zurich")
     IQM5q = platform.instruments["EL_ZURO"]
@@ -582,7 +582,7 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
     assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
 
 
-@pytest.mark.parametrize("parameter1", [Parameter.start, Parameter.duration])
+@pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     platform = create_platform("zurich")
     IQM5q = platform.instruments["EL_ZURO"]
@@ -643,7 +643,6 @@ SweeperParameter = {
     Parameter.frequency,
     Parameter.amplitude,
     Parameter.duration,
-    Parameter.start,
     Parameter.relative_phase,
 }
 
