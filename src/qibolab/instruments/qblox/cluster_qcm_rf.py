@@ -439,7 +439,6 @@ class QcmRf(ClusterModule):
                     Parameter.amplitude,
                     Parameter.duration,
                     Parameter.relative_phase,
-                    Parameter.start,
                 ]
 
                 for sweeper in sweepers:
