@@ -22,7 +22,7 @@ class Coupler:
 
     sweetspot: float = 0
     "Coupler sweetspot to center it's flux dependence if needed."
-    native_pulse: SingleQubitNatives = field(default_factory=SingleQubitNatives)
+    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
     "For now this only contains the calibrated pulse to activate the coupler."
 
     _flux: Optional[Channel] = None
