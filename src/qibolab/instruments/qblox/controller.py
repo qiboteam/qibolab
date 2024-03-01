@@ -410,7 +410,6 @@ class QbloxController(Controller):
                 Parameter.gain,
                 Parameter.bias,
                 Parameter.amplitude,
-                Parameter.start,
                 Parameter.duration,
                 Parameter.relative_phase,
             ]
