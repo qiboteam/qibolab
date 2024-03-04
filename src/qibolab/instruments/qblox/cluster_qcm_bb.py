@@ -178,10 +178,12 @@ class QcmBb(ClusterModule):
                     self._ports[port].hardware_mod_en = True
                     self._ports[port].nco_freq = 0
                     self._ports[port].nco_phase_offs = 0
+                    self._ports[port].offset = self._ports[port].offset
             except Exception as error:
                 raise RuntimeError(
                     f"Unable to initialize port parameters on module {self.name}: {error}"
                 )
+
             self.is_connected = True
 
     def setup(self, **settings):
