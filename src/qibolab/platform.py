@@ -1,7 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -126,6 +126,53 @@ class Platform:
         self.topology.add_edges_from(
             [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
         )
+        self._set_channels_to_single_qubit_gates()
+        self._set_channels_to_two_qubit_gates()
+
+    def _set_channels_to_single_qubit_gates(self):
+        """Set channels to pulses that implement single-qubit gates.
+
+        This function should be removed when the duplication caused by
+        (``pulse.qubit``, ``pulse.type``) -> ``pulse.channel``
+        is resolved. For now it just makes sure that the channels of
+        native pulses are consistent in order to test the rest of the code.
+        """
+        for qubit in self.qubits.values():
+            gates = qubit.native_gates
+            for fld in fields(gates):
+                pulse = getattr(gates, fld.name)
+                if pulse is not None:
+                    channel = getattr(qubit, pulse.type.name.lower()).name
+                    setattr(gates, fld.name, replace(pulse, channel=channel))
+        for coupler in self.couplers.values():
+            if gates.CP is not None:
+                gates.CP = replace(gates.CP, channel=coupler.flux.name)
+
+    def _set_channels_to_two_qubit_gates(self):
+        """Set channels to pulses that implement single-qubit gates.
+
+        This function should be removed when the duplication caused by
+        (``pulse.qubit``, ``pulse.type``) -> ``pulse.channel``
+        is resolved. For now it just makes sure that the channels of
+        native pulses are consistent in order to test the rest of the code.
+        """
+        for pair in self.pairs.values():
+            gates = pair.native_gates
+            for fld in fields(gates):
+                sequence = getattr(gates, fld.name)
+                if sequence is not None:
+                    new_sequence = PulseSequence()
+                    for pulse in sequence:
+                        if pulse.type is PulseType.VIRTUALZ:
+                            channel = self.qubits[pulse.qubit].drive.name
+                        elif pulse.type is PulseType.COUPLERFLUX:
+                            channel = self.couplers[pulse.qubit].flux.name
+                        else:
+                            channel = getattr(
+                                self.qubits[pulse.qubit], pulse.type.name.lower()
+                            ).name
+                        new_sequence.append(replace(pulse, channel=channel))
+                    setattr(gates, fld.name, new_sequence)
 
     def __str__(self):
         return self.name

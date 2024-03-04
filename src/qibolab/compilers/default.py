@@ -4,25 +4,30 @@ Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
 
 import math
+from dataclasses import replace
 
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, VirtualZ
 
 
 def identity_rule(gate, platform):
     """Identity gate skipped."""
-    return PulseSequence(), {}
+    return PulseSequence()
 
 
 def z_rule(gate, platform):
     """Z gate applied virtually."""
     qubit = platform.get_qubit(gate.target_qubits[0])
-    return PulseSequence(), {qubit.name: math.pi}
+    return PulseSequence(
+        [VirtualZ(phase=math.pi, channel=qubit.drive.name, qubit=qubit.name)]
+    )
 
 
 def rz_rule(gate, platform):
     """RZ gate applied virtually."""
     qubit = platform.get_qubit(gate.target_qubits[0])
-    return PulseSequence(), {qubit.name: gate.parameters[0]}
+    return PulseSequence(
+        [VirtualZ(phase=gate.parameters[0], channel=qubit.drive.name, qubit=qubit.name)]
+    )
 
 
 def gpi2_rule(gate, platform):
@@ -33,7 +38,7 @@ def gpi2_rule(gate, platform):
     pulse = qubit.native_gates.RX90
     pulse.relative_phase = theta
     sequence.append(pulse)
-    return sequence, {}
+    return sequence
 
 
 def gpi_rule(gate, platform):
@@ -48,7 +53,7 @@ def gpi_rule(gate, platform):
     pulse = qubit.native_gates.RX
     pulse.relative_phase = theta
     sequence.append(pulse)
-    return sequence, {}
+    return sequence
 
 
 def u3_rule(gate, platform):
@@ -59,22 +64,16 @@ def u3_rule(gate, platform):
     # apply RZ(lam)
     virtual_z_phases = {qubit.name: lam}
     sequence = PulseSequence()
-    # Fetch pi/2 pulse from calibration
-    rx90_pulse1 = qubit.native_gates.RX90
-    rx90_pulse1.relative_phase = virtual_z_phases[qubit.name]
-    # apply RX(pi/2)
-    sequence.append(rx90_pulse1)
+    sequence.append(VirtualZ(phase=lam, channel=qubit.drive.name, qubit=qubit.name))
+    # Fetch pi/2 pulse from calibration and apply RX(pi/2)
+    sequence.append(qubit.native_gates.RX90)
     # apply RZ(theta)
-    virtual_z_phases[qubit.name] += theta
-    # Fetch pi/2 pulse from calibration
-    rx90_pulse2 = qubit.native_gates.RX90
-    rx90_pulse2.relative_phase = (virtual_z_phases[qubit.name] - math.pi,)
-    # apply RX(-pi/2)
-    sequence.append(rx90_pulse2)
+    sequence.append(VirtualZ(phase=theta, channel=qubit.drive.name, qubit=qubit.name))
+    # Fetch pi/2 pulse from calibration and apply RX(-pi/2)
+    sequence.append(replace(qubit.native_gates.RX90, relative_phase=-math.pi))
     # apply RZ(phi)
-    virtual_z_phases[qubit.name] += phi
-
-    return sequence, virtual_z_phases
+    sequence.append(VirtualZ(phase=phi, channel=qubit.drive.name, qubit=qubit.name))
+    return sequence
 
 
 def cz_rule(gate, platform):
@@ -98,4 +97,4 @@ def measurement_rule(gate, platform):
     sequence = PulseSequence(
         [platform.get_qubit(q).native_gates.MZ for q in gate.qubits]
     )
-    return sequence, {}
+    return sequence
