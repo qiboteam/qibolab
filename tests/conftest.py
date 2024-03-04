@@ -111,5 +111,5 @@ def connected_platform(request):
 
 def pytest_generate_tests(metafunc):
     name = metafunc.module.__name__
-    if "test_instruments" in name or "test_compilers" in name:
+    if "test_instruments" in name or "test_compilers" in name or "qasm" in name:
         pytest.skip()

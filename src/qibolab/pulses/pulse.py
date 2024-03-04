@@ -20,6 +20,7 @@ class PulseType(Enum):
     FLUX = "qf"
     COUPLERFLUX = "cf"
     DELAY = "dl"
+    VIRTUALZ = "virtual_z"
 
 
 @dataclass
@@ -128,3 +129,19 @@ class Delay:
     """Channel on which the delay should be implemented."""
     type: PulseType = PulseType.DELAY
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
+
+
+@dataclass
+class VirtualZ:
+    """Implementation of Z-rotations using virtual phase."""
+
+    duration = 0
+    """Duration of the virtual gate should always be zero."""
+
+    phase: float
+    """Phase that implements the rotation."""
+    channel: Optional[str] = None
+    """Channel on which the virtual phase should be added."""
+    qubit: int = 0
+    """Qubit on the drive of which the virtual phase should be added."""
+    type: PulseType = PulseType.VIRTUALZ
