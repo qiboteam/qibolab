@@ -209,7 +209,7 @@ def _dump_two_qubit_natives(natives: TwoQubitNatives):
         for pulse in sequence:
             pulse_serial = _dump_pulse(pulse)
             if pulse.type == PulseType.COUPLERFLUX:
-                pulse_serial["coupler"] = pulse_serial["qubit"]
+                pulse_serial["coupler"] = pulse_serial.pop("qubit")
             data[fld.name].append(pulse_serial)
     return data
 
