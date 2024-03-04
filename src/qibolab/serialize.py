@@ -6,7 +6,6 @@ example for more details.
 """
 
 import json
-from collections import defaultdict
 from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
@@ -22,7 +21,7 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType
+from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
 from qibolab.qubits import Qubit, QubitPair
 
 RUNCARD = "parameters.json"
@@ -98,6 +97,8 @@ def _load_pulse(pulse_kwargs, qubit):
 
     if pulse_type == "dl":
         return Delay(**pulse_kwargs)
+    if pulse_type == "virtual_z":
+        return VirtualZ(**pulse_kwargs, qubit=q)
     return Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
 
 
@@ -122,21 +123,15 @@ def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
             seq_kwargs = [seq_kwargs]
 
         sequence = PulseSequence()
-        virtual_z_phases = defaultdict(int)
         for kwargs in seq_kwargs:
-            _type = kwargs["type"]
-            if _type == "virtual_z":
-                q = kwargs["qubit"]
-                virtual_z_phases[q] += kwargs["phase"]
+            if "coupler" in kwargs:
+                qubit = couplers[kwargs["coupler"]]
             else:
-                if "coupler" in kwargs:
-                    qubit = couplers[kwargs["coupler"]]
-                else:
-                    qubit = qubits[kwargs["qubit"]]
-                sequence.append(_load_pulse(kwargs, qubit))
+                qubit = qubits[kwargs["qubit"]]
+            sequence.append(_load_pulse(kwargs, qubit))
+        sequences[name] = sequence
 
-        sequences[name] = (sequence, virtual_z_phases)
-        return TwoQubitNatives(**sequences)
+    return TwoQubitNatives(**sequences)
 
 
 def register_gates(
@@ -184,10 +179,13 @@ def _dump_pulse(pulse: Pulse):
     data = asdict(pulse)
     if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
         del data["frequency"]
-    data["shape"] = str(pulse.shape)
+    if "shape" in data:
+        data["shape"] = str(pulse.shape)
     data["type"] = data["type"].value
-    del data["channel"]
-    del data["relative_phase"]
+    if "channel" in data:
+        del data["channel"]
+    if "relative_phase" in data:
+        del data["relative_phase"]
     return data
 
 
@@ -206,17 +204,13 @@ def _dump_two_qubit_natives(natives: TwoQubitNatives):
     for fld in fields(natives):
         if getattr(natives, fld.name) is None:
             continue
-        sequence, virtual_z_phases = getattr(natives, fld.name)
+        sequence = getattr(natives, fld.name)
         data[fld.name] = []
         for pulse in sequence:
             pulse_serial = _dump_pulse(pulse)
             if pulse.type == PulseType.COUPLERFLUX:
                 pulse_serial["coupler"] = pulse_serial["qubit"]
             data[fld.name].append(pulse_serial)
-        data[fld.name].extend(
-            {"type": "virtual_z", "phase": phase, "qubit": q}
-            for q, phase in virtual_z_phases.items()
-        )
     return data
 
 

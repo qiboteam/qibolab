@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields, replace
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 from qibolab.pulses import Pulse, PulseSequence
 
@@ -24,21 +24,14 @@ class SingleQubitNatives:
         return replace(self.RX, amplitude=self.RX.amplitude / 2.0)
 
 
-TwoQubitNativeType = Tuple[PulseSequence, Dict["QubitId", float]]
-
-
 @dataclass
 class TwoQubitNatives:
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Optional[TwoQubitNativeType] = field(default=None, metadata={"symmetric": True})
-    CNOT: Optional[TwoQubitNativeType] = field(
-        default=None, metadata={"symmetric": False}
-    )
-    iSWAP: Optional[TwoQubitNativeType] = field(
-        default=None, metadata={"symmetric": True}
-    )
+    CZ: Optional[PulseSequence] = field(default=None, metadata={"symmetric": True})
+    CNOT: Optional[PulseSequence] = field(default=None, metadata={"symmetric": False})
+    iSWAP: Optional[PulseSequence] = field(default=None, metadata={"symmetric": True})
 
     @property
     def symmetric(self):
