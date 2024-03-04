@@ -54,7 +54,7 @@ def test_dummy_execute_pulse_sequence_couplers():
     )
     sequence = PulseSequence()
 
-    cz, cz_phases = platform.create_CZ_pulse_sequence(
+    cz = platform.create_CZ_pulse_sequence(
         qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
     )
     sequence.extend(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
@@ -66,10 +66,6 @@ def test_dummy_execute_pulse_sequence_couplers():
     sequence.append(platform.create_MZ_pulse(2))
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
-
-    test_phases = {1: 0.0, 2: 0.0}
-
-    assert test_phases == cz_phases
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
