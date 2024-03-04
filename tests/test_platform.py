@@ -72,7 +72,6 @@ def test_platform_pickle(platform):
     assert new_platform.is_connected == platform.is_connected
 
 
-@pytest.mark.skip
 def test_dump_runcard(platform, tmp_path):
     dump_runcard(platform, tmp_path)
     final_runcard = load_runcard(tmp_path)
