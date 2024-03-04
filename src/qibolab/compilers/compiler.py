@@ -15,7 +15,7 @@ from qibolab.compilers.default import (
     u3_rule,
     z_rule,
 )
-from qibolab.pulses import Delay, PulseSequence, PulseType
+from qibolab.pulses import Delay, PulseSequence
 
 
 @dataclass
@@ -114,7 +114,6 @@ class Compiler:
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
-        virtual_z_phases = defaultdict(int)
 
         measurement_map = {}
         qubit_clock = defaultdict(int)
@@ -124,17 +123,13 @@ class Compiler:
             for gate in set(filter(lambda x: x is not None, moment)):
                 if isinstance(gate, gates.Align):
                     for qubit in gate.qubits:
-                        # TODO: do something
-                        pass
+                        qubit_clock[qubit] += gate.delay
                     continue
 
                 rule = self[gate.__class__]
                 # get local sequence and phases for the current gate
-                gate_sequence, gate_phases = rule(gate, platform)
+                gate_sequence = rule(gate, platform)
                 for pulse in gate_sequence:
-                    if pulse.type is not PulseType.READOUT:
-                        pulse.relative_phase += virtual_z_phases[pulse.qubit]
-
                     if qubit_clock[pulse.qubit] > channel_clock[pulse.qubit]:
                         delay = qubit_clock[pulse.qubit] - channel_clock[pulse.channel]
                         sequence.append(Delay(delay, pulse.channel))
@@ -144,10 +139,6 @@ class Compiler:
                     # update clocks
                     qubit_clock[pulse.qubit] += pulse.duration
                     channel_clock[pulse.channel] += pulse.duration
-
-                # update virtual Z phases
-                for qubit, phase in gate_phases.items():
-                    virtual_z_phases[qubit] += phase
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates
