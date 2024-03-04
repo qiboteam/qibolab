@@ -1,25 +1,19 @@
-"""Instrument for using the Zurich Instruments (Zhinst) devices."""
+"""Executing pulse sequences on a Zurich Instruments devices."""
 
 import re
 from collections import defaultdict
-from collections.abc import Iterable
-from copy import copy
 from dataclasses import dataclass, replace
 from typing import Optional
 
 import laboneq.simple as lo
 import numpy as np
-from laboneq.dsl.experiment.pulse_library import (
-    sampled_pulse_complex,
-    sampled_pulse_real,
-)
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 
 from qibolab.instruments.unrolling import batch_max_sequences
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -27,8 +21,15 @@ from qibolab.unrolling import Bounds
 from .abstract import Controller
 from .port import Port
 
-SAMPLING_RATE = 2
-NANO_TO_SECONDS = 1e-9
+from .pulse import ZhPulse
+from .sweep import ProcessedSweeps, classify_sweepers
+from .util import (
+    NANO_TO_SECONDS,
+    SAMPLING_RATE,
+    acquire_channel_name,
+    measure_channel_name,
+)
+
 COMPILER_SETTINGS = {
     "SHFSG_MIN_PLAYWAVE_HINT": 32,
     "SHFSG_MIN_PLAYZERO_HINT": 32,
@@ -47,246 +48,12 @@ AVERAGING_MODE = {
     AveragingMode.SINGLESHOT: lo.AveragingMode.SINGLE_SHOT,
 }
 
-SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
-SWEEPER_BIAS = {"bias"}
-SWEEPER_START = {"start"}
-
-
-def measure_channel_name(qubit: Qubit) -> str:
-    """Construct and return a name for qubit's measure channel.
-
-    FIXME: We cannot use channel name directly, because currently channels are named after wires, and due to multiplexed readout
-    multiple qubits have the same channel name for their readout. Should be fixed once channels are refactored.
-    """
-    return f"{qubit.readout.name}_{qubit.name}"
-
-
-def acquire_channel_name(qubit: Qubit) -> str:
-    """Construct and return a name for qubit's acquire channel.
-
-    FIXME: We cannot use acquire channel name, because qibolab does not have a concept of acquire channel. This function shall be removed
-    once all channel refactoring is done.
-    """
-    return f"acquire{qubit.name}"
-
-
-def select_pulse(pulse: Pulse):
-    """Return laboneq pulse object corresponding to the given qibolab pulse."""
-    if "IIR" not in str(pulse.shape):
-        if str(pulse.shape) == "Rectangular()":
-            can_compress = pulse.type is not PulseType.READOUT
-            return lo.pulse_library.const(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-                can_compress=can_compress,
-            )
-        if "Gaussian" in str(pulse.shape):
-            sigma = pulse.shape.rel_sigma
-            return lo.pulse_library.gaussian(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-                sigma=2 / sigma,
-                zero_boundaries=False,
-            )
-
-        if "GaussianSquare" in str(pulse.shape):
-            sigma = pulse.shape.rel_sigma
-            width = pulse.shape.width
-            can_compress = pulse.type is not PulseType.READOUT
-            return lo.pulse_library.gaussian_square(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,
-                amplitude=pulse.amplitude,
-                can_compress=can_compress,
-                sigma=2 / sigma,
-                zero_boundaries=False,
-            )
-
-        if "Drag" in str(pulse.shape):
-            sigma = pulse.shape.rel_sigma
-            beta = pulse.shape.beta
-            return lo.pulse_library.drag(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-                sigma=2 / sigma,
-                beta=beta,
-                zero_boundaries=False,
-            )
-
-    if np.all(pulse.envelope_waveform_q(SAMPLING_RATE).data == 0):
-        return sampled_pulse_real(
-            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data,
-            can_compress=True,
-        )
-    else:
-        return sampled_pulse_complex(
-            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data
-            + (1j * pulse.envelope_waveform_q(SAMPLING_RATE).data),
-            can_compress=True,
-        )
-
-
-def classify_sweepers(
-    sweepers: Iterable[Sweeper],
-) -> tuple[list[Sweeper], list[Sweeper]]:
-    """Divide sweepers into two lists: 1. sweeps that can be done in the laboneq near-time sweep loop, 2. sweeps that
-    can be done in real-time (i.e. on hardware)"""
-    nt_sweepers, rt_sweepers = [], []
-    for sweeper in sweepers:
-        if (
-            sweeper.parameter is Parameter.amplitude
-            and sweeper.pulses[0].type is PulseType.READOUT
-        ):
-            nt_sweepers.append(sweeper)
-        elif sweeper.parameter.name in SWEEPER_BIAS:
-            nt_sweepers.append(sweeper)
-        else:
-            rt_sweepers.append(sweeper)
-    return nt_sweepers, rt_sweepers
-
 
 @dataclass
 class ZhPort(Port):
     name: tuple[str, str]
     offset: float = 0.0
     power_range: int = 0
-
-
-class ZhPulse:
-    """Wrapper data type that holds a qibolab pulse, the corresponding laboneq
-    pulse object, and any sweeps associated with this pulse."""
-
-    def __init__(self, pulse):
-        self.pulse: Pulse = pulse
-        """Qibolab pulse."""
-        self.zhpulse = select_pulse(pulse)
-        """Laboneq pulse."""
-        self.zhsweepers: list[tuple[Parameter, lo.SweepParameter]] = []
-        """Parameters to be swept, along with their laboneq sweep parameter
-        definitions."""
-        self.delay_sweeper: Optional[lo.SweepParameter] = None
-        """Laboneq sweep parameter if the delay of the pulse should be
-        swept."""
-
-    # pylint: disable=R0903
-    def add_sweeper(self, param: Parameter, sweeper: lo.SweepParameter):
-        """Add sweeper to list of sweepers associated with this pulse."""
-        if param.name in SWEEPER_SET:
-            self.zhsweepers.append((param, sweeper))
-        if param.name in SWEEPER_START:
-            if self.delay_sweeper:
-                raise ValueError(
-                    "Cannot have multiple delay sweepers for a single pulse"
-                )
-            self.delay_sweeper = sweeper
-
-
-class ProcessedSweeps:
-    """Data type that centralizes and allows extracting information about given
-    sweeps."""
-
-    def __init__(self, sweepers: Iterable[Sweeper], qubits: dict[str, Qubit]):
-        pulse_sweeps = []
-        channel_sweeps = []
-        parallel_sweeps = []
-        for sweeper in sweepers:
-            for pulse in sweeper.pulses or []:
-                if sweeper.parameter in (Parameter.duration, Parameter.start):
-                    sweep_param = lo.SweepParameter(
-                        values=sweeper.values * NANO_TO_SECONDS
-                    )
-                    pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
-                elif sweeper.parameter is Parameter.frequency:
-                    ptype, qubit = pulse.type, qubits[pulse.qubit]
-                    if ptype is PulseType.READOUT:
-                        ch = measure_channel_name(qubit)
-                        intermediate_frequency = (
-                            qubit.readout_frequency
-                            - qubit.readout.local_oscillator.frequency
-                        )
-                    elif ptype is PulseType.DRIVE:
-                        ch = qubit.drive.name
-                        intermediate_frequency = (
-                            qubit.drive_frequency
-                            - qubit.drive.local_oscillator.frequency
-                        )
-                    else:
-                        raise ValueError(
-                            f"Cannot sweep frequency of pulse of type {ptype}, because it does not have associated frequency"
-                        )
-                    sweep_param = lo.SweepParameter(
-                        values=sweeper.values + intermediate_frequency
-                    )
-                    channel_sweeps.append((ch, sweeper.parameter, sweep_param))
-                elif (
-                    pulse.type is PulseType.READOUT
-                    and sweeper.parameter is Parameter.amplitude
-                ):
-                    sweep_param = lo.SweepParameter(
-                        values=sweeper.values / max(sweeper.values)
-                    )
-                    channel_sweeps.append(
-                        (
-                            measure_channel_name(qubits[pulse.qubit]),
-                            sweeper.parameter,
-                            sweep_param,
-                        )
-                    )
-                else:
-                    sweep_param = lo.SweepParameter(values=copy(sweeper.values))
-                    pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
-                parallel_sweeps.append((sweeper, sweep_param))
-
-            for qubit in sweeper.qubits or []:
-                if sweeper.parameter is not Parameter.bias:
-                    raise ValueError(
-                        f"Sweeping {sweeper.parameter.name} for {qubit} is not supported"
-                    )
-                sweep_param = lo.SweepParameter(
-                    values=sweeper.values + qubit.flux.offset
-                )
-                channel_sweeps.append((qubit.flux.name, sweeper.parameter, sweep_param))
-                parallel_sweeps.append((sweeper, sweep_param))
-
-            for coupler in sweeper.couplers or []:
-                if sweeper.parameter is not Parameter.bias:
-                    raise ValueError(
-                        f"Sweeping {sweeper.parameter.name} for {coupler} is not supported"
-                    )
-                sweep_param = lo.SweepParameter(
-                    values=sweeper.values + coupler.flux.offset
-                )
-                channel_sweeps.append(
-                    (coupler.flux.name, sweeper.parameter, sweep_param)
-                )
-                parallel_sweeps.append((sweeper, sweep_param))
-
-        self._pulse_sweeps = pulse_sweeps
-        self._channel_sweeps = channel_sweeps
-        self._parallel_sweeps = parallel_sweeps
-
-    def sweeps_for_pulse(
-        self, pulse: Pulse
-    ) -> list[tuple[Parameter, lo.SweepParameter]]:
-        return [item[1:] for item in self._pulse_sweeps if item[0] == pulse]
-
-    def sweeps_for_channel(self, ch: str) -> list[tuple[Parameter, lo.SweepParameter]]:
-        return [item[1:] for item in self._channel_sweeps if item[0] == ch]
-
-    def sweeps_for_sweeper(self, sweeper: Sweeper) -> list[lo.SweepParameter]:
-        return [item[1] for item in self._parallel_sweeps if item[0] == sweeper]
-
-    def channel_sweeps_for_sweeper(
-        self, sweeper: Sweeper
-    ) -> list[tuple[str, Parameter, lo.SweepParameter]]:
-        return [
-            item
-            for item in self._channel_sweeps
-            if item[2] in self.sweeps_for_sweeper(sweeper)
-        ]
-
-    def channels_with_sweeps(self) -> set[str]:
-        return {ch for ch, _, _ in self._channel_sweeps}
 
 
 @dataclass
