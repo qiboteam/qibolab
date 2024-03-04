@@ -4,6 +4,7 @@ Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
 
 import math
+from dataclasses import replace
 
 import numpy as np
 
