@@ -87,7 +87,7 @@ The following example shows how to modify the transpiler and compiler in order t
         qubit = gate.target_qubits[0]
         sequence = PulseSequence()
         sequence.append(platform.create_RX_pulse(qubit))
-        return sequence, {}
+        return sequence
 
 
     # the empty dictionary is needed because the X gate does not require any virtual Z-phases
