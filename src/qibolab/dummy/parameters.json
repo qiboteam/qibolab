@@ -77,14 +77,14 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4200000000.0,
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4855663000,
                     "type": "qd"
                 },
@@ -100,7 +100,7 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4500000000.0,
                     "type": "qd"
                 },
@@ -123,14 +123,14 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4150000000.0,
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 5855663000,
                     "type": "qd"
                 },
@@ -146,14 +146,14 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4155663000,
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 5855663000,
                     "type": "qd"
                 },
@@ -366,7 +366,7 @@
                     {
                         "duration": 40,
                         "amplitude": 0.3,
-                        "shape": "Drag(5, -0.02)",
+                        "shape": "Drag(5, 0.02)",
                         "frequency": 4150000000.0,
                         "type": "qd",
                         "qubit": 2
