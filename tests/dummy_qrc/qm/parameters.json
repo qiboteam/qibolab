@@ -105,14 +105,14 @@
                     "duration": 40,
                     "amplitude": 0.0484,
                     "frequency": 4855663000,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
                     "frequency": 4855663000,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "type": "qd"
                 },
                 "MZ": {
@@ -128,14 +128,14 @@
                     "duration": 40,
                     "amplitude": 0.05682,
                     "frequency": 5800563000,
-                    "shape": "Drag(5, -0.04)",
+                    "shape": "Drag(5, 0.04)",
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.05682,
                     "frequency": 5800563000,
-                    "shape": "Drag(5, -0.04)",
+                    "shape": "Drag(5, 0.04)",
                     "type": "qd"
                 },
                 "MZ": {
@@ -174,14 +174,14 @@
                     "duration": 40,
                     "amplitude": 0.0617,
                     "frequency": 6585053000,
-                    "shape": "Drag(5, 0.0)",
+                    "shape": "Drag(5, 0)",
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0617,
                     "frequency": 6585053000,
-                    "shape": "Drag(5, 0.0)",
+                    "shape": "Drag(5, 0)",
                     "type": "qd"
                 },
                 "MZ": {
