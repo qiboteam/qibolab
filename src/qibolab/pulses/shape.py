@@ -12,8 +12,8 @@ __all__ = [
     "Times",
     "Waveform",
     "IqWaveform",
-    "Shape",
-    "Shapes",
+    "Envelope",
+    "Envelopes",
 ]
 
 Times = npt.NDArray[np.float64]
@@ -26,7 +26,7 @@ IqWaveform = npt.NDArray[np.float64]
 """"""
 
 
-class Shape(ABC):
+class Envelope(ABC):
     """Pulse envelopes.
 
     Generates both i (in-phase) and q (quadrature) components.
@@ -46,7 +46,7 @@ class Shape(ABC):
 
 
 @dataclass(frozen=True)
-class Rectangular(Shape):
+class Rectangular(Envelope):
     """Rectangular envelope."""
 
     amplitude: float
@@ -57,7 +57,7 @@ class Rectangular(Shape):
 
 
 @dataclass(frozen=True)
-class Exponential(Shape):
+class Exponential(Envelope):
     r"""Exponential shape, i.e. square pulse with an exponential decay.
 
     .. math::
@@ -91,7 +91,7 @@ def _gaussian(t, mu, sigma):
 
 
 @dataclass(frozen=True)
-class Gaussian(Shape):
+class Gaussian(Envelope):
     r"""Gaussian pulse shape.
 
     Args:
@@ -114,7 +114,7 @@ class Gaussian(Shape):
 
 
 @dataclass(frozen=True)
-class GaussianSquare(Shape):
+class GaussianSquare(Envelope):
     r"""GaussianSquare pulse shape.
 
     .. math::
@@ -142,7 +142,7 @@ class GaussianSquare(Shape):
 
 
 @dataclass(frozen=True)
-class Drag(Shape):
+class Drag(Envelope):
     """Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
 
     .. todo::
@@ -173,7 +173,7 @@ class Drag(Shape):
 
 
 @dataclass(frozen=True)
-class Iir(Shape):
+class Iir(Envelope):
     """IIR Filter using scipy.signal lfilter."""
 
     # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
@@ -184,7 +184,7 @@ class Iir(Shape):
     amplitude: float
     a: npt.NDArray
     b: npt.NDArray
-    target: Shape
+    target: Envelope
 
     def _data(self, target):
         a = self.a / self.a[0]
@@ -206,7 +206,7 @@ class Iir(Shape):
 
 
 @dataclass(frozen=True)
-class Snz(Shape):
+class Snz(Envelope):
     """Sudden variant Net Zero.
 
     https://arxiv.org/abs/2008.07411
@@ -245,7 +245,7 @@ class Snz(Shape):
 
 
 @dataclass(frozen=True)
-class ECap(Shape):
+class ECap(Envelope):
     r"""ECap pulse shape.
 
     .. todo::
@@ -273,7 +273,7 @@ class ECap(Shape):
 
 
 @dataclass(frozen=True)
-class Custom(Shape):
+class Custom(Envelope):
     """Arbitrary shape.
 
     .. todo::
@@ -295,7 +295,7 @@ class Custom(Shape):
         return self.amplitude * self.custom_q
 
 
-class Shapes(Enum):
+class Envelopes(Enum):
     """Available pulse shapes."""
 
     RECTANGULAR = Rectangular
