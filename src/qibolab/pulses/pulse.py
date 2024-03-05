@@ -1,8 +1,12 @@
 """Pulse class."""
-import copy
+
 from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Optional
+
+import numpy as np
+
+from .shape import Envelope, IqWaveform, Times, Waveform
 
 
 class PulseType(Enum):
@@ -39,11 +43,11 @@ class Pulse:
     """
     relative_phase: float
     """Relative phase of the pulse, in radians."""
-    shape: PulseShape
-    """Pulse shape, as a PulseShape object.
+    envelope: Envelope
+    """The pulse envelope shape.
 
     See
-    :py: mod:`qibolab.pulses` for list of available shapes.
+    :cls:`qibolab.pulses.shape.Envelopes` for list of available shapes.
     """
     channel: Optional[str] = None
     """Channel on which the pulse should be played.
@@ -107,43 +111,20 @@ class Pulse:
     def id(self) -> int:
         return id(self)
 
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+    def i(self, times: Times) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
-        return self.shape.envelope_waveform_i(sampling_rate)
+        return self.envelope.i(times)
 
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+    def q(self, times: Times) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
 
-        return self.shape.envelope_waveform_q(sampling_rate)
+        return self.envelope.q(times)
 
-    def envelope_waveforms(
-        self, sampling_rate=SAMPLING_RATE
-    ):  #  -> tuple[Waveform, Waveform]:
+    def envelopes(self, times: Times) -> IqWaveform:
         """A tuple with the i and q envelope waveforms of the pulse."""
 
-        return (
-            self.shape.envelope_waveform_i(sampling_rate),
-            self.shape.envelope_waveform_q(sampling_rate),
-        )
-
-    def modulated_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The waveform of the i component of the pulse, modulated with its
-        frequency."""
-
-        return self.shape.modulated_waveform_i(sampling_rate)
-
-    def modulated_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
-        """The waveform of the q component of the pulse, modulated with its
-        frequency."""
-
-        return self.shape.modulated_waveform_q(sampling_rate)
-
-    def modulated_waveforms(self, sampling_rate):  #  -> tuple[Waveform, Waveform]:
-        """A tuple with the i and q waveforms of the pulse, modulated with its
-        frequency."""
-
-        return self.shape.modulated_waveforms(sampling_rate)
+        return np.array([self.i(times), self.q(times)])
 
     def __hash__(self):
         """Hash the content.
@@ -167,23 +148,6 @@ class Pulse:
                 if f.name not in ("type", "shape")
             )
         )
-
-    def __add__(self, other):
-        if isinstance(other, Pulse):
-            return PulseSequence(self, other)
-        if isinstance(other, PulseSequence):
-            return PulseSequence(self, *other)
-        raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
-
-    def __mul__(self, n):
-        if not isinstance(n, int):
-            raise TypeError(f"Expected int; got {type(n).__name__}")
-        if n < 0:
-            raise TypeError(f"argument n should be >=0, got {n}")
-        return PulseSequence(*([copy.deepcopy(self)] * n))
-
-    def __rmul__(self, n):
-        return self.__mul__(n)
 
     def is_equal_ignoring_start(self, item) -> bool:
         """Check if two pulses are equal ignoring start time."""
