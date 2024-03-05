@@ -61,7 +61,7 @@ class Envelope(ABC):
 
     def envelopes(self, times: Times) -> IqWaveform:
         """Stacked i and q envelope waveforms of the pulse."""
-        return np.array(self.i(times), self.q(times))
+        return np.array([self.i(times), self.q(times)])
 
 
 @dataclass(frozen=True)
@@ -178,48 +178,53 @@ class Drag(Envelope):
     """
 
     amplitude: float
-    mu: float
-    """Gaussian mean."""
-    sigma: float
-    """Gaussian standard deviation."""
+    rel_sigma: float
+    """Relative Gaussian standard deviation.
+
+    In units of the interval duration.
+    """
     beta: float
     """.. todo::"""
 
     def i(self, times: Times) -> Waveform:
         """Generate a Gaussian envelope."""
-        return self.amplitude * _gaussian(times, self.mu, self.sigma)
+        return self.amplitude * gaussian(
+            len(times), _samples_sigma(self.rel_sigma, times)
+        )
 
     def q(self, times: Times) -> Waveform:
         """Generate ...
 
         .. todo::
         """
-        i = self.amplitude * _gaussian(times, self.mu, self.sigma)
-        return self.beta * (-(times - self.mu) / (self.sigma**2)) * i
+        sigma = self.rel_sigma * _duration(times)
+        return self.beta * (-(times - _mean(times)) / (sigma**2)) * self.i(times)
 
 
 @dataclass(frozen=True)
 class Iir(Envelope):
-    """IIR Filter using scipy.signal lfilter."""
+    """IIR Filter using scipy.signal lfilter.
 
-    # https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)
-    # p = [A, tau_iir]
-    # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
-    # p = [b0, b1, a0, a1]
+    https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)::
+
+        p = [A, tau_iir]
+        p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
+        p = [b0, b1, a0, a1]
+    """
 
     amplitude: float
     a: npt.NDArray
     b: npt.NDArray
     target: Envelope
 
-    def _data(self, target):
+    def _data(self, target: npt.NDArray) -> npt.NDArray:
         a = self.a / self.a[0]
         gain = np.sum(self.b) / np.sum(a)
         b = self.b / gain if gain != 0 else self.b
 
         data = lfilter(b=b, a=a, x=target)
         if np.max(np.abs(data)) != 0:
-            data = data / np.max(np.abs(data))
+            data /= np.max(np.abs(data))
         return data
 
     def i(self, times: Times) -> Waveform:
@@ -244,13 +249,6 @@ class Snz(Envelope):
     """
 
     amplitude: float
-    width: float
-    """Essentially, the pulse duration...
-
-    .. todo::
-
-        - reset to duration, if decided so
-    """
     t_idling: float
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
@@ -258,7 +256,7 @@ class Snz(Envelope):
     def i(self, times: Times) -> Waveform:
         """.. todo::"""
         # convert timings to samples
-        half_pulse_duration = (self.width - self.t_idling) / 2
+        half_pulse_duration = (_duration(times) - self.t_idling) / 2
         aspan = np.sum(times < half_pulse_duration)
         idle = len(times) - 2 * (aspan + 1)
 
