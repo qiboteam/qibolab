@@ -31,7 +31,29 @@ def classify_sweepers(
 
 class ProcessedSweeps:
     """Data type that centralizes and allows extracting information about given
-    sweeps."""
+    sweeps.
+
+    In laboneq, sweeps are represented with the help of SweepParameter
+    instances. When adding pulses to a laboneq experiment, some
+    properties can be set to be an instance of SweepParameter instead of
+    a fixed numeric value. In case of channel property sweeps, either
+    the relevant calibration property or the instrument node directly
+    can be set ot a SweepParameter instance. Parts of the laboneq
+    experiment that define the sweep loops refer to SweepParameter
+    instances as well. These should be linkable to instances that are
+    either set to a pulse property, a channel calibration or instrument
+    node. To achieve this, we use the exact same SweepParameter instance
+    in both places. This class takes care of creating these
+    SweepParameter instances and giving access to them in a consistent
+    way (i.e. whenever they need to be the same instance they will be
+    the same instance). When constructing sweep loops you may ask from
+    this class to provide all the SweepParameter instances related to a
+    given qibolab Sweeper (parallel sweeps). Later, when adding pulses
+    or setting channel properties, you may ask from this class to
+    provide all SweepParameter instances related to a given pulse or
+    channel, and you will get parameters that are linkable to the ones
+    in the sweep loop definition
+    """
 
     def __init__(self, sweepers: Iterable[Sweeper], qubits: dict[str, Qubit]):
         pulse_sweeps = []
