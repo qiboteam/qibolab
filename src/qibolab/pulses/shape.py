@@ -68,11 +68,9 @@ class Envelope(ABC):
 class Rectangular(Envelope):
     """Rectangular envelope."""
 
-    amplitude: float
-
     def i(self, times: Times) -> Waveform:
         """Generate a rectangular envelope."""
-        return self.amplitude * np.ones_like(times)
+        return np.ones_like(times)
 
 
 @dataclass(frozen=True)
@@ -84,7 +82,6 @@ class Exponential(Envelope):
         A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
     """
 
-    amplitude: float
     tau: float
     """The decay rate of the first exponential function."""
     upsilon: float
@@ -94,10 +91,8 @@ class Exponential(Envelope):
 
     def i(self, times: Times) -> Waveform:
         """Generate a combination of two exponential decays."""
-        return (
-            self.amplitude
-            * (np.exp(-times / self.upsilon) + self.g * np.exp(-times / self.tau))
-            / (1 + self.g)
+        return (np.exp(-times / self.upsilon) + self.g * np.exp(-times / self.tau)) / (
+            1 + self.g
         )
 
 
@@ -122,7 +117,6 @@ class Gaussian(Envelope):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
     """
 
-    amplitude: float
     rel_sigma: float
     """Relative Gaussian standard deviation.
 
@@ -131,9 +125,7 @@ class Gaussian(Envelope):
 
     def i(self, times: Times) -> Waveform:
         """Generate a Gaussian window."""
-        return self.amplitude * gaussian(
-            len(times), _samples_sigma(self.rel_sigma, times)
-        )
+        return gaussian(len(times), _samples_sigma(self.rel_sigma, times))
 
 
 @dataclass(frozen=True)
@@ -145,7 +137,6 @@ class GaussianSquare(Envelope):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
     """
 
-    amplitude: float
     rel_sigma: float
     """Relative Gaussian standard deviation.
 
@@ -164,7 +155,7 @@ class GaussianSquare(Envelope):
             len(times[tails]), _samples_sigma(self.rel_sigma, times)
         )
 
-        return self.amplitude * pulse
+        return pulse
 
 
 @dataclass(frozen=True)
@@ -177,7 +168,6 @@ class Drag(Envelope):
         - add reference
     """
 
-    amplitude: float
     rel_sigma: float
     """Relative Gaussian standard deviation.
 
@@ -188,9 +178,7 @@ class Drag(Envelope):
 
     def i(self, times: Times) -> Waveform:
         """Generate a Gaussian envelope."""
-        return self.amplitude * gaussian(
-            len(times), _samples_sigma(self.rel_sigma, times)
-        )
+        return gaussian(len(times), _samples_sigma(self.rel_sigma, times))
 
     def q(self, times: Times) -> Waveform:
         """Generate ...
@@ -212,7 +200,6 @@ class Iir(Envelope):
         p = [b0, b1, a0, a1]
     """
 
-    amplitude: float
     a: npt.NDArray
     b: npt.NDArray
     target: Envelope
@@ -229,11 +216,11 @@ class Iir(Envelope):
 
     def i(self, times: Times) -> Waveform:
         """.. todo::"""
-        return self.amplitude * self._data(self.target.i(times))
+        return self._data(self.target.i(times))
 
     def q(self, times: Times) -> Waveform:
         """.. todo::"""
-        return self.amplitude * self._data(self.target.q(times))
+        return self._data(self.target.q(times))
 
 
 @dataclass(frozen=True)
@@ -248,7 +235,6 @@ class Snz(Envelope):
         - expression
     """
 
-    amplitude: float
     t_idling: float
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
@@ -265,7 +251,7 @@ class Snz(Envelope):
         pulse[aspan] = pulse[aspan + 1 + idle] = self.b_amplitude
         # set idle time to 0
         pulse[aspan + 1 : aspan + 1 + idle] = 0
-        return self.amplitude * pulse
+        return pulse
 
 
 @dataclass(frozen=True)
@@ -282,15 +268,13 @@ class ECap(Envelope):
         &\times& [1 + \tanh(\alpha/2)]^{-2}
     """
 
-    amplitude: float
     alpha: float
 
     def i(self, times: Times) -> Waveform:
         """.. todo::"""
         x = times / len(times)
         return (
-            self.amplitude
-            * (1 + np.tanh(self.alpha * times))
+            (1 + np.tanh(self.alpha * times))
             * (1 + np.tanh(self.alpha * (1 - x)))
             / (1 + np.tanh(self.alpha / 2)) ** 2
         )
@@ -306,17 +290,16 @@ class Custom(Envelope):
         - add attribute docstrings
     """
 
-    amplitude: float
     custom_i: npt.NDArray
     custom_q: npt.NDArray
 
     def i(self, times: Times) -> Waveform:
         """.. todo::"""
-        return self.amplitude * self.custom_i
+        return self.custom_i
 
-    def envelope_waveform_q(self, times: Times) -> Waveform:
+    def q(self, times: Times) -> Waveform:
         """.. todo::"""
-        return self.amplitude * self.custom_q
+        return self.custom_q
 
 
 class Envelopes(Enum):
