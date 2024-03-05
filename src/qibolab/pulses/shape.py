@@ -17,6 +17,16 @@ __all__ = [
 ]
 
 Times = npt.NDArray[np.float64]
+"""The time window of a pulse.
+
+This should span the entire pulse interval, and contain one point per-desired sample.
+
+.. note::
+
+    It is not possible to deal with partial windows or arrays with a rank different from
+    1, since some envelopes are defined in terms of the pulse duration and the
+    individual samples themselves. Cf. :cls:`Snz`.
+"""
 # TODO: they could be distinguished among them, and distinguished from generic float
 # arrays, using the NewType pattern -> but this require some more effort to encforce
 # types throughout the whole code base
