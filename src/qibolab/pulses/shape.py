@@ -7,6 +7,7 @@ from enum import Enum
 import numpy as np
 import numpy.typing as npt
 from scipy.signal import lfilter
+from scipy.signal.windows import gaussian
 
 __all__ = [
     "Times",
@@ -34,6 +35,14 @@ Waveform = npt.NDArray[np.float64]
 """"""
 IqWaveform = npt.NDArray[np.float64]
 """"""
+
+
+def _duration(times: Times) -> float:
+    return times[-1] - times[0]
+
+
+def _mean(times: Times) -> float:
+    return _duration(times) / 2 + times[0]
 
 
 class Envelope(ABC):
@@ -92,12 +101,13 @@ class Exponential(Envelope):
         )
 
 
-def _gaussian(t, mu, sigma):
-    """Gaussian function, normalized to be 1 at the max."""
-    # TODO: if a centered Gaussian has to be used, and we agree that `Times` should
-    # always be the full window, just use `scipy.signal.gaussian`, that is exactly this
-    # function, autcomputing the mean from the number of points
-    return np.exp(-(((t - mu) / sigma) ** 2) / 2)
+def _samples_sigma(rel_sigma: float, times: Times) -> float:
+    """Convert standard deviation in samples.
+
+    `rel_sigma` is assumed in units of the interval duration, and it is turned in units
+    of samples, by counting the number of samples in the interval.
+    """
+    return rel_sigma * len(times)
 
 
 @dataclass(frozen=True)
@@ -113,14 +123,17 @@ class Gaussian(Envelope):
     """
 
     amplitude: float
-    mu: float
-    """Gaussian mean."""
-    sigma: float
-    """Gaussian standard deviation."""
+    rel_sigma: float
+    """Relative Gaussian standard deviation.
+
+    In units of the interval duration.
+    """
 
     def i(self, times: Times) -> Waveform:
         """Generate a Gaussian window."""
-        return self.amplitude * _gaussian(times, self.mu, self.sigma)
+        return self.amplitude * gaussian(
+            len(times), _samples_sigma(self.rel_sigma, times)
+        )
 
 
 @dataclass(frozen=True)
@@ -133,10 +146,11 @@ class GaussianSquare(Envelope):
     """
 
     amplitude: float
-    mu: float
-    """Gaussian mean."""
-    sigma: float
-    """Gaussian standard deviation."""
+    rel_sigma: float
+    """Relative Gaussian standard deviation.
+
+    In units of the interval duration.
+    """
     width: float
     """Length of the flat portion."""
 
@@ -144,9 +158,11 @@ class GaussianSquare(Envelope):
         """Generate a Gaussian envelope, with a flat central window."""
 
         pulse = np.ones_like(times)
-        u, hw = self.mu, self.width / 2
+        u, hw = _mean(times), self.width / 2
         tails = (times < (u - hw)) | ((u + hw) < times)
-        pulse[tails] = _gaussian(times[tails], self.mu, self.sigma)
+        pulse[tails] = gaussian(
+            len(times[tails]), _samples_sigma(self.rel_sigma, times)
+        )
 
         return self.amplitude * pulse
 
