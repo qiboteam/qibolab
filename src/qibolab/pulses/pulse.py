@@ -114,12 +114,12 @@ class Pulse:
     def i(self, times: Times) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
 
-        return self.envelope.i(times)
+        return self.amplitude * self.envelope.i(times)
 
     def q(self, times: Times) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
 
-        return self.envelope.q(times)
+        return self.amplitude * self.envelope.q(times)
 
     def envelopes(self, times: Times) -> IqWaveform:
         """A tuple with the i and q envelope waveforms of the pulse."""
