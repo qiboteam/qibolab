@@ -19,10 +19,9 @@ def classify_sweepers(
     can be done in real-time (i.e. on hardware)"""
     nt_sweepers, rt_sweepers = [], []
     for sweeper in sweepers:
-        if (
-            sweeper.parameter is Parameter.bias or
-            (sweeper.parameter is Parameter.amplitude
-            and sweeper.pulses[0].type is PulseType.READOUT)
+        if sweeper.parameter is Parameter.bias or (
+            sweeper.parameter is Parameter.amplitude
+            and sweeper.pulses[0].type is PulseType.READOUT
         ):
             nt_sweepers.append(sweeper)
         else:
