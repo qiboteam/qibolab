@@ -489,12 +489,19 @@ def test_sweep_and_play_sim(dummy_qrc):
         nshots=12,
     )
 
+    # check play
     IQM5q.session = lo.Session(IQM5q.device_setup)
     IQM5q.session.connect(do_emulation=True)
     res = IQM5q.play(qubits, couplers, sequence, options)
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
+    # check sweep with empty list of sweeps
+    res = IQM5q.sweep(qubits, couplers, sequence, options)
+    assert res is not None
+    assert all(qubit in res for qubit in qubits)
+
+    # check sweep with sweeps
     sweep_1 = Sweeper(Parameter.start, np.array([1, 2, 3, 4]), list(qf_pulses.values()))
     sweep_2 = Sweeper(Parameter.bias, np.array([1, 2, 3]), qubits=[qubits[0]])
     res = IQM5q.sweep(qubits, couplers, sequence, options, sweep_1, sweep_2)
