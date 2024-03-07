@@ -831,7 +831,7 @@ class QrmRf(ClusterModule):
 
                 body_block += final_reset_block
 
-                footer_block = Block("cleaup")
+                footer_block = Block("cleanup")
                 footer_block.append(f"stop")
 
                 # wrap pulses block in sweepers loop blocks
