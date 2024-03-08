@@ -735,7 +735,7 @@ def test_batching(dummy_qrc):
     sequence.add(platform.create_MZ_pulse(0, start=measurement_start))
     sequence.add(platform.create_MZ_pulse(1, start=measurement_start))
 
-    batches = list(batch(600 * [sequence], instrument.BOUNDS))
+    batches = list(batch(600 * [sequence], instrument.bounds))
     # These sequences get limited by the number of measuraments (600/250/2)
     assert len(batches) == 5
     assert len(batches[0]) == 125

@@ -69,9 +69,6 @@ class RFSoC(Controller):
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
 
-    def setup(self):
-        """Empty deprecated method."""
-
     def _execute_pulse_sequence(
         self,
         sequence: PulseSequence,

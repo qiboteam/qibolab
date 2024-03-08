@@ -24,13 +24,6 @@ OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
 
-MAX_DURATION = int(4e4)
-"""Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
-MAX_READOUT = int(30)
-"""Maximum number of readout pulses [Not estimated]."""
-MAX_INSTRUCTIONS = int(1e6)
-"""Maximum instructions size [Not estimated]."""
-
 
 def declare_octaves(octaves, host, calibration_path=None):
     """Initiate Octave configuration and add octaves info.
@@ -126,16 +119,16 @@ class QMController(Controller):
     """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
     instruments being used."""
 
-    BOUNDS = Bounds(
-        waveforms=MAX_DURATION,
-        readout=MAX_READOUT,
-        instructions=MAX_READOUT,
-    )
-
     time_of_flight: int = 0
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
+    bounds: Bounds = Bounds(
+        waveforms=int(4e4),
+        readout=30,
+        instructions=int(1e6),
+    )
+    """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[str] = None
     """Path to the JSON file that contains the mixer calibration."""
     script_file_name: Optional[str] = None
@@ -221,9 +214,6 @@ class QMController(Controller):
         self.manager = QuantumMachinesManager(
             host=host, port=int(port), octave=octave, credentials=credentials
         )
-
-    def setup(self):
-        """Deprecated method."""
 
     def disconnect(self):
         """Disconnect from QM manager."""

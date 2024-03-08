@@ -240,7 +240,7 @@ class Platform:
         }
 
         results = defaultdict(list)
-        bounds = kwargs.get("bounds", self._controller.BOUNDS)
+        bounds = kwargs.get("bounds", self._controller.bounds)
         for b in batch(sequences, bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
             result = self._execute(sequence, options, **kwargs)
