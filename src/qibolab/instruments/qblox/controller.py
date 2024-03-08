@@ -1,4 +1,5 @@
 import signal
+from dataclasses import replace
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
@@ -12,6 +13,7 @@ from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 MAX_BATCH_SIZE = 30
@@ -479,12 +481,7 @@ class QbloxController(Controller):
                     result = self._execute_pulse_sequence(
                         qubits, sequence, options, sweepers
                     )
-                    for pulse in sequence.ro_pulses:
-                        if results[pulse.id]:
-                            results[pulse.id] += result[pulse.serial]
-                        else:
-                            results[pulse.id] = result[pulse.serial]
-                        results[pulse.qubit] = results[pulse.id]
+                    self._add_to_results(sequence, results, result)
                 else:
                     sweepers_repetitions = 1
                     for sweeper in sweepers:
@@ -493,19 +490,22 @@ class QbloxController(Controller):
                         # split nshots
                         max_rt_nshots = (SEQUENCER_MEMORY) // sweepers_repetitions
                         num_full_sft_iterations = nshots // max_rt_nshots
-                        num_bins = max_rt_nshots * sweepers_repetitions
 
+                        result_chunks = []
                         for sft_iteration in range(num_full_sft_iterations + 1):
                             _nshots = min(
                                 max_rt_nshots, nshots - sft_iteration * max_rt_nshots
                             )
-                            self._sweep_recursion(
+
+                            res = self._execute_pulse_sequence(
                                 qubits,
                                 sequence,
-                                options,
-                                *sweepers,
-                                results=results,
+                                replace(options, nshots=_nshots),
+                                sweepers,
                             )
+                            result_chunks.append(res)
+                        result = self._combine_result_chunks(result_chunks)
+                        self._add_to_results(sequence, results, result)
                     else:
                         for _ in range(nshots):
                             num_bins = 1
@@ -538,3 +538,31 @@ class QbloxController(Controller):
                                     *((split_sweeper,) + sweepers[1:]),
                                     results=results,
                                 )
+
+    @staticmethod
+    def _combine_result_chunks(result_chunks):
+        res = result_chunks[0]
+        some_result = next(iter(res.values()))
+        if isinstance(some_result, IntegratedResults):
+            attribute = "voltage"
+        elif isinstance(some_result, SampleResults):
+            attribute = "samples"
+        else:
+            raise ValueError(f"Unknown acquired result type {type(some_result)}")
+        for chunk in result_chunks[1:]:
+            for key, value in chunk.items():
+                appended = np.append(
+                    getattr(res[key], attribute), getattr(value, attribute), axis=0
+                )
+                setattr(res[key], attribute, appended)
+
+        return res
+
+    @staticmethod
+    def _add_to_results(sequence, results, results_to_add):
+        for pulse in sequence.ro_pulses:
+            if results[pulse.id]:
+                results[pulse.id] += results_to_add[pulse.serial]
+            else:
+                results[pulse.id] = results_to_add[pulse.serial]
+            results[pulse.qubit] = results[pulse.id]
