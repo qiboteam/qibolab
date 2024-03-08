@@ -507,37 +507,10 @@ class QbloxController(Controller):
                         result = self._combine_result_chunks(result_chunks)
                         self._add_to_results(sequence, results, result)
                     else:
-                        for _ in range(nshots):
-                            num_bins = 1
-                            for sweeper in sweepers[1:]:
-                                num_bins *= len(sweeper.values)
-                            sweeper = sweepers[0]
-                            max_rt_iterations = (SEQUENCER_MEMORY) // num_bins
-                            num_full_sft_iterations = (
-                                len(sweeper.values) // max_rt_iterations
-                            )
-                            num_bins = nshots * max_rt_iterations
-                            for sft_iteration in range(num_full_sft_iterations + 1):
-                                _from = sft_iteration * max_rt_iterations
-                                _to = min(
-                                    (sft_iteration + 1) * max_rt_iterations,
-                                    len(sweeper.values),
-                                )
-                                _values = sweeper.values[_from:_to]
-                                split_sweeper = Sweeper(
-                                    parameter=sweeper.parameter,
-                                    values=_values,
-                                    pulses=sweeper.pulses,
-                                    qubits=sweeper.qubits,
-                                )
-
-                                self._sweep_recursion(
-                                    qubits,
-                                    sequence,
-                                    options,
-                                    *((split_sweeper,) + sweepers[1:]),
-                                    results=results,
-                                )
+                        raise ValueError(
+                            f"Requested sweep has {sweepers_repetitions} total number of sweep points. "
+                            f"Maximum supported is {SEQUENCER_MEMORY}"
+                        )
 
     @staticmethod
     def _combine_result_chunks(result_chunks):
