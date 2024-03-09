@@ -230,7 +230,7 @@ class QMConfig:
             # register flux element
             self.register_flux_element(qubit, pulse.frequency)
 
-    def register_pulse(self, qubit, qmpulse):
+    def register_pulse(self, pulse, operation, element, qubit):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
@@ -243,60 +243,48 @@ class QMConfig:
                 instantiation of the Qubit objects. They are named as
                 "drive0", "drive1", "flux0", "readout0", ...
         """
-        pulse = qmpulse.pulse
-        if qmpulse.operation not in self.pulses:
-            if pulse.type is PulseType.DRIVE:
-                serial_i = self.register_waveform(pulse, "i")
-                serial_q = self.register_waveform(pulse, "q")
-                self.pulses[qmpulse.operation] = {
-                    "operation": "control",
-                    "length": pulse.duration,
-                    "waveforms": {"I": serial_i, "Q": serial_q},
-                }
-                # register drive pulse in elements
-                self.elements[f"drive{qubit.name}"]["operations"][
-                    qmpulse.operation
-                ] = qmpulse.operation
+        if operation in self.pulses:
+            return
 
-            elif pulse.type is PulseType.FLUX:
-                serial = self.register_waveform(pulse)
-                self.pulses[qmpulse.operation] = {
-                    "operation": "control",
-                    "length": pulse.duration,
-                    "waveforms": {
-                        "single": serial,
-                    },
-                }
-                # register flux pulse in elements
-                self.elements[f"flux{qubit.name}"]["operations"][
-                    qmpulse.operation
-                ] = qmpulse.operation
+        if pulse.type is PulseType.DRIVE:
+            serial_i = self.register_waveform(pulse, "i")
+            serial_q = self.register_waveform(pulse, "q")
+            self.pulses[operation] = {
+                "operation": "control",
+                "length": pulse.duration,
+                "waveforms": {"I": serial_i, "Q": serial_q},
+            }
+        elif pulse.type is PulseType.FLUX:
+            serial = self.register_waveform(pulse)
+            self.pulses[operation] = {
+                "operation": "control",
+                "length": pulse.duration,
+                "waveforms": {
+                    "single": serial,
+                },
+            }
+        elif pulse.type is PulseType.READOUT:
+            serial_i = self.register_waveform(pulse, "i")
+            serial_q = self.register_waveform(pulse, "q")
+            self.register_integration_weights(qubit, pulse.duration)
+            self.pulses[operation] = {
+                "operation": "measurement",
+                "length": pulse.duration,
+                "waveforms": {
+                    "I": serial_i,
+                    "Q": serial_q,
+                },
+                "integration_weights": {
+                    "cos": f"cosine_weights{qubit.name}",
+                    "sin": f"sine_weights{qubit.name}",
+                    "minus_sin": f"minus_sine_weights{qubit.name}",
+                },
+                "digital_marker": "ON",
+            }
+        else:
+            raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
 
-            elif pulse.type is PulseType.READOUT:
-                serial_i = self.register_waveform(pulse, "i")
-                serial_q = self.register_waveform(pulse, "q")
-                self.register_integration_weights(qubit, pulse.duration)
-                self.pulses[qmpulse.operation] = {
-                    "operation": "measurement",
-                    "length": pulse.duration,
-                    "waveforms": {
-                        "I": serial_i,
-                        "Q": serial_q,
-                    },
-                    "integration_weights": {
-                        "cos": f"cosine_weights{qubit.name}",
-                        "sin": f"sine_weights{qubit.name}",
-                        "minus_sin": f"minus_sine_weights{qubit.name}",
-                    },
-                    "digital_marker": "ON",
-                }
-                # register readout pulse in elements
-                self.elements[f"readout{qubit.name}"]["operations"][
-                    qmpulse.operation
-                ] = qmpulse.operation
-
-            else:
-                raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
+        self.elements[element]["operations"][operation] = operation
 
     def register_waveform(self, pulse, mode="i"):
         """Registers waveforms in QM config.

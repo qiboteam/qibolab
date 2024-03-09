@@ -238,7 +238,7 @@ ACQUISITION_TYPES = {
 }
 
 
-def declare_acquisitions(ro_pulses, qubits, options):
+def declare_acquisitions(ro_pulses, qubits, instructions, options):
     """Declares variables for saving acquisition in the QUA program.
 
     Args:
@@ -252,24 +252,25 @@ def declare_acquisitions(ro_pulses, qubits, options):
         List of all :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
     """
     acquisitions = {}
-    for qmpulse in ro_pulses:
-        qubit = qmpulse.pulse.qubit
-        name = f"{qmpulse.operation}_{qubit}"
+    for pulse in ro_pulses:
+        q = pulse.qubit
+        instruction = instructions.pulse_to_instruction[pulse.serial]
+        name = f"{instruction.operation}_{q}"
         if name not in acquisitions:
             average = options.averaging_mode is AveragingMode.CYCLIC
             kwargs = {}
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                kwargs["threshold"] = qubits[qubit].threshold
-                kwargs["angle"] = qubits[qubit].iq_angle
-
+                kwargs["threshold"] = qubits[q].threshold
+                kwargs["angle"] = qubits[q].iq_angle
             acquisition = ACQUISITION_TYPES[options.acquisition_type](
-                name, qubit, average, **kwargs
+                name, q, average, **kwargs
             )
-            acquisition.assign_element(qmpulse.element)
+            acquisition.assign_element(instruction.element)
             acquisitions[name] = acquisition
 
-        acquisitions[name].keys.append(qmpulse.pulse.serial)
-        qmpulse.acquisition = acquisitions[name]
+        acquisitions[name].keys.append(pulse.serial)
+        instructions.update_kwargs(instruction, acquisition=acquisitions[name])
+
     return list(acquisitions.values())
 
 
@@ -278,7 +279,7 @@ def fetch_results(result, acquisitions):
 
     Args:
         result: Result of the executed experiment.
-        acquisition (dict): Dictionary containing :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
+        acquisition: Dictionary containing :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
 
     Returns:
         Dictionary with the results in the format required by the platform.

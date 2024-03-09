@@ -16,8 +16,8 @@ from qibolab.unrolling import Bounds
 from .acquisition import declare_acquisitions, fetch_results
 from .config import SAMPLING_RATE, QMConfig
 from .devices import Octave, OPXplus
+from .instructions import Instructions
 from .ports import OPXIQ
-from .sequence import BakedPulse, QMPulse, Sequence
 from .sweepers import sweep
 
 OCTAVE_ADDRESS_OFFSET = 11000
@@ -136,10 +136,12 @@ class QMController(Controller):
 
     manager: Optional[QuantumMachinesManager] = None
     """Manager object used for controlling the Quantum Machines cluster."""
-    config: QMConfig = field(default_factory=QMConfig)
-    """Configuration dictionary required for pulse execution on the OPXs."""
     is_connected: bool = False
     """Boolean that shows whether we are connected to the QM manager."""
+
+    config: QMConfig = field(default_factory=QMConfig)
+    """Configuration dictionary required for pulse execution on the OPXs."""
+    unique_pulses: Dict[str, int] = field(default_factory=dict)
 
     simulation_duration: Optional[int] = None
     """Duration for the simulation in ns.
@@ -269,25 +271,25 @@ class QMController(Controller):
         )
         return self.manager.simulate(self.config.__dict__, program, simulation_config)
 
-    def create_sequence(self, qubits, sequence, sweepers):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to a
-        :class:`qibolab.instruments.qm.sequence.Sequence`.
+    def create_instructions(self, qubits, sequence, sweepers):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to
+        :class:`qibolab.instruments.qm.instructions.Instructions`.
 
         Args:
             qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
                 passed from the platform.
             sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
             sweepers (list): List of sweeper objects so that pulses that require baking are identified.
+
         Returns:
-            (:class:`qibolab.instruments.qm.sequence.Sequence`) containing the pulses from given pulse sequence.
+            :class:`qibolab.instruments.qm.instructions.Instructions` containing the instructions
+            that play the given pulse sequence.
         """
         # Current driver cannot play overlapping pulses on drive and flux channels
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
 
-        pulses_to_bake = find_baking_pulses(sweepers)
-
-        qmsequence = Sequence()
+        instructions = Instructions(self.config, find_baking_pulses(sweepers))
         ro_pulses = []
         for pulse in sorted(
             sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
@@ -297,29 +299,38 @@ class QMController(Controller):
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
             if pulse.type is PulseType.READOUT:
                 self.config.register_port(qubit.feedback.port)
+                ro_pulses.append(pulse)
 
             self.config.register_element(
                 qubit, pulse, self.time_of_flight, self.smearing
             )
-            if (
-                pulse.duration % 4 != 0
-                or pulse.duration < 16
-                or pulse.serial in pulses_to_bake
-            ):
-                qmpulse = BakedPulse(pulse)
-                qmpulse.bake(self.config, durations=[pulse.duration])
-            else:
-                qmpulse = QMPulse(pulse)
-                if pulse.type is PulseType.READOUT:
-                    ro_pulses.append(qmpulse)
-                self.config.register_pulse(qubit, qmpulse)
-            qmsequence.add(qmpulse)
 
-        qmsequence.shift()
-        return qmsequence, ro_pulses
+            instructions.append(qubit, pulse)
+
+        # instructions.shift()
+        return instructions, ro_pulses
 
     def play(self, qubits, couplers, sequence, options):
         return self.sweep(qubits, couplers, sequence, options)
+
+    # def play_sequences(self, qubits, couplers, sequences, options):
+    #    qmsequences = []
+    #    indices = []
+    #    for sequence in sequences:
+    #        qmsequence, ro_pulses = self.create_sequence(qubits, sequence, [])
+    #        qmsequences.append(qmsequence)
+    #        indices.extend(self.unique_pulses[qmpulse.operation] for qmpulse in qmsequence.qmpulses)
+    #    with qua.program() as experiment:
+    #        n = declare(int)
+    #        p = declare(int)
+    #        acquisitions = declare_acquisitions(ro_pulses, qubits, options)
+    #        with for_(n, 0, n < options.nshots, n + 1):
+    #            qua.align()
+    #            with for_each_(p, indices):
+    #                with qua.switch_(p):
+    #                    for operation, idx in self.unique_pulses.items():
+    #                        pass
+    #    return self.sweep(qubits, couplers, sequence, options)
 
     def sweep(self, qubits, couplers, sequence, options, *sweepers):
         if not sequence:
@@ -336,16 +347,17 @@ class QMController(Controller):
                 self.config.register_port(qubit.flux.port)
                 self.config.register_flux_element(qubit)
 
-        qmsequence, ro_pulses = self.create_sequence(qubits, sequence, sweepers)
-        # play pulses using QUA
+        instructions, ro_pulses = self.create_instructions(qubits, sequence, sweepers)
         with qua.program() as experiment:
             n = declare(int)
-            acquisitions = declare_acquisitions(ro_pulses, qubits, options)
+            acquisitions = declare_acquisitions(
+                ro_pulses, qubits, instructions, options
+            )
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(
                     list(sweepers),
                     qubits,
-                    qmsequence,
+                    instructions,
                     options.relaxation_time,
                     self.config,
                 )
@@ -361,8 +373,7 @@ class QMController(Controller):
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for qmpulse in ro_pulses:
-                pulse = qmpulse.pulse
+            for pulse in ro_pulses:
                 results[pulse.qubit] = results[pulse.serial] = result
             return results
         else:
