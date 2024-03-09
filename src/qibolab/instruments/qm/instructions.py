@@ -65,7 +65,7 @@ class Play(Instruction):
     def from_pulse(cls, pulse):
         element = f"{pulse.type.name.lower()}{pulse.qubit}"
         phase = pulse.relative_phase / (2 * np.pi)
-        shape = pulse.shape.serial
+        shape = str(pulse.shape)
         return cls(element, pulse.amplitude, pulse.duration, phase, shape)
 
     @property
@@ -260,6 +260,7 @@ class Instructions:
         wait_time = pulse.start - self.clock[instruction.element]
         if wait_time >= 12:
             delay = Wait(element, duration=wait_time // 4 + 1)
+            self.instructions.append(delay)
             self.clock[element] += 4 * delay.duration
         self.clock[element] += instruction.duration
 
