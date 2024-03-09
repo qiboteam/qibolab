@@ -12,7 +12,7 @@ from qualang_tools.bakery.bakery import Baking
 from qibolab.pulses import Pulse, PulseType
 
 from .acquisition import Acquisition
-from .config import SAMPLING_RATE, QMConfig
+from .config import SAMPLING_RATE, QMConfig, float_serial
 
 DurationsType = Union[List[int], npt.NDArray[int]]
 """Type of values that can be accepted in a duration sweeper."""
@@ -64,15 +64,15 @@ class Play(Instruction):
     @classmethod
     def from_pulse(cls, pulse):
         element = f"{pulse.type.name.lower()}{pulse.qubit}"
-        phase = pulse.relative_phase / (2 * np.pi)
+        phase = (pulse.relative_phase % (2 * np.pi)) / (2 * np.pi)
         shape = str(pulse.shape)
         return cls(element, pulse.amplitude, pulse.duration, phase, shape)
 
     @property
     def operation(self):
         """Name of the operation implementing the pulse in the QM config."""
-        amplitude = format(self.amplitude, ".6f").rstrip("0").rstrip(".")
-        phase = format(self.relative_phase, ".6f").rstrip("0").rstrip(".")
+        amplitude = float_serial(self.amplitude)
+        phase = float_serial(self.relative_phase)
         return f"{self.element}({self.duration}, {amplitude}, {phase}, {self.shape})"
 
     def __call__(self, duration=None, amplitude=None, phase=None):
