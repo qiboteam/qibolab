@@ -35,8 +35,8 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
-        pwd = builtins.getEnv "PWD";
-        platforms = builtins.toPath "${pwd}/../qibolab_platforms_qrc/";
+        lib = pkgs.lib;
+        isDarwin = lib.strings.hasSuffix "darwin" system;
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
@@ -47,7 +47,7 @@
               config,
               ...
             }: {
-              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter zlib] ++ lib.optionals isDarwin [stdenv.cc.cc.lib];
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
