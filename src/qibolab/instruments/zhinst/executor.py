@@ -3,7 +3,7 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Optional
+from typing import Any, Optional
 
 import laboneq.simple as lo
 import numpy as np
@@ -400,18 +400,8 @@ class Zurich(Controller):
 
     def create_exp(self, qubits, options):
         """Zurich experiment initialization using their Experiment class."""
-
-        # Setting experiment signal lines
-        signals = [lo.ExperimentSignal(name) for name in self.signal_map.keys()]
-
-        exp = lo.Experiment(
-            uid="Sequence",
-            signals=signals,
-        )
-
         if self.acquisition_type:
             acquisition_type = self.acquisition_type
-            self.acquisition_type = None
         else:
             acquisition_type = ACQUISITION_TYPE[options.acquisition_type]
         averaging_mode = AVERAGING_MODE[options.averaging_mode]
@@ -419,28 +409,77 @@ class Zurich(Controller):
             options, acquisition_type=acquisition_type, averaging_mode=averaging_mode
         )
 
-        # Near Time recursion loop or directly to Real Time recursion loop
-        if self.nt_sweeps:
-            self.sweep_recursion_nt(qubits, exp_options, exp)
-        else:
-            self.define_exp(qubits, exp_options, exp)
+        signals = [lo.ExperimentSignal(name) for name in self.signal_map.keys()]
+        exp = lo.Experiment(
+            uid="Sequence",
+            signals=signals,
+        )
 
-    def define_exp(self, qubits, exp_options, exp):
-        """Real time definition."""
-        with exp.acquire_loop_rt(
+        contexts = self._contexts(exp, exp_options)
+        self._populate_exp(qubits, exp, exp_options, contexts)
+        self.set_calibration_for_rt_sweep(exp)
+        exp.set_signal_map(self.signal_map)
+        self.experiment = exp
+
+    def _contexts(
+        self, exp: lo.Experiment, exp_options: ExecutionParameters
+    ) -> list[tuple[Optional[Sweeper], Any]]:
+        """To construct a laboneq experiment, we need to first define a certain
+        sequence of nested contexts.
+
+        This method returns the corresponding sequence of context
+        managers.
+        """
+        sweep_contexts = []
+        for i, sweeper in enumerate(self.nt_sweeps):
+            ctx = exp.sweep(
+                uid=f"nt_sweep_{sweeper.parameter.name.lower()}_{i}",
+                parameter=[
+                    sweep_param
+                    for sweep_param in self.processed_sweeps.sweeps_for_sweeper(sweeper)
+                ],
+            )
+            sweep_contexts.append((sweeper, ctx))
+
+        shots_ctx = exp.acquire_loop_rt(
             uid="shots",
             count=exp_options.nshots,
             acquisition_type=exp_options.acquisition_type,
             averaging_mode=exp_options.averaging_mode,
-        ):
-            # Recursion loop for sweepers or just play a sequence
-            if len(self.rt_sweeps) > 0:
-                self.sweep_recursion(qubits, exp, exp_options)
-            else:
-                self.select_exp(exp, qubits, exp_options)
-            self.set_calibration_for_rt_sweep(exp)
-            exp.set_signal_map(self.signal_map)
-            self.experiment = exp
+        )
+        sweep_contexts.append((None, shots_ctx))
+
+        for i, sweeper in enumerate(self.rt_sweeps):
+            ctx = exp.sweep(
+                uid=f"rt_sweep_{sweeper.parameter.name.lower()}_{i}",
+                parameter=[
+                    sweep_param
+                    for sweep_param in self.processed_sweeps.sweeps_for_sweeper(sweeper)
+                ],
+                reset_oscillator_phase=True,
+            )
+            sweep_contexts.append((sweeper, ctx))
+
+        return sweep_contexts
+
+    def _populate_exp(
+        self,
+        qubits: dict[str, Qubit],
+        exp: lo.Experiment,
+        exp_options: ExecutionParameters,
+        contexts,
+    ):
+        """Recursively activate the nested contexts, then define the main
+        experiment body inside the innermost context."""
+        if len(contexts) == 0:
+            self.select_exp(exp, qubits, exp_options)
+            return
+
+        sweeper, ctx = contexts[0]
+        with ctx:
+            if sweeper in self.nt_sweeps:
+                self.set_instrument_nodes_for_nt_sweep(exp, sweeper)
+            self._populate_exp(qubits, exp, exp_options, contexts[1:])
 
     def set_calibration_for_rt_sweep(self, exp: lo.Experiment) -> None:
         """Set laboneq calibration of parameters that are to be swept in real-
@@ -671,6 +710,7 @@ class Zurich(Controller):
 
         self.frequency_from_pulses(qubits, sequence)
 
+        self.acquisition_type = None
         for sweeper in sweepers:
             if sweeper.parameter in {Parameter.frequency, Parameter.amplitude}:
                 for pulse in sweeper.pulses:
@@ -699,63 +739,6 @@ class Zurich(Controller):
                 results[serial] = results[qubit] = options.results_type(data)
 
         return results
-
-    def sweep_recursion(self, qubits, exp, exp_options):
-        """Sweepers recursion for multiple nested Real Time sweepers."""
-
-        sweeper = self.rt_sweeps[0]
-
-        i = len(self.rt_sweeps) - 1
-        self.rt_sweeps.remove(sweeper)
-
-        with exp.sweep(
-            uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
-            parameter=[
-                sweep_param
-                for sweep_param in self.processed_sweeps.sweeps_for_sweeper(sweeper)
-            ],
-            reset_oscillator_phase=True,
-        ):
-            if len(self.rt_sweeps) > 0:
-                self.sweep_recursion(qubits, exp, exp_options)
-            else:
-                self.select_exp(exp, qubits, exp_options)
-
-    def sweep_recursion_nt(
-        self,
-        qubits: dict[str, Qubit],
-        options: ExecutionParameters,
-        exp: lo.Experiment,
-    ):
-        """Sweepers recursion for Near Time sweepers. Faster than regular
-        software sweepers as they are executed on the actual device by
-        (software ? or slower hardware ones)
-
-        You want to avoid them so for now they are implement for a
-        specific sweep.
-        """
-
-        log.info("nt Loop")
-
-        sweeper = self.nt_sweeps[0]
-
-        i = len(self.nt_sweeps) - 1
-        self.nt_sweeps.remove(sweeper)
-
-        with exp.sweep(
-            uid=f"sweep_{sweeper.parameter.name.lower()}_{i}",
-            parameter=[
-                sweep_param
-                for sweep_param in self.processed_sweeps.sweeps_for_sweeper(sweeper)
-            ],
-        ):
-            # This has to be called exactly here, otherwise laboneq will not identify the sweepable node
-            self.set_instrument_nodes_for_nt_sweep(exp, sweeper)
-
-            if len(self.nt_sweeps) > 0:
-                self.sweep_recursion_nt(qubits, options, exp)
-            else:
-                self.define_exp(qubits, options, exp)
 
     def split_batches(self, sequences):
         return batch_max_sequences(sequences, MAX_SEQUENCES)
