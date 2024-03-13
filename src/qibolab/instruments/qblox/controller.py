@@ -13,7 +13,7 @@ from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import IntegratedResults, SampleResults
+from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 MAX_BATCH_SIZE = 30
@@ -513,23 +513,18 @@ class QbloxController(Controller):
                         )
 
     @staticmethod
-    def _combine_result_chunks(result_chunks):
-        res = result_chunks[0]
-        some_result = next(iter(res.values()))
-        if isinstance(some_result, IntegratedResults):
-            attribute = "voltage"
-        elif isinstance(some_result, SampleResults):
-            attribute = "samples"
-        else:
-            raise ValueError(f"Unknown acquired result type {type(some_result)}")
-        for chunk in result_chunks[1:]:
-            for key, value in chunk.items():
-                appended = np.append(
-                    getattr(res[key], attribute), getattr(value, attribute), axis=0
+    def _combine_result_chunks(chunks):
+        some_chunk = next(iter(chunks))
+        some_result = next(iter(some_chunk.values()))
+        attribute = "samples" if isinstance(some_result, SampleResults) else "voltage"
+        return {
+            key: some_result.__class__(
+                np.concatenate(
+                    [getattr(chunk[key], attribute) for chunk in chunks], axis=0
                 )
-                setattr(res[key], attribute, appended)
-
-        return res
+            )
+            for key in some_chunk.keys()
+        }
 
     @staticmethod
     def _add_to_results(sequence, results, results_to_add):
