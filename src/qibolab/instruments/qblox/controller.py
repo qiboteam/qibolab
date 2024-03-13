@@ -486,31 +486,29 @@ class QbloxController(Controller):
                     sweepers_repetitions = 1
                     for sweeper in sweepers:
                         sweepers_repetitions *= len(sweeper.values)
-                    if sweepers_repetitions < SEQUENCER_MEMORY:
-                        # split nshots
-                        max_rt_nshots = (SEQUENCER_MEMORY) // sweepers_repetitions
-                        num_full_sft_iterations = nshots // max_rt_nshots
-
-                        result_chunks = []
-                        for sft_iteration in range(num_full_sft_iterations + 1):
-                            _nshots = min(
-                                max_rt_nshots, nshots - sft_iteration * max_rt_nshots
-                            )
-
-                            res = self._execute_pulse_sequence(
-                                qubits,
-                                sequence,
-                                replace(options, nshots=_nshots),
-                                sweepers,
-                            )
-                            result_chunks.append(res)
-                        result = self._combine_result_chunks(result_chunks)
-                        self._add_to_results(sequence, results, result)
-                    else:
+                    if sweepers_repetitions > SEQUENCER_MEMORY:
                         raise ValueError(
                             f"Requested sweep has {sweepers_repetitions} total number of sweep points. "
                             f"Maximum supported is {SEQUENCER_MEMORY}"
                         )
+
+                    max_rt_nshots = SEQUENCER_MEMORY // sweepers_repetitions
+                    num_full_sft_iterations = nshots // max_rt_nshots
+                    result_chunks = []
+                    for sft_iteration in range(num_full_sft_iterations + 1):
+                        _nshots = min(
+                            max_rt_nshots, nshots - sft_iteration * max_rt_nshots
+                        )
+
+                        res = self._execute_pulse_sequence(
+                            qubits,
+                            sequence,
+                            replace(options, nshots=_nshots),
+                            sweepers,
+                        )
+                        result_chunks.append(res)
+                    result = self._combine_result_chunks(result_chunks)
+                    self._add_to_results(sequence, results, result)
 
     @staticmethod
     def _combine_result_chunks(chunks):
