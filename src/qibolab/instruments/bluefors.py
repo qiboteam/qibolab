@@ -1,18 +1,22 @@
-import socket
 import re
-from datetime import datetime
+import socket
 import threading
+from datetime import datetime
+
 from qibo.config import log
 
-class TemperatureController():
+
+class TemperatureController:
     def __init__(self, IP_address):
         self.IP_address = IP_address
         self._thread = threading.Thread(target=self.get_data)
-        self._thread.daemon = True  # Daemonize the thread so it terminates when the main program exits
+        self._thread.daemon = (
+            True  # Daemonize the thread so it terminates when the main program exits
+        )
         self._is_running = False
         self._property = None
         self._thread.start()
-		
+
     def get_data(self):
 
         # Create a TCP/IP socket
@@ -29,7 +33,6 @@ class TemperatureController():
                 message = client_socket.recv(1024).decode()
                 # print(message)
 
-
                 # Define regular expression pattern to match the identifier, parameters, and values
                 pattern = r"([\w-]+): {'(\w+)':([\d\.]+), '(\w+)':([\d\.]+)}"
 
@@ -43,13 +46,13 @@ class TemperatureController():
                 date_time = datetime.fromtimestamp(float(timestamp))
 
                 # Format datetime object as a string
-                formatted_date = date_time.strftime('%Y-%m-%d %H:%M:%S')
+                formatted_date = date_time.strftime("%Y-%m-%d %H:%M:%S")
 
                 # Create a dictionary with the extracted information
                 self.data[flange] = {
                     "temperature": float(temperature),
                     "timestamp": float(timestamp),
-                    "datetime": formatted_date
+                    "datetime": formatted_date,
                 }
                 # print(data)
             except:
@@ -58,9 +61,10 @@ class TemperatureController():
 
 # Example usage
 if __name__ == "__main__":
-	import time
-	tc = TemperatureController('192.168.0.114')
-	while True:
-		time.sleep(10)
-		print("latest data")
-		print(tc.data)
+    import time
+
+    tc = TemperatureController("192.168.0.114")
+    while True:
+        time.sleep(10)
+        print("latest data")
+        print(tc.data)
