@@ -10,7 +10,7 @@ from qibo.config import log, raise_error
 from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
-from .pulses import FluxPulse, PulseSequence, ReadoutPulse
+from .pulses import Drag, FluxPulse, PulseSequence, ReadoutPulse
 from .qubits import Qubit, QubitId, QubitPair, QubitPairId
 from .sweeper import Sweeper
 from .unrolling import batch
@@ -411,15 +411,17 @@ class Platform:
     # TODO Add RY90 and RY pulses
 
     def create_RX90_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        """Create native RX90 pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
         if beta is not None:
-            pulse.shape = "Drag(5," + str(beta) + ")"
+            pulse.shape = Drag(rel_sigma=pulse.shape.rel_sigma, beta=beta)
         return pulse
 
     def create_RX_drag_pulse(self, qubit, start, relative_phase=0, beta=None):
+        """Create native RX pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         if beta is not None:
-            pulse.shape = "Drag(5," + str(beta) + ")"
+            pulse.shape = Drag(rel_sigma=pulse.shape.rel_sigma, beta=beta)
         return pulse
