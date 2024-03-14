@@ -209,13 +209,14 @@ class QMController(Controller):
         self.manager = QuantumMachinesManager(
             host=host, port=int(port), octave=octave, credentials=credentials
         )
+        self.is_connected = True
 
     def setup(self):
         """Deprecated method."""
 
     def disconnect(self):
         """Disconnect from QM manager."""
-        if self.is_connected:
+        if self.manager is not None:
             self.manager.close_all_quantum_machines()
             self.manager.close()
             self.is_connected = False
