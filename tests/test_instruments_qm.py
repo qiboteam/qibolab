@@ -9,11 +9,13 @@ from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.instruments.qm.acquisition import Acquisition, declare_acquisitions
 from qibolab.instruments.qm.controller import controllers_config
 from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
-from qibolab.pulses import Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.pulses import Envelopes, Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile
+
+Rectangular = Envelopes.RECTANGULAR.value
 
 
 def test_qmpulse():
