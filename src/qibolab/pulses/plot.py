@@ -1,10 +1,14 @@
 """Plotting tools for pulses and related entities."""
+
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .pulse import Pulse
-from .shape import SAMPLING_RATE
-from .waveform import Waveform
+from .envelope import Waveform
+from .modulation import modulate
+from .pulse import Delay, Pulse
+from .sequence import PulseSequence
 
 
 def waveform(wf: Waveform, filename=None):
@@ -14,7 +18,7 @@ def waveform(wf: Waveform, filename=None):
         filename (str): a file path. If provided the plot is save to a file.
     """
     plt.figure(figsize=(14, 5), dpi=200)
-    plt.plot(wf.data, c="C0", linestyle="dashed")
+    plt.plot(wf, c="C0", linestyle="dashed")
     plt.xlabel("Sample Number")
     plt.ylabel("Amplitude")
     plt.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
@@ -25,7 +29,7 @@ def waveform(wf: Waveform, filename=None):
     plt.close()
 
 
-def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
+def pulse(pulse_: Pulse, filename=None):
     """Plot the pulse envelope and modulated waveforms.
 
     Args:
@@ -34,76 +38,58 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     import matplotlib.pyplot as plt
     from matplotlib import gridspec
 
-    waveform_i = pulse_.shape.envelope_waveform_i(sampling_rate)
-    waveform_q = pulse_.shape.envelope_waveform_q(sampling_rate)
+    window = Times(pulse_.duration, num_samples)
+    waveform_i = pulse_.shape.i(window)
+    waveform_q = pulse_.shape.q(window)
 
     num_samples = len(waveform_i)
-    time = pulse_.start + np.arange(num_samples) / sampling_rate
+    time = np.arange(num_samples) / sampling_rate
     _ = plt.figure(figsize=(14, 5), dpi=200)
     gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=np.array([2, 1]))
     ax1 = plt.subplot(gs[0])
     ax1.plot(
         time,
-        waveform_i.data,
+        waveform_i,
         label="envelope i",
         c="C0",
         linestyle="dashed",
     )
     ax1.plot(
         time,
-        waveform_q.data,
+        waveform_q,
         label="envelope q",
         c="C1",
         linestyle="dashed",
     )
-    ax1.plot(
-        time,
-        pulse_.shape.modulated_waveform_i(sampling_rate).data,
-        label="modulated i",
-        c="C0",
-    )
-    ax1.plot(
-        time,
-        pulse_.shape.modulated_waveform_q(sampling_rate).data,
-        label="modulated q",
-        c="C1",
-    )
-    ax1.plot(time, -waveform_i.data, c="silver", linestyle="dashed")
+
+    envelope = pulse_.shape.envelopes(window)
+    modulated = modulate(np.array(envelope), pulse_.frequency)
+    ax1.plot(time, modulated[0], label="modulated i", c="C0")
+    ax1.plot(time, modulated[1], label="modulated q", c="C1")
+    ax1.plot(time, -waveform_i, c="silver", linestyle="dashed")
     ax1.set_xlabel("Time [ns]")
     ax1.set_ylabel("Amplitude")
 
     ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
-    start = float(pulse_.start)
-    finish = float(pulse._finish) if pulse._finish is not None else 0.0
+    start = 0
+    finish = float(pulse_.duration)
     ax1.axis((start, finish, -1.0, 1.0))
     ax1.legend()
 
-    modulated_i = pulse_.shape.modulated_waveform_i(sampling_rate).data
-    modulated_q = pulse_.shape.modulated_waveform_q(sampling_rate).data
     ax2 = plt.subplot(gs[1])
+    ax2.plot(modulated[0], modulated[1], label="modulated", c="C3")
+    ax2.plot(waveform_i, waveform_q, label="envelope", c="C2")
     ax2.plot(
-        modulated_i,
-        modulated_q,
-        label="modulated",
-        c="C3",
-    )
-    ax2.plot(
-        waveform_i.data,
-        waveform_q.data,
-        label="envelope",
-        c="C2",
-    )
-    ax2.plot(
-        modulated_i[0],
-        modulated_q[0],
+        modulated[0][0],
+        modulated[1][0],
         marker="o",
         markersize=5,
         label="start",
         c="lightcoral",
     )
     ax2.plot(
-        modulated_i[-1],
-        modulated_q[-1],
+        modulated[0][-1],
+        modulated[1][-1],
         marker="o",
         markersize=5,
         label="finish",
@@ -126,3 +112,67 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     else:
         plt.show()
     plt.close()
+
+
+def sequence(ps: PulseSequence, filename=None):
+    """Plot the sequence of pulses.
+
+    Args:
+        filename (str): a file path. If provided the plot is save to a file.
+    """
+    if len(ps) > 0:
+        import matplotlib.pyplot as plt
+        from matplotlib import gridspec
+
+        _ = plt.figure(figsize=(14, 2 * len(ps)), dpi=200)
+        gs = gridspec.GridSpec(ncols=1, nrows=len(ps))
+        vertical_lines = []
+        starts = defaultdict(int)
+        for pulse in ps:
+            if not isinstance(pulse, Delay):
+                vertical_lines.append(starts[pulse.channel])
+                vertical_lines.append(starts[pulse.channel] + pulse.duration)
+            starts[pulse.channel] += pulse.duration
+
+        n = -1
+        for qubit in ps.qubits:
+            qubit_pulses = ps.get_qubit_pulses(qubit)
+            for channel in qubit_pulses.channels:
+                n += 1
+                channel_pulses = qubit_pulses.get_channel_pulses(channel)
+                ax = plt.subplot(gs[n])
+                ax.axis([0, ps.duration, -1, 1])
+                start = 0
+                for pulse in channel_pulses:
+                    if isinstance(pulse, Delay):
+                        start += pulse.duration
+                        continue
+
+                    envelope = pulse.shape.envelope_waveforms(sampling_rate)
+                    num_samples = envelope[0].size
+                    time = start + np.arange(num_samples) / sampling_rate
+                    modulated = modulate(np.array(envelope), pulse.frequency)
+                    ax.plot(time, modulated[1], c="lightgrey")
+                    ax.plot(time, modulated[0], c=f"C{str(n)}")
+                    ax.plot(time, pulse.shape.i(), c=f"C{str(n)}")
+                    ax.plot(time, -pulse.shape.i(), c=f"C{str(n)}")
+                    # TODO: if they overlap use different shades
+                    ax.axhline(0, c="dimgrey")
+                    ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
+                    for vl in vertical_lines:
+                        ax.axvline(vl, c="slategrey", linestyle="--")
+                    ax.axis((0, ps.duration, -1, 1))
+                    ax.grid(
+                        visible=True,
+                        which="both",
+                        axis="both",
+                        color="#CCCCCC",
+                        linestyle="-",
+                    )
+                    start += pulse.duration
+
+        if filename:
+            plt.savefig(filename)
+        else:
+            plt.show()
+        plt.close()
