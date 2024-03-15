@@ -17,7 +17,7 @@ def test_add_readout():
             amplitude=0.3,
             duration=60,
             relative_phase=0,
-            shape="Gaussian(5)",
+            envelope=Gaussian(5),
             channel=1,
         )
     )
@@ -28,9 +28,9 @@ def test_add_readout():
             amplitude=0.3,
             duration=60,
             relative_phase=0,
-            shape="Drag(5, 2)",
+            envelope=Drag(5, 2),
             channel=1,
-            type="qf",
+            type=PulseType.FLUX,
         )
     )
     sequence.append(Delay(4, channel=1))
@@ -40,7 +40,7 @@ def test_add_readout():
             amplitude=0.9,
             duration=2000,
             relative_phase=0,
-            shape="Rectangular()",
+            envelope=Rectangular(),
             channel=11,
             type=PulseType.READOUT,
         )

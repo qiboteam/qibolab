@@ -1,6 +1,7 @@
 import numpy as np
 
 from qibolab.pulses import Envelopes, IqWaveform, Pulse, PulseType
+from qibolab.pulses.envelope import Times
 from qibolab.pulses.modulation import demodulate, modulate
 
 Rectangular = Envelopes.RECTANGULAR.value
@@ -14,12 +15,13 @@ def test_modulation():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
-        shape=Rectangular(),
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
-    renvs: IqWaveform = np.array(rect.shape.envelope_waveforms())
+    times = Times(rect.duration, 30)
+    renvs: IqWaveform = rect.envelopes(times)
     # fmt: off
     np.testing.assert_allclose(modulate(renvs, 0.04),
          np.array([[ 6.36396103e-01,  6.16402549e-01,  5.57678156e-01,
@@ -46,33 +48,34 @@ def test_modulation():
     # fmt: on
 
     gauss = Pulse(
-        start=5,
+        start=0,
         duration=20,
         amplitude=3.5,
         frequency=2_000_000,
         relative_phase=0.0,
-        shape=Gaussian(0.5),
-        channel=0,
+        envelope=Gaussian(0.5),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
-    genvs: IqWaveform = np.array(gauss.shape.envelope_waveforms())
+    times = Times(gauss.duration, 20)
+    genvs: IqWaveform = gauss.envelope.envelopes(times)
     # fmt: off
     np.testing.assert_allclose(modulate(genvs, 0.3),
-        np.array([[ 2.40604965e+00, -7.47704261e-01, -1.96732725e+00,
-                    1.97595317e+00,  7.57582564e-01, -2.45926187e+00,
-                    7.61855973e-01,  1.99830815e+00, -2.00080760e+00,
-                   -7.64718297e-01,  2.47468039e+00, -7.64240497e-01,
-                   -1.99830815e+00,  1.99456483e+00,  7.59953712e-01,
-                   -2.45158868e+00,  7.54746949e-01,  1.96732725e+00,
-                   -1.95751517e+00, -7.43510231e-01],
-                  [ 0.00000000e+00,  2.30119709e+00, -1.42934692e+00,
-                   -1.43561401e+00,  2.33159938e+00,  9.03518154e-16,
-                   -2.34475159e+00,  1.45185586e+00,  1.45367181e+00,
-                   -2.35356091e+00, -1.81836565e-15,  2.35209040e+00,
-                   -1.45185586e+00, -1.44913618e+00,  2.33889703e+00,
-                    2.70209720e-15, -2.32287226e+00,  1.42934692e+00,
-                    1.42221802e+00, -2.28828920e+00]])
+         np.array([[ 4.50307953e-01, -1.52257426e-01, -4.31814602e-01,
+                     4.63124693e-01,  1.87836646e-01, -6.39017403e-01,
+                     2.05526028e-01,  5.54460924e-01, -5.65661777e-01,
+                    -2.18235048e-01,  7.06223450e-01, -2.16063573e-01,
+                    -5.54460924e-01,  5.38074127e-01,  1.97467237e-01,
+                    -6.07852156e-01,  1.76897892e-01,  4.31814602e-01,
+                    -3.98615117e-01, -1.39152810e-01],
+                   [ 0.00000000e+00,  4.68600175e-01, -3.13731672e-01,
+                    -3.36479785e-01,  5.78101754e-01,  2.34771185e-16,
+                    -6.32544073e-01,  4.02839441e-01,  4.10977338e-01,
+                    -6.71658414e-01, -5.18924572e-16,  6.64975301e-01,
+                    -4.02839441e-01, -3.90933736e-01,  6.07741665e-01,
+                     6.69963778e-16, -5.44435729e-01,  3.13731672e-01,
+                     2.89610835e-01, -4.28268313e-01]])
     )
     # fmt: on
 
