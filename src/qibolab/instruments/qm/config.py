@@ -4,9 +4,11 @@ from dataclasses import dataclass, field
 import numpy as np
 from qibo.config import raise_error
 
-from qibolab.pulses import PulseType, Rectangular
+from qibolab.pulses import Envelopes, PulseType
 
 from .ports import OPXIQ, OctaveInput, OctaveOutput, OPXOutput
+
+Rectangular = Envelopes.RECTANGULAR.value
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""

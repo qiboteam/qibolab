@@ -5,7 +5,7 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequenc
 
 from qibolab.instruments.qblox.q1asm import Program
 from qibolab.pulses import Pulse, PulseSequence, PulseType
-from qibolab.pulses.shape import modulate
+from qibolab.pulses.modulation import modulate
 from qibolab.sweeper import Parameter, Sweeper
 
 SAMPLING_RATE = 1
