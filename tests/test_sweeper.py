@@ -1,9 +1,11 @@
 import numpy as np
 import pytest
 
-from qibolab.pulses import Pulse, Rectangular
+from qibolab.pulses import Envelopes, Pulse
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
+
+Rectangular = Envelopes.RECTANGULAR.value
 
 
 @pytest.mark.parametrize("parameter", Parameter)
