@@ -64,9 +64,9 @@ class Pulse:
     """Qubit or coupler addressed by the pulse."""
 
     @classmethod
-    def flux(cls, start, duration, amplitude, shape, **kwargs):
+    def flux(cls, start, duration, amplitude, envelope, **kwargs):
         return cls(
-            start, duration, amplitude, 0, 0, shape, type=PulseType.FLUX, **kwargs
+            start, duration, amplitude, 0, 0, envelope, type=PulseType.FLUX, **kwargs
         )
 
     @property
@@ -149,7 +149,7 @@ class Pulse:
             and self.amplitude == item.amplitude
             and self.frequency == item.frequency
             and self.relative_phase == item.relative_phase
-            and self.shape == item.shape
+            and self.envelope == item.envelope
             and self.channel == item.channel
             and self.type == item.type
             and self.qubit == item.qubit
