@@ -15,7 +15,7 @@ from qibolab.instruments.rfsoc.convert import (
     replace_pulse_shape,
 )
 from qibolab.platform import Qubit
-from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.pulses import Envelopes, Pulse, PulseSequence, PulseType
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedSampleResults,
@@ -24,6 +24,10 @@ from qibolab.result import (
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument
+
+Rectangular = Envelopes.RECTANGULAR.value
+Gaussian = Envelopes.GAUSSIAN.value
+Drag = Envelopes.DRAG.value
 
 
 def test_convert_default(dummy_qrc):

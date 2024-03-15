@@ -8,7 +8,7 @@ import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab.platform import Qubit
-from qibolab.pulses import Pulse, PulseSequence, PulseShape
+from qibolab.pulses import Envelope, Pulse, PulseSequence
 from qibolab.sweeper import BIAS, DURATION, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
@@ -16,7 +16,7 @@ NS_TO_US = 1e-3
 
 
 def replace_pulse_shape(
-    rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape, sampling_rate: float
+    rfsoc_pulse: rfsoc_pulses.Pulse, shape: Envelope, sampling_rate: float
 ) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
     if shape.name not in {"Gaussian", "Drag", "Rectangular", "Exponential"}:
