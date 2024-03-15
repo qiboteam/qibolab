@@ -1,6 +1,6 @@
 import numpy as np
 
-from qibolab.pulses import Envelopes, IqWaveform, Pulse, PulseType
+from qibolab.pulses import Envelopes, IqWaveform
 from qibolab.pulses.envelope import Times
 from qibolab.pulses.modulation import demodulate, modulate
 
@@ -9,19 +9,9 @@ Gaussian = Envelopes.GAUSSIAN.value
 
 
 def test_modulation():
-    rect = Pulse(
-        start=0,
-        duration=30,
-        amplitude=0.9,
-        frequency=20_000_000,
-        relative_phase=0.0,
-        envelope=Rectangular(),
-        channel="0",
-        type=PulseType.READOUT,
-        qubit=0,
-    )
-    times = Times(rect.duration, 30)
-    renvs: IqWaveform = rect.envelopes(times)
+    times = Times(30, 30)
+    amplitude = 0.9
+    renvs: IqWaveform = Rectangular().envelopes(times) * amplitude
     # fmt: off
     np.testing.assert_allclose(modulate(renvs, 0.04),
          np.array([[ 6.36396103e-01,  6.16402549e-01,  5.57678156e-01,
@@ -47,19 +37,8 @@ def test_modulation():
     )
     # fmt: on
 
-    gauss = Pulse(
-        start=0,
-        duration=20,
-        amplitude=3.5,
-        frequency=2_000_000,
-        relative_phase=0.0,
-        envelope=Gaussian(0.5),
-        channel="0",
-        type=PulseType.READOUT,
-        qubit=0,
-    )
-    times = Times(gauss.duration, 20)
-    genvs: IqWaveform = gauss.envelope.envelopes(times)
+    times = Times(20, 20)
+    genvs: IqWaveform = Gaussian(0.5).envelopes(times)
     # fmt: off
     np.testing.assert_allclose(modulate(genvs, 0.3),
          np.array([[ 4.50307953e-01, -1.52257426e-01, -4.31814602e-01,
