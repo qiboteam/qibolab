@@ -23,6 +23,7 @@ class PulseType(Enum):
     COUPLERFLUX = "cf"
 
 
+# TODO: replace nested serialization with pydantic
 @dataclass
 class Pulse:
     """A class to represent a pulse to be sent to the QPU."""
@@ -61,10 +62,6 @@ class Pulse:
     """Pulse type, as an element of PulseType enumeration."""
     qubit: int = 0
     """Qubit or coupler addressed by the pulse."""
-
-    def __post_init__(self):
-        if isinstance(self.type, str):
-            self.type = PulseType(self.type)
 
     @classmethod
     def flux(cls, start, duration, amplitude, shape, **kwargs):
