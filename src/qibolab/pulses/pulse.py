@@ -47,7 +47,7 @@ class Pulse:
     """The pulse envelope shape.
 
     See
-    :cls:`qibolab.pulses.shape.Envelopes` for list of available shapes.
+    :cls:`qibolab.pulses.envelope.Envelopes` for list of available shapes.
     """
     channel: Optional[str] = None
     """Channel on which the pulse should be played.
@@ -65,10 +65,6 @@ class Pulse:
     def __post_init__(self):
         if isinstance(self.type, str):
             self.type = PulseType(self.type)
-        if isinstance(self.shape, str):
-            self.shape = PulseShape.eval(self.shape)
-        # TODO: drop the cyclic reference
-        self.shape.pulse = self
 
     @classmethod
     def flux(cls, start, duration, amplitude, shape, **kwargs):
