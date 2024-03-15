@@ -4,6 +4,8 @@ import pytest
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
+Rectangular = Envelopes.RECTANGULAR.value
+
 
 @pytest.mark.parametrize("parameter", Parameter)
 def test_sweeper_pulses(parameter):
