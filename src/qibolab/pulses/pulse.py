@@ -6,7 +6,7 @@ from typing import Optional
 
 import numpy as np
 
-from .shape import Envelope, IqWaveform, Times, Waveform
+from .envelope import Envelope, IqWaveform, Times, Waveform
 
 
 class PulseType(Enum):

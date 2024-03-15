@@ -1,13 +1,13 @@
 import numpy as np
 import pytest
 
-from qibolab.pulses import Pulse, PulseType, Shapes
+from qibolab.pulses import Envelopes, Pulse, PulseType
 
-Rectangular = Shapes.RECTANGULAR.value
-Gaussian = Shapes.GAUSSIAN.value
-GaussianSquare = Shapes.GAUSSIAN_SQUARE.value
-Drag = Shapes.DRAG.value
-eCap = Shapes.ECAP.value
+Rectangular = Envelopes.RECTANGULAR.value
+Gaussian = Envelopes.GAUSSIAN.value
+GaussianSquare = Envelopes.GAUSSIAN_SQUARE.value
+Drag = Envelopes.DRAG.value
+eCap = Envelopes.ECAP.value
 
 
 @pytest.mark.parametrize(
