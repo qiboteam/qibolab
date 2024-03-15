@@ -1,6 +1,6 @@
 import numpy as np
 
-from .shape import IqWaveform
+from .envelope import IqWaveform
 
 __all__ = ["modulate", "demodulate"]
 

@@ -5,9 +5,10 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .envelope import Waveform
+from .modulation import modulate
 from .pulse import Delay, Pulse
 from .sequence import PulseSequence
-from .shape import SAMPLING_RATE, Waveform, modulate
 
 
 def waveform(wf: Waveform, filename=None):
@@ -28,7 +29,7 @@ def waveform(wf: Waveform, filename=None):
     plt.close()
 
 
-def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
+def pulse(pulse_: Pulse, filename=None):
     """Plot the pulse envelope and modulated waveforms.
 
     Args:
@@ -37,8 +38,9 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     import matplotlib.pyplot as plt
     from matplotlib import gridspec
 
-    waveform_i = pulse_.shape.envelope_waveform_i(sampling_rate)
-    waveform_q = pulse_.shape.envelope_waveform_q(sampling_rate)
+    window = Times(pulse_.duration, num_samples)
+    waveform_i = pulse_.shape.i(window)
+    waveform_q = pulse_.shape.q(window)
 
     num_samples = len(waveform_i)
     time = np.arange(num_samples) / sampling_rate
@@ -60,7 +62,7 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
         linestyle="dashed",
     )
 
-    envelope = pulse_.shape.envelope_waveforms(sampling_rate)
+    envelope = pulse_.shape.envelopes(window)
     modulated = modulate(np.array(envelope), pulse_.frequency)
     ax1.plot(time, modulated[0], label="modulated i", c="C0")
     ax1.plot(time, modulated[1], label="modulated q", c="C1")
@@ -112,7 +114,7 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     plt.close()
 
 
-def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
+def sequence(ps: PulseSequence, filename=None):
     """Plot the sequence of pulses.
 
     Args:
@@ -152,16 +154,8 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
                     modulated = modulate(np.array(envelope), pulse.frequency)
                     ax.plot(time, modulated[1], c="lightgrey")
                     ax.plot(time, modulated[0], c=f"C{str(n)}")
-                    ax.plot(
-                        time,
-                        pulse.shape.envelope_waveform_i(sampling_rate),
-                        c=f"C{str(n)}",
-                    )
-                    ax.plot(
-                        time,
-                        -pulse.shape.envelope_waveform_i(sampling_rate),
-                        c=f"C{str(n)}",
-                    )
+                    ax.plot(time, pulse.shape.i(), c=f"C{str(n)}")
+                    ax.plot(time, -pulse.shape.i(), c=f"C{str(n)}")
                     # TODO: if they overlap use different shades
                     ax.axhline(0, c="dimgrey")
                     ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
