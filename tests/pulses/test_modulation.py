@@ -1,10 +1,10 @@
 import numpy as np
 
-from qibolab.pulses import IqWaveform, Pulse, PulseType, Shapes
+from qibolab.pulses import Envelopes, IqWaveform, Pulse, PulseType
 from qibolab.pulses.modulation import demodulate, modulate
 
-Rectangular = Shapes.RECTANGULAR.value
-Gaussian = Shapes.GAUSSIAN.value
+Rectangular = Envelopes.RECTANGULAR.value
+Gaussian = Envelopes.GAUSSIAN.value
 
 
 def test_modulation():
