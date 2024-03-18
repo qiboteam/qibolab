@@ -11,14 +11,18 @@ from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
-from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+from qibolab.unrolling import Bounds
 
-MAX_BATCH_SIZE = 30
-"""Maximum number of sequences that can be unrolled in a single one
-(independent of measurements)."""
+MAX_DURATION = int(4e4)  # Translate SEQUENCER_MEMORY = 2**17 into pulse duration
+"""Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
+MAX_READOUT = int(1e6)
+"""Maximum number of readout pulses [Not estimated]."""
+MAX_INSTRUCTIONS = int(1e6)
+"""Maximum instructions size [Not estimated]."""
+
 SEQUENCER_MEMORY = 2**17
 
 
@@ -29,6 +33,12 @@ class QbloxController(Controller):
         is_connected (bool): .
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
+
+    BOUNDS = Bounds(
+        waveforms=MAX_DURATION,
+        readout=MAX_READOUT,
+        instructions=MAX_READOUT,
+    )
 
     def __init__(
         self, name, address: str, modules, internal_reference_clock: bool = True
@@ -219,9 +229,6 @@ class QbloxController(Controller):
 
     def play(self, qubits, couplers, sequence, options):
         return self._execute_pulse_sequence(qubits, sequence, options)
-
-    def split_batches(self, sequences):
-        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
     def sweep(
         self,

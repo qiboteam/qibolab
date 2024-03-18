@@ -18,12 +18,13 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
-from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
-from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import CouplerFluxPulse, FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
+from qibolab.unrolling import Bounds
+
+from .abstract import Controller
+from .port import Port
 
 # this env var just needs to be set
 os.environ["LABONEQ_TOKEN"] = "not required"
@@ -53,8 +54,13 @@ SWEEPER_SET = {"amplitude", "frequency", "duration", "relative_phase"}
 SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
-MAX_SEQUENCES = 150
-"""Maximum number of subsequences in a single sequence."""
+
+MAX_DURATION = int(4e4)
+"""Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
+MAX_READOUT = 250
+"""Maximum number of readout pulses [Not estimated]."""
+MAX_INSTRUCTIONS = int(1e6)
+"""Maximum instructions size [Not estimated]."""
 
 
 def select_pulse(pulse, pulse_type):
@@ -291,6 +297,12 @@ class Zurich(Controller):
     """Zurich driver main class."""
 
     PortType = ZhPort
+
+    BOUNDS = Bounds(
+        waveforms=MAX_DURATION,
+        readout=MAX_READOUT,
+        instructions=MAX_INSTRUCTIONS,
+    )
 
     def __init__(
         self, name, device_setup, use_emulation=False, time_of_flight=0.0, smearing=0.0
@@ -1402,9 +1414,6 @@ class Zurich(Controller):
                 self.sweep_recursion_nt(qubits, couplers, options, exp, exp_calib)
             else:
                 self.define_exp(qubits, couplers, options, exp, exp_calib)
-
-    def split_batches(self, sequences):
-        return batch_max_sequences(sequences, MAX_SEQUENCES)
 
     def play_sim(self, qubits, sequence, options, sim_time):
         """Play pulse sequence."""
