@@ -68,7 +68,7 @@
                   enable = true;
                   install = {
                     enable = true;
-                    groups = ["dev" "tests"];
+                    groups = ["dev" "analysis" "tests"];
                     extras = [
                       (lib.strings.concatStrings
                         (lib.strings.intersperse " -E "
