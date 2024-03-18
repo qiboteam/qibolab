@@ -136,6 +136,3 @@ class ERA(LocalOscillator):
             return ERASynthEthernet(self.name, self.address)
         else:
             return ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
-
-    def __del__(self):
-        self.disconnect()
