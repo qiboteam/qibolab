@@ -1,4 +1,5 @@
 import signal
+from dataclasses import replace
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
@@ -11,6 +12,7 @@ from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
 
@@ -473,62 +475,54 @@ class QbloxController(Controller):
                     result = self._execute_pulse_sequence(
                         qubits, sequence, options, sweepers
                     )
-                    for pulse in sequence.ro_pulses:
-                        if results[pulse.id]:
-                            results[pulse.id] += result[pulse.serial]
-                        else:
-                            results[pulse.id] = result[pulse.serial]
-                        results[pulse.qubit] = results[pulse.id]
+                    self._add_to_results(sequence, results, result)
                 else:
                     sweepers_repetitions = 1
                     for sweeper in sweepers:
                         sweepers_repetitions *= len(sweeper.values)
-                    if sweepers_repetitions < SEQUENCER_MEMORY:
-                        # split nshots
-                        max_rt_nshots = (SEQUENCER_MEMORY) // sweepers_repetitions
-                        num_full_sft_iterations = nshots // max_rt_nshots
-                        num_bins = max_rt_nshots * sweepers_repetitions
+                    if sweepers_repetitions > SEQUENCER_MEMORY:
+                        raise ValueError(
+                            f"Requested sweep has {sweepers_repetitions} total number of sweep points. "
+                            f"Maximum supported is {SEQUENCER_MEMORY}"
+                        )
 
-                        for sft_iteration in range(num_full_sft_iterations + 1):
-                            _nshots = min(
-                                max_rt_nshots, nshots - sft_iteration * max_rt_nshots
-                            )
-                            self._sweep_recursion(
-                                qubits,
-                                sequence,
-                                options,
-                                *sweepers,
-                                results=results,
-                            )
-                    else:
-                        for _ in range(nshots):
-                            num_bins = 1
-                            for sweeper in sweepers[1:]:
-                                num_bins *= len(sweeper.values)
-                            sweeper = sweepers[0]
-                            max_rt_iterations = (SEQUENCER_MEMORY) // num_bins
-                            num_full_sft_iterations = (
-                                len(sweeper.values) // max_rt_iterations
-                            )
-                            num_bins = nshots * max_rt_iterations
-                            for sft_iteration in range(num_full_sft_iterations + 1):
-                                _from = sft_iteration * max_rt_iterations
-                                _to = min(
-                                    (sft_iteration + 1) * max_rt_iterations,
-                                    len(sweeper.values),
-                                )
-                                _values = sweeper.values[_from:_to]
-                                split_sweeper = Sweeper(
-                                    parameter=sweeper.parameter,
-                                    values=_values,
-                                    pulses=sweeper.pulses,
-                                    qubits=sweeper.qubits,
-                                )
+                    max_rt_nshots = SEQUENCER_MEMORY // sweepers_repetitions
+                    num_full_sft_iterations = nshots // max_rt_nshots
+                    result_chunks = []
+                    for sft_iteration in range(num_full_sft_iterations + 1):
+                        _nshots = min(
+                            max_rt_nshots, nshots - sft_iteration * max_rt_nshots
+                        )
 
-                                self._sweep_recursion(
-                                    qubits,
-                                    sequence,
-                                    options,
-                                    *((split_sweeper,) + sweepers[1:]),
-                                    results=results,
-                                )
+                        res = self._execute_pulse_sequence(
+                            qubits,
+                            sequence,
+                            replace(options, nshots=_nshots),
+                            sweepers,
+                        )
+                        result_chunks.append(res)
+                    result = self._combine_result_chunks(result_chunks)
+                    self._add_to_results(sequence, results, result)
+
+    @staticmethod
+    def _combine_result_chunks(chunks):
+        some_chunk = next(iter(chunks))
+        some_result = next(iter(some_chunk.values()))
+        attribute = "samples" if isinstance(some_result, SampleResults) else "voltage"
+        return {
+            key: some_result.__class__(
+                np.concatenate(
+                    [getattr(chunk[key], attribute) for chunk in chunks], axis=0
+                )
+            )
+            for key in some_chunk.keys()
+        }
+
+    @staticmethod
+    def _add_to_results(sequence, results, results_to_add):
+        for pulse in sequence.ro_pulses:
+            if results[pulse.id]:
+                results[pulse.id] += results_to_add[pulse.serial]
+            else:
+                results[pulse.id] = results_to_add[pulse.serial]
+            results[pulse.qubit] = results[pulse.id]
