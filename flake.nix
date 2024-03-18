@@ -66,7 +66,7 @@
                 poetry = {
                   enable = true;
                   install.enable = true;
-                  install.groups = ["dev" "tests"];
+                  install.groups = ["dev" "analysis" "tests"];
                   install.allExtras = true;
                 };
                 version = "3.11";
