@@ -5,13 +5,15 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import Controller
-from qibolab.instruments.oscillator import LocalOscillator
-from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
+from qibolab.unrolling import Bounds
+
+from .abstract import Controller
+from .oscillator import LocalOscillator
+from .port import Port
 
 SAMPLING_RATE = 1
 
@@ -74,6 +76,8 @@ class DummyInstrument(Controller):
             instruments.
     """
 
+    BOUNDS = Bounds(1, 1, 1)
+
     PortType = DummyPort
 
     @property
@@ -126,9 +130,6 @@ class DummyInstrument(Controller):
             )
 
         return results
-
-    def split_batches(self, sequences):
-        return [sequences]
 
     def sweep(
         self,
