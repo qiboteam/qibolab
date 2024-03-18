@@ -10,6 +10,13 @@ from .modulation import modulate
 from .pulse import Delay, Pulse
 from .sequence import PulseSequence
 
+SAMPLING_RATE = 1
+"""Default sampling rate in gigasamples per second (GSps).
+
+Used for generating waveform envelopes if the instruments do not provide
+a different value.
+"""
+
 
 def waveform(wf: Waveform, filename=None):
     """Plot the waveform.
@@ -38,12 +45,11 @@ def pulse(pulse_: Pulse, filename=None):
     import matplotlib.pyplot as plt
     from matplotlib import gridspec
 
-    window = Times(pulse_.duration, num_samples)
-    waveform_i = pulse_.shape.i(window)
-    waveform_q = pulse_.shape.q(window)
+    waveform_i = pulse_.i(SAMPLING_RATE)
+    waveform_q = pulse_.q(SAMPLING_RATE)
 
     num_samples = len(waveform_i)
-    time = np.arange(num_samples) / sampling_rate
+    time = np.arange(num_samples) / SAMPLING_RATE
     _ = plt.figure(figsize=(14, 5), dpi=200)
     gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=np.array([2, 1]))
     ax1 = plt.subplot(gs[0])
@@ -62,7 +68,7 @@ def pulse(pulse_: Pulse, filename=None):
         linestyle="dashed",
     )
 
-    envelope = pulse_.shape.envelopes(window)
+    envelope = pulse_.envelopes(SAMPLING_RATE)
     modulated = modulate(np.array(envelope), pulse_.frequency)
     ax1.plot(time, modulated[0], label="modulated i", c="C0")
     ax1.plot(time, modulated[1], label="modulated q", c="C1")
@@ -150,7 +156,7 @@ def sequence(ps: PulseSequence, filename=None):
 
                     envelope = pulse.shape.envelope_waveforms(sampling_rate)
                     num_samples = envelope[0].size
-                    time = start + np.arange(num_samples) / sampling_rate
+                    time = start + np.arange(num_samples) / SAMPLING_RATE
                     modulated = modulate(np.array(envelope), pulse.frequency)
                     ax.plot(time, modulated[1], c="lightgrey")
                     ax.plot(time, modulated[0], c=f"C{str(n)}")

@@ -4,18 +4,11 @@ from .envelope import IqWaveform
 
 __all__ = ["modulate", "demodulate"]
 
-SAMPLING_RATE = 1
-"""Default sampling rate in gigasamples per second (GSps).
-
-Used for generating waveform envelopes if the instruments do not provide
-a different value.
-"""
-
 
 def modulate(
     envelope: IqWaveform,
     freq: float,
-    rate: float = SAMPLING_RATE,
+    rate: float,
     phase: float = 0.0,
 ) -> IqWaveform:
     """Modulate the envelope waveform with a carrier.
@@ -47,7 +40,7 @@ def modulate(
 def demodulate(
     modulated: IqWaveform,
     freq: float,
-    rate: float = SAMPLING_RATE,
+    rate: float,
 ) -> IqWaveform:
     """Demodulate the acquired pulse.
 
