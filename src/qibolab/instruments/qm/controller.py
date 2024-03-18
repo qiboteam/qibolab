@@ -129,7 +129,7 @@ class QMController(Controller):
     BOUNDS = Bounds(
         waveforms=MAX_DURATION,
         readout=MAX_READOUT,
-        instructions=MAX_READOUT,
+        instructions=MAX_INSTRUCTIONS,
     )
 
     time_of_flight: int = 0
