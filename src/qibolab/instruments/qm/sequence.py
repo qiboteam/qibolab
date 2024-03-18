@@ -9,9 +9,9 @@ from qm.qua._dsl import _Variable  # for type declaration only
 from qualang_tools.bakery import baking
 from qualang_tools.bakery.bakery import Baking
 
-from qibolab.instruments.qm.acquisition import Acquisition
 from qibolab.pulses import Pulse, PulseType
 
+from .acquisition import Acquisition
 from .config import SAMPLING_RATE, QMConfig
 
 DurationsType = Union[List[int], npt.NDArray[int]]
@@ -71,7 +71,7 @@ class QMPulse:
         if self.element is None:
             self.element = f"{pulse_type}{self.pulse.qubit}"
         self.operation: str = (
-            f"{pulse_type}({self.pulse.duration}, {amplitude}, {self.pulse.shape})"
+            f"{pulse_type}({self.pulse.duration}, {amplitude}, {self.pulse.envelope})"
         )
         self.relative_phase: float = self.pulse.relative_phase / (2 * np.pi)
         self.elements_to_align.add(self.element)
@@ -147,11 +147,11 @@ class BakedPulse(QMPulse):
         for t in durations:
             with baking(config.__dict__, padding_method="right") as segment:
                 if self.pulse.type is PulseType.FLUX:
-                    waveform = self.pulse.envelope_waveform_i(SAMPLING_RATE).tolist()
+                    waveform = self.pulse.i(SAMPLING_RATE).tolist()
                     waveform = self.calculate_waveform(waveform, t)
                 else:
-                    waveform_i = self.pulse.envelope_waveform_i(SAMPLING_RATE).tolist()
-                    waveform_q = self.pulse.envelope_waveform_q(SAMPLING_RATE).tolist()
+                    waveform_i = self.pulse.i(SAMPLING_RATE).tolist()
+                    waveform_q = self.pulse.q(SAMPLING_RATE).tolist()
                     waveform = [
                         self.calculate_waveform(waveform_i, t),
                         self.calculate_waveform(waveform_q, t),
