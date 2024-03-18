@@ -104,20 +104,22 @@ class Pulse:
     def id(self) -> int:
         return id(self)
 
-    def i(self, times: Times) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
+    def _times(self, sampling_rate: float):
+        return Times(self.duration, int(self.duration * sampling_rate))
 
+    def i(self, sampling_rate: float) -> Waveform:
+        """The envelope waveform of the i component of the pulse."""
+        times = self._times(sampling_rate)
         return self.amplitude * self.envelope.i(times)
 
-    def q(self, times: Times) -> Waveform:
+    def q(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-
+        times = self._times(sampling_rate)
         return self.amplitude * self.envelope.q(times)
 
-    def envelopes(self, times: Times) -> IqWaveform:
+    def envelopes(self, sampling_rate: float) -> IqWaveform:
         """A tuple with the i and q envelope waveforms of the pulse."""
-
-        return np.array([self.i(times), self.q(times)])
+        return np.array([self.i(sampling_rate), self.q(sampling_rate)])
 
     def __hash__(self):
         """Hash the content.
