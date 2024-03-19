@@ -95,6 +95,11 @@ class ProcessedSweeps:
                     sweep_param = lo.SweepParameter(
                         values=sweeper.values / max(sweeper.values)
                     )
+                    # FIXME: this implicitly relies on the fact that pulse is the same python object as appears in the
+                    # sequence that is being executed, hence the mutation is propagated. This is bad programming and
+                    # should be fixed once things become simpler
+                    pulse.amplitude *= max(sweeper.values)
+
                     channel_sweeps.append(
                         (
                             measure_channel_name(qubits[pulse.qubit]),
