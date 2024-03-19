@@ -9,7 +9,7 @@ from laboneq.dsl.experiment.pulse_library import (
     sampled_pulse_real,
 )
 
-from qibolab.pulses import Pulse, PulseType
+from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rectangular
 from qibolab.sweeper import Parameter
 
 from .util import NANO_TO_SECONDS, SAMPLING_RATE
@@ -17,46 +17,45 @@ from .util import NANO_TO_SECONDS, SAMPLING_RATE
 
 def select_pulse(pulse: Pulse):
     """Return laboneq pulse object corresponding to the given qibolab pulse."""
-    if "IIR" not in str(pulse.shape):
-        if str(pulse.shape) == "Rectangular()":
-            can_compress = pulse.type is not PulseType.READOUT
-            return lo.pulse_library.const(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-                can_compress=can_compress,
-            )
-        if "Gaussian" in str(pulse.shape):
-            sigma = pulse.shape.rel_sigma
-            return lo.pulse_library.gaussian(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-                sigma=2 / sigma,
-                zero_boundaries=False,
-            )
+    if isinstance(pulse.shape, Rectangular):
+        can_compress = pulse.type is not PulseType.READOUT
+        return lo.pulse_library.const(
+            length=round(pulse.duration * NANO_TO_SECONDS, 9),
+            amplitude=pulse.amplitude,
+            can_compress=can_compress,
+        )
+    if isinstance(pulse.shape, Gaussian):
+        sigma = pulse.shape.rel_sigma
+        return lo.pulse_library.gaussian(
+            length=round(pulse.duration * NANO_TO_SECONDS, 9),
+            amplitude=pulse.amplitude,
+            sigma=2 / sigma,
+            zero_boundaries=False,
+        )
 
-        if "GaussianSquare" in str(pulse.shape):
-            sigma = pulse.shape.rel_sigma
-            width = pulse.shape.width
-            can_compress = pulse.type is not PulseType.READOUT
-            return lo.pulse_library.gaussian_square(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,
-                amplitude=pulse.amplitude,
-                can_compress=can_compress,
-                sigma=2 / sigma,
-                zero_boundaries=False,
-            )
+    if isinstance(pulse.shape, GaussianSquare):
+        sigma = pulse.shape.rel_sigma
+        width = pulse.shape.width
+        can_compress = pulse.type is not PulseType.READOUT
+        return lo.pulse_library.gaussian_square(
+            length=round(pulse.duration * NANO_TO_SECONDS, 9),
+            width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,
+            amplitude=pulse.amplitude,
+            can_compress=can_compress,
+            sigma=2 / sigma,
+            zero_boundaries=False,
+        )
 
-        if "Drag" in str(pulse.shape):
-            sigma = pulse.shape.rel_sigma
-            beta = pulse.shape.beta
-            return lo.pulse_library.drag(
-                length=round(pulse.duration * NANO_TO_SECONDS, 9),
-                amplitude=pulse.amplitude,
-                sigma=2 / sigma,
-                beta=beta,
-                zero_boundaries=False,
-            )
+    if isinstance(pulse.shape, Drag):
+        sigma = pulse.shape.rel_sigma
+        beta = pulse.shape.beta
+        return lo.pulse_library.drag(
+            length=round(pulse.duration * NANO_TO_SECONDS, 9),
+            amplitude=pulse.amplitude,
+            sigma=2 / sigma,
+            beta=beta,
+            zero_boundaries=False,
+        )
 
     if np.all(pulse.envelope_waveform_q(SAMPLING_RATE).data == 0):
         return sampled_pulse_real(
