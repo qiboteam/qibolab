@@ -123,11 +123,7 @@ class QMController(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
-    bounds: Bounds = Bounds(
-        waveforms=int(4e4),
-        readout=30,
-        instructions=int(1e6),
-    )
+    bounds: Bounds = Bounds(0, 0, 0)
     """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[str] = None
     """Path to the JSON file that contains the mixer calibration."""
@@ -163,6 +159,12 @@ class QMController(Controller):
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
+        # redefine bounds because abstract instrument overwrites them
+        self.bounds = Bounds(
+            waveforms=int(4e4),
+            readout=30,
+            instructions=int(1e6),
+        )
         # convert lists to dicts
         if not isinstance(self.opxs, dict):
             self.opxs = {instr.name: instr for instr in self.opxs}
