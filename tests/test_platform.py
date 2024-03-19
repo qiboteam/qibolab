@@ -19,7 +19,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
-from qibolab.pulses import PulseSequence, Rectangular
+from qibolab.pulses import Drag, PulseSequence, Rectangular
 from qibolab.serialize import (
     dump_kernels,
     dump_platform,
@@ -358,3 +358,19 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     target_probs = np.zeros((nqubits, 2))
     target_probs[:, 0] = 1
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
+
+
+@pytest.mark.qpu
+@pytest.mark.skip(reason="no way of currently testing this")
+@pytest.mark.parametrize("beta", [None, 0.123])
+def test_create_RX_pulses(qpu_platform, beta):
+    platform = qpu_platform
+    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
+
+    for qubit in qubits:
+        drag = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
+        drive = platform.create_RX_pulse(qubit, 0)
+        if beta is None:
+            assert drag == drive
+        else:
+            drive.shape = Drag(drive.shape.rel_sigma, beta=beta)
