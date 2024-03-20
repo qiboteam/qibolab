@@ -18,7 +18,6 @@ from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
-
 from .pulse import ZhPulse
 from .sweep import ProcessedSweeps, classify_sweepers
 from .util import (
