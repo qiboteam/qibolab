@@ -5,7 +5,7 @@ import pytest
 
 from qibolab import AveragingMode, ExecutionParameters
 from qibolab.instruments.qblox.controller import SEQUENCER_MEMORY, QbloxController
-from qibolab.pulses import Gaussian, Pulse, PulseSequence, ReadoutPulse, Rectangular
+from qibolab.pulses import Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -24,10 +24,18 @@ def test_sweep_too_many_bins(platform, controller):
     and executed."""
     qubit = platform.qubits[0]
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), qubit.drive.name, qubit=0)
-    ro_pulse = ReadoutPulse(
-        0, 40, 0.05, int(3e9), 0.0, Rectangular(), qubit.readout.name, qubit=0
+    ro_pulse = Pulse(
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        qubit.readout.name,
+        PulseType.READOUT,
+        qubit=0,
     )
-    sequence = PulseSequence(pulse, ro_pulse)
+    sequence = PulseSequence([pulse, ro_pulse])
 
     # These values shall result into execution in two rounds
     shots = 128
@@ -39,13 +47,13 @@ def test_sweep_too_many_bins(platform, controller):
         nshots=shots, relaxation_time=10, averaging_mode=AveragingMode.SINGLESHOT
     )
     controller._execute_pulse_sequence = Mock(
-        return_value={ro_pulse.serial: IntegratedResults(mock_data)}
+        return_value={ro_pulse.id: IntegratedResults(mock_data)}
     )
     res = controller.sweep(
         {0: platform.qubits[0]}, platform.couplers, sequence, params, sweep_ampl
     )
     expected_data = np.append(mock_data, mock_data)  #
-    assert np.array_equal(res[ro_pulse.serial].voltage, expected_data)
+    assert np.array_equal(res[ro_pulse.id].voltage, expected_data)
 
 
 def test_sweep_too_many_sweep_points(platform, controller):
@@ -58,7 +66,7 @@ def test_sweep_too_many_sweep_points(platform, controller):
     )
     params = ExecutionParameters(nshots=12, relaxation_time=10)
     with pytest.raises(ValueError, match="total number of sweep points"):
-        controller.sweep({0: qubit}, {}, PulseSequence(pulse), params, sweep)
+        controller.sweep({0: qubit}, {}, PulseSequence([pulse]), params, sweep)
 
 
 @pytest.mark.qpu

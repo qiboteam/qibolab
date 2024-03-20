@@ -15,7 +15,7 @@ def test_bounds_update():
     p5 = Pulse(540, 1000, 0.9, int(20e6), 0, Rectangular(), 2, PulseType.READOUT)
     p6 = Pulse(640, 1000, 0.9, int(20e6), 0, Rectangular(), 1, PulseType.READOUT)
 
-    ps = PulseSequence(p1, p2, p3, p4, p5, p6)
+    ps = PulseSequence([p1, p2, p3, p4, p5, p6])
     bounds = Bounds.update(ps)
 
     assert bounds.waveforms >= 40
@@ -59,7 +59,7 @@ def test_batch(bounds):
     p5 = Pulse(540, 1000, 0.9, int(20e6), 0, Rectangular(), 2, PulseType.READOUT)
     p6 = Pulse(640, 1000, 0.9, int(20e6), 0, Rectangular(), 1, PulseType.READOUT)
 
-    ps = PulseSequence(p1, p2, p3, p4, p5, p6)
+    ps = PulseSequence([p1, p2, p3, p4, p5, p6])
 
     sequences = 10 * [ps]
 
