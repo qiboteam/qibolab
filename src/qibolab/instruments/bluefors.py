@@ -18,6 +18,19 @@ class TemperatureController:
         """
         self.ip_address = ip_address
         self.port = port
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.is_connected = False
+
+    def connect(self):
+        """Connect to the socket."""
+        if self.is_connected:
+            return
+        try:
+            self.client_socket.connect((self.ip_address, self.port))
+            self.is_connected = True
+            log.info("Bluefors Temperature Controller Connected")
+        except:
+            pass
 
     def get_data(self) -> str:
         """Connect to the socket and get temperature data.
@@ -26,13 +39,9 @@ class TemperatureController:
             message (str): socket message in this format:
                 flange_name: {'temperature': <value(float)>, 'timestamp':<value(float)>}
         """
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((self.ip_address, self.port))
-        log.info("Bluefors Temperature Controller Connected")
-
         # This message is a string that looks like a json
         # Shoud we convert it into a dictionary?
-        message = client_socket.recv(1024).decode()
+        message = self.client_socket.recv(1024).decode()
         return message
 
     def read_data(self):
@@ -44,6 +53,7 @@ class TemperatureController:
 # Example usage
 if __name__ == "__main__":
     tc = TemperatureController("192.168.0.114", 8888)
+    tc.connect()
     temperature_values = tc.read_data()
     for temperature_value in temperature_values:
         print(temperature_value)
