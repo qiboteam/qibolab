@@ -652,8 +652,9 @@ class Zurich(Controller):
         play_parameters = {}
         for p, zhs in pulse.zhsweepers:
             if p is Parameter.amplitude:
-                pulse.zhpulse.amplitude *= max(zhs.values)
-                zhs.values /= max(zhs.values)
+                max_value = max(np.abs(zhs.values))
+                pulse.zhpulse.amplitude *= max_value
+                zhs.values /= max_value
                 play_parameters["amplitude"] = zhs
             if p is Parameter.duration:
                 play_parameters["length"] = zhs

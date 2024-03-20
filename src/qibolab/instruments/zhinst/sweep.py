@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from copy import copy
 
 import laboneq.simple as lo
+import numpy as np
 
 from qibolab.pulses import Pulse, PulseType
 from qibolab.qubits import Qubit
@@ -92,13 +93,12 @@ class ProcessedSweeps:
                     pulse.type is PulseType.READOUT
                     and sweeper.parameter is Parameter.amplitude
                 ):
-                    sweep_param = lo.SweepParameter(
-                        values=sweeper.values / max(sweeper.values)
-                    )
+                    max_value = max(np.abs(sweeper.values))
+                    sweep_param = lo.SweepParameter(values=sweeper.values / max_value)
                     # FIXME: this implicitly relies on the fact that pulse is the same python object as appears in the
                     # sequence that is being executed, hence the mutation is propagated. This is bad programming and
                     # should be fixed once things become simpler
-                    pulse.amplitude *= max(sweeper.values)
+                    pulse.amplitude *= max_value
 
                     channel_sweeps.append(
                         (
