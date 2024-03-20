@@ -102,6 +102,9 @@ class QibolabBackend(NumpyBackend):
             sequence,
             ExecutionParameters(nshots=nshots),
         )
+
+        self.platform.disconnect()
+
         result = MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
         self.assign_measurements(measurement_map, readout)
         return result
@@ -148,6 +151,8 @@ class QibolabBackend(NumpyBackend):
             sequences,
             ExecutionParameters(nshots=nshots),
         )
+
+        self.platform.disconnect()
 
         results = []
         readout = {k: deque(v) for k, v in readout.items()}

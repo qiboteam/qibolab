@@ -1,4 +1,5 @@
 import signal
+from dataclasses import replace
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
@@ -10,13 +11,11 @@ from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
-from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+from qibolab.unrolling import Bounds
 
-MAX_BATCH_SIZE = 30
-"""Maximum number of sequences that can be unrolled in a single one
-(independent of measurements)."""
 SEQUENCER_MEMORY = 2**17
 
 
@@ -37,6 +36,13 @@ class QbloxController(Controller):
         self.cluster: QbloxCluster = None
         self.modules: dict = modules
         self._reference_clock = "internal" if internal_reference_clock else "external"
+        self.bounds = Bounds(
+            waveforms=int(
+                4e4
+            ),  # Translate SEQUENCER_MEMORY = 2**17 into pulse duration
+            readout=int(1e6),
+            instructions=int(1e6),
+        )
         signal.signal(signal.SIGTERM, self._termination_handler)
 
     @property
@@ -72,13 +78,6 @@ class QbloxController(Controller):
             self.cluster.close()
             self.is_connected = False
 
-    def setup(self):
-        """Empty method to comply with Instrument interface.
-
-        Setup of the modules happens in the platform ``create`` method
-        using :meth:`qibolab.serialize.load_instrument_settings`.
-        """
-
     def _termination_handler(self, signum, frame):
         """Calls all modules to stop if the program receives a termination
         signal."""
@@ -111,7 +110,7 @@ class QbloxController(Controller):
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
-        **kwargs
+        **kwargs,
         # nshots=None,
         # navgs=None,
         # relaxation_time=None,
@@ -186,25 +185,24 @@ class QbloxController(Controller):
         for name, module in self.modules.items():
             if isinstance(module, QrmRf) and not module_pulses[name].ro_pulses.is_empty:
                 results = module.acquire()
-                existing_keys = set(acquisition_results.keys()) & set(results.keys())
                 for key, value in results.items():
-                    if key in existing_keys:
-                        acquisition_results[key].update(value)
-                    else:
-                        acquisition_results[key] = value
-
+                    acquisition_results[key] = value
         # TODO: move to QRM_RF.acquire()
         shape = tuple(len(sweeper.values) for sweeper in reversed(sweepers))
         shots_shape = (nshots,) + shape
         for ro_pulse in sequence.ro_pulses:
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                _res = acquisition_results[ro_pulse.serial][2]
+                _res = acquisition_results[ro_pulse.serial].classified
                 _res = np.reshape(_res, shots_shape)
                 if options.averaging_mode is not AveragingMode.SINGLESHOT:
                     _res = np.mean(_res, axis=0)
-            else:
-                ires = acquisition_results[ro_pulse.serial][0]
-                qres = acquisition_results[ro_pulse.serial][1]
+            elif options.acquisition_type is AcquisitionType.RAW:
+                i_raw = acquisition_results[ro_pulse.serial].raw_i
+                q_raw = acquisition_results[ro_pulse.serial].raw_q
+                _res = i_raw + 1j * q_raw
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
+                ires = acquisition_results[ro_pulse.serial].shots_i
+                qres = acquisition_results[ro_pulse.serial].shots_q
                 _res = ires + 1j * qres
                 if options.averaging_mode is AveragingMode.SINGLESHOT:
                     _res = np.reshape(_res, shots_shape)
@@ -218,9 +216,6 @@ class QbloxController(Controller):
 
     def play(self, qubits, couplers, sequence, options):
         return self._execute_pulse_sequence(qubits, sequence, options)
-
-    def split_batches(self, sequences):
-        return batch_max_sequences(sequences, MAX_BATCH_SIZE)
 
     def sweep(
         self,
@@ -480,62 +475,54 @@ class QbloxController(Controller):
                     result = self._execute_pulse_sequence(
                         qubits, sequence, options, sweepers
                     )
-                    for pulse in sequence.ro_pulses:
-                        if results[pulse.id]:
-                            results[pulse.id] += result[pulse.serial]
-                        else:
-                            results[pulse.id] = result[pulse.serial]
-                        results[pulse.qubit] = results[pulse.id]
+                    self._add_to_results(sequence, results, result)
                 else:
                     sweepers_repetitions = 1
                     for sweeper in sweepers:
                         sweepers_repetitions *= len(sweeper.values)
-                    if sweepers_repetitions < SEQUENCER_MEMORY:
-                        # split nshots
-                        max_rt_nshots = (SEQUENCER_MEMORY) // sweepers_repetitions
-                        num_full_sft_iterations = nshots // max_rt_nshots
-                        num_bins = max_rt_nshots * sweepers_repetitions
+                    if sweepers_repetitions > SEQUENCER_MEMORY:
+                        raise ValueError(
+                            f"Requested sweep has {sweepers_repetitions} total number of sweep points. "
+                            f"Maximum supported is {SEQUENCER_MEMORY}"
+                        )
 
-                        for sft_iteration in range(num_full_sft_iterations + 1):
-                            _nshots = min(
-                                max_rt_nshots, nshots - sft_iteration * max_rt_nshots
-                            )
-                            self._sweep_recursion(
-                                qubits,
-                                sequence,
-                                options,
-                                *sweepers,
-                                results=results,
-                            )
-                    else:
-                        for _ in range(nshots):
-                            num_bins = 1
-                            for sweeper in sweepers[1:]:
-                                num_bins *= len(sweeper.values)
-                            sweeper = sweepers[0]
-                            max_rt_iterations = (SEQUENCER_MEMORY) // num_bins
-                            num_full_sft_iterations = (
-                                len(sweeper.values) // max_rt_iterations
-                            )
-                            num_bins = nshots * max_rt_iterations
-                            for sft_iteration in range(num_full_sft_iterations + 1):
-                                _from = sft_iteration * max_rt_iterations
-                                _to = min(
-                                    (sft_iteration + 1) * max_rt_iterations,
-                                    len(sweeper.values),
-                                )
-                                _values = sweeper.values[_from:_to]
-                                split_sweeper = Sweeper(
-                                    parameter=sweeper.parameter,
-                                    values=_values,
-                                    pulses=sweeper.pulses,
-                                    qubits=sweeper.qubits,
-                                )
+                    max_rt_nshots = SEQUENCER_MEMORY // sweepers_repetitions
+                    num_full_sft_iterations = nshots // max_rt_nshots
+                    result_chunks = []
+                    for sft_iteration in range(num_full_sft_iterations + 1):
+                        _nshots = min(
+                            max_rt_nshots, nshots - sft_iteration * max_rt_nshots
+                        )
 
-                                self._sweep_recursion(
-                                    qubits,
-                                    sequence,
-                                    options,
-                                    *((split_sweeper,) + sweepers[1:]),
-                                    results=results,
-                                )
+                        res = self._execute_pulse_sequence(
+                            qubits,
+                            sequence,
+                            replace(options, nshots=_nshots),
+                            sweepers,
+                        )
+                        result_chunks.append(res)
+                    result = self._combine_result_chunks(result_chunks)
+                    self._add_to_results(sequence, results, result)
+
+    @staticmethod
+    def _combine_result_chunks(chunks):
+        some_chunk = next(iter(chunks))
+        some_result = next(iter(some_chunk.values()))
+        attribute = "samples" if isinstance(some_result, SampleResults) else "voltage"
+        return {
+            key: some_result.__class__(
+                np.concatenate(
+                    [getattr(chunk[key], attribute) for chunk in chunks], axis=0
+                )
+            )
+            for key in some_chunk.keys()
+        }
+
+    @staticmethod
+    def _add_to_results(sequence, results, results_to_add):
+        for pulse in sequence.ro_pulses:
+            if results[pulse.id]:
+                results[pulse.id] += results_to_add[pulse.serial]
+            else:
+                results[pulse.id] = results_to_add[pulse.serial]
+            results[pulse.qubit] = results[pulse.id]

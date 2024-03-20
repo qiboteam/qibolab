@@ -33,6 +33,3 @@ class Port:
     power_range: int
     """Similar to attenuation (negative) and gain (positive) for (Zurich
     instruments)."""
-    filters: dict
-    """Filters to be applied to the channel to reduce the distortions when
-    sending flux pulses."""

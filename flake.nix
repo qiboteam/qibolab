@@ -35,6 +35,8 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
+        pwd = builtins.getEnv "PWD";
+        platforms = builtins.toPath "${pwd}/../qibolab_platforms_qrc/";
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
@@ -42,6 +44,8 @@
           modules = [
             {
               packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
+
+              env.QIBOLAB_PLATFORMS = platforms;
 
               languages.c = {
                 enable = true;

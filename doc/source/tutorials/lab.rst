@@ -253,139 +253,182 @@ since ``create()`` is part of a Python module, is is possible to load parameters
 from an external file or database.
 
 Qibolab provides some utility functions, accessible through
-:py:mod:`qibolab.serialize`, for loading calibration parameters stored in a YAML
+:py:mod:`qibolab.serialize`, for loading calibration parameters stored in a JSON
 file with a specific format. We call such file a runcard. Here is a runcard for
 a two-qubit system:
 
-.. code-block::  yaml
+.. code-block::  json
 
-    # my_platform / parameters.yml
-
-    nqubits: 2
-
-    qubits: [0, 1]
-
-    settings:
-        nshots: 1024
-        sampling_rate: 1000000000
-        relaxation_time: 50_000
-
-    topology: [[0, 1]]
-
-    native_gates:
-        single_qubit:
-            0: # qubit number
-                RX:
-                    duration: 40
-                    amplitude: 0.0484
-                    frequency: 4_855_663_000
-                    shape: Drag(5, -0.02)
-                    type: qd # qubit drive
-                    start: 0
-                    phase: 0
-                MZ:
-                    duration: 620
-                    amplitude: 0.003575
-                    frequency: 7_453_265_000
-                    shape: Rectangular()
-                    type: ro # readout
-                    start: 0
-                    phase: 0
-            1: # qubit number
-                RX:
-                    duration: 40
-                    amplitude: 0.05682
-                    frequency: 5_800_563_000
-                    shape: Drag(5, -0.04)
-                    type: qd # qubit drive
-                    start: 0
-                    phase: 0
-                MZ:
-                    duration: 960
-                    amplitude: 0.00325
-                    frequency: 7_655_107_000
-                    shape: Rectangular()
-                    type: ro # readout
-                    start: 0
-                    phase: 0
-
-        two_qubit:
-            0-1:
-                CZ:
-                - duration: 30
-                  amplitude: 0.055
-                  shape: Rectangular()
-                  qubit: 1
-                  relative_start: 0
-                  type: qf
-                - type: virtual_z
-                  phase: -1.5707963267948966
-                  qubit: 0
-                - type: virtual_z
-                  phase: -1.5707963267948966
-                  qubit: 1
-
-    characterization:
-        single_qubit:
-            0:
-                readout_frequency: 7_453_265_000
-                drive_frequency: 4_855_663_000
-                T1: 0.0
-                T2: 0.0
-                sweetspot: -0.047
-                # parameters for single shot classification
-                threshold: 0.00028502261712637096
-                iq_angle: 1.283105298787488
-            1:
-                readout_frequency: 7_655_107_000
-                drive_frequency: 5_800_563_000
-                T1: 0.0
-                T2: 0.0
-                sweetspot: -0.045
-                # parameters for single shot classification
-                threshold: 0.0002694329123116206
-                iq_angle: 4.912447775569025
+    {
+        "nqubits": 2,
+        "qubits": [
+            0,
+            1
+        ],
+        "settings": {
+            "nshots": 1024,
+            "sampling_rate": 1000000000,
+            "relaxation_time": 50000
+        },
+        "topology": [
+            [
+                0,
+                1
+            ]
+        ],
+        "native_gates": {
+            "single_qubit": {
+                "0": {
+                    "RX": {
+                        "duration": 40,
+                        "amplitude": 0.0484,
+                        "frequency": 4855663000,
+                        "shape": "Drag(5, -0.02)",
+                        "type": "qd",
+                        "start": 0,
+                        "phase": 0
+                    },
+                    "MZ": {
+                        "duration": 620,
+                        "amplitude": 0.003575,
+                        "frequency": 7453265000,
+                        "shape": "Rectangular()",
+                        "type": "ro",
+                        "start": 0,
+                        "phase": 0
+                    }
+                },
+                "1": {
+                    "RX": {
+                        "duration": 40,
+                        "amplitude": 0.05682,
+                        "frequency": 5800563000,
+                        "shape": "Drag(5, -0.04)",
+                        "type": "qd",
+                        "start": 0,
+                        "phase": 0
+                    },
+                    "MZ": {
+                        "duration": 960,
+                        "amplitude": 0.00325,
+                        "frequency": 7655107000,
+                        "shape": "Rectangular()",
+                        "type": "ro",
+                        "start": 0,
+                        "phase": 0
+                    }
+                }
+            },
+            "two_qubit": {
+                "0-1": {
+                    "CZ": [
+                        {
+                            "duration": 30,
+                            "amplitude": 0.055,
+                            "shape": "Rectangular()",
+                            "qubit": 1,
+                            "relative_start": 0,
+                            "type": "qf"
+                        },
+                        {
+                            "type": "virtual_z",
+                            "phase": -1.5707963267948966,
+                            "qubit": 0
+                        },
+                        {
+                            "type": "virtual_z",
+                            "phase": -1.5707963267948966,
+                            "qubit": 1
+                        }
+                    ]
+                }
+            }
+        },
+        "characterization": {
+            "single_qubit": {
+                "0": {
+                    "readout_frequency": 7453265000,
+                    "drive_frequency": 4855663000,
+                    "T1": 0.0,
+                    "T2": 0.0,
+                    "sweetspot": -0.047,
+                    "threshold": 0.00028502261712637096,
+                    "iq_angle": 1.283105298787488
+                },
+                "1": {
+                    "readout_frequency": 7655107000,
+                    "drive_frequency": 5800563000,
+                    "T1": 0.0,
+                    "T2": 0.0,
+                    "sweetspot": -0.045,
+                    "threshold": 0.0002694329123116206,
+                    "iq_angle": 4.912447775569025
+                }
+            }
+        }
+    }
 
 And in the case of having a chip with coupler qubits
 we need the following changes to the previous runcard:
 
-.. code-block::  yaml
+.. code-block::  json
 
-    qubits: [0, 1]
-    couplers: [0]
-
-    # Mapping couplers to qubit pairs
-    topology: {0: [0, 1]}
-
-    native_gates:
-        two_qubit:
-            0-1:
-                CZ:
-                - duration: 30
-                  amplitude: 0.6025
-                  shape: Rectangular()
-                  qubit: 1
-                  relative_start: 0
-                  type: qf
-
-                - type: virtual_z
-                  phase: -1
-                  qubit: 0
-                - type: virtual_z
-                  phase: -3
-                  qubit: 1
-
-                - type: coupler
-                  duration: 40
-                  amplitude: 0.1
-                  shape: Rectangular()
-                  coupler: 0
-                  relative_start: 0
-
-    characterization:
-        coupler:
-            0:
-                sweetspot: 0.0
+    {
+        "qubits": [
+            0,
+            1
+        ],
+        "couplers": [
+            0
+        ],
+        "topology": {
+            "0": [
+                0,
+                1
+            ]
+        },
+        "native_gates": {
+            "two_qubit": {
+                "0-1": {
+                    "CZ": [
+                        {
+                            "duration": 30,
+                            "amplitude": 0.6025,
+                            "shape": "Rectangular()",
+                            "qubit": 1,
+                            "relative_start": 0,
+                            "type": "qf"
+                        },
+                        {
+                            "type": "virtual_z",
+                            "phase": -1,
+                            "qubit": 0
+                        },
+                        {
+                            "type": "virtual_z",
+                            "phase": -3,
+                            "qubit": 1
+                        },
+                        {
+                            "type": "coupler",
+                            "duration": 40,
+                            "amplitude": 0.1,
+                            "shape": "Rectangular()",
+                            "coupler": 0,
+                            "relative_start": 0
+                        }
+                    ]
+                }
+            }
+        },
+        "characterization": {
+            "coupler": {
+                "0": {
+                    "sweetspot": 0.0
+                }
+            }
+        }
+    }
 
 This file contains different sections: ``qubits`` is a list with the qubit
 names, ``couplers`` one with the coupler names , ``settings`` defines default execution parameters, ``topology`` defines
@@ -514,99 +557,122 @@ such as the one used to pump a traveling wave parametric amplifier (TWPA).
 
 The runcard can contain an ``instruments`` section that provides these parameters
 
-.. code-block::  yaml
+.. code-block::  json
 
-    # my_platform / parameters.yml
-
-    nqubits: 2
-
-    qubits: [0, 1]
-
-    settings:
-        nshots: 1024
-        sampling_rate: 1000000000
-        relaxation_time: 50_000
-
-    topology: [[0, 1]]
-
-    instruments:
-        twpa_pump:
-            frequency: 4_600_000_000
-            power: 5
-
-    native_gates:
-        single_qubit:
-            0: # qubit number
-                RX:
-                    duration: 40
-                    amplitude: 0.0484
-                    frequency: 4_855_663_000
-                    shape: Drag(5, -0.02)
-                    type: qd # qubit drive
-                    start: 0
-                    phase: 0
-                MZ:
-                    duration: 620
-                    amplitude: 0.003575
-                    frequency: 7_453_265_000
-                    shape: Rectangular()
-                    type: ro # readout
-                    start: 0
-                    phase: 0
-            1: # qubit number
-                RX:
-                    duration: 40
-                    amplitude: 0.05682
-                    frequency: 5_800_563_000
-                    shape: Drag(5, -0.04)
-                    type: qd # qubit drive
-                    start: 0
-                    phase: 0
-                MZ:
-                    duration: 960
-                    amplitude: 0.00325
-                    frequency: 7_655_107_000
-                    shape: Rectangular()
-                    type: ro # readout
-                    start: 0
-                    phase: 0
-
-        two_qubit:
-            0-1:
-                CZ:
-                - duration: 30
-                  amplitude: 0.055
-                  shape: Rectangular()
-                  qubit: 1
-                  relative_start: 0
-                  type: qf
-                - type: virtual_z
-                  phase: -1.5707963267948966
-                  qubit: 0
-                - type: virtual_z
-                  phase: -1.5707963267948966
-                  qubit: 1
-
-    characterization:
-        single_qubit:
-            0:
-                readout_frequency: 7_453_265_000
-                drive_frequency: 4_855_663_000
-                T1: 0.0
-                T2: 0.0
-                sweetspot: -0.047
-                # parameters for single shot classification
-                threshold: 0.00028502261712637096
-                iq_angle: 1.283105298787488
-            1:
-                readout_frequency: 7_655_107_000
-                drive_frequency: 5_800_563_000
-                T1: 0.0
-                T2: 0.0
-                sweetspot: -0.045
-                # parameters for single shot classification
-                threshold: 0.0002694329123116206
-                iq_angle: 4.912447775569025
+    {
+        "nqubits": 2,
+        "qubits": [
+            0,
+            1
+        ],
+        "settings": {
+            "nshots": 1024,
+            "sampling_rate": 1000000000,
+            "relaxation_time": 50000
+        },
+        "topology": [
+            [
+                0,
+                1
+            ]
+        ],
+        "instruments": {
+            "twpa_pump": {
+                "frequency": 4600000000,
+                "power": 5
+            }
+        },
+        "native_gates": {
+            "single_qubit": {
+                "0": {
+                    "RX": {
+                        "duration": 40,
+                        "amplitude": 0.0484,
+                        "frequency": 4855663000,
+                        "shape": "Drag(5, -0.02)",
+                        "type": "qd",
+                        "start": 0,
+                        "phase": 0
+                    },
+                    "MZ": {
+                        "duration": 620,
+                        "amplitude": 0.003575,
+                        "frequency": 7453265000,
+                        "shape": "Rectangular()",
+                        "type": "ro",
+                        "start": 0,
+                        "phase": 0
+                    }
+                },
+                "1": {
+                    "RX": {
+                        "duration": 40,
+                        "amplitude": 0.05682,
+                        "frequency": 5800563000,
+                        "shape": "Drag(5, -0.04)",
+                        "type": "qd",
+                        "start": 0,
+                        "phase": 0
+                    },
+                    "MZ": {
+                        "duration": 960,
+                        "amplitude": 0.00325,
+                        "frequency": 7655107000,
+                        "shape": "Rectangular()",
+                        "type": "ro",
+                        "start": 0,
+                        "phase": 0
+                    }
+                }
+            },
+            "two_qubit": {
+                "0-1": {
+                    "CZ": [
+                        {
+                            "duration": 30,
+                            "amplitude": 0.055,
+                            "shape": "Rectangular()",
+                            "qubit": 1,
+                            "relative_start": 0,
+                            "type": "qf"
+                        },
+                        {
+                            "type": "virtual_z",
+                            "phase": -1.5707963267948966,
+                            "qubit": 0
+                        },
+                        {
+                            "type": "virtual_z",
+                            "phase": -1.5707963267948966,
+                            "qubit": 1
+                        }
+                    ]
+                }
+            }
+        },
+        "characterization": {
+            "single_qubit": {
+                "0": {
+                    "readout_frequency": 7453265000,
+                    "drive_frequency": 4855663000,
+                    "T1": 0.0,
+                    "T2": 0.0,
+                    "sweetspot": -0.047,
+                    "threshold": 0.00028502261712637096,
+                    "iq_angle": 1.283105298787488
+                },
+                "1": {
+                    "readout_frequency": 7655107000,
+                    "drive_frequency": 5800563000,
+                    "T1": 0.0,
+                    "T2": 0.0,
+                    "sweetspot": -0.045,
+                    "threshold": 0.0002694329123116206,
+                    "iq_angle": 4.912447775569025
+                }
+            }
+        }
+    }
 
 
 These settings are loaded when creating the platform using :meth:`qibolab.serialize.load_instrument_settings`.

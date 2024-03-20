@@ -122,9 +122,9 @@ class QcmBb(ClusterModule):
         self.channel_map: dict = {}
         self._device_num_output_ports = 2
         self._device_num_sequencers: int
-        self._free_sequencers_numbers: list[
-            int
-        ] = []  # TODO: we can create only list and put three flags: free, used, unused
+        self._free_sequencers_numbers: list[int] = (
+            []
+        )  # TODO: we can create only list and put three flags: free, used, unused
         self._used_sequencers_numbers: list[int] = []
         self._unused_sequencers_numbers: list[int] = []
 
@@ -178,10 +178,12 @@ class QcmBb(ClusterModule):
                     self._ports[port].hardware_mod_en = True
                     self._ports[port].nco_freq = 0
                     self._ports[port].nco_phase_offs = 0
+                    self._ports[port].offset = self._ports[port].offset
             except Exception as error:
                 raise RuntimeError(
                     f"Unable to initialize port parameters on module {self.name}: {error}"
                 )
+
             self.is_connected = True
 
     def setup(self, **settings):
@@ -213,7 +215,9 @@ class QcmBb(ClusterModule):
         # select the qubit with flux line, if present, connected to the specific port
         qubit = None
         for _qubit in qubits.values():
-            if _qubit.flux is not None and _qubit.flux.port == self.ports(port):
+            name = _qubit.flux.port.name
+            module = _qubit.flux.port.module
+            if _qubit.flux is not None and (name, module) == (port, self):
                 qubit = _qubit
 
         # select a new sequencer and configure it as required
@@ -488,9 +492,7 @@ class QcmBb(ClusterModule):
                             )
 
                     else:  # qubit_sweeper_parameters
-                        if sweeper.qubits and sequencer.qubit in [
-                            _.name for _ in sweeper.qubits
-                        ]:
+                        if sequencer.qubit in [qubit.name for qubit in sweeper.qubits]:
                             # plays an active role
                             if sweeper.parameter == Parameter.bias:
                                 reference_value = self._ports[port].offset
@@ -639,7 +641,7 @@ class QcmBb(ClusterModule):
                 )
                 body_block += final_reset_block
 
-                footer_block = Block("cleaup")
+                footer_block = Block("cleanup")
                 footer_block.append(f"stop")
 
                 # wrap pulses block in sweepers loop blocks
