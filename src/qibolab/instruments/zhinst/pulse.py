@@ -57,15 +57,15 @@ def select_pulse(pulse: Pulse):
             zero_boundaries=False,
         )
 
-    if np.all(pulse.envelope_waveform_q(SAMPLING_RATE).data == 0):
+    if np.all(pulse.envelope_waveform_q(SAMPLING_RATE) == 0):
         return sampled_pulse_real(
-            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data,
+            samples=pulse.envelope_waveform_i(SAMPLING_RATE),
             can_compress=True,
         )
     else:
         return sampled_pulse_complex(
-            samples=pulse.envelope_waveform_i(SAMPLING_RATE).data
-            + (1j * pulse.envelope_waveform_q(SAMPLING_RATE).data),
+            samples=pulse.envelope_waveform_i(SAMPLING_RATE)
+            + (1j * pulse.envelope_waveform_q(SAMPLING_RATE)),
             can_compress=True,
         )
 

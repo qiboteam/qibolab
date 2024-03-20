@@ -23,7 +23,6 @@ from qibolab.pulses import (
     Pulse,
     PulseSequence,
     PulseType,
-    ReadoutPulse,
     Rectangular,
 )
 from qibolab.sweeper import Parameter, Sweeper
@@ -258,12 +257,20 @@ def test_zhsequence(dummy_qrc):
     )
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
     ro_pulse = Pulse(
-        0, 40, 0.05, int(3e9), 0.0, Rectangular(), readout_channel, PulseType.READOUT, qubit=0
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        readout_channel,
+        PulseType.READOUT,
+        qubit=0,
     )
     sequence = PulseSequence()
-    sequence.add(qd_pulse)
-    sequence.add(qd_pulse)
-    sequence.add(ro_pulse)
+    sequence.append(qd_pulse)
+    sequence.append(qd_pulse)
+    sequence.append(ro_pulse)
 
     zhsequence = controller.sequence_zh(sequence, IQM5q.qubits)
 
@@ -285,15 +292,24 @@ def test_zhsequence_couplers(dummy_qrc):
     couplerflux_channel = IQM5q.couplers[0].flux.name
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
     ro_pulse = Pulse(
-        0, 40, 0.05, int(3e9), 0.0, Rectangular(), readout_channel, PulseType.READOUT, qubit=0
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        readout_channel,
+        PulseType.READOUT,
+        qubit=0,
     )
-    qc_pulse = Pulse(
-        0, 40, 0.05, Rectangular(), couplerflux_channel, PulseType.COUPLERFLUX, qubit=3
+    qc_pulse = Pulse.flux(
+        0, 40, 0.05, Rectangular(), channel=couplerflux_channel, qubit=3
     )
+    qc_pulse.type = PulseType.COUPLERFLUX
     sequence = PulseSequence()
-    sequence.add(qd_pulse)
-    sequence.add(ro_pulse)
-    sequence.add(qc_pulse)
+    sequence.append(qd_pulse)
+    sequence.append(ro_pulse)
+    sequence.append(qc_pulse)
 
     zhsequence = controller.sequence_zh(sequence, IQM5q.qubits)
 
@@ -306,15 +322,31 @@ def test_zhsequence_multiple_ro(dummy_qrc):
     readout_channel = measure_channel_name(platform.qubits[0])
     sequence = PulseSequence()
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
-    sequence.add(qd_pulse)
+    sequence.append(qd_pulse)
     ro_pulse = Pulse(
-        0, 40, 0.05, int(3e9), 0.0, Rectangular(), readout_channel, PulseType.READOUT, qubit=0
+        0,
+        40,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        readout_channel,
+        PulseType.READOUT,
+        qubit=0,
     )
-    sequence.add(ro_pulse)
+    sequence.append(ro_pulse)
     ro_pulse = Pulse(
-        0, 5000, 0.05, int(3e9), 0.0, Rectangular(), readout_channel, PulseType.READOUT, qubit=0
+        0,
+        5000,
+        0.05,
+        int(3e9),
+        0.0,
+        Rectangular(),
+        readout_channel,
+        PulseType.READOUT,
+        qubit=0,
     )
-    sequence.add(ro_pulse)
+    sequence.append(ro_pulse)
     platform = create_platform("zurich")
 
     controller = platform.instruments["EL_ZURO"]
@@ -477,9 +509,9 @@ def test_sweep_and_play_sim(dummy_qrc):
             channel=platform.qubits[q].flux.name,
             qubit=q,
         )
-        sequence.add(qf_pulses[q])
+        sequence.append(qf_pulses[q])
         ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qf_pulses[q].finish)
-        sequence.add(ro_pulses[q])
+        sequence.append(ro_pulses[q])
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -782,41 +814,8 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     IQM5q.experiment_flow(qubits, couplers, sequence, options)
 
-<<<<<<< HEAD
     assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
     assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
-=======
-    assert "measure0" in IQM5q.experiment.signals
-    assert "acquire0" in IQM5q.experiment.signals
-
-
-# TODO: Fix this
-def test_sim(dummy_qrc):
-    platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
-    sequence = PulseSequence()
-    qubits = {0: platform.qubits[0]}
-    platform.qubits = qubits
-    ro_pulses = {}
-    qd_pulses = {}
-    qf_pulses = {}
-    for qubit in qubits:
-        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.append(qd_pulses[qubit])
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
-        sequence.append(ro_pulses[qubit])
-        qf_pulses[qubit] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.qubits[qubit].flux.name,
-            qubit=qubit,
-        )
-        sequence.append(qf_pulses[qubit])
->>>>>>> 1b1e4cd4 (Fix Zurich tests)
 
 
 def test_batching(dummy_qrc):
