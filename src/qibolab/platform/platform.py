@@ -1,4 +1,5 @@
 """A platform for executing quantum algorithms."""
+
 import copy
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
@@ -10,7 +11,7 @@ from qibo.config import log, raise_error
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Drag, FluxPulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import Drag, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 from qibolab.unrolling import batch
