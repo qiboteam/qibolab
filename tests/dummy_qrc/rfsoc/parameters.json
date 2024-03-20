@@ -9,6 +9,13 @@
         "relaxation_time": 100000
     },
     "instruments": {
+        "tii_rfsoc4x2": {
+                "bounds": {
+                    "waveforms": 0,
+                    "readout": 0,
+                    "instructions": 0
+                }
+        },
         "twpa_a": {
             "frequency": 6200000000,
             "power": -1

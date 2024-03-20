@@ -19,7 +19,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
-from qibolab.pulses import PulseSequence, Rectangular
+from qibolab.pulses import Drag, PulseSequence, Rectangular
 from qibolab.serialize import (
     dump_kernels,
     dump_platform,
@@ -358,3 +358,19 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     target_probs = np.zeros((nqubits, 2))
     target_probs[:, 0] = 1
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
+
+
+def test_create_RX_drag_pulses():
+    platform = create_dummy()
+    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
+    beta = 0.1234
+    for qubit in qubits:
+        drag_pi = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
+        assert drag_pi.shape == Drag(drag_pi.shape.rel_sigma, beta=beta)
+        drag_pi_half = platform.create_RX90_drag_pulse(qubit, drag_pi.finish, beta=beta)
+        assert drag_pi_half.shape == Drag(drag_pi_half.shape.rel_sigma, beta=beta)
+        np.testing.assert_almost_equal(drag_pi.amplitude, 2 * drag_pi_half.amplitude)
+
+        # to check ShapeInitError
+        drag_pi.shape.envelope_waveforms()
+        drag_pi_half.shape.envelope_waveforms()

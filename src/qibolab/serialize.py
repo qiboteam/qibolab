@@ -177,18 +177,19 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     data = {}
     for name, instrument in instruments.items():
         try:
+            # TODO: Migrate all instruments to this approach
+            # (I think it is also useful for qblox)
+            settings = instrument.dump()
+            if len(settings) > 0:
+                data[name] = settings
+        except AttributeError:
             settings = instrument.settings
             if settings is not None:
                 if isinstance(settings, dict):
                     data[name] = settings
                 else:
                     data[name] = settings.dump()
-        except AttributeError:
-            # TODO: Migrate all instruments to this approach
-            # (I think it is also useful for qblox)
-            settings = instrument.dump()
-            if len(settings) > 0:
-                data[name] = settings
+
     return data
 
 

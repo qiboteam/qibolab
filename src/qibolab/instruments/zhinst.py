@@ -55,14 +55,6 @@ SWEEPER_BIAS = {"bias"}
 SWEEPER_START = {"start"}
 
 
-MAX_DURATION = int(4e4)
-"""Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
-MAX_READOUT = 250
-"""Maximum number of readout pulses [Not estimated]."""
-MAX_INSTRUCTIONS = int(1e6)
-"""Maximum instructions size [Not estimated]."""
-
-
 def select_pulse(pulse, pulse_type):
     """Pulse translation."""
 
@@ -298,12 +290,6 @@ class Zurich(Controller):
 
     PortType = ZhPort
 
-    BOUNDS = Bounds(
-        waveforms=MAX_DURATION,
-        readout=MAX_READOUT,
-        instructions=MAX_INSTRUCTIONS,
-    )
-
     def __init__(
         self, name, device_setup, use_emulation=False, time_of_flight=0.0, smearing=0.0
     ):
@@ -336,6 +322,12 @@ class Zurich(Controller):
         self.exp_calib = lo.Calibration()
         self.results = None
         "Zurich experiment definitions"
+
+        self.bounds = Bounds(
+            waveforms=int(4e4),
+            readout=250,
+            instructions=int(1e6),
+        )
 
         self.acquisition_type = None
         "To store if the AcquisitionType.SPECTROSCOPY needs to be enabled by parsing the sequence"
@@ -370,9 +362,6 @@ class Zurich(Controller):
         if self.is_connected:
             self.device = self.session.disconnect()
             self.is_connected = False
-
-    def setup(self, *args, **kwargs):
-        """Empty method to comply with Instrument interface."""
 
     def calibration_step(self, qubits, couplers, options):
         """Zurich general pre experiment calibration definitions.

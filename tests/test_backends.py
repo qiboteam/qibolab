@@ -5,6 +5,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
+from qibolab import create_platform
 from qibolab.backends import QibolabBackend
 
 
@@ -81,6 +82,47 @@ def test_execute_circuits():
     for result in results:
         assert result.samples().shape == (100, 3)
         assert sum(result.frequencies().values()) == 100
+
+
+def test_multiple_measurements():
+    backend = QibolabBackend("dummy")
+
+    circuit = Circuit(4)
+    circuit.add(gates.H(i) for i in range(2))
+    circuit.add(gates.CZ(0, 1))
+    res0 = circuit.add(gates.M(0))
+    res1 = circuit.add(gates.M(3))
+    res2 = circuit.add(gates.M(1))
+    result = backend.execute_circuit(circuit, nshots=50)
+
+    samples = [res.samples()[:, 0] for res in [res0, res1, res2]]
+    final_samples = np.array(samples).T
+    target_samples = result.samples()
+    np.testing.assert_allclose(final_samples, target_samples)
+
+
+def dummy_string_qubit_names():
+    """Create dummy platform with string-named qubits."""
+    platform = create_platform("dummy")
+    for q, qubit in platform.qubits.items():
+        qubit.name = f"A{q}"
+    platform.qubits = {qubit.name: qubit for qubit in platform.qubits.values()}
+    platform.pairs = {
+        (f"A{q0}", f"A{q1}"): pair for (q0, q1), pair in platform.pairs.items()
+    }
+    return platform
+
+
+def test_execute_circuit_str_qubit_names():
+    """Check that platforms with qubits that have non-integer names can execute
+    circuits."""
+    backend = QibolabBackend(dummy_string_qubit_names())
+    circuit = Circuit(3)
+    circuit.add(gates.H(i) for i in range(2))
+    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.M(0, 1))
+    result = backend.execute_circuit(circuit, nshots=20)
+    assert result.samples().shape == (20, 2)
 
 
 @pytest.mark.qpu
