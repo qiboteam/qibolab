@@ -45,13 +45,11 @@ class QibolabBackend(NumpyBackend):
         """
         # TODO: Move this method to transpilers
         if self.transpiler is None or self.transpiler.is_satisfied(circuit):
-            native_circuit = circuit
+            native = circuit
             qubit_map = {q: q for q in range(circuit.nqubits)}
         else:
-            native_circuit, qubit_map = self.transpiler(
-                circuit
-            )  # pylint: disable=E1102
-        return native_circuit, qubit_map
+            native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
+        return native, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
         """Assigning measurement outcomes to
