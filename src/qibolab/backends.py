@@ -6,7 +6,6 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
-from qibo.transpiler.pipeline import Passes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
@@ -29,7 +28,7 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
-        self.transpiler = Passes(connectivity=self.platform.topology)
+        self.transpiler = None
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")

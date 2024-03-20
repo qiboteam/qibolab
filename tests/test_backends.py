@@ -23,13 +23,13 @@ def connected_backend(connected_platform):
 def test_execute_circuit_initial_state():
     backend = QibolabBackend("dummy")
     circuit = Circuit(1)
-    circuit.add(gates.X(0))
+    circuit.add(gates.GPI2(0, phi=0))
     circuit.add(gates.M(0))
     with pytest.raises(ValueError):
         backend.execute_circuit(circuit, initial_state=np.ones(2))
 
     initial_circuit = Circuit(1)
-    initial_circuit.add(gates.H(0))
+    circuit.add(gates.GPI2(0, phi=np.pi / 2))
     backend.execute_circuit(circuit, initial_state=initial_circuit)
 
 
@@ -37,12 +37,9 @@ def test_execute_circuit_initial_state():
     "gate,kwargs",
     [
         (gates.I, {}),
-        (gates.X, {}),
-        (gates.Y, {}),
         (gates.Z, {}),
-        (gates.RX, {"theta": np.pi / 8}),
-        (gates.RY, {"theta": -np.pi / 8}),
-        (gates.RZ, {"theta": np.pi / 4}),
+        (gates.GPI, {"phi": np.pi / 8}),
+        (gates.GPI2, {"phi": np.pi / 8}),
         (gates.U3, {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
     ],
 )
@@ -73,7 +70,7 @@ def test_measurement_samples():
 def test_execute_circuits():
     backend = QibolabBackend("dummy")
     circuit = Circuit(3)
-    circuit.add(gates.H(i) for i in range(3))
+    circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(3))
     circuit.add(gates.M(0, 1, 2))
 
     results = backend.execute_circuits(5 * [circuit], nshots=100)
