@@ -268,7 +268,7 @@ def declare_acquisitions(ro_pulses, qubits, options):
             acquisition.assign_element(qmpulse.element)
             acquisitions[name] = acquisition
 
-        acquisitions[name].keys.append(qmpulse.pulse.serial)
+        acquisitions[name].keys.append(qmpulse.pulse.id)
         qmpulse.acquisition = acquisitions[name]
     return list(acquisitions.values())
 
@@ -288,6 +288,6 @@ def fetch_results(result, acquisitions):
     results = {}
     for acquisition in acquisitions:
         data = acquisition.fetch(handles)
-        for serial, result in zip(acquisition.keys, data):
-            results[acquisition.qubit] = results[serial] = result
+        for id_, result in zip(acquisition.keys, data):
+            results[acquisition.qubit] = results[id_] = result
     return results
