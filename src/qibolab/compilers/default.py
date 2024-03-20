@@ -45,7 +45,7 @@ def gpi_rule(gate, platform):
     # https://github.com/qiboteam/qibolab/pull/804#pullrequestreview-1890205509
     # for more detail.
     pulse = platform.create_RX_pulse(qubit, start=0, relative_phase=theta)
-    sequence.add(pulse)
+    sequence.append(pulse)
     return sequence, {}
 
 
