@@ -11,15 +11,13 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
-
-from qibolab.instruments.unrolling import batch_max_sequences
+from qibolab.instruments.abstract import Controller
+from qibolab.instruments.port import Port
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
-from .abstract import Controller
-from .port import Port
 
 from .pulse import ZhPulse
 from .sweep import ProcessedSweeps, classify_sweepers
@@ -740,6 +738,3 @@ class Zurich(Controller):
                 results[serial] = results[qubit] = options.results_type(data)
 
         return results
-
-    def split_batches(self, sequences):
-        return batch_max_sequences(sequences, MAX_SEQUENCES)
