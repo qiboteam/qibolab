@@ -68,7 +68,7 @@ def test_compile_two_gates(platform):
 
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence.pulses) == 4
+    assert len(sequence) == 4
     assert len(sequence.qd_pulses) == 3
     assert len(sequence.ro_pulses) == 1
 
