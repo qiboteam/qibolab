@@ -98,14 +98,13 @@ def test_gpi_to_sequence(platform):
     circuit = Circuit(1)
     circuit.add(gates.GPI(0, phi=0.2))
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.pulses) == 1
+    assert len(sequence) == 1
     assert len(sequence.qd_pulses) == 1
 
-    RX_pulse = platform.create_RX_pulse(0, start=0, relative_phase=0.2)
-    s = PulseSequence(RX_pulse)
+    rx_pulse = platform.create_RX_pulse(0, start=0, relative_phase=0.2)
+    s = PulseSequence([rx_pulse])
 
-    np.testing.assert_allclose(sequence.duration, RX_pulse.duration)
-    assert sequence.serial == s.serial
+    np.testing.assert_allclose(sequence.duration, rx_pulse.duration)
 
 
 def test_gpi2_to_sequence(platform):

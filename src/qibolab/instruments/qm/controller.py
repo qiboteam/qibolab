@@ -57,7 +57,7 @@ def find_baking_pulses(sweepers):
         step = values[1] - values[0] if len(values) > 0 else values[0]
         if sweeper.parameter is Parameter.duration and step % 4 != 0:
             for pulse in sweeper.pulses:
-                to_bake.add(pulse.serial)
+                to_bake.add(pulse.id)
 
     return to_bake
 
@@ -302,7 +302,7 @@ class QMController(Controller):
             if (
                 pulse.duration % 4 != 0
                 or pulse.duration < 16
-                or pulse.serial in pulses_to_bake
+                or pulse.id in pulses_to_bake
             ):
                 qmpulse = BakedPulse(pulse, element)
                 qmpulse.bake(self.config, durations=[pulse.duration])
@@ -361,7 +361,7 @@ class QMController(Controller):
             results = {}
             for qmpulse in ro_pulses:
                 pulse = qmpulse.pulse
-                results[pulse.qubit] = results[pulse.serial] = result
+                results[pulse.qubit] = results[pulse.id] = result
             return results
         else:
             result = self.execute_program(experiment)

@@ -535,7 +535,7 @@ class QbloxController(Controller):
     def _add_to_results(sequence, results, results_to_add):
         for pulse in sequence.ro_pulses:
             if results[pulse.id]:
-                results[pulse.id] += results_to_add[pulse.serial]
+                results[pulse.id] += results_to_add[pulse.id]
             else:
-                results[pulse.id] = results_to_add[pulse.serial]
+                results[pulse.id] = results_to_add[pulse.id]
             results[pulse.qubit] = results[pulse.id]
