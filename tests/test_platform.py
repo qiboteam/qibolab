@@ -362,10 +362,13 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
 
 @pytest.mark.qpu
 @pytest.mark.skip(reason="no way of currently testing this")
-def test_create_RX_pulses(qpu_platform):
+def test_create_RX_drag_pulses(qpu_platform):
     platform = qpu_platform
     qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
     beta = 0.1234
     for qubit in qubits:
-        drag = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
-        assert drag.shape == Drag(drag.shape.rel_sigma, beta=beta)
+        drag_pi = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
+        assert drag_pi.shape == Drag(drag_pi.shape.rel_sigma, beta=beta)
+        drag_pi_half = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
+        assert drag_pi_half.shape == Drag(drag_pi_half.shape.rel_sigma, beta=beta)
+        assert drag_pi.amplitude == 2 * drag_pi_half.amplitude
