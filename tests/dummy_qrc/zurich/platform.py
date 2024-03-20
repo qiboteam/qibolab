@@ -86,7 +86,6 @@ def create(path: pathlib.Path = FOLDER):
     controller = Zurich(
         "EL_ZURO",
         device_setup=device_setup,
-        use_emulation=False,
         time_of_flight=75,
         smearing=50,
     )
