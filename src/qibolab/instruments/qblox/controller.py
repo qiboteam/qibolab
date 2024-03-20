@@ -16,13 +16,6 @@ from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
 
-MAX_DURATION = int(4e4)  # Translate SEQUENCER_MEMORY = 2**17 into pulse duration
-"""Maximum duration of the control pulses [1q 40ns] [Rough estimate]."""
-MAX_READOUT = int(1e6)
-"""Maximum number of readout pulses [Not estimated]."""
-MAX_INSTRUCTIONS = int(1e6)
-"""Maximum instructions size [Not estimated]."""
-
 SEQUENCER_MEMORY = 2**17
 
 
@@ -34,12 +27,6 @@ class QbloxController(Controller):
         modules (dict): A dictionay with the qblox modules connected to the experiment.
     """
 
-    BOUNDS = Bounds(
-        waveforms=MAX_DURATION,
-        readout=MAX_READOUT,
-        instructions=MAX_READOUT,
-    )
-
     def __init__(
         self, name, address: str, modules, internal_reference_clock: bool = True
     ):
@@ -49,6 +36,13 @@ class QbloxController(Controller):
         self.cluster: QbloxCluster = None
         self.modules: dict = modules
         self._reference_clock = "internal" if internal_reference_clock else "external"
+        self.bounds = Bounds(
+            waveforms=int(
+                4e4
+            ),  # Translate SEQUENCER_MEMORY = 2**17 into pulse duration
+            readout=int(1e6),
+            instructions=int(1e6),
+        )
         signal.signal(signal.SIGTERM, self._termination_handler)
 
     @property
@@ -83,13 +77,6 @@ class QbloxController(Controller):
                 module.disconnect()
             self.cluster.close()
             self.is_connected = False
-
-    def setup(self):
-        """Empty method to comply with Instrument interface.
-
-        Setup of the modules happens in the platform ``create`` method
-        using :meth:`qibolab.serialize.load_instrument_settings`.
-        """
 
     def _termination_handler(self, signum, frame):
         """Calls all modules to stop if the program receives a termination
