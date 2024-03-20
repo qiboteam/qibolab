@@ -85,8 +85,8 @@ def test_multiple_measurements():
     backend = QibolabBackend("dummy")
 
     circuit = Circuit(4)
-    circuit.add(gates.H(i) for i in range(2))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(2))
+    circuit.add(gates.CZ(1, 2))
     res0 = circuit.add(gates.M(0))
     res1 = circuit.add(gates.M(3))
     res2 = circuit.add(gates.M(1))
@@ -115,8 +115,8 @@ def test_execute_circuit_str_qubit_names():
     circuits."""
     backend = QibolabBackend(dummy_string_qubit_names())
     circuit = Circuit(3)
-    circuit.add(gates.H(i) for i in range(2))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(2))
+    circuit.add(gates.CZ(1, 2))
     circuit.add(gates.M(0, 1))
     result = backend.execute_circuit(circuit, nshots=20)
     assert result.samples().shape == (20, 2)
@@ -171,7 +171,7 @@ def test_superposition_for_all_qubits(connected_backend):
     probs = []
     for q in range(nqubits):
         circuit = Circuit(nqubits)
-        circuit.add(gates.H(q=q))
+        circuit.add(gates.GPI2(q=q, phi=np.pi / 2))
         circuit.add(gates.M(q))
         freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(
             binary=False

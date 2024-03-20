@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Callable, Optional
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -28,7 +29,7 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
-        self.transpiler = None
+        self.transpiler: Optional[Callable] = None
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -47,7 +48,9 @@ class QibolabBackend(NumpyBackend):
             native_circuit = circuit
             qubit_map = {q: q for q in range(circuit.nqubits)}
         else:
-            native_circuit, qubit_map = self.transpiler(circuit)
+            native_circuit, qubit_map = self.transpiler(
+                circuit
+            )  # pylint: disable=E1102
         return native_circuit, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
