@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Callable, Optional
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -6,7 +7,6 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
-from qibo.transpiler.pipeline import Passes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
@@ -16,20 +16,20 @@ from qibolab.platform import Platform
 
 
 class QibolabBackend(NumpyBackend):
-    def __init__(self, platform, runcard=None):
+    def __init__(self, platform):
         super().__init__()
         self.name = "qibolab"
         if isinstance(platform, Platform):
             self.platform = platform
         else:
-            self.platform = create_platform(platform, runcard)
+            self.platform = create_platform(platform)
         self.versions = {
             "qibo": qibo_version,
             "numpy": self.np.__version__,
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
-        self.transpiler = Passes(connectivity=self.platform.topology)
+        self.transpiler: Optional[Callable] = None
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -45,11 +45,11 @@ class QibolabBackend(NumpyBackend):
         """
         # TODO: Move this method to transpilers
         if self.transpiler is None or self.transpiler.is_satisfied(circuit):
-            native_circuit = circuit
+            native = circuit
             qubit_map = {q: q for q in range(circuit.nqubits)}
         else:
-            native_circuit, qubit_map = self.transpiler(circuit)
-        return native_circuit, qubit_map
+            native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
+        return native, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
         """Assigning measurement outcomes to
