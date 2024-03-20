@@ -415,6 +415,7 @@ class Platform:
         qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
         pulse.shape = Drag(rel_sigma=pulse.shape.rel_sigma, beta=beta)
+        pulse.shape.pulse = pulse
         return pulse
 
     def create_RX_drag_pulse(self, qubit, start, beta, relative_phase=0):
@@ -422,4 +423,5 @@ class Platform:
         qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
         pulse.shape = Drag(rel_sigma=pulse.shape.rel_sigma, beta=beta)
+        pulse.shape.pulse = pulse
         return pulse
