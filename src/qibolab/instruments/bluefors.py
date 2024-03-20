@@ -29,8 +29,17 @@ class TemperatureController:
             self.client_socket.connect((self.ip_address, self.port))
             self.is_connected = True
             log.info("Bluefors Temperature Controller Connected")
-        except:
-            pass
+        except ConnectionRefusedError as e:
+            log.error(f"Refused connection. IP: {self.ip_address} Port: {self.port}")
+            raise e
+        except TimeoutError as e:
+            log.error(f"Connection timed out. IP: {self.ip_address} Port: {self.port}")
+            raise e
+        except OSError as e:
+            log.error(
+                f"Cannot connect to host. IP: {self.ip_address} Port: {self.port}"
+            )
+            raise e
 
     def get_data(self) -> str:
         """Connect to the socket and get temperature data.
