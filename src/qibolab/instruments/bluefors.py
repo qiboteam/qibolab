@@ -1,4 +1,5 @@
-# import re
+import json
+import re
 import socket
 
 from qibo.config import log
@@ -41,16 +42,33 @@ class TemperatureController:
             )
             raise e
 
-    def get_data(self) -> str:
+    def convert_to_json(self, message: str) -> dict[str, dict[str, float]]:
+        """Convert the received socket message into a dictionary.
+
+        The typical message looks like this:
+            flange_name: {'temperature':12.345678, 'timestamp':1234567890.123456}
+        Args:
+            message (str): messaged received from the socket.
+        Returns:
+            dictionary_message (dict[str, dict[str, float]]):
+                message converted into python dictionary.
+        """
+        message = "\n".join(
+            [re.sub("^([^':]+)", r"'\g<1>'", m) for m in message.split("\n")]
+        )
+        message = re.sub("'", '"', message)
+        message = ",".join(message.split("\n"))
+        dictionary_message = json.loads("{" + message + "}")
+        return dictionary_message
+
+    def get_data(self) -> dict[str, dict[str, float]]:
         """Connect to the socket and get temperature data.
 
         Returns:
-            message (str): socket message in this format:
-                flange_name: {'temperature': <value(float)>, 'timestamp':<value(float)>}
+            message (dict[str, dict[str, float]]): socket message in this format:
+                {"flange_name": {'temperature': <value(float)>, 'timestamp':<value(float)>}}
         """
-        # This message is a string that looks like a json
-        # Shoud we convert it into a dictionary?
-        message = self.client_socket.recv(1024).decode()
+        message = self.convert_to_json(self.client_socket.recv(1024).decode())
         return message
 
     def read_data(self):
