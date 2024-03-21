@@ -2,11 +2,12 @@
 
 from abc import ABC
 from dataclasses import dataclass
-from enum import Enum
 from functools import cached_property
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
+from pydantic import BaseModel
 from scipy.signal import lfilter
 from scipy.signal.windows import gaussian
 
@@ -14,8 +15,8 @@ __all__ = [
     "Times",
     "Waveform",
     "IqWaveform",
+    "BaseEnvelope",
     "Envelope",
-    "Envelopes",
     "Rectangular",
     "Exponential",
     "Gaussian",
@@ -60,7 +61,7 @@ class Times:
         return np.linspace(0, self.duration, self.samples)
 
 
-class Envelope(ABC):
+class BaseEnvelope(ABC, BaseModel):
     """Pulse envelopes.
 
     Generates both i (in-phase) and q (quadrature) components.
@@ -79,8 +80,7 @@ class Envelope(ABC):
         return np.array([self.i(times), self.q(times)])
 
 
-@dataclass(frozen=True)
-class Rectangular(Envelope):
+class Rectangular(BaseEnvelope):
     """Rectangular envelope."""
 
     def i(self, times: Times) -> Waveform:
@@ -88,8 +88,7 @@ class Rectangular(Envelope):
         return np.ones(times.samples)
 
 
-@dataclass(frozen=True)
-class Exponential(Envelope):
+class Exponential(BaseEnvelope):
     r"""Exponential shape, i.e. square pulse with an exponential decay.
 
     .. math::
@@ -121,8 +120,7 @@ def _samples_sigma(rel_sigma: float, times: Times) -> float:
     return rel_sigma * times.samples
 
 
-@dataclass(frozen=True)
-class Gaussian(Envelope):
+class Gaussian(BaseEnvelope):
     r"""Gaussian pulse shape.
 
     Args:
@@ -144,8 +142,7 @@ class Gaussian(Envelope):
         return gaussian(times.samples, _samples_sigma(self.rel_sigma, times))
 
 
-@dataclass(frozen=True)
-class GaussianSquare(Envelope):
+class GaussianSquare(BaseEnvelope):
     r"""GaussianSquare pulse shape.
 
     .. math::
@@ -173,8 +170,7 @@ class GaussianSquare(Envelope):
         return pulse
 
 
-@dataclass(frozen=True)
-class Drag(Envelope):
+class Drag(BaseEnvelope):
     """Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
 
     .. todo::
@@ -205,8 +201,7 @@ class Drag(Envelope):
         return self.beta * (-(ts - times.mean) / (sigma**2)) * self.i(times)
 
 
-@dataclass(frozen=True)
-class Iir(Envelope):
+class Iir(BaseEnvelope):
     """IIR Filter using scipy.signal lfilter.
 
     https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)::
@@ -218,7 +213,7 @@ class Iir(Envelope):
 
     a: npt.NDArray
     b: npt.NDArray
-    target: Envelope
+    target: BaseEnvelope
 
     def _data(self, target: npt.NDArray) -> npt.NDArray:
         a = self.a / self.a[0]
@@ -239,8 +234,7 @@ class Iir(Envelope):
         return self._data(self.target.q(times))
 
 
-@dataclass(frozen=True)
-class Snz(Envelope):
+class Snz(BaseEnvelope):
     """Sudden variant Net Zero.
 
     https://arxiv.org/abs/2008.07411
@@ -270,8 +264,7 @@ class Snz(Envelope):
         return pulse
 
 
-@dataclass(frozen=True)
-class ECap(Envelope):
+class ECap(BaseEnvelope):
     r"""ECap pulse shape.
 
     .. todo::
@@ -296,8 +289,7 @@ class ECap(Envelope):
         )
 
 
-@dataclass(frozen=True)
-class Custom(Envelope):
+class Custom(BaseEnvelope):
     """Arbitrary shape.
 
     .. todo::
@@ -318,15 +310,15 @@ class Custom(Envelope):
         raise NotImplementedError
 
 
-class Envelopes(Enum):
-    """Available pulse shapes."""
-
-    RECTANGULAR = Rectangular
-    EXPONENTIAL = Exponential
-    GAUSSIAN = Gaussian
-    GAUSSIAN_SQUARE = GaussianSquare
-    DRAG = Drag
-    IIR = Iir
-    SNZ = Snz
-    ECAP = ECap
-    CUSTOM = Custom
+Envelope = Union[
+    Rectangular,
+    Exponential,
+    Gaussian,
+    GaussianSquare,
+    Drag,
+    Iir,
+    Snz,
+    ECap,
+    Custom,
+]
+"""Available pulse shapes."""
