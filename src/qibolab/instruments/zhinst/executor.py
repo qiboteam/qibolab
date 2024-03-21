@@ -13,7 +13,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import FluxPulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -114,6 +114,8 @@ class Zurich(Controller):
         "Zurich pulse sequence"
         self.sub_sequences: list[SubSequence] = []
         "Sub sequences between each measurement"
+        self.unsplit_channels: set[str] = set()
+        "Names of channels that were not split into seb-sequences"
 
         self.processed_sweeps: Optional[ProcessedSweeps] = None
         self.nt_sweeps: list[Sweeper] = []
@@ -307,8 +309,14 @@ class Zurich(Controller):
             if pulse.type is PulseType.DRIVE:
                 qubit.drive_frequency = pulse.frequency
 
-    def create_sub_sequences(self, qubits: list[Qubit]) -> list[SubSequence]:
-        """Create subsequences based on locations of measurements."""
+    def create_sub_sequences(
+        self, qubits: list[Qubit]
+    ) -> tuple[list[SubSequence], set[str]]:
+        """Create subsequences based on locations of measurements.
+
+        Returns list of subsequences and a set of channel names that
+        were not split
+        """
         measure_channels = {measure_channel_name(qb) for qb in qubits}
         other_channels = set(self.sequence.keys()) - measure_channels
 
@@ -317,17 +325,36 @@ class Zurich(Controller):
             for i, pulse in enumerate(self.sequence[ch]):
                 measurement_groups[i].append((ch, pulse))
 
-        measurement_starts = {}
+        measurement_start_end = {}
         for i, group in measurement_groups.items():
             starts = np.array([meas.pulse.start for _, meas in group])
-            measurement_starts[i] = max(starts)
+            ends = np.array([meas.pulse.finish for _, meas in group])
+            measurement_start_end[i] = (
+                max(starts),
+                max(ends),
+            )  # max is intended for float arithmetic errors only
 
-        # split all non-measurement channels according to the locations of the measurements
+        # FIXME: this is a hotfix specifically made for the qubit_flux experiment in flux pulse mode, where the flux
+        # pulses extend through the entire duration of the experiment. This should be removed once the sub-sequence
+        # splitting logic is removed from the driver.
+        channels_overlapping_measurement = set()
+        if len(measurement_groups) == 1:
+            for ch in other_channels:
+                for pulse in self.sequence[ch]:
+                    if not isinstance(pulse.pulse, FluxPulse):
+                        break
+                    start, end = measurement_start_end[0]
+                    if pulse.pulse.start < end and pulse.pulse.finish > start:
+                        channels_overlapping_measurement.add(ch)
+                        break
+
+        # split non-measurement channels according to the locations of the measurements
         sub_sequences = defaultdict(lambda: defaultdict(list))
-        for ch in other_channels:
+        for ch in other_channels - channels_overlapping_measurement:
             measurement_index = 0
             for pulse in self.sequence[ch]:
-                if pulse.pulse.finish > measurement_starts[measurement_index]:
+                start, _ = measurement_start_end[measurement_index]
+                if pulse.pulse.finish > start:
                     measurement_index += 1
                 sub_sequences[measurement_index][ch].append(pulse)
         if len(sub_sequences) > len(measurement_groups):
@@ -336,7 +363,7 @@ class Zurich(Controller):
         return [
             SubSequence(measurement_groups[i], sub_sequences[i])
             for i in range(len(measurement_groups))
-        ]
+        ], channels_overlapping_measurement
 
     def experiment_flow(
         self,
@@ -356,7 +383,9 @@ class Zurich(Controller):
             sequence (PulseSequence): sequence of pulses to be played in the experiment.
         """
         self.sequence = self.sequence_zh(sequence, qubits)
-        self.sub_sequences = self.create_sub_sequences(list(qubits.values()))
+        self.sub_sequences, self.unsplit_channels = self.create_sub_sequences(
+            list(qubits.values())
+        )
         self.calibration_step(qubits, couplers, options)
         self.create_exp(qubits, options)
 
@@ -532,6 +561,12 @@ class Zurich(Controller):
 
     def select_exp(self, exp, qubits, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
+        # channels that were not split are just applied in parallel to the rest of the experiment
+        for ch in self.unsplit_channels:
+            with exp.section(uid="unsplit_channels"):
+                for pulse in self.sequence[ch]:
+                    self.play_sweep(exp, ch, pulse)
+
         weights = {}
         previous_section = None
         for i, seq in enumerate(self.sub_sequences):
