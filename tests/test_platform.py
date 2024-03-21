@@ -19,11 +19,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
-<<<<<<< HEAD
-from qibolab.pulses import Drag, PulseSequence, Rectangular
-=======
-from qibolab.pulses import Delay, PulseSequence, Rectangular
->>>>>>> 2a664bea (test: first batch of fixing tests)
+from qibolab.pulses import Delay, Drag, PulseSequence, Rectangular
 from qibolab.serialize import (
     dump_kernels,
     dump_platform,
@@ -378,7 +374,9 @@ def test_create_RX_drag_pulses():
     for qubit in qubits:
         drag_pi = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
         assert drag_pi.shape == Drag(drag_pi.shape.rel_sigma, beta=beta)
-        drag_pi_half = platform.create_RX90_drag_pulse(qubit, drag_pi.finish, beta=beta)
+        drag_pi_half = platform.create_RX90_drag_pulse(
+            qubit, drag_pi.duration, beta=beta
+        )
         assert drag_pi_half.shape == Drag(drag_pi_half.shape.rel_sigma, beta=beta)
         np.testing.assert_almost_equal(drag_pi.amplitude, 2 * drag_pi_half.amplitude)
 
