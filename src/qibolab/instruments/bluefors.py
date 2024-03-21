@@ -30,16 +30,8 @@ class TemperatureController:
             self.client_socket.connect((self.ip_address, self.port))
             self.is_connected = True
             log.info("Bluefors Temperature Controller Connected")
-        except ConnectionRefusedError as e:
-            log.error(f"Refused connection. IP: {self.ip_address} Port: {self.port}")
-            raise e
-        except TimeoutError as e:
-            log.error(f"Connection timed out. IP: {self.ip_address} Port: {self.port}")
-            raise e
-        except OSError as e:
-            log.error(
-                f"Cannot connect to host. IP: {self.ip_address} Port: {self.port}"
-            )
+        except (ConnectionRefusedError, TimeoutError, OSError) as e:
+            log.error(f"Bluefors connection. IP: {self.ip_address} Port: {self.port}")
             raise e
 
     def convert_to_json(self, message: str) -> dict[str, dict[str, float]]:
