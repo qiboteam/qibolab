@@ -42,22 +42,19 @@ def unroll_sequences(
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
-    clock = defaultdict(int)
-    start = 0
+    channels = {pulse.channel for sequence in sequences for pulse in sequence}
     for sequence in sequences:
+        total_sequence.extend(sequence)
+        # TODO: Fix unrolling results
         for pulse in sequence:
-            if clock[pulse.channel] < start:
-                delay = start - clock[pulse.channel]
-                total_sequence.append(Delay(delay, pulse.channel))
-
-            total_sequence.append(pulse)
-            clock[pulse.channel] += pulse.duration
-
             if pulse.type is PulseType.READOUT:
-                # TODO: Fix unrolling results
                 readout_map[pulse.id].append(pulse.id)
 
-        start = sequence.duration + relaxation_time
+        length = sequence.duration + relaxation_time
+        pulses_per_channel = sequence.pulses_per_channel
+        for channel in channels:
+            delay = length - pulses_per_channel[channel].duration
+            total_sequence.append(Delay(delay, channel))
 
     return total_sequence, readout_map
 
