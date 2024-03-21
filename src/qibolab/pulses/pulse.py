@@ -1,10 +1,11 @@
 """Pulse class."""
 
-from dataclasses import dataclass, fields
+from dataclasses import fields
 from enum import Enum
 from typing import Optional
 
 import numpy as np
+from pydantic import BaseModel
 
 from .envelope import Envelope, IqWaveform, Times, Waveform
 
@@ -23,9 +24,7 @@ class PulseType(Enum):
     COUPLERFLUX = "cf"
 
 
-# TODO: replace nested serialization with pydantic
-@dataclass
-class Pulse:
+class Pulse(BaseModel):
     """A class to represent a pulse to be sent to the QPU."""
 
     start: int
@@ -64,10 +63,16 @@ class Pulse:
     """Qubit or coupler addressed by the pulse."""
 
     @classmethod
-    def flux(cls, start, duration, amplitude, envelope, **kwargs):
-        return cls(
-            start, duration, amplitude, 0, 0, envelope, type=PulseType.FLUX, **kwargs
-        )
+    def flux(cls, **kwargs):
+        """Construct a flux pulse.
+
+        It provides a simplified syntax for the :cls:`Pulse` constructor, by applying
+        suitable defaults.
+        """
+        kwargs["frequency"] = 0
+        kwargs["relative_phase"] = 0
+        kwargs["type"] = PulseType.FLUX
+        return cls(**kwargs)
 
     @property
     def finish(self) -> Optional[int]:
