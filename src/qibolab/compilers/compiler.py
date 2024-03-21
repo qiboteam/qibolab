@@ -98,6 +98,31 @@ class Compiler:
 
         return inner
 
+    def get_sequence(self, gate, platform):
+        """Get pulse sequence implementing the given gate using the registered
+        rules.
+
+        Args:
+            gate (:class:`qibo.gates.Gate`): Qibo gate to convert to pulses.
+            platform (:class:`qibolab.platform.Platform`): Qibolab platform to read the native gates from.
+        """
+        # get local sequence for the current gate
+        rule = self[type(gate)]
+        if isinstance(gate, gates.M):
+            qubits = [platform.get_qubit(q) for q in gate.qubits]
+            gate_sequence = rule(gate, qubits)
+        elif len(gate.qubits) == 1:
+            qubit = platform.get_qubit(gate.target_qubits[0])
+            gate_sequence = rule(gate, qubit)
+        elif len(gate.qubits) == 2:
+            pair = platform.pairs[
+                tuple(platform.get_qubit(q).name for q in gate.qubits)
+            ]
+            gate_sequence = rule(gate, pair)
+        else:
+            raise NotImplementedError(f"{type(gate)} is not a native gate.")
+        return gate_sequence
+
     def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
 
@@ -126,9 +151,7 @@ class Compiler:
                         qubit_clock[qubit] += gate.delay
                     continue
 
-                rule = self[gate.__class__]
-                # get local sequence and phases for the current gate
-                gate_sequence = rule(gate, platform)
+                gate_sequence = self.get_sequence(gate, platform)
                 for pulse in gate_sequence:
                     if qubit_clock[pulse.qubit] > channel_clock[pulse.qubit]:
                         delay = qubit_clock[pulse.qubit] - channel_clock[pulse.channel]
