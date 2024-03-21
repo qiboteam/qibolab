@@ -160,7 +160,7 @@ class Platform:
             gates = pair.native_gates
             for fld in fields(gates):
                 sequence = getattr(gates, fld.name)
-                if sequence is not None:
+                if len(sequence) > 0:
                     new_sequence = PulseSequence()
                     for pulse in sequence:
                         if pulse.type is PulseType.VIRTUALZ:
@@ -413,7 +413,7 @@ class Platform:
 
     def create_CZ_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
+        if pair not in self.pairs or len(self.pairs[pair].native_gates.CZ) == 0:
             raise_error(
                 ValueError,
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
@@ -422,7 +422,7 @@ class Platform:
 
     def create_iSWAP_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or self.pairs[pair].native_gates.iSWAP is None:
+        if pair not in self.pairs or len(self.pairs[pair].native_gates.iSWAP) == 0:
             raise_error(
                 ValueError,
                 f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
@@ -431,7 +431,7 @@ class Platform:
 
     def create_CNOT_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or self.pairs[pair].native_gates.CNOT is None:
+        if pair not in self.pairs or len(self.pairs[pair].native_gates.CNOT) == 0:
             raise_error(
                 ValueError,
                 f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
