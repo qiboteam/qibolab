@@ -82,19 +82,14 @@ The following example shows how to modify the transpiler and compiler in order t
 
 
     # define a compiler rule that translates X to the pi-pulse
-    def x_rule(gate, platform):
+    def x_rule(gate, qubit):
         """X gate applied with a single pi-pulse."""
-        qubit = gate.target_qubits[0]
-        sequence = PulseSequence()
-        sequence.append(platform.create_RX_pulse(qubit))
-        return sequence
+        return PulseSequence([qubit.native_gates.RX])
 
 
     # the empty dictionary is needed because the X gate does not require any virtual Z-phases
 
     backend = QibolabBackend(platform="dummy")
-    # disable the transpiler
-    backend.transpiler = None
     # register the new X rule in the compiler
     backend.compiler[gates.X] = x_rule
 
