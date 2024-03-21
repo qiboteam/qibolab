@@ -790,3 +790,93 @@ Compatible and tested with:
 - Xilinx ZCU216
 
 Technically compatible with any board running ``qibosoq``.
+
+.. _main_doc_emulator:
+
+Emulator
+--------
+
+QiboLab supports the use of emulators to simulate the behavior of quantum devices. The key features of the emulator modules include:
+
+- :py:mod:`qibolab.emulator` module: Provides functionality for creating a general multi-qubit emulator platform. 
+    - ``create_runcard_emulator`` function: Main function of the module.
+        - Takes the directory (:class:`str`) containing the runcard and an (initialized) :class:`qibolab.instruments.pulse_simulator.PulseSimulator` object as inputs. 
+        - Loads the runcard and extracts the model configuration from the pulse simulator.
+        - Prints out the emulator name, qubit and coupler names (:class:`str`), as well as the runcard's qubits and couplers names (:class:`str` or :class:`int`) for verification.
+        - Prints out the sampling rate and simulation sampling boost factor from the simulation configuration of the pulse simulator for verification.
+        - Creates a :class:`qibolab.channels.ChannelMap` object and assigns readout and drive channels to each qubit.
+        - Loads the qubits, couplers, and pairs from the runcard, as well as the settings.
+        - Specifies the pulse simulator the platform instrument (controller) and maps the channels to the qubits.
+        - Returns a :class:`qibolab.platform.Platform` object, representing the emulator platform with the specified configuration.
+
+- :py:mod:`qibolab.oneQ_emulator` module: Provides functionality for creating a one-qubit emulator platform based on the general multi-qubit version.
+    - The model and simulation configuration will be automatically generated from the exposed list of model and simulation parameters that users can directly modify:
+
+    .. testcode:: python
+
+        # device parameters: frequency in Hz, time in s
+        device_name = 'ibmfakebelemQ0'
+        sampling_rate = 4500000000.0
+        readout_error = [0.01, 0.02]
+        lo_freq = 5090167234.445013
+        anharmonicity = -336123005.1821652
+        drive_freq = 5090167234.445013
+        rabi_freq = 125457538.19061986
+        T1 = 8.857848970762537e-05
+        T2 = 0.00010679794866226273
+        T2e = 0.0
+        nlevel = 3
+
+        # simulation parameters
+        sim_sampling_boost=10
+        simulate_dissipation=True
+        instant_measurement=True
+
+
+    - ``create_oneQ_emulator`` function: Main function of the module.
+        - Only requires the directory (:class:`str`) containing the runcard as an input.
+        - Organizes the above model parameters into a dictionary that serves as the input to the ``generate_model_config_oneQ`` function from the :py:mod:`qibolab.instruments.models.general_no_coupler_model` module to generate a model configuration dictionary.
+        - Creates a simulation configuration dictionary using the ``get_default_simulation_config`` function from the :py:mod:`qibolab.instruments.pulse_simulator` module with the above simulation parameters.
+        - Creates a :class:`qibolab.instruments.pulse_simulator.PulseSimulator` object initialized with the simulation and model configurations.
+        - Calls the ``create_runcard_emulator`` function from the :py:mod:`qibolab.emulator` module with the runcard folder and pulse simulator as inputs.
+        - Returns the resulting one-qubit emulator platform.
+
+These modules simplify the creation of a one-qubit emulator platform by exposing limited settings to the user and using recommended values for the rest, facilitating the execution of quantum simulations for a general user.
+
+
+Pulse Simulator
+^^^^^^^^^^^^^^^
+
+- :py:mod:`qibolab.instruments.pulse_simulator` module: Provides functionality for creating a pulse simulator object, which serve as the controller of the emulator platform that communicates between the platform and the simulation backend.
+    - ``get_default_simulation_config``: Generates a default simulation configuration with optional input parameters ``sim_sampling_boost`` and ``default_nshots``.
+    - Creates a :class:`qibolab.instruments.pulse_simulator.PulseSimulator` object with the simulation and model configurations. Returns the resulting pulse simulator as a subclass of :class:`qibolab.instruments.abstract.Controller`.
+
+These modules support the functionalities of a pulse simulator object with the specified configurations, enabling the communication between Qibolab and the simulation backend through general python and numpy objects. The simulation backend is hosted within the pulse simulator.
+
+
+Simulator Models
+^^^^^^^^^^^^^^^^
+
+- :py:mod:`qibolab.instruments.models.general_no_coupler_model` module: Provides functionality for generating a model configuration for a general multi-qubit emulator platform without couplers.
+    - ``generate_model_config``: Generates and returns a multi-qubit model configuration with the specified parameters.
+    - ``generate_model_config_oneQ``: Generates and returns a one-qubit model configuration with the specified parameters.
+    
+- :py:mod:`qibolab.instruments.models.methods` module: Provides common functionalities for all other model modules.
+    - ``load_model_params``: Loads a yaml file storing the model parameters into a dictionary.
+    - ``default_noflux_platform2simulator_channels``: Constructs and returns the dictionary that specifies the default mapping between platform channel names to simulator chanel names.
+
+Simulator Backends
+^^^^^^^^^^^^^^^^^^
+
+- :py:mod:`qibolab.instruments.simulator.backends.generic` module: Provides generic functionalities for different  simulator backend modules.
+    - ``dec_to_basis_string``: Converts an integer (e.g. matrix/vector index) to a generalized bitstring in the computation basis for a heterogeneous Hilbert space with a specified structure given by an ordered list of local Hilbert space dimensions.
+    - ``make_comp_basis``: Generates the computational basis states of a heterogeneous Hilbert space with a specified structure given by a list of qubit indices and their corresponding local Hilbert space dimensions.
+    - ``op_from_instruction``: Converts an instruction tuple into a quantum operator.
+        - ``process_op``: Helper function that implements only the specified type of operation between adjacent quantum objects when processing the instruction tuple.
+
+- :py:mod:`qibolab.instruments.simulator.backends.qutip_backend` module: This module provides a backend for Quantum Toolbox in Python (QuTiP) to simulate quantum devices.
+    - ``get_default_qutip_sim_opts``: Generates a default QuTiP simulation options object.
+    - :class:`qibolab.instruments.simulator.backends.qutip_backend.Qutip_Simulator`: This class builds pulse simulator components using the QuTiP backend. The pulse simulation is implemented by the `qevolve` function, which is called by the `PulseSimulator.play` method with `channel_waveforms` (:class:`dict`) as input. The `Qutip_Simulator` class does not directly interact with Qibolab. Instead, the `channel_waveforms` dictionary is generated from the `qibolab.pulses.PulseSequence` within the :class:`qibolab.instruments.pulse_simulator.PulseSimulator` class, which uses Qibolab primitives.
+    - ``make_arbitrary_state``: Creates a quantum state object using the given state data and dimensions.
+    - ``function_from_array``: Returns function given a output array y and an input array x.
+    - ``extend_op_dim``: general helper function to extend the dimension of the input operator from the local Hilbert space (typically involving 1 or 2 qubits) to a larger Hilbert space.
