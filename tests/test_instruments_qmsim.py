@@ -23,7 +23,7 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.pulses import SNZ, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Pulse, PulseSequence, Rectangular, Snz
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile
@@ -489,7 +489,7 @@ def test_qmsim_snz_pulse(simulator, folder, qubit):
     duration = 30
     amplitude = 0.01
     sequence = PulseSequence()
-    shape = SNZ(t_half_flux_pulse=duration // 2, b_amplitude=2)
+    shape = Snz(t_half_flux_pulse=duration // 2, b_amplitude=2)
     channel = simulator.qubits[qubit].flux.name
     qd_pulse = simulator.create_RX_pulse(qubit, start=0)
     flux_pulse = Pulse.flux(qd_pulse.finish, duration, amplitude, shape, channel, qubit)
