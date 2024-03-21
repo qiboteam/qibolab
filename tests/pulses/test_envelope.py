@@ -5,7 +5,13 @@ from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rec
 
 
 @pytest.mark.parametrize(
-    "shape", [Rectangular(), Gaussian(5), GaussianSquare(5, 0.9), Drag(5, 1)]
+    "shape",
+    [
+        Rectangular(),
+        Gaussian(rel_sigma=5),
+        GaussianSquare(rel_sigma=5, width=0.9),
+        Drag(rel_sigma=5, beta=1),
+    ],
 )
 def test_sampling_rate(shape):
     pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
