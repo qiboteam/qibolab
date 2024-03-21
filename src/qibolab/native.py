@@ -29,15 +29,21 @@ class TwoQubitNatives:
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Optional[PulseSequence] = field(default=None, metadata={"symmetric": True})
-    CNOT: Optional[PulseSequence] = field(default=None, metadata={"symmetric": False})
-    iSWAP: Optional[PulseSequence] = field(default=None, metadata={"symmetric": True})
+    CZ: PulseSequence = field(
+        default_factory=lambda: PulseSequence(), metadata={"symmetric": True}
+    )
+    CNOT: PulseSequence = field(
+        default_factory=lambda: PulseSequence(), metadata={"symmetric": False}
+    )
+    iSWAP: PulseSequence = field(
+        default_factory=lambda: PulseSequence(), metadata={"symmetric": True}
+    )
 
     @property
     def symmetric(self):
         """Check if the defined two-qubit gates are symmetric between target
         and control qubits."""
         return all(
-            fld.metadata["symmetric"] or getattr(self, fld.name) is None
+            fld.metadata["symmetric"] or len(getattr(self, fld.name)) == 0
             for fld in fields(self)
         )
