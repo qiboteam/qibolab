@@ -207,9 +207,7 @@ class RFSoC(Controller):
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
-            self.cfg.repetition_duration = (
-                execution_parameters.relaxation_time * NS_TO_US
-            )
+            self.cfg.relaxation_time = execution_parameters.relaxation_time * NS_TO_US
 
     def classify_shots(
         self,
