@@ -46,7 +46,7 @@ class Qutip_Simulator:
     def __init__(self, model_config: dict, sim_opts: Optional[Options] = None):
         """Initializes with qutip simulation backend with model_config and
         qutip simulation options.
-        
+
         Args:
             model_config (dict): Model configuration dictionary.
             sim_opts (`qutip.Options`, optional): Qutip simulation options. If None, default
@@ -65,8 +65,7 @@ class Qutip_Simulator:
 
     def update(self):
         """Updates the simulation backend by loading all parameters from
-        `self.model_config` and `self.sim_opts`.
-        """
+        `self.model_config` and `self.sim_opts`."""
         ### from model_config ###
         self.nlevels_q = self.model_config["nlevels_q"]  # as per runcard, big endian
         self.nlevels_c = self.model_config["nlevels_c"]  # as per runcard, big endian
@@ -203,7 +202,8 @@ class Qutip_Simulator:
     def make_arbitrary_state(
         self, statedata: np.ndarray, is_qibo_state_vector: bool = False
     ) -> Qobj:
-        """Creates a quantum state object of the full system Hilbert space using the given state data.
+        """Creates a quantum state object of the full system Hilbert space
+        using the given state data.
 
         Args:
             statedata (np.ndarray): The state data, in little endian order for compatibility with pulse simulation.
@@ -226,7 +226,8 @@ class Qutip_Simulator:
     def extend_op_dim(
         self, op_qobj: Qobj, op_indices_q: List[int] = [0], op_indices_c: List[int] = []
     ) -> Qobj:
-        """Extends the dimension of an operator from its local Hilbert space to the full system Hilbert space.
+        """Extends the dimension of an operator from its local Hilbert space to
+        the full system Hilbert space.
 
         Args:
             op_qobj (`qutip.Qobj`): The quantum object representation of the operator in the local Hilbert space.
@@ -245,8 +246,8 @@ class Qutip_Simulator:
         )
 
     def make_operator(self, op_instruction) -> Qobj:
-        """Constructs the operator specified by op_instruction as a Qobj and extends it
-        to the full system Hilbert space.
+        """Constructs the operator specified by op_instruction as a Qobj and
+        extends it to the full system Hilbert space.
 
         Args:
             op_instruction (tuple): The instruction tuple containing the coefficient, operator string, and a list of qubit IDs that the operator acts on. The operator string and the qubit ID list are required to be in little endian order, and should have consistent qubit IDs.
@@ -383,8 +384,8 @@ class Qutip_Simulator:
     def state_from_basis_vector(
         self, basis_vector: List[int], cbasis_vector: List[int] = None
     ) -> Qobj:
-        """Constructs the corresponding computational basis state of the generalized
-        Hilbert space specified by qubit_list.
+        """Constructs the corresponding computational basis state of the
+        generalized Hilbert space specified by qubit_list.
 
         Args:
             basis_vector (List[int]): Generalized bitstring that specifies the computational basis state corresponding to the qubits in big endian order.
@@ -537,8 +538,8 @@ def extend_op_dim(
     nlevels_q: List[int] = [2],
     nlevels_c: List[int] = [],
 ) -> Qobj:
-    """Extenda the dimension of the input operator from its local Hilbert space to a larger n-body Hilbert
-    space.
+    """Extenda the dimension of the input operator from its local Hilbert space
+    to a larger n-body Hilbert space.
 
     Args:
         op_qobj (`qutip.Qobj`): The quantum object representation of the operator in the local Hilbert space.

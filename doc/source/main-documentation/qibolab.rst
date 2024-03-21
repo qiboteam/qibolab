@@ -798,9 +798,9 @@ Emulator
 
 QiboLab supports the use of emulators to simulate the behavior of quantum devices. The key features of the emulator modules include:
 
-- :py:mod:`qibolab.emulator` module: Provides functionality for creating a general multi-qubit emulator platform. 
+- :py:mod:`qibolab.emulator` module: Provides functionality for creating a general multi-qubit emulator platform.
     - ``create_runcard_emulator`` function: Main function of the module.
-        - Takes the directory (:class:`str`) containing the runcard and an (initialized) :class:`qibolab.instruments.pulse_simulator.PulseSimulator` object as inputs. 
+        - Takes the directory (:class:`str`) containing the runcard and an (initialized) :class:`qibolab.instruments.pulse_simulator.PulseSimulator` object as inputs.
         - Loads the runcard and extracts the model configuration from the pulse simulator.
         - Prints out the emulator name, qubit and coupler names (:class:`str`), as well as the runcard's qubits and couplers names (:class:`str` or :class:`int`) for verification.
         - Prints out the sampling rate and simulation sampling boost factor from the simulation configuration of the pulse simulator for verification.
@@ -815,7 +815,7 @@ QiboLab supports the use of emulators to simulate the behavior of quantum device
     .. testcode:: python
 
         # device parameters: frequency in Hz, time in s
-        device_name = 'ibmfakebelemQ0'
+        device_name = "ibmfakebelemQ0"
         sampling_rate = 4500000000.0
         readout_error = [0.01, 0.02]
         lo_freq = 5090167234.445013
@@ -828,9 +828,9 @@ QiboLab supports the use of emulators to simulate the behavior of quantum device
         nlevel = 3
 
         # simulation parameters
-        sim_sampling_boost=10
-        simulate_dissipation=True
-        instant_measurement=True
+        sim_sampling_boost = 10
+        simulate_dissipation = True
+        instant_measurement = True
 
 
     - ``create_oneQ_emulator`` function: Main function of the module.
@@ -860,7 +860,7 @@ Simulator Models
 - :py:mod:`qibolab.instruments.models.general_no_coupler_model` module: Provides functionality for generating a model configuration for a general multi-qubit emulator platform without couplers.
     - ``generate_model_config``: Generates and returns a multi-qubit model configuration with the specified parameters.
     - ``generate_model_config_oneQ``: Generates and returns a one-qubit model configuration with the specified parameters.
-    
+
 - :py:mod:`qibolab.instruments.models.methods` module: Provides common functionalities for all other model modules.
     - ``load_model_params``: Loads a yaml file storing the model parameters into a dictionary.
     - ``default_noflux_platform2simulator_channels``: Constructs and returns the dictionary that specifies the default mapping between platform channel names to simulator chanel names.

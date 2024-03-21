@@ -17,6 +17,7 @@ Next, as with all platform create methods in Qibolab, we need the location of th
 
 .. code-block:: python
     from qibolab.instruments.simulator import emulator_test
+
     runcard_folder = f"{emulator_test.__path__[0]}/default_q0"
 
 Now, we can create the emulator using the `create_oneQ_emulator` function and the runcard folder:
@@ -48,6 +49,7 @@ We first import the `PulseSequence` object from `qibolab.pulses` and initialize 
 .. code-block:: python
 
     from qibolab.pulses import PulseSequence
+
     sequence = PulseSequence()
 
 Now, we retreive the native RX pulse and readout pulse of qubit 0 and add them to the pulse sequence.
@@ -65,7 +67,7 @@ We can plot the sequence to inspect it.
 .. code-block:: python
 
     sequence.plot()
-    
+
 .. image:: emulator/pulse_sequence.png
     :width: 800
     :align: center
@@ -75,6 +77,7 @@ Next we import the module `ExecutionParameters` from `qibolab.execution_paramete
 .. code-block:: python
 
     from qibolab.execution_parameters import ExecutionParameters
+
     options = ExecutionParameters(nshots=1000)
     results = emulator_platform.execute_pulse_sequence(sequence, options=options)
 
@@ -105,7 +108,7 @@ We can also print the simulation details.
 .. code-block:: python
 
     emulator_platform.instruments["pulse_simulator"].print_sim_details()
-    
+
 Each time a pulse sequence is simulated by the emulator, the pulse sequence and channel waveforms are added to their respective histories stored in the pulse simulator. Let us retrive the pulse sequence and channel waveform for the pulse sequence that we just executed. The full list of time steps simulated is recorded as part of the channel waveforms data.
 
 .. code-block:: python
@@ -148,4 +151,3 @@ Finally, we can check how the fidelity of the state with all computation basis s
 .. image:: emulator/fidelity_history.png
     :width: 500
     :align: center
-

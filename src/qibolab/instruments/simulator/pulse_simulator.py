@@ -101,8 +101,7 @@ class PulseSimulator(Controller):
 
     def update(self):
         """Updates the pulse simulator by loading all parameters from
-        `self.model_config` and `self.simulation_config`.
-        """
+        `self.model_config` and `self.simulation_config`."""
         self.simulation_backend_name = self.simulation_config["simulation_backend_name"]
         self.device_name = self.model_config["device_name"]
         self.model_name = self.model_config["model_name"]
@@ -156,8 +155,8 @@ class PulseSimulator(Controller):
         ro_qubit_list: list,
         readout_error: Optional[dict] = None,
     ) -> dict[Union[str, int], list]:
-        """Gets samples from a the density matrix corresponding
-        to the system or subsystem specified by the ordered qubit indices.
+        """Gets samples from a the density matrix corresponding to the system
+        or subsystem specified by the ordered qubit indices.
 
         Args:
             nshots (int): Number of shots corresponding to the number of samples in the output.
@@ -390,7 +389,7 @@ class PulseSimulator(Controller):
             results objects.
         """
         append_to_shape = [len(sweep.values) for sweep in sweeper]
-        
+
         # Record pulse values before sweeper modification
         bsv = []
         for sweep in sweeper:
@@ -522,7 +521,8 @@ class PulseSimulator(Controller):
         dict_a: """dict[str, Union[IntegratedResults, SampleResults]]""",
         dict_b: """dict[str, Union[IntegratedResults, SampleResults]]""",
     ) -> """dict[str, Union[IntegratedResults, SampleResults]]""":
-        """Merges two dictionary mapping pulse serial to Qibolab results object.
+        """Merges two dictionary mapping pulse serial to Qibolab results
+        object.
 
         If dict_b has a key (serial) that dict_a does not have, simply add it,
         otherwise sum the two results
