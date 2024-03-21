@@ -463,24 +463,24 @@ class Platform:
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
-    def create_RX90_drag_pulse(self, qubit, start, beta, relative_phase=0):
+    def create_RX90_drag_pulse(self, qubit, beta, relative_phase=0):
         """Create native RX90 pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
         pulse = qubit.native_gates.RX90
         return replace(
             pulse,
             relative_phase=relative_phase,
-            shape=Drag(pulse.shape.rel_sigma, beta),
+            shape=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
             channel=qubit.drive.name,
         )
 
-    def create_RX_drag_pulse(self, qubit, start, beta, relative_phase=0):
+    def create_RX_drag_pulse(self, qubit, beta, relative_phase=0):
         """Create native RX pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
         pulse = qubit.native_gates.RX
         return replace(
             pulse,
             relative_phase=relative_phase,
-            shape=Drag(pulse.shape.rel_sigma, beta),
+            shape=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
             channel=qubit.drive.name,
         )
