@@ -62,7 +62,7 @@ class ProcessedSweeps:
         parallel_sweeps = []
         for sweeper in sweepers:
             for pulse in sweeper.pulses or []:
-                if sweeper.parameter in (Parameter.duration, Parameter.start):
+                if sweeper.parameter is Parameter.duration:
                     sweep_param = lo.SweepParameter(
                         values=sweeper.values * NANO_TO_SECONDS
                     )
