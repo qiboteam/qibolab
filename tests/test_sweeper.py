@@ -5,8 +5,6 @@ from qibolab.pulses import Pulse, Rectangular
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
-Rectangular = Envelopes.RECTANGULAR.value
-
 
 @pytest.mark.parametrize("parameter", Parameter)
 def test_sweeper_pulses(parameter):
