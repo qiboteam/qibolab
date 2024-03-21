@@ -6,18 +6,16 @@ import numpy as np
 import pytest
 
 from qibolab.pulses import (
-    IIR,
-    SNZ,
     Custom,
     Drag,
+    ECap,
     Gaussian,
     GaussianSquare,
+    Iir,
     Pulse,
-    PulseShape,
     PulseType,
     Rectangular,
-    ShapeInitError,
-    eCap,
+    Snz,
 )
 
 
@@ -105,10 +103,10 @@ def test_init():
     p8 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
     p9 = Pulse(40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
     p10 = Pulse.flux(
-        40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), channel=0, qubit=200
+        40, 0.9, Iir([-1, 1], [-0.1, 0.1001], Rectangular()), channel=0, qubit=200
     )
-    p11 = Pulse.flux(40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), channel=0, qubit=200)
-    p13 = Pulse(40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
+    p11 = Pulse.flux(40, 0.9, Snz(t_idling=10, b_amplitude=0.5), channel=0, qubit=200)
+    p13 = Pulse(40, 0.9, 400e6, 0, ECap(alpha=2), 0, PulseType.DRIVE)
     p14 = Pulse(40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.READOUT, 2)
 
     # initialisation with float duration
