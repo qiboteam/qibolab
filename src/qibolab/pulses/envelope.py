@@ -16,6 +16,15 @@ __all__ = [
     "IqWaveform",
     "Envelope",
     "Envelopes",
+    "Rectangular",
+    "Exponential",
+    "Gaussian",
+    "GaussianSquare",
+    "Drag",
+    "Iir",
+    "Snz",
+    "ECap",
+    "Custom",
 ]
 
 
