@@ -454,7 +454,7 @@ class RFSoC(Controller):
                 for pulse in original_ro
                 if qubits[pulse.qubit].feedback.port.name == k_val
             ]
-            for i, (ro_pulse, original_ro_pulse) in enumerate(zip(adc_ro, original_ro)):
+            for i, ro_pulse in enumerate(adc_ro):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
 
@@ -466,7 +466,7 @@ class RFSoC(Controller):
                     execution_parameters.acquisition_type
                     is AcquisitionType.DISCRIMINATION
                 ):
-                    qubit = qubits[original_ro_pulse.qubit]
+                    qubit = qubits[ro_pulse.qubit]
                     discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
                         discriminated_shots = np.mean(discriminated_shots, axis=0)
@@ -474,7 +474,7 @@ class RFSoC(Controller):
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
-                results[original_ro_pulse.qubit] = results[ro_pulse.serial] = result
+                results[ro_pulse.qubit] = results[ro_pulse.serial] = result
         return results
 
     def sweep(
