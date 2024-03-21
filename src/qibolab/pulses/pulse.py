@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Optional, Union
 
 import numpy as np
+from pydantic import BaseModel
 
 from qibolab.serialize_ import Model
 
