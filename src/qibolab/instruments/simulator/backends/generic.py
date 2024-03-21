@@ -195,15 +195,15 @@ def print_Hamiltonian(model_config, op_qid_list: list = None):
     }
     for k in op_qid_list:
         latex_op_dict["b"].update({k: f"b_{k}"})
-        latex_op_dict["bdag"].update({k: fr"b^{{\dagger}}_{k}"})
+        latex_op_dict["bdag"].update({k: rf"b^{{\dagger}}_{k}"})
         latex_op_dict["O"].update({k: f"O_{k}"})
         latex_op_dict["X"].update({k: f"X_{k}"})
-        latex_op_dict["Z01"].update({k: fr"\sigma^Z_{k}"})
-        latex_op_dict["sp01"].update({k: fr"\sigma^+_{k}"})
+        latex_op_dict["Z01"].update({k: rf"\sigma^Z_{k}"})
+        latex_op_dict["sp01"].update({k: rf"\sigma^+_{k}"})
 
     latex_op_connectors_dict = OrderedDict(
         [
-            ("^", lambda a, b: fr"{a}{{\otimes}}{b}"),
+            ("^", lambda a, b: rf"{a}{{\otimes}}{b}"),
             ("*", lambda a, b: f"{a}{b}"),
             ("+", lambda a, b: f"{a}+{b}"),
             ("-", lambda a, b: f"{a}-{b}"),
@@ -211,8 +211,8 @@ def print_Hamiltonian(model_config, op_qid_list: list = None):
     )
 
     basic_dict = [
-        fr"$O_i = b^{{\dagger}}_i b_i$",
-        fr"$X_i = b^{{\dagger}}_i + b_i$",
+        rf"$O_i = b^{{\dagger}}_i b_i$",
+        rf"$X_i = b^{{\dagger}}_i + b_i$",
     ]
     print("Dictionary")
     for i in basic_dict:

@@ -1,13 +1,10 @@
-
 import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.simulator import emulator_test
 from qibolab.oneQ_emulator import create_oneQ_emulator
-from qibolab.pulses import (
-    PulseSequence,
-)
+from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 # pulse_simulator = emulator_platform.instruments['pulse_simulator']
