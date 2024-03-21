@@ -1,0 +1,54 @@
+nqubits: 5
+description: IBM 5-qubit device FakeBelem, q0 and q1 only
+
+settings:
+    nshots: 4096
+    #sampling_rate: 4500000000 #1e9
+    relaxation_time: 300_000
+    #chip: ibmfakebelem5q
+
+qubits: [0]
+couplers: []
+
+topology: []
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 35.55555555555556 #80
+                amplitude: 0.24045125169257026 #0.051 #
+                frequency: 5090167234.445013 #1131148274.321114
+                shape: Drag(4, -2.4305800297101414) #Rectangular() #
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 4977.777777777777
+                amplitude: 0.03
+                frequency: 7301661824.000001 #1622591516.4444447
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+                phase: 1.5636758979377372
+
+characterization:
+    single_qubit:
+        0:
+            readout_frequency: 7301661824.000001
+            #resonator_polycoef_flux: []
+            drive_frequency: 5090167234.445013
+            anharmonicity: 0
+            Ec: 0
+            Ej: 0
+            g: 0
+            T1: 0.0
+            T2: 0.0
+            sweetspot: 0
+            # filter: {}
+            mean_gnd_states: 1.5417+0.1817j
+            mean_exc_states: 2.5332-0.5914j
+            # parameters for single shot classification
+            threshold: 1.5435
+            iq_angle:  2.602
+            anharmonicity: 217_492_000
