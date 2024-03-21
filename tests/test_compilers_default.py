@@ -37,7 +37,7 @@ def compile_circuit(circuit, platform):
 
 
 @pytest.mark.parametrize(
-    "gateargs,sequence_len",
+    "gateargs",
     [
         ((gates.I,), 1),
         ((gates.Z,), 2),
@@ -47,11 +47,11 @@ def compile_circuit(circuit, platform):
         ((gates.U3, 0.1, 0.2, 0.3), 10),
     ],
 )
-def test_compile(platform, gateargs, sequence_len):
+def test_compile(platform, gateargs):
     nqubits = platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == nqubits * sequence_len
+    assert len(sequence) == nqubits * nseq
 
 
 def test_compile_two_gates(platform):
