@@ -154,7 +154,7 @@ def sequence(ps: PulseSequence, filename=None):
                         start += pulse.duration
                         continue
 
-                    envelope = pulse.shape.envelope_waveforms(sampling_rate)
+                    envelope = pulse.envelopes(SAMPLING_RATE)
                     num_samples = envelope[0].size
                     time = start + np.arange(num_samples) / SAMPLING_RATE
                     modulated = modulate(np.array(envelope), pulse.frequency)
