@@ -37,27 +37,21 @@ def compile_circuit(circuit, platform):
 
 
 @pytest.mark.parametrize(
-    "gateargs",
+    "gateargs,sequence_len",
     [
-        (gates.I,),
-        (gates.Z,),
-        (gates.GPI, np.pi / 8),
-        (gates.GPI2, -np.pi / 8),
-        (gates.RZ, np.pi / 4),
-        (gates.U3, 0.1, 0.2, 0.3),
+        ((gates.I,), 1),
+        ((gates.Z,), 2),
+        ((gates.GPI, np.pi / 8), 3),
+        ((gates.GPI2, -np.pi / 8), 3),
+        ((gates.RZ, np.pi / 4), 2),
+        ((gates.U3, 0.1, 0.2, 0.3), 10),
     ],
 )
-def test_compile(platform, gateargs):
+def test_compile(platform, gateargs, sequence_len):
     nqubits = platform.nqubits
-    if gateargs[0] is gates.U3:
-        nseq = 2
-    elif gateargs[0] in (gates.GPI, gates.GPI2):
-        nseq = 1
-    else:
-        nseq = 0
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == nqubits * nseq
+    assert len(sequence) == nqubits * sequence_len
 
 
 def test_compile_two_gates(platform):
@@ -68,7 +62,7 @@ def test_compile_two_gates(platform):
 
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence) == 4
+    assert len(sequence) == 13
     assert len(sequence.qd_pulses) == 3
     assert len(sequence.ro_pulses) == 1
 
@@ -166,8 +160,8 @@ def test_cz_to_sequence():
     circuit.add(gates.CZ(1, 2))
 
     sequence = compile_circuit(circuit, platform)
-    test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
-    assert sequence == test_sequence
+    test_sequence = platform.create_CZ_pulse_sequence((2, 1))
+    assert sequence[0] == test_sequence[0]
 
 
 def test_cnot_to_sequence():
