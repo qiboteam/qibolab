@@ -198,15 +198,14 @@ def _dump_single_qubit_natives(natives: SingleQubitNatives):
 def _dump_two_qubit_natives(natives: TwoQubitNatives):
     data = {}
     for fld in fields(natives):
-        if getattr(natives, fld.name) is None:
-            continue
         sequence = getattr(natives, fld.name)
-        data[fld.name] = []
-        for pulse in sequence:
-            pulse_serial = _dump_pulse(pulse)
-            if pulse.type == PulseType.COUPLERFLUX:
-                pulse_serial["coupler"] = pulse_serial.pop("qubit")
-            data[fld.name].append(pulse_serial)
+        if len(sequence) > 0:
+            data[fld.name] = []
+            for pulse in sequence:
+                pulse_serial = _dump_pulse(pulse)
+                if pulse.type == PulseType.COUPLERFLUX:
+                    pulse_serial["coupler"] = pulse_serial.pop("qubit")
+                data[fld.name].append(pulse_serial)
     return data
 
 
