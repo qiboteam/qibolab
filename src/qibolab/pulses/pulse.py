@@ -5,7 +5,8 @@ from enum import Enum
 from typing import Optional
 
 import numpy as np
-from pydantic import BaseModel
+
+from qibolab.serialize_ import Model
 
 from .envelope import Envelope, IqWaveform, Times, Waveform
 
@@ -26,7 +27,7 @@ class PulseType(Enum):
     VIRTUALZ = "vz"
 
 
-class Pulse(BaseModel):
+class Pulse(Model):
     """A pulse to be sent to the QPU."""
 
     duration: int
@@ -119,7 +120,7 @@ class Pulse(BaseModel):
         )
 
 
-class Delay(BaseModel):
+class Delay(Model):
     """A wait instruction during which we are not sending any pulses to the
     QPU."""
 
@@ -131,10 +132,10 @@ class Delay(BaseModel):
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
 
-class VirtualZ(BaseModel):
+class VirtualZ(Model):
     """Implementation of Z-rotations using virtual phase."""
 
-    duration = 0
+    duration: int = 0
     """Duration of the virtual gate should always be zero."""
 
     phase: float

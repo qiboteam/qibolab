@@ -7,9 +7,10 @@ from typing import Union
 
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel
 from scipy.signal import lfilter
 from scipy.signal.windows import gaussian
+
+from qibolab.serialize_ import Model, NdArray
 
 __all__ = [
     "Times",
@@ -61,7 +62,7 @@ class Times:
         return np.linspace(0, self.duration, self.samples)
 
 
-class BaseEnvelope(ABC, BaseModel):
+class BaseEnvelope(ABC, Model):
     """Pulse envelopes.
 
     Generates both i (in-phase) and q (quadrature) components.
@@ -211,8 +212,8 @@ class Iir(BaseEnvelope):
         p = [b0, b1, a0, a1]
     """
 
-    a: npt.NDArray
-    b: npt.NDArray
+    a: NdArray
+    b: NdArray
     target: BaseEnvelope
 
     def _data(self, target: npt.NDArray) -> npt.NDArray:
