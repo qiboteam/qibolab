@@ -10,7 +10,7 @@ from qibo.config import log, raise_error
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Drag, PulseSequence, PulseType
+from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 from qibolab.unrolling import batch
