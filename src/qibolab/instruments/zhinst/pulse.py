@@ -86,7 +86,7 @@ class ZhPulse:
         """Laboneq sweep parameter if the delay of the pulse should be
         swept."""
 
-    # pylint: disable=R0903
+    # pylint: disable=R0903,E1101
     def add_sweeper(self, param: Parameter, sweeper: lo.SweepParameter):
         """Add sweeper to list of sweepers associated with this pulse."""
         if param in {
@@ -97,6 +97,7 @@ class ZhPulse:
         }:
             self.zhsweepers.append((param, sweeper))
         elif param is Parameter.start:
+            # TODO: Change this case to ``Delay.duration``
             if self.delay_sweeper:
                 raise ValueError(
                     "Cannot have multiple delay sweepers for a single pulse"
