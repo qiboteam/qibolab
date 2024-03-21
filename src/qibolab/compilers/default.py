@@ -9,30 +9,27 @@ from dataclasses import replace
 from qibolab.pulses import PulseSequence, VirtualZ
 
 
-def identity_rule(gate, platform):
+def identity_rule(gate, qubit):
     """Identity gate skipped."""
     return PulseSequence()
 
 
-def z_rule(gate, platform):
+def z_rule(gate, qubit):
     """Z gate applied virtually."""
-    qubit = platform.get_qubit(gate.target_qubits[0])
     return PulseSequence(
         [VirtualZ(phase=math.pi, channel=qubit.drive.name, qubit=qubit.name)]
     )
 
 
-def rz_rule(gate, platform):
+def rz_rule(gate, qubit):
     """RZ gate applied virtually."""
-    qubit = platform.get_qubit(gate.target_qubits[0])
     return PulseSequence(
         [VirtualZ(phase=gate.parameters[0], channel=qubit.drive.name, qubit=qubit.name)]
     )
 
 
-def gpi2_rule(gate, platform):
+def gpi2_rule(gate, qubit):
     """Rule for GPI2."""
-    qubit = platform.get_qubit(gate.target_qubits[0])
     theta = gate.parameters[0]
     sequence = PulseSequence()
     pulse = qubit.native_gates.RX90
@@ -41,9 +38,8 @@ def gpi2_rule(gate, platform):
     return sequence
 
 
-def gpi_rule(gate, platform):
+def gpi_rule(gate, qubit):
     """Rule for GPI."""
-    qubit = platform.get_qubit(gate.target_qubits[0])
     theta = gate.parameters[0]
     sequence = PulseSequence()
     # the following definition has a global phase difference compare to
@@ -56,9 +52,8 @@ def gpi_rule(gate, platform):
     return sequence
 
 
-def u3_rule(gate, platform):
+def u3_rule(gate, qubit):
     """U3 applied as RZ-RX90-RZ-RX90-RZ."""
-    qubit = platform.get_qubit(gate.target_qubits[0])
     # Transform gate to U3 and add pi/2-pulses
     theta, phi, lam = gate.parameters
     # apply RZ(lam)
@@ -76,25 +71,20 @@ def u3_rule(gate, platform):
     return sequence
 
 
-def cz_rule(gate, platform):
+def cz_rule(gate, pair):
     """CZ applied as defined in the platform runcard.
 
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    pair = platform.pairs[tuple(platform.get_qubit(q).name for q in gate.qubits)]
     return pair.native_gates.CZ
 
 
-def cnot_rule(gate, platform):
+def cnot_rule(gate, pair):
     """CNOT applied as defined in the platform runcard."""
-    pair = platform.pairs[tuple(platform.get_qubit(q).name for q in gate.qubits)]
     return pair.native_gates.CNOT
 
 
-def measurement_rule(gate, platform):
+def measurement_rule(gate, qubits):
     """Measurement gate applied using the platform readout pulse."""
-    sequence = PulseSequence(
-        [platform.get_qubit(q).native_gates.MZ for q in gate.qubits]
-    )
-    return sequence
+    return PulseSequence([qubit.native_gates.MZ for qubit in qubits])
