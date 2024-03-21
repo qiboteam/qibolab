@@ -152,7 +152,6 @@ def _(
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
-
             base_value = qubit.flux.offset
             values = sweeper.get_values(base_value)
             starts.append(values[0])
