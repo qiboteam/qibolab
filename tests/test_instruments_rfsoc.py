@@ -20,10 +20,6 @@ from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument
 
-Rectangular = Envelopes.RECTANGULAR.value
-Gaussian = Envelopes.GAUSSIAN.value
-Drag = Envelopes.DRAG.value
-
 
 def test_convert_default(dummy_qrc):
     """Test convert function raises errors when parameter have wrong types."""
