@@ -96,7 +96,7 @@ class PulseSequence(list):
     @property
     def pulses_per_channel(self):
         """Return a dictionary with the sequence per channel."""
-        sequences = defaultdict(self.__class__)
+        sequences = defaultdict(type(self))
         for pulse in self:
             sequences[pulse.channel].append(pulse)
         return sequences
