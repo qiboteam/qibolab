@@ -16,14 +16,14 @@ from qibolab.instruments.zhinst import (
     measure_channel_name,
 )
 from qibolab.pulses import (
-    IIR,
-    SNZ,
     Drag,
     Gaussian,
+    Iir,
     Pulse,
     PulseSequence,
     PulseType,
     Rectangular,
+    Snz,
 )
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import batch
@@ -38,13 +38,13 @@ from .conftest import get_instrument
         Pulse(40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0),
         Pulse(40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0),
         Pulse(40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0),
-        Pulse(40, 0.05, int(3e9), 0.0, SNZ(10, 0.01), "ch0", qubit=0),
+        Pulse(40, 0.05, int(3e9), 0.0, Snz(10, 0.01), "ch0", qubit=0),
         Pulse(
             40,
             0.05,
             int(3e9),
             0.0,
-            IIR([10, 1], [0.4, 1], target=Gaussian(5)),
+            Iir([10, 1], [0.4, 1], target=Gaussian(5)),
             "ch0",
             qubit=0,
         ),
@@ -54,7 +54,7 @@ def test_zhpulse_pulse_conversion(pulse):
     shape = pulse.shape
     zhpulse = ZhPulse(pulse).zhpulse
     assert isinstance(zhpulse, laboneq_pulse.Pulse)
-    if isinstance(shape, (SNZ, IIR)):
+    if isinstance(shape, (Snz, Iir)):
         assert len(zhpulse.samples) == 80
     else:
         assert zhpulse.length == 40e-9
@@ -251,8 +251,9 @@ def test_zhsequence(dummy_qrc):
     IQM5q = create_platform("zurich")
     controller = IQM5q.instruments["EL_ZURO"]
 
-    drive_channel, readout_channel = IQM5q.qubits[0].drive.name, measure_channel_name(
-        IQM5q.qubits[0]
+    drive_channel, readout_channel = (
+        IQM5q.qubits[0].drive.name,
+        measure_channel_name(IQM5q.qubits[0]),
     )
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
     ro_pulse = Pulse(
@@ -285,8 +286,9 @@ def test_zhsequence_couplers(dummy_qrc):
     IQM5q = create_platform("zurich")
     controller = IQM5q.instruments["EL_ZURO"]
 
-    drive_channel, readout_channel = IQM5q.qubits[0].drive.name, measure_channel_name(
-        IQM5q.qubits[0]
+    drive_channel, readout_channel = (
+        IQM5q.qubits[0].drive.name,
+        measure_channel_name(IQM5q.qubits[0]),
     )
     couplerflux_channel = IQM5q.couplers[0].flux.name
     qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
