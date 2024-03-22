@@ -1,11 +1,13 @@
 """RFSoC FPGA driver."""
 
+import re
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 import qibosoq.components.base as rfsoc
+from qibo.config import log
 from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -90,7 +92,19 @@ class RFSoC(Controller):
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
-        return client.connect(server_commands, self.host, self.port)
+        try:
+            return client.connect(server_commands, self.host, self.port)
+        except RuntimeError as e:
+            if "exception in readout loop" in str(e):
+                log.warning(
+                    "Exception in readout loop. Attempting again",
+                    "You may want to increase the relaxation time.",
+                )
+                return client.connect(server_commands, self.host, self.port)
+            buffer_overflow = r"buffer length must be \d+ samples or less"
+            if bool(re.search(buffer_overflow, str(e))):
+                log.warning("Buffer full! Use shorter pulses.")
+            raise (e)
 
     def _execute_sweeps(
         self,
@@ -116,7 +130,16 @@ class RFSoC(Controller):
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
             "sweepers": [sweeper.serialized for sweeper in sweepers],
         }
-        return client.connect(server_commands, self.host, self.port)
+        try:
+            return client.connect(server_commands, self.host, self.port)
+        except RuntimeError as e:
+            if "exception in readout loop" in str(e):
+                log.warning("Exception in readout loop. Attempting again.")
+                return client.connect(server_commands, self.host, self.port)
+            buffer_overflow = r"buffer length must be \d+ samples or less"
+            if bool(re.search(buffer_overflow, str(e))):
+                log.warning("Buffer full! Use shorter pulses.")
+            raise (e)
 
     def play(
         self,
