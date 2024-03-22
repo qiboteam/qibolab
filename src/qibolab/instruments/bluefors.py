@@ -1,12 +1,11 @@
 import json
 import re
 import socket
+from datetime import datetime
 
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
-
-# from datetime import datetime
 
 
 class TemperatureController(Instrument):
@@ -61,6 +60,8 @@ class TemperatureController(Instrument):
         message = re.sub("'", '"', message)
         message = ",".join(message.split("\n"))
         dictionary_message = json.loads("{" + message + "}")
+        for flange_values in dictionary_message.values():
+            flange_values["time"] = datetime.fromtimestamp(flange_values["timestamp"])
         return dictionary_message
 
     def get_data(self) -> dict[str, dict[str, float]]:
