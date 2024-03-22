@@ -4,32 +4,43 @@ import socket
 
 from qibo.config import log
 
+from qibolab.instruments.abstract import Instrument
+
 # from datetime import datetime
 
 
-class TemperatureController:
+class TemperatureController(Instrument):
     """Bluefors temperature controller."""
 
-    def __init__(self, ip_address: str, port: int = 8888):
+    def __init__(self, name: str, address: str, port: int = 8888):
         """Creation of the controller object.
 
         Args:
-            ip_address (str): IP address of the board sending cryo temperature data.
+            name (str): name of the instrument.
+            address (str): IP address of the board sending cryo temperature data.
             port (int): port of the board sending cryo temperature data.
         """
-        self.ip_address = ip_address
         self.port = port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.is_connected = False
+        super().__init__(name, address)
 
     def connect(self):
         """Connect to the socket."""
         if self.is_connected:
             return
-        log.error(f"Bluefors connection. IP: {self.ip_address} Port: {self.port}")
-        self.client_socket.connect((self.ip_address, self.port))
+        log.error(f"Bluefors connection. IP: {self.address} Port: {self.port}")
+        self.client_socket.connect((self.address, self.port))
         self.is_connected = True
         log.info("Bluefors Temperature Controller Connected")
+
+    def disconnect(self):
+        """Disconnect from the socket."""
+        if self.is_connected:
+            self.client_socket.close()
+
+    def setup(self):
+        """Required by parent class, but not used here."""
+        pass
 
     def convert_to_json(self, message: str) -> dict[str, dict[str, float]]:
         """Convert the received socket message into a dictionary.
@@ -68,7 +79,7 @@ class TemperatureController:
 
 # Example usage
 if __name__ == "__main__":
-    tc = TemperatureController("192.168.0.114", 8888)
+    tc = TemperatureController("XLD1000_Temperature_Controller", "192.168.0.114", 8888)
     tc.connect()
     temperature_values = tc.read_data()
     for temperature_value in temperature_values:
