@@ -171,7 +171,7 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             qibolab results objects
         """
-        if not couplers:
+        if couplers != {}:
             raise NotImplementedError(
                 "The RFSoC driver currently does not support couplers."
             )
@@ -534,7 +534,7 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         """
-        if not couplers:
+        if couplers != {}:
             raise NotImplementedError(
                 "The RFSoC driver currently does not support couplers."
             )
