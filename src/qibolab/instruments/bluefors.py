@@ -43,7 +43,8 @@ class TemperatureController(Instrument):
         """Required by parent class, but not used here."""
         pass
 
-    def convert_to_json(self, message: str) -> dict[str, dict[str, float]]:
+    @staticmethod
+    def convert_to_json(message: str) -> dict[str, dict[str, float]]:
         """Convert the received socket message into a dictionary.
 
         The typical message looks like this:
