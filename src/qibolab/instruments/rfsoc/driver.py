@@ -97,6 +97,7 @@ class RFSoC(Controller):
         except RuntimeError as e:
             if "exception in readout loop" in str(e):
                 log.warning(
+                    "%s %s",
                     "Exception in readout loop. Attempting again",
                     "You may want to increase the relaxation time.",
                 )
@@ -104,7 +105,7 @@ class RFSoC(Controller):
             buffer_overflow = r"buffer length must be \d+ samples or less"
             if bool(re.search(buffer_overflow, str(e))):
                 log.warning("Buffer full! Use shorter pulses.")
-            raise (e)
+            raise e
 
     def _execute_sweeps(
         self,
@@ -134,12 +135,16 @@ class RFSoC(Controller):
             return client.connect(server_commands, self.host, self.port)
         except RuntimeError as e:
             if "exception in readout loop" in str(e):
-                log.warning("Exception in readout loop. Attempting again.")
+                log.warning(
+                    "%s %s",
+                    "Exception in readout loop. Attempting again",
+                    "You may want to increase the relaxation time.",
+                )
                 return client.connect(server_commands, self.host, self.port)
             buffer_overflow = r"buffer length must be \d+ samples or less"
             if bool(re.search(buffer_overflow, str(e))):
                 log.warning("Buffer full! Use shorter pulses.")
-            raise (e)
+            raise e
 
     def play(
         self,
@@ -166,6 +171,11 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             qibolab results objects
         """
+        if not couplers:
+            raise NotImplementedError(
+                "The RFSoC driver currently does not support couplers."
+            )
+
         self.validate_input_command(sequence, execution_parameters, sweep=False)
         self.update_cfg(execution_parameters)
 
@@ -353,7 +363,6 @@ class RFSoC(Controller):
                         sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx]
                     )
                 elif sweeper is rfsoc.Parameter.DELAY:
-                    start_delay = values[jdx][idx]
                     sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
@@ -525,6 +534,11 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         """
+        if not couplers:
+            raise NotImplementedError(
+                "The RFSoC driver currently does not support couplers."
+            )
+
         self.validate_input_command(sequence, execution_parameters, sweep=True)
         self.update_cfg(execution_parameters)
 
