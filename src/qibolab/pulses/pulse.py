@@ -42,14 +42,14 @@ class Pulse(Model):
 
     The value has to be in the range [10e6 to 300e6].
     """
-    relative_phase: float
-    """Relative phase of the pulse, in radians."""
     envelope: Envelope
     """The pulse envelope shape.
 
     See
     :cls:`qibolab.pulses.envelope.Envelopes` for list of available shapes.
     """
+    relative_phase: float = 0.0
+    """Relative phase of the pulse, in radians."""
     channel: Optional[str] = None
     """Channel on which the pulse should be played.
 
