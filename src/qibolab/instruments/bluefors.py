@@ -37,6 +37,7 @@ class TemperatureController(Instrument):
         """Disconnect from the socket."""
         if self.is_connected:
             self.client_socket.close()
+            self.is_connected = False
 
     def setup(self):
         """Required by parent class, but not used here."""
