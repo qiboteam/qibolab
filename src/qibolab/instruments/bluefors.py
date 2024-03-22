@@ -9,7 +9,18 @@ from qibolab.instruments.abstract import Instrument
 
 
 class TemperatureController(Instrument):
-    """Bluefors temperature controller."""
+    """Bluefors temperature controller.
+
+    ```
+    # Example usage
+    if __name__ == "__main__":
+        tc = TemperatureController("XLD1000_Temperature_Controller", "192.168.0.114", 8888)
+        tc.connect()
+        temperature_values = tc.read_data()
+        for temperature_value in temperature_values:
+            print(temperature_value)
+    ```
+    """
 
     def __init__(self, name: str, address: str, port: int = 8888):
         """Creation of the controller object.
@@ -78,12 +89,3 @@ class TemperatureController(Instrument):
         """Continously read data from the temperature controller."""
         while True:
             yield self.get_data()
-
-
-# Example usage
-if __name__ == "__main__":
-    tc = TemperatureController("XLD1000_Temperature_Controller", "192.168.0.114", 8888)
-    tc.connect()
-    temperature_values = tc.read_data()
-    for temperature_value in temperature_values:
-        print(temperature_value)
