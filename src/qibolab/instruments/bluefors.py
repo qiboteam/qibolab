@@ -38,7 +38,7 @@ class TemperatureController(Instrument):
         """Connect to the socket."""
         if self.is_connected:
             return
-        log.error(f"Bluefors connection. IP: {self.address} Port: {self.port}")
+        log.info(f"Bluefors connection. IP: {self.address} Port: {self.port}")
         self.client_socket.connect((self.address, self.port))
         self.is_connected = True
         log.info("Bluefors Temperature Controller Connected")
