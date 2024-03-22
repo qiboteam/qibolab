@@ -2,7 +2,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
-    devenv.url = "github:cachix/devenv";
+    devenv = {
+      url = "github:cachix/devenv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixpkgs-python = {
       url = "github:cachix/nixpkgs-python";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -35,8 +38,6 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
-        lib = pkgs.lib;
-        isDarwin = lib.strings.hasSuffix "darwin" system;
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
@@ -48,7 +49,7 @@
               config,
               ...
             }: {
-              packages = with pkgs; [pre-commit poethepoet jupyter zlib] ++ lib.optionals isDarwin [stdenv.cc.cc.lib];
+              packages = with pkgs; [pre-commit poethepoet jupyter zlib];
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
