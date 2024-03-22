@@ -3,10 +3,11 @@
 from abc import ABC
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Union
+from typing import Annotated, Literal, Union
 
 import numpy as np
 import numpy.typing as npt
+from pydantic import Field
 from scipy.signal import lfilter
 from scipy.signal.windows import gaussian
 
@@ -84,6 +85,8 @@ class BaseEnvelope(ABC, Model):
 class Rectangular(BaseEnvelope):
     """Rectangular envelope."""
 
+    kind: Literal["rectangular"]
+
     def i(self, times: Times) -> Waveform:
         """Generate a rectangular envelope."""
         return np.ones(times.samples)
@@ -96,6 +99,8 @@ class Exponential(BaseEnvelope):
 
         A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
     """
+
+    kind: Literal["exponential"]
 
     tau: float
     """The decay rate of the first exponential function."""
@@ -132,6 +137,8 @@ class Gaussian(BaseEnvelope):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
     """
 
+    kind: Literal["gaussian"]
+
     rel_sigma: float
     """Relative Gaussian standard deviation.
 
@@ -150,6 +157,8 @@ class GaussianSquare(BaseEnvelope):
 
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
     """
+
+    kind: Literal["gaussian_square"]
 
     rel_sigma: float
     """Relative Gaussian standard deviation.
@@ -179,6 +188,8 @@ class Drag(BaseEnvelope):
         - add expression
         - add reference
     """
+
+    kind: Literal["drag"]
 
     rel_sigma: float
     """Relative Gaussian standard deviation.
@@ -211,6 +222,8 @@ class Iir(BaseEnvelope):
         p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
         p = [b0, b1, a0, a1]
     """
+
+    kind: Literal["iir"]
 
     a: NdArray
     b: NdArray
@@ -246,6 +259,8 @@ class Snz(BaseEnvelope):
         - expression
     """
 
+    kind: Literal["snz"]
+
     t_idling: float
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
@@ -278,6 +293,8 @@ class ECap(BaseEnvelope):
         &\times& [1 + \tanh(\alpha/2)]^{-2}
     """
 
+    kind: Literal["ecap"]
+
     alpha: float
 
     def i(self, times: Times) -> Waveform:
@@ -299,6 +316,8 @@ class Custom(BaseEnvelope):
         - add attribute docstrings
     """
 
+    kind: Literal["custom"]
+
     i_: npt.NDArray
     q_: npt.NDArray
 
@@ -311,15 +330,18 @@ class Custom(BaseEnvelope):
         raise NotImplementedError
 
 
-Envelope = Union[
-    Rectangular,
-    Exponential,
-    Gaussian,
-    GaussianSquare,
-    Drag,
-    Iir,
-    Snz,
-    ECap,
-    Custom,
+Envelope = Annotated[
+    Union[
+        Rectangular,
+        Exponential,
+        Gaussian,
+        GaussianSquare,
+        Drag,
+        Iir,
+        Snz,
+        ECap,
+        Custom,
+    ],
+    Field(discriminator="kind"),
 ]
 """Available pulse shapes."""

@@ -31,14 +31,14 @@
         "RX": {
           "duration": 40,
           "amplitude": 0.1,
-          "envelope": { "rel_sigma": 5 },
+          "envelope": { "kind": "gaussian", "rel_sigma": 5 },
           "frequency": 4000000000.0,
           "type": "qd"
         },
         "RX12": {
           "duration": 40,
           "amplitude": 0.005,
-          "envelope": { "rel_sigma": 5 },
+          "envelope": { "kind": "gaussian", "rel_sigma": 5 },
           "frequency": 4700000000,
           "type": "qd"
         },
@@ -54,14 +54,14 @@
         "RX": {
           "duration": 40,
           "amplitude": 0.3,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 4200000000.0,
           "type": "qd"
         },
         "RX12": {
           "duration": 40,
           "amplitude": 0.0484,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 4855663000,
           "type": "qd"
         },
@@ -77,14 +77,14 @@
         "RX": {
           "duration": 40,
           "amplitude": 0.3,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 4500000000.0,
           "type": "qd"
         },
         "RX12": {
           "duration": 40,
           "amplitude": 0.005,
-          "envelope": { "rel_sigma": 5 },
+          "envelope": { "kind": "gaussian", "rel_sigma": 5 },
           "frequency": 2700000000,
           "type": "qd"
         },
@@ -100,14 +100,14 @@
         "RX": {
           "duration": 40,
           "amplitude": 0.3,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 4150000000.0,
           "type": "qd"
         },
         "RX12": {
           "duration": 40,
           "amplitude": 0.0484,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 5855663000,
           "type": "qd"
         },
@@ -123,14 +123,14 @@
         "RX": {
           "duration": 40,
           "amplitude": 0.3,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 4155663000,
           "type": "qd"
         },
         "RX12": {
           "duration": 40,
           "amplitude": 0.0484,
-          "envelope": { "rel_sigma": 5, "beta": 0.02 },
+          "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
           "frequency": 5855663000,
           "type": "qd"
         },
@@ -343,7 +343,7 @@
           {
             "duration": 40,
             "amplitude": 0.3,
-            "envelope": { "rel_sigma": 5, "beta": 0.02 },
+            "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
             "frequency": 4150000000.0,
             "type": "qd",
             "qubit": 2
