@@ -17,6 +17,7 @@ circuits on quantum hardware. Qibolab includes:
 3. :ref:`Arbitrary pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
 4. :ref:`Compiler <main_doc_compiler>`: compiles quantum circuits into pulse sequences.
 5. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on quantum hardware.
+5. :ref:`Emulator <tutorials_emulator>`: seamless emulation of quantum hardware based on a emulator backend equiped with various quantum dynamics simulation engines.
 
 Components
 ----------
