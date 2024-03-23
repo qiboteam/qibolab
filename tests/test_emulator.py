@@ -11,8 +11,8 @@ from qibolab.instruments.simulator.backends.generic import (
 )
 from qibolab.instruments.simulator.backends.qutip_backend import (
     Qutip_Simulator,
-    function_from_array,
     extend_op_dim,
+    function_from_array,
 )
 from qibolab.instruments.simulator.models import (
     general_no_coupler_model,
@@ -260,7 +260,7 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     sequence.add(platform.create_RX_pulse(0, 0))
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     with pytest.raises(ValueError) as excinfo:
-        pulse_simulator.play({0:0},{},sequence)
+        pulse_simulator.play({0: 0}, {}, sequence)
     assert "not present in ro_error_dict" in str(excinfo.value)
     pulse_simulator.simulation_backend.fidelity_history()
 
@@ -317,9 +317,7 @@ def test_state_from_basis_vector_exception(model):
     for combined_vector in combined_vector_list:
         with pytest.raises(Exception) as excinfo:
             basis_vector, cbasis_vector, error_vector = combined_vector
-            simulation_backend.state_from_basis_vector(
-                basis_vector, cbasis_vector
-            )
+            simulation_backend.state_from_basis_vector(basis_vector, cbasis_vector)
         assert f"length of {error_vector} does not match" in str(excinfo.value)
 
 
