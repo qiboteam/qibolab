@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from qutip import Options, identity, tensor
 
-import qibolab.instruments.simulator.models as models
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.simulator import emulator_test
 from qibolab.instruments.simulator.backends.generic import (
@@ -13,6 +12,10 @@ from qibolab.instruments.simulator.backends.generic import (
 from qibolab.instruments.simulator.backends.qutip_backend import (
     Qutip_Simulator,
     function_from_array,
+)
+from qibolab.instruments.simulator.models import (
+    general_no_coupler_model,
+    models_template,
 )
 from qibolab.oneQ_emulator import create_oneQ_emulator
 from qibolab.pulses import PulseSequence
