@@ -1,8 +1,6 @@
-import json
-import re
 import socket
-from datetime import datetime
 
+import yaml
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
@@ -52,36 +50,17 @@ class TemperatureController(Instrument):
     def setup(self):
         """Required by parent class, but not used here."""
 
-    @staticmethod
-    def convert_to_json(message: str) -> dict[str, dict[str, float]]:
-        """Convert the received socket message into a dictionary.
-
-        The typical message looks like this:
-            flange_name: {'temperature':12.345678, 'timestamp':1234567890.123456}
-        Args:
-            message (str): messaged received from the socket.
-        Returns:
-            dictionary_message (dict[str, dict[str, float]]):
-                message converted into python dictionary.
-        """
-        message = "\n".join(
-            [re.sub("^([^':]+)", r"'\g<1>'", m) for m in message.split("\n")]
-        )
-        message = re.sub("'", '"', message)
-        message = ",".join(message.split("\n"))
-        dictionary_message = json.loads("{" + message + "}")
-        for flange_values in dictionary_message.values():
-            flange_values["time"] = datetime.fromtimestamp(flange_values["timestamp"])
-        return dictionary_message
-
     def get_data(self) -> dict[str, dict[str, float]]:
         """Connect to the socket and get temperature data.
 
+        The typical message looks like this:
+            flange_name: {'temperature':12.345678, 'timestamp':1234567890.123456}
+        `timestamp` can be converted to datetime using `datetime.fromtimestamp`.
         Returns:
             message (dict[str, dict[str, float]]): socket message in this format:
                 {"flange_name": {'temperature': <value(float)>, 'timestamp':<value(float)>}}
         """
-        return self.convert_to_json(self.client_socket.recv(1024).decode())
+        return yaml.safe_load(self.client_socket.recv(1024).decode())
 
     def read_data(self):
         """Continously read data from the temperature controller."""
