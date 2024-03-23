@@ -6,7 +6,7 @@ from qibolab.pulses import PulseSequence, DrivePulse, Drag
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 from qibolab.oneQ_emulator import create_oneQ_emulator
 from qibolab.instruments.simulator import emulator_test
-import qibolab.instruments.simulator.models as models
+from qibolab.instruments.simulator.models import models_template, general_no_coupler_model
 from qibolab.instruments.simulator.backends.qutip_backend import Qutip_Simulator, function_from_array
 from qibolab.instruments.simulator.backends.generic import print_Hamiltonian, op_from_instruction, dec_to_basis_string
 
@@ -14,7 +14,7 @@ from qutip import Options, Qobj, identity, tensor
 
 SWEPT_POINTS = 2
 PLATFORM_NAMES = ["default_q0"]
-MODELS = [models.models_template, models.general_no_coupler_model]
+MODELS = [models_template, general_no_coupler_model]
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -267,7 +267,7 @@ def test_print_Hamiltonian(model):
 
 
 def test_op_from_instruction():
-    model = models.models_template
+    model = models_template
     model_config = model.generate_model_config()
     test_inst= model_config["drift"]["one_body"][1]
     op_from_instruction(test_inst, multiply_coeff=False)
