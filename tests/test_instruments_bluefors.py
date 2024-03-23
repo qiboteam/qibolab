@@ -1,7 +1,7 @@
-import datetime
 from unittest import mock
 
 import pytest
+import yaml
 
 from qibolab.instruments.bluefors import TemperatureController
 
@@ -10,20 +10,6 @@ messages = [
     """50K-flange: {'temperature':35.733738, 'timestamp':1710956419.545651}
 4K-flange: {'temperature':3.065067, 'timestamp':1710955431.128234}""",
 ]
-
-
-@pytest.mark.parametrize("message", messages)
-def test_message_converted_json(message):
-    tc = TemperatureController("Test_Temperature_Controller", "")
-    converted_message = tc.convert_to_json(message)
-    assert isinstance(converted_message, dict)
-    for key, value in converted_message.items():
-        assert key.endswith("-flange")
-        assert isinstance(value, dict)
-        assert set(value.keys()) == {"temperature", "timestamp", "time"}
-        assert isinstance(value["temperature"], float)
-        assert isinstance(value["timestamp"], float)
-        assert isinstance(value["time"], datetime.datetime)
 
 
 def test_connect():
@@ -51,12 +37,10 @@ def test_disconnect(already_connected):
 def test_continuously_read_data():
     with mock.patch(
         "qibolab.instruments.bluefors.TemperatureController.get_data",
-        new=lambda _: TemperatureController.convert_to_json(messages[0]),
+        new=lambda _: yaml.safe_load(messages[0]),
     ):
         tc = TemperatureController("Test_Temperature_Controller", "")
         read_temperatures = tc.read_data()
         for read_temperature in read_temperatures:
-            assert read_temperature == TemperatureController.convert_to_json(
-                messages[0]
-            )
+            assert read_temperature == yaml.safe_load(messages[0])
             break
