@@ -45,7 +45,11 @@
         "MZ": {
           "duration": 2000,
           "amplitude": 0.1,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "frequency": 5200000000.0,
           "type": "ro"
         }
@@ -68,7 +72,11 @@
         "MZ": {
           "duration": 2000,
           "amplitude": 0.1,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "frequency": 4900000000.0,
           "type": "ro"
         }
@@ -91,7 +99,11 @@
         "MZ": {
           "duration": 2000,
           "amplitude": 0.1,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "frequency": 6100000000.0,
           "type": "ro"
         }
@@ -114,7 +126,11 @@
         "MZ": {
           "duration": 2000,
           "amplitude": 0.1,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "frequency": 5800000000.0,
           "type": "ro"
         }
@@ -137,7 +153,11 @@
         "MZ": {
           "duration": 2000,
           "amplitude": 0.1,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "frequency": 5500000000.0,
           "type": "ro"
         }
@@ -148,7 +168,11 @@
         "CP": {
           "duration": 30,
           "amplitude": 0.05,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "type": "cf"
         }
       },
@@ -156,7 +180,11 @@
         "CP": {
           "duration": 30,
           "amplitude": 0.05,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "type": "cf"
         }
       },
@@ -164,7 +192,11 @@
         "CP": {
           "duration": 30,
           "amplitude": 0.05,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "type": "cf"
         }
       },
@@ -172,7 +204,11 @@
         "CP": {
           "duration": 30,
           "amplitude": 0.05,
-          "envelope": { "rel_sigma": 5, "width": 0.75 },
+          "envelope": {
+            "kind": "gaussian_square",
+            "rel_sigma": 5,
+            "width": 0.75
+          },
           "type": "cf"
         }
       }
@@ -183,7 +219,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -200,7 +240,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 0,
             "type": "cf"
           }
@@ -209,7 +253,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -226,7 +274,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 0,
             "type": "cf"
           }
@@ -237,7 +289,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -254,7 +310,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 1,
             "type": "cf"
           }
@@ -263,7 +323,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -280,7 +344,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 1,
             "type": "cf"
           }
@@ -291,7 +359,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -308,7 +380,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 3,
             "type": "cf"
           }
@@ -317,7 +393,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -334,7 +414,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 3,
             "type": "cf"
           }
@@ -365,7 +449,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -382,7 +470,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 4,
             "type": "cf"
           }
@@ -391,7 +483,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "qubit": 2,
             "type": "qf"
           },
@@ -408,7 +504,11 @@
           {
             "duration": 30,
             "amplitude": 0.05,
-            "envelope": { "rel_sigma": 5, "width": 0.75 },
+            "envelope": {
+              "kind": "gaussian_square",
+              "rel_sigma": 5,
+              "width": 0.75
+            },
             "coupler": 4,
             "type": "cf"
           }
