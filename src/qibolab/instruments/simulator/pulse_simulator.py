@@ -383,7 +383,7 @@ class PulseSimulator(Controller):
         Returns:
             dict: A dictionary mapping the readout pulses serial and respective qubits to
             results objects.
-        
+
         Raises:
             NotImplementedError: If sweep.parameter is not in self.available_sweep_parameters.
         """
@@ -611,8 +611,8 @@ def ps_to_waveform_dict(
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
                     ## to add during flux pulse update
-                    #elif pulse.type.value == "qf":
-                     #   platform_channel_name = f"flux-{qubit}"
+                    # elif pulse.type.value == "qf":
+                    #   platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
 
@@ -658,8 +658,8 @@ def ps_to_waveform_dict(
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
                     ## to add during flux pulse update
-                    #elif pulse.type.value == "qf":
-                        #platform_channel_name = f"flux-{qubit}"
+                    # elif pulse.type.value == "qf":
+                    # platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
 

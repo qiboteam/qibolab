@@ -1,16 +1,22 @@
 import numpy as np
 import pytest
+from qutip import Options, identity, tensor
 
+import qibolab.instruments.simulator.models as models
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.pulses import PulseSequence, DrivePulse, Drag
-from qibolab.sweeper import Parameter, QubitParameter, Sweeper
-from qibolab.oneQ_emulator import create_oneQ_emulator
 from qibolab.instruments.simulator import emulator_test
-from qibolab.instruments.simulator.models import models_template, general_no_coupler_model
-from qibolab.instruments.simulator.backends.qutip_backend import Qutip_Simulator, function_from_array
-from qibolab.instruments.simulator.backends.generic import print_Hamiltonian, op_from_instruction, dec_to_basis_string
-
-from qutip import Options, Qobj, identity, tensor
+from qibolab.instruments.simulator.backends.generic import (
+    dec_to_basis_string,
+    op_from_instruction,
+    print_Hamiltonian,
+)
+from qibolab.instruments.simulator.backends.qutip_backend import (
+    Qutip_Simulator,
+    function_from_array,
+)
+from qibolab.oneQ_emulator import create_oneQ_emulator
+from qibolab.pulses import PulseSequence
+from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 SWEPT_POINTS = 2
 PLATFORM_NAMES = ["default_q0"]
@@ -23,7 +29,7 @@ def test_emulator_initialization(name):
     platform = create_oneQ_emulator(runcard_folder)
     platform.connect()
     platform.disconnect()
-    
+
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize(
@@ -34,7 +40,7 @@ def test_emulator_execute_pulse_sequence(name, acquisition):
     nshots = 10  # 100
     runcard_folder = f"{emulator_test.__path__[0]}/{name}"
     platform = create_oneQ_emulator(runcard_folder)
-    pulse_simulator = platform.instruments['pulse_simulator']
+    pulse_simulator = platform.instruments["pulse_simulator"]
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
@@ -54,10 +60,10 @@ def test_emulator_execute_pulse_sequence_def_execparams_no_dissipation_dt_units_
     name = "default_q0"
     runcard_folder = f"{emulator_test.__path__[0]}/{name}"
     platform = create_oneQ_emulator(runcard_folder)
-    pulse_simulator = platform.instruments['pulse_simulator']
-    pulse_simulator.model_config.update({'readout_error':{1: [0.1,0.1]}})
-    pulse_simulator.model_config.update({'runcard_duration_in_dt_units': True})
-    pulse_simulator.model_config.update({'simulate_dissipation': False})
+    pulse_simulator = platform.instruments["pulse_simulator"]
+    pulse_simulator.model_config.update({"readout_error": {1: [0.1, 0.1]}})
+    pulse_simulator.model_config.update({"runcard_duration_in_dt_units": True})
+    pulse_simulator.model_config.update({"simulate_dissipation": False})
     pulse_simulator.update()
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
@@ -246,7 +252,7 @@ def test_pulse_simulator_initialization():
     runcard_folder = f"{emulator_test.__path__[0]}/{name}"
     platform = create_oneQ_emulator(runcard_folder)
     sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
-    pulse_simulator = platform.instruments['pulse_simulator']
+    pulse_simulator = platform.instruments["pulse_simulator"]
     pulse_simulator.update_sim_opts(sim_opts)
     pulse_simulator.connect()
     pulse_simulator.setup()
@@ -269,7 +275,7 @@ def test_print_Hamiltonian(model):
 def test_op_from_instruction():
     model = models_template
     model_config = model.generate_model_config()
-    test_inst= model_config["drift"]["one_body"][1]
+    test_inst = model_config["drift"]["one_body"][1]
     op_from_instruction(test_inst, multiply_coeff=False)
 
 
@@ -289,7 +295,9 @@ def test_make_arbitrary_state(model):
     qibo_statevector = np.zeros(zerostate.shape[0])
     qibo_statevector[2] = 1
     qibo_statevector = np.array(qibo_statevector.tolist())
-    teststate = simulation_backend.make_arbitrary_state(qibo_statevector, is_qibo_state_vector=True)
+    teststate = simulation_backend.make_arbitrary_state(
+        qibo_statevector, is_qibo_state_vector=True
+    )
 
 
 @pytest.mark.parametrize("model", MODELS)
@@ -298,17 +306,22 @@ def test_state_from_basis_vector_exception(model):
     simulation_backend = Qutip_Simulator(model_config)
     basis_vector0 = [0 for i in range(simulation_backend.nqubits)]
     cbasis_vector0 = [0 for i in range(simulation_backend.ncouplers)]
-    combined_vector_list = [[basis_vector0+[0], cbasis_vector0, 'basis_vector'],[basis_vector0, cbasis_vector0+[0],'cbasis_vector']]
+    combined_vector_list = [
+        [basis_vector0 + [0], cbasis_vector0, "basis_vector"],
+        [basis_vector0, cbasis_vector0 + [0], "cbasis_vector"],
+    ]
     for combined_vector in combined_vector_list:
         with pytest.raises(Exception) as excinfo:
             basis_vector, cbasis_vector, error_vector = combined_vector
-            simulation_backend.state_from_basis_vector_errors(basis_vector, cbasis_vector)
+            simulation_backend.state_from_basis_vector_errors(
+                basis_vector, cbasis_vector
+            )
         assert f"length of {error_vector} does not match" in str(excinfo.value)
 
 
 def test_function_from_array_exception():
-    y = np.ones(2,2)
-    x = np.ones(3,2)
+    y = np.ones(2, 2)
+    x = np.ones(3, 2)
     with pytest.raises(ValueError) as excinfo:
         function_from_array(y, x)
     assert "y and x must have the same" in str(excinfo.value)
@@ -318,10 +331,10 @@ def test_extend_op_dim_exceptions():
     I2 = identity(2)
     I4 = identity(4)
     op_qobj = tensor(I2, I4)
-    
-    index_list1 = [[0], [0,1], [2,3], [4,5,6]]
-    index_list2 = [[0], [4], [2,3], [4,5]]
-    index_list3 = [[0], [0], [2,3], [5,4]]
+
+    index_list1 = [[0], [0, 1], [2, 3], [4, 5, 6]]
+    index_list2 = [[0], [4], [2, 3], [4, 5]]
+    index_list3 = [[0], [0], [2, 3], [5, 4]]
     index_lists = [index_list1, index_list2, index_list3]
 
     for index_list in index_lists:

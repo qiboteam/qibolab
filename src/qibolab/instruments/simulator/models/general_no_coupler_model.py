@@ -8,48 +8,49 @@ from qibolab.instruments.simulator.models.methods import (
     load_model_params,
 )
 
+
 def generate_default_params():
-    """ Returns template model parameters dictionary"""
+    """Returns template model parameters dictionary."""
     model_params = {
-        'device_name': 'model template for 0-c1-1 system',
-        'topology': [[0, 1]],
-        'nqubits': 2,
-        'ncouplers': 0,
-        'qubits_list': ['0','1'],
-        'couplers_list': [],
-        'sampling_rate': 2.0e+9,
-        'readout_error': {
+        "device_name": "model template for 0-c1-1 system",
+        "topology": [[0, 1]],
+        "nqubits": 2,
+        "ncouplers": 0,
+        "qubits_list": ["0", "1"],
+        "couplers_list": [],
+        "sampling_rate": 2.0e9,
+        "readout_error": {
             # same key datatype as per runcard
             0: [0.01, 0.02],
-            1: [0.01, 0.02]
+            1: [0.01, 0.02],
         },
-        'drive_freq': {
-            '0': 4.581205e+9,
-            '1': 4.62381e+9,
+        "drive_freq": {
+            "0": 4.581205e9,
+            "1": 4.62381e9,
         },
-        'T1': {
-            '0': 0.,
-            '1': 0.,
+        "T1": {
+            "0": 0.0,
+            "1": 0.0,
         },
-        'T2': {
-            '0': 0.,
-            '1': 0.,
+        "T2": {
+            "0": 0.0,
+            "1": 0.0,
         },
-        'lo_freq': {
-            '0': 5.0e+9,
-            '1': 5.1e+9,
+        "lo_freq": {
+            "0": 5.0e9,
+            "1": 5.1e9,
         },
-        'rabi_freq': {
-            '0': 0.2e+9,
-            '1': 0.2e+9,
+        "rabi_freq": {
+            "0": 0.2e9,
+            "1": 0.2e9,
         },
-        'anharmonicity': {
-            '0': -0.20e+9,
-            '1': -0.21e+9,
+        "anharmonicity": {
+            "0": -0.20e9,
+            "1": -0.21e9,
         },
-        'coupling_strength': {
-            '1_0': 5.0e+6,
-        }
+        "coupling_strength": {
+            "1_0": 5.0e6,
+        },
     }
     return model_params
 
@@ -156,6 +157,7 @@ def generate_model_config(
     }
 
     return model_config
+
 
 '''
 def generate_model_config_oneQ(model_params: dict, nlevels_q: int = None) -> dict:
