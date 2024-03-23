@@ -30,9 +30,9 @@ class TemperatureController(Instrument):
             address (str): IP address of the board sending cryo temperature data.
             port (int): port of the board sending cryo temperature data.
         """
+        super().__init__(name, address)
         self.port = port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        super().__init__(name, address)
 
     def connect(self):
         """Connect to the socket."""
@@ -51,7 +51,6 @@ class TemperatureController(Instrument):
 
     def setup(self):
         """Required by parent class, but not used here."""
-        pass
 
     @staticmethod
     def convert_to_json(message: str) -> dict[str, dict[str, float]]:
@@ -82,8 +81,7 @@ class TemperatureController(Instrument):
             message (dict[str, dict[str, float]]): socket message in this format:
                 {"flange_name": {'temperature': <value(float)>, 'timestamp':<value(float)>}}
         """
-        message = self.convert_to_json(self.client_socket.recv(1024).decode())
-        return message
+        return self.convert_to_json(self.client_socket.recv(1024).decode())
 
     def read_data(self):
         """Continously read data from the temperature controller."""
