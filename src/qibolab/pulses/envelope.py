@@ -85,7 +85,7 @@ class BaseEnvelope(ABC, Model):
 class Rectangular(BaseEnvelope):
     """Rectangular envelope."""
 
-    kind: Literal["rectangular"]
+    kind: Literal["rectangular"] = "rectangular"
 
     def i(self, times: Times) -> Waveform:
         """Generate a rectangular envelope."""
@@ -100,7 +100,7 @@ class Exponential(BaseEnvelope):
         A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
     """
 
-    kind: Literal["exponential"]
+    kind: Literal["exponential"] = "exponential"
 
     tau: float
     """The decay rate of the first exponential function."""
@@ -137,7 +137,7 @@ class Gaussian(BaseEnvelope):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
     """
 
-    kind: Literal["gaussian"]
+    kind: Literal["gaussian"] = "gaussian"
 
     rel_sigma: float
     """Relative Gaussian standard deviation.
@@ -158,7 +158,7 @@ class GaussianSquare(BaseEnvelope):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
     """
 
-    kind: Literal["gaussian_square"]
+    kind: Literal["gaussian_square"] = "gaussian_square"
 
     rel_sigma: float
     """Relative Gaussian standard deviation.
@@ -189,7 +189,7 @@ class Drag(BaseEnvelope):
         - add reference
     """
 
-    kind: Literal["drag"]
+    kind: Literal["drag"] = "drag"
 
     rel_sigma: float
     """Relative Gaussian standard deviation.
@@ -223,7 +223,7 @@ class Iir(BaseEnvelope):
         p = [b0, b1, a0, a1]
     """
 
-    kind: Literal["iir"]
+    kind: Literal["iir"] = "iir"
 
     a: NdArray
     b: NdArray
@@ -259,7 +259,7 @@ class Snz(BaseEnvelope):
         - expression
     """
 
-    kind: Literal["snz"]
+    kind: Literal["snz"] = "snz"
 
     t_idling: float
     b_amplitude: float = 0.5
@@ -293,7 +293,7 @@ class ECap(BaseEnvelope):
         &\times& [1 + \tanh(\alpha/2)]^{-2}
     """
 
-    kind: Literal["ecap"]
+    kind: Literal["ecap"] = "ecap"
 
     alpha: float
 
@@ -316,7 +316,7 @@ class Custom(BaseEnvelope):
         - add attribute docstrings
     """
 
-    kind: Literal["custom"]
+    kind: Literal["custom"] = "custom"
 
     i_: npt.NDArray
     q_: npt.NDArray
