@@ -259,7 +259,7 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         pulse_simulator.play({0:0},{},sequence)
     assert "not present in ro_error_dict" in str(excinfo.value)
     pulse_simulator.simulation_backend.fidelity_history()
