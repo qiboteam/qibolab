@@ -1,7 +1,8 @@
 from qibolab.emulator import create_runcard_emulator
-from qibolab.instruments.simulator.models.general_no_coupler_model import (
-    generate_model_config_oneQ,
-)
+#from qibolab.instruments.simulator.models.general_no_coupler_model import (
+ #   generate_model_config_oneQ,
+#
+from qibolab.instruments.simulator.models import general_no_coupler_model
 from qibolab.instruments.simulator.pulse_simulator import (
     PulseSimulator,
     get_default_simulation_config,
@@ -48,7 +49,10 @@ def create_oneQ_emulator(runcard_folder: str):
         "coupling_strength": {},
     }
 
-    model_config = generate_model_config_oneQ(model_params_dict, nlevel)
+    #model_config = generate_model_config_oneQ(model_params_dict, nlevel)
+    model_config = general_no_coupler_model.generate_model_config(
+        model_params_dict, nlevels_q=[nlevel]
+    )
     simulation_config = get_default_simulation_config(sim_sampling_boost)
     simulation_config.update({"simulate_dissipation": simulate_dissipation})
     simulation_config.update({"instant_measurement": instant_measurement})

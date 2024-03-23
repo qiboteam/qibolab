@@ -72,8 +72,6 @@ class Qutip_Simulator:
         self.nlevels_HS = np.flip(
             self.nlevels_c + self.nlevels_q
         ).tolist()  # little endian, qubits first then couplers
-        print("nlevels structure in HS: ", self.nlevels_HS)
-
         self.qubits_list = self.model_config[
             "qubits_list"
         ]  # as per runcard, big endian
@@ -85,6 +83,7 @@ class Qutip_Simulator:
         )  # as per runcard, big endian
         self.HS_list = np.flip(self.combined_list)
         print("Hilbert space structure: ", self.HS_list.tolist())
+        print("Hilbert space dimensions: ", self.nlevels_HS)
 
         self.topology = self.model_config["topology"]
         self.nqubits = len(self.qubits_list)
@@ -216,7 +215,6 @@ class Qutip_Simulator:
             dims = [self.nlevels_HS, np.ones(len(self.nlevels_HS), dtype=int).tolist()]
         else:  # density matrix
             dims = [self.nlevels_HS, self.nlevels_HS]
-        # print(dims)
         arbitrary_state = make_arbitrary_state(statedata, dims)
         if is_qibo_state_vector is True:
             arbitrary_state = self.flip_HS(arbitrary_state)

@@ -2,18 +2,19 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.simulator import emulator_test
-from qibolab.oneQ_emulator import create_oneQ_emulator
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import PulseSequence, DrivePulse, Drag
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
+from qibolab.oneQ_emulator import create_oneQ_emulator
+from qibolab.instruments.simulator import emulator_test
+import qibolab.instruments.simulator.models as models
+from qibolab.instruments.simulator.backends.qutip_backend import Qutip_Simulator, function_from_array
+from qibolab.instruments.simulator.backends.generic import print_Hamiltonian, op_from_instruction, dec_to_basis_string
 
-# pulse_simulator = emulator_platform.instruments['pulse_simulator']
-# simulation_backend = pulse_simulator.simulation_backend
-
-# HERE = pathlib.Path(__file__).parent
+from qutip import Options, Qobj, identity, tensor
 
 SWEPT_POINTS = 2
 PLATFORM_NAMES = ["default_q0"]
+MODELS = [models.models_template, models.general_no_coupler_model]
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -22,7 +23,7 @@ def test_emulator_initialization(name):
     platform = create_oneQ_emulator(runcard_folder)
     platform.connect()
     platform.disconnect()
-
+    
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize(
@@ -33,10 +34,10 @@ def test_emulator_execute_pulse_sequence(name, acquisition):
     nshots = 10  # 100
     runcard_folder = f"{emulator_test.__path__[0]}/{name}"
     platform = create_oneQ_emulator(runcard_folder)
-    ro_pulse = platform.create_qubit_readout_pulse(0, 0)
+    pulse_simulator = platform.instruments['pulse_simulator']
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_readout_pulse(0, 0))
     sequence.add(platform.create_RX_pulse(0, 0))
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
     if acquisition is AcquisitionType.DISCRIMINATION:
         result = platform.execute_pulse_sequence(sequence, options)
@@ -45,6 +46,26 @@ def test_emulator_execute_pulse_sequence(name, acquisition):
         with pytest.raises(TypeError) as excinfo:
             platform.execute_pulse_sequence(sequence, options)
         assert "Emulator does not support" in str(excinfo.value)
+    pulse_simulator.print_sim_details()
+    pulse_simulator.simulation_backend.fidelity_history()
+
+
+def test_emulator_execute_pulse_sequence_def_execparams_no_dissipation_dt_units_ro_exception():
+    name = "default_q0"
+    runcard_folder = f"{emulator_test.__path__[0]}/{name}"
+    platform = create_oneQ_emulator(runcard_folder)
+    pulse_simulator = platform.instruments['pulse_simulator']
+    pulse_simulator.model_config.update({'readout_error':{1: [0.1,0.1]}})
+    pulse_simulator.model_config.update({'runcard_duration_in_dt_units': True})
+    pulse_simulator.model_config.update({'simulate_dissipation': False})
+    pulse_simulator.update()
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(0, 0))
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    with pytest.raises(TypeError) as excinfo:
+        platform.execute_pulse_sequence(sequence)
+    assert "not present in ro_error_dict" in str(excinfo.value)
+    pulse_simulator.simulation_backend.fidelity_history()
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -101,7 +122,7 @@ def test_emulator_single_sweep(
     else:
         with pytest.raises(NotImplementedError) as excinfo:
             platform.sweep(sequence, options, sweeper)
-        assert "Sweep" in str(excinfo.value)
+        assert "Sweep parameter requested not available" in str(excinfo.value)
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -217,3 +238,93 @@ def test_emulator_single_sweep_multiplex(name, parameter, average, acquisition, 
             assert (
                 results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
             )
+
+
+# pulse_simulator
+def test_pulse_simulator_initialization():
+    name = "default_q0"
+    runcard_folder = f"{emulator_test.__path__[0]}/{name}"
+    platform = create_oneQ_emulator(runcard_folder)
+    sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
+    pulse_simulator = platform.instruments['pulse_simulator']
+    pulse_simulator.update_sim_opts(sim_opts)
+    pulse_simulator.connect()
+    pulse_simulator.setup()
+    pulse_simulator.start()
+    pulse_simulator.stop()
+    pulse_simulator.disconnect()
+
+
+# backends.generic
+def test_dec_to_basis_string():
+    dec_to_basis_string(x=1)
+
+
+@pytest.mark.parametrize("model", MODELS)
+def test_print_Hamiltonian(model):
+    model_config = model.generate_model_config()
+    print_Hamiltonian(model_config)
+
+
+def test_op_from_instruction():
+    model = models.models_template
+    model_config = model.generate_model_config()
+    test_inst= model_config["drift"]["one_body"][1]
+    op_from_instruction(test_inst, multiply_coeff=False)
+
+
+# backends.qutip_backend
+@pytest.mark.parametrize("model", MODELS)
+def test_update_sim_opts(model):
+    model_config = model.generate_model_config()
+    simulation_backend = Qutip_Simulator(model_config)
+    sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
+
+
+@pytest.mark.parametrize("model", MODELS)
+def test_make_arbitrary_state(model):
+    model_config = model.generate_model_config()
+    simulation_backend = Qutip_Simulator(model_config)
+    zerostate = simulation_backend.psi0.copy()
+    qibo_statevector = np.zeros(zerostate.shape[0])
+    qibo_statevector[2] = 1
+    qibo_statevector = np.array(qibo_statevector.tolist())
+    teststate = simulation_backend.make_arbitrary_state(qibo_statevector, is_qibo_state_vector=True)
+
+
+@pytest.mark.parametrize("model", MODELS)
+def test_state_from_basis_vector_exception(model):
+    model_config = model.generate_model_config()
+    simulation_backend = Qutip_Simulator(model_config)
+    basis_vector0 = [0 for i in range(simulation_backend.nqubits)]
+    cbasis_vector0 = [0 for i in range(simulation_backend.ncouplers)]
+    combined_vector_list = [[basis_vector0+[0], cbasis_vector0, 'basis_vector'],[basis_vector0, cbasis_vector0+[0],'cbasis_vector']]
+    for combined_vector in combined_vector_list:
+        with pytest.raises(Exception) as excinfo:
+            basis_vector, cbasis_vector, error_vector = combined_vector
+            simulation_backend.state_from_basis_vector_errors(basis_vector, cbasis_vector)
+        assert f"length of {error_vector} does not match" in str(excinfo.value)
+
+
+def test_function_from_array_exception():
+    y = np.ones(2,2)
+    x = np.ones(3,2)
+    with pytest.raises(ValueError) as excinfo:
+        function_from_array(y, x)
+    assert "y and x must have the same" in str(excinfo.value)
+
+
+def test_extend_op_dim_exceptions():
+    I2 = identity(2)
+    I4 = identity(4)
+    op_qobj = tensor(I2, I4)
+    
+    index_list1 = [[0], [0,1], [2,3], [4,5,6]]
+    index_list2 = [[0], [4], [2,3], [4,5]]
+    index_list3 = [[0], [0], [2,3], [5,4]]
+    index_lists = [index_list1, index_list2, index_list3]
+
+    for index_list in index_lists:
+        with pytest.raises(Exception) as excinfo:
+            extend_op_dim(op_qobj, *index_list)
+        assert "mismatch" in str(excinfo.value)

@@ -34,7 +34,7 @@ def dec_to_basis_string(
             coeff = np.divmod(y, 1)[0]
             output_list.append(coeff)
 
-    if to_string == True:
+    if to_string:
         output_list = "".join([str(c) for c in output_list])
 
     return output_list

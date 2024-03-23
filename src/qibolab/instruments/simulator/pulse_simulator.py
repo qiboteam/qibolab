@@ -166,6 +166,9 @@ class PulseSimulator(Controller):
 
         Returns:
             dict: The sampled qubit values for each qubit labelled by its index.
+
+        Raises:
+            ValueError: If any ro_qubit in ro_qubit_list is not in ro_error_dict.
         """
         # load readout error from model_config if not specified
         if readout_error is None:
@@ -324,7 +327,7 @@ class PulseSimulator(Controller):
             dict: A dictionary mapping the readout pulses serial and respective qubits to
             Qibolab results object.
         """
-        if execution_parameters == None:
+        if execution_parameters is None:
             execution_parameters = self.exec_params
 
         nshots = execution_parameters.nshots
@@ -338,13 +341,6 @@ class PulseSimulator(Controller):
         )
 
         return results
-
-    def split_batches(self, sequences):
-        """Placeholder.
-
-        Copied over from dummy, may not be required.
-        """
-        return [sequences]
 
     def print_sim_details(self, sim_index=-1):
         """Print simulation details of any of the previously run simulations.
@@ -387,6 +383,9 @@ class PulseSimulator(Controller):
         Returns:
             dict: A dictionary mapping the readout pulses serial and respective qubits to
             results objects.
+        
+        Raises:
+            NotImplementedError: If sweep.parameter is not in self.available_sweep_parameters.
         """
         append_to_shape = [len(sweep.values) for sweep in sweeper]
 
@@ -452,11 +451,6 @@ class PulseSimulator(Controller):
         param = sweep.parameter
         param_name = param.name.lower()
 
-        if param not in self.available_sweep_parameters:
-            raise NotImplementedError(
-                "Sweep parameter requested not available", param_name
-            )
-
         base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
         sweeper_op = _sweeper_operation.get(sweep.type)
         ret = {}
@@ -483,7 +477,7 @@ class PulseSimulator(Controller):
         qubits: Dict[QubitId, Qubit],
         couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
-        execution_parameters: Optional[ExecutionParameters] = None,
+        execution_parameters: ExecutionParameters,
     ) -> dict[Union[str, int], list]:
         """Generates samples list labelled by qubit index.
 
@@ -496,14 +490,10 @@ class PulseSimulator(Controller):
                                                         fast_reset,
                                                         acquisition_type,
                                                         averaging_mode)
-                                                        Defaults to None, for which case it uses the values stored in self.exec_params.
 
         Returns:
             dict: A dictionary mapping the qubit indices to list of sampled values.
         """
-        if execution_parameters == None:
-            execution_parameters = self.exec_params
-
         nshots = execution_parameters.nshots
         ro_pulse_list = sequence.ro_pulses
 
@@ -620,8 +610,9 @@ def ps_to_waveform_dict(
 
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
-                    elif pulse.type.value == "qf":
-                        platform_channel_name = f"flux-{qubit}"
+                    ## to add during flux pulse update
+                    #elif pulse.type.value == "qf":
+                     #   platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
 
@@ -666,8 +657,9 @@ def ps_to_waveform_dict(
 
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
-                    elif pulse.type.value == "qf":
-                        platform_channel_name = f"flux-{qubit}"
+                    ## to add during flux pulse update
+                    #elif pulse.type.value == "qf":
+                        #platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
 
