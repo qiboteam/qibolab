@@ -8,7 +8,7 @@ import numpy as np
 
 from qibolab.serialize_ import Model
 
-from .envelope import Envelope, IqWaveform, Times, Waveform
+from .envelope import Envelope, IqWaveform, Waveform
 
 
 class PulseType(Enum):
@@ -30,8 +30,6 @@ class PulseType(Enum):
 class Pulse(Model):
     """A pulse to be sent to the QPU."""
 
-    duration: int
-    """Pulse duration in ns."""
     amplitude: float
     """Pulse digital amplitude (unitless).
 
@@ -79,18 +77,15 @@ class Pulse(Model):
     def id(self) -> int:
         return id(self)
 
-    def _times(self, sampling_rate: float):
-        return Times(self.duration, int(self.duration * sampling_rate))
-
     def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-        times = self._times(sampling_rate)
-        return self.amplitude * self.envelope.i(times)
+        samples = int(self.envelope.duration * sampling_rate)
+        return self.amplitude * self.envelope.i(samples)
 
     def q(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-        times = self._times(sampling_rate)
-        return self.amplitude * self.envelope.q(times)
+        samples = int(self.envelope.duration * sampling_rate)
+        return self.amplitude * self.envelope.q(samples)
 
     def envelopes(self, sampling_rate: float) -> IqWaveform:
         """A tuple with the i and q envelope waveforms of the pulse."""

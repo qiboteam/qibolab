@@ -1,8 +1,6 @@
 """Library of pulse shapes."""
 
 from abc import ABC
-from dataclasses import dataclass
-from functools import cached_property
 from typing import Annotated, Literal, Union
 
 import numpy as np
@@ -14,7 +12,6 @@ from scipy.signal.windows import gaussian
 from qibolab.serialize_ import Model, NdArray
 
 __all__ = [
-    "Times",
     "Waveform",
     "IqWaveform",
     "BaseEnvelope",
@@ -40,46 +37,30 @@ IqWaveform = npt.NDArray[np.float64]
 """Full shape, both I and Q components."""
 
 
-@dataclass
-class Times:
-    """Time window of a pulse."""
-
-    duration: float
-    """Pulse duration."""
-    samples: int
-    """Number of requested samples."""
-    # Here only the information consumed by the `Envelopes` is stored. How to go from
-    # the sampling rate to the number of samples is callers' business, since nothing
-    # else has to be known by this module.
-
-    @property
-    def mean(self) -> float:
-        """Middle point of the temporal window."""
-        return self.duration / 2
-
-    @cached_property
-    def window(self):
-        """Individual timing of each sample."""
-        return np.linspace(0, self.duration, self.samples)
-
-
 class BaseEnvelope(ABC, Model):
     """Pulse envelopes.
 
     Generates both i (in-phase) and q (quadrature) components.
     """
 
-    def i(self, times: Times) -> Waveform:
+    duration: float
+    """Pulse duration."""
+
+    def window(self, samples: int):
+        """Individual timing of each sample."""
+        return np.linspace(0, self.duration, samples)
+
+    def i(self, samples: int) -> Waveform:
         """In-phase envelope."""
-        return np.zeros(times.samples)
+        return np.zeros(samples)
 
-    def q(self, times: Times) -> Waveform:
+    def q(self, samples: int) -> Waveform:
         """Quadrature envelope."""
-        return np.zeros(times.samples)
+        return np.zeros(samples)
 
-    def envelopes(self, times: Times) -> IqWaveform:
+    def envelopes(self, samples: int) -> IqWaveform:
         """Stacked i and q envelope waveforms of the pulse."""
-        return np.array([self.i(times), self.q(times)])
+        return np.array([self.i(samples), self.q(samples)])
 
 
 class Rectangular(BaseEnvelope):
@@ -87,9 +68,9 @@ class Rectangular(BaseEnvelope):
 
     kind: Literal["rectangular"] = "rectangular"
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """Generate a rectangular envelope."""
-        return np.ones(times.samples)
+        return np.ones(samples)
 
 
 class Exponential(BaseEnvelope):
@@ -109,21 +90,21 @@ class Exponential(BaseEnvelope):
     g: float = 0.1
     """Weight of the second exponential function."""
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """Generate a combination of two exponential decays."""
-        ts = times.window
+        ts = self.window(samples)
         return (np.exp(-ts / self.upsilon) + self.g * np.exp(-ts / self.tau)) / (
             1 + self.g
         )
 
 
-def _samples_sigma(rel_sigma: float, times: Times) -> float:
+def _samples_sigma(rel_sigma: float, samples: int) -> float:
     """Convert standard deviation in samples.
 
     `rel_sigma` is assumed in units of the interval duration, and it is turned in units
     of samples, by counting the number of samples in the interval.
     """
-    return rel_sigma * times.samples
+    return rel_sigma * samples
 
 
 class Gaussian(BaseEnvelope):
@@ -145,9 +126,9 @@ class Gaussian(BaseEnvelope):
     In units of the interval duration.
     """
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """Generate a Gaussian window."""
-        return gaussian(times.samples, _samples_sigma(self.rel_sigma, times))
+        return gaussian(samples, _samples_sigma(self.rel_sigma, samples))
 
 
 class GaussianSquare(BaseEnvelope):
@@ -168,14 +149,14 @@ class GaussianSquare(BaseEnvelope):
     width: float
     """Length of the flat portion."""
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """Generate a Gaussian envelope, with a flat central window."""
 
-        pulse = np.ones_like(times)
-        u, hw = times.mean, self.width / 2
-        ts = times.window
+        pulse = np.ones(samples)
+        u, hw = samples / 2, self.width * samples / self.duration / 2
+        ts = np.arange(samples)
         tails = (ts < (u - hw)) | ((u + hw) < ts)
-        pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, times))
+        pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, samples))
 
         return pulse
 
@@ -199,18 +180,19 @@ class Drag(BaseEnvelope):
     beta: float
     """.. todo::"""
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """Generate a Gaussian envelope."""
-        return gaussian(times.samples, _samples_sigma(self.rel_sigma, times))
+        return gaussian(samples, _samples_sigma(self.rel_sigma, samples))
 
-    def q(self, times: Times) -> Waveform:
+    def q(self, samples: int) -> Waveform:
         """Generate ...
 
         .. todo::
         """
-        sigma = self.rel_sigma * times.duration
-        ts = times.window
-        return self.beta * (-(ts - times.mean) / (sigma**2)) * self.i(times)
+        ts = np.arange(samples)
+        mu = samples / 2
+        sigma = _samples_sigma(self.rel_sigma, samples)
+        return self.beta * (-(ts - mu) / (sigma**2)) * self.i(samples)
 
 
 class Iir(BaseEnvelope):
@@ -239,13 +221,13 @@ class Iir(BaseEnvelope):
             data /= np.max(np.abs(data))
         return data
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """.. todo::"""
-        return self._data(self.target.i(times))
+        return self._data(self.target.i(samples))
 
-    def q(self, times: Times) -> Waveform:
+    def q(self, samples: int) -> Waveform:
         """.. todo::"""
-        return self._data(self.target.q(times))
+        return self._data(self.target.q(samples))
 
 
 class Snz(BaseEnvelope):
@@ -265,14 +247,14 @@ class Snz(BaseEnvelope):
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """.. todo::"""
         # convert timings to samples
-        half_pulse_duration = (times.duration - self.t_idling) / 2
-        aspan = np.sum(times.window < half_pulse_duration)
-        idle = times.samples - 2 * (aspan + 1)
+        half_pulse_duration = (self.duration - self.t_idling) / 2
+        aspan = np.sum(self.window(samples) < half_pulse_duration)
+        idle = samples - 2 * (aspan + 1)
 
-        pulse = np.ones(times.samples)
+        pulse = np.ones(samples)
         # the aspan + 1 sample is B (and so the aspan + 1 + idle + 1), indexes are 0-based
         pulse[aspan] = pulse[aspan + 1 + idle] = self.b_amplitude
         # set idle time to 0
@@ -297,11 +279,11 @@ class ECap(BaseEnvelope):
 
     alpha: float
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """.. todo::"""
-        x = times.window / times.samples
+        x = self.window(samples) / samples
         return (
-            (1 + np.tanh(self.alpha * times.window))
+            (1 + np.tanh(self.alpha * self.window(samples)))
             * (1 + np.tanh(self.alpha * (1 - x)))
             / (1 + np.tanh(self.alpha / 2)) ** 2
         )
@@ -321,13 +303,19 @@ class Custom(BaseEnvelope):
     i_: npt.NDArray
     q_: npt.NDArray
 
-    def i(self, times: Times) -> Waveform:
+    def i(self, samples: int) -> Waveform:
         """.. todo::"""
-        raise NotImplementedError
+        if len(self.i_) != samples:
+            raise ValueError
 
-    def q(self, times: Times) -> Waveform:
+        return self.i_
+
+    def q(self, samples: int) -> Waveform:
         """.. todo::"""
-        raise NotImplementedError
+        if len(self.q_) != samples:
+            raise ValueError
+
+        return self.q_
 
 
 Envelope = Annotated[
