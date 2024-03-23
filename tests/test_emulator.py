@@ -12,6 +12,7 @@ from qibolab.instruments.simulator.backends.generic import (
 from qibolab.instruments.simulator.backends.qutip_backend import (
     Qutip_Simulator,
     function_from_array,
+    extend_op_dim,
 )
 from qibolab.instruments.simulator.models import (
     general_no_coupler_model,
@@ -56,24 +57,6 @@ def test_emulator_execute_pulse_sequence(name, acquisition):
             platform.execute_pulse_sequence(sequence, options)
         assert "Emulator does not support" in str(excinfo.value)
     pulse_simulator.print_sim_details()
-    pulse_simulator.simulation_backend.fidelity_history()
-
-
-def test_emulator_execute_pulse_sequence_def_execparams_no_dissipation_dt_units_ro_exception():
-    name = "default_q0"
-    runcard_folder = f"{emulator_test.__path__[0]}/{name}"
-    platform = create_oneQ_emulator(runcard_folder)
-    pulse_simulator = platform.instruments["pulse_simulator"]
-    pulse_simulator.model_config.update({"readout_error": {1: [0.1, 0.1]}})
-    pulse_simulator.model_config.update({"runcard_duration_in_dt_units": True})
-    pulse_simulator.model_config.update({"simulate_dissipation": False})
-    pulse_simulator.update()
-    sequence = PulseSequence()
-    sequence.add(platform.create_RX_pulse(0, 0))
-    sequence.add(platform.create_qubit_readout_pulse(0, 0))
-    with pytest.raises(TypeError) as excinfo:
-        platform.execute_pulse_sequence(sequence)
-    assert "not present in ro_error_dict" in str(excinfo.value)
     pulse_simulator.simulation_backend.fidelity_history()
 
 
@@ -264,6 +247,24 @@ def test_pulse_simulator_initialization():
     pulse_simulator.disconnect()
 
 
+def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exception():
+    name = "default_q0"
+    runcard_folder = f"{emulator_test.__path__[0]}/{name}"
+    platform = create_oneQ_emulator(runcard_folder)
+    pulse_simulator = platform.instruments["pulse_simulator"]
+    pulse_simulator.model_config.update({"readout_error": {1: [0.1, 0.1]}})
+    pulse_simulator.model_config.update({"runcard_duration_in_dt_units": True})
+    pulse_simulator.model_config.update({"simulate_dissipation": False})
+    pulse_simulator.update()
+    sequence = PulseSequence()
+    sequence.add(platform.create_RX_pulse(0, 0))
+    sequence.add(platform.create_qubit_readout_pulse(0, 0))
+    with pytest.raises(TypeError) as excinfo:
+        pulse_simulator.play({0:0},{},sequence)
+    assert "not present in ro_error_dict" in str(excinfo.value)
+    pulse_simulator.simulation_backend.fidelity_history()
+
+
 # backends.generic
 def test_dec_to_basis_string():
     dec_to_basis_string(x=1)
@@ -316,15 +317,15 @@ def test_state_from_basis_vector_exception(model):
     for combined_vector in combined_vector_list:
         with pytest.raises(Exception) as excinfo:
             basis_vector, cbasis_vector, error_vector = combined_vector
-            simulation_backend.state_from_basis_vector_errors(
+            simulation_backend.state_from_basis_vector(
                 basis_vector, cbasis_vector
             )
         assert f"length of {error_vector} does not match" in str(excinfo.value)
 
 
 def test_function_from_array_exception():
-    y = np.ones(2, 2)
-    x = np.ones(3, 2)
+    y = np.ones([2, 2])
+    x = np.ones([3, 2])
     with pytest.raises(ValueError) as excinfo:
         function_from_array(y, x)
     assert "y and x must have the same" in str(excinfo.value)
