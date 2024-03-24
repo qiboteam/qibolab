@@ -293,7 +293,7 @@ def test_op_from_instruction():
     model_config = model.generate_model_config()
     test_inst = model_config["drift"]["one_body"][1]
     test_inst2 = model_config["drift"]["two_body"][0]
-    test_inst3 = (1.0, 'b_2 ^ b_1 ^ b_0', ['2', '1', '0'])
+    test_inst3 = (1.0, "b_2 ^ b_1 ^ b_0", ["2", "1", "0"])
     op_from_instruction(test_inst, multiply_coeff=False)
     op_from_instruction(test_inst2, multiply_coeff=False)
     op_from_instruction(test_inst3, multiply_coeff=False)
