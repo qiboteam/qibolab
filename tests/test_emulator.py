@@ -255,7 +255,7 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     pulse_simulator = platform.instruments["pulse_simulator"]
     pulse_simulator.model_config.update({"readout_error": {1: [0.1, 0.1]}})
     pulse_simulator.model_config.update({"runcard_duration_in_dt_units": True})
-    pulse_simulator.model_config.update({"simulate_dissipation": False})
+    pulse_simulator.simulation_config.update({"simulate_dissipation": False})
     pulse_simulator.model_config["drift"].update({"two_body": []})
     pulse_simulator.model_config["dissipation"].update({"t1": []})
     print_Hamiltonian(pulse_simulator.model_config)
@@ -293,8 +293,10 @@ def test_op_from_instruction():
     model_config = model.generate_model_config()
     test_inst = model_config["drift"]["one_body"][1]
     test_inst2 = model_config["drift"]["two_body"][0]
+    test_inst3 = (1.0, 'b_2 ^ b_1 ^ b_0', ['2', '1', '0'])
     op_from_instruction(test_inst, multiply_coeff=False)
     op_from_instruction(test_inst2, multiply_coeff=False)
+    op_from_instruction(test_inst3, multiply_coeff=False)
 
 
 # backends.qutip_backend
@@ -331,7 +333,7 @@ def test_state_from_basis_vector_exception(model):
     simulation_backend = Qutip_Simulator(model_config)
     basis_vector0 = [0 for i in range(simulation_backend.nqubits)]
     cbasis_vector0 = [0 for i in range(simulation_backend.ncouplers)]
-    simulation_backend.state_from_basis_vector(basis_vector0, cbasis_vector0)
+    simulation_backend.state_from_basis_vector(basis_vector0, None)
     combined_vector_list = [
         [basis_vector0 + [0], cbasis_vector0, "basis_vector"],
         [basis_vector0, cbasis_vector0 + [0], "cbasis_vector"],
