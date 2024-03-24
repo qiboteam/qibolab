@@ -272,14 +272,14 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
 # models.methods
 def test_load_model_params():
     model_params_folder = emulator_test.__path__[0]
-    device_name = 'ibmfakebelem_q01'
-    model_params = f'{model_params_folder}/{device_name}_model_params.yml'
+    device_name = "ibmfakebelem_q01"
+    model_params = f"{model_params_folder}/{device_name}_model_params.yml"
     load_model_params(model_params)
 
 
 # backends.generic
 def test_dec_to_basis_string():
-    dec_to_basis_string(x=1, nlevels = [3,2,2])
+    dec_to_basis_string(x=1, nlevels=[3, 2, 2])
 
 
 @pytest.mark.parametrize("model", MODELS)
@@ -314,7 +314,9 @@ def test_make_arbitrary_state(model):
     qibo_statevector = np.zeros(dim)
     qibo_statevector[2] = 1
     qibo_statevector = np.array(qibo_statevector.tolist())
-    qibo_statedm = np.kron(qibo_statevector.reshape([dim,1]), qibo_statevector.reshape([1,dim]))
+    qibo_statedm = np.kron(
+        qibo_statevector.reshape([dim, 1]), qibo_statevector.reshape([1, dim])
+    )
     teststate = simulation_backend.make_arbitrary_state(
         qibo_statevector, is_qibo_state_vector=True
     )
