@@ -270,7 +270,7 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
 
 
 # models.methods
-def test_load_model_params()
+def test_load_model_params():
     model_params_folder = emulator_test.__path__[0]
     device_name = 'ibmfakebelem_q01'
     model_params = f'{model_params_folder}/{device_name}_model_params.yml'
