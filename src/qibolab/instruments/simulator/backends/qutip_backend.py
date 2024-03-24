@@ -503,7 +503,7 @@ def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:
     shape = (np.product(dims[0]), np.product(dims[1]))
     if shape[1] == 1:
         statetype = "ket"
-    elif shape[0]==shape[1]:
+    elif shape[0] == shape[1]:
         statetype = "oper"
 
     return Qobj(statedata, dims=dims, shape=shape, type=statetype)
