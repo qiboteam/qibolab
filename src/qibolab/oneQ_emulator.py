@@ -1,8 +1,4 @@
 from qibolab.emulator import create_runcard_emulator
-
-# from qibolab.instruments.simulator.models.general_no_coupler_model import (
-#   generate_model_config_oneQ,
-#
 from qibolab.instruments.simulator.models import general_no_coupler_model
 from qibolab.instruments.simulator.pulse_simulator import (
     PulseSimulator,
@@ -19,7 +15,6 @@ drive_freq = 5090167234.445013
 rabi_freq = 125457538.19061986
 T1 = 8.857848970762537e-05
 T2 = 0.00010679794866226273
-T2e = 0.0
 nlevel = 3
 
 # simulation parameters
@@ -43,14 +38,12 @@ def create_oneQ_emulator(runcard_folder: str):
         "drive_freq": {"0": drive_freq},
         "T1": {"0": T1},
         "T2": {"0": T2},
-        "T2e": {"0": T2e},
         "lo_freq": {"0": lo_freq},
         "rabi_freq": {"0": rabi_freq},
         "anharmonicity": {"0": anharmonicity},
         "coupling_strength": {},
     }
 
-    # model_config = generate_model_config_oneQ(model_params_dict, nlevel)
     model_config = general_no_coupler_model.generate_model_config(
         model_params_dict, nlevels_q=[nlevel]
     )

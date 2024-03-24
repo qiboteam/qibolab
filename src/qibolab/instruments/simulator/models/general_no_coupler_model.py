@@ -12,7 +12,7 @@ from qibolab.instruments.simulator.models.methods import (
 def generate_default_params():
     """Returns template model parameters dictionary."""
     model_params = {
-        "device_name": "model template for 0-c1-1 system",
+        "device_name": "model template for 0-1 system",
         "topology": [[0, 1]],
         "nqubits": 2,
         "ncouplers": 0,
@@ -25,8 +25,8 @@ def generate_default_params():
             1: [0.01, 0.02],
         },
         "drive_freq": {
-            "0": 4.581205e9,
-            "1": 4.62381e9,
+            "0": 5.0e9,
+            "1": 5.1e9,
         },
         "T1": {
             "0": 0.0,
@@ -157,15 +157,3 @@ def generate_model_config(
     }
 
     return model_config
-
-
-'''
-def generate_model_config_oneQ(model_params: dict, nlevels_q: int = None) -> dict:
-    """Calls `generate_model_config` to construct a model configuration
-    dictionary for generic 1Q emulators."""
-    model_config = generate_model_config(
-        model_params, nlevels_q=[nlevels_q], topology=[]
-    )
-
-    return model_config
-'''

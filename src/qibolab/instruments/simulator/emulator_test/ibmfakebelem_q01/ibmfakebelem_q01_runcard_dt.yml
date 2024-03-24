@@ -1,0 +1,194 @@
+nqubits: 5
+description: IBM 5-qubit device FakeBelem, q0 and q1 only
+
+settings:
+    nshots: 4096
+    #sampling_rate: 4500000000 #1e9
+    relaxation_time: 300_000
+    #time_of_flight: 280
+    #smearing: 0
+    #Fast_reset: False
+    #chip: ibmfakebelem5q
+
+qubits: [0, 1] #, 2, 3, 4]
+couplers: []
+
+topology: [[0, 1]] #, [1, 2], [1, 3], [3, 4]]
+
+native_gates:
+    single_qubit:
+        0: # qubit number
+            RX:
+                duration: 160 #80 #
+                amplitude: 0.24045125169257026 #0.051 #
+                frequency: 5090167234.445013 #1131148274.321114
+                shape: Drag(4, -2.4305800297101414) #Rectangular() #
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 22400
+                amplitude: 0.03
+                frequency: 7301661824.000001 #1622591516.4444447
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+                phase: 1.5636758979377372
+
+        1: # qubit number
+            RX:
+                duration: 160 #80 #
+                amplitude: 0.24840043468596693 #0.040985 #
+                frequency: 5245306068.285917 #1165623570.7302039
+                shape: Drag(4, 0.6571522139248822) #Rectangular() #
+                type: qd # qubit drive
+                start: 0
+                phase: 0
+            MZ:
+                duration: 22400
+                amplitude: 0.056500000000000015
+                frequency: 7393428047.0 #1642984010.4444444
+                shape: Rectangular()
+                type: ro # readout
+                start: 0
+                phase: -3.022547221302854
+
+    two_qubit:
+        0-1: # qubit numbers (order is independent as of v0.1.4)
+            CZ: # actually CX
+            - type: virtual_z
+              phase: -3.141592653589793
+              qubit: 0
+            - type: virtual_z
+              phase: -1.5707963267948966
+              qubit: 1
+              
+            - duration: 160
+              amplitude: 0.11622814090041741
+              frequency: 5090167234.445013
+              shape: Drag(4, -2.4030014266125312)
+              type: qd
+              relative_start: 0
+              phase: 1.6155738267853115
+              qubit: 0
+            - duration: 160
+              amplitude: 0.11976666126366188
+              frequency: 5245306068.285917
+              shape: Drag(4, 0.6889687213780946)
+              type: qd
+              relative_start: 0
+              phase: 0.02175043021781017
+              qubit: 1
+              
+            - duration: 1584
+              amplitude: 0.023676707660000004
+              frequency: 5090167234.445013
+              shape: GaussianSquare(6.4, 1328) #Gaussian(6.4) #
+              type: qd
+              relative_start: 160
+              phase: 0.16645972884560645
+              qubit: 0
+            - type: virtual_z
+              phase: -1.5707963267948966 #-3.141592653589793
+              qubit: 1 
+            - duration: 1584
+              amplitude: 0.14343084605450945
+              frequency: 5090167234.445013
+              shape: GaussianSquare(6.4, 1328) #Gaussian(6.4) #
+              type: qd
+              relative_start: 160
+              phase: -2.9352017171062608
+              qubit: 1 #U(q1,w0)
+
+            - type: virtual_z
+              phase: 1.5707963267948966 
+              qubit: 1 
+            - duration: 160
+              amplitude: 0.24840043468596693
+              frequency: 5245306068.285917
+              shape: Drag(4, 0.6571522139248822) #GaussianSquare(6.4, 1328)
+              type: qd
+              relative_start: 1744
+              phase: 0.0
+              qubit: 1
+              
+            - duration: 1584
+              amplitude: 0.023676707660000004
+              frequency: 5090167234.445013
+              shape: GaussianSquare(6.4, 1328) #Gaussian(6.4) #
+              type: qd
+              relative_start: 1904
+              phase: -2.975132924744187
+              qubit: 0
+            - type: virtual_z
+              phase: -1.5707963267948966 
+              qubit: 1
+            - duration: 1584
+              amplitude: 0.14343084605450945
+              frequency: 5090167234.445013
+              shape: GaussianSquare(6.4, 1328) #Gaussian(6.4) #
+              type: qd
+              relative_start: 1904
+              phase: 0.20639093648353235
+              qubit: 1 #U(q1,w0)
+
+            - type: virtual_z
+              phase: -1.5707963267948966 
+              qubit: 0
+            - type: virtual_z
+              phase: 1.5707963267948966 
+              qubit: 1
+            - duration: 160
+              amplitude: 0.11622814090041741
+              frequency: 5090167234.445013
+              shape: Drag(4, -2.4030014266125312)
+              type: qd
+              relative_start: 3488
+              phase: 0.04477749999041481
+              qubit: 0
+            - duration: 160
+              amplitude: 0.11976666126366188
+              frequency: 5245306068.285917
+              shape: Drag(4, 0.6889687213780946)
+              type: qd
+              relative_start: 3488
+              phase: -1.549045896577087
+              qubit: 1
+
+characterization:
+    single_qubit:
+        0:
+            readout_frequency: 7301661824.000001
+            #resonator_polycoef_flux: []
+            drive_frequency: 5090167234.445013
+            anharmonicity: 0
+            Ec: 0
+            Ej: 0
+            g: 0
+            T1: 0.0
+            T2: 0.0
+            sweetspot: 0
+            # filter: {}
+            mean_gnd_states: 1.5417+0.1817j
+            mean_exc_states: 2.5332-0.5914j
+            # parameters for single shot classification
+            threshold: 1.5435
+            iq_angle:  2.602
+            anharmonicity: 217_492_000
+        1:
+            readout_frequency: 7393428047.0
+            #resonator_polycoef_flux: []
+            drive_frequency: 5245306068.285917
+            anharmonicity: 0
+            Ec: 0
+            Ej: 0
+            g: 0
+            T1: 0.0
+            T2: 0.0
+            sweetspot: 0
+            # filter: {}
+            mean_gnd_states: (0+0j)
+            mean_exc_states: (0+0j)
+        #"c0":
+         #   sweetspot: 0.0
+            # filter: {}

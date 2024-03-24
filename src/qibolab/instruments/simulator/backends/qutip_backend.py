@@ -53,11 +53,9 @@ class Qutip_Simulator:
             options are used.
         """
         self.model_config = model_config
-        if sim_opts is not None:
-            self.sim_opts = sim_opts
-        else:
-            self.sim_opts = get_default_qutip_sim_opts()
-
+        if sim_opts is None:
+            sim_opts = get_default_qutip_sim_opts()
+        self.sim_opts = sim_opts
         self.update()
 
     def update_sim_opts(self, updated_sim_opts: Options):
@@ -183,14 +181,10 @@ class Qutip_Simulator:
 
         ### drive ###
         for channel_name, op_instruction_list in self.model_config["drive"].items():
-            print(op_instruction_list)
-            for i, op_instruction in enumerate(op_instruction_list):
-                if i == 0:
-                    self.operators.update(
-                        {channel_name: self.make_operator(op_instruction)}
-                    )
-                else:
-                    self.operators[channel_name] += self.make_operator(op_instruction)
+            channel_op = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
+            for op_instruction in op_instruction_list:
+                channel_op += self.make_operator(op_instruction)
+            self.operators.update({channel_name: channel_op})
 
         ### dissipation ###
         for op_instruction in self.model_config["dissipation"]["t1"]:
