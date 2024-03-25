@@ -66,9 +66,10 @@ class QMConfig:
 
             if is_octave:
                 con = port.opx_port.i.device
+                number = port.opx_port.i.number
                 device["connectivity"] = con
                 self.register_port(port.opx_port)
-                self.controllers[con]["digital_outputs"][port.number] = {}
+                self.controllers[con]["digital_outputs"][number] = {}
 
     @staticmethod
     def iq_imbalance(g, phi):
