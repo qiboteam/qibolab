@@ -159,9 +159,8 @@ class OctaveOutput(QMOutput):
         Digital markers are used to switch LOs on in triggered mode.
         """
         opx = self.opx_port.i.device
-        return {
-            "output_switch": {"port": (opx, self.number)} | DIGITAL_PULSE_CALIBRATION
-        }
+        number = self.opx_port.i.number
+        return {"output_switch": {"port": (opx, number)} | DIGITAL_PULSE_CALIBRATION}
 
 
 @dataclass
