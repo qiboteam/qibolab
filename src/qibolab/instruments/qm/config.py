@@ -53,15 +53,19 @@ class QMConfig:
                 controllers[port.device] = {}
                 if not is_octave:
                     controllers[port.device]["analog_inputs"] = DEFAULT_INPUTS
+                    controllers[port.device]["digital_outputs"] = {}
 
             device = controllers[port.device]
             if port.key in device:
                 device[port.key].update(port.config)
             else:
                 device[port.key] = port.config
+
             if is_octave:
                 device["connectivity"] = port.opx_port.i.device
                 self.register_port(port.opx_port)
+            else:
+                device["digital_outputs"][port.number] = {}
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -168,9 +172,18 @@ class QMConfig:
                     }
                 ]
             else:
+                opx = qubit.readout.port.opx_port.i.device
+                port_number = qubit.readout.port.number
                 self.elements[f"readout{qubit.name}"] = {
                     "RF_inputs": {"port": qubit.readout.port.pair},
                     "RF_outputs": {"port": qubit.feedback.port.pair},
+                    "digitalInputs": {
+                        "output_switch": {
+                            "port": (opx, port_number),
+                            "delay": 57,
+                            "buffer": 18,
+                        },
+                    },
                 }
             self.elements[f"readout{qubit.name}"].update(
                 {

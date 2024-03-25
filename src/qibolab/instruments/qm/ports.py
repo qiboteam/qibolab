@@ -140,7 +140,7 @@ class OctaveOutput(QMOutput):
 
     Can be external or internal.
     """
-    output_mode: str = field(default="always_on", metadata={"config": "output_mode"})
+    output_mode: str = field(default="triggered", metadata={"config": "output_mode"})
     """Can be: "always_on" / "always_off"/ "triggered" / "triggered_reversed"."""
 
     opx_port: Optional[OPXOutput] = None
