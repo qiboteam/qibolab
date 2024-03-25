@@ -196,7 +196,7 @@
             "0": {
                 "readout_frequency": 7301661824.000001,
                 "drive_frequency": 5090167234.445013,
-                "anharmonicity": 217492000,
+                "anharmonicity": -336123005.1821652,
                 "Ec": 0,
                 "Ej": 0,
                 "g": 0,
@@ -211,7 +211,7 @@
             "1": {
                 "readout_frequency": 7393428047.0,
                 "drive_frequency": 5245306068.285917,
-                "anharmonicity": 0,
+                "anharmonicity": -316572131.412737,
                 "Ec": 0,
                 "Ej": 0,
                 "g": 0,
