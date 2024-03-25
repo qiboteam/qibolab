@@ -115,7 +115,7 @@ class Zurich(Controller):
         self.sub_sequences: list[SubSequence] = []
         "Sub sequences between each measurement"
         self.unsplit_channels: set[str] = set()
-        "Names of channels that were not split into seb-sequences"
+        "Names of channels that were not split into sub-sequences"
 
         self.processed_sweeps: Optional[ProcessedSweeps] = None
         self.nt_sweeps: list[Sweeper] = []
