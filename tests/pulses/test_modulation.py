@@ -1,16 +1,14 @@
 import numpy as np
 
 from qibolab.pulses import Gaussian, IqWaveform, Rectangular
-from qibolab.pulses.envelope import Times
 from qibolab.pulses.modulation import demodulate, modulate
 
 
 def test_modulation():
-    times = Times(30, 30)
     amplitude = 0.9
-    renvs: IqWaveform = Rectangular().envelopes(times) * amplitude
+    renvs: IqWaveform = Rectangular().envelopes(30) * amplitude
     # fmt: off
-    np.testing.assert_allclose(modulate(renvs, 0.04),
+    np.testing.assert_allclose(modulate(renvs, 0.04, rate=1),
          np.array([[ 6.36396103e-01,  6.16402549e-01,  5.57678156e-01,
                      4.63912794e-01,  3.40998084e-01,  1.96657211e-01,
                      3.99596419e-02, -1.19248738e-01, -2.70964282e-01,
@@ -34,10 +32,9 @@ def test_modulation():
     )
     # fmt: on
 
-    times = Times(20, 20)
-    genvs: IqWaveform = Gaussian(0.5).envelopes(times)
+    genvs: IqWaveform = Gaussian(rel_sigma=0.5).envelopes(30)
     # fmt: off
-    np.testing.assert_allclose(modulate(genvs, 0.3),
+    np.testing.assert_allclose(modulate(genvs, 0.3,rate=1),
          np.array([[ 4.50307953e-01, -1.52257426e-01, -4.31814602e-01,
                      4.63124693e-01,  1.87836646e-01, -6.39017403e-01,
                      2.05526028e-01,  5.54460924e-01, -5.65661777e-01,
@@ -59,16 +56,17 @@ def test_modulation():
 def test_demodulation():
     signal = np.ones((2, 100))
     freq = 0.15
-    mod = modulate(signal, freq)
+    rate = 1
+    mod = modulate(signal, freq, rate)
 
-    demod = demodulate(mod, freq)
+    demod = demodulate(mod, freq, rate)
     np.testing.assert_allclose(demod, signal)
 
     mod1 = modulate(demod, freq * 3.0, rate=3.0)
     np.testing.assert_allclose(mod1, mod)
 
-    mod2 = modulate(signal, freq, phase=2 * np.pi)
+    mod2 = modulate(signal, freq, rate, phase=2 * np.pi)
     np.testing.assert_allclose(mod2, mod)
 
-    demod1 = demodulate(mod + np.ones_like(mod), freq)
+    demod1 = demodulate(mod + np.ones_like(mod), freq, rate)
     np.testing.assert_allclose(demod1, demod)
