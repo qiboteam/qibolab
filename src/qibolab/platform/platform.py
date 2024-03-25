@@ -25,7 +25,7 @@ NS_TO_SEC = 1e-9
 
 def unroll_sequences(
     sequences: List[PulseSequence], relaxation_time: int
-) -> Tuple[PulseSequence, Dict[str, str]]:
+) -> Tuple[PulseSequence, dict[str, list[str]]]:
     """Unrolls a list of pulse sequences to a single pulse sequence with
     multiple measurements.
 
@@ -54,7 +54,7 @@ def unroll_sequences(
         pulses_per_channel = sequence.pulses_per_channel
         for channel in channels:
             delay = length - pulses_per_channel[channel].duration
-            total_sequence.append(Delay(delay, channel))
+            total_sequence.append(Delay(duration=delay, channel=channel))
 
     return total_sequence, readout_map
 
