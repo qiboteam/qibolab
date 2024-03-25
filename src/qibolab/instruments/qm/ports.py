@@ -1,6 +1,12 @@
 from dataclasses import dataclass, field, fields
 from typing import ClassVar, Dict, Optional, Union
 
+DIGITAL_PULSE_CALIBRATION = {"delay": 57, "buffer": 18}
+"""Calibration of digital pulses used for LO triggering.
+
+https://docs.quantum-machines.co/1.1.7/qm-qua-sdk/docs/Guides/octave/#calibrating-the-digital-pulse
+"""
+
 
 @dataclass
 class QMPort:
@@ -145,6 +151,17 @@ class OctaveOutput(QMOutput):
 
     opx_port: Optional[OPXOutput] = None
     """OPX+ port that is connected to the Octave port."""
+
+    @property
+    def digital_inputs(self):
+        """Generates `digitalInputs` entry for elements in QM config.
+
+        Digital markers are used to switch LOs on in triggered mode.
+        """
+        opx = self.opx_port.i.device
+        return {
+            "output_switch": {"port": (opx, self.number)} | DIGITAL_PULSE_CALIBRATION
+        }
 
 
 @dataclass
