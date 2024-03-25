@@ -697,50 +697,12 @@ class Zurich(Controller):
 
         exp.play(signal=channel_name, pulse=pulse.zhpulse, **play_parameters)
 
-    @staticmethod
-    def rearrange_rt_sweepers(
-        sweepers: list[Sweeper],
-    ) -> tuple[Optional[tuple[int, int]], list[Sweeper]]:
-        """Rearranges list of real-time sweepers based on hardware limitations.
-
-        The only known limitation currently is that frequency sweepers must be applied before (on the outer loop) other
-        (e.g. amplitude) sweepers. Consequently, the only thing done here is to swap the frequency sweeper with the
-        first sweeper in the list.
-
-        Args:
-            sweepers: Sweepers to rearrange.
-
-        Returns:
-            swapped_axis_pair: tuple containing indices of the two swapped axes, or None if nothing to rearrange.
-            sweepers: rearranged (or original, if nothing to rearrange) list of sweepers.
-        """
-        freq_sweeper = next(
-            iter(s for s in sweepers if s.parameter is Parameter.frequency), None
-        )
-        if freq_sweeper:
-            sweepers_copy = sweepers.copy()
-            freq_sweeper_idx = sweepers_copy.index(freq_sweeper)
-            sweepers_copy[freq_sweeper_idx] = sweepers_copy[0]
-            sweepers_copy[0] = freq_sweeper
-            log.warning("Sweepers were reordered")
-            return (0, freq_sweeper_idx), sweepers_copy
-        return None, sweepers
-
     def sweep(self, qubits, couplers, sequence: PulseSequence, options, *sweepers):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}
         self.processed_sweeps = ProcessedSweeps(sweepers, qubits)
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(sweepers)
-        swapped_axis_pair, self.rt_sweeps = self.rearrange_rt_sweepers(self.rt_sweeps)
-        if swapped_axis_pair:
-            # 1. axes corresponding to NT sweeps appear before axes corresponding to RT sweeps
-            # 2. in singleshot mode, the first axis contains shots, i.e.: (nshots, sweeper_1, sweeper_2)
-            axis_offset = len(self.nt_sweeps) + int(
-                options.averaging_mode is AveragingMode.SINGLESHOT
-            )
-            swapped_axis_pair = tuple(ax + axis_offset for ax in swapped_axis_pair)
-
         self.frequency_from_pulses(qubits, sequence)
 
         self.acquisition_type = None
@@ -760,8 +722,6 @@ class Zurich(Controller):
             for i, ropulse in enumerate(self.sequence[measure_channel_name(qubit)]):
                 data = self.results.get_data(f"sequence{q}_{i}")
 
-                if swapped_axis_pair:
-                    data = np.moveaxis(data, swapped_axis_pair[0], swapped_axis_pair[1])
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     data = (
                         np.ones(data.shape) - data.real
