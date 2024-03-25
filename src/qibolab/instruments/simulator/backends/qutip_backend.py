@@ -393,7 +393,7 @@ class Qutip_Simulator:
         if len(basis_vector) != self.nqubits:
             raise Exception("length of basis_vector does not match number of qubits!")
         if cbasis_vector is None:
-            cbasis_vector = np.zeros(self.ncouplers).tolist()
+            cbasis_vector = [0 for c in range(self.ncouplers)]
         else:
             if len(cbasis_vector) != self.ncouplers:
                 raise Exception(
