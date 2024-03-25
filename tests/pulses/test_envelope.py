@@ -14,68 +14,22 @@ from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rec
     ],
 )
 def test_sampling_rate(shape):
-    pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
-    assert len(pulse.envelope_waveform_i(sampling_rate=1)) == 40
-    assert len(pulse.envelope_waveform_i(sampling_rate=100)) == 4000
-
-
-def test_eval():
-    shape = PulseShape.eval("Rectangular()")
-    assert isinstance(shape, Rectangular)
-    shape = PulseShape.eval("Drag(5, 1)")
-    assert isinstance(shape, Drag)
-    with pytest.raises(ValueError):
-        shape = PulseShape.eval("Ciao()")
-
-
-def test_raise_shapeiniterror():
-    shape = Rectangular()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = Gaussian(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = GaussianSquare(0, 1)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = Drag(0, 0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = IIR([0], [0], None)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = SNZ(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = eCap(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
+    pulse = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=shape,
+        relative_phase=0,
+        type=PulseType.DRIVE,
+    )
+    assert len(pulse.i(sampling_rate=1)) == 40
+    assert len(pulse.i(sampling_rate=100)) == 4000
 
 
 def test_drag_shape():
     pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
     # envelope i & envelope q should cross nearly at 0 and at 2
-    waveform = pulse.envelope_waveform_i(sampling_rate=10)
+    waveform = pulse.i(sampling_rate=10)
     target_waveform = np.array(
         [
             0.63683161,
@@ -105,21 +59,17 @@ def test_drag_shape():
 
 def test_rectangular():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
         relative_phase=0,
-        shape=Rectangular(),
-        channel=1,
+        envelope=Rectangular(),
+        channel="1",
         qubit=0,
     )
-    _if = 0
 
     assert pulse.duration == 50
-    assert isinstance(pulse.shape, Rectangular)
-    assert pulse.shape.name == "Rectangular"
-    assert repr(pulse.shape) == "Rectangular()"
+    assert isinstance(pulse.envelope, Rectangular)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -128,28 +78,24 @@ def test_rectangular():
         pulse.amplitude * np.zeros(num_samples),
     )
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
+    np.testing.assert_allclose(pulse.envelope.i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.envelope.q(sampling_rate), q)
 
 
 def test_gaussian():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
         relative_phase=0,
-        shape=Gaussian(5),
-        channel=1,
+        envelope=Gaussian(rel_sigma=5),
+        channel="1",
         qubit=0,
     )
-    _if = 0
 
     assert pulse.duration == 50
-    assert isinstance(pulse.shape, Gaussian)
-    assert pulse.shape.name == "Gaussian"
-    assert pulse.shape.rel_sigma == 5
-    assert repr(pulse.shape) == "Gaussian(5)"
+    assert isinstance(pulse.envelope, Gaussian)
+    assert pulse.envelope.rel_sigma == 5
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -158,13 +104,13 @@ def test_gaussian():
         -(1 / 2)
         * (
             ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
+            / (((num_samples) / pulse.envelope.rel_sigma) ** 2)
         )
     )
     q = pulse.amplitude * np.zeros(num_samples)
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
+    np.testing.assert_allclose(pulse.envelope.i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.envelope.q(sampling_rate), q)
 
 
 def test_drag():

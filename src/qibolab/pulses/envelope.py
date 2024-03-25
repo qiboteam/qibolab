@@ -43,10 +43,6 @@ class BaseEnvelope(ABC, Model):
     Generates both i (in-phase) and q (quadrature) components.
     """
 
-    def window(self, samples: int):
-        """Individual timing of each sample."""
-        return np.linspace(0, self.duration, samples)
-
     def i(self, samples: int) -> Waveform:
         """In-phase envelope."""
         return np.zeros(samples)
@@ -144,13 +140,16 @@ class GaussianSquare(BaseEnvelope):
     In units of the interval duration.
     """
     width: float
-    """Length of the flat portion."""
+    """Fraction of the flat portion.
+
+    E.g., use `0.6` for a Pulse that is flat for 60% of its duration.
+    """
 
     def i(self, samples: int) -> Waveform:
         """Generate a Gaussian envelope, with a flat central window."""
 
         pulse = np.ones(samples)
-        u, hw = samples / 2, self.width * samples / self.duration / 2
+        u, hw = samples / 2, self.width * samples / 2
         ts = np.arange(samples)
         tails = (ts < (u - hw)) | ((u + hw) < ts)
         pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, samples))
