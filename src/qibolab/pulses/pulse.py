@@ -30,6 +30,9 @@ class PulseType(Enum):
 class Pulse(Model):
     """A pulse to be sent to the QPU."""
 
+    duration: float
+    """Pulse duration."""
+
     amplitude: float
     """Pulse digital amplitude (unitless).
 
