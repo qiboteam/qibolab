@@ -334,7 +334,7 @@ class Zurich(Controller):
                 max(ends),
             )  # max is intended for float arithmetic errors only
 
-        # FIXME: this is a hotfix specifically made for the qubit_flux experiment in flux pulse mode, where the flux
+        # FIXME: this is a hotfix specifically made for any flux experiments in flux pulse mode, where the flux
         # pulses extend through the entire duration of the experiment. This should be removed once the sub-sequence
         # splitting logic is removed from the driver.
         channels_overlapping_measurement = set()
