@@ -4,8 +4,6 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Optional
 
-import numpy as np
-
 from .shape import SAMPLING_RATE, PulseShape, Waveform
 
 
@@ -21,14 +19,14 @@ class PulseType(Enum):
     DRIVE = "qd"
     FLUX = "qf"
     COUPLERFLUX = "cf"
+    DELAY = "dl"
+    VIRTUALZ = "virtual_z"
 
 
 @dataclass
 class Pulse:
-    """A class to represent a pulse to be sent to the QPU."""
+    """A pulse to be sent to the QPU."""
 
-    start: int
-    """Start time of pulse in ns."""
     duration: int
     """Pulse duration in ns."""
     amplitude: float
@@ -36,14 +34,14 @@ class Pulse:
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: int
+    frequency: int = 0
     """Pulse Intermediate Frequency in Hz.
 
     The value has to be in the range [10e6 to 300e6].
     """
-    relative_phase: float
+    relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
-    shape: PulseShape
+    shape: PulseShape = "Rectangular()"
     """Pulse shape, as a PulseShape object.
 
     See
@@ -71,41 +69,8 @@ class Pulse:
         self.shape.pulse = self
 
     @classmethod
-    def flux(cls, start, duration, amplitude, shape, **kwargs):
-        return cls(
-            start, duration, amplitude, 0, 0, shape, type=PulseType.FLUX, **kwargs
-        )
-
-    @property
-    def finish(self) -> Optional[int]:
-        """Time when the pulse is scheduled to finish."""
-        if None in {self.start, self.duration}:
-            return None
-        return self.start + self.duration
-
-    @property
-    def global_phase(self):
-        """Global phase of the pulse, in radians.
-
-        This phase is calculated from the pulse start time and frequency
-        as `2 * pi * frequency * start`.
-        """
-        if self.type is PulseType.READOUT:
-            # readout pulses should have zero global phase so that we can
-            # calculate probabilities in the i-q plane
-            return 0
-
-        # pulse start, duration and finish are in ns
-        return 2 * np.pi * self.frequency * self.start / 1e9
-
-    @property
-    def phase(self) -> float:
-        """Total phase of the pulse, in radians.
-
-        The total phase is computed as the sum of the global and
-        relative phases.
-        """
-        return self.global_phase + self.relative_phase
+    def flux(cls, duration, amplitude, shape, **kwargs):
+        return cls(duration, amplitude, 0, 0, shape, type=PulseType.FLUX, **kwargs)
 
     @property
     def id(self) -> int:
@@ -152,15 +117,31 @@ class Pulse:
             )
         )
 
-    def is_equal_ignoring_start(self, item) -> bool:
-        """Check if two pulses are equal ignoring start time."""
-        return (
-            self.duration == item.duration
-            and self.amplitude == item.amplitude
-            and self.frequency == item.frequency
-            and self.relative_phase == item.relative_phase
-            and self.shape == item.shape
-            and self.channel == item.channel
-            and self.type == item.type
-            and self.qubit == item.qubit
-        )
+
+@dataclass
+class Delay:
+    """A wait instruction during which we are not sending any pulses to the
+    QPU."""
+
+    duration: int
+    """Delay duration in ns."""
+    channel: str
+    """Channel on which the delay should be implemented."""
+    type: PulseType = PulseType.DELAY
+    """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
+
+
+@dataclass
+class VirtualZ:
+    """Implementation of Z-rotations using virtual phase."""
+
+    duration = 0
+    """Duration of the virtual gate should always be zero."""
+
+    phase: float
+    """Phase that implements the rotation."""
+    channel: Optional[str] = None
+    """Channel on which the virtual phase should be added."""
+    qubit: int = 0
+    """Qubit on the drive of which the virtual phase should be added."""
+    type: PulseType = PulseType.VIRTUALZ

@@ -1,11 +1,18 @@
-from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.pulses import (
+    Delay,
+    Drag,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    PulseType,
+    Rectangular,
+)
 
 
 def test_add_readout():
     sequence = PulseSequence()
     sequence.append(
         Pulse(
-            start=0,
             frequency=200_000_000,
             amplitude=0.3,
             duration=60,
@@ -14,10 +21,9 @@ def test_add_readout():
             channel=1,
         )
     )
-
+    sequence.append(Delay(4, channel=1))
     sequence.append(
         Pulse(
-            start=64,
             frequency=200_000_000,
             amplitude=0.3,
             duration=60,
@@ -27,10 +33,9 @@ def test_add_readout():
             type="qf",
         )
     )
-
+    sequence.append(Delay(4, channel=1))
     sequence.append(
         Pulse(
-            start=128,
             frequency=20_000_000,
             amplitude=0.9,
             duration=2000,
@@ -40,32 +45,15 @@ def test_add_readout():
             type=PulseType.READOUT,
         )
     )
-    assert len(sequence) == 3
+    assert len(sequence) == 5
     assert len(sequence.ro_pulses) == 1
     assert len(sequence.qd_pulses) == 1
     assert len(sequence.qf_pulses) == 1
 
 
-def test_separate_overlapping_pulses():
-    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = Pulse(100, 400, 0.9, 20e6, 0, Rectangular(), qubit=30, type=PulseType.READOUT)
-    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = Pulse(500, 400, 0.9, 20e6, 0, Rectangular(), qubit=20, type=PulseType.READOUT)
-    p6 = Pulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
-
-    ps = PulseSequence([p1, p2, p3, p4, p5, p6])
-    n = 70
-    for segregated_ps in ps.separate_overlapping_pulses():
-        n += 1
-        for pulse in segregated_ps:
-            pulse.channel = n
-
-
 def test_get_qubit_pulses():
-    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10, qubit=0)
+    p1 = Pulse(400, 0.9, 20e6, 0, Gaussian(5), 10, qubit=0)
     p2 = Pulse(
-        100,
         400,
         0.9,
         20e6,
@@ -75,10 +63,9 @@ def test_get_qubit_pulses():
         qubit=0,
         type=PulseType.READOUT,
     )
-    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20, qubit=1)
-    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30, qubit=1)
+    p3 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 20, qubit=1)
+    p4 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 30, qubit=1)
     p5 = Pulse(
-        500,
         400,
         0.9,
         20e6,
@@ -88,8 +75,8 @@ def test_get_qubit_pulses():
         qubit=1,
         type=PulseType.READOUT,
     )
-    p6 = Pulse.flux(600, 400, 0.9, Rectangular(), channel=40, qubit=1)
-    p7 = Pulse.flux(900, 400, 0.9, Rectangular(), channel=40, qubit=2)
+    p6 = Pulse.flux(400, 0.9, Rectangular(), channel=40, qubit=1)
+    p7 = Pulse.flux(400, 0.9, Rectangular(), channel=40, qubit=2)
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6, p7])
     assert ps.qubits == [0, 1, 2]
@@ -99,28 +86,13 @@ def test_get_qubit_pulses():
     assert len(ps.get_qubit_pulses(0, 1)) == 6
 
 
-def test_pulses_overlap():
-    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = Pulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30, type=PulseType.READOUT)
-    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = Pulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20, type=PulseType.READOUT)
-    p6 = Pulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
-
-    ps = PulseSequence([p1, p2, p3, p4, p5, p6])
-    assert ps.pulses_overlap
-    assert not ps.get_channel_pulses(10).pulses_overlap
-    assert ps.get_channel_pulses(20).pulses_overlap
-    assert ps.get_channel_pulses(30).pulses_overlap
-
-
 def test_get_channel_pulses():
-    p1 = Pulse(0, 400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = Pulse(100, 400, 0.9, 20e6, 0, Rectangular(), 30, type=PulseType.READOUT)
-    p3 = Pulse(300, 400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = Pulse(400, 400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = Pulse(500, 400, 0.9, 20e6, 0, Rectangular(), 20, type=PulseType.READOUT)
-    p6 = Pulse(600, 400, 0.9, 20e6, 0, Gaussian(5), 30)
+    p1 = Pulse(400, 0.9, 20e6, 0, Gaussian(5), 10)
+    p2 = Pulse(400, 0.9, 20e6, 0, Rectangular(), 30, type=PulseType.READOUT)
+    p3 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 20)
+    p4 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 30)
+    p5 = Pulse(400, 0.9, 20e6, 0, Rectangular(), 20, type=PulseType.READOUT)
+    p6 = Pulse(400, 0.9, 20e6, 0, Gaussian(5), 30)
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
     assert ps.channels == [10, 20, 30]
@@ -130,23 +102,20 @@ def test_get_channel_pulses():
     assert len(ps.get_channel_pulses(20, 30)) == 5
 
 
-def test_start_finish():
-    p1 = Pulse(20, 40, 0.9, 200e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
-    p2 = Pulse(60, 1000, 0.9, 20e6, 0, Rectangular(), 2, PulseType.READOUT)
-    ps = PulseSequence([p1]) + [p2]
-    assert ps.start == p1.start
-    assert ps.finish == p2.finish
-
-    p1.start = None
-    assert p1.finish is None
-    p2.duration = None
-    assert p2.finish is None
+def test_sequence_duration():
+    p0 = Delay(20, 1)
+    p1 = Pulse(40, 0.9, 200e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p2 = Pulse(1000, 0.9, 20e6, 0, Rectangular(), 1, PulseType.READOUT)
+    ps = PulseSequence([p0, p1]) + [p2]
+    assert ps.duration == 20 + 40 + 1000
+    p2.channel = 2
+    assert ps.duration == 1000
 
 
 def test_init():
-    p1 = Pulse(400, 40, 0.9, 100e6, 0, Drag(5, 1), 3, PulseType.DRIVE)
-    p2 = Pulse(500, 40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
-    p3 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p1 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 3, PulseType.DRIVE)
+    p2 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
+    p3 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
 
     ps = PulseSequence()
     assert type(ps) == PulseSequence
@@ -172,13 +141,13 @@ def test_init():
 
 def test_operators():
     ps = PulseSequence()
-    ps += [Pulse(800, 200, 0.9, 20e6, 0, Rectangular(), 1, type=PulseType.READOUT)]
-    ps = ps + [Pulse(800, 200, 0.9, 20e6, 0, Rectangular(), 2, type=PulseType.READOUT)]
-    ps = [Pulse(800, 200, 0.9, 20e6, 0, Rectangular(), 3, type=PulseType.READOUT)] + ps
+    ps += [Pulse(200, 0.9, 20e6, 0, Rectangular(), 1, type=PulseType.READOUT)]
+    ps = ps + [Pulse(200, 0.9, 20e6, 0, Rectangular(), 2, type=PulseType.READOUT)]
+    ps = [Pulse(200, 0.9, 20e6, 0, Rectangular(), 3, type=PulseType.READOUT)] + ps
 
-    p4 = Pulse(100, 40, 0.9, 50e6, 0, Gaussian(5), 3, PulseType.DRIVE)
-    p5 = Pulse(200, 40, 0.9, 50e6, 0, Gaussian(5), 2, PulseType.DRIVE)
-    p6 = Pulse(300, 40, 0.9, 50e6, 0, Gaussian(5), 1, PulseType.DRIVE)
+    p4 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 3, PulseType.DRIVE)
+    p5 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 2, PulseType.DRIVE)
+    p6 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 1, PulseType.DRIVE)
 
     another_ps = PulseSequence()
     another_ps.append(p4)
@@ -195,7 +164,7 @@ def test_operators():
 
     # ps.plot()
 
-    p7 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p7 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
     yet_another_ps = PulseSequence([p7])
     assert len(yet_another_ps) == 1
     yet_another_ps *= 3
@@ -203,7 +172,7 @@ def test_operators():
     yet_another_ps *= 3
     assert len(yet_another_ps) == 9
 
-    p8 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
-    p9 = Pulse(600, 40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
+    p8 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p9 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
     and_yet_another_ps = 2 * PulseSequence([p9]) + [p8] * 3
     assert len(and_yet_another_ps) == 5

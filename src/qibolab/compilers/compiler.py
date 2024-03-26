@@ -15,7 +15,7 @@ from qibolab.compilers.default import (
     u3_rule,
     z_rule,
 )
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import Delay, PulseSequence
 
 
 @dataclass
@@ -98,32 +98,30 @@ class Compiler:
 
         return inner
 
-    def _compile_gate(
-        self, gate, platform, sequence, virtual_z_phases, moment_start, delays
-    ):
-        """Adds a single gate to the pulse sequence."""
-        rule = self[gate.__class__]
-        # get local sequence and phases for the current gate
-        gate_sequence, gate_phases = rule(gate, platform)
+    def get_sequence(self, gate, platform):
+        """Get pulse sequence implementing the given gate using the registered
+        rules.
 
-        # update global pulse sequence
-        # determine the right start time based on the availability of the qubits involved
-        all_qubits = {*gate_sequence.qubits, *gate.qubits}
-        start = max(
-            *[
-                sequence.get_qubit_pulses(qubit).finish + delays[qubit]
-                for qubit in all_qubits
-            ],
-            moment_start,
-        )
-        # shift start time and phase according to the global sequence
-        for pulse in gate_sequence:
-            pulse.start += start
-            if pulse.type is not PulseType.READOUT:
-                pulse.relative_phase += virtual_z_phases[pulse.qubit]
-            sequence.append(pulse)
-
-        return gate_sequence, gate_phases
+        Args:
+            gate (:class:`qibo.gates.Gate`): Qibo gate to convert to pulses.
+            platform (:class:`qibolab.platform.Platform`): Qibolab platform to read the native gates from.
+        """
+        # get local sequence for the current gate
+        rule = self[type(gate)]
+        if isinstance(gate, gates.M):
+            qubits = [platform.get_qubit(q) for q in gate.qubits]
+            gate_sequence = rule(gate, qubits)
+        elif len(gate.qubits) == 1:
+            qubit = platform.get_qubit(gate.target_qubits[0])
+            gate_sequence = rule(gate, qubit)
+        elif len(gate.qubits) == 2:
+            pair = platform.pairs[
+                tuple(platform.get_qubit(q).name for q in gate.qubits)
+            ]
+            gate_sequence = rule(gate, pair)
+        else:
+            raise NotImplementedError(f"{type(gate)} is not a native gate.")
+        return gate_sequence
 
     def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
@@ -141,27 +139,29 @@ class Compiler:
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
-        virtual_z_phases = defaultdict(int)
 
         measurement_map = {}
+        qubit_clock = defaultdict(int)
+        channel_clock = defaultdict(int)
         # process circuit gates
-        delays = defaultdict(int)
         for moment in circuit.queue.moments:
-            moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
                 if isinstance(gate, gates.Align):
                     for qubit in gate.qubits:
-                        delays[qubit] += gate.delay
+                        qubit_clock[qubit] += gate.delay
                     continue
-                gate_sequence, gate_phases = self._compile_gate(
-                    gate, platform, sequence, virtual_z_phases, moment_start, delays
-                )
-                for qubit in gate.qubits:
-                    delays[qubit] = 0
 
-                # update virtual Z phases
-                for qubit, phase in gate_phases.items():
-                    virtual_z_phases[qubit] += phase
+                gate_sequence = self.get_sequence(gate, platform)
+                for pulse in gate_sequence:
+                    if qubit_clock[pulse.qubit] > channel_clock[pulse.qubit]:
+                        delay = qubit_clock[pulse.qubit] - channel_clock[pulse.channel]
+                        sequence.append(Delay(delay, pulse.channel))
+                        channel_clock[pulse.channel] += delay
+
+                    sequence.append(pulse)
+                    # update clocks
+                    qubit_clock[pulse.qubit] += pulse.duration
+                    channel_clock[pulse.channel] += pulse.duration
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates

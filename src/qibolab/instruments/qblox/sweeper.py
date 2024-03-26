@@ -224,7 +224,6 @@ class QbloxSweeper:
             Parameter.gain: QbloxSweeperType.gain,
             Parameter.amplitude: QbloxSweeperType.gain,
             Parameter.bias: QbloxSweeperType.offset,
-            Parameter.start: QbloxSweeperType.start,
             Parameter.duration: QbloxSweeperType.duration,
             Parameter.relative_phase: QbloxSweeperType.relative_phase,
         }

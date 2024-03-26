@@ -1,5 +1,7 @@
 """PulseSequence class."""
 
+from collections import defaultdict
+
 from .pulse import PulseType
 
 
@@ -92,27 +94,21 @@ class PulseSequence(list):
         return new_pc
 
     @property
-    def finish(self) -> int:
-        """The time when the last pulse of the sequence finishes."""
-        t: int = 0
+    def pulses_per_channel(self):
+        """Return a dictionary with the sequence per channel."""
+        sequences = defaultdict(type(self))
         for pulse in self:
-            if pulse.finish > t:
-                t = pulse.finish
-        return t
-
-    @property
-    def start(self) -> int:
-        """The start time of the first pulse of the sequence."""
-        t = self.finish
-        for pulse in self:
-            if pulse.start < t:
-                t = pulse.start
-        return t
+            sequences[pulse.channel].append(pulse)
+        return sequences
 
     @property
     def duration(self) -> int:
-        """Duration of the sequence calculated as its finish - start times."""
-        return self.finish - self.start
+        """The time when the last pulse of the sequence finishes."""
+        channel_pulses = self.pulses_per_channel
+        if len(channel_pulses) == 1:
+            pulses = next(iter(channel_pulses.values()))
+            return sum(pulse.duration for pulse in pulses)
+        return max(sequence.duration for sequence in channel_pulses.values())
 
     @property
     def channels(self) -> list:
@@ -133,25 +129,6 @@ class PulseSequence(list):
                 qubits.append(pulse.qubit)
         qubits.sort()
         return qubits
-
-    def get_pulse_overlaps(self):  # -> dict((int,int): PulseSequence):
-        """Return a dictionary of slices of time (tuples with start and finish
-        times) where pulses overlap."""
-        times = []
-        for pulse in self:
-            if not pulse.start in times:
-                times.append(pulse.start)
-            if not pulse.finish in times:
-                times.append(pulse.finish)
-        times.sort()
-
-        overlaps = {}
-        for n in range(len(times) - 1):
-            overlaps[(times[n], times[n + 1])] = PulseSequence()
-            for pulse in self:
-                if (pulse.start <= times[n]) & (pulse.finish >= times[n + 1]):
-                    overlaps[(times[n], times[n + 1])] += [pulse]
-        return overlaps
 
     def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
         """Separate a sequence of overlapping pulses into a list of non-
@@ -178,15 +155,3 @@ class PulseSequence(list):
             if not stored:
                 separated_pulses.append(PulseSequence([new_pulse]))
         return separated_pulses
-
-    # TODO: Implement separate_different_frequency_pulses()
-
-    @property
-    def pulses_overlap(self) -> bool:
-        """Whether any of the pulses in the sequence overlap."""
-        overlap = False
-        for pc in self.get_pulse_overlaps().values():
-            if len(pc) > 1:
-                overlap = True
-                break
-        return overlap

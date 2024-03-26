@@ -9,7 +9,7 @@ import qibosoq.components.pulses as rfsoc_pulses
 
 from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape
-from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
+from qibolab.sweeper import BIAS, DURATION, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
@@ -165,14 +165,14 @@ def _(
             idx_sweep = sequence.index(pulse)
             indexes.append(idx_sweep)
             base_value = getattr(pulse, sweeper.parameter.name)
-            if idx_sweep != 0 and sweeper.parameter is START:
+            if idx_sweep != 0 and sweeper.parameter is START:  # pylint: disable=E0602
                 # do the conversion from start to delay
                 base_value = base_value - sequence[idx_sweep - 1].start
             values = sweeper.get_values(base_value)
             starts.append(values[0])
             stops.append(values[-1])
 
-            if sweeper.parameter is START:
+            if sweeper.parameter is START:  # pylint: disable=E0602
                 parameters.append(rfsoc.Parameter.DELAY)
             elif sweeper.parameter is DURATION:
                 parameters.append(rfsoc.Parameter.DURATION)

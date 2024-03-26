@@ -26,31 +26,36 @@ A simple example on how to connect to a platform and use it execute a pulse sequ
 
 ```python
 from qibolab import create_platform, ExecutionParameters
-from qibolab.pulses import DrivePulse, ReadoutPulse, PulseSequence
+from qibolab.pulses import Pulse, Delay, PulseType
 
 # Define PulseSequence
 sequence = PulseSequence()
 # Add some pulses to the pulse sequence
-sequence.add(
-    DrivePulse(
-        start=0,
+sequence.append(
+    Pulse(
         amplitude=0.3,
         duration=4000,
         frequency=200_000_000,
         relative_phase=0,
         shape="Gaussian(5)",  # Gaussian shape with std = duration / 5
+        type=PulseType.DRIVE,
         channel=1,
     )
 )
-
-sequence.add(
+sequence.append(
+    Delay(
+        duration=4000,
+        channel=2,
+    )
+)
+sequence.append(
     ReadoutPulse(
-        start=4004,
         amplitude=0.9,
         duration=2000,
         frequency=20_000_000,
         relative_phase=0,
         shape="Rectangular",
+        type=PulseType.READOUT,
         channel=2,
     )
 )

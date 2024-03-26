@@ -1,9 +1,11 @@
 """Plotting tools for pulses and related entities."""
 
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .pulse import Pulse
+from .pulse import Delay, Pulse
 from .sequence import PulseSequence
 from .shape import SAMPLING_RATE, Waveform, modulate
 
@@ -39,7 +41,7 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     waveform_q = pulse_.shape.envelope_waveform_q(sampling_rate)
 
     num_samples = len(waveform_i)
-    time = pulse_.start + np.arange(num_samples) / sampling_rate
+    time = np.arange(num_samples) / sampling_rate
     _ = plt.figure(figsize=(14, 5), dpi=200)
     gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=np.array([2, 1]))
     ax1 = plt.subplot(gs[0])
@@ -67,8 +69,8 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     ax1.set_ylabel("Amplitude")
 
     ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
-    start = float(pulse_.start)
-    finish = float(pulse_.finish) if pulse_.finish is not None else 0.0
+    start = 0
+    finish = float(pulse_.duration)
     ax1.axis((start, finish, -1.0, 1.0))
     ax1.legend()
 
@@ -123,9 +125,12 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
         _ = plt.figure(figsize=(14, 2 * len(ps)), dpi=200)
         gs = gridspec.GridSpec(ncols=1, nrows=len(ps))
         vertical_lines = []
+        starts = defaultdict(int)
         for pulse in ps:
-            vertical_lines.append(pulse.start)
-            vertical_lines.append(pulse.finish)
+            if not isinstance(pulse, Delay):
+                vertical_lines.append(starts[pulse.channel])
+                vertical_lines.append(starts[pulse.channel] + pulse.duration)
+            starts[pulse.channel] += pulse.duration
 
         n = -1
         for qubit in ps.qubits:
@@ -134,11 +139,16 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
                 n += 1
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 ax = plt.subplot(gs[n])
-                ax.axis([0, ps.finish, -1, 1])
+                ax.axis([0, ps.duration, -1, 1])
+                start = 0
                 for pulse in channel_pulses:
+                    if isinstance(pulse, Delay):
+                        start += pulse.duration
+                        continue
+
                     envelope = pulse.shape.envelope_waveforms(sampling_rate)
                     num_samples = envelope[0].size
-                    time = pulse.start + np.arange(num_samples) / sampling_rate
+                    time = start + np.arange(num_samples) / sampling_rate
                     modulated = modulate(np.array(envelope), pulse.frequency)
                     ax.plot(time, modulated[1], c="lightgrey")
                     ax.plot(time, modulated[0], c=f"C{str(n)}")
@@ -157,7 +167,7 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
                     ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
                     for vl in vertical_lines:
                         ax.axvline(vl, c="slategrey", linestyle="--")
-                    ax.axis((0, ps.finish, -1, 1))
+                    ax.axis((0, ps.duration, -1, 1))
                     ax.grid(
                         visible=True,
                         which="both",
@@ -165,6 +175,8 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
                         color="#CCCCCC",
                         linestyle="-",
                     )
+                    start += pulse.duration
+
         if filename:
             plt.savefig(filename)
         else:

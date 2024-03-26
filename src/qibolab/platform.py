@@ -1,8 +1,7 @@
 """A platform for executing quantum algorithms."""
 
-import copy
 from collections import defaultdict
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -11,7 +10,7 @@ from qibo.config import log, raise_error
 from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
-from .pulses import Drag, PulseSequence, PulseType
+from .pulses import Delay, Drag, PulseSequence, PulseType
 from .qubits import Qubit, QubitId, QubitPair, QubitPairId
 from .sweeper import Sweeper
 from .unrolling import batch
@@ -43,15 +42,20 @@ def unroll_sequences(
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
-    start = 0
+    channels = {pulse.channel for sequence in sequences for pulse in sequence}
     for sequence in sequences:
+        total_sequence.extend(sequence)
+        # TODO: Fix unrolling results
         for pulse in sequence:
-            new_pulse = copy.deepcopy(pulse)
-            new_pulse.start += start
-            total_sequence.append(new_pulse)
             if pulse.type is PulseType.READOUT:
-                readout_map[pulse.id].append(new_pulse.id)
-        start = total_sequence.finish + relaxation_time
+                readout_map[pulse.id].append(pulse.id)
+
+        length = sequence.duration + relaxation_time
+        pulses_per_channel = sequence.pulses_per_channel
+        for channel in channels:
+            delay = length - pulses_per_channel[channel].duration
+            total_sequence.append(Delay(delay, channel))
+
     return total_sequence, readout_map
 
 
@@ -119,6 +123,53 @@ class Platform:
         self.topology.add_edges_from(
             [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
         )
+        self._set_channels_to_single_qubit_gates()
+        self._set_channels_to_two_qubit_gates()
+
+    def _set_channels_to_single_qubit_gates(self):
+        """Set channels to pulses that implement single-qubit gates.
+
+        This function should be removed when the duplication caused by
+        (``pulse.qubit``, ``pulse.type``) -> ``pulse.channel``
+        is resolved. For now it just makes sure that the channels of
+        native pulses are consistent in order to test the rest of the code.
+        """
+        for qubit in self.qubits.values():
+            gates = qubit.native_gates
+            for fld in fields(gates):
+                pulse = getattr(gates, fld.name)
+                if pulse is not None:
+                    channel = getattr(qubit, pulse.type.name.lower()).name
+                    setattr(gates, fld.name, replace(pulse, channel=channel))
+        for coupler in self.couplers.values():
+            if gates.CP is not None:
+                gates.CP = replace(gates.CP, channel=coupler.flux.name)
+
+    def _set_channels_to_two_qubit_gates(self):
+        """Set channels to pulses that implement single-qubit gates.
+
+        This function should be removed when the duplication caused by
+        (``pulse.qubit``, ``pulse.type``) -> ``pulse.channel``
+        is resolved. For now it just makes sure that the channels of
+        native pulses are consistent in order to test the rest of the code.
+        """
+        for pair in self.pairs.values():
+            gates = pair.native_gates
+            for fld in fields(gates):
+                sequence = getattr(gates, fld.name)
+                if len(sequence) > 0:
+                    new_sequence = PulseSequence()
+                    for pulse in sequence:
+                        if pulse.type is PulseType.VIRTUALZ:
+                            channel = self.qubits[pulse.qubit].drive.name
+                        elif pulse.type is PulseType.COUPLERFLUX:
+                            channel = self.couplers[pulse.qubit].flux.name
+                        else:
+                            channel = getattr(
+                                self.qubits[pulse.qubit], pulse.type.name.lower()
+                            ).name
+                        new_sequence.append(replace(pulse, channel=channel))
+                    setattr(gates, fld.name, new_sequence)
 
     def __str__(self):
         return self.name
@@ -274,7 +325,7 @@ class Platform:
                 platform = create_dummy()
                 sequence = PulseSequence()
                 parameter = Parameter.frequency
-                pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
+                pulse = platform.create_qubit_readout_pulse(qubit=0)
                 sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
@@ -317,9 +368,9 @@ class Platform:
         qubits are not named as 0, 1, 2, ...
         """
         try:
-            return self.qubits[qubit].name
+            return self.qubits[qubit]
         except KeyError:
-            return list(self.qubits.keys())[qubit]
+            return list(self.qubits.values())[qubit]
 
     def get_coupler(self, coupler):
         """Return the name of the physical coupler corresponding to a logical
@@ -329,71 +380,85 @@ class Platform:
         couplers are not named as 0, 1, 2, ...
         """
         try:
-            return self.couplers[coupler].name
+            return self.couplers[coupler]
         except KeyError:
-            return list(self.couplers.keys())[coupler]
+            return list(self.couplers.values())[coupler]
 
-    def create_RX90_pulse(self, qubit, start=0, relative_phase=0):
+    def create_RX90_pulse(self, qubit, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
+        return replace(
+            qubit.native_gates.RX90,
+            relative_phase=relative_phase,
+            channel=qubit.drive.name,
+        )
 
-    def create_RX_pulse(self, qubit, start=0, relative_phase=0):
+    def create_RX_pulse(self, qubit, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
+        return replace(
+            qubit.native_gates.RX,
+            relative_phase=relative_phase,
+            channel=qubit.drive.name,
+        )
 
-    def create_RX12_pulse(self, qubit, start=0, relative_phase=0):
+    def create_RX12_pulse(self, qubit, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.RX12.pulse(start, relative_phase)
+        return replace(
+            qubit.native_gates.RX12,
+            relative_phase=relative_phase,
+            channel=qubit.drive.name,
+        )
 
-    def create_CZ_pulse_sequence(self, qubits, start=0):
-        pair = tuple(self.get_qubit(q) for q in qubits)
-        if pair not in self.pairs or self.pairs[pair].native_gates.CZ is None:
+    def create_CZ_pulse_sequence(self, qubits):
+        pair = tuple(self.get_qubit(q).name for q in qubits)
+        if pair not in self.pairs or len(self.pairs[pair].native_gates.CZ) == 0:
             raise_error(
                 ValueError,
                 f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.pairs[pair].native_gates.CZ.sequence(start)
+        return self.pairs[pair].native_gates.CZ
 
-    def create_iSWAP_pulse_sequence(self, qubits, start=0):
-        pair = tuple(self.get_qubit(q) for q in qubits)
-        if pair not in self.pairs or self.pairs[pair].native_gates.iSWAP is None:
+    def create_iSWAP_pulse_sequence(self, qubits):
+        pair = tuple(self.get_qubit(q).name for q in qubits)
+        if pair not in self.pairs or len(self.pairs[pair].native_gates.iSWAP) == 0:
             raise_error(
                 ValueError,
                 f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.pairs[pair].native_gates.iSWAP.sequence(start)
+        return self.pairs[pair].native_gates.iSWAP
 
-    def create_CNOT_pulse_sequence(self, qubits, start=0):
-        pair = tuple(self.get_qubit(q) for q in qubits)
-        if pair not in self.pairs or self.pairs[pair].native_gates.CNOT is None:
+    def create_CNOT_pulse_sequence(self, qubits):
+        pair = tuple(self.get_qubit(q).name for q in qubits)
+        if pair not in self.pairs or len(self.pairs[pair].native_gates.CNOT) == 0:
             raise_error(
                 ValueError,
                 f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
             )
-        return self.pairs[pair].native_gates.CNOT.sequence(start)
+        return self.pairs[pair].native_gates.CNOT
 
-    def create_MZ_pulse(self, qubit, start):
+    def create_MZ_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
-        return self.qubits[qubit].native_gates.MZ.pulse(start)
+        return replace(qubit.native_gates.MZ, channel=qubit.readout.name)
 
-    def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
+    def create_qubit_drive_pulse(self, qubit, duration, relative_phase=0):
         qubit = self.get_qubit(qubit)
-        pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
-        pulse.duration = duration
-        return pulse
+        return replace(
+            qubit.native_gates.RX,
+            duration=duration,
+            relative_phase=relative_phase,
+            channel=qubit.drive.name,
+        )
 
-    def create_qubit_readout_pulse(self, qubit, start):
-        qubit = self.get_qubit(qubit)
-        return self.create_MZ_pulse(qubit, start)
+    def create_qubit_readout_pulse(self, qubit):
+        return self.create_MZ_pulse(qubit)
 
-    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
+    def create_coupler_pulse(self, coupler, duration=None, amplitude=None):
         coupler = self.get_coupler(coupler)
-        pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
+        pulse = coupler.native_gates.CP
         if duration is not None:
-            pulse.duration = duration
+            pulse = replace(pulse, duration=duration)
         if amplitude is not None:
-            pulse.amplitude = amplitude
-        return pulse
+            pulse = replace(pulse, amplitude=amplitude)
+        return replace(pulse, channel=coupler.flux.name)
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
@@ -401,15 +466,21 @@ class Platform:
     def create_RX90_drag_pulse(self, qubit, start, beta, relative_phase=0):
         """Create native RX90 pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
-        pulse = self.qubits[qubit].native_gates.RX90.pulse(start, relative_phase)
-        pulse.shape = Drag(rel_sigma=pulse.shape.rel_sigma, beta=beta)
-        pulse.shape.pulse = pulse
-        return pulse
+        pulse = qubit.native_gates.RX90
+        return replace(
+            pulse,
+            relative_phase=relative_phase,
+            shape=Drag(pulse.shape.rel_sigma, beta),
+            channel=qubit.drive.name,
+        )
 
     def create_RX_drag_pulse(self, qubit, start, beta, relative_phase=0):
         """Create native RX pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
-        pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)
-        pulse.shape = Drag(rel_sigma=pulse.shape.rel_sigma, beta=beta)
-        pulse.shape.pulse = pulse
-        return pulse
+        pulse = qubit.native_gates.RX
+        return replace(
+            pulse,
+            relative_phase=relative_phase,
+            shape=Drag(pulse.shape.rel_sigma, beta),
+            channel=qubit.drive.name,
+        )

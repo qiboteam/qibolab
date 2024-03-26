@@ -56,8 +56,6 @@
                     "amplitude": 0.1,
                     "shape": "Gaussian(5)",
                     "frequency": 4000000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -65,8 +63,6 @@
                     "amplitude": 0.005,
                     "shape": "Gaussian(5)",
                     "frequency": 4700000000,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -74,8 +70,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5200000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -83,19 +77,15 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4200000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4855663000,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -103,8 +93,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 4900000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -112,10 +100,8 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4500000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
@@ -123,8 +109,6 @@
                     "amplitude": 0.005,
                     "shape": "Gaussian(5)",
                     "frequency": 2700000000,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -132,8 +116,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 6100000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -141,19 +123,15 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4150000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 5855663000,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -161,8 +139,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5800000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "ro"
                 }
             },
@@ -170,19 +146,15 @@
                 "RX": {
                     "duration": 40,
                     "amplitude": 0.3,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 4155663000,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "RX12": {
                     "duration": 40,
                     "amplitude": 0.0484,
-                    "shape": "Drag(5, -0.02)",
+                    "shape": "Drag(5, 0.02)",
                     "frequency": 5855663000,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "qd"
                 },
                 "MZ": {
@@ -190,8 +162,6 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5500000000.0,
-                    "relative_start": 0,
-                    "phase": 0,
                     "type": "ro"
                 }
             }
@@ -202,9 +172,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "relative_start": 0,
-                    "type": "coupler",
-                    "coupler": 0
+                    "type": "cf"
                 }
             },
             "1": {
@@ -212,9 +180,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "relative_start": 0,
-                    "type": "coupler",
-                    "coupler": 1
+                    "type": "cf"
                 }
             },
             "3": {
@@ -222,9 +188,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "relative_start": 0,
-                    "type": "coupler",
-                    "coupler": 3
+                    "type": "cf"
                 }
             },
             "4": {
@@ -232,9 +196,7 @@
                     "duration": 30,
                     "amplitude": 0.05,
                     "shape": "GaussianSquare(5, 0.75)",
-                    "relative_start": 0,
-                    "type": "coupler",
-                    "coupler": 4
+                    "type": "cf"
                 }
             }
         },
@@ -246,7 +208,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -264,8 +225,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 0,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -274,7 +234,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -292,8 +251,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 0,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ]
             },
@@ -304,7 +262,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -322,8 +279,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 1,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -332,7 +288,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -350,8 +305,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 1,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ]
             },
@@ -362,7 +316,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -380,8 +333,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 3,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -390,7 +342,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -408,18 +359,15 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 3,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "CNOT": [
                     {
                         "duration": 40,
                         "amplitude": 0.3,
-                        "shape": "Drag(5, -0.02)",
+                        "shape": "Drag(5, 0.02)",
                         "frequency": 4150000000.0,
-                        "relative_start": 0,
-                        "phase": 0,
                         "type": "qd",
                         "qubit": 2
                     },
@@ -442,7 +390,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -460,8 +407,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 4,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ],
                 "iSWAP": [
@@ -470,7 +416,6 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "qubit": 2,
-                        "relative_start": 0,
                         "type": "qf"
                     },
                     {
@@ -488,8 +433,7 @@
                         "amplitude": 0.05,
                         "shape": "GaussianSquare(5, 0.75)",
                         "coupler": 4,
-                        "relative_start": 0,
-                        "type": "coupler"
+                        "type": "cf"
                     }
                 ]
             }

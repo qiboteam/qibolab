@@ -34,13 +34,12 @@ from .conftest import get_instrument
 @pytest.mark.parametrize(
     "pulse",
     [
-        Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0),
-        Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0),
-        Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0),
-        Pulse(0, 40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0),
-        Pulse(0, 40, 0.05, int(3e9), 0.0, SNZ(10, 0.01), "ch0", qubit=0),
+        Pulse(40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0),
+        Pulse(40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0),
+        Pulse(40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=0),
+        Pulse(40, 0.05, int(3e9), 0.0, Drag(5, 0.4), "ch0", qubit=0),
+        Pulse(40, 0.05, int(3e9), 0.0, SNZ(10, 0.01), "ch0", qubit=0),
         Pulse(
-            0,
             40,
             0.05,
             int(3e9),
@@ -540,7 +539,7 @@ def test_sweep_and_play_sim(dummy_qrc):
     assert all(qubit in res for qubit in qubits)
 
 
-@pytest.mark.parametrize("parameter1", [Parameter.start, Parameter.duration])
+@pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single(dummy_qrc, parameter1):
     platform = create_platform("zurich")
     IQM5q = platform.instruments["EL_ZURO"]
@@ -582,7 +581,7 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
     assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
 
 
-@pytest.mark.parametrize("parameter1", [Parameter.start, Parameter.duration])
+@pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     platform = create_platform("zurich")
     IQM5q = platform.instruments["EL_ZURO"]
@@ -643,7 +642,6 @@ SweeperParameter = {
     Parameter.frequency,
     Parameter.amplitude,
     Parameter.duration,
-    Parameter.start,
     Parameter.relative_phase,
 }
 

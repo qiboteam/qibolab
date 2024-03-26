@@ -94,6 +94,7 @@ def test_qmpulse_previous_and_next():
                 f"readout{qubit}",
                 PulseType.READOUT,
                 qubit=qubit,
+                type=PulseType.READOUT,
             )
         )
         ro_qmpulses.append(ro_pulse)

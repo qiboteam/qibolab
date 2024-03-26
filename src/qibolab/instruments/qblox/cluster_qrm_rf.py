@@ -1,4 +1,5 @@
 """Qblox Cluster QRM-RF driver."""
+
 import copy
 import json
 import time
@@ -498,7 +499,6 @@ class QrmRf(ClusterModule):
                     Parameter.amplitude,
                     Parameter.duration,
                     Parameter.relative_phase,
-                    Parameter.start,
                 ]
 
                 for sweeper in sweepers:

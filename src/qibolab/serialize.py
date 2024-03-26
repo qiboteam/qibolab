@@ -6,13 +6,13 @@ example for more details.
 """
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
 
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
-from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
+from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import (
     CouplerMap,
     InstrumentMap,
@@ -21,6 +21,7 @@ from qibolab.platform import (
     QubitPairMap,
     Settings,
 )
+from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
 from qibolab.qubits import Qubit, QubitPair
 
 RUNCARD = "parameters.json"
@@ -83,7 +84,52 @@ def load_qubits(
     return qubits, couplers, pairs
 
 
-# This creates the compiler error
+def _load_pulse(pulse_kwargs, qubit):
+    pulse_type = pulse_kwargs.pop("type")
+    if "coupler" in pulse_kwargs:
+        q = pulse_kwargs.pop("coupler", qubit.name)
+    else:
+        q = pulse_kwargs.pop("qubit", qubit.name)
+
+    if pulse_type == "dl":
+        return Delay(**pulse_kwargs)
+    if pulse_type == "virtual_z":
+        return VirtualZ(**pulse_kwargs, qubit=q)
+    return Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
+
+
+def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
+    """Parse native gates of the qubit from the runcard.
+
+    Args:
+        qubit (:class:`qibolab.qubits.Qubit`): Qubit object that the
+            native gates are acting on.
+        gates (dict): Dictionary with native gate pulse parameters as loaded
+            from the runcard.
+    """
+    return SingleQubitNatives(
+        **{name: _load_pulse(kwargs, qubit) for name, kwargs in gates.items()}
+    )
+
+
+def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
+    sequences = {}
+    for name, seq_kwargs in gates.items():
+        if isinstance(seq_kwargs, dict):
+            seq_kwargs = [seq_kwargs]
+
+        sequence = PulseSequence()
+        for kwargs in seq_kwargs:
+            if "coupler" in kwargs:
+                qubit = couplers[kwargs["coupler"]]
+            else:
+                qubit = qubits[kwargs["qubit"]]
+            sequence.append(_load_pulse(kwargs, qubit))
+        sequences[name] = sequence
+
+    return TwoQubitNatives(**sequences)
+
+
 def register_gates(
     runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> Tuple[QubitMap, QubitPairMap]:
@@ -97,19 +143,17 @@ def register_gates(
 
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
-        qubits[json.loads(q)].native_gates = SingleQubitNatives.from_dict(
-            qubits[json.loads(q)], gates
-        )
+        qubit = qubits[json.loads(q)]
+        qubit.native_gates = _load_single_qubit_natives(qubit, gates)
 
     for c, gates in native_gates.get("coupler", {}).items():
-        couplers[json.loads(c)].native_pulse = CouplerNatives.from_dict(
-            couplers[json.loads(c)], gates
-        )
+        coupler = couplers[json.loads(c)]
+        coupler.native_gates = _load_single_qubit_natives(coupler, gates)
 
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
-        native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
+        native_gates = _load_two_qubit_natives(qubits, couplers, gatedict)
         coupler = pairs[(q0, q1)].coupler
         pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], coupler, native_gates)
         if native_gates.symmetric:
@@ -127,6 +171,44 @@ def load_instrument_settings(
     return instruments
 
 
+def _dump_pulse(pulse: Pulse):
+    data = asdict(pulse)
+    if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
+        del data["frequency"]
+    if "shape" in data:
+        data["shape"] = str(pulse.shape)
+    data["type"] = data["type"].value
+    if "channel" in data:
+        del data["channel"]
+    if "relative_phase" in data:
+        del data["relative_phase"]
+    return data
+
+
+def _dump_single_qubit_natives(natives: SingleQubitNatives):
+    data = {}
+    for fld in fields(natives):
+        pulse = getattr(natives, fld.name)
+        if pulse is not None:
+            data[fld.name] = _dump_pulse(pulse)
+            del data[fld.name]["qubit"]
+    return data
+
+
+def _dump_two_qubit_natives(natives: TwoQubitNatives):
+    data = {}
+    for fld in fields(natives):
+        sequence = getattr(natives, fld.name)
+        if len(sequence) > 0:
+            data[fld.name] = []
+            for pulse in sequence:
+                pulse_serial = _dump_pulse(pulse)
+                if pulse.type == PulseType.COUPLERFLUX:
+                    pulse_serial["coupler"] = pulse_serial.pop("qubit")
+                data[fld.name].append(pulse_serial)
+    return data
+
+
 def dump_native_gates(
     qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> dict:
@@ -135,18 +217,21 @@ def dump_native_gates(
     # single-qubit native gates
     native_gates = {
         "single_qubit": {
-            json.dumps(q): qubit.native_gates.raw for q, qubit in qubits.items()
+            json.dumps(q): _dump_single_qubit_natives(qubit.native_gates)
+            for q, qubit in qubits.items()
         }
     }
+
     if couplers:
         native_gates["coupler"] = {
-            json.dumps(c): coupler.native_pulse.raw for c, coupler in couplers.items()
+            json.dumps(c): _dump_single_qubit_natives(coupler.native_gates)
+            for c, coupler in couplers.items()
         }
 
     # two-qubit native gates
     native_gates["two_qubit"] = {}
     for pair in pairs.values():
-        natives = pair.native_gates.raw
+        natives = _dump_two_qubit_natives(pair.native_gates)
         if len(natives) > 0:
             pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
             native_gates["two_qubit"][pair_name] = natives
