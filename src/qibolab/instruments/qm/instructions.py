@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Set, Union
@@ -9,9 +8,15 @@ from qm import qua
 from qualang_tools.bakery import baking
 from qualang_tools.bakery.bakery import Baking
 
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import Pulse, PulseType
+from qibolab.qubits import Qubit
 
-from .acquisition import Acquisition
+from .acquisition import ACQUISITION_TYPES, Acquisition
 from .config import SAMPLING_RATE, QMConfig, float_serial
 
 DurationsType = Union[List[int], npt.NDArray[int]]
@@ -19,17 +24,16 @@ DurationsType = Union[List[int], npt.NDArray[int]]
 
 
 @dataclass(frozen=True)
-class Instruction:
-    element: str
-    """QM config element that the instruction will be played on."""
+class Align:
+    elements: tuple = field(default_factory=tuple)
 
-    @abstractmethod
-    def __call__(self, *args, **kwargs):
-        """QUA method implementing the instruction."""
+    def __call__(self):
+        qua.align(*self.elements)
 
 
 @dataclass(frozen=True)
-class Wait(Instruction):
+class Wait:
+    elements: tuple
     duration: int
     """Time (in clock cycles) to wait before playing this pulse.
 
@@ -39,14 +43,13 @@ class Wait(Instruction):
     def __call__(self, additional_wait=None):
         """``additional_wait`` is given when we are sweeping start."""
         if additional_wait is not None:
-            qua.wait(additional_wait + self.duration, self.element)
+            qua.wait(additional_wait + self.duration, *self.elements)
         elif self.duration >= 4:
-            qua.wait(self.duration, self.element)
-        return None
+            qua.wait(self.duration, *self.elements)
 
 
 @dataclass(frozen=True)
-class Play(Instruction):
+class Play:
     """Wrapper around :class:`qibolab.pulses.Pulse` for easier translation to
     QUA program.
 
@@ -55,6 +58,8 @@ class Play(Instruction):
     as defined in the QM config.
     """
 
+    element: str
+    """QM config element that the instruction will be played on."""
     amplitude: float
     duration: int
     relative_phase: float
@@ -198,23 +203,55 @@ class Bake(Play):
 # self.elements_to_align.add(self.element)
 
 
+def create_acquisition(
+    instruction: Measure, qubit: Qubit, options: ExecutionParameters
+):
+    """Create container for the variables used for saving acquisition in the
+    QUA program.
+
+    Args:
+        instruction ...
+        qubit (dict): :class:`qibolab.qubits.Qubit` object that is measured.
+        options (:class:`qibolab.execution_parameters.ExecutionParameters`): Execution
+            options containing acquisition type and averaging mode.
+
+    Returns:
+        :class:`qibolab.instruments.qm.acquisition.Acquisition` object containing acquisition variables.
+    """
+    average = options.averaging_mode is AveragingMode.CYCLIC
+    kwargs = {}
+    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+        kwargs = {"threshold": qubit.threshold, "angle": qubit.iq_angle}
+    acquisition = ACQUISITION_TYPES[options.acquisition_type](
+        instruction.operation, qubit.name, average, **kwargs
+    )
+    return acquisition
+
+
+InstructionType = Union[Align, Wait, Play]
+
+
 @dataclass
 class Instructions:
     config: QMConfig
     to_bake: Set[Pulse]
 
-    instructions: List[Instruction] = field(default_factory=list)
+    instructions: List[InstructionType] = field(default_factory=list)
     """List of instructions to deploy to the instruments."""
-    kwargs: Dict[Instruction, dict] = field(default_factory=lambda: defaultdict(dict))
+    acquisitions: Dict[Measure, Acquisition] = field(default_factory=dict)
+    """Map from measurement instructions to acquisition objects."""
+    kwargs: Dict[InstructionType, dict] = field(
+        default_factory=lambda: defaultdict(dict)
+    )
 
-    pulse_to_instruction: Dict[str, Instruction] = field(default_factory=dict)
+    pulse_to_instruction: Dict[str, InstructionType] = field(default_factory=dict)
     """Map from qibolab pulses to instructions (useful for measurements and
     when sweeping)."""
 
     clock: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
     """Dictionary used to keep track of times of each element, in order to
     calculate wait times."""
-    pulse_finish: Dict[int, List[Instruction]] = field(
+    pulse_finish: Dict[int, List[InstructionType]] = field(
         default_factory=lambda: defaultdict(list)
     )
     """Map to find all pulses that finish at a given time (useful for
@@ -233,7 +270,7 @@ class Instructions:
     #                return last_pulses[-1]
     #    return None
 
-    def append(self, qubit, pulse):
+    def append(self, qubit, pulse, options):
         if (
             pulse.duration % 4 != 0
             or pulse.duration < 16
@@ -243,6 +280,14 @@ class Instructions:
         else:
             if pulse.type is PulseType.READOUT:
                 instruction = Measure.from_pulse(pulse)
+                if instruction not in self.acquisitions:
+                    self.acquisitions[instruction] = create_acquisition(
+                        instruction, qubit, options
+                    )
+                    self.update_kwargs(
+                        instruction, acquisition=self.acquisitions[instruction]
+                    )
+                self.acquisitions[instruction].keys.append(pulse.serial)
             else:
                 instruction = Play.from_pulse(pulse)
 
@@ -259,7 +304,7 @@ class Instructions:
         element = instruction.element
         wait_time = pulse.start - self.clock[instruction.element]
         if wait_time >= 12:
-            delay = Wait(element, duration=wait_time // 4 + 1)
+            delay = Wait((element,), duration=wait_time // 4 + 1)
             self.instructions.append(delay)
             self.clock[element] += 4 * delay.duration
         self.clock[element] += instruction.duration
@@ -282,6 +327,9 @@ class Instructions:
     #        qmpulse.wait_time += 2
     #        to_shift.extend(qmpulse.next_)
 
+    def __iter__(self):
+        return self.instructions
+
     def play(self, relaxation_time=0):
         """Part of QUA program that plays an arbitrary pulse sequence.
 
@@ -296,3 +344,11 @@ class Instructions:
 
         if relaxation_time > 0:
             qua.wait(relaxation_time // 4)
+
+
+class UniqueInstructions(dict):
+
+    def __getitem__(self, key):
+        if key not in self:
+            self[key] = len(self)
+        return super().__getitem__(key)

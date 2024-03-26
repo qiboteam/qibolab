@@ -13,10 +13,10 @@ from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
-from .acquisition import declare_acquisitions, fetch_results
+from .acquisition import fetch_results
 from .config import SAMPLING_RATE, QMConfig
 from .devices import Octave, OPXplus
-from .instructions import Instructions
+from .instructions import Align, Instructions, UniqueInstructions, Wait
 from .ports import OPXIQ
 from .sweepers import sweep
 
@@ -141,7 +141,6 @@ class QMController(Controller):
 
     config: QMConfig = field(default_factory=QMConfig)
     """Configuration dictionary required for pulse execution on the OPXs."""
-    unique_pulses: Dict[str, int] = field(default_factory=dict)
 
     simulation_duration: Optional[int] = None
     """Duration for the simulation in ns.
@@ -271,7 +270,7 @@ class QMController(Controller):
         )
         return self.manager.simulate(self.config.__dict__, program, simulation_config)
 
-    def create_instructions(self, qubits, sequence, sweepers):
+    def create_instructions(self, qubits, sequence, options, sweepers):
         """Translates a :class:`qibolab.pulses.PulseSequence` to
         :class:`qibolab.instruments.qm.instructions.Instructions`.
 
@@ -290,36 +289,34 @@ class QMController(Controller):
         # like we do for readout multiplex
 
         instructions = Instructions(self.config, find_baking_pulses(sweepers))
-        ro_pulses = []
         for pulse in sorted(
             sequence.pulses, key=lambda pulse: (pulse.start, pulse.duration)
         ):
             qubit = qubits[pulse.qubit]
-
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
             if pulse.type is PulseType.READOUT:
                 self.config.register_port(qubit.feedback.port)
-                ro_pulses.append(pulse)
 
             self.config.register_element(
                 qubit, pulse, self.time_of_flight, self.smearing
             )
-
-            instructions.append(qubit, pulse)
-
+            instructions.append(qubit, pulse, options)
         # instructions.shift()
-        return instructions, ro_pulses
+        return instructions
 
     def play(self, qubits, couplers, sequence, options):
         return self.sweep(qubits, couplers, sequence, options)
 
-    # def play_sequences(self, qubits, couplers, sequences, options):
-    #    qmsequences = []
-    #    indices = []
-    #    for sequence in sequences:
-    #        qmsequence, ro_pulses = self.create_sequence(qubits, sequence, [])
-    #        qmsequences.append(qmsequence)
-    #        indices.extend(self.unique_pulses[qmpulse.operation] for qmpulse in qmsequence.qmpulses)
+    def play_sequences(self, qubits, couplers, sequences, options):
+        indices = []
+        unique_instructions = UniqueInstructions()
+        relaxation = options.relaxation_time // 4
+        for sequence in sequences:
+            instructions = self.create_instructions(qubits, sequence, options, [])
+            indices.extend(unique_instructions[instr] for instr in instructions)
+            indices.append(Wait(elements=tuple(), duration=relaxation))
+            indices.append(Align())
+
     #    with qua.program() as experiment:
     #        n = declare(int)
     #        p = declare(int)
@@ -347,12 +344,13 @@ class QMController(Controller):
                 self.config.register_port(qubit.flux.port)
                 self.config.register_flux_element(qubit)
 
-        instructions, ro_pulses = self.create_instructions(qubits, sequence, sweepers)
+        instructions = self.create_instructions(qubits, sequence, options, sweepers)
         with qua.program() as experiment:
             n = declare(int)
-            acquisitions = declare_acquisitions(
-                ro_pulses, qubits, instructions, options
-            )
+            # declare acquisition variables
+            for instruction, acquisition in instructions.acquisitions.items():
+                acquisition.declare(instruction.element)
+            # execute pulses
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(
                     list(sweepers),
@@ -361,9 +359,9 @@ class QMController(Controller):
                     options.relaxation_time,
                     self.config,
                 )
-
+            # download acquisitions
             with qua.stream_processing():
-                for acquisition in acquisitions:
+                for acquisition in instructions.acquisitions.values():
                     acquisition.download(*buffer_dims)
 
         if self.script_file_name is not None:
@@ -373,9 +371,10 @@ class QMController(Controller):
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for pulse in ro_pulses:
-                results[pulse.qubit] = results[pulse.serial] = result
+            for pulse in sequence:
+                if pulse.type is PulseType.READOUT:
+                    results[pulse.qubit] = results[pulse.serial] = result
             return results
-        else:
-            result = self.execute_program(experiment)
-            return fetch_results(result, acquisitions)
+
+        result = self.execute_program(experiment)
+        return fetch_results(result, instructions.acquisitions.values())

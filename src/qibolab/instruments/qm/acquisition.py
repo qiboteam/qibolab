@@ -9,7 +9,7 @@ from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qualang_tools.addons.variables import assign_variables_to_element
 from qualang_tools.units import unit
 
-from qibolab.execution_parameters import AcquisitionType, AveragingMode
+from qibolab.execution_parameters import AcquisitionType
 from qibolab.qubits import QubitId
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -49,10 +49,11 @@ class Acquisition(ABC):
         return len(self.keys)
 
     @abstractmethod
-    def assign_element(self, element):
-        """Assign acquisition variables to the corresponding QM controlled.
+    def declare(self, element):
+        """Declares QUA variables related to this acquisition.
 
-        Proposed to do by QM to avoid crashes.
+        Assigns acquisition variables to the corresponding QM controller.
+        This was proposed by QM to avoid crashes.
 
         Args:
             element (str): Element (from ``config``) that the pulse will be applied on.
@@ -91,16 +92,14 @@ class Acquisition(ABC):
 class RawAcquisition(Acquisition):
     """QUA variables used for raw waveform acquisition."""
 
-    adc_stream: _ResultSource = field(
-        default_factory=lambda: declare_stream(adc_trace=True)
-    )
+    adc_stream: Optional[_ResultSource] = None
     """Stream to collect raw ADC data."""
 
     RESULT_CLS = RawWaveformResults
     AVERAGED_RESULT_CLS = AveragedRawWaveformResults
 
-    def assign_element(self, element):
-        pass
+    def declare(self, element):
+        self.adc_stream = declare_stream(adc_trace=True)
 
     def measure(self, operation, element):
         qua.measure(operation, element, self.adc_stream)
@@ -127,17 +126,21 @@ class RawAcquisition(Acquisition):
 class IntegratedAcquisition(Acquisition):
     """QUA variables used for integrated acquisition."""
 
-    i: _Variable = field(default_factory=lambda: declare(fixed))
-    q: _Variable = field(default_factory=lambda: declare(fixed))
+    i: Optional[_Variable] = None
+    q: Optional[_Variable] = None
     """Variables to save the (I, Q) values acquired from a single shot."""
-    istream: _ResultSource = field(default_factory=lambda: declare_stream())
-    qstream: _ResultSource = field(default_factory=lambda: declare_stream())
+    istream: Optional[_ResultSource] = None
+    qstream: Optional[_ResultSource] = None
     """Streams to collect the results of all shots."""
 
     RESULT_CLS = IntegratedResults
     AVERAGED_RESULT_CLS = AveragedIntegratedResults
 
-    def assign_element(self, element):
+    def declare(self, element):
+        self.i = declare(fixed)
+        self.q = declare(fixed)
+        self.istream = declare_stream()
+        self.qstream = declare_stream()
         assign_variables_to_element(element, self.i, self.q)
 
     def measure(self, operation, element):
@@ -184,12 +187,12 @@ class ShotsAcquisition(Acquisition):
     angle: Optional[float] = None
     """Angle in the IQ plane to be used for classification of single shots."""
 
-    i: _Variable = field(default_factory=lambda: declare(fixed))
-    q: _Variable = field(default_factory=lambda: declare(fixed))
+    i: Optional[_Variable] = None
+    q: Optional[_Variable] = None
     """Variables to save the (I, Q) values acquired from a single shot."""
-    shot: _Variable = field(default_factory=lambda: declare(int))
+    shot: Optional[_Variable] = None
     """Variable for calculating an individual shots."""
-    shots: _ResultSource = field(default_factory=lambda: declare_stream())
+    shots: Optional[_ResultSource] = None
     """Stream to collect multiple shots."""
 
     RESULT_CLS = SampleResults
@@ -199,7 +202,11 @@ class ShotsAcquisition(Acquisition):
         self.cos = np.cos(self.angle)
         self.sin = np.sin(self.angle)
 
-    def assign_element(self, element):
+    def declare(self, element):
+        self.i = declare(fixed)
+        self.q = declare(fixed)
+        self.shot = declare(int)
+        self.shots = declare_stream()
         assign_variables_to_element(element, self.i, self.q, self.shot)
 
     def measure(self, operation, element):
@@ -236,42 +243,6 @@ ACQUISITION_TYPES = {
     AcquisitionType.INTEGRATION: IntegratedAcquisition,
     AcquisitionType.DISCRIMINATION: ShotsAcquisition,
 }
-
-
-def declare_acquisitions(ro_pulses, qubits, instructions, options):
-    """Declares variables for saving acquisition in the QUA program.
-
-    Args:
-        ro_pulses (list): List of readout pulses in the sequence.
-        qubits (dict): Dictionary containing all the :class:`qibolab.qubits.Qubit`
-            objects of the platform.
-        options (:class:`qibolab.execution_parameters.ExecutionParameters`): Execution
-            options containing acquisition type and averaging mode.
-
-    Returns:
-        List of all :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
-    """
-    acquisitions = {}
-    for pulse in ro_pulses:
-        q = pulse.qubit
-        instruction = instructions.pulse_to_instruction[pulse.serial]
-        name = f"{instruction.operation}_{q}"
-        if name not in acquisitions:
-            average = options.averaging_mode is AveragingMode.CYCLIC
-            kwargs = {}
-            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                kwargs["threshold"] = qubits[q].threshold
-                kwargs["angle"] = qubits[q].iq_angle
-            acquisition = ACQUISITION_TYPES[options.acquisition_type](
-                name, q, average, **kwargs
-            )
-            acquisition.assign_element(instruction.element)
-            acquisitions[name] = acquisition
-
-        acquisitions[name].keys.append(pulse.serial)
-        instructions.update_kwargs(instruction, acquisition=acquisitions[name])
-
-    return list(acquisitions.values())
 
 
 def fetch_results(result, acquisitions):
