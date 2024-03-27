@@ -9,7 +9,7 @@ from pydantic import Field
 from scipy.signal import lfilter
 from scipy.signal.windows import gaussian
 
-from qibolab.serialize_ import Model, NdArray
+from qibolab.serialize_ import Model, NdArray, eq
 
 __all__ = [
     "Waveform",
@@ -75,7 +75,7 @@ class Exponential(BaseEnvelope):
 
     .. math::
 
-        A\frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
+        \frac{\exp\left(-\frac{x}{\text{upsilon}}\right) + g \exp\left(-\frac{x}{\text{tau}}\right)}{1 + g}
     """
 
     kind: Literal["exponential"] = "exponential"
@@ -89,8 +89,8 @@ class Exponential(BaseEnvelope):
 
     def i(self, samples: int) -> Waveform:
         """Generate a combination of two exponential decays."""
-        ts = self.window(samples)
-        return (np.exp(-ts / self.upsilon) + self.g * np.exp(-ts / self.tau)) / (
+        x = np.arange(samples)
+        return (np.exp(-x / self.upsilon) + self.g * np.exp(-x / self.tau)) / (
             1 + self.g
         )
 
@@ -226,6 +226,10 @@ class Iir(BaseEnvelope):
         """.. todo::"""
         return self._data(self.target.q(samples))
 
+    def __eq__(self, other) -> bool:
+        """.. todo::"""
+        return eq(self, other)
+
 
 class Snz(BaseEnvelope):
     """Sudden variant Net Zero.
@@ -278,9 +282,10 @@ class ECap(BaseEnvelope):
 
     def i(self, samples: int) -> Waveform:
         """.. todo::"""
-        x = self.window(samples) / samples
+        ss = np.arange(samples)
+        x = ss / samples
         return (
-            (1 + np.tanh(self.alpha * self.window(samples)))
+            (1 + np.tanh(self.alpha * ss))
             * (1 + np.tanh(self.alpha * (1 - x)))
             / (1 + np.tanh(self.alpha / 2)) ** 2
         )
@@ -313,6 +318,10 @@ class Custom(BaseEnvelope):
             raise ValueError
 
         return self.q_
+
+    def __eq__(self, other) -> bool:
+        """.. todo::"""
+        return eq(self, other)
 
 
 Envelope = Annotated[
