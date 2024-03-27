@@ -1,7 +1,12 @@
 from qibolab.couplers import Coupler
-from qibolab.native import NativePulse, NativeSequence, TwoQubitNatives
-from qibolab.pulses import PulseType
 from qibolab.qubits import Qubit, QubitPair
+from qibolab.pulses import PulseType
+from qibolab.native import (
+    NativePulse,
+    NativeSequence,
+    SingleQubitNatives,
+    TwoQubitNatives,
+)
 
 # create the qubit and coupler objects
 qubit0 = Qubit(0)
