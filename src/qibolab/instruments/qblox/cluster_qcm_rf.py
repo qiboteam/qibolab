@@ -681,8 +681,8 @@ class QcmRf(ClusterModule):
         for sequencer_number in self._unused_sequencers_numbers:
             target = self.device.sequencers[sequencer_number]
 
-            target.set("marker_ovr_value", 0)  # Default after reboot = 0
-            target.set("marker_ovr_en", True)  # Default after reboot = False
+            target.set("marker_ovr_value", 0)
+            target.set("marker_ovr_en", False)
             target.set("sync_en", False)
             if sequencer_number >= 2:  # Never disconnect default sequencers
                 target.set("connect_out0", "off")
