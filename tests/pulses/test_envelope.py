@@ -41,7 +41,7 @@ def test_drag_shape():
         duration=2,
         amplitude=1,
         frequency=int(4e9),
-        envelope=Drag(rel_sigma=2, beta=1),
+        envelope=Drag(rel_sigma=0.5, beta=1),
         relative_phase=0,
         type=PulseType.DRIVE,
     )
@@ -136,30 +136,30 @@ def test_drag():
         amplitude=1,
         frequency=200_000_000,
         relative_phase=0,
-        envelope=Drag(rel_sigma=5, beta=0.2),
+        envelope=Drag(rel_sigma=0.2, beta=0.2),
         qubit=0,
     )
 
     assert pulse.duration == 50
     assert isinstance(pulse.envelope, Drag)
-    assert pulse.envelope.rel_sigma == 5
+    assert pulse.envelope.rel_sigma == 0.2
     assert pulse.envelope.beta == 0.2
 
     sampling_rate = 1
-    num_samples = int(pulse.duration / 1 * sampling_rate)
+    num_samples = int(pulse.duration / sampling_rate)
     x = np.arange(num_samples)
     i = pulse.amplitude * np.exp(
         -(1 / 2)
         * (
             ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.envelope.rel_sigma) ** 2)
+            / ((num_samples * pulse.envelope.rel_sigma) ** 2)
         )
     )
-    q = (
+    q = pulse.amplitude * (
         pulse.envelope.beta
         * (
             -(x - (num_samples - 1) / 2)
-            / ((num_samples / pulse.envelope.rel_sigma) ** 2)
+            / ((num_samples * pulse.envelope.rel_sigma) ** 2)
         )
         * i
         * sampling_rate
