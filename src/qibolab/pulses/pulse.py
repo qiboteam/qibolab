@@ -38,7 +38,7 @@ class Pulse(Model):
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: int
+    frequency: float
     """Pulse Intermediate Frequency in Hz.
 
     The value has to be in the range [10e6 to 300e6].
