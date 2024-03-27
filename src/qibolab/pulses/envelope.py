@@ -251,8 +251,8 @@ class Snz(BaseEnvelope):
     def i(self, samples: int) -> Waveform:
         """.. todo::"""
         # convert timings to samples
-        half_pulse_duration = (self.duration - self.t_idling) / 2
-        aspan = np.sum(self.window(samples) < half_pulse_duration)
+        half_pulse_duration = (1 - self.t_idling) * samples / 2
+        aspan = np.sum(np.arange(samples) < half_pulse_duration)
         idle = samples - 2 * (aspan + 1)
 
         pulse = np.ones(samples)

@@ -118,9 +118,9 @@ class PulseSequence(list):
         """List containing the channels used by the pulses in the sequence."""
         channels = []
         for pulse in self:
-            if not pulse.channel in channels:
+            if pulse.channel not in channels:
                 channels.append(pulse.channel)
-        channels.sort()
+
         return channels
 
     @property
