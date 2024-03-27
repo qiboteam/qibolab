@@ -20,64 +20,7 @@ instrumentation.
 The following cell shows how to define a single qubit platform from scratch,
 using different Qibolab primitives.
 
-.. testcode::  python
-
-    from qibolab import Platform
-    from qibolab.qubits import Qubit
-    from qibolab.pulses import PulseType
-    from qibolab.channels import ChannelMap, Channel
-    from qibolab.native import NativePulse, SingleQubitNatives
-    from qibolab.instruments.dummy import DummyInstrument
-
-
-    def create():
-        # Create a controller instrument
-        instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
-
-        # Create channel objects and assign to them the controller ports
-        channels = ChannelMap()
-        channels |= Channel("ch1out", port=instrument["o1"])
-        channels |= Channel("ch2", port=instrument["o2"])
-        channels |= Channel("ch1in", port=instrument["i1"])
-
-        # create the qubit object
-        qubit = Qubit(0)
-
-        # assign native gates to the qubit
-        qubit.native_gates = SingleQubitNatives(
-            RX=NativePulse(
-                name="RX",
-                duration=40,
-                amplitude=0.05,
-                shape="Gaussian(5)",
-                pulse_type=PulseType.DRIVE,
-                qubit=qubit,
-                frequency=int(4.5e9),
-            ),
-            MZ=NativePulse(
-                name="MZ",
-                duration=1000,
-                amplitude=0.005,
-                shape="Rectangular()",
-                pulse_type=PulseType.READOUT,
-                qubit=qubit,
-                frequency=int(7e9),
-            ),
-        )
-
-        # assign channels to the qubit
-        qubit.readout = channels["ch1out"]
-        qubit.feedback = channels["ch1in"]
-        qubit.drive = channels["ch2"]
-
-        # create dictionaries of the different objects
-        qubits = {qubit.name: qubit}
-        pairs = {}  # empty as for single qubit we have no qubit pairs
-        instruments = {instrument.name: instrument}
-
-        # allocate and return Platform object
-        return Platform("my_platform", qubits, pairs, instruments, resonator_type="3D")
-
+.. literalinclude:: examples/lab0.py
 
 This code creates a platform with a single qubit that is controlled by the
 :class:`qibolab.instruments.dummy.DummyInstrument`. In real applications, if
@@ -96,80 +39,7 @@ that two-qubit gates can be applied. For such connected pairs of qubits one
 needs to additionally define :class:`qibolab.qubits.QubitPair` objects, which
 hold the parameters of the two-qubit gates.
 
-.. testcode::  python
-
-    from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import PulseType
-    from qibolab.native import (
-        NativePulse,
-        NativeSequence,
-        SingleQubitNatives,
-        TwoQubitNatives,
-    )
-
-    # create the qubit objects
-    qubit0 = Qubit(0)
-    qubit1 = Qubit(1)
-
-    # assign single-qubit native gates to each qubit
-    qubit0.native_gates = SingleQubitNatives(
-        RX=NativePulse(
-            name="RX",
-            duration=40,
-            amplitude=0.05,
-            shape="Gaussian(5)",
-            pulse_type=PulseType.DRIVE,
-            qubit=qubit0,
-            frequency=int(4.7e9),
-        ),
-        MZ=NativePulse(
-            name="MZ",
-            duration=1000,
-            amplitude=0.005,
-            shape="Rectangular()",
-            pulse_type=PulseType.READOUT,
-            qubit=qubit0,
-            frequency=int(7e9),
-        ),
-    )
-    qubit1.native_gates = SingleQubitNatives(
-        RX=NativePulse(
-            name="RX",
-            duration=40,
-            amplitude=0.05,
-            shape="Gaussian(5)",
-            pulse_type=PulseType.DRIVE,
-            qubit=qubit1,
-            frequency=int(5.1e9),
-        ),
-        MZ=NativePulse(
-            name="MZ",
-            duration=1000,
-            amplitude=0.005,
-            shape="Rectangular()",
-            pulse_type=PulseType.READOUT,
-            qubit=qubit1,
-            frequency=int(7.5e9),
-        ),
-    )
-
-    # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1)
-    pair.native_gates = TwoQubitNatives(
-        CZ=NativeSequence(
-            name="CZ",
-            pulses=[
-                NativePulse(
-                    name="CZ1",
-                    duration=30,
-                    amplitude=0.005,
-                    shape="Rectangular()",
-                    pulse_type=PulseType.FLUX,
-                    qubit=qubit1,
-                )
-            ],
-        )
-    )
+.. literalinclude:: examples/lab1.py
 
 Some architectures may also have coupler qubits that mediate the interactions.
 We can also interact with them defining the :class:`qibolab.couplers.Coupler` objects.
@@ -178,43 +48,7 @@ to the chip topology. We neglected characterization parameters associated to the
 coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
 
 
-.. testcode::  python
-
-    from qibolab.couplers import Coupler
-    from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import PulseType
-    from qibolab.native import (
-        NativePulse,
-        NativeSequence,
-        SingleQubitNatives,
-        TwoQubitNatives,
-    )
-
-    # create the qubit and coupler objects
-    qubit0 = Qubit(0)
-    qubit1 = Qubit(1)
-    coupler_01 = Coupler(0)
-
-    # assign single-qubit native gates to each qubit
-    # Look above example
-
-    # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1, coupler_01)
-    pair.native_gates = TwoQubitNatives(
-        CZ=NativeSequence(
-            name="CZ",
-            pulses=[
-                NativePulse(
-                    name="CZ1",
-                    duration=30,
-                    amplitude=0.005,
-                    shape="Rectangular()",
-                    pulse_type=PulseType.FLUX,
-                    qubit=qubit1,
-                )
-            ],
-        )
-    )
+.. literalinclude:: examples/lab2.py
 
 The platform automatically creates the connectivity graph of the given chip
 using the dictionary of :class:`qibolab.qubits.QubitPair` objects.
