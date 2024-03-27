@@ -62,6 +62,8 @@ qcodes_contrib_drivers = "0.18.0"
 qibosoq = ">=0.0.4,<0.2"
 qualang-tools = "^0.15.0"
 laboneq = "==2.25.0"
+# to run code examples from tutorial
+matplotlib = "^3.8.2"
 
 [tool.poetry.group.tests]
 optional = true
