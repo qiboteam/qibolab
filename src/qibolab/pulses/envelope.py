@@ -187,7 +187,7 @@ class Drag(BaseEnvelope):
         .. todo::
         """
         ts = np.arange(samples)
-        mu = samples / 2
+        mu = (samples - 1) / 2
         sigma = _samples_sigma(self.rel_sigma, samples)
         return self.beta * (-(ts - mu) / (sigma**2)) * self.i(samples)
 
