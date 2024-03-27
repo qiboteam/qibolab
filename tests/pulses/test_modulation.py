@@ -32,7 +32,7 @@ def test_modulation():
     )
     # fmt: on
 
-    genvs: IqWaveform = Gaussian(rel_sigma=0.5).envelopes(30)
+    genvs: IqWaveform = Gaussian(rel_sigma=0.5).envelopes(20)
     # fmt: off
     np.testing.assert_allclose(modulate(genvs, 0.3,rate=1),
          np.array([[ 4.50307953e-01, -1.52257426e-01, -4.31814602e-01,
