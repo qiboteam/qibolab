@@ -69,7 +69,7 @@ def pulse(pulse_: Pulse, filename=None):
     )
 
     envelope = pulse_.envelopes(SAMPLING_RATE)
-    modulated = modulate(np.array(envelope), pulse_.frequency)
+    modulated = modulate(np.array(envelope), pulse_.frequency, rate=SAMPLING_RATE)
     ax1.plot(time, modulated[0], label="modulated i", c="C0")
     ax1.plot(time, modulated[1], label="modulated q", c="C1")
     ax1.plot(time, -waveform_i, c="silver", linestyle="dashed")
@@ -157,11 +157,13 @@ def sequence(ps: PulseSequence, filename=None):
                     envelope = pulse.envelopes(SAMPLING_RATE)
                     num_samples = envelope[0].size
                     time = start + np.arange(num_samples) / SAMPLING_RATE
-                    modulated = modulate(np.array(envelope), pulse.frequency)
+                    modulated = modulate(
+                        np.array(envelope), pulse.frequency, rate=SAMPLING_RATE
+                    )
                     ax.plot(time, modulated[1], c="lightgrey")
                     ax.plot(time, modulated[0], c=f"C{str(n)}")
-                    ax.plot(time, pulse.shape.i(), c=f"C{str(n)}")
-                    ax.plot(time, -pulse.shape.i(), c=f"C{str(n)}")
+                    ax.plot(time, pulse.i(SAMPLING_RATE), c=f"C{str(n)}")
+                    ax.plot(time, -pulse.i(SAMPLING_RATE), c=f"C{str(n)}")
                     # TODO: if they overlap use different shades
                     ax.axhline(0, c="dimgrey")
                     ax.set_ylabel(f"qubit {qubit} \n channel {channel}")
