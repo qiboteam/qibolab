@@ -95,8 +95,8 @@ def test_rectangular():
         pulse.amplitude * np.zeros(num_samples),
     )
 
-    np.testing.assert_allclose(pulse.envelope.i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.envelope.q(sampling_rate), q)
+    np.testing.assert_allclose(pulse.i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.q(sampling_rate), q)
 
 
 def test_gaussian():
@@ -118,10 +118,9 @@ def test_gaussian():
     num_samples = int(pulse.duration / sampling_rate)
     x = np.arange(0, num_samples, 1)
     i = pulse.amplitude * np.exp(
-        -(1 / 2)
-        * (
+        -(
             ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.envelope.rel_sigma) ** 2)
+            / (2 * (num_samples * pulse.envelope.rel_sigma) ** 2)
         )
     )
     q = pulse.amplitude * np.zeros(num_samples)
@@ -149,10 +148,9 @@ def test_drag():
     num_samples = int(pulse.duration / sampling_rate)
     x = np.arange(num_samples)
     i = pulse.amplitude * np.exp(
-        -(1 / 2)
-        * (
+        -(
             ((x - (num_samples - 1) / 2) ** 2)
-            / ((num_samples * pulse.envelope.rel_sigma) ** 2)
+            / (2 * (num_samples * pulse.envelope.rel_sigma) ** 2)
         )
     )
     q = pulse.amplitude * (
