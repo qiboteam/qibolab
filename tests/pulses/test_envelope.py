@@ -1,7 +1,17 @@
 import numpy as np
 import pytest
 
-from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rectangular
+from qibolab.pulses import (
+    Drag,
+    ECap,
+    Gaussian,
+    GaussianSquare,
+    Iir,
+    Pulse,
+    PulseType,
+    Rectangular,
+    Snz,
+)
 
 
 @pytest.mark.parametrize(
@@ -14,74 +24,29 @@ from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rec
     ],
 )
 def test_sampling_rate(shape):
-    pulse = Pulse(0, 40, 0.9, 100e6, 0, shape, 0, PulseType.DRIVE)
-    assert len(pulse.envelope_waveform_i(sampling_rate=1)) == 40
-    assert len(pulse.envelope_waveform_i(sampling_rate=100)) == 4000
-
-
-def test_eval():
-    shape = PulseShape.eval("Rectangular()")
-    assert isinstance(shape, Rectangular)
-    with pytest.raises(ValueError):
-        shape = PulseShape.eval("Ciao()")
-
-
-@pytest.mark.parametrize("rel_sigma,beta", [(5, 1), (5, -1), (3, -0.03), (4, 0.02)])
-def test_drag_shape_eval(rel_sigma, beta):
-    shape = PulseShape.eval(f"Drag({rel_sigma}, {beta})")
-    assert isinstance(shape, Drag)
-    assert shape.rel_sigma == rel_sigma
-    assert shape.beta == beta
-
-
-def test_raise_shapeiniterror():
-    shape = Rectangular()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = Gaussian(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = GaussianSquare(0, 1)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = Drag(0, 0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = IIR([0], [0], None)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = SNZ(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
-
-    shape = eCap(0)
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        shape.envelope_waveform_q()
+    pulse = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=shape,
+        relative_phase=0,
+        type=PulseType.DRIVE,
+    )
+    assert len(pulse.i(sampling_rate=1)) == 40
+    assert len(pulse.i(sampling_rate=100)) == 4000
 
 
 def test_drag_shape():
-    pulse = Pulse(0, 2, 1, 4e9, 0, Drag(2, 1), 0, PulseType.DRIVE)
+    pulse = Pulse(
+        duration=2,
+        amplitude=1,
+        frequency=int(4e9),
+        envelope=Drag(rel_sigma=2, beta=1),
+        relative_phase=0,
+        type=PulseType.DRIVE,
+    )
     # envelope i & envelope q should cross nearly at 0 and at 2
-    waveform = pulse.envelope_waveform_i(sampling_rate=10)
+    waveform = pulse.i(sampling_rate=10)
     target_waveform = np.array(
         [
             0.63683161,
@@ -111,21 +76,17 @@ def test_drag_shape():
 
 def test_rectangular():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
         relative_phase=0,
-        shape=Rectangular(),
-        channel=1,
+        envelope=Rectangular(),
+        channel="1",
         qubit=0,
     )
-    _if = 0
 
     assert pulse.duration == 50
-    assert isinstance(pulse.shape, Rectangular)
-    assert pulse.shape.name == "Rectangular"
-    assert repr(pulse.shape) == "Rectangular()"
+    assert isinstance(pulse.envelope, Rectangular)
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -134,28 +95,24 @@ def test_rectangular():
         pulse.amplitude * np.zeros(num_samples),
     )
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
+    np.testing.assert_allclose(pulse.envelope.i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.envelope.q(sampling_rate), q)
 
 
 def test_gaussian():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
         relative_phase=0,
-        shape=Gaussian(5),
-        channel=1,
+        envelope=Gaussian(rel_sigma=5),
+        channel="1",
         qubit=0,
     )
-    _if = 0
 
     assert pulse.duration == 50
-    assert isinstance(pulse.shape, Gaussian)
-    assert pulse.shape.name == "Gaussian"
-    assert pulse.shape.rel_sigma == 5
-    assert repr(pulse.shape) == "Gaussian(5)"
+    assert isinstance(pulse.envelope, Gaussian)
+    assert pulse.envelope.rel_sigma == 5
 
     sampling_rate = 1
     num_samples = int(pulse.duration / sampling_rate)
@@ -164,54 +121,52 @@ def test_gaussian():
         -(1 / 2)
         * (
             ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
+            / (((num_samples) / pulse.envelope.rel_sigma) ** 2)
         )
     )
     q = pulse.amplitude * np.zeros(num_samples)
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
+    np.testing.assert_allclose(pulse.i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.q(sampling_rate), q)
 
 
 def test_drag():
     pulse = Pulse(
-        start=0,
         duration=50,
         amplitude=1,
         frequency=200_000_000,
         relative_phase=0,
-        shape=Drag(5, 0.2),
-        channel=1,
+        envelope=Drag(rel_sigma=5, beta=0.2),
         qubit=0,
     )
-    _if = 0
 
     assert pulse.duration == 50
-    assert isinstance(pulse.shape, Drag)
-    assert pulse.shape.name == "Drag"
-    assert pulse.shape.rel_sigma == 5
-    assert pulse.shape.beta == 0.2
-    assert repr(pulse.shape) == "Drag(5, 0.2)"
+    assert isinstance(pulse.envelope, Drag)
+    assert pulse.envelope.rel_sigma == 5
+    assert pulse.envelope.beta == 0.2
 
     sampling_rate = 1
     num_samples = int(pulse.duration / 1 * sampling_rate)
-    x = np.arange(0, num_samples, 1)
+    x = np.arange(num_samples)
     i = pulse.amplitude * np.exp(
         -(1 / 2)
         * (
             ((x - (num_samples - 1) / 2) ** 2)
-            / (((num_samples) / pulse.shape.rel_sigma) ** 2)
+            / (((num_samples) / pulse.envelope.rel_sigma) ** 2)
         )
     )
     q = (
-        pulse.shape.beta
-        * (-(x - (num_samples - 1) / 2) / ((num_samples / pulse.shape.rel_sigma) ** 2))
+        pulse.envelope.beta
+        * (
+            -(x - (num_samples - 1) / 2)
+            / ((num_samples / pulse.envelope.rel_sigma) ** 2)
+        )
         * i
         * sampling_rate
     )
 
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_i(sampling_rate), i)
-    np.testing.assert_allclose(pulse.shape.envelope_waveform_q(sampling_rate), q)
+    np.testing.assert_allclose(pulse.i(sampling_rate), i)
+    np.testing.assert_allclose(pulse.q(sampling_rate), q)
 
 
 def test_eq():
@@ -219,60 +174,60 @@ def test_eq():
 
     shape1 = Rectangular()
     shape2 = Rectangular()
-    shape3 = Gaussian(5)
+    shape3 = Gaussian(rel_sigma=5)
     assert shape1 == shape2
     assert not shape1 == shape3
 
-    shape1 = Gaussian(4)
-    shape2 = Gaussian(4)
-    shape3 = Gaussian(5)
+    shape1 = Gaussian(rel_sigma=4)
+    shape2 = Gaussian(rel_sigma=4)
+    shape3 = Gaussian(rel_sigma=5)
     assert shape1 == shape2
     assert not shape1 == shape3
 
-    shape1 = GaussianSquare(4, 0.01)
-    shape2 = GaussianSquare(4, 0.01)
-    shape3 = GaussianSquare(5, 0.01)
-    shape4 = GaussianSquare(4, 0.05)
-    shape5 = GaussianSquare(5, 0.05)
-    assert shape1 == shape2
-    assert not shape1 == shape3
-    assert not shape1 == shape4
-    assert not shape1 == shape5
-
-    shape1 = Drag(4, 0.01)
-    shape2 = Drag(4, 0.01)
-    shape3 = Drag(5, 0.01)
-    shape4 = Drag(4, 0.05)
-    shape5 = Drag(5, 0.05)
+    shape1 = GaussianSquare(rel_sigma=4, width=0.01)
+    shape2 = GaussianSquare(rel_sigma=4, width=0.01)
+    shape3 = GaussianSquare(rel_sigma=5, width=0.01)
+    shape4 = GaussianSquare(rel_sigma=4, width=0.05)
+    shape5 = GaussianSquare(rel_sigma=5, width=0.05)
     assert shape1 == shape2
     assert not shape1 == shape3
     assert not shape1 == shape4
     assert not shape1 == shape5
 
-    shape1 = IIR([-0.5, 2], [1], Rectangular())
-    shape2 = IIR([-0.5, 2], [1], Rectangular())
-    shape3 = IIR([-0.5, 4], [1], Rectangular())
-    shape4 = IIR([-0.4, 2], [1], Rectangular())
-    shape5 = IIR([-0.5, 2], [2], Rectangular())
-    shape6 = IIR([-0.5, 2], [2], Gaussian(5))
+    shape1 = Drag(rel_sigma=4, beta=0.01)
+    shape2 = Drag(rel_sigma=4, beta=0.01)
+    shape3 = Drag(rel_sigma=5, beta=0.01)
+    shape4 = Drag(rel_sigma=4, beta=0.05)
+    shape5 = Drag(rel_sigma=5, beta=0.05)
+    assert shape1 == shape2
+    assert not shape1 == shape3
+    assert not shape1 == shape4
+    assert not shape1 == shape5
+
+    shape1 = Iir(a=np.array([-0.5, 2]), b=np.array([1]), target=Rectangular())
+    shape2 = Iir(a=np.array([-0.5, 2]), b=np.array([1]), target=Rectangular())
+    shape3 = Iir(a=np.array([-0.5, 4]), b=np.array([1]), target=Rectangular())
+    shape4 = Iir(a=np.array([-0.4, 2]), b=np.array([1]), target=Rectangular())
+    shape5 = Iir(a=np.array([-0.5, 2]), b=np.array([2]), target=Rectangular())
+    shape6 = Iir(a=np.array([-0.5, 2]), b=np.array([2]), target=Gaussian(rel_sigma=5))
     assert shape1 == shape2
     assert not shape1 == shape3
     assert not shape1 == shape4
     assert not shape1 == shape5
     assert not shape1 == shape6
 
-    shape1 = SNZ(5)
-    shape2 = SNZ(5)
-    shape3 = SNZ(2)
-    shape4 = SNZ(2, 0.1)
-    shape5 = SNZ(2, 0.1)
+    shape1 = Snz(t_idling=5)
+    shape2 = Snz(t_idling=5)
+    shape3 = Snz(t_idling=2)
+    shape4 = Snz(t_idling=2, b_amplitude=0.1)
+    shape5 = Snz(t_idling=2, b_amplitude=0.1)
     assert shape1 == shape2
     assert not shape1 == shape3
     assert not shape1 == shape4
     assert not shape1 == shape5
 
-    shape1 = eCap(4)
-    shape2 = eCap(4)
-    shape3 = eCap(5)
+    shape1 = ECap(alpha=4)
+    shape2 = ECap(alpha=4)
+    shape3 = ECap(alpha=5)
     assert shape1 == shape2
     assert not shape1 == shape3
