@@ -1,9 +1,9 @@
 from qibolab import Platform
-from qibolab.channels import Channel, ChannelMap
-from qibolab.instruments.dummy import DummyInstrument
-from qibolab.native import NativePulse, SingleQubitNatives
-from qibolab.pulses import PulseType
 from qibolab.qubits import Qubit
+from qibolab.pulses import PulseType
+from qibolab.channels import ChannelMap, Channel
+from qibolab.native import NativePulse, SingleQubitNatives
+from qibolab.instruments.dummy import DummyInstrument
 
 
 def create():
