@@ -36,6 +36,25 @@ NdArray = Annotated[
 """Pydantic-compatible array representation."""
 
 
+def eq(obj1: BaseModel, obj2: BaseModel) -> bool:
+    """Compare two models with non-default equality.
+
+    Currently, defines custom equality for NumPy arrays.
+    """
+    obj2d = obj2.model_dump()
+    comparisons = []
+    for field, value1 in obj1.model_dump().items():
+        value2 = obj2d[field]
+        if isinstance(value1, np.ndarray):
+            comparisons.append(
+                (value1.shape == value2.shape) and (value1 == value2).all()
+            )
+
+        comparisons.append(value1 == value2)
+
+    return all(comparisons)
+
+
 class Model(BaseModel):
     """Global qibolab model, holding common configurations."""
 
