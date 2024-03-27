@@ -160,6 +160,7 @@ def test_qm_register_port(qmcontroller, offset):
         "con1": {
             "analog_inputs": {1: {}, 2: {}},
             "analog_outputs": {1: {"offset": offset, "filter": {}}},
+            "digital_outputs": {},
         }
     }
 
@@ -179,6 +180,7 @@ def test_qm_register_port_filter(qmcontroller):
                     "offset": 0.005,
                 }
             },
+            "digital_outputs": {},
         }
     }
 
@@ -234,6 +236,9 @@ def test_qm_register_drive_element(qmplatform):
     else:
         target_element = {
             "RF_inputs": {"port": ("octave3", 1)},
+            "digitalInputs": {
+                "output_switch": {"buffer": 18, "delay": 57, "port": ("con3", 1)}
+            },
             "intermediate_frequency": 1000000,
             "operations": {},
         }
@@ -278,6 +283,9 @@ def test_qm_register_readout_element(qmplatform):
         target_element = {
             "RF_inputs": {"port": ("octave2", 5)},
             "RF_outputs": {"port": ("octave2", 1)},
+            "digitalInputs": {
+                "output_switch": {"buffer": 18, "delay": 57, "port": ("con2", 9)}
+            },
             "intermediate_frequency": 1000000,
             "operations": {},
             "time_of_flight": 280,
@@ -296,6 +304,7 @@ def test_qm_register_pulse(qmplatform, pulse_type, qubit):
         target_pulse = {
             "operation": "control",
             "length": pulse.duration,
+            "digital_marker": "ON",
             "waveforms": {
                 "I": pulse.envelope_waveform_i().serial,
                 "Q": pulse.envelope_waveform_q().serial,
