@@ -174,11 +174,9 @@ def load_instrument_settings(
 
 
 def _dump_pulse(pulse: Pulse):
-    data = asdict(pulse)
+    data = pulse.model_dump()
     if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
         del data["frequency"]
-    if "shape" in data:
-        data["shape"] = str(pulse.shape)
     data["type"] = data["type"].value
     if "channel" in data:
         del data["channel"]

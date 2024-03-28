@@ -471,7 +471,7 @@ class Platform:
         return replace(
             pulse,
             relative_phase=relative_phase,
-            shape=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
+            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
             channel=qubit.drive.name,
         )
 
@@ -482,6 +482,6 @@ class Platform:
         return replace(
             pulse,
             relative_phase=relative_phase,
-            shape=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
+            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
             channel=qubit.drive.name,
         )

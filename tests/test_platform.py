@@ -39,7 +39,9 @@ def test_unroll_sequences(platform):
     qd_pulse = platform.create_RX_pulse(qubit)
     ro_pulse = platform.create_MZ_pulse(qubit)
     sequence.append(qd_pulse)
-    sequence.append(Delay(qd_pulse.duration, platform.qubits[qubit].readout.name))
+    sequence.append(
+        Delay(duration=qd_pulse.duration, channel=platform.qubits[qubit].readout.name)
+    )
     sequence.append(ro_pulse)
     total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence.ro_pulses) == 10
@@ -350,7 +352,10 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
         if not start_zero:
             qd_pulse = platform.create_RX_pulse(qubit)
             sequence.append(
-                Delay(qd_pulse.duration, platform.qubits[qubit].readout.name)
+                Delay(
+                    duration=qd_pulse.duration,
+                    channel=platform.qubits[qubit].readout.name,
+                )
             )
         ro_pulse = platform.create_MZ_pulse(qubit)
         sequence.append(ro_pulse)
@@ -372,14 +377,13 @@ def test_create_RX_drag_pulses():
     qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
     beta = 0.1234
     for qubit in qubits:
-        drag_pi = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
-        assert drag_pi.shape == Drag(drag_pi.shape.rel_sigma, beta=beta)
-        drag_pi_half = platform.create_RX90_drag_pulse(
-            qubit, drag_pi.duration, beta=beta
+        drag_pi = platform.create_RX_drag_pulse(qubit, beta=beta)
+        assert drag_pi.envelope == Drag(rel_sigma=drag_pi.envelope.rel_sigma, beta=beta)
+        drag_pi_half = platform.create_RX90_drag_pulse(qubit, beta=beta)
+        assert drag_pi_half.envelope == Drag(
+            rel_sigma=drag_pi_half.envelope.rel_sigma, beta=beta
         )
-        assert drag_pi_half.shape == Drag(drag_pi_half.shape.rel_sigma, beta=beta)
         np.testing.assert_almost_equal(drag_pi.amplitude, 2 * drag_pi_half.amplitude)
 
-        # to check ShapeInitError
-        drag_pi.shape.envelope_waveforms()
-        drag_pi_half.shape.envelope_waveforms()
+        drag_pi.envelopes(sampling_rate=1)
+        drag_pi_half.envelopes(sampling_rate=1)
