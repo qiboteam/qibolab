@@ -278,8 +278,8 @@ def test_envelope_waveform_i_q():
         channel="1",
     )
 
-    custom_shape_pulse.i_ = pulse.i(1)
-    pulse.duration = 2000
+    custom_shape_pulse = custom_shape_pulse.model_copy(update={"i_": pulse.i(1)})
+    pulse = pulse.model_copy(update={"duration": 2000})
     with pytest.raises(ValueError):
         custom_shape_pulse.i(samples=10)
     with pytest.raises(ValueError):
