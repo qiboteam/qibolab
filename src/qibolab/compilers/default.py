@@ -4,9 +4,9 @@ Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 """
 
 import math
-from dataclasses import replace
 
 from qibolab.pulses import PulseSequence, VirtualZ
+from qibolab.serialize_ import replace
 
 
 def identity_rule(gate, qubit):
