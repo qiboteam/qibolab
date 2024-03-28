@@ -16,7 +16,20 @@ from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
 
-SEQUENCER_MEMORY = 2**17
+MAX_NUM_BINS = 98304
+"""Maximum number of bins that should be used per sequencer in a readout
+module.
+
+One sequencer can have up to 2 ** 17 bins, however the 6 sequencers in
+module allocate bins from a shared memory, and this memory is smaller
+than 6 * 2 ** 17. Hence, if all sequencers are used at once, each cannot
+support 2 ** 17 bins. In fact, the total bin memory for the module is 3
+* (2 ** 17 + 2 ** 16). This means up to three sequencers used at once
+can support 2 ** 17 bins each, but four or more sequencers cannot. So
+the limitation on the number of bins technically depends on the number
+of sequencers used, but to keep things simple we limit ourselves to max
+number of bins that works regardless of situation.
+"""
 
 
 class QbloxController(Controller):
@@ -455,7 +468,7 @@ class QbloxController(Controller):
                     num_bins *= len(sweeper.values)
 
                     # split the sweep if the number of bins is larget than the memory of the sequencer (2**17)
-                if num_bins < SEQUENCER_MEMORY:
+                if num_bins < MAX_NUM_BINS:
                     # for sweeper in sweepers:
                     #     if sweeper.parameter is Parameter.amplitude:
                     #         # qblox cannot sweep amplitude in real time, but sweeping gain is quivalent
@@ -480,13 +493,13 @@ class QbloxController(Controller):
                     sweepers_repetitions = 1
                     for sweeper in sweepers:
                         sweepers_repetitions *= len(sweeper.values)
-                    if sweepers_repetitions > SEQUENCER_MEMORY:
+                    if sweepers_repetitions > MAX_NUM_BINS:
                         raise ValueError(
                             f"Requested sweep has {sweepers_repetitions} total number of sweep points. "
-                            f"Maximum supported is {SEQUENCER_MEMORY}"
+                            f"Maximum supported is {MAX_NUM_BINS}"
                         )
 
-                    max_rt_nshots = SEQUENCER_MEMORY // sweepers_repetitions
+                    max_rt_nshots = MAX_NUM_BINS // sweepers_repetitions
                     num_full_sft_iterations = nshots // max_rt_nshots
                     result_chunks = []
                     for sft_iteration in range(num_full_sft_iterations + 1):

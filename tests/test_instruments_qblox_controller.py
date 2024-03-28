@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from qibolab import AveragingMode, ExecutionParameters
-from qibolab.instruments.qblox.controller import SEQUENCER_MEMORY, QbloxController
+from qibolab.instruments.qblox.controller import MAX_NUM_BINS, QbloxController
 from qibolab.pulses import Gaussian, Pulse, PulseSequence, ReadoutPulse, Rectangular
 from qibolab.result import IntegratedResults
 from qibolab.sweeper import Parameter, Sweeper
@@ -31,7 +31,7 @@ def test_sweep_too_many_bins(platform, controller):
 
     # These values shall result into execution in two rounds
     shots = 128
-    sweep_len = (SEQUENCER_MEMORY + 431) // shots
+    sweep_len = (MAX_NUM_BINS + 431) // shots
 
     mock_data = np.array([1, 2, 3, 4])
     sweep_ampl = Sweeper(Parameter.amplitude, np.random.rand(sweep_len), pulses=[pulse])
@@ -54,7 +54,7 @@ def test_sweep_too_many_sweep_points(platform, controller):
     qubit = platform.qubits[0]
     pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), qubit.drive.name, qubit=0)
     sweep = Sweeper(
-        Parameter.amplitude, np.random.rand(SEQUENCER_MEMORY + 17), pulses=[pulse]
+        Parameter.amplitude, np.random.rand(MAX_NUM_BINS + 17), pulses=[pulse]
     )
     params = ExecutionParameters(nshots=12, relaxation_time=10)
     with pytest.raises(ValueError, match="total number of sweep points"):
