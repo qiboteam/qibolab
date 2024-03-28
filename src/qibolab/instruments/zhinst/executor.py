@@ -562,8 +562,8 @@ class Zurich(Controller):
     def select_exp(self, exp, qubits, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
         # channels that were not split are just applied in parallel to the rest of the experiment
-        for ch in self.unsplit_channels:
-            with exp.section(uid="unsplit_channels"):
+        with exp.section(uid="unsplit_channels"):
+            for ch in self.unsplit_channels:
                 for pulse in self.sequence[ch]:
                     self.play_sweep(exp, ch, pulse)
 
