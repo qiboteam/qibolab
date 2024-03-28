@@ -1,78 +1,70 @@
 {
-    "nqubits": 1,
-    "qubits": [
-        0
-    ],
-    "topology": [],
-    "settings": {
-        "nshots": 1024,
-        "relaxation_time": 100000
+  "nqubits": 1,
+  "qubits": [0],
+  "topology": [],
+  "settings": {
+    "nshots": 1024,
+    "relaxation_time": 100000
+  },
+  "instruments": {
+    "tii_rfsoc4x2": {
+      "bounds": {
+        "waveforms": 0,
+        "readout": 0,
+        "instructions": 0
+      }
     },
-    "instruments": {
-        "tii_rfsoc4x2": {
-                "bounds": {
-                    "waveforms": 0,
-                    "readout": 0,
-                    "instructions": 0
-                }
-        },
-        "twpa_a": {
-            "frequency": 6200000000,
-            "power": -1
-        },
-        "ErasynthLO": {
-            "frequency": 0,
-            "power": 0
-        }
+    "twpa_a": {
+      "frequency": 6200000000,
+      "power": -1
     },
-    "native_gates": {
-        "single_qubit": {
-            "0": {
-                "RX": {
-                    "duration": 30,
-                    "amplitude": 0.05284168507293318,
-                    "frequency": 5542341844,
-                    "shape": "Rectangular()",
-                    "type": "qd"
-                },
-                "RX12": {
-                    "duration": 30,
-                    "amplitude": 0.05284168507293318,
-                    "frequency": 5542341844,
-                    "shape": "Rectangular()",
-                    "type": "qd"
-                },
-                "MZ": {
-                    "duration": 600,
-                    "amplitude": 0.03,
-                    "frequency": 7371258599,
-                    "shape": "Rectangular()",
-                    "type": "ro"
-                }
-            }
-        },
-        "two_qubit": {}
-    },
-    "characterization": {
-        "single_qubit": {
-            "0": {
-                "readout_frequency": 7371258599,
-                "drive_frequency": 5542341844,
-                "pi_pulse_amplitude": 0.05284168507293318,
-                "T1": 10441.64173639732,
-                "T2": 4083.4697338939845,
-                "threshold": -0.8981346462690887,
-                "iq_angle": -1.2621946150226666,
-                "mean_gnd_states": [
-                    -0.17994037940379404,
-                    -2.4709365853658536
-                ],
-                "mean_exc_states": [
-                    0.6854460704607047,
-                    0.24369105691056914
-                ],
-                "T2_spin_echo": 5425.5448969467925
-            }
-        }
+    "ErasynthLO": {
+      "frequency": 0,
+      "power": 0
     }
+  },
+  "native_gates": {
+    "single_qubit": {
+      "0": {
+        "RX": {
+          "duration": 30,
+          "amplitude": 0.05284168507293318,
+          "frequency": 5542341844,
+          "envelope": { "kind": "rectangular" },
+          "type": "qd"
+        },
+        "RX12": {
+          "duration": 30,
+          "amplitude": 0.05284168507293318,
+          "frequency": 5542341844,
+          "envelope": { "kind": "rectangular" },
+          "type": "qd"
+        },
+        "MZ": {
+          "duration": 600,
+          "amplitude": 0.03,
+          "frequency": 7371258599,
+          "envelope": { "kind": "rectangular" },
+          "type": "ro"
+        }
+      }
+    },
+    "two_qubit": {}
+  },
+  "characterization": {
+    "single_qubit": {
+      "0": {
+        "readout_frequency": 7371258599,
+        "drive_frequency": 5542341844,
+        "pi_pulse_amplitude": 0.05284168507293318,
+        "T1": 10441.64173639732,
+        "T2": 4083.4697338939845,
+        "threshold": -0.8981346462690887,
+        "iq_angle": -1.2621946150226666,
+        "mean_gnd_states": [-0.17994037940379404, -2.4709365853658536],
+        "mean_exc_states": [0.6854460704607047, 0.24369105691056914],
+        "T2_spin_echo": 5425.5448969467925
+      }
+    }
+  }
 }
