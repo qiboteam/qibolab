@@ -59,3 +59,11 @@ class Model(BaseModel):
     """Global qibolab model, holding common configurations."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
+
+
+def replace(model: BaseModel, **update):
+    """Replace interface for pydantic models.
+
+    To have the same familiar syntax of :func:`dataclasses.replace`.
+    """
+    return model.model_copy(update=update)

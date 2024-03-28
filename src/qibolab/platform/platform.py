@@ -1,7 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import dataclass, field, fields
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -12,6 +12,7 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.serialize_ import replace
 from qibolab.sweeper import Sweeper
 from qibolab.unrolling import batch
 
