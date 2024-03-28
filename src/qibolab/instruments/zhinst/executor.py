@@ -565,6 +565,7 @@ class Zurich(Controller):
         with exp.section(uid="unsplit_channels"):
             for ch in self.unsplit_channels:
                 for pulse in self.sequence[ch]:
+                    exp.delay(signal=ch, time=pulse.pulse.start)
                     self.play_sweep(exp, ch, pulse)
 
         weights = {}
