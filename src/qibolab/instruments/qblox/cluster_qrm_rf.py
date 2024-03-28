@@ -154,6 +154,11 @@ class QrmRf(ClusterModule):
         self._unused_sequencers_numbers: list[int] = []
         self._execution_time: float = 0
 
+    @property
+    def estimated_execution_time(self) -> float:
+        """Estimated execution time in seconds."""
+        return self._execution_time
+
     def _set_default_values(self):
         # disable all sequencer connections
         self.device.disconnect_outputs()
@@ -877,8 +882,8 @@ class QrmRf(ClusterModule):
         for sequencer_number in self._unused_sequencers_numbers:
             target = self.device.sequencers[sequencer_number]
             target.set("sync_en", False)
-            target.set("marker_ovr_en", False)  # Default after reboot = False
-            target.set("marker_ovr_value", 0)  # Default after reboot = 0
+            target.set("marker_ovr_en", False)
+            target.set("marker_ovr_value", 0)
             if sequencer_number >= 1:  # Never disconnect default sequencers
                 target.set("connect_out0", "off")
                 target.set("connect_acq", "in0")
