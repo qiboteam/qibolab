@@ -108,6 +108,8 @@ def _load_pulse(pulse_kwargs, qubit):
         return Delay(**pulse_kwargs)
     if pulse_type == "vz":
         return VirtualZ(**pulse_kwargs, qubit=q)
+    if "frequency" not in pulse_kwargs:
+        return Pulse.flux(**pulse_kwargs, type=pulse_type, qubit=q)
     return Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
 
 
