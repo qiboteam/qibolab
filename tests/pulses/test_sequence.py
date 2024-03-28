@@ -183,7 +183,7 @@ def test_sequence_duration():
     )
     ps = PulseSequence([p0, p1]) + [p2]
     assert ps.duration == 20 + 40 + 1000
-    p2.channel = "2"
+    ps[-1] = p2.model_copy(update={"channel": "2"})
     assert ps.duration == 1000
 
 
