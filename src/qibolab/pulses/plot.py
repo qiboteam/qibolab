@@ -5,9 +5,17 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .envelope import Waveform
+from .modulation import modulate
 from .pulse import Delay, Pulse
 from .sequence import PulseSequence
-from .shape import SAMPLING_RATE, Waveform, modulate
+
+SAMPLING_RATE = 1
+"""Default sampling rate in gigasamples per second (GSps).
+
+Used for generating waveform envelopes if the instruments do not provide
+a different value.
+"""
 
 
 def waveform(wf: Waveform, filename=None):
@@ -28,7 +36,7 @@ def waveform(wf: Waveform, filename=None):
     plt.close()
 
 
-def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
+def pulse(pulse_: Pulse, filename=None):
     """Plot the pulse envelope and modulated waveforms.
 
     Args:
@@ -37,11 +45,11 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     import matplotlib.pyplot as plt
     from matplotlib import gridspec
 
-    waveform_i = pulse_.shape.envelope_waveform_i(sampling_rate)
-    waveform_q = pulse_.shape.envelope_waveform_q(sampling_rate)
+    waveform_i = pulse_.i(SAMPLING_RATE)
+    waveform_q = pulse_.q(SAMPLING_RATE)
 
     num_samples = len(waveform_i)
-    time = np.arange(num_samples) / sampling_rate
+    time = np.arange(num_samples) / SAMPLING_RATE
     _ = plt.figure(figsize=(14, 5), dpi=200)
     gs = gridspec.GridSpec(ncols=2, nrows=1, width_ratios=np.array([2, 1]))
     ax1 = plt.subplot(gs[0])
@@ -60,8 +68,8 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
         linestyle="dashed",
     )
 
-    envelope = pulse_.shape.envelope_waveforms(sampling_rate)
-    modulated = modulate(np.array(envelope), pulse_.frequency)
+    envelope = pulse_.envelopes(SAMPLING_RATE)
+    modulated = modulate(np.array(envelope), pulse_.frequency, rate=SAMPLING_RATE)
     ax1.plot(time, modulated[0], label="modulated i", c="C0")
     ax1.plot(time, modulated[1], label="modulated q", c="C1")
     ax1.plot(time, -waveform_i, c="silver", linestyle="dashed")
@@ -112,7 +120,7 @@ def pulse(pulse_: Pulse, filename=None, sampling_rate=SAMPLING_RATE):
     plt.close()
 
 
-def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
+def sequence(ps: PulseSequence, filename=None):
     """Plot the sequence of pulses.
 
     Args:
@@ -146,22 +154,16 @@ def sequence(ps: PulseSequence, filename=None, sampling_rate=SAMPLING_RATE):
                         start += pulse.duration
                         continue
 
-                    envelope = pulse.shape.envelope_waveforms(sampling_rate)
+                    envelope = pulse.envelopes(SAMPLING_RATE)
                     num_samples = envelope[0].size
-                    time = start + np.arange(num_samples) / sampling_rate
-                    modulated = modulate(np.array(envelope), pulse.frequency)
+                    time = start + np.arange(num_samples) / SAMPLING_RATE
+                    modulated = modulate(
+                        np.array(envelope), pulse.frequency, rate=SAMPLING_RATE
+                    )
                     ax.plot(time, modulated[1], c="lightgrey")
                     ax.plot(time, modulated[0], c=f"C{str(n)}")
-                    ax.plot(
-                        time,
-                        pulse.shape.envelope_waveform_i(sampling_rate),
-                        c=f"C{str(n)}",
-                    )
-                    ax.plot(
-                        time,
-                        -pulse.shape.envelope_waveform_i(sampling_rate),
-                        c=f"C{str(n)}",
-                    )
+                    ax.plot(time, pulse.i(SAMPLING_RATE), c=f"C{str(n)}")
+                    ax.plot(time, -pulse.i(SAMPLING_RATE), c=f"C{str(n)}")
                     # TODO: if they overlap use different shades
                     ax.axhline(0, c="dimgrey")
                     ax.set_ylabel(f"qubit {qubit} \n channel {channel}")

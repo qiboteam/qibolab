@@ -2,7 +2,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
-    devenv.url = "github:cachix/devenv";
+    devenv = {
+      url = "github:cachix/devenv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixpkgs-python = {
       url = "github:cachix/nixpkgs-python";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -35,8 +38,6 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
-        pwd = builtins.getEnv "PWD";
-        platforms = builtins.toPath "${pwd}/../qibolab_platforms_qrc/";
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
@@ -47,7 +48,7 @@
               config,
               ...
             }: {
-              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter zlib];
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
@@ -66,7 +67,7 @@
                 poetry = {
                   enable = true;
                   install.enable = true;
-                  install.groups = ["dev" "tests"];
+                  install.groups = ["dev" "analysis" "tests"];
                   install.allExtras = true;
                 };
                 version = "3.11";
