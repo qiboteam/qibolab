@@ -1,7 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import dataclass, field, fields
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -12,6 +12,7 @@ from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
 from .pulses import Delay, Drag, PulseSequence, PulseType
 from .qubits import Qubit, QubitId, QubitPair, QubitPairId
+from .serialize_ import replace
 from .sweeper import Sweeper
 from .unrolling import batch
 
