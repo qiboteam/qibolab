@@ -1,4 +1,5 @@
 import signal
+import time
 from dataclasses import replace
 
 import numpy as np
@@ -179,6 +180,11 @@ class QbloxController(Controller):
         for module in self.modules.values():
             if isinstance(module, (QrmRf, QcmRf, QcmBb)):
                 module.play_sequence()
+
+        estimated_execution_time = max(
+            m.estimated_execution_time for m in self.modules if isinstance(m, QrmRf)
+        )
+        time.sleep(estimated_execution_time)
 
         # retrieve the results
         acquisition_results = {}

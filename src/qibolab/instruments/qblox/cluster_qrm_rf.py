@@ -154,6 +154,11 @@ class QrmRf(ClusterModule):
         self._unused_sequencers_numbers: list[int] = []
         self._execution_time: float = 0
 
+    @property
+    def estimated_execution_time(self) -> float:
+        """Estimated execution time in seconds."""
+        return self._execution_time
+
     def _set_default_values(self):
         # disable all sequencer connections
         self.device.disconnect_outputs()
