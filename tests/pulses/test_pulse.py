@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 
 from qibolab.pulses import (
+    BaseEnvelope,
     Custom,
     Drag,
     ECap,
-    Envelope,
     Gaussian,
     GaussianSquare,
     Iir,
@@ -198,7 +198,7 @@ def test_attributes():
     assert isinstance(p10.duration, float) and p10.duration == 50
     assert isinstance(p10.amplitude, float) and p10.amplitude == 0.9
     assert isinstance(p10.frequency, float) and p10.frequency == 20_000_000
-    assert isinstance(p10.envelope, Envelope)
+    assert isinstance(p10.envelope, BaseEnvelope)
     assert isinstance(p10.channel, type(channel)) and p10.channel == channel
     assert isinstance(p10.qubit, type(qubit)) and p10.qubit == qubit
 
