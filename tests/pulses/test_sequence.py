@@ -17,23 +17,23 @@ def test_add_readout():
             amplitude=0.3,
             duration=60,
             relative_phase=0,
-            envelope=Gaussian(5),
-            channel=1,
+            envelope=Gaussian(rel_sigma=0.2),
+            channel="1",
         )
     )
-    sequence.append(Delay(4, channel=1))
+    sequence.append(Delay(duration=4, channel="1"))
     sequence.append(
         Pulse(
             frequency=200_000_000,
             amplitude=0.3,
             duration=60,
             relative_phase=0,
-            envelope=Drag(5, 2),
-            channel=1,
+            envelope=Drag(rel_sigma=0.2, beta=2),
+            channel="1",
             type=PulseType.FLUX,
         )
     )
-    sequence.append(Delay(4, channel=1))
+    sequence.append(Delay(duration=4, channel="1"))
     sequence.append(
         Pulse(
             frequency=20_000_000,
@@ -41,7 +41,7 @@ def test_add_readout():
             duration=2000,
             relative_phase=0,
             envelope=Rectangular(),
-            channel=11,
+            channel="11",
             type=PulseType.READOUT,
         )
     )
@@ -52,31 +52,54 @@ def test_add_readout():
 
 
 def test_get_qubit_pulses():
-    p1 = Pulse(400, 0.9, 20e6, 0, Gaussian(5), 10, qubit=0)
+    p1 = Pulse(
+        duration=400,
+        amplitude=0.9,
+        frequency=20e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        relative_phase=10,
+        qubit=0,
+    )
     p2 = Pulse(
-        400,
-        0.9,
-        20e6,
-        0,
-        Rectangular(),
-        channel=30,
+        duration=400,
+        amplitude=0.9,
+        frequency=20e6,
+        envelope=Rectangular(),
+        channel="30",
         qubit=0,
         type=PulseType.READOUT,
     )
-    p3 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 20, qubit=1)
-    p4 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 30, qubit=1)
+    p3 = Pulse(
+        duration=400,
+        amplitude=0.9,
+        frequency=20e6,
+        envelope=Drag(rel_sigma=0.2, beta=50),
+        relative_phase=20,
+        qubit=1,
+    )
+    p4 = Pulse(
+        duration=400,
+        amplitude=0.9,
+        frequency=20e6,
+        envelope=Drag(rel_sigma=0.2, beta=50),
+        relative_phase=30,
+        qubit=1,
+    )
     p5 = Pulse(
-        400,
-        0.9,
-        20e6,
-        0,
-        Rectangular(),
-        channel=30,
+        duration=400,
+        amplitude=0.9,
+        frequency=20e6,
+        envelope=Rectangular(),
+        channel="30",
         qubit=1,
         type=PulseType.READOUT,
     )
-    p6 = Pulse.flux(400, 0.9, Rectangular(), channel=40, qubit=1)
-    p7 = Pulse.flux(400, 0.9, Rectangular(), channel=40, qubit=2)
+    p6 = Pulse.flux(
+        duration=400, amplitude=0.9, envelope=Rectangular(), channel="40", qubit=1
+    )
+    p7 = Pulse.flux(
+        duration=400, amplitude=0.9, envelope=Rectangular(), channel="40", qubit=2
+    )
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6, p7])
     assert ps.qubits == [0, 1, 2]
@@ -87,35 +110,108 @@ def test_get_qubit_pulses():
 
 
 def test_get_channel_pulses():
-    p1 = Pulse(400, 0.9, 20e6, 0, Gaussian(5), 10)
-    p2 = Pulse(400, 0.9, 20e6, 0, Rectangular(), 30, type=PulseType.READOUT)
-    p3 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 20)
-    p4 = Pulse(400, 0.9, 20e6, 0, Drag(5, 50), 30)
-    p5 = Pulse(400, 0.9, 20e6, 0, Rectangular(), 20, type=PulseType.READOUT)
-    p6 = Pulse(400, 0.9, 20e6, 0, Gaussian(5), 30)
+    p1 = Pulse(
+        duration=400,
+        frequency=0.9,
+        amplitude=20e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        channel="10",
+    )
+    p2 = Pulse(
+        duration=400,
+        frequency=0.9,
+        amplitude=20e6,
+        envelope=Rectangular(),
+        channel="30",
+        type=PulseType.READOUT,
+    )
+    p3 = Pulse(
+        duration=400,
+        frequency=0.9,
+        amplitude=20e6,
+        envelope=Drag(rel_sigma=0.2, beta=5),
+        channel="20",
+    )
+    p4 = Pulse(
+        duration=400,
+        frequency=0.9,
+        amplitude=20e6,
+        envelope=Drag(rel_sigma=0.2, beta=5),
+        channel="30",
+    )
+    p5 = Pulse(
+        duration=400,
+        frequency=0.9,
+        amplitude=20e6,
+        envelope=Rectangular(),
+        channel="20",
+        type=PulseType.READOUT,
+    )
+    p6 = Pulse(
+        duration=400,
+        frequency=0.9,
+        amplitude=20e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        channel="30",
+    )
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
-    assert ps.channels == [10, 20, 30]
-    assert len(ps.get_channel_pulses(10)) == 1
-    assert len(ps.get_channel_pulses(20)) == 2
-    assert len(ps.get_channel_pulses(30)) == 3
-    assert len(ps.get_channel_pulses(20, 30)) == 5
+    assert sorted(ps.channels) == ["10", "20", "30"]
+    assert len(ps.get_channel_pulses("10")) == 1
+    assert len(ps.get_channel_pulses("20")) == 2
+    assert len(ps.get_channel_pulses("30")) == 3
+    assert len(ps.get_channel_pulses("20", "30")) == 5
 
 
 def test_sequence_duration():
-    p0 = Delay(20, 1)
-    p1 = Pulse(40, 0.9, 200e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
-    p2 = Pulse(1000, 0.9, 20e6, 0, Rectangular(), 1, PulseType.READOUT)
+    p0 = Delay(duration=20, channel="1")
+    p1 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=200e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
+    p2 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=20e6,
+        envelope=Rectangular(),
+        channel="1",
+        type=PulseType.READOUT,
+    )
     ps = PulseSequence([p0, p1]) + [p2]
     assert ps.duration == 20 + 40 + 1000
-    p2.channel = 2
+    p2.channel = "2"
     assert ps.duration == 1000
 
 
 def test_init():
-    p1 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 3, PulseType.DRIVE)
-    p2 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
-    p3 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p1 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=100e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="3",
+        type=PulseType.DRIVE,
+    )
+    p2 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=100e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="2",
+        type=PulseType.DRIVE,
+    )
+    p3 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=100e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
 
     ps = PulseSequence()
     assert type(ps) == PulseSequence
@@ -141,13 +237,61 @@ def test_init():
 
 def test_operators():
     ps = PulseSequence()
-    ps += [Pulse(200, 0.9, 20e6, 0, Rectangular(), 1, type=PulseType.READOUT)]
-    ps = ps + [Pulse(200, 0.9, 20e6, 0, Rectangular(), 2, type=PulseType.READOUT)]
-    ps = [Pulse(200, 0.9, 20e6, 0, Rectangular(), 3, type=PulseType.READOUT)] + ps
+    ps += [
+        Pulse(
+            duration=200,
+            amplitude=0.9,
+            frequency=20e6,
+            envelope=Rectangular(),
+            channel="3",
+            type=PulseType.DRIVE,
+        )
+    ]
+    ps = ps + [
+        Pulse(
+            duration=200,
+            amplitude=0.9,
+            frequency=20e6,
+            envelope=Rectangular(),
+            channel="2",
+            type=PulseType.DRIVE,
+        )
+    ]
+    ps = [
+        Pulse(
+            duration=200,
+            amplitude=0.9,
+            frequency=20e6,
+            envelope=Rectangular(),
+            channel="3",
+            type=PulseType.DRIVE,
+        )
+    ] + ps
 
-    p4 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 3, PulseType.DRIVE)
-    p5 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 2, PulseType.DRIVE)
-    p6 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 1, PulseType.DRIVE)
+    p4 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        channel="3",
+        type=PulseType.DRIVE,
+    )
+    p5 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        channel="2",
+        type=PulseType.DRIVE,
+    )
+    p6 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
 
     another_ps = PulseSequence()
     another_ps.append(p4)
@@ -164,7 +308,14 @@ def test_operators():
 
     # ps.plot()
 
-    p7 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p7 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=100e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
     yet_another_ps = PulseSequence([p7])
     assert len(yet_another_ps) == 1
     yet_another_ps *= 3
@@ -172,7 +323,21 @@ def test_operators():
     yet_another_ps *= 3
     assert len(yet_another_ps) == 9
 
-    p8 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 1, PulseType.DRIVE)
-    p9 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 2, PulseType.DRIVE)
+    p8 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=100e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
+    p9 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=100e6,
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="2",
+        type=PulseType.DRIVE,
+    )
     and_yet_another_ps = 2 * PulseSequence([p9]) + [p8] * 3
     assert len(and_yet_another_ps) == 5
