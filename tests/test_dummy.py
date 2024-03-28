@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType
+from qibolab.pulses import Delay, GaussianSquare, Pulse, PulseSequence, PulseType
 from qibolab.qubits import QubitPair
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
@@ -140,7 +140,7 @@ def test_dummy_single_sweep_coupler(
     coupler_pulse = Pulse.flux(
         duration=40,
         amplitude=0.5,
-        shape="GaussianSquare(5, 0.75)",
+        envelope=GaussianSquare(rel_sigma=0.2, width=0.75),
         channel="flux_coupler-0",
         qubit=0,
     )
