@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field, fields
 from typing import ClassVar, Dict, Optional, Union
 
+DIGITAL_DELAY = 57
+DIGITAL_BUFFER = 18
+"""Default calibration parameters for digital pulses.
+
+https://docs.quantum-machines.co/1.1.7/qm-qua-sdk/docs/Guides/octave/#calibrating-the-digital-pulse
+
+Digital markers are used for LO triggering.
+"""
+
 
 @dataclass
 class QMPort:
@@ -142,16 +151,9 @@ class OctaveOutput(QMOutput):
     """
     output_mode: str = field(default="triggered", metadata={"config": "output_mode"})
     """Can be: "always_on" / "always_off"/ "triggered" / "triggered_reversed"."""
-    digital_delay: int = 57
-    """Delay for digital output channel.
-
-    Digital markers are used for LO triggering.
-
-    See
-    https://docs.quantum-machines.co/1.1.7/qm-qua-sdk/docs/Guides/octave/#calibrating-the-digital-pulse
-    for more details on the default values.
-    """
-    digital_buffer: int = 18
+    digital_delay: int = DIGITAL_DELAY
+    """Delay for digital output channel."""
+    digital_buffer: int = DIGITAL_BUFFER
     """Buffer for digital output channel."""
 
     opx_port: Optional[OPXOutput] = None
