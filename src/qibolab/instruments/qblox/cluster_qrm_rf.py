@@ -4,6 +4,7 @@ import json
 import time
 
 import numpy as np
+from qblox_instruments.native.generic_func import SequencerStatus
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
 from qibo.config import log
@@ -950,7 +951,7 @@ class QrmRf(ClusterModule):
             while True:
                 state = self.device.get_sequencer_state(sequencer_number)
 
-                if state.status == "STOPPED":
+                if state.status is SequencerStatus.STOPPED:
                     # TODO: check flags for errors
                     break
                 elif time.time() - t > time_out:
