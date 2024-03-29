@@ -117,6 +117,7 @@ complex pulse sequence. Therefore with start with that:
         AveragingMode,
         AcquisitionType,
     )
+    from qibolab.serialize_ import replace
 
     # allocate platform
     platform = create_platform("dummy")
@@ -124,11 +125,10 @@ complex pulse sequence. Therefore with start with that:
     # create pulse sequence and add pulses
     sequence = PulseSequence()
     drive_pulse = platform.create_RX_pulse(qubit=0)
-    drive_pulse.duration = 2000
-    drive_pulse.amplitude = 0.01
+    drive_pulse = replace(drive_pulse, duration=2000, amplitude=0.01)
     readout_pulse = platform.create_MZ_pulse(qubit=0)
     sequence.append(drive_pulse)
-    sequence.append(Delay(drive_pulse.duration, readout_pulse.channel))
+    sequence.append(Delay(duration=drive_pulse.duration, channel=readout_pulse.channel))
     sequence.append(readout_pulse)
 
     # allocate frequency sweeper
@@ -222,7 +222,9 @@ and its impact on qubit states in the IQ plane.
     drive_pulse = platform.create_RX_pulse(qubit=0)
     readout_pulse1 = platform.create_MZ_pulse(qubit=0)
     one_sequence.append(drive_pulse)
-    one_sequence.append(Delay(drive_pulse.duration, readout_pulse1.channel))
+    one_sequence.append(
+        Delay(duration=drive_pulse.duration, channel=readout_pulse1.channel)
+    )
     one_sequence.append(readout_pulse1)
 
     # create pulse sequence 2 and add pulses
