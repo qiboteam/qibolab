@@ -98,19 +98,16 @@ def load_qubits(
 
 
 def _load_pulse(pulse_kwargs, qubit):
-    pulse_type = pulse_kwargs.pop("type")
-    if "coupler" in pulse_kwargs:
-        q = pulse_kwargs.pop("coupler", qubit.name)
-    else:
-        q = pulse_kwargs.pop("qubit", qubit.name)
+    coupler = "coupler" in pulse_kwargs
+    q = pulse_kwargs.pop("coupler" if coupler else "qubit", qubit.name)
 
-    if pulse_type == "dl":
-        return Delay(**pulse_kwargs)
-    if pulse_type == "vz":
+    if "phase" in pulse_kwargs:
         return VirtualZ(**pulse_kwargs, qubit=q)
+    if "amplitude" not in pulse_kwargs:
+        return Delay(**pulse_kwargs)
     if "frequency" not in pulse_kwargs:
-        return Pulse.flux(**pulse_kwargs, type=pulse_type, qubit=q)
-    return Pulse(**pulse_kwargs, type=pulse_type, qubit=q)
+        return Pulse.flux(**pulse_kwargs, qubit=q)
+    return Pulse(**pulse_kwargs, qubit=q)
 
 
 def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
