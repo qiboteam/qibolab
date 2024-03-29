@@ -4,6 +4,7 @@ import pytest
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.pulses import Delay, GaussianSquare, Pulse, PulseSequence, PulseType
 from qibolab.qubits import QubitPair
+from qibolab.serialize_ import replace
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 SWEPT_POINTS = 5
@@ -60,8 +61,8 @@ def test_dummy_execute_pulse_sequence_couplers():
     sequence.extend(cz.get_qubit_pulses(qubit_ordered_pair.qubit1.name))
     sequence.extend(cz.get_qubit_pulses(qubit_ordered_pair.qubit2.name))
     sequence.extend(cz.coupler_pulses(qubit_ordered_pair.coupler.name))
-    sequence.append(Delay(40, platform.qubits[0].readout.name))
-    sequence.append(Delay(40, platform.qubits[2].readout.name))
+    sequence.append(Delay(duration=40, channel=platform.qubits[0].readout.name))
+    sequence.append(Delay(duration=40, channel=platform.qubits[2].readout.name))
     sequence.append(platform.create_MZ_pulse(0))
     sequence.append(platform.create_MZ_pulse(2))
     options = ExecutionParameters(nshots=None)
@@ -144,7 +145,7 @@ def test_dummy_single_sweep_coupler(
         channel="flux_coupler-0",
         qubit=0,
     )
-    coupler_pulse.type = PulseType.COUPLERFLUX
+    coupler_pulse = replace(coupler_pulse, type=PulseType.COUPLERFLUX)
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
@@ -239,7 +240,9 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
     pulse = platform.create_qubit_drive_pulse(qubit=0, duration=1000)
     ro_pulse = platform.create_MZ_pulse(qubit=0)
     sequence.append(pulse)
-    sequence.append(Delay(pulse.duration, channel=platform.qubits[0].readout.name))
+    sequence.append(
+        Delay(duration=pulse.duration, channel=platform.qubits[0].readout.name)
+    )
     sequence.append(ro_pulse)
     parameter_range_1 = (
         np.random.rand(SWEPT_POINTS)
