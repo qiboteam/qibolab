@@ -73,7 +73,8 @@ class Pulse(Model):
         """
         kwargs["frequency"] = 0
         kwargs["relative_phase"] = 0
-        kwargs["type"] = PulseType.FLUX
+        if "type" not in kwargs:
+            kwargs["type"] = PulseType.FLUX
         return cls(**kwargs)
 
     @property
@@ -133,9 +134,6 @@ class Delay(Model):
 class VirtualZ(Model):
     """Implementation of Z-rotations using virtual phase."""
 
-    duration: int = 0
-    """Duration of the virtual gate should always be zero."""
-
     phase: float
     """Phase that implements the rotation."""
     channel: Optional[str] = None
@@ -143,3 +141,8 @@ class VirtualZ(Model):
     qubit: int = 0
     """Qubit on the drive of which the virtual phase should be added."""
     type: PulseType = PulseType.VIRTUALZ
+
+    @property
+    def duration(self):
+        """Duration of the virtual gate should always be zero."""
+        return 0
