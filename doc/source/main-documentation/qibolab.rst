@@ -66,7 +66,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
    ps = PulseSequence()
    ps.append(platform.create_RX_pulse(qubit=0))
    ps.append(platform.create_RX_pulse(qubit=0))
-   ps.append(Delay(200, platform.qubits[0].readout.name))
+   ps.append(Delay(duration=200, channel=platform.qubits[0].readout.name))
    ps.append(platform.create_MZ_pulse(qubit=0))
 
 Now we can execute the sequence on hardware:
@@ -300,7 +300,7 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
         amplitude=0.5,  # Amplitude relative to instrument range
         frequency=1e8,  # Frequency in Hz
         relative_phase=0,  # Phase in radians
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel="channel",
         type="qd",  # Enum type: :class:`qibolab.pulses.PulseType`
         qubit=0,
@@ -318,7 +318,7 @@ Alternatively, you can achieve the same result using the dedicated :class:`qibol
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel="channel",
         qubit=0,
     )
@@ -338,7 +338,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel="channel",
         qubit=0,
     )
@@ -347,7 +347,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel="channel",
         qubit=0,
     )
@@ -356,7 +356,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel="channel",
         qubit=0,
     )
@@ -365,7 +365,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
         frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel="channel",
         qubit=0,
     )
@@ -382,7 +382,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
 .. testoutput:: python
     :hide:
 
-    Total duration: 160
+    Total duration: 160.0
     We have 0 pulses on channel 1.
 
 
@@ -409,7 +409,7 @@ Typical experiments may include both pre-defined pulses and new ones:
             amplitude=0.5,
             frequency=2500000000,
             relative_phase=0,
-            shape=Rectangular(),
+            envelope=Rectangular(),
             channel="0",
         )
     )
@@ -525,7 +525,9 @@ For example:
     sequence = PulseSequence()
 
     sequence.append(platform.create_RX_pulse(0))
-    sequence.append(Delay(sequence.duration, platform.qubits[0].readout.name))
+    sequence.append(
+        Delay(duration=sequence.duration, channel=platform.qubits[0].readout.name)
+    )
     sequence.append(platform.create_MZ_pulse(0))
 
     sweeper_freq = Sweeper(
