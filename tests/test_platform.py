@@ -2,7 +2,6 @@
 :class:`qibolab.platforms.platform.DesignPlatform`."""
 
 import pathlib
-import pickle
 import warnings
 
 import numpy as np
@@ -60,14 +59,6 @@ def test_create_platform_error():
 
 def test_platform_sampling_rate(platform):
     assert platform.sampling_rate >= 1
-
-
-@pytest.mark.xfail(reason="Cannot pickle all platforms")
-def test_platform_pickle(platform):
-    serial = pickle.dumps(platform)
-    new_platform = pickle.loads(serial)
-    assert new_platform.name == platform.name
-    assert new_platform.is_connected == platform.is_connected
 
 
 def test_dump_runcard(platform, tmp_path):
