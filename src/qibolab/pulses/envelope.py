@@ -81,18 +81,24 @@ class Exponential(BaseEnvelope):
     kind: Literal["exponential"] = "exponential"
 
     tau: float
-    """The decay rate of the first exponential function."""
+    """The decay rate of the first exponential function.
+
+    In units of the interval duration.
+    """
     upsilon: float
-    """The decay rate of the second exponential function."""
+    """The decay rate of the second exponential function.
+
+    In units of the interval duration.
+    """
     g: float = 0.1
     """Weight of the second exponential function."""
 
     def i(self, samples: int) -> Waveform:
         """Generate a combination of two exponential decays."""
         x = np.arange(samples)
-        return (np.exp(-x / self.upsilon) + self.g * np.exp(-x / self.tau)) / (
-            1 + self.g
-        )
+        upsilon = self.upsilon * samples
+        tau = self.tau * samples
+        return (np.exp(-x / upsilon) + self.g * np.exp(-x / tau)) / (1 + self.g)
 
 
 def _samples_sigma(rel_sigma: float, samples: int) -> float:
@@ -245,6 +251,7 @@ class Snz(BaseEnvelope):
     kind: Literal["snz"] = "snz"
 
     t_idling: float
+    """Fraction of interval where idling."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
@@ -279,6 +286,7 @@ class ECap(BaseEnvelope):
     kind: Literal["ecap"] = "ecap"
 
     alpha: float
+    """In units of the inverse interval duration."""
 
     def i(self, samples: int) -> Waveform:
         """.. todo::"""
