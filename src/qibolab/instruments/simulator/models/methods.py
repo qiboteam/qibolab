@@ -1,22 +1,15 @@
+import json
 from typing import Union
+from pathlib import Path
 
-import yaml
-
-MHz = 1e6
 GHz = 1e9
-us = 1e-6
 ns = 1e-9
 
+MODEL_PARAMS = "model.json"
 
-def load_model_params(model_params: Union[dict, str]) -> dict:
-    """Load yaml to a dictionary or returns the input if it is already a
-    dictionary."""
-    if isinstance(model_params, dict):
-        params = model_params
-    else:
-        with open(model_params) as file:
-            params = yaml.safe_load(file)
-    return params
+def load_model_params(path: Path) -> dict:
+    """Load model parameters JSON to a dictionary."""
+    return json.loads((path / MODEL_PARAMS).read_text())
 
 
 def default_noflux_platform2simulator_channels(
