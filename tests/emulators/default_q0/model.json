@@ -1,0 +1,42 @@
+{
+    "device_name": "ibmfakebelem_q0",
+    "topology": [
+        [
+            0,
+            1
+        ]
+    ],
+    "nqubits": 1,
+    "ncouplers": 0,
+    "qubits_list": [
+        "0",
+        "1"
+    ],
+    "couplers_list": [],
+    "sampling_rate": 4500000000.0,
+    "readout_error": {
+        "0": [
+            0.01,
+            0.02
+        ]
+    },
+    "drive_freq": {
+        "0": 5090167234.445013
+    },
+    "T1": {
+        "0": 8.857848970762537e-05
+    },
+    "T2": {
+        "0": 0.00010679794866226273
+    },
+    "lo_freq": {
+        "0": 5090167234.445013
+    },
+    "rabi_freq": {
+        "0": 125457538.19061986
+    },
+    "anharmonicity": {
+        "0": -336123005.1821652
+    },
+    "coupling_strength": {}
+}
