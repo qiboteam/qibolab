@@ -214,40 +214,6 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, sequence, options, **kwargs):
-        """Executes sequence on the controllers."""
-        result = {}
-
-        for instrument in self.instruments.values():
-            if isinstance(instrument, Controller):
-                new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, options
-                )
-                if isinstance(new_result, dict):
-                    result.update(new_result)
-
-        return result
-
-    def execute_pulse_sequence(
-        self, sequence: PulseSequence, options: ExecutionParameters, **kwargs
-    ):
-        """
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
-        Returns:
-            Readout results acquired by after execution.
-        """
-        options = self.settings.fill(options)
-
-        time = (
-            (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
-        )
-        log.info(f"Minimal execution time (sequence): {time}")
-
-        return self._execute(sequence, options, **kwargs)
-
     @property
     def _controller(self):
         """Controller instrument used for splitting the unrolled sequences to
@@ -264,7 +230,21 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def execute_pulse_sequences(
+    def _execute(self, sequence, options, **kwargs):
+        """Executes sequence on the controllers."""
+        result = {}
+
+        for instrument in self.instruments.values():
+            if isinstance(instrument, Controller):
+                new_result = instrument.play(
+                    self.qubits, self.couplers, sequence, options
+                )
+                if isinstance(new_result, dict):
+                    result.update(new_result)
+
+        return result
+
+    def execute(
         self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs
     ):
         """
