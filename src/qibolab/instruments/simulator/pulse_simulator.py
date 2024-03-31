@@ -119,7 +119,10 @@ class PulseSimulator(Controller):
         self.runcard_duration_in_dt_units = self.model_config[
             "runcard_duration_in_dt_units"
         ]
-        self.readout_error = self.model_config["readout_error"]
+        #self.readout_error = self.model_config["readout_error"]
+        self.readout_error = {}
+        for k, v in self.model_config["readout_error"].items():
+            self.readout_error.update({int(k): v})
         self.exec_params = ExecutionParameters
         self.default_nshots = self.simulation_config["default_nshots"]
         self.exec_params.nshots = self.default_nshots

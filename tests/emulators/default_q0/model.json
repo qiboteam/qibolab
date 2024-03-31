@@ -1,16 +1,10 @@
 {
     "device_name": "ibmfakebelem_q0",
-    "topology": [
-        [
-            0,
-            1
-        ]
-    ],
+    "topology": [],
     "nqubits": 1,
     "ncouplers": 0,
     "qubits_list": [
-        "0",
-        "1"
+        "0"
     ],
     "couplers_list": [],
     "sampling_rate": 4500000000.0,

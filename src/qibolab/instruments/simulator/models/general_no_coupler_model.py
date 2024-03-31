@@ -56,7 +56,8 @@ def generate_default_params():
 
 
 def generate_model_config(
-    model_params: Union[dict, str] = None, nlevels_q: list = None, topology: list = None
+    #model_params: Union[dict, str] = None, nlevels_q: list = None, topology: list = None
+    model_params: dict = None, nlevels_q: list = None, topology: list = None
 ) -> dict:
     """Generates the model configuration dictionary.
 
@@ -70,8 +71,8 @@ def generate_model_config(
     """
     if model_params is None:
         model_params = generate_default_params()
-    else:
-        model_params = load_model_params(model_params)
+    #else:
+     #   model_params = load_model_params(model_params)
 
     # allows for user to overwrite topology in model_params for quick test
     if topology is None:

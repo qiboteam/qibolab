@@ -1,21 +1,26 @@
 import pathlib
 import logging
-from qibolab.channels import ChannelMap
-from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
 
-from qibolab.instruments.simulator.models import general_no_coupler_model
+from qibolab.channels import ChannelMap
 from qibolab.instruments.simulator.pulse_simulator import (
     PulseSimulator,
     get_default_simulation_config,
 )
+from qibolab.instruments.simulator.models import general_no_coupler_model
+from qibolab.instruments.simulator.models.methods import load_model_params
+from qibolab.platform import Platform
+from qibolab.serialize import (
+    load_qubits,
+    load_runcard,
+    load_settings,
+)
 
-
+#from qibolab.emulator import create_runcard_emulator
 log = logging.getLogger()
-log.setLevel(logging.ERROR)
+#log.setLevel(logging.ERROR)
+log.setLevel(logging.INFO)
 
-# set number of levels of qubit
-nlevel = 3
+FOLDER = pathlib.Path(__file__).parent
 
 # simulation parameters
 sim_sampling_boost = 10
@@ -23,29 +28,17 @@ simulate_dissipation = True
 instant_measurement = True
 
 
-def create_emulator(runcard_folder: str):
+#def create_oneQ_emulator(runcard_folder: str):
+def create_emulator(nlevel:int=3):
     """Create a one qubit emulator platform."""
 
-    model_params_dict = {
-        "device_name": device_name,
-        "topology": [],
-        "nqubits": 1,
-        "ncouplers": 0,
-        "qubits_list": ["0"],
-        "couplers_list": [],
-        "sampling_rate": sampling_rate,
-        "readout_error": {0: readout_error},
-        "drive_freq": {"0": drive_freq},
-        "T1": {"0": T1},
-        "T2": {"0": T2},
-        "lo_freq": {"0": lo_freq},
-        "rabi_freq": {"0": rabi_freq},
-        "anharmonicity": {"0": anharmonicity},
-        "coupling_strength": {},
-    }
+    # load runcard
+    original_runcard = load_runcard(FOLDER)
+    runcard = load_runcard(FOLDER)
+    model_params = load_model_params(FOLDER)
 
     model_config = general_no_coupler_model.generate_model_config(
-        model_params_dict, nlevels_q=[nlevel]
+        model_params, nlevels_q=[nlevel]
     )
     simulation_config = get_default_simulation_config(sim_sampling_boost)
     simulation_config.update({"simulate_dissipation": simulate_dissipation})
@@ -53,14 +46,8 @@ def create_emulator(runcard_folder: str):
 
     pulse_simulator = PulseSimulator(simulation_config, model_config)
 
-    # load runcard
-    runcard_folder_path = pathlib.Path(runcard_folder)
-    original_runcard = load_runcard(runcard_folder_path)
-    runcard = load_runcard(runcard_folder_path)
+    #return create_runcard_emulator(runcard_folder, pulse_simulator)
 
-    # todo: check PulseSimulator topology is superset of runcard topology
-
-    model_config = pulse_simulator.model_config
     emulator_name = pulse_simulator.emulator_name
     qubits_list = model_config["qubits_list"]
     couplers_list = model_config["couplers_list"]
