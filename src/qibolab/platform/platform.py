@@ -358,9 +358,6 @@ class Platform:
                     result.update(new_result)
         return result
 
-    def __call__(self, sequence, options):
-        return self.execute_pulse_sequence(sequence, options)
-
     def get_qubit(self, qubit):
         """Return the name of the physical qubit corresponding to a logical
         qubit.
