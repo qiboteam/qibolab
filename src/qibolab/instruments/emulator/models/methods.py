@@ -1,4 +1,6 @@
 import json
+import operator
+from functools import reduce
 from pathlib import Path
 
 GHz = 1e9
@@ -23,11 +25,8 @@ def default_noflux_platform2simulator_channels(
     Returns:
         dict: Mapping between platform channel names to simulator chanel names.
     """
-    platform2simulator_channels = {}
-    for qubit in qubits_list:
-        platform2simulator_channels.update({f"drive-{qubit}": f"D-{qubit}"})
-        platform2simulator_channels.update({f"readout-{qubit}": f"R-{qubit}"})
-    for coupler in couplers_list:
-        platform2simulator_channels.update({f"drive-{coupler}": f"D-{coupler}"})
-
-    return platform2simulator_channels
+    return reduce(
+        operator.or_,
+        [{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}"} for q in qubits]
+        + [{f"drive-{c}": f"D-{c}"} for c in couplers],
+    )
