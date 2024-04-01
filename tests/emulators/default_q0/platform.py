@@ -2,9 +2,9 @@ import logging
 import pathlib
 
 from qibolab.channels import ChannelMap
-from qibolab.instruments.simulator.models import general_no_coupler_model
-from qibolab.instruments.simulator.models.methods import load_model_params
-from qibolab.instruments.simulator.pulse_simulator import (
+from qibolab.instruments.emulator.models import general_no_coupler_model
+from qibolab.instruments.emulator.models.methods import load_model_params
+from qibolab.instruments.emulator.pulse_simulator import (
     PulseSimulator,
     get_default_simulation_config,
 )

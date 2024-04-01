@@ -10,9 +10,9 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.emulator.backends.generic import make_comp_basis
+from qibolab.instruments.emulator.backends.qutip_backend import Qutip_Simulator
 from qibolab.instruments.port import Port
-from qibolab.instruments.simulator.backends.generic import make_comp_basis
-from qibolab.instruments.simulator.backends.qutip_backend import Qutip_Simulator
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.qubits import QubitId

@@ -14,7 +14,7 @@ from qutip.operators import identity as Id
 from qutip.tensor import tensor
 from qutip.ui.progressbar import EnhancedTextProgressBar
 
-from qibolab.instruments.simulator.backends.generic import (
+from qibolab.instruments.emulator.backends.generic import (
     dec_to_basis_string,
     op_from_instruction,
 )

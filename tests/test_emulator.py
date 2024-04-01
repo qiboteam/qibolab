@@ -5,21 +5,21 @@ import pytest
 from qutip import Options, identity, tensor
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.simulator.backends.generic import (
+from qibolab.instruments.emulator.backends.generic import (
     dec_to_basis_string,
     op_from_instruction,
     print_Hamiltonian,
 )
-from qibolab.instruments.simulator.backends.qutip_backend import (
+from qibolab.instruments.emulator.backends.qutip_backend import (
     Qutip_Simulator,
     extend_op_dim,
     function_from_array,
 )
-from qibolab.instruments.simulator.models import (
+from qibolab.instruments.emulator.models import (
     general_no_coupler_model,
     models_template,
 )
-from qibolab.instruments.simulator.models.methods import load_model_params
+from qibolab.instruments.emulator.models.methods import load_model_params
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 

@@ -1,6 +1,6 @@
 {
     "nqubits": 5,
-    "description": "IBM 5-qubit device FakeBelem, q0 and q1 only",
+    "description": "IBM 5-qubit device FakeBelem, q0 only",
     "settings": {
         "nshots": 4096,
         "relaxation_time": 300000
