@@ -1,24 +1,19 @@
-import pathlib
 import logging
+import pathlib
 
 from qibolab.channels import ChannelMap
+from qibolab.instruments.simulator.models import general_no_coupler_model
+from qibolab.instruments.simulator.models.methods import load_model_params
 from qibolab.instruments.simulator.pulse_simulator import (
     PulseSimulator,
     get_default_simulation_config,
 )
-from qibolab.instruments.simulator.models import general_no_coupler_model
-from qibolab.instruments.simulator.models.methods import load_model_params
 from qibolab.platform import Platform
-from qibolab.serialize import (
-    load_qubits,
-    load_runcard,
-    load_settings,
-)
+from qibolab.serialize import load_qubits, load_runcard, load_settings
 
-#from qibolab.emulator import create_runcard_emulator
+# from qibolab.emulator import create_runcard_emulator
 log = logging.getLogger()
-#log.setLevel(logging.ERROR)
-log.setLevel(logging.INFO)
+log.setLevel(logging.INFO)  # log.setLevel(logging.ERROR)
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -28,8 +23,7 @@ simulate_dissipation = True
 instant_measurement = True
 
 
-#def create_oneQ_emulator(runcard_folder: str):
-def create_emulator(nlevel:int=3):
+def create(nlevel: int = 3):
     """Create a one qubit emulator platform."""
 
     # load runcard
@@ -45,8 +39,6 @@ def create_emulator(nlevel:int=3):
     simulation_config.update({"instant_measurement": instant_measurement})
 
     pulse_simulator = PulseSimulator(simulation_config, model_config)
-
-    #return create_runcard_emulator(runcard_folder, pulse_simulator)
 
     emulator_name = pulse_simulator.emulator_name
     qubits_list = model_config["qubits_list"]
@@ -76,7 +68,6 @@ def create_emulator(nlevel:int=3):
 
     # map channels to qubits
     for q in runcard_qubits_list:
-        # print(q)
         qubits[q].readout = channels[f"readout-{q}"]
         qubits[q].drive = channels[f"drive-{q}"]
 
@@ -86,4 +77,3 @@ def create_emulator(nlevel:int=3):
     return Platform(
         emulator_name, qubits, pairs, instruments, settings, resonator_type="2D"
     )
-

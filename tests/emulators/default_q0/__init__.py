@@ -1,1 +1,1 @@
-from .platform import create_emulator
+from .platform import create

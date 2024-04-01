@@ -1,11 +1,11 @@
 import json
-from typing import Union
 from pathlib import Path
 
 GHz = 1e9
 ns = 1e-9
 
 MODEL_PARAMS = "model.json"
+
 
 def load_model_params(path: Path) -> dict:
     """Load model parameters JSON to a dictionary."""
