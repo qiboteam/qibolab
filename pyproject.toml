@@ -63,6 +63,7 @@ qcodes_contrib_drivers = "0.18.0"
 qibosoq = ">=0.1.2,<0.2"
 qualang-tools = "^0.15.0"
 laboneq = "==2.25.0"
+qutip = "^4.7.5"
 
 [tool.poetry.group.tests]
 optional = true
@@ -85,6 +86,7 @@ qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq"]
 los = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
+emulator = ["qutip"]
 
 
 [tool.poe.tasks]
