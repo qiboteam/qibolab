@@ -27,6 +27,6 @@ def default_noflux_platform2simulator_channels(
     """
     return reduce(
         operator.or_,
-        [{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}"} for q in qubits]
-        + [{f"drive-{c}": f"D-{c}"} for c in couplers],
+        [{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}"} for q in qubits_list]
+        + [{f"drive-{c}": f"D-{c}"} for c in couplers_list],
     )
