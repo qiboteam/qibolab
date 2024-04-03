@@ -24,13 +24,13 @@ def connected_backend(connected_platform):
 def test_execute_circuit_initial_state():
     backend = QibolabBackend("dummy")
     circuit = Circuit(1)
-    circuit.add(gates.X(0))
+    circuit.add(gates.GPI2(0, phi=0))
     circuit.add(gates.M(0))
     with pytest.raises(ValueError):
         backend.execute_circuit(circuit, initial_state=np.ones(2))
 
     initial_circuit = Circuit(1)
-    initial_circuit.add(gates.H(0))
+    circuit.add(gates.GPI2(0, phi=np.pi / 2))
     backend.execute_circuit(circuit, initial_state=initial_circuit)
 
 
@@ -38,12 +38,9 @@ def test_execute_circuit_initial_state():
     "gate,kwargs",
     [
         (gates.I, {}),
-        (gates.X, {}),
-        (gates.Y, {}),
         (gates.Z, {}),
-        (gates.RX, {"theta": np.pi / 8}),
-        (gates.RY, {"theta": -np.pi / 8}),
-        (gates.RZ, {"theta": np.pi / 4}),
+        (gates.GPI, {"phi": np.pi / 8}),
+        (gates.GPI2, {"phi": np.pi / 8}),
         (gates.U3, {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
     ],
 )
@@ -74,7 +71,7 @@ def test_measurement_samples():
 def test_execute_circuits():
     backend = QibolabBackend("dummy")
     circuit = Circuit(3)
-    circuit.add(gates.H(i) for i in range(3))
+    circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(3))
     circuit.add(gates.M(0, 1, 2))
 
     results = backend.execute_circuits(5 * [circuit], nshots=100)
@@ -88,8 +85,8 @@ def test_multiple_measurements():
     backend = QibolabBackend("dummy")
 
     circuit = Circuit(4)
-    circuit.add(gates.H(i) for i in range(2))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(2))
+    circuit.add(gates.CZ(1, 2))
     res0 = circuit.add(gates.M(0))
     res1 = circuit.add(gates.M(3))
     res2 = circuit.add(gates.M(1))
@@ -118,8 +115,8 @@ def test_execute_circuit_str_qubit_names():
     circuits."""
     backend = QibolabBackend(dummy_string_qubit_names())
     circuit = Circuit(3)
-    circuit.add(gates.H(i) for i in range(2))
-    circuit.add(gates.CZ(0, 1))
+    circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(2))
+    circuit.add(gates.CZ(1, 2))
     circuit.add(gates.M(0, 1))
     result = backend.execute_circuit(circuit, nshots=20)
     assert result.samples().shape == (20, 2)
@@ -174,7 +171,7 @@ def test_superposition_for_all_qubits(connected_backend):
     probs = []
     for q in range(nqubits):
         circuit = Circuit(nqubits)
-        circuit.add(gates.H(q=q))
+        circuit.add(gates.GPI2(q=q, phi=np.pi / 2))
         circuit.add(gates.M(q))
         freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(
             binary=False
