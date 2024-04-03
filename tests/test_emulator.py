@@ -5,7 +5,7 @@ import pytest
 from qutip import Options, identity, tensor
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.emulator.backends.generic import (  # dec_to_basis_string,
+from qibolab.instruments.emulator.backends.generic import (
     op_from_instruction,
     print_Hamiltonian,
 )
@@ -274,11 +274,6 @@ def test_load_model_params():
     device_name = "ibmfakebelem_q01"
     model_params_folder = emulators_folder / device_name
     load_model_params(model_params_folder)
-
-
-# backends.generic
-# def test_dec_to_basis_string():
-#   dec_to_basis_string(x=1, nlevels=[3, 2, 2])
 
 
 @pytest.mark.parametrize("model", MODELS)

@@ -16,24 +16,17 @@ def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
     Returns:
         list: Generalized bitstring of x.
     """
-
     nqubits = len(nlevels)
-
     output_list = []
     y = x
-    for i in range(nqubits):
-        if i < nqubits - 1:
-            sub_dim = np.prod(nlevels[i + 1 :])
-            coeff = np.divmod(y, sub_dim)[0]
-            output_list.append(coeff)
-            y -= coeff * sub_dim
-        else:
-            coeff = np.divmod(y, 1)[0]
-            output_list.append(coeff)
-    """
-    if to_string:
-        output_list = "".join([str(c) for c in output_list])
-    """
+    subdims_ = np.mulitply.accumulate(nlevels)
+    subdims = (subdims_[-1] / subdims_).astype(int)
+
+    for sub_dim in subdims:
+        coeff = np.divmod(y, sub_dim)[0]
+        output_list.append(coeff)
+        y -= coeff * sub_dim
+
     return output_list
 
 
