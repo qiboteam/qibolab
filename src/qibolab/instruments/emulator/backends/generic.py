@@ -56,9 +56,7 @@ def make_comp_basis(
     comp_basis_list = []
     comp_dim = np.prod(nlevels)
     for ind in range(comp_dim):
-        comp_basis_list.append(
-            dec_to_basis_string(ind, nlevels=nlevels, to_string=False)
-        )
+        comp_basis_list.append(dec_to_basis_string(ind, nlevels=nlevels))
 
     return np.array(comp_basis_list)
 
