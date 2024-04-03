@@ -2,7 +2,7 @@
        move      20,R1    #Initial wait period in ns.
        wait_sync 4        #Wait for sequencers to synchronize and then wait another 4 ns.
 
-lorp:  set_mrk   1        #Set marker output 1.
+loop:  set_mrk   1        #Set marker output 1.
        play      0,1,4    #Play a gaussian and a block on output path 0 and 1 respectively and wait 4 ns.
        set_mrk   0        #Reset marker output 1.
        upd_param 18       #Update parameters and wait the remaining 18 ns of the waveforms.
