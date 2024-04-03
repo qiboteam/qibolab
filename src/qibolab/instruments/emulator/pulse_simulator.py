@@ -37,26 +37,6 @@ class DummyPort(Port):
     filters: Optional[dict] = None
 
 
-def get_default_simulation_config(sim_sampling_boost=20, default_nshots=100):
-    """Returns the default simulation configuration for the pulse simulator.
-
-    Args:
-        sim_sampling_boost (int): The boost factor to be multiplied to the device sampling rate for the sampling rate to be used in simulation.
-        default_nshots (int): The default number of shots for the simulation.
-
-    Returns:
-        dict: The default simulation configuration.
-    """
-    default_CR_drive_simulation_config = {
-        "simulation_backend_name": "Qutip",
-        "default_nshots": default_nshots,
-        "sim_sampling_boost": sim_sampling_boost,
-        "simulate_dissipation": True,
-        "instant_measurement": True,
-    }
-    return default_CR_drive_simulation_config
-
-
 class PulseSimulator(Controller):
     """Runs quantum dynamics simulation of model of device.
 

@@ -246,6 +246,9 @@ def test_pulse_simulator_initialization():
 
 
 def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exception():
+    import matplotlib
+
+    matplotlib.use("TkAgg")
     emulator = default_q0
     platform = emulator.create()
     pulse_simulator = platform.instruments["pulse_simulator"]

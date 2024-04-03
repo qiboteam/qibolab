@@ -4,40 +4,36 @@ import pathlib
 from qibolab.channels import ChannelMap
 from qibolab.instruments.emulator.models import general_no_coupler_model
 from qibolab.instruments.emulator.models.methods import load_model_params
-from qibolab.instruments.emulator.pulse_simulator import (
-    PulseSimulator,
-    get_default_simulation_config,
-)
+from qibolab.instruments.emulator.pulse_simulator import PulseSimulator
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
 
-# from qibolab.emulator import create_runcard_emulator
 log = logging.getLogger()
 log.setLevel(logging.INFO)  # log.setLevel(logging.ERROR)
 
 FOLDER = pathlib.Path(__file__).parent
 
-# simulation parameters
-sim_sampling_boost = 10
-simulate_dissipation = True
-instant_measurement = True
+simulation_config = {
+    "simulation_backend_name": "Qutip",
+    "default_nshots": 100,
+    "sim_sampling_boost": 10,  # 20
+    "simulate_dissipation": True,
+    "instant_measurement": True,
+}
 
 
 def create(nlevel: int = 3):
     """Create a one qubit emulator platform."""
 
-    # load runcard
+    # load runcard and model params
     original_runcard = load_runcard(FOLDER)
     runcard = load_runcard(FOLDER)
     model_params = load_model_params(FOLDER)
 
+    # construct model and set up pulse simulator
     model_config = general_no_coupler_model.generate_model_config(
         model_params, nlevels_q=[nlevel]
     )
-    simulation_config = get_default_simulation_config(sim_sampling_boost)
-    simulation_config.update({"simulate_dissipation": simulate_dissipation})
-    simulation_config.update({"instant_measurement": instant_measurement})
-
     pulse_simulator = PulseSimulator(simulation_config, model_config)
 
     emulator_name = pulse_simulator.emulator_name

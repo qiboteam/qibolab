@@ -4,7 +4,7 @@ from functools import reduce
 from pathlib import Path
 
 GHz = 1e9
-ns = 1e-9
+# ns = 1e-9
 
 MODEL_PARAMS = "model.json"
 
