@@ -5,19 +5,16 @@ import numpy as np
 from IPython.display import Latex, display
 
 
-def dec_to_basis_string(
-    x: int, nlevels: list = [2], to_string: bool = True
-) -> Union[str, list]:
+def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
     """Converts an integer to a generalized bitstring in the computation basis
     of the full Hilbert space.
 
     Args:
         x (int): The integer (decimal number) to be converted.
         nlevels (list): The list of nlevels to convert the decimal number to. Defaults to [2].
-        to_string (bool): Flag to return the result as a string. Defaults to True.
 
     Returns:
-        str or list: Generalized bitstring of x. If to_string is True, the result is returned as a string, otherwise as a list of integers.
+        list: Generalized bitstring of x.
     """
 
     nqubits = len(nlevels)
@@ -33,10 +30,10 @@ def dec_to_basis_string(
         else:
             coeff = np.divmod(y, 1)[0]
             output_list.append(coeff)
-
+    """
     if to_string:
         output_list = "".join([str(c) for c in output_list])
-
+    """
     return output_list
 
 

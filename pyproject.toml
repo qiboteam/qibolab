@@ -104,9 +104,3 @@ disable = ["E1123", "E1120", "C0301"]
 [tool.pytest.ini_options]
 testpaths = ['tests/']
 markers = ["qpu: mark tests that require qpu"]
-addopts = [
-  '--cov=qibolab',
-  '--cov-report=xml',
-  '--cov-report=html',
-  '-m not qpu',
-]

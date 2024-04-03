@@ -446,7 +446,7 @@ class Qutip_Simulator:
             full_HS_dim = np.product(self.nlevels_HS)
             for state_id in range(full_HS_dim):
                 basis_string = dec_to_basis_string(
-                    state_id, self.nlevels_HS, to_string=False
+                    state_id, self.nlevels_HS  # , to_string=False
                 )
                 labels.append(basis_string)
                 basis_state = self.state_from_basis_vector(
