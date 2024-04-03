@@ -746,7 +746,7 @@ class QcmRf(ClusterModule):
         if not self.is_connected:
             return
         for sequencer_number in self._used_sequencers_numbers:
-            state = self.device.get_sequencer_state(sequencer_number)
+            state = self.device.get_sequencer_status(sequencer_number)
             if state.status != "STOPPED":
                 log.warning(
                     f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"

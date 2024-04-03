@@ -949,7 +949,7 @@ class QrmRf(ClusterModule):
         t = time.time()
         for sequencer_number in self._used_sequencers_numbers:
             while True:
-                state = self.device.get_sequencer_state(sequencer_number)
+                state = self.device.get_sequencer_status(sequencer_number)
 
                 if state.status is SequencerStatus.STOPPED:
                     # TODO: check flags for errors
@@ -1022,7 +1022,7 @@ class QrmRf(ClusterModule):
             return
 
         for sequencer_number in self._used_sequencers_numbers:
-            state = self.device.get_sequencer_state(sequencer_number)
+            state = self.device.get_sequencer_status(sequencer_number)
             if state.status != "STOPPED":
                 log.warning(
                     f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
