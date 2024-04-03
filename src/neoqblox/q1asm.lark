@@ -1,7 +1,7 @@
 ?start: (statement | COMMENT)*
 
 HEXINT: "0x"HEXDIGIT+
-LABEL: /[^\w]+/
+LABEL: /\w+/
 IMMEDIATE: ["+"|"-"] (INT|HEXINT) | "@"LABEL
 REGISTER: "R"(INT+)
 VALUE: IMMEDIATE | REGISTER
@@ -12,14 +12,55 @@ nop: "nop"
 control: illegal | stop | nop
 
 jmp: "jmp" VALUE
-jump: jmp
+jge: "jge" REGISTER "," IMMEDIATE "," VALUE
+jlt: "jlt" REGISTER "," IMMEDIATE "," VALUE
+loop: "loop" REGISTER "," VALUE
+jump: jmp | jge | jlt | loop
 
 move: "move" VALUE "," REGISTER
 not: "not" VALUE "," REGISTER
 add: "add" REGISTER "," VALUE "," REGISTER
-arithmetic: move | not | add
+sub: "sub" REGISTER "," VALUE "," REGISTER
+and: "and" REGISTER "," VALUE "," REGISTER
+or: "or" REGISTER "," VALUE "," REGISTER
+xor: "xor" REGISTER "," VALUE "," REGISTER
+asl: "asl" REGISTER "," VALUE "," REGISTER
+arl: "arl" REGISTER "," VALUE "," REGISTER
+arithmetic: move | not | add | sub | and | or | xor | asl | arl
 
-statement: [LABEL ":" WS+] control | jump | arithmetic [WS+ COMMENT]
+set_mrk: "set_mrk" VALUE
+set_freq: "set_freq" VALUE
+reset_ph: "reset_ph"
+set_ph: "set_ph" VALUE
+set_ph_delta: "set_ph_delta" VALUE
+set_awg_gain: "set_awg_gain" (IMMEDIATE "," IMMEDIATE | REGISTER "," REGISTER)
+set_awg_offs: "set_awg_offs" (IMMEDIATE "," IMMEDIATE | REGISTER "," REGISTER)
+param_ops: set_mrk | set_freq | reset_ph | set_ph | set_ph_delta | set_awg_gain | set_awg_offs
+
+q1: control | jump | arithmetic | param_ops
+
+set_cond: "set_cond" (IMMEDIATE "," IMMEDIATE "," IMMEDIATE | REGISTER "," REGISTER "," REGISTER) "," IMMEDIATE
+conditional: set_cond
+
+upd_param: "upd_param" IMMEDIATE
+play: "play" (IMMEDIATE "," IMMEDIATE | REGISTER "," REGISTER) "," IMMEDIATE
+acquire: "acquire" IMMEDIATE "," VALUE "," IMMEDIATE
+acquire_weighed: "acquire_weighed" IMMEDIATE "," (IMMEDIATE "," IMMEDIATE "," IMMEDIATE | REGISTER "," REGISTER "," REGISTER) "," IMMEDIATE
+acquire_ttl: "acquire_ttl" IMMEDIATE "," VALUE "," IMMEDIATE "," IMMEDIATE
+io: upd_param | play | acquire | acquire_weighed | acquire_ttl
+
+set_latch_en: "set_latch_en" VALUE "," IMMEDIATE
+latch_rst: "latch_rst" VALUE
+trigger: set_latch_en | latch_rst
+
+wait: "wait" VALUE
+wait_trigger: "wait_trigger" (IMMEDIATE "," IMMEDIATE | REGISTER "," REGISTER)
+wait_sync: "wait_sync" VALUE
+wait_ops: wait | wait_trigger | wait_sync
+
+real_time: conditional | io | trigger | wait_ops
+
+statement: [LABEL ":"] (q1 | real_time) [WS+ COMMENT]
 
 
 %import common.ESCAPED_STRING
