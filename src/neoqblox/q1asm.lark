@@ -1,0 +1,29 @@
+?start: (statement | COMMENT)*
+
+HEXINT: "0x"HEXDIGIT+
+LABEL: /[^\w]+/
+IMMEDIATE: ["+"|"-"] (INT|HEXINT) | "@"LABEL
+REGISTER: "R"(INT+)
+VALUE: IMMEDIATE | REGISTER
+
+illegal: "illegal"
+stop: "stop"
+nop: "nop"
+control: illegal | stop | nop
+
+jmp: "jmp" VALUE
+jump: jmp
+
+move: "move" VALUE "," REGISTER
+not: "not" VALUE "," REGISTER
+add: "add" REGISTER "," VALUE "," REGISTER
+arithmetic: move | not | add
+
+statement: [LABEL ":" WS+] control | jump | arithmetic [WS+ COMMENT]
+
+
+%import common.ESCAPED_STRING
+%import common (INT, HEXDIGIT)
+%import common.WS
+%ignore WS
+%import lark.COMMENT

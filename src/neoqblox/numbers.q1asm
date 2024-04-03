@@ -1,0 +1,6 @@
+jmp 109238
+jmp -8125
+jmp 0x13
+jmp 0xf8a34
+jmp -0x123
+jmp +3125
