@@ -142,7 +142,7 @@ class RFSoC(Controller):
                 )
                 return client.connect(server_commands, self.host, self.port)
             buffer_overflow = r"buffer length must be \d+ samples or less"
-            if bool(re.search(buffer_overflow, str(e))):
+            if re.search(buffer_overflow, str(e)) is not None:
                 log.warning("Buffer full! Use shorter pulses.")
             raise e
 
