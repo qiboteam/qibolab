@@ -6,7 +6,7 @@ GRAMMAR_FILE = Path(__file__).parent / "q1asm.lark"
 GRAMMAR = GRAMMAR_FILE.read_text()
 
 
-parser = Lark(GRAMMAR, parser="lalr")
+parser = Lark(GRAMMAR)
 
 
 def test(code):

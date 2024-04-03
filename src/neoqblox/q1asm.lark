@@ -1,4 +1,4 @@
-?start: (statement | COMMENT)*
+?start: (instruction | COMMENT)*
 
 HEXINT: "0x"HEXDIGIT+
 LABEL: /\w+/
@@ -60,7 +60,7 @@ wait_sync: "wait_sync" VALUE
 
 ?real_time: conditional | io | trigger | wait_ops
 
-statement: [LABEL ":"] (q1 | real_time) [COMMENT]
+instruction: [LABEL ":"] (q1 | real_time) [COMMENT]
 
 
 %import common.ESCAPED_STRING
