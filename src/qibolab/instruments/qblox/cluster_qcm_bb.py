@@ -2,6 +2,7 @@
 
 import json
 
+from qblox_instruments.native.generic_func import SequencerStates
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
 from qblox_instruments.qcodes_drivers.module import Module as QbloxModule
 from qibo.config import log
@@ -749,7 +750,7 @@ class QcmBb(ClusterModule):
             return
         for sequencer_number in self._used_sequencers_numbers:
             state = self.device.get_sequencer_status(sequencer_number)
-            if state.status != "STOPPED":
+            if state.state is not SequencerStates.STOPPED:
                 log.warning(
                     f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
                 )
