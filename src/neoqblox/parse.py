@@ -17,4 +17,5 @@ def test(code):
 if __name__ == "__main__":
     import sys
 
-    test(Path(sys.argv[1]).read_text())
+    for arg in sys.argv[1:]:
+        test(Path(arg).read_text())

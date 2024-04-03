@@ -1,0 +1,17 @@
+       move      100,R0   #Loop iterator.
+       move      20,R1    #Initial wait period in ns.
+       wait_sync 4        #Wait for sequencers to synchronize and then wait another 4 ns.
+
+lorp:  set_mrk   1        #Set marker output 1.
+       play      0,1,4    #Play a gaussian and a block on output path 0 and 1 respectively and wait 4 ns.
+       set_mrk   0        #Reset marker output 1.
+       upd_param 18       #Update parameters and wait the remaining 18 ns of the waveforms.
+
+       wait      R1       #Wait period.
+
+       play      1,0,22   #Play a block and a gaussian on output path 0 and 1 respectively and wait 22 ns.
+       wait      1000     #Wait a 1us in between iterations.
+       add       R1,20,R1 #Increase wait period by 20 ns.
+       loop      R0,@loop #Subtract one from loop iterator.
+
+       stop               #Stop the sequence after the last iteration.
