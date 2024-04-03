@@ -19,7 +19,7 @@ def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
     nqubits = len(nlevels)
     output_list = []
     y = x
-    subdims_ = np.mulitply.accumulate(nlevels)
+    subdims_ = np.multiply.accumulate(nlevels)
     subdims = (subdims_[-1] / subdims_).astype(int)
 
     for sub_dim in subdims:
