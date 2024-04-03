@@ -3,7 +3,7 @@
 import json
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
+from qblox_instruments.qcodes_drivers.module import Module as QbloxModule
 from qibo.config import log
 
 from qibolab.instruments.qblox.module import ClusterModule
@@ -115,7 +115,7 @@ class QcmBb(ClusterModule):
         """
         super().__init__(name, address)
         self._ports: dict = {}
-        self.device: QbloxQrmQcm = None
+        self.device: QbloxModule = None
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}

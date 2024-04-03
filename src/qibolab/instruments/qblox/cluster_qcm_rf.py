@@ -3,7 +3,7 @@
 import json
 
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
+from qblox_instruments.qcodes_drivers.module import Module as QbloxModule
 from qibo.config import log
 
 from qibolab.instruments.qblox.module import ClusterModule
@@ -130,7 +130,7 @@ class QcmRf(ClusterModule):
         >>> qcm_module = QcmRf(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.device: QbloxQrmQcm = None
+        self.device: QbloxModule = None
         self.settings = {}
 
         self._debug_folder: str = ""

@@ -6,7 +6,7 @@ import time
 import numpy as np
 from qblox_instruments.native.generic_func import SequencerStatus
 from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
+from qblox_instruments.qcodes_drivers.module import Module as QbloxModule
 from qibo.config import log
 
 from qibolab.pulses import Pulse, PulseSequence, PulseType
@@ -139,7 +139,7 @@ class QrmRf(ClusterModule):
         """
 
         super().__init__(name, address)
-        self.device: QbloxQrmQcm = None
+        self.device: QbloxModule = None
         self.classification_parameters: dict = {}
         self.settings: dict = {}
 
