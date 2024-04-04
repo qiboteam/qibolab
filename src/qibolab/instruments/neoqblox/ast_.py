@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import Optional
+from typing import Optional, Union
 
 from lark import Transformer
 from pydantic import model_validator
@@ -9,9 +9,9 @@ from qibolab.serialize_ import Model
 
 Register = str
 Immediate = int
-Value = Register | Immediate
+Value = Union[Register, Immediate]
 
-CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])|(?!^)(?=[A-Z][a-z])")
+CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z]),(?!^)(?=[A-Z][a-z])")
 
 
 class Instr(Model):
@@ -39,7 +39,7 @@ class Nop(Instr):
     """"""
 
 
-Control = Illegal | Stop | Nop
+Control = Union[Illegal, Stop, Nop]
 
 
 class Jmp(Instr):
@@ -63,7 +63,7 @@ class Loop(Instr):
     address: Value
 
 
-Jump = Jmp | Jge | Jlt | Loop
+Jump = Union[Jmp, Jge, Jlt, Loop]
 
 
 class Move(Instr):
@@ -118,7 +118,7 @@ class Asr(Instr):
     destination: Register
 
 
-Arithmetic = Move | Not | Add | Sub | And | Or | Xor | Asl | Asr
+Arithmetic = Union[Move, Not, Add, Sub, And, Or, Xor, Asl, Asr]
 
 
 class SetMrk(Instr):
@@ -161,9 +161,9 @@ class SetAwgOffs(Instr):
         return self
 
 
-ParamOps = SetMrk | SetFreq | ResetPh | SetPh | SetPhDelta | SetAwgGain | SetAwgOffs
+ParamOps = Union[SetMrk, SetFreq, ResetPh, SetPh, SetPhDelta, SetAwgGain, SetAwgOffs]
 
-Q1Instr = Control | Jump | Arithmetic | ParamOps
+Q1Instr = Union[Control, Jump, Arithmetic, ParamOps]
 
 
 class SetCond(Instr):
@@ -224,7 +224,7 @@ class AcquireTtl(Instr):
     duration: Immediate
 
 
-Io = UpdParam | Play | Acquire | AcquireWeighed | AcquireTtl
+Io = Union[UpdParam, Play, Acquire, AcquireWeighed, AcquireTtl]
 
 
 class SetLatchEn(Instr):
@@ -236,7 +236,7 @@ class LatchRst(Instr):
     duration: Value
 
 
-Trigger = SetLatchEn | LatchRst
+Trigger = Union[SetLatchEn, LatchRst]
 
 
 class Wait(Instr):
@@ -257,12 +257,12 @@ class WaitSync(Instr):
     duration: Value
 
 
-WaitOps = Wait | WaitTrigger | WaitSync
+WaitOps = Union[Wait, WaitTrigger, WaitSync]
 
-RealTimeInstr = Conditional | Io | Trigger | WaitOps
+RealTimeInstr = Union[Conditional, Io, Trigger, WaitOps]
 
 
-Instruction = Q1Instr | RealTimeInstr
+Instruction = Union[Q1Instr, RealTimeInstr]
 
 
 class Line(Model):
