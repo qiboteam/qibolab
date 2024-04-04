@@ -1,8 +1,7 @@
 import inspect
 import re
-from typing import Optional, Union
+from typing import NewType, Optional, Union
 
-from lark import Transformer
 from pydantic import model_validator
 
 from qibolab.serialize_ import Model
@@ -11,7 +10,7 @@ Register = str
 Immediate = int
 Value = Union[Register, Immediate]
 
-CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z]),(?!^)(?=[A-Z][a-z])")
+CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
 
 
 class Instr(Model):
@@ -265,6 +264,17 @@ RealTimeInstr = Union[Conditional, Io, Trigger, WaitOps]
 Instruction = Union[Q1Instr, RealTimeInstr]
 
 
+INSTRUCTIONS = {
+    c.keyword(): c
+    for c in locals().values()
+    if inspect.isclass(c) and issubclass(c, Instr)
+}
+
+
+class Comment(str):
+    pass
+
+
 class Line(Model):
     instruction: Instruction
     label: Optional[str]
@@ -284,24 +294,30 @@ class Line(Model):
         return self.label, instr, self.comment
 
 
+Element = Union[Line, Comment, "Block"]
+
+
 class Block(Model):
-    line: list[Line]
+    elements: list[Element]
 
 
-INSTRUCTIONS = {
-    c.keyword(): c
-    for c in locals().values()
-    if inspect.isclass(c) and issubclass(c, Instr)
-}
+class Program(Model):
+    elements: list[Element]
 
+    @classmethod
+    def from_elements(cls, elements: list[Element]):
+        comments = []
+        elements_ = []
 
-class ToAst(Transformer):
-    def instruction(self, args):
-        name = args[0].data.value
-        attrs = (a.value for a in args[0].children)
-        return INSTRUCTIONS[name].from_args(*attrs)
+        # group comments
+        for el in elements:
+            if isinstance(el, Comment):
+                comments.append(el)
+                continue
+            if len(comments) > 0:
+                comment = "\n".join(comments)
+                elements_.append(Comment(comment))
+                comments = []
+            elements_.append(el)
 
-    def line(self, args):
-        label = args[0].value if args[0] is not None else None
-        comment = args[2].value[1:] if args[2] is not None else None
-        return Line(instruction=args[1], label=label, comment=comment)
+        return cls(elements=elements_)
