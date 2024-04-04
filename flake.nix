@@ -47,7 +47,9 @@
             }: {
               packages = with pkgs; [pre-commit poethepoet jupyter];
 
-              env.QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
+              env = {
+                QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
+              };
 
               languages.python = {
                 enable = true;
@@ -58,11 +60,7 @@
                   install = {
                     enable = true;
                     groups = ["dev" "analysis" "tests"];
-                    extras = [
-                      (lib.strings.concatStrings
-                        (lib.strings.intersperse " -E "
-                          ["qblox" "qm" "zh" "rfsoc" "los"]))
-                    ];
+                    allExtras = true;
                   };
                 };
               };
