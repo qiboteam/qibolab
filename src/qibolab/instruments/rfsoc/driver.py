@@ -394,7 +394,14 @@ class RFSoC(Controller):
         """
         for serial in dict_b:
             if serial in dict_a:
-                dict_a[serial] = dict_a[serial] + dict_b[serial]
+                cls = dict_a[serial].__class__
+                if isinstance(dict_a[serial], IntegratedResults):
+                    new_data = np.column_stack(
+                        [dict_a[serial].voltage, dict_b[serial].voltage]
+                    )
+                elif isinstance(dict_a[serial], SampleResults):
+                    new_data = np.append(dict_a[serial].samples, dict_b[serial].samples)
+                dict_a[serial] = cls(new_data)
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a

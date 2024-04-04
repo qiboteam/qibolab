@@ -18,8 +18,7 @@ class IntegratedResults:
         self.voltage: npt.NDArray[np.complex128] = data
 
     def __add__(self, data):
-        """Concatenates two results for sweeping variables."""
-        return self.__class__(np.column_stack([self.voltage, data.voltage]))
+        return self.__class__(np.append(self.voltage, data.voltage))
 
     @property
     def voltage_i(self):
