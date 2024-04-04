@@ -51,7 +51,6 @@ class QibolabBackend(NumpyBackend):
             native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
             qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)}
             # TODO: fix transpiler to return the correct map
-        print("QQQQQQQQ", qubit_map)
         return native, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
