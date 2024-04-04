@@ -477,7 +477,7 @@ class Qutip_Simulator:
                 plt.xlabel("Time / dt")
             else:
                 plt.xlabel("Time / ns")
-            plt.show()
+            # plt.show()
             for result_ind in range(len(labels)):
                 print(
                     labels[result_ind],

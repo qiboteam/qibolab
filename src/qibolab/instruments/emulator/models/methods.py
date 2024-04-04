@@ -3,8 +3,6 @@ import operator
 from functools import reduce
 from pathlib import Path
 
-GHz = 1e9
-
 MODEL_PARAMS = "model.json"
 
 

@@ -1,12 +1,12 @@
 import numpy as np
 
 from qibolab.instruments.emulator.models.methods import (
-    GHz,
     default_noflux_platform2simulator_channels,
 )
 
 
 def generate_default_params():
+    # all time in ns and frequency in GHz
     """Returns template model parameters dictionary."""
     model_params = {
         "device_name": "model template for 0-1 system",
@@ -15,15 +15,15 @@ def generate_default_params():
         "ncouplers": 0,
         "qubits_list": ["0", "1"],
         "couplers_list": [],
-        "sampling_rate": 2.0e9,
+        "sampling_rate": 2.0,  # units of samples/ns
         "readout_error": {
             # same key datatype as per runcard
             0: [0.01, 0.02],
             1: [0.01, 0.02],
         },
         "drive_freq": {
-            "0": 5.0e9,
-            "1": 5.1e9,
+            "0": 5.0,
+            "1": 5.1,
         },
         "T1": {
             "0": 0.0,
@@ -34,19 +34,19 @@ def generate_default_params():
             "1": 0.0,
         },
         "lo_freq": {
-            "0": 5.0e9,
-            "1": 5.1e9,
+            "0": 5.0,
+            "1": 5.1,
         },
         "rabi_freq": {
-            "0": 0.2e9,
-            "1": 0.2e9,
+            "0": 0.2,
+            "1": 0.2,
         },
         "anharmonicity": {
-            "0": -0.20e9,
-            "1": -0.21e9,
+            "0": -0.20,
+            "1": -0.21,
         },
         "coupling_strength": {
-            "1_0": 5.0e6,
+            "1_0": 5.0e-3,
         },
     }
     return model_params
@@ -60,7 +60,7 @@ def generate_model_config(
     """Generates the model configuration dictionary.
 
     Args:
-        model_params(dict or str): Dictionary with model paramters or path of a yaml file (string) containing the model parameters.
+        model_params(dict): Dictionary containing the model parameters.
         nlevels_q(list, optional): List of the dimensions of each qubit to be simulated, in big endian order. Defaults to none, in which case a list of 2s with the same length as model_params['qubits_list'] will be used.
         topology(list, optional): List containing all pairs of qubit indices that are nearest neighbours. Defaults to none, in which case the value of model_params['topology'] will be used.
 
@@ -75,7 +75,7 @@ def generate_model_config(
         topology = model_params["topology"]
 
     device_name = model_params["device_name"]
-    sampling_rate = model_params["sampling_rate"] / GHz  # units of samples/ns
+    sampling_rate = model_params["sampling_rate"]
     readout_error = model_params["readout_error"]
     qubits_list = model_params["qubits_list"]
 
@@ -94,11 +94,11 @@ def generate_model_config(
     for i, q in enumerate(qubits_list):
         # drift Hamiltonian terms (constant in time)
         drift_hamiltonian_dict["one_body"].append(
-            (2 * np.pi * model_params["lo_freq"][q] / GHz, f"O_{q}", [q])
+            (2 * np.pi * model_params["lo_freq"][q], f"O_{q}", [q])
         )
         drift_hamiltonian_dict["one_body"].append(
             (
-                np.pi * model_params["anharmonicity"][q] / GHz,
+                np.pi * model_params["anharmonicity"][q],
                 f"O_{q} * O_{q} - O_{q}",
                 [q],
             )
@@ -107,14 +107,14 @@ def generate_model_config(
         # drive Hamiltonian terms (amplitude determined by pulse sequence)
         drive_hamiltonian_dict.update({f"D-{qubits_list[i]}": []})
         drive_hamiltonian_dict[f"D-{qubits_list[i]}"].append(
-            (2 * np.pi * model_params["rabi_freq"][q] / GHz, f"X_{q}", [q])
+            (2 * np.pi * model_params["rabi_freq"][q], f"X_{q}", [q])
         )
 
         # dissipation terms (one qubit, constant in time)
         t1 = model_params["T1"][q]
-        g1 = 0 if t1 == 0 else 1.0 / t1 * 2 * np.pi / GHz
+        g1 = 0 if t1 == 0 else 1.0 / t1 * 2 * np.pi
         t2 = model_params["T2"][q]
-        g2 = 0 if t1 == 0 else 1.0 / t2 * 2 * np.pi / GHz
+        g2 = 0 if t1 == 0 else 1.0 / t2 * 2 * np.pi
 
         dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{q}", [q]))
         dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{q}", [q]))
@@ -127,7 +127,7 @@ def generate_model_config(
         coupling = model_params["coupling_strength"][key]
         drift_hamiltonian_dict["two_body"].append(
             (
-                2 * np.pi * coupling / GHz,
+                2 * np.pi * coupling,
                 f"bdag_{ind2} ^ b_{ind1} + b_{ind2} ^ bdag_{ind1}",
                 [ind2, ind1],
             )
