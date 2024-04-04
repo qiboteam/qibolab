@@ -92,8 +92,10 @@ class M8195Connection:
         """Sends a query to an instrument and reads the output buffer
         immediately afterward :param command: text containing an instrument
         command (Documented SCPI); Should end with "?" :param error_check:
-        [Optional] Check for instrument errors (default False) :return: Returns
-        the query response."""
+
+        [Optional] Check for instrument errors (default False)
+        :return: Returns the query response.
+        """
 
         if not isinstance(command, str):
             raise SocketInstrumentError(f"command must be a string.")
@@ -129,7 +131,10 @@ class M8195Connection:
     def Write(self, command, error_check=False):
         """Write a command to an instrument :param command: text containing an
         instrument command; i.e. Documented SCPI command :param error_check:
-        [Optional] Check for instrument errors (default False) :return:"""
+
+        [Optional] Check for instrument errors (default False)
+        :return:
+        """
         if not isinstance(command, str):
             raise SocketInstrumentError(f"Argument must be a string.")
 
