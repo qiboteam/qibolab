@@ -265,10 +265,9 @@ class M8195AConfiguration:
         self.EstablishedConnection.Query(f":SYST:SET?", error_check=True)
 
     def SCPIVersionQuery(self):
-        """
-        Query SCPI version number
-        :return: a formatted numeric value corresponding to the SCPI version number for which the instrument complies.
-        """
+        """Query SCPI version number :return: a formatted numeric value
+        corresponding to the SCPI version number for which the instrument
+        complies."""
         self.EstablishedConnection.Query(f":SYST:VERS?", error_check=True)
 
     def SoftFrontPanelConnectionsQuery(self):
@@ -289,31 +288,23 @@ class M8195AConfiguration:
         self.EstablishedConnection.Query(f":SYST:COMM:*?", error_check=True)
 
     def SoftFrontPanelVXI11NumberQuery(self):
-        """
-        Query VXI-11 instrument number
-        :return: This query returns the VXI-11 instrument number used by the Soft Front Panel.
-        """
+        """Query VXI-11 instrument number :return: This query returns the
+        VXI-11 instrument number used by the Soft Front Panel."""
         self.EstablishedConnection.Query(f":SYST:COMM:INST?", error_check=True)
 
     def SoftFrontPanelHiSLIPNumberQuery(self):
-        """
-        Query HiSLIP number
-        :return: This query returns the HiSLIP number used by the Soft Front Panel.
-        """
+        """Query HiSLIP number :return: This query returns the HiSLIP number
+        used by the Soft Front Panel."""
         self.EstablishedConnection.Query(f":SYST:COMM:HISL?", error_check=True)
 
     def SoftFrontPanelSocketPortQuery(self):
-        """
-        Query socket port
-        :return: This query returns the socket port used by the Soft Front Panel.
-        """
+        """Query socket port :return: This query returns the socket port used
+        by the Soft Front Panel."""
         self.EstablishedConnection.Query(f":SYST:COMM:SOCK?", error_check=True)
 
     def SoftFrontPanelTelnetPortQuery(self):
-        """
-        Query telnet port
-        :return: This query returns the telnet port used by the Soft Front Panel.
-        """
+        """Query telnet port :return: This query returns the telnet port used
+        by the Soft Front Panel."""
         self.EstablishedConnection.Query(f":SYST:COMM:TELN?", error_check=True)
 
     def SoftFrontPanelTCPPortQuery(self):
@@ -1762,7 +1753,7 @@ class M8195AConfiguration:
             raise Exception("M8195A: Path is not a directory in DefaultDirectorySet")
         elif Path is None:
             RSTPath = r"""C:\Users\reza-\Documents"""
-            self.EstablishedConnection.Write(f':MMEM:CDIR {RSTPath}', error_check=True)
+            self.EstablishedConnection.Write(f":MMEM:CDIR {RSTPath}", error_check=True)
             RSTPath = r"C:\Users\reza-\Documents"
             self.EstablishedConnection.Write(f":MMEM:CDIR {RSTPath}", error_check=True)
         else:
