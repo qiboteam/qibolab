@@ -25,8 +25,8 @@ and: "and" REGISTER "," VALUE "," REGISTER
 or: "or" REGISTER "," VALUE "," REGISTER
 xor: "xor" REGISTER "," VALUE "," REGISTER
 asl: "asl" REGISTER "," VALUE "," REGISTER
-arl: "arl" REGISTER "," VALUE "," REGISTER
-?arithmetic: move | not | add | sub | and | or | xor | asl | arl
+asr: "arl" REGISTER "," VALUE "," REGISTER
+?arithmetic: move | not | add | sub | and | or | xor | asl | asr
 
 set_mrk: "set_mrk" VALUE
 set_freq: "set_freq" VALUE
