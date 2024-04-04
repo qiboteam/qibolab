@@ -1,10 +1,11 @@
-?start: (instruction | COMMENT)*
+?start: (line | COMMENT)*
 
 HEXINT: "0x"HEXDIGIT+
 LABEL: /\w+/
 IMMEDIATE: ["+"|"-"] (INT|HEXINT) | "@"LABEL
 REGISTER: "R"(INT+)
 VALUE: IMMEDIATE | REGISTER
+COMMENT: "#" /[^\n]/*
 
 illegal: "illegal"
 stop: "stop"
@@ -60,11 +61,11 @@ wait_sync: "wait_sync" VALUE
 
 ?real_time: conditional | io | trigger | wait_ops
 
-instruction: [LABEL ":"] (q1 | real_time) [COMMENT]
+instruction: q1 | real_time
+line: [LABEL ":"] instruction [COMMENT] NEWLINE
 
 
 %import common.ESCAPED_STRING
 %import common (INT, HEXDIGIT)
-%import common.WS
-%ignore WS
-%import lark.COMMENT
+%import common (NEWLINE, WS_INLINE)
+%ignore WS_INLINE
