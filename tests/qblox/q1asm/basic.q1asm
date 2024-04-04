@@ -1,3 +1,5 @@
+# https://qblox-qblox-instruments.readthedocs-hosted.com/en/main/tutorials/q1asm_tutorials/basic/baseband/basic_sequencing.html#Create-Q1ASM-program
+
        move      100,R0   #Loop iterator.
        move      20,R1    #Initial wait period in ns.
        wait_sync 4        #Wait for sequencers to synchronize and then wait another 4 ns.
