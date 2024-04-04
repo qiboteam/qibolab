@@ -1,3 +1,4 @@
+# Basic example from docs
 # https://qblox-qblox-instruments.readthedocs-hosted.com/en/main/tutorials/q1asm_tutorials/basic/baseband/basic_sequencing.html#Create-Q1ASM-program
 
        move      100,R0   #Loop iterator.
