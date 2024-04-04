@@ -1744,14 +1744,14 @@ class M8195AConfiguration:
         self.EstablishedConnection.Query(f":MMEM:CAT?", error_check=True)
 
     def DefaultDirectorySet(self, Path):
-        """Changes the default directory for a mass memory file system.
+        r"""Changes the default directory for a mass memory file system.
 
         The "path" parameter is a string. If no parameter is specified,
         the directory is set to the *RST value. At *RST, this value is
         set to the default user data storage area, that is defined as
         System.Environment.SpecialFolder.Personal: e.g.
         C:\\Users\\Name\\Documents :MMEM:CDIR
-        "C:\\Users\\reza-\\Documents"
+        C:\\Users\\reza-\\Documents
         :param Path:
         :return:
         """
