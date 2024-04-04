@@ -71,6 +71,23 @@ class RFSoC(Controller):
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
 
+    @staticmethod
+    def _try_to_execute(server_commands, host, port):
+        try:
+            return client.connect(server_commands, host, port)
+        except RuntimeError as e:
+            if "exception in readout loop" in str(e):
+                log.warning(
+                    "%s %s",
+                    "Exception in readout loop. Attempting again",
+                    "You may want to increase the relaxation time.",
+                )
+                return client.connect(server_commands, host, port)
+            buffer_overflow = r"buffer length must be \d+ samples or less"
+            if re.search(buffer_overflow, str(e)) is not None:
+                log.warning("Buffer full! Use shorter pulses.")
+            raise e
+
     def _execute_pulse_sequence(
         self,
         sequence: PulseSequence,
@@ -92,20 +109,7 @@ class RFSoC(Controller):
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
-        try:
-            return client.connect(server_commands, self.host, self.port)
-        except RuntimeError as e:
-            if "exception in readout loop" in str(e):
-                log.warning(
-                    "%s %s",
-                    "Exception in readout loop. Attempting again",
-                    "You may want to increase the relaxation time.",
-                )
-                return client.connect(server_commands, self.host, self.port)
-            buffer_overflow = r"buffer length must be \d+ samples or less"
-            if bool(re.search(buffer_overflow, str(e))):
-                log.warning("Buffer full! Use shorter pulses.")
-            raise e
+        return self._try_to_execute(server_commands, self.host, self.port)
 
     def _execute_sweeps(
         self,
@@ -131,20 +135,7 @@ class RFSoC(Controller):
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
             "sweepers": [sweeper.serialized for sweeper in sweepers],
         }
-        try:
-            return client.connect(server_commands, self.host, self.port)
-        except RuntimeError as e:
-            if "exception in readout loop" in str(e):
-                log.warning(
-                    "%s %s",
-                    "Exception in readout loop. Attempting again",
-                    "You may want to increase the relaxation time.",
-                )
-                return client.connect(server_commands, self.host, self.port)
-            buffer_overflow = r"buffer length must be \d+ samples or less"
-            if re.search(buffer_overflow, str(e)) is not None:
-                log.warning("Buffer full! Use shorter pulses.")
-            raise e
+        return self._try_to_execute(server_commands, self.host, self.port)
 
     def play(
         self,
