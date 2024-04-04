@@ -1,6 +1,6 @@
 import inspect
 import re
-from typing import NewType, Optional, Union
+from typing import Optional, Union
 
 from pydantic import model_validator
 
