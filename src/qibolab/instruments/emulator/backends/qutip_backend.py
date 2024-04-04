@@ -9,6 +9,7 @@ from timeit import default_timer as timer
 from typing import List, Optional
 
 import numpy as np
+from matplotlib.figure import Figure
 from qutip import Options, Qobj, basis, expect, ket2dm, mesolve, ptrace
 from qutip.operators import identity as Id
 from qutip.tensor import tensor
@@ -17,6 +18,7 @@ from qutip.ui.progressbar import EnhancedTextProgressBar
 from qibolab.instruments.emulator.backends.generic import (
     dec_to_basis_string,
     op_from_instruction,
+    plot_fidelity_history,
 )
 
 
@@ -418,10 +420,7 @@ class Qutip_Simulator:
         self,
         sim_index: int = -1,
         reference_states: Optional[list] = None,
-        labels: list = None,
-        show_plot: bool = True,
-        time_in_dt: bool = False,
-    ) -> List[Qobj]:
+    ) -> tuple:
         """Calculates the fidelity history, i.e. the overlaps between the
         device quantum state at each time step in the pulse simulation with
         respect to the input reference states.
@@ -430,14 +429,11 @@ class Qutip_Simulator:
             sim_index (int, optional): Specifies the pulse sequence simulations stored in the Simulation backend of interest. Defaults to -1, i.e. the last simulation.
             reference_states (list, optional): List of reference states to compare the pulse simulation with.
             If not provided, all computational basis states will be assigned.
-            labels (list, optional): List of labels for the reference states. Displayed in the plot legend.
-            If not provided, the method will generate labels based on the basis states.
-            show_plot (bool): Whether to show the fidelity history plot. Defaults to True.
-            time_in_dt (bool): Specify the units of the x-axis in the plots to be in dt (inverse sampling rate) if True and in ns if False. Defaults to False.
 
         Returns:
-            list: List of fidelity histories for each reference state.
+            tuple: Tuple with the list of times used in simulation, fidelity histories for each reference state, as well as the labels.
         """
+        labels = None
         fid_list_all = []
         if reference_states is None:
             reference_states = []
@@ -453,7 +449,8 @@ class Qutip_Simulator:
                 psi0 = ket2dm(basis_state)
                 reference_states.append(psi0)
 
-        total_samples = len(self.pulse_sim_time_list[sim_index])
+        time_list = self.pulse_sim_time_list[sim_index]
+        total_samples = len(time_list)
         for ref_state in reference_states:
             fid_list = [
                 expect(ref_state, self.pulse_sim_history[sim_index][i])
@@ -461,31 +458,34 @@ class Qutip_Simulator:
             ]
             fid_list_all.append(fid_list)
 
-        if show_plot is True:
-            import matplotlib.pyplot as plt
+        return time_list, fid_list_all, labels
 
-            plt.figure()
-            for result_ind in range(len(labels)):
-                plt.plot(
-                    self.pulse_sim_time_list[sim_index],
-                    fid_list_all[result_ind],
-                    label=labels[result_ind],
-                )
-            plt.legend(loc="upper left")
-            plt.ylabel("Overlap with basis state")
-            if time_in_dt:
-                plt.xlabel("Time / dt")
-            else:
-                plt.xlabel("Time / ns")
-            # plt.show()
-            for result_ind in range(len(labels)):
-                print(
-                    labels[result_ind],
-                    fid_list_all[result_ind][0],
-                    fid_list_all[result_ind][-1],
-                )
+    def plot_fidelity_history(
+        self,
+        sim_index: int = -1,
+        reference_states: Optional[list] = None,
+        labels: list = None,
+        time_in_dt: bool = False,
+    ) -> Figure:
+        """Plots the fidelity history.
 
-        return fid_list_all
+        Args:
+            sim_index (int, optional): Specifies the pulse sequence simulations stored in the Simulation backend of interest. Defaults to -1, i.e. the last simulation.
+            reference_states (list, optional): List of reference states to compare the pulse simulation with.
+            If not provided, all computational basis states will be assigned.
+            labels (list): List of labels. Displayed in the plot legend.
+            time_in_dt (bool): Specify the units of the x-axis in the plots to be in dt (inverse sampling rate) if True and in ns if False. Defaults to False.
+
+        Returns:
+            Figure: Figure of input fidelity histories with labels.
+        """
+        fidelity_history = self.fidelity_history(sim_index, reference_states)
+        if labels is None:
+            labels = fidelity_history[-1]
+
+        return plot_fidelity_history(
+            fidelity_history[0], fidelity_history[1], labels, time_in_dt
+        )
 
 
 def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:

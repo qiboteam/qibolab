@@ -1,8 +1,10 @@
 from collections import OrderedDict
 from typing import List, Optional, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 from IPython.display import Latex, display
+from matplotlib.figure import Figure
 
 
 def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
@@ -270,3 +272,44 @@ def print_Hamiltonian(model_config, op_qid_list: list = None):
             display(Latex(inst[0]))
             display(Latex(inst[1]))
     print("-" * 21)
+
+
+def plot_fidelity_history(
+    time_list: list,
+    fid_list_all: list,
+    labels: list,
+    time_in_dt: bool = False,
+) -> Figure:
+    """Plots the fidelity history.
+
+    Args:
+        time_list (list): Specifies the list of times used in simulation.
+        fid_list_all (list): List of fidelity histories.
+        labels (list): List of labels. Displayed in the plot legend.
+        time_in_dt (bool): Specify the units of the x-axis in the plots to be in dt (inverse sampling rate) if True and in ns if False. Defaults to False.
+
+    Returns:
+        Figure: Figure of input fidelity histories with labels.
+    """
+
+    fig = plt.figure()
+    for result_ind in range(len(labels)):
+        plt.plot(
+            time_list,
+            fid_list_all[result_ind],
+            label=labels[result_ind],
+        )
+    plt.legend(loc="upper left")
+    plt.ylabel("Overlap with basis state")
+    if time_in_dt:
+        plt.xlabel("Time / dt")
+    else:
+        plt.xlabel("Time / ns")
+    for result_ind in range(len(labels)):
+        print(
+            labels[result_ind],
+            fid_list_all[result_ind][0],
+            fid_list_all[result_ind][-1],
+        )
+
+    return fig

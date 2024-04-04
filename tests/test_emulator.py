@@ -57,7 +57,7 @@ def test_emulator_execute_pulse_sequence(emulator, acquisition):
             platform.execute_pulse_sequence(sequence, options)
         assert "Emulator does not support" in str(excinfo.value)
     pulse_simulator.print_sim_details()
-    pulse_simulator.simulation_backend.fidelity_history(show_plot=False)
+    pulse_simulator.simulation_backend.plot_fidelity_history()
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
@@ -245,9 +245,9 @@ def test_pulse_simulator_initialization():
 
 
 def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exception():
-    import matplotlib
+    # import matplotlib
 
-    matplotlib.use("TkAgg")
+    # matplotlib.use("TkAgg")
     emulator = default_q0
     platform = emulator.create()
     pulse_simulator = platform.instruments["pulse_simulator"]
@@ -264,7 +264,7 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     with pytest.raises(ValueError) as excinfo:
         pulse_simulator.play({0: 0}, {}, sequence)
     assert "not present in ro_error_dict" in str(excinfo.value)
-    pulse_simulator.simulation_backend.fidelity_history(time_in_dt=True)
+    pulse_simulator.simulation_backend.plot_fidelity_history(time_in_dt=True)
 
 
 # models.methods
