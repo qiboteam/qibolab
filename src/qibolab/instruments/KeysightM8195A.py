@@ -25,7 +25,7 @@ class M8195Connection:
         :param IPAddress: ip address of the instrument :param port: [Optional]
         socket port of the instrument (default 5025) :return: Returns the
         socket session."""
-        self.OpenSession = []
+        self.OpenSession
         self.port = port
         self.IPAddress = IPAddress
         self.TimeOut = TimeOut
@@ -87,6 +87,8 @@ class M8195Connection:
 
         if Err:
             raise SocketInstrumentError(Err)
+
+        return response
 
     def Query(self, command, error_check=False):
         """Sends a query to an instrument and reads the output buffer
