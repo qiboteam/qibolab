@@ -1,4 +1,4 @@
-?start: (line | COMMENT)*
+?start: (line | comment)*
 
 HEXINT: "0x"HEXDIGIT+
 LABEL: /\w+/
@@ -63,6 +63,7 @@ wait_sync: "wait_sync" VALUE
 
 instruction: q1 | real_time
 line: [LABEL ":"] instruction [COMMENT] NEWLINE
+comment: COMMENT NEWLINE
 
 
 %import common.ESCAPED_STRING
