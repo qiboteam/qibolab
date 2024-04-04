@@ -7,7 +7,6 @@ from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
-from qibo.transpiler.pipeline import Passes
 
 from qibolab import ExecutionParameters
 from qibolab import __version__ as qibolab_version
@@ -45,14 +44,14 @@ class QibolabBackend(NumpyBackend):
         gates.
         """
         # TODO: Move this method to transpilers
-        if self.transpiler is None  or self.transpiler.is_satisfied(circuit):
+        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
             native = circuit
             qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)}
         else:
             native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
-            qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)} 
+            qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)}
             # TODO: fix transpiler to return the correct map
-        print("QQQQQQQQ",qubit_map)
+        print("QQQQQQQQ", qubit_map)
         return native, qubit_map
 
     def assign_measurements(self, measurement_map, readout):

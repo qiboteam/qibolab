@@ -99,7 +99,14 @@ class Compiler:
         return inner
 
     def _compile_gate(
-        self, gate, platform, sequence, virtual_z_phases, moment_start, delays, qubit_map
+        self,
+        gate,
+        platform,
+        sequence,
+        virtual_z_phases,
+        moment_start,
+        delays,
+        qubit_map,
     ):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
@@ -155,7 +162,13 @@ class Compiler:
                         delays[qubit] += gate.delay
                     continue
                 gate_sequence, gate_phases = self._compile_gate(
-                        gate, platform, sequence, virtual_z_phases, moment_start, delays, circuit.wire_names
+                    gate,
+                    platform,
+                    sequence,
+                    virtual_z_phases,
+                    moment_start,
+                    delays,
+                    circuit.wire_names,
                 )
                 for qubit in gate.qubits:
                     delays[qubit] = 0
