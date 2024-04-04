@@ -3,8 +3,8 @@
 import json
 
 from qblox_instruments.native.generic_func import SequencerStates
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.module import Module as QbloxModule
+from qblox_instruments.qcodes_drivers.cluster import Cluster
+from qblox_instruments.qcodes_drivers.module import Module
 from qibo.config import log
 
 from qibolab.instruments.qblox.module import ClusterModule
@@ -131,7 +131,7 @@ class QcmRf(ClusterModule):
         >>> qcm_module = QcmRf(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.device: QbloxModule = None
+        self.device: Module = None
         self.settings = {}
 
         self._debug_folder: str = ""
@@ -166,7 +166,7 @@ class QcmRf(ClusterModule):
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self, cluster: Cluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 

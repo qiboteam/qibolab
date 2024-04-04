@@ -5,8 +5,8 @@ import time
 
 import numpy as np
 from qblox_instruments.native.generic_func import SequencerStates
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.module import Module as QbloxModule
+from qblox_instruments.qcodes_drivers.cluster import Cluster
+from qblox_instruments.qcodes_drivers.module import Module
 from qibo.config import log
 
 from qibolab.pulses import Pulse, PulseSequence, PulseType
@@ -139,7 +139,7 @@ class QrmRf(ClusterModule):
         """
 
         super().__init__(name, address)
-        self.device: QbloxModule = None
+        self.device: Module = None
         self.classification_parameters: dict = {}
         self.settings: dict = {}
 
@@ -182,7 +182,7 @@ class QrmRf(ClusterModule):
         target.set("connect_out0", "IQ")
         target.set("connect_acq", "in0")
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self, cluster: Cluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
