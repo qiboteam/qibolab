@@ -1,44 +1,64 @@
+import re
+import inspect
+from typing import Optional
+
+from lark import Transformer
 from pydantic import model_validator
 
 from qibolab.serialize_ import Model
 
-Register = int
+Register = str
 Immediate = int
 Value = Register | Immediate
 
+CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])|(?!^)(?=[A-Z][a-z])")
 
-class Illegal(Model):
+
+class Instr(Model):
+    @classmethod
+    def keyword(cls):
+        return CAMEL_TO_SNAKE.sub("_", cls.__name__).lower()
+
+    @classmethod
+    def from_args(cls, *args):
+        return cls(**dict(zip(cls.model_fields.keys(), args)))
+
+    def args(self):
+        return list(self.model_dump().values())
+
+
+class Illegal(Instr):
     """"""
 
 
-class Stop(Model):
+class Stop(Instr):
     """"""
 
 
-class Nop(Model):
+class Nop(Instr):
     """"""
 
 
 Control = Illegal | Stop | Nop
 
 
-class Jmp(Model):
+class Jmp(Instr):
     address: Value
 
 
-class Jge(Model):
+class Jge(Instr):
     a: Register
     b: Immediate
     address: Value
 
 
-class Jlt(Model):
+class Jlt(Instr):
     a: Register
     b: Immediate
     address: Value
 
 
-class Loop(Model):
+class Loop(Instr):
     a: Register
     address: Value
 
@@ -46,53 +66,53 @@ class Loop(Model):
 Jump = Jmp | Jge | Jlt | Loop
 
 
-class Move(Model):
+class Move(Instr):
     source: Value
     destination: Register
 
 
-class Not(Model):
+class Not(Instr):
     source: Value
     destination: Register
 
 
-class Add(Model):
+class Add(Instr):
     a: Register
     b: Value
     destination: Register
 
 
-class Sub(Model):
+class Sub(Instr):
     a: Register
     b: Value
     destination: Register
 
 
-class And(Model):
+class And(Instr):
     a: Register
     b: Value
     destination: Register
 
 
-class Or(Model):
+class Or(Instr):
     a: Register
     b: Value
     destination: Register
 
 
-class Xor(Model):
+class Xor(Instr):
     a: Register
     b: Value
     destination: Register
 
 
-class Asl(Model):
+class Asl(Instr):
     a: Register
     b: Value
     destination: Register
 
 
-class Asr(Model):
+class Asr(Instr):
     a: Register
     b: Value
     destination: Register
@@ -101,27 +121,27 @@ class Asr(Model):
 Arithmetic = Move | Not | Add | Sub | And | Or | Xor | Asl | Asr
 
 
-class SetMrk(Model):
+class SetMrk(Instr):
     mask: Value
 
 
-class SetFreq(Model):
+class SetFreq(Instr):
     value: Value
 
 
-class ResetPh(Model):
+class ResetPh(Instr):
     """"""
 
 
-class SetPh(Model):
+class SetPh(Instr):
     value: Value
 
 
-class SetPhDelta(Model):
+class SetPhDelta(Instr):
     value: Value
 
 
-class SetAwgGain(Model):
+class SetAwgGain(Instr):
     value_0: Value
     value_1: Value
 
@@ -131,7 +151,7 @@ class SetAwgGain(Model):
         return self
 
 
-class SetAwgOffs(Model):
+class SetAwgOffs(Instr):
     value_0: Value
     value_1: Value
 
@@ -146,7 +166,7 @@ ParamOps = SetMrk | SetFreq | ResetPh | SetPh | SetPhDelta | SetAwgGain | SetAwg
 Q1Instr = Control | Jump | Arithmetic | ParamOps
 
 
-class SetCond(Model):
+class SetCond(Instr):
     enable: Value
     mask: Value
     operator: Value
@@ -162,11 +182,11 @@ class SetCond(Model):
 Conditional = SetCond
 
 
-class UpdParam(Model):
+class UpdParam(Instr):
     duration: Immediate
 
 
-class Play(Model):
+class Play(Instr):
     wave_0: Value
     wave_1: Value
     duration: Immediate
@@ -177,13 +197,13 @@ class Play(Model):
         return self
 
 
-class Acquire(Model):
+class Acquire(Instr):
     acquisition: Immediate
     bin: Value
     duration: Immediate
 
 
-class AcquireWeighed(Model):
+class AcquireWeighed(Instr):
     acquisition: Immediate
     bin: Value
     weight_0: Value
@@ -197,7 +217,7 @@ class AcquireWeighed(Model):
         return self
 
 
-class AcquireTtl(Model):
+class AcquireTtl(Instr):
     acquisition: Immediate
     bin: Value
     enable: Immediate
@@ -207,23 +227,23 @@ class AcquireTtl(Model):
 Io = UpdParam | Play | Acquire | AcquireWeighed | AcquireTtl
 
 
-class SetLatchEn(Model):
+class SetLatchEn(Instr):
     enable: Value
     duration: Immediate
 
 
-class LatchRst(Model):
+class LatchRst(Instr):
     duration: Value
 
 
 Trigger = SetLatchEn | LatchRst
 
 
-class Wait(Model):
+class Wait(Instr):
     duration: Value
 
 
-class WaitTrigger(Model):
+class WaitTrigger(Instr):
     trigger: Value
     duration: Value
 
@@ -233,7 +253,7 @@ class WaitTrigger(Model):
         return self
 
 
-class WaitSync(Model):
+class WaitSync(Instr):
     duration: Value
 
 
@@ -246,13 +266,42 @@ Instruction = Q1Instr | RealTimeInstr
 
 
 class Line(Model):
-    label: str
     instruction: Instruction
-    comment: str
+    label: Optional[str]
+    comment: Optional[str]
+
+    def __rich_repr__(self):
+        print(self.asm)
+        yield self.instruction
+        yield "label", self.label, None
+        yield "comment", self.comment, None
+
+    @property
+    def asm(self):
+        key = self.instruction.keyword()
+        args = self.instruction.args()
+        instr = " ".join([key] + [str(a) for a in args])
+        return self.label, instr, self.comment
 
 
 class Block(Model):
     line: list[Line]
 
 
-__import__("pdb").set_trace()
+INSTRUCTIONS = {
+    c.keyword(): c
+    for c in locals().values()
+    if inspect.isclass(c) and issubclass(c, Instr)
+}
+
+
+class ToAst(Transformer):
+    def instruction(self, args):
+        name = args[0].data.value
+        attrs = (a.value for a in args[0].children)
+        return INSTRUCTIONS[name].from_args(*attrs)
+
+    def line(self, args):
+        label = args[0].value if args[0] is not None else None
+        comment = args[2].value[1:] if args[2] is not None else None
+        return Line(instruction=args[1], label=label, comment=comment)
