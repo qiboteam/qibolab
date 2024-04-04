@@ -261,7 +261,7 @@ class M8195AConfiguration:
 
     def SCPIVersionQuery(self):
         """
-
+        Query SCPI version number
         :return: a formatted numeric value corresponding to the SCPI version number for which the instrument complies.
         """
         self.EstablishedConnection.Query(f":SYST:VERS?", error_check=True)
@@ -285,28 +285,28 @@ class M8195AConfiguration:
 
     def SoftFrontPanelVXI11NumberQuery(self):
         """
-
+        Query VXI-11 instrument number
         :return: This query returns the VXI-11 instrument number used by the Soft Front Panel.
         """
         self.EstablishedConnection.Query(f":SYST:COMM:INST?", error_check=True)
 
     def SoftFrontPanelHiSLIPNumberQuery(self):
         """
-
+        Query HiSLIP number
         :return: This query returns the HiSLIP number used by the Soft Front Panel.
         """
         self.EstablishedConnection.Query(f":SYST:COMM:HISL?", error_check=True)
 
     def SoftFrontPanelSocketPortQuery(self):
         """
-
+        Query socket port
         :return: This query returns the socket port used by the Soft Front Panel.
         """
         self.EstablishedConnection.Query(f":SYST:COMM:SOCK?", error_check=True)
 
     def SoftFrontPanelTelnetPortQuery(self):
         """
-
+        Query telnet port
         :return: This query returns the telnet port used by the Soft Front Panel.
         """
         self.EstablishedConnection.Query(f":SYST:COMM:TELN?", error_check=True)
@@ -1756,8 +1756,13 @@ class M8195AConfiguration:
         elif isDirectory is False:
             raise Exception("M8195A: Path is not a directory in DefaultDirectorySet")
         elif Path is None:
+<<<<<<< HEAD
+            RSTPath = r"""C:\Users\reza-\Documents"""
+            self.EstablishedConnection.Write(f':MMEM:CDIR {RSTPath}', error_check=True)
+=======
             RSTPath = r"C:\Users\reza-\Documents"
             self.EstablishedConnection.Write(f":MMEM:CDIR {RSTPath}", error_check=True)
+>>>>>>> 3fdce9594ddcc63bf24d4297b59c3524d8948284
         else:
             raise Exception("M8195A: Unknown error in DefaultDirectorySet")
 
