@@ -5,7 +5,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_
 from qibolab.pulses import Delay, GaussianSquare, Pulse, PulseSequence, PulseType
 from qibolab.qubits import QubitPair
 from qibolab.serialize_ import replace
-from qibolab.sweeper import Parameter, QubitParameter, Sweeper
+from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 SWEPT_POINTS = 5
 PLATFORM_NAMES = ["dummy", "dummy_couplers"]
@@ -151,7 +151,7 @@ def test_dummy_single_sweep_coupler(
     else:
         parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     sequence.append(ro_pulse)
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         sweeper = Sweeper(parameter, parameter_range, couplers=[platform.couplers[0]])
     else:
         sweeper = Sweeper(parameter, parameter_range, pulses=[coupler_pulse])
@@ -197,7 +197,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
     else:
         parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     sequence.append(pulse)
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         sweeper = Sweeper(parameter, parameter_range, qubits=[platform.qubits[0]])
     else:
         sweeper = Sweeper(parameter, parameter_range, pulses=[pulse])
@@ -255,11 +255,11 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
         else np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     )
 
-    if parameter1 in QubitParameter:
+    if parameter1 in ChannelParameter:
         sweeper1 = Sweeper(parameter1, parameter_range_1, qubits=[platform.qubits[0]])
     else:
         sweeper1 = Sweeper(parameter1, parameter_range_1, pulses=[ro_pulse])
-    if parameter2 in QubitParameter:
+    if parameter2 in ChannelParameter:
         sweeper2 = Sweeper(parameter2, parameter_range_2, qubits=[platform.qubits[0]])
     else:
         sweeper2 = Sweeper(parameter2, parameter_range_2, pulses=[pulse])
@@ -314,7 +314,7 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         else np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     )
 
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         sweeper1 = Sweeper(
             parameter,
             parameter_range,
