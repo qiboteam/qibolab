@@ -6,7 +6,7 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
-from qibolab.channels import check_max_offset
+from qibolab.instruments.instrument_channel import check_max_offset
 from qibolab.instruments.qm.sequence import BakedPulse
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
