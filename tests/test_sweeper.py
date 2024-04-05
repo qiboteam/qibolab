@@ -3,7 +3,7 @@ import pytest
 
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.qubits import Qubit
-from qibolab.sweeper import Parameter, QubitParameter, Sweeper
+from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 
 @pytest.mark.parametrize("parameter", Parameter)
@@ -19,7 +19,7 @@ def test_sweeper_pulses(parameter):
         parameter_range = np.random.rand(10)
     else:
         parameter_range = np.random.randint(10, size=10)
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         with pytest.raises(ValueError):
             sweeper = Sweeper(parameter, parameter_range, [pulse])
     else:
@@ -31,7 +31,7 @@ def test_sweeper_pulses(parameter):
 def test_sweeper_qubits(parameter):
     qubit = Qubit(0)
     parameter_range = np.random.randint(10, size=10)
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         sweeper = Sweeper(parameter, parameter_range, qubits=[qubit])
         assert sweeper.parameter is parameter
     else:
