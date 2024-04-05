@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar
 import networkx as nx
 from qibo.config import log, raise_error
 
+from qibolab.channel_config import ChannelConfig
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
