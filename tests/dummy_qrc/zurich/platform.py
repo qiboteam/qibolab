@@ -6,8 +6,8 @@ from laboneq.dsl.device.instruments import HDAWG, PQSC, SHFQC
 from laboneq.simple import DeviceSetup
 
 from qibolab import Platform
-from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
 from qibolab.instruments.zhinst import Zurich
 from qibolab.kernels import Kernels
 from qibolab.serialize import (
@@ -90,16 +90,16 @@ def create():
     # Create channel objects and map controllers
     channels = ChannelMap()
     # feedback
-    channels |= Channel(
+    channels |= InstrumentChannel(
         "L2-7", port=controller.ports(("device_shfqc", "[QACHANNELS/0/INPUT]"))
     )
     # readout
-    channels |= Channel(
+    channels |= InstrumentChannel(
         "L3-31", port=controller.ports(("device_shfqc", "[QACHANNELS/0/OUTPUT]"))
     )
     # drive
     channels |= (
-        Channel(
+        InstrumentChannel(
             f"L4-{i}",
             port=controller.ports(("device_shfqc", f"SGCHANNELS/{i-5}/OUTPUT")),
         )
@@ -107,17 +107,23 @@ def create():
     )
     # flux qubits (CAREFUL WITH THIS !!!)
     channels |= (
-        Channel(f"L4-{i}", port=controller.ports(("device_hdawg", f"SIGOUTS/{i-6}")))
+        InstrumentChannel(
+            f"L4-{i}", port=controller.ports(("device_hdawg", f"SIGOUTS/{i - 6}"))
+        )
         for i in range(6, 11)
     )
     # flux couplers
     channels |= (
-        Channel(f"L4-{i}", port=controller.ports(("device_hdawg", f"SIGOUTS/{i-11+5}")))
+        InstrumentChannel(
+            f"L4-{i}", port=controller.ports(("device_hdawg", f"SIGOUTS/{i - 11 + 5}"))
+        )
         for i in range(11, 14)
     )
-    channels |= Channel("L4-14", port=controller.ports(("device_hdawg2", "SIGOUTS/0")))
+    channels |= InstrumentChannel(
+        "L4-14", port=controller.ports(("device_hdawg2", "SIGOUTS/0"))
+    )
     # TWPA pump(EraSynth)
-    channels |= Channel("L3-32")
+    channels |= InstrumentChannel("L3-32")
 
     # SHFQC
     # Sets the maximal Range of the Signal Output power.

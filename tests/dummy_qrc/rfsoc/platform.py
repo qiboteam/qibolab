@@ -1,7 +1,7 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.erasynth import ERA
+from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
@@ -25,10 +25,12 @@ def create():
 
     # Create channel objects and map to instrument controllers
     channels = ChannelMap()
-    channels |= Channel("L3-18_ro", port=controller.ports(0))  # readout (DAC)
-    channels |= Channel("L2-RO", port=controller.ports(0))  # feedback (readout DAC)
-    channels |= Channel("L3-18_qd", port=controller.ports(1))  # drive
-    channels |= Channel("L2-22_qf", port=controller.ports(2))  # flux
+    channels |= InstrumentChannel("L3-18_ro", port=controller.ports(0))  # readout (DAC)
+    channels |= InstrumentChannel(
+        "L2-RO", port=controller.ports(0)
+    )  # feedback (readout DAC)
+    channels |= InstrumentChannel("L3-18_qd", port=controller.ports(1))  # drive
+    channels |= InstrumentChannel("L2-22_qf", port=controller.ports(2))  # flux
 
     lo_twpa = SGS100A("twpa_a", "192.168.0.32")
     lo_era = ERA("ErasynthLO", "192.168.0.212", ethernet=True)

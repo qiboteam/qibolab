@@ -1,16 +1,16 @@
 import pytest
 
-from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyPort
+from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
 
 
 def test_channel_init():
-    channel = Channel("L1-test")
+    channel = InstrumentChannel("L1-test")
     assert channel.name == "L1-test"
 
 
 def test_channel_errors():
-    channel = Channel("L1-test", port=DummyPort("test"))
+    channel = InstrumentChannel("L1-test", port=DummyPort("test"))
     channel.offset = 0.1
     channel.filter = {}
     # attempt to set bias higher than the allowed value
@@ -23,8 +23,8 @@ def test_channel_map_add():
     channels = ChannelMap().add("a", "b")
     assert "a" in channels
     assert "b" in channels
-    assert isinstance(channels["a"], Channel)
-    assert isinstance(channels["b"], Channel)
+    assert isinstance(channels["a"], InstrumentChannel)
+    assert isinstance(channels["b"], InstrumentChannel)
     assert channels["a"].name == "a"
     assert channels["b"].name == "b"
 
@@ -33,8 +33,8 @@ def test_channel_map_setitem():
     channels = ChannelMap()
     with pytest.raises(TypeError):
         channels["c"] = "test"
-    channels["c"] = Channel("c")
-    assert isinstance(channels["c"], Channel)
+    channels["c"] = InstrumentChannel("c")
+    assert isinstance(channels["c"], InstrumentChannel)
 
 
 def test_channel_map_union():
@@ -43,7 +43,7 @@ def test_channel_map_union():
     channels = channels1 | channels2
     for name in ["a", "b", "c", "d"]:
         assert name in channels
-        assert isinstance(channels[name], Channel)
+        assert isinstance(channels[name], InstrumentChannel)
         assert channels[name].name == name
     assert "a" not in channels2
     assert "b" not in channels2
@@ -56,7 +56,7 @@ def test_channel_map_union_update():
     channels |= ChannelMap().add("c", "d")
     for name in ["a", "b", "c", "d"]:
         assert name in channels
-        assert isinstance(channels[name], Channel)
+        assert isinstance(channels[name], InstrumentChannel)
         assert channels[name].name == name
 
 
