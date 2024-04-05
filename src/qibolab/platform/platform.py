@@ -7,14 +7,15 @@ from typing import Dict, List, Optional, Tuple
 import networkx as nx
 from qibo.config import log, raise_error
 
-from qibolab.couplers import Coupler
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
-from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
-from qibolab.serialize_ import replace
-from qibolab.sweeper import Sweeper
-from qibolab.unrolling import batch
+from .channel_config import ChannelConfig
+from .couplers import Coupler
+from .execution_parameters import ExecutionParameters
+from .instruments.abstract import Controller, Instrument, InstrumentId
+from .pulses import Delay, Drag, PulseSequence, PulseType
+from .qubits import Qubit, QubitId, QubitPair, QubitPairId
+from .serialize_ import replace
+from .sweeper import Sweeper
+from .unrolling import batch
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
@@ -229,7 +230,11 @@ class Platform:
         return result
 
     def execute_pulse_sequence(
-        self, sequence: PulseSequence, options: ExecutionParameters, **kwargs
+        self,
+        sequence: PulseSequence,
+        channel_config: dict[str, ChannelConfig],
+        options: ExecutionParameters,
+        **kwargs,
     ):
         """
         Args:
@@ -265,7 +270,11 @@ class Platform:
         return controllers[0]
 
     def execute_pulse_sequences(
-        self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs
+        self,
+        sequences: List[PulseSequence],
+        channel_config: dict[str, ChannelConfig],
+        options: ExecutionParameters,
+        **kwargs,
     ):
         """
         Args:
@@ -306,7 +315,11 @@ class Platform:
         return results
 
     def sweep(
-        self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper
+        self,
+        sequence: PulseSequence,
+        channel_config: dict[str, ChannelConfig],
+        options: ExecutionParameters,
+        *sweepers: Sweeper,
     ):
         """Executes a pulse sequence for different values of sweeped
         parameters.
