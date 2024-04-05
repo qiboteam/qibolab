@@ -1,7 +1,7 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
 from qibolab.instruments.qm import Octave, OPXplus, QMController
 from qibolab.platform import Platform
 from qibolab.serialize import (
@@ -36,16 +36,20 @@ def create(runcard_path=RUNCARD):
     # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels |= Channel("L3-25_a", port=octave1.ports(5))
-    channels |= Channel("L3-25_b", port=octave2.ports(5))
+    channels |= InstrumentChannel("L3-25_a", port=octave1.ports(5))
+    channels |= InstrumentChannel("L3-25_b", port=octave2.ports(5))
     # feedback
-    channels |= Channel("L2-5_a", port=octave1.ports(1, output=False))
-    channels |= Channel("L2-5_b", port=octave2.ports(1, output=False))
+    channels |= InstrumentChannel("L2-5_a", port=octave1.ports(1, output=False))
+    channels |= InstrumentChannel("L2-5_b", port=octave2.ports(1, output=False))
     # drive
-    channels |= (Channel(f"L3-1{i}", port=octave1.ports(i)) for i in range(1, 5))
-    channels |= Channel("L3-15", port=octave3.ports(1))
+    channels |= (
+        InstrumentChannel(f"L3-1{i}", port=octave1.ports(i)) for i in range(1, 5)
+    )
+    channels |= InstrumentChannel("L3-15", port=octave3.ports(1))
     # flux
-    channels |= (Channel(f"L4-{i}", port=opxs[1].ports(i)) for i in range(1, 6))
+    channels |= (
+        InstrumentChannel(f"L4-{i}", port=opxs[1].ports(i)) for i in range(1, 6)
+    )
     # TWPA
     channels |= "L4-26"
 

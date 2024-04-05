@@ -1,7 +1,7 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
+from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
 from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.platform import Platform
 from qibolab.serialize import (
@@ -28,25 +28,33 @@ def create():
     # Create channel objects and map controllers to channels
     channels = ChannelMap()
     # readout
-    channels |= Channel("L3-25_a", port=controller.ports((("con1", 10), ("con1", 9))))
-    channels |= Channel("L3-25_b", port=controller.ports((("con2", 10), ("con2", 9))))
+    channels |= InstrumentChannel(
+        "L3-25_a", port=controller.ports((("con1", 10), ("con1", 9)))
+    )
+    channels |= InstrumentChannel(
+        "L3-25_b", port=controller.ports((("con2", 10), ("con2", 9)))
+    )
     # feedback
-    channels |= Channel(
+    channels |= InstrumentChannel(
         "L2-5_a", port=controller.ports((("con1", 2), ("con1", 1)), output=False)
     )
-    channels |= Channel(
+    channels |= InstrumentChannel(
         "L2-5_b", port=controller.ports((("con2", 2), ("con2", 1)), output=False)
     )
     # drive
     channels |= (
-        Channel(
+        InstrumentChannel(
             f"L3-1{i}", port=controller.ports((("con1", 2 * i), ("con1", 2 * i - 1)))
         )
         for i in range(1, 5)
     )
-    channels |= Channel("L3-15", port=controller.ports((("con3", 2), ("con3", 1))))
+    channels |= InstrumentChannel(
+        "L3-15", port=controller.ports((("con3", 2), ("con3", 1)))
+    )
     # flux
-    channels |= (Channel(f"L4-{i}", port=opxs[1].ports(i)) for i in range(1, 6))
+    channels |= (
+        InstrumentChannel(f"L4-{i}", port=opxs[1].ports(i)) for i in range(1, 6)
+    )
     # TWPA
     channels |= "L4-26"
 
