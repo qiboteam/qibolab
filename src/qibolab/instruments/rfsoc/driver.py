@@ -86,6 +86,23 @@ class RFSoC(Controller):
                     pulse["dac"],
                 )
 
+    @staticmethod
+    def _try_to_execute(server_commands, host, port):
+        try:
+            return client.connect(server_commands, host, port)
+        except RuntimeError as e:
+            if "exception in readout loop" in str(e):
+                log.warning(
+                    "%s %s",
+                    "Exception in readout loop. Attempting again",
+                    "You may want to increase the relaxation time.",
+                )
+                return client.connect(server_commands, host, port)
+            buffer_overflow = r"buffer length must be \d+ samples or less"
+            if re.search(buffer_overflow, str(e)) is not None:
+                log.warning("Buffer full! Use shorter pulses.")
+            raise e
+
     def _execute_pulse_sequence(
         self,
         sequence: PulseSequence,
@@ -108,20 +125,7 @@ class RFSoC(Controller):
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
         self.prepare_interpolated_channels(server_commands["sequence"])
-        try:
-            return client.connect(server_commands, self.host, self.port)
-        except RuntimeError as e:
-            if "exception in readout loop" in str(e):
-                log.warning(
-                    "%s %s",
-                    "Exception in readout loop. Attempting again",
-                    "You may want to increase the relaxation time.",
-                )
-                return client.connect(server_commands, self.host, self.port)
-            buffer_overflow = r"buffer length must be \d+ samples or less"
-            if bool(re.search(buffer_overflow, str(e))):
-                log.warning("Buffer full! Use shorter pulses.")
-            raise e
+        return self._try_to_execute(server_commands, self.host, self.port)
 
     def _execute_sweeps(
         self,
@@ -148,20 +152,7 @@ class RFSoC(Controller):
             "sweepers": [sweeper.serialized for sweeper in sweepers],
         }
         self.prepare_interpolated_channels(server_commands["sequence"])
-        try:
-            return client.connect(server_commands, self.host, self.port)
-        except RuntimeError as e:
-            if "exception in readout loop" in str(e):
-                log.warning(
-                    "%s %s",
-                    "Exception in readout loop. Attempting again",
-                    "You may want to increase the relaxation time.",
-                )
-                return client.connect(server_commands, self.host, self.port)
-            buffer_overflow = r"buffer length must be \d+ samples or less"
-            if bool(re.search(buffer_overflow, str(e))):
-                log.warning("Buffer full! Use shorter pulses.")
-            raise e
+        return self._try_to_execute(server_commands, self.host, self.port)
 
     def play(
         self,
@@ -411,7 +402,14 @@ class RFSoC(Controller):
         """
         for serial in dict_b:
             if serial in dict_a:
-                dict_a[serial] = dict_a[serial] + dict_b[serial]
+                cls = dict_a[serial].__class__
+                if isinstance(dict_a[serial], IntegratedResults):
+                    new_data = np.column_stack(
+                        [dict_a[serial].voltage, dict_b[serial].voltage]
+                    )
+                elif isinstance(dict_a[serial], SampleResults):
+                    new_data = np.append(dict_a[serial].samples, dict_b[serial].samples)
+                dict_a[serial] = cls(new_data)
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
