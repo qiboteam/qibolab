@@ -218,7 +218,7 @@ class PulseShape(ABC):
         shape_name = re.findall(r"(\w+)", value)[0]
         if shape_name not in globals():
             raise ValueError(f"shape {value} not found")
-        shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
+        shape_parameters = re.findall(r"[-\w+\d\.\d]+", value)[1:]
         # TODO: create multiple tests to prove regex working correctly
         return globals()[shape_name](*shape_parameters)
 
