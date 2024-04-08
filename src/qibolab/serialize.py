@@ -23,7 +23,7 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
+from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
