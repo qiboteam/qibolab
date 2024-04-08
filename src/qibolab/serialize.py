@@ -10,6 +10,8 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
 
+from pydantic import ConfigDict, TypeAdapter
+
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -22,6 +24,7 @@ from qibolab.platform.platform import (
     Settings,
 )
 from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
+from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 RUNCARD = "parameters.json"
@@ -97,17 +100,26 @@ def load_qubits(
     return qubits, couplers, pairs
 
 
-def _load_pulse(pulse_kwargs, qubit):
-    coupler = "coupler" in pulse_kwargs
-    q = pulse_kwargs.pop("coupler" if coupler else "qubit", qubit.name)
+_PulseLike = TypeAdapter(PulseLike, config=ConfigDict(extra="ignore"))
+"""Parse a pulse-like object.
 
-    if "phase" in pulse_kwargs:
-        return VirtualZ(**pulse_kwargs, qubit=q)
-    if "amplitude" not in pulse_kwargs:
-        return Delay(**pulse_kwargs)
+.. note::
+
+    Extra arguments are ignored, in order to standardize the qubit handling, since the
+    :cls:`Delay` object has no `qubit` field.
+    This will be removed once there won't be any need for dedicated couplers handling.
+"""
+
+
+def _load_pulse(pulse_kwargs: dict, qubit: Qubit):
+    coupler = "coupler" in pulse_kwargs
+    pulse_kwargs["qubit"] = pulse_kwargs.pop(
+        "coupler" if coupler else "qubit", qubit.name
+    )
+
     if "frequency" not in pulse_kwargs:
         return Pulse.flux(**pulse_kwargs, qubit=q)
-    return Pulse(**pulse_kwargs, qubit=q)
+    return _PulseLike.validate_python(pulse_kwargs)
 
 
 def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
