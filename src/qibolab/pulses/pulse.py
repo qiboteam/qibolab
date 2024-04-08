@@ -119,6 +119,12 @@ class Pulse(Model):
         )
 
 
+class FluxPulse(Pulse):
+    frequency: float = 0.0
+    relative_phase: float = 0.0
+    type: PulseType = PulseType.FLUX
+
+
 class Delay(Model):
     """A wait instruction during which we are not sending any pulses to the
     QPU."""
@@ -148,4 +154,4 @@ class VirtualZ(Model):
         return 0
 
 
-PulseLike = Union[Pulse, Delay, VirtualZ]
+PulseLike = Union[Pulse, FluxPulse, Delay, VirtualZ]
