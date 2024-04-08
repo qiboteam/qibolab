@@ -108,8 +108,6 @@ def _load_pulse(pulse_kwargs: dict, qubit: Qubit):
         "coupler" if coupler else "qubit", qubit.name
     )
 
-    if "frequency" not in pulse_kwargs:
-        return Pulse.flux(**pulse_kwargs, qubit=q)
     return _PulseLike.validate_python(pulse_kwargs)
 
 
