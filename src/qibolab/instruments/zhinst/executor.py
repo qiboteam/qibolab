@@ -13,7 +13,7 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.pulses import FluxPulse, PulseSequence, PulseType
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -341,7 +341,7 @@ class Zurich(Controller):
         if len(measurement_groups) == 1:
             for ch in other_channels:
                 for pulse in self.sequence[ch]:
-                    if not isinstance(pulse.pulse, FluxPulse):
+                    if not pulse.pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
                         break
                     start, end = measurement_start_end[0]
                     if pulse.pulse.start < end and pulse.pulse.finish > start:
