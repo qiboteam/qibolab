@@ -83,12 +83,12 @@ class Pulse(Model):
 
     def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
-        samples = int(self.envelope.duration * sampling_rate)
+        samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.i(samples)
 
     def q(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
-        samples = int(self.envelope.duration * sampling_rate)
+        samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.q(samples)
 
     def envelopes(self, sampling_rate: float) -> IqWaveform:
