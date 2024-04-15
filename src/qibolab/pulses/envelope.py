@@ -152,7 +152,7 @@ class GaussianSquare(BaseEnvelope):
         """Generate a Gaussian envelope, with a flat central window."""
 
         pulse = np.ones(samples)
-        u, hw = samples / 2, self.width * samples / self.duration / 2
+        u, hw = samples / 2, self.width / 2
         ts = np.arange(samples)
         tails = (ts < (u - hw)) | ((u + hw) < ts)
         pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, samples))
