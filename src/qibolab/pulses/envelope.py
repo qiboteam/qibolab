@@ -43,10 +43,6 @@ class BaseEnvelope(ABC, Model):
     Generates both i (in-phase) and q (quadrature) components.
     """
 
-    def window(self, samples: int):
-        """Individual timing of each sample."""
-        return np.linspace(0, self.duration, samples)
-
     def i(self, samples: int) -> Waveform:
         """In-phase envelope."""
         return np.zeros(samples)
