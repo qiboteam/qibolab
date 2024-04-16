@@ -1,4 +1,4 @@
-"""Library of pulse shapes."""
+"""Library of pulse envelopes."""
 
 from abc import ABC
 from typing import Annotated, Literal, Union
@@ -131,7 +131,7 @@ class Gaussian(BaseEnvelope):
 
 
 class GaussianSquare(BaseEnvelope):
-    r"""GaussianSquare pulse shape.
+    r"""Rectangular envelope with Gaussian rise and fall.
 
     .. math::
 
@@ -161,7 +161,7 @@ class GaussianSquare(BaseEnvelope):
 
 
 class Drag(BaseEnvelope):
-    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
+    """Derivative Removal by Adiabatic Gate (DRAG) pulse envelope.
 
     .. todo::
 
@@ -267,7 +267,7 @@ class Snz(BaseEnvelope):
 
 
 class ECap(BaseEnvelope):
-    r"""ECap pulse shape.
+    r"""ECap pulse envelope.
 
     .. todo::
 
@@ -296,7 +296,7 @@ class ECap(BaseEnvelope):
 
 
 class Custom(BaseEnvelope):
-    """Arbitrary shape.
+    """Arbitrary envelope.
 
     .. todo::
 
