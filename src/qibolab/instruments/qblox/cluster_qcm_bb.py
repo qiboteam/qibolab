@@ -2,8 +2,9 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
+from qblox_instruments.native.generic_func import SequencerStates
+from qblox_instruments.qcodes_drivers.cluster import Cluster
+from qblox_instruments.qcodes_drivers.module import Module
 from qibo.config import log
 
 from qibolab.instruments.qblox.module import ClusterModule
@@ -115,7 +116,7 @@ class QcmBb(ClusterModule):
         """
         super().__init__(name, address)
         self._ports: dict = {}
-        self.device: QbloxQrmQcm = None
+        self.device: Module = None
 
         self._debug_folder: str = ""
         self._sequencers: dict[Sequencer] = {}
@@ -149,7 +150,7 @@ class QcmBb(ClusterModule):
         for port_num, value in self.OUT_PORT_PATH.items():
             self.device.sequencers[port_num].set(f"connect_out{port_num}", value)
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self, cluster: Cluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -748,10 +749,10 @@ class QcmBb(ClusterModule):
         if not self.is_connected:
             return
         for sequencer_number in self._used_sequencers_numbers:
-            state = self.device.get_sequencer_state(sequencer_number)
-            if state.status != "STOPPED":
+            status = self.device.get_sequencer_status(sequencer_number)
+            if status.state is not SequencerStates.STOPPED:
                 log.warning(
-                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
+                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstatus: {status}"
                 )
 
         self.device.stop_sequencer()
