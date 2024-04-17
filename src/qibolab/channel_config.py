@@ -1,59 +1,81 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Optional, Union
 
 from .execution_parameters import AcquisitionType
 
+"""
+Channel is an abstract concept that defines an interface in front of various instrument drivers in qibolab, without
+exposing instrument specific implementation details. For the users of this interface a quantum computer is just a
+predefined set of channels where they can send signals or receive signals/data from. Users do not have control over what
+channels exist - it is determined by the setup of a certain quantum computer. However, users have control over some
+configuration parameters. A typical use case is to configure some channels with desired parameters and request an
+execution of a synchronized pulse sequence that implements a certain computation or a calibration experiment.
+"""
 
-@dataclass
+
+@dataclass(frozen=True)
 class DCChannelConfig:
     """Configuration for a channel that can be used to send DC pulses (i.e.
-    just envelopes without modulation on any frequency)"""
+    just envelopes without modulation)."""
 
-    bias: float
-    """DC bias/offset of the channel."""
+    offset: float
+    """DC offset/bias of the channel."""
 
 
-@dataclass
-class IQChannelConfig:
-    """Configuration for an IQ channel. This is used for IQ channels that can
-    generate requested signals by first generating them at an intermediate
-    frequency, and then mixing it with a local oscillator (LO) to upconvert to
-    the target carrier frequency.
+@dataclass(frozen=True)
+class LOConfig:
+    """Configuration for a local oscillator."""
 
-    For this type of IQ channels users typically
-        1. want to have control over the LO frequency.
-        2. need to be able to calibrate parameters related to the mixer imperfections.
-           Mixers typically have some imbalance in the way they treat the I and Q components
-           of the signal, and to compensate for it users typically need to calibrate the
-           compensation parameters and provide them as channel configuration.
+    frequency: float
+    power: float
+
+
+@dataclass(frozen=True)
+class IQMixerConfig:
+    """Configuration for IQ mixer.
+
+    Mixers usually have various imperfections, and one needs to
+    compensate for them. This class holds the compensation
+    configuration.
     """
 
+    offset_i: float = 0.0
+    """DC offset for the I component."""
+    offset_q: float = 0.0
+    """DC offset for the Q component."""
+    scale_q: float = 1.0
+    """The relative amplitude scale/factor of the q channel, to account for I-Q
+    amplitude imbalance."""
+    phase_q: float = 0.0
+    """The phase offset of the q channel, to account for I-Q phase
+    imbalance."""
+
+
+@dataclass(frozen=True)
+class IQChannelConfig:
+    """Configuration for an IQ channel."""
+
     frequency: float
     """The carrier frequency of the channel."""
-    lo_frequency: float
-    """The frequency of the local oscillator."""
-    mixer_correction_scale: float = 0.0
-    """The relative amplitude scale/factor of the q channel."""
-    mixer_correction_phase: float = 0.0
-    """The phase offset of the q channel of the LO."""
+    lo_config: Optional[LOConfig] = None
+    """Configuration for the corresponding LO.
+
+    None if the channel does not use an LO.
+    """
+    mixer_config: Optional[IQMixerConfig] = None
+    """Configuration for the corresponding IQ mixer.
+
+    None if the channel does not feature a mixer.
+    """
 
 
-@dataclass
-class DirectIQChannelConfig:
-    """Configuration for an IQ channel that directly generates signals at
-    necessary carrier frequency."""
-
-    frequency: float
-    """The carrier frequency of the channel."""
-
-
-@dataclass
+@dataclass(frozen=True)
 class AcquisitionChannelConfig:
     """Configuration for acquisition channels."""
 
     type: AcquisitionType
+    twpa_frequency: float
+    twpa_power: float
 
 
-ChannelConfig = Union[
-    DCChannelConfig, IQChannelConfig, DirectIQChannelConfig, AcquisitionChannelConfig
-]
+ChannelConfig = Union[DCChannelConfig, IQChannelConfig, AcquisitionChannelConfig]
