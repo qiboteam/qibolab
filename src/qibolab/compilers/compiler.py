@@ -155,7 +155,7 @@ class Compiler:
                 for pulse in gate_sequence:
                     if qubit_clock[pulse.qubit] > channel_clock[pulse.qubit]:
                         delay = qubit_clock[pulse.qubit] - channel_clock[pulse.channel]
-                        sequence.append(Delay(delay, pulse.channel))
+                        sequence.append(Delay(duration=delay, channel=pulse.channel))
                         channel_clock[pulse.channel] += delay
 
                     sequence.append(pulse)

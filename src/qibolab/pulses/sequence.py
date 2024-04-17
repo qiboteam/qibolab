@@ -108,16 +108,18 @@ class PulseSequence(list):
         if len(channel_pulses) == 1:
             pulses = next(iter(channel_pulses.values()))
             return sum(pulse.duration for pulse in pulses)
-        return max(sequence.duration for sequence in channel_pulses.values())
+        return max(
+            (sequence.duration for sequence in channel_pulses.values()), default=0
+        )
 
     @property
     def channels(self) -> list:
         """List containing the channels used by the pulses in the sequence."""
         channels = []
         for pulse in self:
-            if not pulse.channel in channels:
+            if pulse.channel not in channels:
                 channels.append(pulse.channel)
-        channels.sort()
+
         return channels
 
     @property

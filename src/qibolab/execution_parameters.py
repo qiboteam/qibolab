@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
 
@@ -10,6 +9,7 @@ from qibolab.result import (
     RawWaveformResults,
     SampleResults,
 )
+from qibolab.serialize_ import Model
 
 
 class AcquisitionType(Enum):
@@ -51,8 +51,7 @@ RESULTS_TYPE = {
 }
 
 
-@dataclass(frozen=True)
-class ExecutionParameters:
+class ExecutionParameters(Model):
     """Data structure to deal with execution parameters."""
 
     nshots: Optional[int] = None

@@ -24,7 +24,7 @@ using different Qibolab primitives.
 
     from qibolab import Platform
     from qibolab.qubits import Qubit
-    from qibolab.pulses import Pulse, PulseType
+    from qibolab.pulses import Gaussian, Pulse, PulseType, Rectangular
     from qibolab.channels import ChannelMap, Channel
     from qibolab.native import SingleQubitNatives
     from qibolab.instruments.dummy import DummyInstrument
@@ -48,18 +48,18 @@ using different Qibolab primitives.
             RX=Pulse(
                 duration=40,
                 amplitude=0.05,
-                shape="Gaussian(5)",
+                envelope=Gaussian(rel_sigma=0.2),
                 type=PulseType.DRIVE,
-                qubit=qubit,
-                frequency=int(4.5e9),
+                qubit=qubit.name,
+                frequency=4.5e9,
             ),
             MZ=Pulse(
                 duration=1000,
                 amplitude=0.005,
-                shape="Rectangular()",
+                envelope=Rectangular(),
                 type=PulseType.READOUT,
-                qubit=qubit,
-                frequency=int(7e9),
+                qubit=qubit.name,
+                frequency=7e9,
             ),
         )
 
@@ -97,7 +97,7 @@ hold the parameters of the two-qubit gates.
 .. testcode::  python
 
     from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import PulseType, Pulse, PulseSequence
+    from qibolab.pulses import Gaussian, PulseType, Pulse, PulseSequence, Rectangular
     from qibolab.native import (
         SingleQubitNatives,
         TwoQubitNatives,
@@ -112,36 +112,36 @@ hold the parameters of the two-qubit gates.
         RX=Pulse(
             duration=40,
             amplitude=0.05,
-            shape="Gaussian(5)",
+            envelope=Gaussian(rel_sigma=0.2),
             type=PulseType.DRIVE,
-            qubit=qubit0,
-            frequency=int(4.7e9),
+            qubit=qubit0.name,
+            frequency=4.7e9,
         ),
         MZ=Pulse(
             duration=1000,
             amplitude=0.005,
-            shape="Rectangular()",
+            envelope=Rectangular(),
             type=PulseType.READOUT,
-            qubit=qubit0,
-            frequency=int(7e9),
+            qubit=qubit0.name,
+            frequency=7e9,
         ),
     )
     qubit1.native_gates = SingleQubitNatives(
         RX=Pulse(
             duration=40,
             amplitude=0.05,
-            shape="Gaussian(5)",
+            envelope=Gaussian(rel_sigma=0.2),
             type=PulseType.DRIVE,
-            qubit=qubit1,
-            frequency=int(5.1e9),
+            qubit=qubit1.name,
+            frequency=5.1e9,
         ),
         MZ=Pulse(
             duration=1000,
             amplitude=0.005,
-            shape="Rectangular()",
+            envelope=Rectangular(),
             type=PulseType.READOUT,
-            qubit=qubit1,
-            frequency=int(7.5e9),
+            qubit=qubit1.name,
+            frequency=7.5e9,
         ),
     )
 
@@ -153,9 +153,10 @@ hold the parameters of the two-qubit gates.
                 Pulse(
                     duration=30,
                     amplitude=0.005,
-                    shape="Rectangular()",
+                    envelope=Rectangular(),
                     type=PulseType.FLUX,
-                    qubit=qubit1,
+                    qubit=qubit1.name,
+                    frequency=1e9,
                 )
             ],
         )
@@ -194,9 +195,10 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
                 Pulse(
                     duration=30,
                     amplitude=0.005,
-                    shape="Rectangular()",
+                    frequency=1e9,
+                    envelope=Rectangular(),
                     type=PulseType.FLUX,
-                    qubit=qubit1,
+                    qubit=qubit1.name,
                 )
             ],
         )
@@ -269,14 +271,18 @@ a two-qubit system:
                         "duration": 40,
                         "amplitude": 0.0484,
                         "frequency": 4855663000,
-                        "shape": "Drag(5, -0.02)",
+                        "envelope": {
+                            "kind": "drag",
+                            "rel_sigma": 0.2,
+                            "beta": -0.02,
+                        },
                         "type": "qd",
                     },
                     "MZ": {
                         "duration": 620,
                         "amplitude": 0.003575,
                         "frequency": 7453265000,
-                        "shape": "Rectangular()",
+                        "envelope": {"kind": "rectangular"},
                         "type": "ro",
                     }
                 },
@@ -285,14 +291,18 @@ a two-qubit system:
                         "duration": 40,
                         "amplitude": 0.05682,
                         "frequency": 5800563000,
-                        "shape": "Drag(5, -0.04)",
+                        "envelope": {
+                            "kind": "drag",
+                            "rel_sigma": 0.2,
+                            "beta": -0.04,
+                        },
                         "type": "qd",
                     },
                     "MZ": {
                         "duration": 960,
                         "amplitude": 0.00325,
                         "frequency": 7655107000,
-                        "shape": "Rectangular()",
+                        "envelope": {"kind": "rectangular"},
                         "type": "ro",
                     }
                 }
@@ -303,7 +313,7 @@ a two-qubit system:
                         {
                             "duration": 30,
                             "amplitude": 0.055,
-                            "shape": "Rectangular()",
+                            "envelope": {"kind": "rectangular"},
                             "qubit": 1,
                             "type": "qf"
                         },
@@ -371,7 +381,7 @@ we need the following changes to the previous runcard:
                         {
                             "duration": 30,
                             "amplitude": 0.6025,
-                            "shape": "Rectangular()",
+                            "envelope": {"kind": "rectangular"},
                             "qubit": 1,
                             "type": "qf"
                         },
@@ -389,7 +399,7 @@ we need the following changes to the previous runcard:
                             "type": "cf",
                             "duration": 40,
                             "amplitude": 0.1,
-                            "shape": "Rectangular()",
+                            "envelope": {"kind": "rectangular"},
                             "coupler": 0,
                         }
                     ]
@@ -564,14 +574,18 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         "duration": 40,
                         "amplitude": 0.0484,
                         "frequency": 4855663000,
-                        "shape": "Drag(5, -0.02)",
+                        "envelope": {
+                            "kind": "drag",
+                            "rel_sigma": 0.2,
+                            "beta": -0.02,
+                        },
                         "type": "qd",
                     },
                     "MZ": {
                         "duration": 620,
                         "amplitude": 0.003575,
                         "frequency": 7453265000,
-                        "shape": "Rectangular()",
+                        "envelope": {"kind": "rectangular"},
                         "type": "ro",
                     }
                 },
@@ -580,14 +594,18 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         "duration": 40,
                         "amplitude": 0.05682,
                         "frequency": 5800563000,
-                        "shape": "Drag(5, -0.04)",
+                        "envelope": {
+                            "kind": "drag",
+                            "rel_sigma": 0.2,
+                            "beta": -0.04,
+                        },
                         "type": "qd",
                     },
                     "MZ": {
                         "duration": 960,
                         "amplitude": 0.00325,
                         "frequency": 7655107000,
-                        "shape": "Rectangular()",
+                        "envelope": {"kind": "rectangular"},
                         "type": "ro",
                     }
                 }
@@ -598,7 +616,7 @@ The runcard can contain an ``instruments`` section that provides these parameter
                         {
                             "duration": 30,
                             "amplitude": 0.055,
-                            "shape": "Rectangular()",
+                            "envelope": {"kind": "rectangular"},
                             "qubit": 1,
                             "type": "qf"
                         },

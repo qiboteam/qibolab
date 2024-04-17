@@ -1,23 +1,20 @@
 """Tests ``pulses.py``."""
 
-import copy
-
 import numpy as np
 import pytest
 
 from qibolab.pulses import (
-    IIR,
-    SNZ,
+    BaseEnvelope,
     Custom,
     Drag,
+    ECap,
     Gaussian,
     GaussianSquare,
+    Iir,
     Pulse,
-    PulseShape,
     PulseType,
     Rectangular,
-    ShapeInitError,
-    eCap,
+    Snz,
 )
 
 
@@ -28,8 +25,8 @@ def test_init():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
-        shape=Rectangular(),
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
@@ -40,8 +37,8 @@ def test_init():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
-        shape=Rectangular(),
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
@@ -53,12 +50,12 @@ def test_init():
         amplitude=0.9,
         frequency=int(20e6),
         relative_phase=0,
-        shape=Rectangular(),
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert isinstance(p2.frequency, int) and p2.frequency == 20_000_000
+    assert isinstance(p2.frequency, float) and p2.frequency == 20_000_000
 
     # initialisation with non float (int) relative_phase
     p3 = Pulse(
@@ -66,8 +63,8 @@ def test_init():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=1.0,
-        shape=Rectangular(),
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
@@ -79,12 +76,12 @@ def test_init():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0,
-        shape="Rectangular()",
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
-    assert isinstance(p4.shape, Rectangular)
+    assert isinstance(p4.envelope, Rectangular)
 
     # initialisation with str channel and str qubit
     p5 = Pulse(
@@ -92,24 +89,82 @@ def test_init():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0,
-        shape="Rectangular()",
+        envelope=Rectangular(),
         channel="channel0",
         type=PulseType.READOUT,
-        qubit="qubit0",
+        qubit=0,
     )
-    assert p5.qubit == "qubit0"
+    assert p5.qubit == 0
 
     # initialisation with different frequencies, shapes and types
-    p6 = Pulse(40, 0.9, -50e6, 0, Rectangular(), 0, PulseType.READOUT)
-    p7 = Pulse(40, 0.9, 0, 0, Rectangular(), 0, PulseType.FLUX, 0)
-    p8 = Pulse(40, 0.9, 50e6, 0, Gaussian(5), 0, PulseType.DRIVE, 2)
-    p9 = Pulse(40, 0.9, 50e6, 0, Drag(5, 2), 0, PulseType.DRIVE, 200)
-    p10 = Pulse.flux(
-        40, 0.9, IIR([-1, 1], [-0.1, 0.1001], Rectangular()), channel=0, qubit=200
+    p6 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=-50e6,
+        envelope=Rectangular(),
+        relative_phase=0,
+        type=PulseType.READOUT,
     )
-    p11 = Pulse.flux(40, 0.9, SNZ(t_idling=10, b_amplitude=0.5), channel=0, qubit=200)
-    p13 = Pulse(40, 0.9, 400e6, 0, eCap(alpha=2), 0, PulseType.DRIVE)
-    p14 = Pulse(40, 0.9, 50e6, 0, GaussianSquare(5, 0.9), 0, PulseType.READOUT, 2)
+    p7 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=0,
+        envelope=Rectangular(),
+        relative_phase=0,
+        type=PulseType.FLUX,
+        qubit=0,
+    )
+    p8 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        envelope=Gaussian(rel_sigma=0.2),
+        relative_phase=0,
+        type=PulseType.DRIVE,
+        qubit=2,
+    )
+    p9 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        envelope=Drag(rel_sigma=0.2, beta=2),
+        relative_phase=0,
+        type=PulseType.DRIVE,
+        qubit=200,
+    )
+    p10 = Pulse.flux(
+        duration=40,
+        amplitude=0.9,
+        envelope=Iir(
+            a=np.array([-1, 1]), b=np.array([-0.1, 0.1001]), target=Rectangular()
+        ),
+        channel="0",
+        qubit=200,
+    )
+    p11 = Pulse.flux(
+        duration=40,
+        amplitude=0.9,
+        envelope=Snz(t_idling=10, b_amplitude=0.5),
+        channel="0",
+        qubit=200,
+    )
+    p13 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=400e6,
+        envelope=ECap(alpha=2),
+        relative_phase=0,
+        type=PulseType.DRIVE,
+    )
+    p14 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=50e6,
+        envelope=GaussianSquare(rel_sigma=0.2, width=0.9),
+        relative_phase=0,
+        type=PulseType.READOUT,
+        qubit=2,
+    )
 
     # initialisation with float duration
     p12 = Pulse(
@@ -117,8 +172,8 @@ def test_init():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=1,
-        shape=Rectangular(),
-        channel=0,
+        envelope=Rectangular(),
+        channel="0",
         type=PulseType.READOUT,
         qubit=0,
     )
@@ -127,7 +182,7 @@ def test_init():
 
 
 def test_attributes():
-    channel = 0
+    channel = "0"
     qubit = 0
 
     p10 = Pulse(
@@ -135,37 +190,17 @@ def test_attributes():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
-        shape=Rectangular(),
+        envelope=Rectangular(),
         channel=channel,
         qubit=qubit,
     )
 
-    assert type(p10.duration) == int and p10.duration == 50
-    assert type(p10.amplitude) == float and p10.amplitude == 0.9
-    assert type(p10.frequency) == int and p10.frequency == 20_000_000
-    assert isinstance(p10.shape, PulseShape) and repr(p10.shape) == "Rectangular()"
-    assert type(p10.channel) == type(channel) and p10.channel == channel
-    assert type(p10.qubit) == type(qubit) and p10.qubit == qubit
-
-
-def test_hash():
-    rp = Pulse(40, 0.9, 100e6, 0, Rectangular(), 0, PulseType.DRIVE)
-    dp = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    hash(rp)
-    my_dict = {rp: 1, dp: 2}
-    assert list(my_dict.keys())[0] == rp
-    assert list(my_dict.keys())[1] == dp
-
-    p1 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    p2 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-
-    assert p1 == p2
-
-    p1 = Pulse(40, 0.9, 100e6, 0, Drag(5, 1), 0, PulseType.DRIVE)
-    p2 = copy.copy(p1)
-    p3 = copy.deepcopy(p1)
-    assert p1 == p2
-    assert p1 == p3
+    assert isinstance(p10.duration, float) and p10.duration == 50
+    assert isinstance(p10.amplitude, float) and p10.amplitude == 0.9
+    assert isinstance(p10.frequency, float) and p10.frequency == 20_000_000
+    assert isinstance(p10.envelope, BaseEnvelope)
+    assert isinstance(p10.channel, type(channel)) and p10.channel == channel
+    assert isinstance(p10.qubit, type(qubit)) and p10.qubit == qubit
 
 
 def test_aliases():
@@ -174,9 +209,9 @@ def test_aliases():
         amplitude=0.9,
         frequency=20_000_000,
         relative_phase=0.0,
-        shape=Rectangular(),
+        envelope=Rectangular(),
         type=PulseType.READOUT,
-        channel=0,
+        channel="0",
         qubit=0,
     )
     assert rop.qubit == 0
@@ -186,17 +221,17 @@ def test_aliases():
         amplitude=0.9,
         frequency=200_000_000,
         relative_phase=0.0,
-        shape=Gaussian(5),
-        channel=0,
+        envelope=Gaussian(rel_sigma=5),
+        channel="0",
         qubit=0,
     )
     assert dp.amplitude == 0.9
-    assert isinstance(dp.shape, Gaussian)
+    assert isinstance(dp.envelope, Gaussian)
 
     fp = Pulse.flux(
-        duration=300, amplitude=0.9, shape=Rectangular(), channel=0, qubit=0
+        duration=300, amplitude=0.9, envelope=Rectangular(), channel="0", qubit=0
     )
-    assert fp.channel == 0
+    assert fp.channel == "0"
 
 
 def test_pulse():
@@ -208,8 +243,8 @@ def test_pulse():
         amplitude=1,
         duration=duration,
         relative_phase=0,
-        shape=f"Drag({rel_sigma}, {beta})",
-        channel=1,
+        envelope=Drag(rel_sigma=rel_sigma, beta=beta),
+        channel="1",
     )
 
     assert pulse.duration == duration
@@ -222,8 +257,8 @@ def test_readout_pulse():
         amplitude=1,
         duration=duration,
         relative_phase=0,
-        shape=f"Rectangular()",
-        channel=11,
+        envelope=Rectangular(),
+        channel="11",
         type=PulseType.READOUT,
     )
 
@@ -233,28 +268,19 @@ def test_readout_pulse():
 def test_envelope_waveform_i_q():
     envelope_i = np.cos(np.arange(0, 10, 0.01))
     envelope_q = np.sin(np.arange(0, 10, 0.01))
-    custom_shape_pulse = Custom(envelope_i, envelope_q)
-    custom_shape_pulse_old_behaviour = Custom(envelope_i)
+    custom_shape_pulse = Custom(i_=envelope_i, q_=envelope_q)
     pulse = Pulse(
         duration=1000,
         amplitude=1,
         frequency=10e6,
         relative_phase=0,
-        shape="Rectangular()",
-        channel=1,
+        envelope=Rectangular(),
+        channel="1",
     )
 
-    with pytest.raises(ShapeInitError):
-        custom_shape_pulse.envelope_waveform_i()
-    with pytest.raises(ShapeInitError):
-        custom_shape_pulse.envelope_waveform_q()
-
-    custom_shape_pulse.pulse = pulse
-    custom_shape_pulse_old_behaviour.pulse = pulse
-    pulse.duration = 2000
+    custom_shape_pulse = custom_shape_pulse.model_copy(update={"i_": pulse.i(1)})
+    pulse = pulse.model_copy(update={"duration": 2000})
     with pytest.raises(ValueError):
-        custom_shape_pulse.pulse = pulse
-        custom_shape_pulse.envelope_waveform_i()
+        custom_shape_pulse.i(samples=10)
     with pytest.raises(ValueError):
-        custom_shape_pulse.pulse = pulse
-        custom_shape_pulse.envelope_waveform_q()
+        custom_shape_pulse.q(samples=10)

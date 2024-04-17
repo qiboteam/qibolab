@@ -1,7 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import dataclass, field, fields
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -12,6 +12,7 @@ from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
 from .pulses import Delay, Drag, PulseSequence, PulseType
 from .qubits import Qubit, QubitId, QubitPair, QubitPairId
+from .serialize_ import replace
 from .sweeper import Sweeper
 from .unrolling import batch
 
@@ -25,7 +26,7 @@ NS_TO_SEC = 1e-9
 
 def unroll_sequences(
     sequences: List[PulseSequence], relaxation_time: int
-) -> Tuple[PulseSequence, Dict[str, str]]:
+) -> Tuple[PulseSequence, dict[str, list[str]]]:
     """Unrolls a list of pulse sequences to a single pulse sequence with
     multiple measurements.
 
@@ -54,7 +55,7 @@ def unroll_sequences(
         pulses_per_channel = sequence.pulses_per_channel
         for channel in channels:
             delay = length - pulses_per_channel[channel].duration
-            total_sequence.append(Delay(delay, channel))
+            total_sequence.append(Delay(duration=delay, channel=channel))
 
     return total_sequence, readout_map
 
@@ -463,24 +464,24 @@ class Platform:
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
 
-    def create_RX90_drag_pulse(self, qubit, start, beta, relative_phase=0):
+    def create_RX90_drag_pulse(self, qubit, beta, relative_phase=0):
         """Create native RX90 pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
         pulse = qubit.native_gates.RX90
         return replace(
             pulse,
             relative_phase=relative_phase,
-            shape=Drag(pulse.shape.rel_sigma, beta),
+            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
             channel=qubit.drive.name,
         )
 
-    def create_RX_drag_pulse(self, qubit, start, beta, relative_phase=0):
+    def create_RX_drag_pulse(self, qubit, beta, relative_phase=0):
         """Create native RX pulse with Drag shape."""
         qubit = self.get_qubit(qubit)
         pulse = qubit.native_gates.RX
         return replace(
             pulse,
             relative_phase=relative_phase,
-            shape=Drag(pulse.shape.rel_sigma, beta),
+            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
             channel=qubit.drive.name,
         )

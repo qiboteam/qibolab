@@ -8,7 +8,13 @@ from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 @pytest.mark.parametrize("parameter", Parameter)
 def test_sweeper_pulses(parameter):
-    pulse = Pulse(40, 0.1, int(1e9), 0.0, Rectangular(), "channel")
+    pulse = Pulse(
+        duration=40,
+        amplitude=0.1,
+        frequency=1e9,
+        envelope=Rectangular(),
+        channel="channel",
+    )
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(10)
     else:
@@ -34,7 +40,13 @@ def test_sweeper_qubits(parameter):
 
 
 def test_sweeper_errors():
-    pulse = Pulse(40, 0.1, int(1e9), 0.0, Rectangular(), "channel")
+    pulse = Pulse(
+        duration=40,
+        amplitude=0.1,
+        frequency=1e9,
+        envelope=Rectangular(),
+        channel="channel",
+    )
     qubit = Qubit(0)
     parameter_range = np.random.randint(10, size=10)
     with pytest.raises(ValueError):

@@ -190,7 +190,12 @@ def test_add_measurement_to_sequence(platform):
     mz_pulse = platform.create_MZ_pulse(0)
     delay = 2 * rx90_pulse1.duration
     s = PulseSequence(
-        [rx90_pulse1, rx90_pulse2, Delay(delay, mz_pulse.channel), mz_pulse]
+        [
+            rx90_pulse1,
+            rx90_pulse2,
+            Delay(duration=delay, channel=mz_pulse.channel),
+            mz_pulse,
+        ]
     )
     # assert sequence == s
 
@@ -205,7 +210,7 @@ def test_align_delay_measurement(platform, delay):
     mz_pulse = platform.create_MZ_pulse(0)
     target_sequence = PulseSequence()
     if delay > 0:
-        target_sequence.append(Delay(delay, mz_pulse.channel))
+        target_sequence.append(Delay(duration=delay, channel=mz_pulse.channel))
     target_sequence.append(mz_pulse)
     assert sequence == target_sequence
     assert len(sequence.ro_pulses) == 1

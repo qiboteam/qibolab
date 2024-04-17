@@ -1,7 +1,8 @@
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import dataclass, field, fields
 from typing import Optional
 
-from qibolab.pulses import Pulse, PulseSequence
+from .pulses import Pulse, PulseSequence
+from .serialize_ import replace
 
 
 @dataclass

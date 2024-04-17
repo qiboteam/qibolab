@@ -1,10 +1,14 @@
 """Pulse class."""
 
-from dataclasses import dataclass, fields
+from dataclasses import fields
 from enum import Enum
 from typing import Optional
 
-from .shape import SAMPLING_RATE, PulseShape, Waveform
+import numpy as np
+
+from qibolab.serialize_ import Model
+
+from .envelope import Envelope, IqWaveform, Waveform
 
 
 class PulseType(Enum):
@@ -20,33 +24,33 @@ class PulseType(Enum):
     FLUX = "qf"
     COUPLERFLUX = "cf"
     DELAY = "dl"
-    VIRTUALZ = "virtual_z"
+    VIRTUALZ = "vz"
 
 
-@dataclass
-class Pulse:
+class Pulse(Model):
     """A pulse to be sent to the QPU."""
 
-    duration: int
-    """Pulse duration in ns."""
+    duration: float
+    """Pulse duration."""
+
     amplitude: float
     """Pulse digital amplitude (unitless).
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: int = 0
+    frequency: float
     """Pulse Intermediate Frequency in Hz.
 
     The value has to be in the range [10e6 to 300e6].
     """
-    relative_phase: float = 0.0
-    """Relative phase of the pulse, in radians."""
-    shape: PulseShape = "Rectangular()"
-    """Pulse shape, as a PulseShape object.
+    envelope: Envelope
+    """The pulse envelope shape.
 
     See
-    :py: mod:`qibolab.pulses` for list of available shapes.
+    :cls:`qibolab.pulses.envelope.Envelopes` for list of available shapes.
     """
+    relative_phase: float = 0.0
+    """Relative phase of the pulse, in radians."""
     channel: Optional[str] = None
     """Channel on which the pulse should be played.
 
@@ -60,39 +64,36 @@ class Pulse:
     qubit: int = 0
     """Qubit or coupler addressed by the pulse."""
 
-    def __post_init__(self):
-        if isinstance(self.type, str):
-            self.type = PulseType(self.type)
-        if isinstance(self.shape, str):
-            self.shape = PulseShape.eval(self.shape)
-        # TODO: drop the cyclic reference
-        self.shape.pulse = self
-
     @classmethod
-    def flux(cls, duration, amplitude, shape, **kwargs):
-        return cls(duration, amplitude, 0, 0, shape, type=PulseType.FLUX, **kwargs)
+    def flux(cls, **kwargs):
+        """Construct a flux pulse.
+
+        It provides a simplified syntax for the :cls:`Pulse` constructor, by applying
+        suitable defaults.
+        """
+        kwargs["frequency"] = 0
+        kwargs["relative_phase"] = 0
+        if "type" not in kwargs:
+            kwargs["type"] = PulseType.FLUX
+        return cls(**kwargs)
 
     @property
     def id(self) -> int:
         return id(self)
 
-    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+    def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
+        samples = int(self.duration * sampling_rate)
+        return self.amplitude * self.envelope.i(samples)
 
-        return self.shape.envelope_waveform_i(sampling_rate)
-
-    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+    def q(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the q component of the pulse."""
+        samples = int(self.duration * sampling_rate)
+        return self.amplitude * self.envelope.q(samples)
 
-        return self.shape.envelope_waveform_q(sampling_rate)
-
-    def envelope_waveforms(self, sampling_rate=SAMPLING_RATE):
+    def envelopes(self, sampling_rate: float) -> IqWaveform:
         """A tuple with the i and q envelope waveforms of the pulse."""
-
-        return (
-            self.shape.envelope_waveform_i(sampling_rate),
-            self.shape.envelope_waveform_q(sampling_rate),
-        )
+        return np.array([self.i(sampling_rate), self.q(sampling_rate)])
 
     def __hash__(self):
         """Hash the content.
@@ -118,8 +119,7 @@ class Pulse:
         )
 
 
-@dataclass
-class Delay:
+class Delay(Model):
     """A wait instruction during which we are not sending any pulses to the
     QPU."""
 
@@ -131,12 +131,8 @@ class Delay:
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
 
-@dataclass
-class VirtualZ:
+class VirtualZ(Model):
     """Implementation of Z-rotations using virtual phase."""
-
-    duration = 0
-    """Duration of the virtual gate should always be zero."""
 
     phase: float
     """Phase that implements the rotation."""
@@ -145,3 +141,8 @@ class VirtualZ:
     qubit: int = 0
     """Qubit on the drive of which the virtual phase should be added."""
     type: PulseType = PulseType.VIRTUALZ
+
+    @property
+    def duration(self):
+        """Duration of the virtual gate should always be zero."""
+        return 0

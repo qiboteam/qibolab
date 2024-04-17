@@ -7,13 +7,55 @@ from qibolab.unrolling import Bounds, batch
 
 
 def test_bounds_update():
-    p1 = Pulse(40, 0.9, int(100e6), 0, Drag(5, 1), 3, PulseType.DRIVE)
-    p2 = Pulse(40, 0.9, int(100e6), 0, Drag(5, 1), 2, PulseType.DRIVE)
-    p3 = Pulse(40, 0.9, int(100e6), 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p1 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="3",
+        type=PulseType.DRIVE,
+    )
+    p2 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="2",
+        type=PulseType.DRIVE,
+    )
+    p3 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
 
-    p4 = Pulse(1000, 0.9, int(20e6), 0, Rectangular(), 3, PulseType.READOUT)
-    p5 = Pulse(1000, 0.9, int(20e6), 0, Rectangular(), 2, PulseType.READOUT)
-    p6 = Pulse(1000, 0.9, int(20e6), 0, Rectangular(), 1, PulseType.READOUT)
+    p4 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=int(20e6),
+        envelope=Rectangular(),
+        channel="3",
+        type=PulseType.READOUT,
+    )
+    p5 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=int(20e6),
+        envelope=Rectangular(),
+        channel="2",
+        type=PulseType.READOUT,
+    )
+    p6 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=int(20e6),
+        envelope=Rectangular(),
+        channel="1",
+        type=PulseType.READOUT,
+    )
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
     bounds = Bounds.update(ps)
@@ -51,13 +93,55 @@ def test_bounds_comparison():
     ],
 )
 def test_batch(bounds):
-    p1 = Pulse(40, 0.9, int(100e6), 0, Drag(5, 1), 3, PulseType.DRIVE)
-    p2 = Pulse(40, 0.9, int(100e6), 0, Drag(5, 1), 2, PulseType.DRIVE)
-    p3 = Pulse(40, 0.9, int(100e6), 0, Drag(5, 1), 1, PulseType.DRIVE)
+    p1 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="3",
+        type=PulseType.DRIVE,
+    )
+    p2 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="2",
+        type=PulseType.DRIVE,
+    )
+    p3 = Pulse(
+        duration=40,
+        amplitude=0.9,
+        frequency=int(100e6),
+        envelope=Drag(rel_sigma=0.2, beta=1),
+        channel="1",
+        type=PulseType.DRIVE,
+    )
 
-    p4 = Pulse(1000, 0.9, int(20e6), 0, Rectangular(), 3, PulseType.READOUT)
-    p5 = Pulse(1000, 0.9, int(20e6), 0, Rectangular(), 2, PulseType.READOUT)
-    p6 = Pulse(1000, 0.9, int(20e6), 0, Rectangular(), 1, PulseType.READOUT)
+    p4 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=int(20e6),
+        envelope=Rectangular(),
+        channel="3",
+        type=PulseType.READOUT,
+    )
+    p5 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=int(20e6),
+        envelope=Rectangular(),
+        channel="2",
+        type=PulseType.READOUT,
+    )
+    p6 = Pulse(
+        duration=1000,
+        amplitude=0.9,
+        frequency=int(20e6),
+        envelope=Rectangular(),
+        channel="1",
+        type=PulseType.READOUT,
+    )
 
     ps = PulseSequence([p1, p2, p3, p4, p5, p6])
 
