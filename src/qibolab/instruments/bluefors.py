@@ -1,6 +1,8 @@
 import socket
+import time
 
 import yaml
+from qcodes_contrib_drivers.drivers.BlueFors.BlueFors import BlueFors
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
@@ -66,3 +68,61 @@ class TemperatureController(Instrument):
         """Continously read data from the temperature controller."""
         while True:
             yield self.get_data()
+
+
+class FridgeLog(Instrument):
+    """Temperature log reader for dilution refrigerators.
+
+    This provides a safe way to obtain data from the fridge without
+    directly accessing the fridge control.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        address: str,
+        port: int = None,
+        fridge_type: str = "bluefors",
+        **kwargs,
+    ):
+
+        self.fridge_type = fridge_type
+
+        if self.fridge_type == "bluefors":
+            self.device = BlueFors(name, folder_path=address, **kwargs)
+        else:
+            raise NotImplementedError("Fridge type not implemented", fridge_type)
+
+    def connect(self):
+        pass
+
+    def disconnect(self):
+        pass
+
+    def setup(self):
+        pass
+
+    def read_data(self):
+        """Read data from the temperature logger."""
+        if self.fridge_type == "bluefors":
+            ts = time.time()
+            return [
+                {
+                    "_50K_flange": {
+                        "temperature": self.device.temperature_50k_plate(),
+                        "timestamp": ts,
+                    },
+                    "_4K_flange": {
+                        "temperature": self.device.temperature_4k_plate(),
+                        "timestamp": ts,
+                    },
+                    "_Still_flange": {
+                        "temperature": self.device.temperature_still(),
+                        "timestamp": ts,
+                    },
+                    "_MXC_flange": {
+                        "temperature": self.device.temperature_mixing_chamber(),
+                        "timestamp": ts,
+                    },
+                }
+            ]
