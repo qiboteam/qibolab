@@ -19,6 +19,16 @@ calibration when using Octaves.
 """
 
 
+def operation(pulse):
+    """Generate operation name in QM ``config`` for the given pulse."""
+    return str(hash(pulse))
+
+
+def element(pulse):
+    """Generate element name in QM ``config`` for the given pulse."""
+    return pulse.channel
+
+
 def float_serial(x):
     """Convert float to string to use in config keys."""
     return format(x, ".6f").rstrip("0").rstrip(".")
@@ -256,7 +266,7 @@ class QMConfig:
             element = self.register_flux_element(qubit, pulse.frequency)
         return element
 
-    def register_pulse(self, pulse, operation, element, qubit):
+    def register_pulse(self, pulse, qubit):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
@@ -350,7 +360,7 @@ class QMConfig:
         phase = (pulse.relative_phase % (2 * np.pi)) / (2 * np.pi)
         amplitude = float_serial(pulse.amplitude)
         phase_str = float_serial(phase)
-        if isinstance(pulse.shape, Rectangular):
+        if isinstance(pulse.envelope, Rectangular):
             serial = f"constant_wf({amplitude}, {phase_str})"
             if serial not in self.waveforms:
                 if mode == "i":
@@ -359,10 +369,10 @@ class QMConfig:
                     sample = pulse.amplitude * np.sin(phase)
                 self.waveforms[serial] = {"type": "constant", "sample": sample}
         else:
-            serial = f"{mode}({pulse.duration}, {amplitude}, {phase_str}, {str(pulse.shape)})"
+            serial = f"{hash(pulse)}_{mode}"
             if serial not in self.waveforms:
-                samples_i = pulse.envelope_waveform_i(SAMPLING_RATE).data
-                samples_q = pulse.envelope_waveform_q(SAMPLING_RATE).data
+                samples_i = pulse.i(SAMPLING_RATE)
+                samples_q = pulse.q(SAMPLING_RATE)
                 if mode == "i":
                     samples = samples_i * np.cos(phase) - samples_q * np.sin(phase)
                 else:

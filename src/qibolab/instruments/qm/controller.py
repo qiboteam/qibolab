@@ -10,15 +10,15 @@ from qualang_tools.simulator_tools import create_simulator_controller_connection
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import PulseType
+from qibolab.pulses import Delay, PulseType
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
 from .acquisition import create_acquisition, fetch_results
-from .config import SAMPLING_RATE, QMConfig
+from .config import SAMPLING_RATE, QMConfig, element, operation
 from .devices import Octave, OPXplus
 from .ports import OPXIQ
-from .program import Parameters, element, operation
+from .program import Parameters
 from .sweepers import sweep
 
 OCTAVE_ADDRESS_OFFSET = 11000
@@ -292,6 +292,9 @@ class QMController(Controller):
         acquisitions = {}
         parameters = defaultdict(Parameters)
         for pulse in sequence:
+            if isinstance(pulse, Delay):
+                continue
+
             qubit = qubits[pulse.qubit]
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
             if pulse.type is PulseType.READOUT:
@@ -314,17 +317,14 @@ class QMController(Controller):
                 self.config.register_pulse(qubit, qmpulse)
             qmsequence.add(qmpulse)
 
-            op = operation(hash(pulse))
-            el = element(pulse)
-            if op not in self.config.pulses:
-                self.config.register_pulse(pulse, op, el, qubit)
-
+            op = self.config.register_pulse(pulse, qubit)
             if pulse.type is PulseType.READOUT:
                 if op not in acquisitions:
+                    el = element(pulse)
                     acquisitions[op] = create_acquisition(
-                        op, el, options, qubit.threshold, qubit.iq_angle
+                        op, el, pulse.qubit, options, qubit.threshold, qubit.iq_angle
                     )
-                    parameters[op].acquisition = acquisitions[op]
+                parameters[op].acquisition = acquisitions[op]
                 acquisitions[op].keys.append(pulse.id)
 
         return acquisitions, parameters
@@ -369,8 +369,11 @@ class QMController(Controller):
                     acquisition.download(*buffer_dims)
 
         if self.script_file_name is not None:
+            script = generate_qua_script(experiment, self.config.__dict__)
+            for pulse in sequence:
+                script = script.replace(operation(pulse), str(pulse))
             with open(self.script_file_name, "w") as file:
-                file.write(generate_qua_script(experiment, self.config.__dict__))
+                file.write(script)
 
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)

@@ -9,7 +9,8 @@ from qualang_tools.loops import from_array
 from qibolab.channels import check_max_offset
 from qibolab.pulses import PulseType
 
-from .program import element, operation, play
+from .config import element, operation
+from .program import play
 
 
 def maximum_sweep_value(values, value0):
