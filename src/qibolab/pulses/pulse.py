@@ -1,6 +1,5 @@
 """Pulse class."""
 
-from dataclasses import fields
 from enum import Enum
 from typing import Union
 
@@ -103,25 +102,25 @@ class Pulse(_PulseLike):
     def __hash__(self):
         """Hash the content.
 
-        .. warning::
+    #    .. warning::
 
-            unhashable attributes are not taken into account, so there will be more
-            clashes than those usually expected with a regular hash
+    #        unhashable attributes are not taken into account, so there will be more
+    #        clashes than those usually expected with a regular hash
 
-        .. todo::
+    #    .. todo::
 
-            This method should be eventually dropped, and be provided automatically by
-            freezing the dataclass (i.e. setting ``frozen=true`` in the decorator).
-            However, at the moment is not possible nor desired, because it contains
-            unhashable attributes and because some instances are mutated inside Qibolab.
-        """
-        return hash(
-            tuple(
-                getattr(self, f.name)
-                for f in fields(self)
-                if f.name not in ("type", "shape")
-            )
-        )
+    #        This method should be eventually dropped, and be provided automatically by
+    #        freezing the dataclass (i.e. setting ``frozen=true`` in the decorator).
+    #        However, at the moment is not possible nor desired, because it contains
+    #        unhashable attributes and because some instances are mutated inside Qibolab.
+    #    """
+    #    return hash(self)
+    #    #    tuple(
+    #    #        getattr(self, f.name)
+    #    #        for f in fields(self)
+    #    #        if f.name not in ("type", "shape")
+    #    #    )
+    #    #)
 
     def __add__(self, other):
         if isinstance(other, Pulse):

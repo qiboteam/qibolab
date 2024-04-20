@@ -6,16 +6,7 @@ from qm import qua
 from qibolab.pulses import Delay, PulseType
 
 from .acquisition import Acquisition
-
-
-def operation(pulse):
-    """Generate operation name in QM ``config`` for the given pulse."""
-    return str(hash(pulse))
-
-
-def element(pulse):
-    """Generate element name in QM ``config`` for the given pulse."""
-    return pulse.channel
+from .config import element, operation
 
 
 @dataclass
@@ -30,7 +21,7 @@ class Parameters:
 
 def _delay(pulse):
     # TODO: How to play delays on multiple elements?
-    qua.wait(pulse.duration, element(pulse))
+    qua.wait(pulse.duration // 4 + 1, element(pulse))
 
 
 def _play(pulse, parameters):
@@ -51,7 +42,7 @@ def _play(pulse, parameters):
         qua.reset_frame(el)
 
 
-def play(self, sequence, parameters, relaxation_time=0):
+def play(sequence, parameters, relaxation_time=0):
     """Part of QUA program that plays an arbitrary pulse sequence.
 
     Should be used inside a ``program()`` context.
