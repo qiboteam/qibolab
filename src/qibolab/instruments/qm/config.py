@@ -19,6 +19,11 @@ calibration when using Octaves.
 """
 
 
+def float_serial(x):
+    """Convert float to string to use in config keys."""
+    return format(x, ".6f").rstrip("0").rstrip(".")
+
+
 @dataclass
 class QMConfig:
     """Configuration for communicating with the ``QuantumMachinesManager``."""
@@ -251,7 +256,7 @@ class QMConfig:
             element = self.register_flux_element(qubit, pulse.frequency)
         return element
 
-    def register_pulse(self, qubit, qmpulse):
+    def register_pulse(self, pulse, operation, element, qubit):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
@@ -340,17 +345,31 @@ class QMConfig:
             serial = "zero_wf"
             if serial not in self.waveforms:
                 self.waveforms[serial] = {"type": "constant", "sample": 0.0}
-        elif isinstance(pulse.shape, Rectangular):
-            serial = f"constant_wf{pulse.amplitude}"
+            return serial
+
+        phase = (pulse.relative_phase % (2 * np.pi)) / (2 * np.pi)
+        amplitude = float_serial(pulse.amplitude)
+        phase_str = float_serial(phase)
+        if isinstance(pulse.shape, Rectangular):
+            serial = f"constant_wf({amplitude}, {phase_str})"
             if serial not in self.waveforms:
-                self.waveforms[serial] = {"type": "constant", "sample": pulse.amplitude}
+                if mode == "i":
+                    sample = pulse.amplitude * np.cos(phase)
+                else:
+                    sample = pulse.amplitude * np.sin(phase)
+                self.waveforms[serial] = {"type": "constant", "sample": sample}
         else:
-            waveform = getattr(pulse, f"envelope_waveform_{mode}")(SAMPLING_RATE)
-            serial = hash(waveform.tobytes())
+            serial = f"{mode}({pulse.duration}, {amplitude}, {phase_str}, {str(pulse.shape)})"
             if serial not in self.waveforms:
+                samples_i = pulse.envelope_waveform_i(SAMPLING_RATE).data
+                samples_q = pulse.envelope_waveform_q(SAMPLING_RATE).data
+                if mode == "i":
+                    samples = samples_i * np.cos(phase) - samples_q * np.sin(phase)
+                else:
+                    samples = samples_i * np.sin(phase) + samples_q * np.cos(phase)
                 self.waveforms[serial] = {
                     "type": "arbitrary",
-                    "samples": waveform.tolist(),
+                    "samples": samples.tolist(),
                 }
         return serial
 

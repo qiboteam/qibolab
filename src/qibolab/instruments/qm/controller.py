@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
@@ -13,11 +14,11 @@ from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
-from .acquisition import declare_acquisitions, fetch_results
+from .acquisition import create_acquisition, fetch_results
 from .config import SAMPLING_RATE, QMConfig
 from .devices import Octave, OPXplus
 from .ports import OPXIQ
-from .sequence import BakedPulse, QMPulse, Sequence
+from .program import Parameters, element, operation
 from .sweepers import sweep
 
 OCTAVE_ADDRESS_OFFSET = 11000
@@ -136,10 +137,11 @@ class QMController(Controller):
 
     manager: Optional[QuantumMachinesManager] = None
     """Manager object used for controlling the Quantum Machines cluster."""
-    config: QMConfig = field(default_factory=QMConfig)
-    """Configuration dictionary required for pulse execution on the OPXs."""
     is_connected: bool = False
     """Boolean that shows whether we are connected to the QM manager."""
+
+    config: QMConfig = field(default_factory=QMConfig)
+    """Configuration dictionary required for pulse execution on the OPXs."""
 
     simulation_duration: Optional[int] = None
     """Duration for the simulation in ns.
@@ -269,29 +271,28 @@ class QMController(Controller):
         )
         return self.manager.simulate(self.config.__dict__, program, simulation_config)
 
-    def create_sequence(self, qubits, sequence, sweepers):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to a
-        :class:`qibolab.instruments.qm.sequence.Sequence`.
+    def register_pulses(self, qubits, sequence, options):
+        """Translates a :class:`qibolab.pulses.PulseSequence` to
+        :class:`qibolab.instruments.qm.instructions.Instructions`.
 
         Args:
             qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
                 passed from the platform.
             sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
             sweepers (list): List of sweeper objects so that pulses that require baking are identified.
+
         Returns:
-            (:class:`qibolab.instruments.qm.sequence.Sequence`) containing the pulses from given pulse sequence.
+            acquisitions (dict): Map from measurement instructions to acquisition objects.
+            parameters (dict):
         """
         # Current driver cannot play overlapping pulses on drive and flux channels
         # If we want to play overlapping pulses we need to define different elements on the same ports
         # like we do for readout multiplex
 
-        pulses_to_bake = find_baking_pulses(sweepers)
-
-        qmsequence = Sequence()
-        ro_pulses = []
-        for pulse in sorted(sequence, key=lambda pulse: (pulse.start, pulse.duration)):
+        acquisitions = {}
+        parameters = defaultdict(Parameters)
+        for pulse in sequence:
             qubit = qubits[pulse.qubit]
-
             self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
             if pulse.type is PulseType.READOUT:
                 self.config.register_port(qubit.feedback.port)
@@ -313,8 +314,20 @@ class QMController(Controller):
                 self.config.register_pulse(qubit, qmpulse)
             qmsequence.add(qmpulse)
 
-        qmsequence.shift()
-        return qmsequence, ro_pulses
+            op = operation(hash(pulse))
+            el = element(pulse)
+            if op not in self.config.pulses:
+                self.config.register_pulse(pulse, op, el, qubit)
+
+            if pulse.type is PulseType.READOUT:
+                if op not in acquisitions:
+                    acquisitions[op] = create_acquisition(
+                        op, el, options, qubit.threshold, qubit.iq_angle
+                    )
+                    parameters[op].acquisition = acquisitions[op]
+                acquisitions[op].keys.append(pulse.id)
+
+        return acquisitions, parameters
 
     def play(self, qubits, couplers, sequence, options):
         return self.sweep(qubits, couplers, sequence, options)
@@ -334,22 +347,25 @@ class QMController(Controller):
                 self.config.register_port(qubit.flux.port)
                 self.config.register_flux_element(qubit)
 
-        qmsequence, ro_pulses = self.create_sequence(qubits, sequence, sweepers)
-        # play pulses using QUA
+        acquisitions, parameters = self.register_pulses(qubits, sequence, options)
         with qua.program() as experiment:
             n = declare(int)
-            acquisitions = declare_acquisitions(ro_pulses, qubits, options)
+            # declare acquisition variables
+            for acquisition in acquisitions.values():
+                acquisition.declare()
+            # execute pulses
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(
                     list(sweepers),
                     qubits,
-                    qmsequence,
+                    sequence,
+                    parameters,
                     options.relaxation_time,
-                    self.config,
+                    # self.config,
                 )
-
+            # download acquisitions
             with qua.stream_processing():
-                for acquisition in acquisitions:
+                for acquisition in acquisitions.values():
                     acquisition.download(*buffer_dims)
 
         if self.script_file_name is not None:
@@ -359,10 +375,10 @@ class QMController(Controller):
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for qmpulse in ro_pulses:
-                pulse = qmpulse.pulse
-                results[pulse.qubit] = results[pulse.id] = result
+            for pulse in sequence:
+                if pulse.type is PulseType.READOUT:
+                    results[pulse.qubit] = results[pulse.id] = result
             return results
-        else:
-            result = self.execute_program(experiment)
-            return fetch_results(result, acquisitions)
+
+        result = self.execute_program(experiment)
+        return fetch_results(result, acquisitions.values())
