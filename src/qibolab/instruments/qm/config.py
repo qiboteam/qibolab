@@ -29,11 +29,6 @@ def element(pulse):
     return pulse.channel
 
 
-def float_serial(x):
-    """Convert float to string to use in config keys."""
-    return format(x, ".6f").rstrip("0").rstrip(".")
-
-
 @dataclass
 class QMConfig:
     """Configuration for communicating with the ``QuantumMachinesManager``."""
@@ -358,10 +353,8 @@ class QMConfig:
             return serial
 
         phase = (pulse.relative_phase % (2 * np.pi)) / (2 * np.pi)
-        amplitude = float_serial(pulse.amplitude)
-        phase_str = float_serial(phase)
+        serial = f"{hash(pulse)}_{mode}"
         if isinstance(pulse.envelope, Rectangular):
-            serial = f"constant_wf({amplitude}, {phase_str})"
             if serial not in self.waveforms:
                 if mode == "i":
                     sample = pulse.amplitude * np.cos(phase)
@@ -369,7 +362,6 @@ class QMConfig:
                     sample = pulse.amplitude * np.sin(phase)
                 self.waveforms[serial] = {"type": "constant", "sample": sample}
         else:
-            serial = f"{hash(pulse)}_{mode}"
             if serial not in self.waveforms:
                 samples_i = pulse.i(SAMPLING_RATE)
                 samples_q = pulse.q(SAMPLING_RATE)
