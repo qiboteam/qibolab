@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 from qibolab import create_platform
@@ -25,6 +26,8 @@ sweeper = Sweeper(
     type=SweeperType.OFFSET,
 )
 
+## We then define the execution parameters and launch the experiment.
+
 options = ExecutionParameters(
     nshots=1000,
     relaxation_time=50,
@@ -34,7 +37,7 @@ options = ExecutionParameters(
 
 results = platform.sweep(sequence, options, sweeper)
 
-import matplotlib.pyplot as plt
+## In few seconds, the experiment will be finished and we can proceed to plot it.
 
 amplitudes = results[readout_pulse.serial].magnitude
 frequencies = np.arange(-2e8, +2e8, 1e6) + readout_pulse.frequency

@@ -30,6 +30,11 @@ sweeper = Sweeper(
     type=SweeperType.OFFSET,
 )
 
+## Note that the drive pulse has been changed to match the characteristics required
+## for the experiment.
+
+## We can now proceed to launch on hardware:
+
 options = ExecutionParameters(
     nshots=1000,
     relaxation_time=50,
@@ -42,7 +47,7 @@ results = platform.sweep(sequence, options, sweeper)
 amplitudes = results[readout_pulse.serial].magnitude
 frequencies = np.arange(-2e8, +2e8, 1e6) + drive_pulse.frequency
 
-plt.title("Resonator Spectroscopy")
+plt.title("Qubit Spectroscopy")
 plt.xlabel("Frequencies [Hz]")
 plt.ylabel("Amplitudes [a.u.]")
 

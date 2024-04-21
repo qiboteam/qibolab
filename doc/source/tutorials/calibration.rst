@@ -26,62 +26,7 @@ We start by initializing the platform, that reads the information written in the
 respective runcard, a sequence composed of only a measurement and a sweeper
 around the pre-defined frequency.
 
-.. testcode:: python
-
-    import numpy as np
-    from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
-        AcquisitionType,
-    )
-
-    # allocate platform
-    platform = create_platform("dummy")
-
-    # create pulse sequence and add pulse
-    sequence = PulseSequence()
-    readout_pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    sequence.add(readout_pulse)
-
-    # allocate frequency sweeper
-    sweeper = Sweeper(
-        parameter=Parameter.frequency,
-        values=np.arange(-2e8, +2e8, 1e6),
-        pulses=[readout_pulse],
-        type=SweeperType.OFFSET,
-    )
-
-We then define the execution parameters and launch the experiment.
-
-.. testcode:: python
-
-    options = ExecutionParameters(
-        nshots=1000,
-        relaxation_time=50,
-        averaging_mode=AveragingMode.CYCLIC,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
-
-    results = platform.sweep(sequence, options, sweeper)
-
-In few seconds, the experiment will be finished and we can proceed to plot it.
-
-.. testcode:: python
-
-    import matplotlib.pyplot as plt
-
-    amplitudes = results[readout_pulse.serial].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + readout_pulse.frequency
-
-    plt.title("Resonator Spectroscopy")
-    plt.xlabel("Frequencies [Hz]")
-    plt.ylabel("Amplitudes [a.u.]")
-
-    plt.plot(frequencies, amplitudes)
-    plt.show()
+.. literalinclude:: ./examples/calibration0.py
 
 .. image:: resonator_spectroscopy_light.svg
    :class: only-light
@@ -105,64 +50,7 @@ typical qubit spectroscopy experiment is as follows:
 So, mainly, the difference that this experiment introduces is a slightly more
 complex pulse sequence. Therefore with start with that:
 
-.. testcode:: python
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
-        AcquisitionType,
-    )
-
-    # allocate platform
-    platform = create_platform("dummy")
-
-    # create pulse sequence and add pulses
-    sequence = PulseSequence()
-    drive_pulse = platform.create_RX_pulse(qubit=0, start=0)
-    drive_pulse.duration = 2000
-    drive_pulse.amplitude = 0.01
-    readout_pulse = platform.create_MZ_pulse(qubit=0, start=drive_pulse.finish)
-    sequence.add(drive_pulse)
-    sequence.add(readout_pulse)
-
-    # allocate frequency sweeper
-    sweeper = Sweeper(
-        parameter=Parameter.frequency,
-        values=np.arange(-2e8, +2e8, 1e6),
-        pulses=[drive_pulse],
-        type=SweeperType.OFFSET,
-    )
-
-Note that the drive pulse has been changed to match the characteristics required
-for the experiment.
-
-We can now proceed to launch on hardware:
-
-.. testcode:: python
-
-    options = ExecutionParameters(
-        nshots=1000,
-        relaxation_time=50,
-        averaging_mode=AveragingMode.CYCLIC,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
-
-    results = platform.sweep(sequence, options, sweeper)
-
-    amplitudes = results[readout_pulse.serial].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + drive_pulse.frequency
-
-    plt.title("Resonator Spectroscopy")
-    plt.xlabel("Frequencies [Hz]")
-    plt.ylabel("Amplitudes [a.u.]")
-
-    plt.plot(frequencies, amplitudes)
-    plt.show()
+.. literalinclude:: ./examples/calibration1.py
 
 .. image:: qubit_spectroscopy_light.svg
    :class: only-light
@@ -200,58 +88,7 @@ two states.
 This experiment serves to assess the effectiveness of single-qubit calibration
 and its impact on qubit states in the IQ plane.
 
-.. testcode:: python
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
-        AcquisitionType,
-    )
-
-    # allocate platform
-    platform = create_platform("dummy")
-
-    # create pulse sequence 1 and add pulses
-    one_sequence = PulseSequence()
-    drive_pulse = platform.create_RX_pulse(qubit=0, start=0)
-    readout_pulse1 = platform.create_MZ_pulse(qubit=0, start=drive_pulse.finish)
-    one_sequence.add(drive_pulse)
-    one_sequence.add(readout_pulse1)
-
-    # create pulse sequence 2 and add pulses
-    zero_sequence = PulseSequence()
-    readout_pulse2 = platform.create_MZ_pulse(qubit=0, start=0)
-    zero_sequence.add(readout_pulse2)
-
-    options = ExecutionParameters(
-        nshots=1000,
-        relaxation_time=50_000,
-        averaging_mode=AveragingMode.SINGLESHOT,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
-
-    results_one = platform.execute_pulse_sequence(one_sequence, options)
-    results_zero = platform.execute_pulse_sequence(zero_sequence, options)
-
-    plt.title("Single shot classification")
-    plt.xlabel("I [a.u.]")
-    plt.ylabel("Q [a.u.]")
-    plt.scatter(
-        results_one[readout_pulse1.serial].voltage_i,
-        results_one[readout_pulse1.serial].voltage_q,
-        label="One state",
-    )
-    plt.scatter(
-        results_zero[readout_pulse2.serial].voltage_i,
-        results_zero[readout_pulse2.serial].voltage_q,
-        label="Zero state",
-    )
-    plt.show()
+.. literalinclude:: ./examples/calibration2.py
 
 .. image:: classification_light.svg
    :class: only-light
