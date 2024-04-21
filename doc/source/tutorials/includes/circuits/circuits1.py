@@ -9,7 +9,7 @@ def execute_rotation():
     circuit = Circuit(1)
 
     # attach Rotation on X-Pauli with angle = 0
-    circuit.add(gates.RX(0, theta=0))
+    circuit.add(gates.GPI2(0, phi=0))
     circuit.add(gates.M(0))
 
     # define range of angles from [0, 2pi]
@@ -22,18 +22,18 @@ def execute_rotation():
 
         # execute circuit
         result = circuit.execute(nshots=4000)
-        freq = result.frequencies()
-        p0 = freq["0"] / 4000 if "0" in freq else 0
-        p1 = freq["1"] / 4000 if "1" in freq else 0
+    freq = result.frequencies()
+    p0 = freq["0"] / 4000 if "0" in freq else 0
+    p1 = freq["1"] / 4000 if "1" in freq else 0
 
-        # store probability in state |1>
-        res.append(p1)
+    # store probability in state |1>
+    res.append(p1)
 
     return res
 
 
 # execute on quantum hardware
-qibo.set_backend("qibolab", "dummy")
+qibo.set_backend("qibolab", platform="dummy")
 hardware = execute_rotation()
 
 # execute with classical quantum simulation

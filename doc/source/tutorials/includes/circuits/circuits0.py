@@ -8,11 +8,11 @@ np.random.seed(0)
 circuit = Circuit(1)
 
 # attach Hadamard gate and a measurement
-circuit.add(gates.H(0))
+circuit.add(gates.GPI2(0, phi=np.pi / 2))
 circuit.add(gates.M(0))
 
 # execute on quantum hardware
-qibo.set_backend("qibolab", "dummy")
+qibo.set_backend("qibolab", platform="dummy")
 hardware_result = circuit(nshots=5000)
 
 # retrieve measured probabilities
@@ -27,5 +27,6 @@ simulation_result = circuit(nshots=5000)
 
 simulation = simulation_result.probabilities(qubits=(0,))
 
+# print results
 print(f"Qibolab: P(0) = {hardware[0]:.2f}\tP(1) = {hardware[1]:.2f}")
 print(f"Numpy:   P(0) = {simulation[0]:.2f}\tP(1) = {simulation[1]:.2f}")
