@@ -20,7 +20,7 @@ instrumentation.
 The following cell shows how to define a single qubit platform from scratch,
 using different Qibolab primitives.
 
-.. literalinclude:: examples/lab0.py
+.. literalinclude:: ./includes/lab/lab0.py
 
 This code creates a platform with a single qubit that is controlled by the
 :class:`qibolab.instruments.dummy.DummyInstrument`. In real applications, if
@@ -39,7 +39,7 @@ that two-qubit gates can be applied. For such connected pairs of qubits one
 needs to additionally define :class:`qibolab.qubits.QubitPair` objects, which
 hold the parameters of the two-qubit gates.
 
-.. literalinclude:: examples/lab1.py
+.. literalinclude:: ./includes/lab1.py
 
 Some architectures may also have coupler qubits that mediate the interactions.
 We can also interact with them defining the :class:`qibolab.couplers.Coupler` objects.
@@ -47,8 +47,7 @@ Then we add them to their corresponding :class:`qibolab.qubits.QubitPair` object
 to the chip topology. We neglected characterization parameters associated to the
 coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
 
-
-.. literalinclude:: examples/lab2.py
+.. literalinclude:: ./includes/lab2.py
 
 The platform automatically creates the connectivity graph of the given chip
 using the dictionary of :class:`qibolab.qubits.QubitPair` objects.
