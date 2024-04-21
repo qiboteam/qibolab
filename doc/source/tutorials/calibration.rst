@@ -26,7 +26,7 @@ We start by initializing the platform, that reads the information written in the
 respective runcard, a sequence composed of only a measurement and a sweeper
 around the pre-defined frequency.
 
-.. literalinclude:: ./examples/calibration0.py
+.. literalinclude:: ./includes/calibration/calibration0.py
 
 .. image:: resonator_spectroscopy_light.svg
    :class: only-light
@@ -50,7 +50,7 @@ typical qubit spectroscopy experiment is as follows:
 So, mainly, the difference that this experiment introduces is a slightly more
 complex pulse sequence. Therefore with start with that:
 
-.. literalinclude:: ./examples/calibration1.py
+.. literalinclude:: ./includes/calibration/calibration1.py
 
 .. image:: qubit_spectroscopy_light.svg
    :class: only-light
@@ -88,7 +88,7 @@ two states.
 This experiment serves to assess the effectiveness of single-qubit calibration
 and its impact on qubit states in the IQ plane.
 
-.. literalinclude:: ./examples/calibration2.py
+.. literalinclude:: ./includes/calibration/calibration2.py
 
 .. image:: classification_light.svg
    :class: only-light
