@@ -30,6 +30,7 @@ if load_circuit:
 
 measurement = execute_qasm(circuit, platform="dummy", nshots=4000)
 
+# FIXME: This crashes - understand the MeasurementObject
 freq = measurement.frequencies()
 p0 = freq["0"] / 4000 if "0" in freq else 0
 p1 = freq["1"] / 4000 if "1" in freq else 0
