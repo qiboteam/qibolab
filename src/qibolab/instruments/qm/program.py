@@ -19,9 +19,13 @@ class Parameters:
     phase: Optional[float] = None
 
 
-def _delay(pulse):
+def _delay(pulse, parameters):
     # TODO: How to play delays on multiple elements?
-    qua.wait(pulse.duration // 4 + 1, element(pulse))
+    if parameters.duration is None:
+        duration = pulse.duration // 4 + 1
+    else:
+        duration = parameters.duration
+    qua.wait(duration, element(pulse))
 
 
 def _play(pulse, parameters):
@@ -49,10 +53,11 @@ def play(sequence, parameters, relaxation_time=0):
     """
     qua.align()
     for pulse in sequence:
+        params = parameters[operation(pulse)]
         if isinstance(pulse, Delay):
-            _delay(pulse)
+            _delay(pulse, params)
         else:
-            _play(pulse, parameters[operation(pulse)])
+            _play(pulse, params)
 
     if relaxation_time > 0:
         qua.wait(relaxation_time // 4)
