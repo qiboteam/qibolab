@@ -110,7 +110,7 @@ class Compiler:
     ):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
-        qubits = (int(qubit_map[qubit]) for qubit in gate.qubits)
+        qubits = [int(qubit_map[qubit]) for qubit in gate.qubits]
         # get local sequence and phases for the current gate
         gate_sequence, gate_phases = rule(gate, platform, qubits)
 
@@ -133,7 +133,7 @@ class Compiler:
 
         return gate_sequence, gate_phases
 
-    def compile(self, circuit, platform):
+    def compile(self, circuit, platform, qubit_map):
         """Transforms a circuit to pulse sequence.
 
         Args:
@@ -157,7 +157,6 @@ class Compiler:
         for moment in circuit.queue.moments:
             moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
-                new_qubits = (circuit.wire_names[qubit] for qubit in gate.qubits)
                 if isinstance(gate, gates.Align):
                     for qubit in gate.qubits:
                         delays[qubit] += gate.delay
@@ -169,7 +168,7 @@ class Compiler:
                     virtual_z_phases,
                     moment_start,
                     delays,
-                    circuit.wire_names,
+                    qubit_map,
                 )
                 for qubit in gate.qubits:
                     delays[qubit] = 0

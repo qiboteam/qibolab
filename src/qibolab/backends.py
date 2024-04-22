@@ -46,7 +46,7 @@ class QibolabBackend(NumpyBackend):
         # TODO: Move this method to transpilers
         if self.transpiler is None or self.transpiler.is_satisfied(circuit):
             native = circuit
-            qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)}
+            qubit_map = {q: q for q in range(circuit.nqubits)}
         else:
             native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
             qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)}
@@ -95,7 +95,9 @@ class QibolabBackend(NumpyBackend):
             )
 
         native_circuit, qubit_map = self.transpile(circuit)
-        sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)
+        sequence, measurement_map = self.compiler.compile(
+            native_circuit, self.platform, qubit_map
+        )
 
         if not self.platform.is_connected:
             self.platform.connect()
@@ -128,7 +130,7 @@ class QibolabBackend(NumpyBackend):
         """
         if isinstance(initial_state, Circuit):
             return self.execute_circuits(
-                circuit=[initial_state + circuit for circuit in circuits],
+                circuits=[initial_state + circuit for circuit in circuits],
                 nshots=nshots,
             )
         if initial_state is not None:
@@ -162,7 +164,7 @@ class QibolabBackend(NumpyBackend):
             results.append(
                 MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
             )
-            for gate, sequence in measurement_map.items():
+            for gate, sequence in measurement_map.itms():
                 samples = [
                     readout[pulse.serial].popleft().samples for pulse in sequence.pulses
                 ]
