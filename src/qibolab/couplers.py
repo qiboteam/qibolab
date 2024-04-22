@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
 
-from qibolab.channels import Channel
+from qibolab.instruments.channels import Channel
 from qibolab.native import SingleQubitNatives
 
 QubitId = Union[str, int]
