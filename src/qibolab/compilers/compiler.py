@@ -110,8 +110,9 @@ class Compiler:
     ):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
+        qubits = (int(qubit_map[qubit]) for qubit in gate.qubits)
         # get local sequence and phases for the current gate
-        gate_sequence, gate_phases = rule(gate, platform, qubit_map)
+        gate_sequence, gate_phases = rule(gate, platform, qubits)
 
         # update global pulse sequence
         # determine the right start time based on the availability of the qubits involved

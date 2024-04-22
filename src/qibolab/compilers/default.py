@@ -8,52 +8,48 @@ import math
 from qibolab.pulses import PulseSequence
 
 
-def identity_rule(gate, platform, qubit_map):
+def identity_rule(gate, platform, qubits):
     """Identity gate skipped."""
     return PulseSequence(), {}
 
 
-def z_rule(gate, platform, qubit_map):
+def z_rule(gate, platform, qubits):
     """Z gate applied virtually."""
-    qubit = int(qubit_map[gate.target_qubits[0]])
-    return PulseSequence(), {qubit: math.pi}
+    return PulseSequence(), {qubits[0]: math.pi}
 
 
-def rz_rule(gate, platform, qubit_map):
+def rz_rule(gate, platform, qubits):
     """RZ gate applied virtually."""
-    qubit = int(qubit_map[gate.target_qubits[0]])
-    return PulseSequence(), {qubit: gate.parameters[0]}
+    return PulseSequence(), {qubits[0]: gate.parameters[0]}
 
 
-def gpi2_rule(gate, platform, qubit_map):
+def gpi2_rule(gate, platform, qubits):
     """Rule for GPI2."""
-    qubit = int(qubit_map[gate.target_qubits[0]])
     theta = gate.parameters[0]
     sequence = PulseSequence()
-    pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
+    pulse = platform.create_RX90_pulse(qubits[0], start=0, relative_phase=theta)
     sequence.add(pulse)
     return sequence, {}
 
 
-def gpi_rule(gate, platform, qubit_map):
+def gpi_rule(gate, platform, qubits):
     """Rule for GPI."""
-    qubit = int(qubit_map[gate.target_qubits[0]])
     theta = gate.parameters[0]
     sequence = PulseSequence()
     # the following definition has a global phase difference compare to
     # to the matrix representation. See
     # https://github.com/qiboteam/qibolab/pull/804#pullrequestreview-1890205509
     # for more detail.
-    pulse = platform.create_RX_pulse(qubit, start=0, relative_phase=theta)
+    pulse = platform.create_RX_pulse(qubits[0], start=0, relative_phase=theta)
     sequence.add(pulse)
     return sequence, {}
 
 
-def u3_rule(gate, platform, qubit_map):
+def u3_rule(gate, platform, qubits):
     """U3 applied as RZ-RX90-RZ-RX90-RZ."""
-    qubit = int(qubit_map[gate.target_qubits[0]])
     # Transform gate to U3 and add pi/2-pulses
     theta, phi, lam = gate.parameters
+    qubit = qubits[0]
     # apply RZ(lam)
     virtual_z_phases = {qubit: lam}
     sequence = PulseSequence()
@@ -79,26 +75,24 @@ def u3_rule(gate, platform, qubit_map):
     return sequence, virtual_z_phases
 
 
-def cz_rule(gate, platform, qubit_map):
+def cz_rule(gate, platform, qubits):
     """CZ applied as defined in the platform runcard.
 
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    qubits = (int(qubit_map[qubit]) for qubit in gate.qubits)
     return platform.create_CZ_pulse_sequence(qubits)
 
 
-def cnot_rule(gate, platform, qubit_map):
+def cnot_rule(gate, platform, qubits):
     """CNOT applied as defined in the platform runcard."""
-    qubits = (int(qubit_map[qubit]) for qubit in gate.qubits)
     return platform.create_CNOT_pulse_sequence(qubits)
 
 
-def measurement_rule(gate, platform, qubit_map):
+def measurement_rule(gate, platform, qubits):
     """Measurement gate applied using the platform readout pulse."""
     sequence = PulseSequence()
     for qubit in gate.target_qubits:
-        MZ_pulse = platform.create_MZ_pulse(int(qubit_map[qubit]), start=0)
+        MZ_pulse = platform.create_MZ_pulse(qubits[0], start=0)
         sequence.add(MZ_pulse)
     return sequence, {}
