@@ -133,7 +133,7 @@ class Compiler:
 
         return gate_sequence, gate_phases
 
-    def compile(self, circuit, platform, qubit_map):
+    def compile(self, circuit, platform, qubit_map=None):
         """Transforms a circuit to pulse sequence.
 
         Args:
@@ -142,14 +142,19 @@ class Compiler:
             platform (qibolab.platforms.abstract.AbstractPlatform): Platform used
                 to load the native pulse representations.
 
-            qubit_map (dict): Dictionary mirroring the logical (key) - physical
+            qubit_map (dict, optional): Dictionary mirroring the logical (key) - physical
                 (values) mapping. Each key `i` correspond to the `i-th` qubit
-                in the platform.
+                in the platform. If `qubit_map` is not given, the identity will
+                be used.
 
         Returns:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
             measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
+
+        if qubit_map is None:
+            qubit_map = {q: q for q in range(circuit.nqubits)}
+
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
