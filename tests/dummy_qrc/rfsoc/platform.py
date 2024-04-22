@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
+from qibolab.instruments.channels import Channel, ChannelMap
 from qibolab.instruments.erasynth import ERA
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rohde_schwarz import SGS100A
