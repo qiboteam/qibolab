@@ -49,8 +49,6 @@ class QibolabBackend(NumpyBackend):
             qubit_map = {q: q for q in range(circuit.nqubits)}
         else:
             native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
-            qubit_map = {q: circuit.wire_names[q] for q in range(circuit.nqubits)}
-            # TODO: fix transpiler to return the correct map
         return native, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
@@ -168,7 +166,9 @@ class QibolabBackend(NumpyBackend):
 
     def generate_sequence(self, circuit):
         native_circuit, qubit_map = self.transpile(circuit)
+        # invert logical-physical mapping
+        inverse_qubit_map = dict(zip(qubit_map.values(), qubit_map.keys()))
         sequence, measurement_map = self.compiler.compile(
-            native_circuit, self.platform, qubit_map
+            native_circuit, self.platform, inverse_qubit_map
         )
         return sequence, measurement_map

@@ -110,7 +110,7 @@ class Compiler:
     ):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
-        qubits = [int(qubit_map[qubit]) for qubit in gate.qubits]
+        qubits = [platform.get_qubit(qubit_map[qubit]) for qubit in gate.qubits]
         # get local sequence and phases for the current gate
         gate_sequence, gate_phases = rule(gate, platform, qubits)
 
@@ -141,6 +141,10 @@ class Compiler:
                                            connectivity and native gates.
             platform (qibolab.platforms.abstract.AbstractPlatform): Platform used
                 to load the native pulse representations.
+
+            qubit_map (dict): Dictionary mirroring the logical (key) - physical
+                (values) mapping. Each key `i` correspond to the `i-th` qubit
+                in the platform.
 
         Returns:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
