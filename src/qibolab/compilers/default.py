@@ -85,13 +85,13 @@ def cz_rule(gate, platform, qubit_map):
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    qubits = (int(qubit_map[qubit]) for qubit in gates.qubits)
+    qubits = (int(qubit_map[qubit]) for qubit in gate.qubits)
     return platform.create_CZ_pulse_sequence(qubits)
 
 
 def cnot_rule(gate, platform, qubit_map):
     """CNOT applied as defined in the platform runcard."""
-    qubits = (int(qubit_map[qubit]) for qubit in gates.qubits)
+    qubits = (int(qubit_map[qubit]) for qubit in gate.qubits)
     return platform.create_CNOT_pulse_sequence(qubits)
 
 
