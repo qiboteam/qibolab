@@ -157,50 +157,15 @@ def _sweep_bias(sweepers, qubits, sequence, parameters, relaxation_time):
         _sweep_recursion(sweepers[1:], qubits, sequence, parameters, relaxation_time)
 
 
-# def _sweep_start(sweepers, qubits, qmsequence, relaxation_time):
-#     sweeper = sweepers[0]
-#     start = declare(int)
-#     values = (np.array(sweeper.values) // 4).astype(int)
-#
-#     if len(np.unique(values[1:] - values[:-1])) > 1:
-#         loop = qua.for_each_(start, values)
-#     else:
-#         loop = for_(*from_array(start, values))
-#
-#     with loop:
-#         for pulse in sweeper.pulses:
-#             qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-#             # find all pulses that are connected to ``qmpulse`` and update their starts
-#             to_process = {qmpulse}
-#             while to_process:
-#                 next_qmpulse = to_process.pop()
-#                 to_process |= next_qmpulse.next_
-#                 next_qmpulse.wait_time_variable = start
-#
-#         _sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
+def _sweep_duration(sweepers, qubits, sequence, parameters, relaxation_time):
+    # TODO: Handle baked pulses
+    sweeper = sweepers[0]
+    dur = declare(int)
+    with for_(*from_array(dur, (sweeper.values // 4).astype(int))):
+        for pulse in sweeper.pulses:
+            parameters[operation(pulse)].duration = dur
+
+        _sweep_recursion(sweepers[1:], qubits, sequence, parameters, relaxation_time)
 
 
-# def _sweep_duration(sweepers, qubits, qmsequence, relaxation_time):
-#     sweeper = sweepers[0]
-#     qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].serial]
-#     if isinstance(qmpulse, BakedPulse):
-#         values = np.array(sweeper.values).astype(int)
-#     else:
-#         values = np.array(sweeper.values).astype(int) // 4
-#
-#     dur = declare(int)
-#     with for_(*from_array(dur, values)):
-#         for pulse in sweeper.pulses:
-#             qmpulse = qmsequence.pulse_to_qmpulse[pulse.serial]
-#             qmpulse.swept_duration = dur
-#             # find all pulses that are connected to ``qmpulse`` and align them
-#             if not isinstance(qmpulse, BakedPulse):
-#                 to_process = set(qmpulse.next_)
-#                 while to_process:
-#                     next_qmpulse = to_process.pop()
-#                     to_process |= next_qmpulse.next_
-#                     qmpulse.elements_to_align.add(next_qmpulse.element)
-#                     next_qmpulse.wait_time -= qmpulse.wait_time + qmpulse.duration // 4
-#
-#         _sweep_recursion(sweepers[1:], qubits, qmsequence, relaxation_time)
 #
