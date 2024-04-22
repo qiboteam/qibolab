@@ -169,6 +169,6 @@ class QibolabBackend(NumpyBackend):
         # invert logical-physical mapping
         inverse_qubit_map = dict(zip(qubit_map.values(), qubit_map.keys()))
         sequence, measurement_map = self.compiler.compile(
-            native_circuit, self.platform, inverse_qubit_map
+            native_circuit, self.platform, qubit_map=inverse_qubit_map
         )
         return sequence, measurement_map

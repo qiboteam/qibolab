@@ -144,7 +144,7 @@ class Compiler:
 
             qubit_map (dict, optional): Dictionary mirroring the logical (key) - physical
                 (values) mapping. Each key `i` correspond to the `i-th` qubit
-                in the platform. If `qubit_map` is not given, the identity will
+                in the platform. If `qubit_map` is not given, the identity map will
                 be used.
 
         Returns:
