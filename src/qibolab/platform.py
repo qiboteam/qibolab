@@ -214,40 +214,6 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, sequence, options, **kwargs):
-        """Executes sequence on the controllers."""
-        result = {}
-
-        for instrument in self.instruments.values():
-            if isinstance(instrument, Controller):
-                new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, options
-                )
-                if isinstance(new_result, dict):
-                    result.update(new_result)
-
-        return result
-
-    def execute_pulse_sequence(
-        self, sequence: PulseSequence, options: ExecutionParameters, **kwargs
-    ):
-        """
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
-        Returns:
-            Readout results acquired by after execution.
-        """
-        options = self.settings.fill(options)
-
-        time = (
-            (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
-        )
-        log.info(f"Minimal execution time (sequence): {time}")
-
-        return self._execute(sequence, options, **kwargs)
-
     @property
     def _controller(self):
         """Controller instrument used for splitting the unrolled sequences to
@@ -264,54 +230,30 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def execute_pulse_sequences(
-        self, sequences: List[PulseSequence], options: ExecutionParameters, **kwargs
+    def _execute(self, sequence, options, *sweepers, **kwargs):
+        """Executes sequence on the controllers."""
+        result = {}
+
+        for instrument in self.instruments.values():
+            if isinstance(instrument, Controller):
+                new_result = instrument.play(
+                    self.qubits, self.couplers, sequence, options, *sweepers
+                )
+                if isinstance(new_result, dict):
+                    result.update(new_result)
+
+        return result
+
+    def execute(
+        self,
+        sequences: List[PulseSequence],
+        options: ExecutionParameters,
+        *sweepers: Sweeper,
+        **kwargs,
     ):
-        """
-        Args:
-            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
-        Returns:
-            Readout results acquired by after execution.
-        """
-        options = self.settings.fill(options)
+        """Executes a pulse sequences.
 
-        duration = sum(seq.duration for seq in sequences)
-        time = (
-            (duration + len(sequences) * options.relaxation_time)
-            * options.nshots
-            * NS_TO_SEC
-        )
-        log.info(f"Minimal execution time (unrolling): {time}")
-
-        # find readout pulses
-        ro_pulses = {
-            pulse.id: pulse.qubit
-            for sequence in sequences
-            for pulse in sequence.ro_pulses
-        }
-
-        results = defaultdict(list)
-        bounds = kwargs.get("bounds", self._controller.bounds)
-        for b in batch(sequences, bounds):
-            sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, options, **kwargs)
-            for serial, new_serials in readouts.items():
-                results[serial].extend(result[ser] for ser in new_serials)
-
-        for serial, qubit in ro_pulses.items():
-            results[qubit] = results[serial]
-
-        return results
-
-    def sweep(
-        self, sequence: PulseSequence, options: ExecutionParameters, *sweepers: Sweeper
-    ):
-        """Executes a pulse sequence for different values of sweeped
-        parameters.
-
-        Useful for performing chip characterization.
+        If any sweeper is passed, the execution is performed for the different values of sweeped parameters.
 
         Example:
             .. testcode::
@@ -330,36 +272,46 @@ class Platform:
                 sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = Sweeper(parameter, parameter_range, [pulse])
-                platform.sweep(sequence, ExecutionParameters(), sweeper)
+                platform.execute([sequence], ExecutionParameters(), sweeper)
 
+        Args:
+            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
+            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
         """
-        if options.nshots is None:
-            options = replace(options, nshots=self.settings.nshots)
+        options = self.settings.fill(options)
 
-        if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.settings.relaxation_time)
-
+        duration = sum(seq.duration for seq in sequences)
         time = (
-            (sequence.duration + options.relaxation_time) * options.nshots * NS_TO_SEC
+            (duration + len(sequences) * options.relaxation_time)
+            * options.nshots
+            * NS_TO_SEC
         )
         for sweep in sweepers:
             time *= len(sweep.values)
-        log.info(f"Minimal execution time (sweep): {time}")
+        log.info(f"Minimal execution time: {time}")
 
-        result = {}
-        for instrument in self.instruments.values():
-            if isinstance(instrument, Controller):
-                new_result = instrument.sweep(
-                    self.qubits, self.couplers, sequence, options, *sweepers
-                )
-                if isinstance(new_result, dict):
-                    result.update(new_result)
-        return result
+        # find readout pulses
+        ro_pulses = {
+            pulse.id: pulse.qubit
+            for sequence in sequences
+            for pulse in sequence.ro_pulses
+        }
 
-    def __call__(self, sequence, options):
-        return self.execute_pulse_sequence(sequence, options)
+        results = defaultdict(list)
+        bounds = kwargs.get("bounds", self._controller.bounds)
+        for b in batch(sequences, bounds):
+            sequence, readouts = unroll_sequences(b, options.relaxation_time)
+            result = self._execute(sequence, options, *sweepers, **kwargs)
+            for serial, new_serials in readouts.items():
+                results[serial].extend(result[ser] for ser in new_serials)
+
+        for serial, qubit in ro_pulses.items():
+            results[qubit] = results[serial]
+
+        return results
 
     def get_qubit(self, qubit):
         """Return the name of the physical qubit corresponding to a logical
