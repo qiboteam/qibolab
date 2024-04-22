@@ -82,11 +82,10 @@ The following example shows how to modify the transpiler and compiler in order t
 
 
     # define a compiler rule that translates X to the pi-pulse
-    def x_rule(gate, platform):
+    def x_rule(gate, platform, qubits):
         """X gate applied with a single pi-pulse."""
-        qubit = gate.target_qubits[0]
         sequence = PulseSequence()
-        sequence.add(platform.create_RX_pulse(qubit, start=0))
+        sequence.add(platform.create_RX_pulse(qubits[0], start=0))
         return sequence, {}
 
 
