@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
@@ -50,29 +50,25 @@ def create():
     # Create channel objects
     channels = ChannelMap()
     # Readout
-    channels |= InstrumentChannel(name="L3-25_a", port=modules["qrm_rf_a"].ports("o1"))
-    channels |= InstrumentChannel(name="L3-25_b", port=modules["qrm_rf_b"].ports("o1"))
+    channels |= Channel(name="L3-25_a", port=modules["qrm_rf_a"].ports("o1"))
+    channels |= Channel(name="L3-25_b", port=modules["qrm_rf_b"].ports("o1"))
     # Feedback
-    channels |= InstrumentChannel(
-        name="L2-5_a", port=modules["qrm_rf_a"].ports("i1", out=False)
-    )
-    channels |= InstrumentChannel(
-        name="L2-5_b", port=modules["qrm_rf_b"].ports("i1", out=False)
-    )
+    channels |= Channel(name="L2-5_a", port=modules["qrm_rf_a"].ports("i1", out=False))
+    channels |= Channel(name="L2-5_b", port=modules["qrm_rf_b"].ports("i1", out=False))
     # Drive
-    channels |= InstrumentChannel(name="L3-15", port=modules["qcm_rf0"].ports("o1"))
-    channels |= InstrumentChannel(name="L3-11", port=modules["qcm_rf0"].ports("o2"))
-    channels |= InstrumentChannel(name="L3-12", port=modules["qcm_rf1"].ports("o1"))
-    channels |= InstrumentChannel(name="L3-13", port=modules["qcm_rf1"].ports("o2"))
-    channels |= InstrumentChannel(name="L3-14", port=modules["qcm_rf2"].ports("o1"))
+    channels |= Channel(name="L3-15", port=modules["qcm_rf0"].ports("o1"))
+    channels |= Channel(name="L3-11", port=modules["qcm_rf0"].ports("o2"))
+    channels |= Channel(name="L3-12", port=modules["qcm_rf1"].ports("o1"))
+    channels |= Channel(name="L3-13", port=modules["qcm_rf1"].ports("o2"))
+    channels |= Channel(name="L3-14", port=modules["qcm_rf2"].ports("o1"))
     # Flux
-    channels |= InstrumentChannel(name="L4-5", port=modules["qcm_bb0"].ports("o1"))
-    channels |= InstrumentChannel(name="L4-1", port=modules["qcm_bb0"].ports("o2"))
-    channels |= InstrumentChannel(name="L4-2", port=modules["qcm_bb0"].ports("o3"))
-    channels |= InstrumentChannel(name="L4-3", port=modules["qcm_bb0"].ports("o4"))
-    channels |= InstrumentChannel(name="L4-4", port=modules["qcm_bb1"].ports("o1"))
+    channels |= Channel(name="L4-5", port=modules["qcm_bb0"].ports("o1"))
+    channels |= Channel(name="L4-1", port=modules["qcm_bb0"].ports("o2"))
+    channels |= Channel(name="L4-2", port=modules["qcm_bb0"].ports("o3"))
+    channels |= Channel(name="L4-3", port=modules["qcm_bb0"].ports("o4"))
+    channels |= Channel(name="L4-4", port=modules["qcm_bb1"].ports("o1"))
     # TWPA
-    channels |= InstrumentChannel(name="L3-28", port=None)
+    channels |= Channel(name="L3-28", port=None)
     channels["L3-28"].local_oscillator = twpa_pump
 
     # create qubit objects
