@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.channels import Channel, ChannelMap
+from qibolab.instruments.channels import Channel, ChannelMap
 from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
