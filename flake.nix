@@ -48,7 +48,7 @@
               config,
               ...
             }: {
-              packages = with pkgs; [pre-commit poethepoet jupyter zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter];
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
@@ -66,10 +66,13 @@
                 enable = true;
                 poetry = {
                   enable = true;
-                  install.enable = true;
-                  install.groups = ["dev" "analysis" "tests"];
-                  install.allExtras = true;
+                  install = {
+                    enable = true;
+                    groups = ["dev" "analysis" "tests"];
+                    allExtras = true;
+                  };
                 };
+                libraries = with pkgs; [zlib];
                 version = "3.11";
               };
 

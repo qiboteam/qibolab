@@ -2076,6 +2076,23 @@ files = [
 env = ["pydantic (>=1.0.0,<3.0.0)"]
 
 [[package]]
+name = "lark"
+version = "1.1.9"
+description = "a modern parsing library"
+optional = true
+python-versions = ">=3.6"
+files = [
+    {file = "lark-1.1.9-py3-none-any.whl", hash = "sha256:a0dd3a87289f8ccbb325901e4222e723e7d745dbfc1803eaf5f3d2ace19cf2db"},
+    {file = "lark-1.1.9.tar.gz", hash = "sha256:15fa5236490824c2c4aba0e22d2d6d823575dcaf4cdd1848e34b6ad836240fba"},
+]
+
+[package.extras]
+atomic-cache = ["atomicwrites"]
+interegular = ["interegular (>=0.3.1,<0.4.0)"]
+nearley = ["js2py"]
+regex = ["regex"]
+
+[[package]]
 name = "latexcodec"
 version = "3.0.0"
 description = "A lexer and codec to work with LaTeX code in Python."
@@ -5766,6 +5783,7 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [extras]
 los = ["pyvisa-py", "qcodes", "qcodes_contrib_drivers"]
+neoqblox = ["lark"]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
 qm = ["qm-qua", "qualang-tools"]
 rfsoc = ["qibosoq"]
@@ -5774,4 +5792,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "f6936794bf8da84d55fdff23d1c1ac5730f47e0efebf70fa32990c0f8cb057de"
+content-hash = "9ea5389f655299688259dd6e96cb1f6514afa2030027b3ec084a2465bf439e9c"
