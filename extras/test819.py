@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import numpy as np
 from qibo.backends import GlobalBackend
 
@@ -23,8 +25,8 @@ qid = 0
 qubit = platform.qubits[qid]
 qubits = {qid: qubit}
 
-ro_pulse = platform.create_qubit_readout_pulse(qid, start=0)
-ro_pulse.frequency = int(2e9)
+native = platform.qubits[0].native_gates.MZ
+ro_pulse = replace(native, channel=qubit.readout.name, frequency=2e9)
 sequence.add(ro_pulse)
 
 freq_width = 2e7

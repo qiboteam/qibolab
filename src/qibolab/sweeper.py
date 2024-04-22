@@ -62,7 +62,8 @@ class Sweeper:
             platform = create_dummy()
             sequence = PulseSequence()
             parameter = Parameter.frequency
-            pulse = platform.create_qubit_readout_pulse(qubit=0)
+            native = platform.qubits[0].native_gates.MZ
+            pulse = replace(native, channel=qubit.readout.name)
             sequence.append(pulse)
             parameter_range = np.random.randint(10, size=10)
             sweeper = Sweeper(parameter, parameter_range, [pulse])
