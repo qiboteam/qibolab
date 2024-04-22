@@ -1,8 +1,8 @@
 import itertools
 import pathlib
 
+from qibolab.channels import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
-from qibolab.instruments.instrument_channel import ChannelMap, InstrumentChannel
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
@@ -47,21 +47,18 @@ def create_dummy(with_couplers: bool = True):
     # Create channel objects
     nqubits = runcard["nqubits"]
     channels = ChannelMap()
-    channels |= InstrumentChannel("readout", port=instrument.ports("readout"))
+    channels |= Channel("readout", port=instrument.ports("readout"))
     channels |= (
-        InstrumentChannel(f"drive-{i}", port=instrument.ports(f"drive-{i}"))
+        Channel(f"drive-{i}", port=instrument.ports(f"drive-{i}"))
         for i in range(nqubits)
     )
     channels |= (
-        InstrumentChannel(f"flux-{i}", port=instrument.ports(f"flux-{i}"))
-        for i in range(nqubits)
+        Channel(f"flux-{i}", port=instrument.ports(f"flux-{i}")) for i in range(nqubits)
     )
-    channels |= InstrumentChannel("twpa", port=None)
+    channels |= Channel("twpa", port=None)
     if with_couplers:
         channels |= (
-            InstrumentChannel(
-                f"flux_coupler-{c}", port=instrument.ports(f"flux_coupler-{c}")
-            )
+            Channel(f"flux_coupler-{c}", port=instrument.ports(f"flux_coupler-{c}"))
             for c in itertools.chain(range(0, 2), range(3, 5))
         )
     channels["readout"].attenuation = 0

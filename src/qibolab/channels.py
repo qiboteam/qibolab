@@ -20,7 +20,7 @@ def check_max_offset(offset, max_offset):
 
 
 @dataclass
-class InstrumentChannel:
+class Channel:
     """Representation of physical wire connection (channel)."""
 
     name: str
@@ -122,7 +122,7 @@ class ChannelMap:
     specifying the names.
     """
 
-    _channels: Dict[str, InstrumentChannel] = field(default_factory=dict)
+    _channels: Dict[str, Channel] = field(default_factory=dict)
 
     def add(self, *items):
         """Add multiple items to the channel map.
@@ -132,17 +132,17 @@ class ChannelMap:
         is created and added to the channel map.
         """
         for item in items:
-            if isinstance(item, InstrumentChannel):
+            if isinstance(item, Channel):
                 self[item.name] = item
             else:
-                self[item] = InstrumentChannel(item)
+                self[item] = Channel(item)
         return self
 
     def __getitem__(self, name):
         return self._channels[name]
 
     def __setitem__(self, name, channel):
-        if not isinstance(channel, InstrumentChannel):
+        if not isinstance(channel, Channel):
             raise_error(
                 TypeError, f"Cannot add channel of type {type(channel)} to ChannelMap."
             )
