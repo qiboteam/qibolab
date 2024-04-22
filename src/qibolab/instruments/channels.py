@@ -3,7 +3,11 @@ from typing import Dict, Optional
 
 from qibo.config import raise_error
 
-from qibolab.channel_config import ChannelConfig
+from qibolab.channel_config import (
+    AcquisitionChannelConfig,
+    DCChannelConfig,
+    IQChannelConfig,
+)
 
 
 def check_max_offset(offset, max_offset):
@@ -19,13 +23,10 @@ def check_max_offset(offset, max_offset):
 
 
 @dataclass
-class Channel:
-    """Representation of physical wire connection (channel)."""
-
+class DCChannel:
     name: str
-    """The name of the channel."""
-    config: ChannelConfig
-    """The exposed configuration of the channel."""
+    config: DCChannelConfig
+
     max_offset: Optional[float] = None
     """Maximum DC voltage that we can safely send through this channel.
 
@@ -37,16 +38,24 @@ class Channel:
     @property
     def offset(self):
         """DC offset that is applied to this port."""
-        if hasattr(self.config, "offset"):
-            return self.config.offset
-        raise ValueError(f"Channel {self.name} does not have property offset.")
+        return self.config.offset
 
     @offset.setter
     def offset(self, value):
-        if hasattr(self.config, "offset"):
-            check_max_offset(value, self.max_offset)
-            self.config = replace(self.config, offset=value)
-        raise ValueError(f"Channel {self.name} does not have property offset.")
+        check_max_offset(value, self.max_offset)
+        self.config = replace(self.config, offset=value)
+
+
+@dataclass
+class IQChannel:
+    name: str
+    config: IQChannelConfig
+
+
+@dataclass
+class AcquisitionChannel:
+    name: str
+    config: AcquisitionChannelConfig
 
 
 @dataclass

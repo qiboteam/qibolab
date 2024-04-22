@@ -4,26 +4,18 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 from qibolab.couplers import Coupler
-from qibolab.instruments.channels import Channel
+from qibolab.instruments.channels import AcquisitionChannel, DCChannel, IQChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
 """Type for qubit names."""
 
-CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
+CHANNEL_NAMES = ("readout", "acquisition", "drive", "flux", "twpa")
 """Names of channels that belong to a qubit.
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + (
-    "name",
-    "native_gates",
-    "kernel",
-    "_flux",
-    "qubit1",
-    "qubit2",
-    "coupler",
-)
+EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "kernel", "flux")
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
@@ -95,27 +87,12 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
-    readout: Optional[Channel] = None
-    feedback: Optional[Channel] = None
-    twpa: Optional[Channel] = None
-    drive: Optional[Channel] = None
-    _flux: Optional[Channel] = None
+    readout: Optional[IQChannel] = None
+    acquisition: Optional[AcquisitionChannel] = None
+    drive: Optional[IQChannel] = None
+    flux: Optional[DCChannel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    def __post_init__(self):
-        if self.flux is not None and self.sweetspot != 0:
-            self.flux.offset = self.sweetspot
-
-    @property
-    def flux(self):
-        return self._flux
-
-    @flux.setter
-    def flux(self, channel):
-        if self.sweetspot != 0:
-            channel.offset = self.sweetspot
-        self._flux = channel
 
     @property
     def channels(self):
