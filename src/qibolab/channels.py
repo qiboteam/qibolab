@@ -1,10 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, Optional
 
 from qibo.config import raise_error
 
-from qibolab.instruments.oscillator import LocalOscillator
-from qibolab.instruments.port import Port
+from qibolab.channel_config import ChannelConfig
 
 
 def check_max_offset(offset, max_offset):
@@ -24,17 +23,9 @@ class Channel:
     """Representation of physical wire connection (channel)."""
 
     name: str
-    """Name of the channel from the lab schematics."""
-    port: Optional[Port] = None
-    """Instrument port that is connected to this channel."""
-    local_oscillator: Optional[LocalOscillator] = None
-    """Instrument object controlling the local oscillator connected to this
-    channel.
-
-    Not applicable for setups that do not use external local oscillators
-    because the controller can send sufficiently high frequencies or
-    contains internal local oscillators.
-    """
+    """The name of the channel."""
+    config: ChannelConfig
+    """The exposed configuration of the channel."""
     max_offset: Optional[float] = None
     """Maximum DC voltage that we can safely send through this channel.
 
@@ -46,71 +37,16 @@ class Channel:
     @property
     def offset(self):
         """DC offset that is applied to this port."""
-        return self.port.offset
+        if hasattr(self.config, "offset"):
+            return self.config.offset
+        raise ValueError(f"Channel {self.name} does not have property offset.")
 
     @offset.setter
     def offset(self, value):
-        check_max_offset(value, self.max_offset)
-        self.port.offset = value
-
-    @property
-    def lo_frequency(self):
-        if self.local_oscillator is not None:
-            return self.local_oscillator.frequency
-        return self.port.lo_frequency
-
-    @lo_frequency.setter
-    def lo_frequency(self, value):
-        if self.local_oscillator is not None:
-            self.local_oscillator.frequency = value
-        else:
-            self.port.lo_frequency = value
-
-    @property
-    def lo_power(self):
-        if self.local_oscillator is not None:
-            return self.local_oscillator.power
-        return self.port.lo_power
-
-    @lo_power.setter
-    def lo_power(self, value):
-        if self.local_oscillator is not None:
-            self.local_oscillator.power = value
-        else:
-            self.port.lo_power = value
-
-    # TODO: gain, attenuation and power range can be unified to a single property
-    @property
-    def gain(self):
-        return self.port.gain
-
-    @gain.setter
-    def gain(self, value):
-        self.port.gain = value
-
-    @property
-    def attenuation(self):
-        return self.port.attenuation
-
-    @attenuation.setter
-    def attenuation(self, value):
-        self.port.attenuation = value
-
-    @property
-    def power_range(self):
-        return self.port.power_range
-
-    @power_range.setter
-    def power_range(self, value):
-        self.port.power_range = value
-
-    @property
-    def filter(self):
-        return self.port.filter
-
-    @filter.setter
-    def filter(self, value):
-        self.port.filter = value
+        if hasattr(self.config, "offset"):
+            check_max_offset(value, self.max_offset)
+            self.config = replace(self.config, offset=value)
+        raise ValueError(f"Channel {self.name} does not have property offset.")
 
 
 @dataclass
