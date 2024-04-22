@@ -94,10 +94,7 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        native_circuit, qubit_map = self.transpile(circuit)
-        sequence, measurement_map = self.compiler.compile(
-            native_circuit, self.platform, qubit_map
-        )
+        sequence, measurement_map = self.generate_sequence(circuit)
 
         if not self.platform.is_connected:
             self.platform.connect()
@@ -142,10 +139,7 @@ class QibolabBackend(NumpyBackend):
         # TODO: Maybe these loops can be parallelized
         native_circuits, _ = zip(*(self.transpile(circuit) for circuit in circuits))
         sequences, measurement_maps = zip(
-            *(
-                self.compiler.compile(circuit, self.platform)
-                for circuit in native_circuits
-            )
+            *(self.generate_sequence(circuit) for circuit in native_circuits)
         )
 
         if not self.platform.is_connected:
@@ -164,10 +158,17 @@ class QibolabBackend(NumpyBackend):
             results.append(
                 MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
             )
-            for gate, sequence in measurement_map.itms():
+            for gate, sequence in measurement_map.items():
                 samples = [
                     readout[pulse.serial].popleft().samples for pulse in sequence.pulses
                 ]
                 gate.result.backend = self
                 gate.result.register_samples(np.array(samples).T)
         return results
+
+    def generate_sequence(self, circuit):
+        native_circuit, qubit_map = self.transpile(circuit)
+        sequence, measurement_map = self.compiler.compile(
+            native_circuit, self.platform, qubit_map
+        )
+        return sequence, measurement_map

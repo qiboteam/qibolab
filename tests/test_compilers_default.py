@@ -31,8 +31,9 @@ def test_u3_sim_agreement():
 
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
+    qubit_map = {q: q for q in range(circuit.nqubits)}
     compiler = Compiler.default()
-    sequence, _ = compiler.compile(circuit, platform)
+    sequence, _ = compiler.compile(circuit, platform, qubit_map)
     return sequence
 
 
