@@ -38,26 +38,18 @@ def unroll_sequences(
     Returns:
         total_sequence (:class:`qibolab.pulses.PulseSequence`): Unrolled pulse sequence containing
             multiple measurements.
-        readout_map (dict): Map from original readout pulse serials to the unrolled readout pulse
-            serials. Required to construct the results dictionary that is returned after execution.
     """
     total_sequence = PulseSequence()
-    readout_map = defaultdict(list)
     channels = {pulse.channel for sequence in sequences for pulse in sequence}
     for sequence in sequences:
         total_sequence.extend(sequence)
-        # TODO: Fix unrolling results
-        for pulse in sequence:
-            if pulse.type is PulseType.READOUT:
-                readout_map[pulse.id].append(pulse.id)
-
         length = sequence.duration + relaxation_time
         pulses_per_channel = sequence.pulses_per_channel
         for channel in channels:
             delay = length - pulses_per_channel[channel].duration
             total_sequence.append(Delay(duration=delay, channel=channel))
 
-    return total_sequence, readout_map
+    return total_sequence
 
 
 @dataclass
@@ -285,23 +277,13 @@ class Platform:
         )
         log.info(f"Minimal execution time (unrolling): {time}")
 
-        # find readout pulses
-        ro_pulses = {
-            pulse.id: pulse.qubit
-            for sequence in sequences
-            for pulse in sequence.ro_pulses
-        }
-
         results = defaultdict(list)
         bounds = kwargs.get("bounds", self._controller.bounds)
         for b in batch(sequences, bounds):
-            sequence, readouts = unroll_sequences(b, options.relaxation_time)
+            sequence = unroll_sequences(b, options.relaxation_time)
             result = self._execute(sequence, options, **kwargs)
-            for serial, new_serials in readouts.items():
-                results[serial].extend(result[ser] for ser in new_serials)
-
-        for serial, qubit in ro_pulses.items():
-            results[qubit] = results[serial]
+            for key, value in result.items():
+                results[key].extend(value)
 
         return results
 
