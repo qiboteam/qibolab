@@ -5,6 +5,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
+from qibolab import MetaBackend
 from qibolab.backends import QibolabBackend
 
 
@@ -149,3 +150,7 @@ def test_superposition_for_all_qubits(connected_backend):
 
 # TODO: test_circuit_result_tensor
 # TODO: test_circuit_result_representation
+
+
+def test_metabackend(connected_backend):
+    assert MetaBackend().list_available()[connected_backend]
