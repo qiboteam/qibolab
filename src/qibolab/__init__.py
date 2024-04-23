@@ -85,7 +85,7 @@ def get_available_platforms() -> list[str]:
     """Returns the platforms found in the $QIBOLAB_PLATFORMS directory."""
     return [
         d.name
-        for d in get_platforms_path.iterdir()
+        for d in get_platforms_path().iterdir()
         if d.is_dir() and not d.name.startswith("_")
     ]
 
