@@ -110,10 +110,3 @@ class Controller(Instrument):
             (dict) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
-
-
-class InstrumentException(Exception):
-    def __init__(self, instrument: Instrument, message: str):
-        header = f"InstrumentException with {instrument.signature}"
-        full_msg = header + ": " + message
-        super().__init__(full_msg)
