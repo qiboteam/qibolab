@@ -178,6 +178,3 @@ def _sweep_duration(sweepers, qubits, sequence, parameters, relaxation_time):
             parameters[operation(pulse)].duration = dur
 
         _sweep_recursion(sweepers[1:], qubits, sequence, parameters, relaxation_time)
-
-
-#
