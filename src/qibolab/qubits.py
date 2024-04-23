@@ -3,8 +3,8 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
+from qibolab.channel import Channel
 from qibolab.couplers import Coupler
-from qibolab.instruments.channels import AcquisitionChannel, DCChannel, IQChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -82,10 +82,10 @@ class Qubit:
     iq_angle: float = 0.0
     kernel: Optional[np.ndarray] = field(default=None, repr=False)
 
-    readout: Optional[IQChannel] = None
-    acquisition: Optional[AcquisitionChannel] = None
-    drive: Optional[IQChannel] = None
-    flux: Optional[DCChannel] = None
+    readout: Optional[Channel] = None
+    acquisition: Optional[Channel] = None
+    drive: Optional[Channel] = None
+    flux: Optional[Channel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
