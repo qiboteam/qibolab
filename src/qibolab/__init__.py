@@ -105,7 +105,7 @@ class MetaBackend:
         from qibolab.backends import QibolabBackend
 
         platforms = get_available_platforms()
-        if platform in PLATFORMS:
+        if platform in platforms:
             return QibolabBackend(platform=platform)
         else:
             raise_error(
