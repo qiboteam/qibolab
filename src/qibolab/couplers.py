@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
 
-from qibolab.instruments.channels import DCChannel
+from qibolab.channel import Channel
 from qibolab.native import SingleQubitNatives
 
 QubitId = Union[str, int]
@@ -25,7 +25,7 @@ class Coupler:
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
     "For now this only contains the calibrated pulse to activate the coupler."
 
-    flux: Optional[DCChannel] = None
+    flux: Optional[Channel] = None
     "flux (:class:`qibolab.platforms.utils.Channel`): Channel used to send flux pulses to the qubit."
 
     # TODO: With topology or conectivity
