@@ -86,7 +86,7 @@ def get_available_platforms() -> list[str]:
     return [
         d.name
         for d in get_platforms_path().iterdir()
-        if d.is_dir() and not d.name.startswith("_")
+        if d.is_dir() and not (d.name.startswith("_") or d.name.startswith("."))
     ]
 
 
@@ -120,6 +120,6 @@ class MetaBackend:
             try:
                 MetaBackend.load(platform)
                 available_platforms[platform] = True
-            except ValueError:
+            except:
                 available_platforms[platform] = False
         return available_platforms

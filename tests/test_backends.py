@@ -151,6 +151,6 @@ def test_superposition_for_all_qubits(connected_backend):
 # TODO: test_circuit_result_tensor
 # TODO: test_circuit_result_representation
 
-
+@pytest.mark.qpu
 def test_metabackend(connected_backend):
     assert MetaBackend().list_available()[connected_backend]
