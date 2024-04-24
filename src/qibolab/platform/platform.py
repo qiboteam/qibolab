@@ -259,14 +259,19 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, options, sweepers):
+    def _execute(self, sequence, channel_config, options, sweepers):
         """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, options, sweepers
+                    self.qubits,
+                    self.couplers,
+                    sequence,
+                    channel_config,
+                    options,
+                    sweepers,
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -276,6 +281,7 @@ class Platform:
     def execute(
         self,
         sequences: List[PulseSequence],
+        channel_config: dict[str, ChannelConfig],
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[Any, list]:
@@ -323,7 +329,7 @@ class Platform:
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, options, sweepers)
+            result = self._execute(sequence, channel_config, options, sweepers)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
