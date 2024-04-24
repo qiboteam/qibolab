@@ -56,17 +56,16 @@ def unroll_sequences(
     readout_map = defaultdict(list)
     channels = {pulse.channel for sequence in sequences for pulse in sequence}
     for sequence in sequences:
-        total_sequence.extend(sequence)
+        total_sequence += sequence
         # TODO: Fix unrolling results
         for pulse in sequence:
             if pulse.type is PulseType.READOUT:
                 readout_map[pulse.id].append(pulse.id)
 
         length = sequence.duration + relaxation_time
-        pulses_per_channel = sequence.pulses_per_channel
         for channel in channels:
-            delay = length - pulses_per_channel[channel].duration
-            total_sequence.append(Delay(duration=delay, channel=channel))
+            delay = length - sequence.channel_duration(channel)
+            total_sequence[channel].append(Delay(duration=delay, channel=channel))
 
     return total_sequence, readout_map
 
@@ -197,7 +196,7 @@ class Platform:
                             channel = getattr(
                                 self.qubits[pulse.qubit], pulse.type.name.lower()
                             ).name
-                        new_sequence.append(replace(pulse, channel=channel))
+                        new_sequence[channel].append(pulse)
                     setattr(gates, fld.name, new_sequence)
 
     def __str__(self):
@@ -259,7 +258,7 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, channel_config, options, sweepers):
+    def _execute(self, sequence, channel_cfg, options, sweepers):
         """Executes sequence on the controllers."""
         result = {}
 
@@ -269,7 +268,7 @@ class Platform:
                     self.qubits,
                     self.couplers,
                     sequence,
-                    channel_config,
+                    channel_cfg,
                     options,
                     sweepers,
                 )
@@ -281,7 +280,7 @@ class Platform:
     def execute(
         self,
         sequences: List[PulseSequence],
-        channel_config: dict[str, ChannelConfig],
+        channel_cfg: dict[str, ChannelConfig],
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[Any, list]:
@@ -311,8 +310,13 @@ class Platform:
                 sweeper = [Sweeper(parameter, parameter_range, [pulse])]
                 platform.execute([sequence], ExecutionParameters(), [sweeper])
         """
+        if channel_cfg:
+            raise ValueError("Currently, overriding channel configs is not supported.")
         if sweepers is None:
             sweepers = []
+
+        if options.nshots is None:
+            options = replace(options, nshots=self.settings.nshots)
 
         options = self.settings.fill(options)
 
@@ -329,7 +333,7 @@ class Platform:
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, channel_config, options, sweepers)
+            result = self._execute(sequence, channel_cfg, options, sweepers)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
