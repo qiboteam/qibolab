@@ -285,7 +285,7 @@ class Platform:
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[Any, list]:
-        """Execute a pulse sequences.
+        """Execute pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values
         of sweeped parameters.
