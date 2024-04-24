@@ -57,12 +57,12 @@ class IQChannelConfig:
 
     frequency: float
     """The carrier frequency of the channel."""
-    lo_config: Optional[LOConfig] = None
+    lo_config: Optional[LOConfig]
     """Configuration for the corresponding LO.
 
     None if the channel does not use an LO.
     """
-    mixer_config: Optional[IQMixerConfig] = None
+    mixer_config: Optional[IQMixerConfig]
     """Configuration for the corresponding IQ mixer.
 
     None if the channel does not feature a mixer.
