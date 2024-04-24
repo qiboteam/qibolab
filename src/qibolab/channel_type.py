@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from typing import Protocol
 
 from .channel_config import ChannelConfig
 
 
-@dataclass(frozen=True)
-class Channel:
+class Channel(Protocol):
     name: str
     config: ChannelConfig
