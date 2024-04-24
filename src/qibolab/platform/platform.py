@@ -215,14 +215,14 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, sequence, options, **kwargs):
+    def _execute(self, sequence, channel_config, options, **kwargs):
         """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, options
+                    self.qubits, self.couplers, sequence, channel_config, options
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -251,7 +251,7 @@ class Platform:
         )
         log.info(f"Minimal execution time (sequence): {time}")
 
-        return self._execute(sequence, options, **kwargs)
+        return self._execute(sequence, channel_config, options, **kwargs)
 
     @property
     def _controller(self):
@@ -305,7 +305,7 @@ class Platform:
         bounds = kwargs.get("bounds", self._controller.bounds)
         for b in batch(sequences, bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, options, **kwargs)
+            result = self._execute(sequence, channel_config, options, **kwargs)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
@@ -365,14 +365,19 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.sweep(
-                    self.qubits, self.couplers, sequence, options, *sweepers
+                    self.qubits,
+                    self.couplers,
+                    sequence,
+                    channel_config,
+                    options,
+                    *sweepers,
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
         return result
 
-    def __call__(self, sequence, options):
-        return self.execute_pulse_sequence(sequence, options)
+    def __call__(self, sequence, channel_config, options):
+        return self.execute_pulse_sequence(sequence, channel_config, options)
 
     def get_qubit(self, qubit):
         """Return the name of the physical qubit corresponding to a logical
