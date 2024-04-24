@@ -380,9 +380,9 @@ class Zurich(Controller):
         self.create_exp(qubits, options)
 
     # pylint: disable=W0221
-    def play(self, qubits, couplers, sequence, options):
+    def play(self, qubits, couplers, sequence, channel_cfg, options):
         """Play pulse sequence."""
-        return self.sweep(qubits, couplers, sequence, options)
+        return self.sweep(qubits, couplers, sequence, channel_cfg, options)
 
     def sequence_zh(
         self, sequence: PulseSequence, qubits: dict[str, Qubit]
@@ -688,7 +688,15 @@ class Zurich(Controller):
 
         exp.play(signal=channel_name, pulse=pulse.zhpulse, **play_parameters)
 
-    def sweep(self, qubits, couplers, sequence: PulseSequence, options, *sweepers):
+    def sweep(
+        self,
+        qubits,
+        couplers,
+        sequence: PulseSequence,
+        channel_cfg,
+        options,
+        *sweepers,
+    ):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}

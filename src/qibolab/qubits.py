@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.channel_type import Channel
+from qibolab.channel import Channel
 from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
