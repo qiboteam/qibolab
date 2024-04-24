@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-import laboneq.simple as lo
+import laboneq.simple as laboneq
 import numpy as np
 from laboneq.dsl.experiment.pulse_library import (
     sampled_pulse_complex,
@@ -19,14 +19,14 @@ def select_pulse(pulse: Pulse):
     """Return laboneq pulse object corresponding to the given qibolab pulse."""
     if isinstance(pulse.envelope, Rectangular):
         can_compress = pulse.type is not PulseType.READOUT
-        return lo.pulse_library.const(
+        return laboneq.pulse_library.const(
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             amplitude=pulse.amplitude,
             can_compress=can_compress,
         )
     if isinstance(pulse.envelope, Gaussian):
         sigma = pulse.envelope.rel_sigma
-        return lo.pulse_library.gaussian(
+        return laboneq.pulse_library.gaussian(
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             amplitude=pulse.amplitude,
             sigma=2 / sigma,
@@ -37,7 +37,7 @@ def select_pulse(pulse: Pulse):
         sigma = pulse.envelope.rel_sigma
         width = pulse.envelope.width
         can_compress = pulse.type is not PulseType.READOUT
-        return lo.pulse_library.gaussian_square(
+        return laboneq.pulse_library.gaussian_square(
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,
             amplitude=pulse.amplitude,
@@ -49,7 +49,7 @@ def select_pulse(pulse: Pulse):
     if isinstance(pulse.envelope, Drag):
         sigma = pulse.envelope.rel_sigma
         beta = pulse.envelope.beta
-        return lo.pulse_library.drag(
+        return laboneq.pulse_library.drag(
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             amplitude=pulse.amplitude,
             sigma=2 / sigma,
@@ -78,15 +78,15 @@ class ZhPulse:
         """Qibolab pulse."""
         self.zhpulse = select_pulse(pulse)
         """Laboneq pulse."""
-        self.zhsweepers: list[tuple[Parameter, lo.SweepParameter]] = []
+        self.zhsweepers: list[tuple[Parameter, laboneq.SweepParameter]] = []
         """Parameters to be swept, along with their laboneq sweep parameter
         definitions."""
-        self.delay_sweeper: Optional[lo.SweepParameter] = None
+        self.delay_sweeper: Optional[laboneq.SweepParameter] = None
         """Laboneq sweep parameter if the delay of the pulse should be
         swept."""
 
     # pylint: disable=R0903,E1101
-    def add_sweeper(self, param: Parameter, sweeper: lo.SweepParameter):
+    def add_sweeper(self, param: Parameter, sweeper: laboneq.SweepParameter):
         """Add sweeper to list of sweepers associated with this pulse."""
         if param in {
             Parameter.amplitude,

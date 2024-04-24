@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Any, Optional
 
-import laboneq.simple as lo
+import laboneq.simple as laboneq
 import numpy as np
 from qibo.config import log
 
@@ -35,14 +35,14 @@ COMPILER_SETTINGS = {
 }
 """Translating to Zurich ExecutionParameters."""
 ACQUISITION_TYPE = {
-    AcquisitionType.INTEGRATION: lo.AcquisitionType.INTEGRATION,
-    AcquisitionType.RAW: lo.AcquisitionType.RAW,
-    AcquisitionType.DISCRIMINATION: lo.AcquisitionType.DISCRIMINATION,
+    AcquisitionType.INTEGRATION: laboneq.AcquisitionType.INTEGRATION,
+    AcquisitionType.RAW: laboneq.AcquisitionType.RAW,
+    AcquisitionType.DISCRIMINATION: laboneq.AcquisitionType.DISCRIMINATION,
 }
 
 AVERAGING_MODE = {
-    AveragingMode.CYCLIC: lo.AveragingMode.CYCLIC,
-    AveragingMode.SINGLESHOT: lo.AveragingMode.SINGLE_SHOT,
+    AveragingMode.CYCLIC: laboneq.AveragingMode.CYCLIC,
+    AveragingMode.SINGLESHOT: laboneq.AveragingMode.SINGLE_SHOT,
 }
 
 
@@ -86,7 +86,7 @@ class Zurich(Controller):
 
         self.signal_map = {}
         "Signals to lines mapping"
-        self.calibration = lo.Calibration()
+        self.calibration = laboneq.Calibration()
         "Zurich calibration object)"
 
         self.device_setup = device_setup
@@ -129,7 +129,7 @@ class Zurich(Controller):
         if self.is_connected is False:
             # To fully remove logging #configure_logging=False
             # I strongly advise to set it to 20 to have time estimates of the experiment duration!
-            self.session = lo.Session(self.device_setup, log_level=20)
+            self.session = laboneq.Session(self.device_setup, log_level=20)
             _ = self.session.connect()
             self.is_connected = True
 
@@ -192,12 +192,12 @@ class Zurich(Controller):
             ]
         )
         self.calibration[f"/logical_signal_groups/q{q}/measure_line"] = (
-            lo.SignalCalibration(
-                oscillator=lo.Oscillator(
+            laboneq.SignalCalibration(
+                oscillator=laboneq.Oscillator(
                     frequency=intermediate_frequency,
-                    modulation_type=lo.ModulationType.SOFTWARE,
+                    modulation_type=laboneq.ModulationType.SOFTWARE,
                 ),
-                local_oscillator=lo.Oscillator(
+                local_oscillator=laboneq.Oscillator(
                     frequency=int(qubit.readout.local_oscillator.frequency),
                 ),
                 range=qubit.readout.power_range,
@@ -212,9 +212,9 @@ class Zurich(Controller):
             ]
         )
 
-        oscillator = lo.Oscillator(
+        oscillator = laboneq.Oscillator(
             frequency=intermediate_frequency,
-            modulation_type=lo.ModulationType.SOFTWARE,
+            modulation_type=laboneq.ModulationType.SOFTWARE,
         )
         threshold = None
 
@@ -227,7 +227,7 @@ class Zurich(Controller):
                 threshold = qubit.threshold
 
         self.calibration[f"/logical_signal_groups/q{q}/acquire_line"] = (
-            lo.SignalCalibration(
+            laboneq.SignalCalibration(
                 oscillator=oscillator,
                 range=qubit.feedback.power_range,
                 port_delay=self.time_of_flight * NANO_TO_SECONDS,
@@ -242,12 +242,12 @@ class Zurich(Controller):
             f"q{q}"
         ].logical_signals["drive_line"]
         self.calibration[f"/logical_signal_groups/q{q}/drive_line"] = (
-            lo.SignalCalibration(
-                oscillator=lo.Oscillator(
+            laboneq.SignalCalibration(
+                oscillator=laboneq.Oscillator(
                     frequency=intermediate_frequency,
-                    modulation_type=lo.ModulationType.HARDWARE,
+                    modulation_type=laboneq.ModulationType.HARDWARE,
                 ),
-                local_oscillator=lo.Oscillator(
+                local_oscillator=laboneq.Oscillator(
                     frequency=int(qubit.drive.local_oscillator.frequency),
                 ),
                 range=qubit.drive.power_range,
@@ -263,7 +263,7 @@ class Zurich(Controller):
             f"q{q}"
         ].logical_signals["flux_line"]
         self.calibration[f"/logical_signal_groups/q{q}/flux_line"] = (
-            lo.SignalCalibration(
+            laboneq.SignalCalibration(
                 range=qubit.flux.power_range,
                 port_delay=None,
                 delay_signal=0,
@@ -278,7 +278,7 @@ class Zurich(Controller):
             f"qc{c}"
         ].logical_signals["flux_line"]
         self.calibration[f"/logical_signal_groups/qc{c}/flux_line"] = (
-            lo.SignalCalibration(
+            laboneq.SignalCalibration(
                 range=coupler.flux.power_range,
                 port_delay=None,
                 delay_signal=0,
@@ -435,8 +435,8 @@ class Zurich(Controller):
             options, acquisition_type=acquisition_type, averaging_mode=averaging_mode
         )
 
-        signals = [lo.ExperimentSignal(name) for name in self.signal_map.keys()]
-        exp = lo.Experiment(
+        signals = [laboneq.ExperimentSignal(name) for name in self.signal_map.keys()]
+        exp = laboneq.Experiment(
             uid="Sequence",
             signals=signals,
         )
@@ -448,7 +448,7 @@ class Zurich(Controller):
         self.experiment = exp
 
     def _contexts(
-        self, exp: lo.Experiment, exp_options: ExecutionParameters
+        self, exp: laboneq.Experiment, exp_options: ExecutionParameters
     ) -> list[tuple[Optional[Sweeper], Any]]:
         """To construct a laboneq experiment, we need to first define a certain
         sequence of nested contexts.
@@ -491,7 +491,7 @@ class Zurich(Controller):
     def _populate_exp(
         self,
         qubits: dict[str, Qubit],
-        exp: lo.Experiment,
+        exp: laboneq.Experiment,
         exp_options: ExecutionParameters,
         contexts,
     ):
@@ -507,26 +507,26 @@ class Zurich(Controller):
                 self.set_instrument_nodes_for_nt_sweep(exp, sweeper)
             self._populate_exp(qubits, exp, exp_options, contexts[1:])
 
-    def set_calibration_for_rt_sweep(self, exp: lo.Experiment) -> None:
+    def set_calibration_for_rt_sweep(self, exp: laboneq.Experiment) -> None:
         """Set laboneq calibration of parameters that are to be swept in real-
         time."""
         if self.processed_sweeps:
-            calib = lo.Calibration()
+            calib = laboneq.Calibration()
             for ch in (
                 set(self.sequence.keys()) | self.processed_sweeps.channels_with_sweeps()
             ):
                 for param, sweep_param in self.processed_sweeps.sweeps_for_channel(ch):
                     if param is Parameter.frequency:
-                        calib[ch] = lo.SignalCalibration(
-                            oscillator=lo.Oscillator(
+                        calib[ch] = laboneq.SignalCalibration(
+                            oscillator=laboneq.Oscillator(
                                 frequency=sweep_param,
-                                modulation_type=lo.ModulationType.HARDWARE,
+                                modulation_type=laboneq.ModulationType.HARDWARE,
                             )
                         )
             exp.set_calibration(calib)
 
     def set_instrument_nodes_for_nt_sweep(
-        self, exp: lo.Experiment, sweeper: Sweeper
+        self, exp: laboneq.Experiment, sweeper: Sweeper
     ) -> None:
         """In some cases there is no straightforward way to sweep a parameter.
 
@@ -617,9 +617,9 @@ class Zurich(Controller):
                     if (
                         qubit.kernel is not None
                         and exp_options.acquisition_type
-                        == lo.AcquisitionType.DISCRIMINATION
+                        == laboneq.AcquisitionType.DISCRIMINATION
                     ):
-                        weight = lo.pulse_library.sampled_pulse_complex(
+                        weight = laboneq.pulse_library.sampled_pulse_complex(
                             samples=qubit.kernel * np.exp(1j * qubit.iq_angle),
                         )
 
@@ -627,9 +627,9 @@ class Zurich(Controller):
                         if i == 0:
                             if (
                                 exp_options.acquisition_type
-                                == lo.AcquisitionType.DISCRIMINATION
+                                == laboneq.AcquisitionType.DISCRIMINATION
                             ):
-                                weight = lo.pulse_library.sampled_pulse_complex(
+                                weight = laboneq.pulse_library.sampled_pulse_complex(
                                     samples=np.ones(
                                         [
                                             int(
@@ -642,7 +642,7 @@ class Zurich(Controller):
                                 )
                                 weights[q] = weight
                             else:
-                                weight = lo.pulse_library.const(
+                                weight = laboneq.pulse_library.const(
                                     length=round(
                                         pulse.pulse.duration * NANO_TO_SECONDS, 9
                                     )
@@ -711,7 +711,7 @@ class Zurich(Controller):
             if sweeper.parameter in {Parameter.frequency, Parameter.amplitude}:
                 for pulse in sweeper.pulses:
                     if pulse.type is PulseType.READOUT:
-                        self.acquisition_type = lo.AcquisitionType.SPECTROSCOPY
+                        self.acquisition_type = laboneq.AcquisitionType.SPECTROSCOPY
 
         self.experiment_flow(qubits, couplers, sequence, options)
         self.run_exp()
