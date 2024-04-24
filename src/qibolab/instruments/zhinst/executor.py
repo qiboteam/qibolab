@@ -12,7 +12,6 @@ from qibo.config import log
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
@@ -47,13 +46,6 @@ AVERAGING_MODE = {
 
 
 @dataclass
-class ZhPort(Port):
-    name: tuple[str, str]
-    offset: float = 0.0
-    power_range: int = 0
-
-
-@dataclass
 class SubSequence:
     """A subsequence is a slice (in time) of a sequence that contains at most
     one measurement per qubit.
@@ -78,8 +70,6 @@ class SubSequence:
 class Zurich(Controller):
     """Driver for a collection of ZI instruments that are automatically
     synchronized via ZSync protocol."""
-
-    PortType = ZhPort
 
     def __init__(self, name, device_setup, time_of_flight=0.0, smearing=0.0):
         super().__init__(name, None)
