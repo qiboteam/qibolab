@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 import networkx as nx
 from qibo.config import log, raise_error
 
-from .channel_config import ChannelConfig
 from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
@@ -232,7 +231,6 @@ class Platform:
     def execute_pulse_sequence(
         self,
         sequence: PulseSequence,
-        channel_config: dict[str, ChannelConfig],
         options: ExecutionParameters,
         **kwargs,
     ):
@@ -272,7 +270,6 @@ class Platform:
     def execute_pulse_sequences(
         self,
         sequences: List[PulseSequence],
-        channel_config: dict[str, ChannelConfig],
         options: ExecutionParameters,
         **kwargs,
     ):
@@ -317,7 +314,6 @@ class Platform:
     def sweep(
         self,
         sequence: PulseSequence,
-        channel_config: dict[str, ChannelConfig],
         options: ExecutionParameters,
         *sweepers: Sweeper,
     ):
