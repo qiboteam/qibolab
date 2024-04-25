@@ -11,7 +11,7 @@ from qibo.config import log
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.backends.generic import make_comp_basis
-from qibolab.instruments.emulator.backends.qutip_backend import Qutip_Simulator
+from qibolab.instruments.emulator.backends.qutip_backend import QutipSimulator
 from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, ReadoutPulse
@@ -63,7 +63,7 @@ class PulseSimulator(Controller):
         self.model_config = model_config
         self.sim_opts = sim_opts
 
-        self.all_simulation_backends = {"Qutip": Qutip_Simulator}
+        self.all_simulation_backends = {"Qutip": QutipSimulator}
 
         self.available_sweep_parameters = {
             Parameter.amplitude,

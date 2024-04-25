@@ -10,7 +10,7 @@ from qibolab.instruments.emulator.backends.generic import (
     print_Hamiltonian,
 )
 from qibolab.instruments.emulator.backends.qutip_backend import (
-    Qutip_Simulator,
+    QutipSimulator,
     extend_op_dim,
     function_from_array,
 )
@@ -297,14 +297,14 @@ def test_op_from_instruction():
 @pytest.mark.parametrize("model", MODELS)
 def test_update_sim_opts(model):
     model_config = model.generate_model_config()
-    simulation_backend = Qutip_Simulator(model_config)
+    simulation_backend = QutipSimulator(model_config)
     sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
 
 
 @pytest.mark.parametrize("model", MODELS)
 def test_make_arbitrary_state(model):
     model_config = model.generate_model_config()
-    simulation_backend = Qutip_Simulator(model_config)
+    simulation_backend = QutipSimulator(model_config)
     zerostate = simulation_backend.psi0.copy()
     dim = zerostate.shape[0]
     qibo_statevector = np.zeros(dim)
@@ -324,7 +324,7 @@ def test_make_arbitrary_state(model):
 @pytest.mark.parametrize("model", MODELS)
 def test_state_from_basis_vector_exception(model):
     model_config = model.generate_model_config()
-    simulation_backend = Qutip_Simulator(model_config)
+    simulation_backend = QutipSimulator(model_config)
     basis_vector0 = [0 for i in range(simulation_backend.nqubits)]
     cbasis_vector0 = [0 for i in range(simulation_backend.ncouplers)]
     simulation_backend.state_from_basis_vector(basis_vector0, None)
