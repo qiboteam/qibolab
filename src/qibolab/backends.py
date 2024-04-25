@@ -1,5 +1,4 @@
 from collections import deque
-from typing import Callable, Optional
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -121,10 +120,7 @@ class QibolabBackend(NumpyBackend):
 
         # TODO: Maybe these loops can be parallelized
         sequences, measurement_maps = zip(
-            *(
-                self.compiler.compile(circuit, self.platform)
-                for circuit in circuits
-            )
+            *(self.compiler.compile(circuit, self.platform) for circuit in circuits)
         )
 
         if not self.platform.is_connected:
