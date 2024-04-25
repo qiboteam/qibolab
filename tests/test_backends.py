@@ -5,8 +5,7 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab import MetaBackend
-from qibolab import create_platform
+from qibolab import MetaBackend, create_platform
 from qibolab.backends import QibolabBackend
 
 
