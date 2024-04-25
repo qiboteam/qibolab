@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field, fields
 from typing import ClassVar, Dict, Optional, Union
 
+DIGITAL_DELAY = 57
+DIGITAL_BUFFER = 18
+"""Default calibration parameters for digital pulses.
+
+https://docs.quantum-machines.co/1.1.7/qm-qua-sdk/docs/Guides/octave/#calibrating-the-digital-pulse
+
+Digital markers are used for LO triggering.
+"""
+
 
 @dataclass
 class QMPort:
@@ -140,11 +149,31 @@ class OctaveOutput(QMOutput):
 
     Can be external or internal.
     """
-    output_mode: str = field(default="always_on", metadata={"config": "output_mode"})
+    output_mode: str = field(default="triggered", metadata={"config": "output_mode"})
     """Can be: "always_on" / "always_off"/ "triggered" / "triggered_reversed"."""
+    digital_delay: int = DIGITAL_DELAY
+    """Delay for digital output channel."""
+    digital_buffer: int = DIGITAL_BUFFER
+    """Buffer for digital output channel."""
 
     opx_port: Optional[OPXOutput] = None
     """OPX+ port that is connected to the Octave port."""
+
+    @property
+    def digital_inputs(self):
+        """Generates `digitalInputs` entry for elements in QM config.
+
+        Digital markers are used to switch LOs on in triggered mode.
+        """
+        opx = self.opx_port.i.device
+        number = self.opx_port.i.number
+        return {
+            "output_switch": {
+                "port": (opx, number),
+                "delay": self.digital_delay,
+                "buffer": self.digital_buffer,
+            }
+        }
 
 
 @dataclass

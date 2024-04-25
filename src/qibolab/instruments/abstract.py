@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Optional
 
-from qibolab.instruments.port import Port
+from qibolab.unrolling import Bounds
+
+from .port import Port
 
 InstrumentId = str
 
@@ -59,6 +61,16 @@ class Controller(Instrument):
     def __init__(self, name, address):
         super().__init__(name, address)
         self._ports = {}
+        self.bounds: Bounds = Bounds(0, 0, 0)
+        """Estimated limitations of the device memory."""
+
+    def setup(self, bounds):
+        """Set unrolling batch bounds."""
+        self.bounds = Bounds(**bounds)
+
+    def dump(self):
+        """Dump unrolling batch bounds."""
+        return {"bounds": asdict(self.bounds)}
 
     @property
     @abstractmethod
@@ -89,22 +101,6 @@ class Controller(Instrument):
             (Dict[ResultType]) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
-
-    def split_batches(self, sequences):  # pragma: no cover
-        """Split sequences to batches each of which can be unrolled and played
-        as a single sequence.
-
-        Args:
-            sequence (list): List of :class:`qibolab.pulses.PulseSequence` to be played.
-
-        Returns:
-            Iterator of batches that can be unrolled in a single one.
-            Default will return all sequences as a single batch.
-        """
-        raise RuntimeError(
-            f"Instrument of type {type(self)} does not support "
-            "batch splitting for sequence unrolling."
-        )
 
     @abstractmethod
     def sweep(self, *args, **kwargs):

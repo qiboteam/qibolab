@@ -50,18 +50,26 @@ class QMConfig:
             is_octave = isinstance(port, (OctaveOutput, OctaveInput))
             controllers = self.octaves if is_octave else self.controllers
             if port.device not in controllers:
-                controllers[port.device] = {}
-                if not is_octave:
-                    controllers[port.device]["analog_inputs"] = DEFAULT_INPUTS
+                if is_octave:
+                    controllers[port.device] = {}
+                else:
+                    controllers[port.device] = {
+                        "analog_inputs": DEFAULT_INPUTS,
+                        "digital_outputs": {},
+                    }
 
             device = controllers[port.device]
             if port.key in device:
                 device[port.key].update(port.config)
             else:
                 device[port.key] = port.config
+
             if is_octave:
-                device["connectivity"] = port.opx_port.i.device
+                con = port.opx_port.i.device
+                number = port.opx_port.i.number
+                device["connectivity"] = con
                 self.register_port(port.opx_port)
+                self.controllers[con]["digital_outputs"][number] = {}
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -116,6 +124,7 @@ class QMConfig:
             else:
                 self.elements[f"drive{qubit.name}"] = {
                     "RF_inputs": {"port": qubit.drive.port.pair},
+                    "digitalInputs": qubit.drive.port.digital_inputs,
                 }
             self.elements[f"drive{qubit.name}"].update(
                 {
@@ -168,9 +177,11 @@ class QMConfig:
                     }
                 ]
             else:
+
                 self.elements[f"readout{qubit.name}"] = {
                     "RF_inputs": {"port": qubit.readout.port.pair},
                     "RF_outputs": {"port": qubit.feedback.port.pair},
+                    "digitalInputs": qubit.readout.port.digital_inputs,
                 }
             self.elements[f"readout{qubit.name}"].update(
                 {
@@ -252,6 +263,7 @@ class QMConfig:
                     "operation": "control",
                     "length": pulse.duration,
                     "waveforms": {"I": serial_i, "Q": serial_q},
+                    "digital_marker": "ON",
                 }
                 # register drive pulse in elements
                 self.elements[f"drive{qubit.name}"]["operations"][

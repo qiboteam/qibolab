@@ -2,8 +2,9 @@
 
 import json
 
-from qblox_instruments.qcodes_drivers.cluster import Cluster as QbloxCluster
-from qblox_instruments.qcodes_drivers.qcm_qrm import QcmQrm as QbloxQrmQcm
+from qblox_instruments.native.generic_func import SequencerStates
+from qblox_instruments.qcodes_drivers.cluster import Cluster
+from qblox_instruments.qcodes_drivers.module import Module
 from qibo.config import log
 
 from qibolab.instruments.qblox.module import ClusterModule
@@ -130,7 +131,7 @@ class QcmRf(ClusterModule):
         >>> qcm_module = QcmRf(name="qcm_rf", address="192.168.1.100:2", cluster=cluster_instance)
         """
         super().__init__(name, address)
-        self.device: QbloxQrmQcm = None
+        self.device: Module = None
         self.settings = {}
 
         self._debug_folder: str = ""
@@ -165,7 +166,7 @@ class QcmRf(ClusterModule):
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out1", "IQ")
         self.device.sequencers[self.DEFAULT_SEQUENCERS["o2"]].set("connect_out0", "off")
 
-    def connect(self, cluster: QbloxCluster = None):
+    def connect(self, cluster: Cluster = None):
         """Connects to the instrument using the instrument settings in the
         runcard.
 
@@ -636,7 +637,7 @@ class QcmRf(ClusterModule):
 
                 body_block += final_reset_block
 
-                footer_block = Block("cleaup")
+                footer_block = Block("cleanup")
                 footer_block.append(f"stop")
 
                 # wrap pulses block in sweepers loop blocks
@@ -746,10 +747,10 @@ class QcmRf(ClusterModule):
         if not self.is_connected:
             return
         for sequencer_number in self._used_sequencers_numbers:
-            state = self.device.get_sequencer_state(sequencer_number)
-            if state.status != "STOPPED":
+            status = self.device.get_sequencer_status(sequencer_number)
+            if status.state is not SequencerStates.STOPPED:
                 log.warning(
-                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {state}"
+                    f"Device {self.device.sequencers[sequencer_number].name} did not stop normally\nstate: {status}"
                 )
 
         self.device.stop_sequencer()

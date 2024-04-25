@@ -275,10 +275,16 @@ def test_pulses_pulseshape_sampling_rate(shape):
 def test_pulseshape_eval():
     shape = PulseShape.eval("Rectangular()")
     assert isinstance(shape, Rectangular)
-    shape = PulseShape.eval("Drag(5, 1)")
-    assert isinstance(shape, Drag)
     with pytest.raises(ValueError):
         shape = PulseShape.eval("Ciao()")
+
+
+@pytest.mark.parametrize("rel_sigma,beta", [(5, 1), (5, -1), (3, -0.03), (4, 0.02)])
+def test_drag_shape_eval(rel_sigma, beta):
+    shape = PulseShape.eval(f"Drag({rel_sigma}, {beta})")
+    assert isinstance(shape, Drag)
+    assert shape.rel_sigma == rel_sigma
+    assert shape.beta == beta
 
 
 def test_raise_shapeiniterror():
