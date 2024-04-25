@@ -1,4 +1,5 @@
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -190,5 +191,6 @@ def test_superposition_for_all_qubits(connected_backend):
 # TODO: test_circuit_result_representation
 
 
-def test_metabackend(connected_backend):
-    assert MetaBackend().list_available()[connected_backend]
+def test_metabackend():
+    available_platforms = {d.name: True for d in Path("tests/dummy_qrc/").iterdir()}
+    assert MetaBackend().list_available() == available_platforms

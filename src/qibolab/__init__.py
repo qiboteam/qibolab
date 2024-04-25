@@ -115,7 +115,7 @@ class MetaBackend:
                 available_platforms[platform] = True
             except:
                 available_platforms[platform] = False
-        if len(available_platforms):
+        if len(available_platforms) == 0:
             raise_error(
                 RuntimeError,
                 f"No valid platform found in the QIBOLAB_PLATFORMS directory: {os.environ.get(PLATFORMS)}. Please make sure that each platform has its corresponding `platform.py` file.",
