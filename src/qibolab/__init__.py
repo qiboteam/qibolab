@@ -48,7 +48,10 @@ def create_platform(name, path: Path = None) -> Platform:
 
     platform = get_platforms_path() / f"{name}"
     if not platform.exists():
-        raise_error(ValueError, f"Platform {name} does not exist.")
+        raise_error(
+            ValueError,
+            f"Platform {name} does not exist. Please pick one within the platforms found available {get_available_platforms()}.",
+        )
 
     spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
     module = importlib.util.module_from_spec(spec)
@@ -86,7 +89,8 @@ def get_available_platforms() -> list[str]:
     return [
         d.name
         for d in get_platforms_path().iterdir()
-        if d.is_dir() and not (d.name.startswith("_") or d.name.startswith("."))
+        if d.is_dir()
+        and Path(f"{os.environ.get(PLATFORMS)}/{d.name}/platform.py") in d.iterdir()
     ]
 
 
@@ -104,14 +108,7 @@ class MetaBackend:
         """
         from qibolab.backends import QibolabBackend
 
-        platforms = get_available_platforms()
-        if platform in platforms:
-            return QibolabBackend(platform=platform)
-        else:
-            raise_error(
-                ValueError,
-                f"Unsupported platform, please use one among {platforms}.",
-            )
+        return QibolabBackend(platform=platform)
 
     def list_available(self) -> dict:
         """Lists all the available qibolab platforms."""
@@ -122,4 +119,9 @@ class MetaBackend:
                 available_platforms[platform] = True
             except:
                 available_platforms[platform] = False
+        if len(available_platforms):
+            raise_error(
+                RuntimeError,
+                f"No valid platform found in the QIBOLAB_PLATFORMS directory: {os.environ.get(PLATFORMS)}. Please make sure that each platform has its corresponding `platform.py` file.",
+            )
         return available_platforms
