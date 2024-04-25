@@ -1,44 +1,34 @@
 # pylint: disable=too-many-lines
-"""
-Instrument for using the Keysight M8195A AWG.
-"""
+"""Instrument for using the Keysight M8195A AWG."""
 
-import ipaddress  # pylint: disable=unused-import
 import os.path
 import socket
 
 
 class SocketInstrumentError(Exception):
-    """
-    A class to handle errors related to socket instrument
-    """
+    """A class to handle errors related to socket instrument."""
+
     pass  # pylint: disable=unnecessary-pass
 
 
 class GranularityError(Exception):
-    """
-    Waveform Granularity Exception class.
-    """
+    """Waveform Granularity Exception class."""
 
     def __init__(self):
         pass
 
     def __str__(self):
-        return 'Must be a multiplication of Granularity'
+        return "Must be a multiplication of Granularity"
 
 
 class M8195Connection:
-    """
-    A class related to M8195A's connection
-    """
+    """A class related to M8195A's connection."""
+
     def __init__(self, ip_address, port=5025, time_out=10):
-        """
-        Opens up a socket connection between an instrument and your PC
-        :param ip_address: ip address of the instrument
-        :param port: [Optional] socket port of the instrument (default 5025)
-        :return: Returns the
-        socket session.
-        """
+        """Opens up a socket connection between an instrument and your PC
+        :param ip_address: ip address of the instrument :param port: [Optional]
+        socket port of the instrument (default 5025) :return: Returns the
+        socket session."""
         self.open_session()  # initially was self.open_session
         self.port = port
         self.ip_address = ip_address
@@ -47,47 +37,49 @@ class M8195Connection:
         if ip_address.ip_address(self.ip_address):
             print(f"connecting to IPv4 address: {self.ip_address}")
         else:
-            raise ValueError('Invalid IP address')
+            raise ValueError("Invalid IP address")
 
         self.open_session = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.open_session.settimeout(self.time_out)
 
     def open_session(self):  # pylint: disable=method-hidden
         """Opens the socket connection :return:"""
-        print('Opening socket session and connection ...')
-        print('connecting to M8195A ...')
+        print("Opening socket session and connection ...")
+        print("connecting to M8195A ...")
 
         try:
             self.open_session.connect((self.ip_address, self.port))
-            print('connected to M8195A ...')
+            print("connected to M8195A ...")
         except OSError:
-            print('Failed to connect to the instrument, please check your IP address')
+            print("Failed to connect to the instrument, please check your IP address")
 
         #  setblocking(1) = socket blocking -> it will wait for the operation to complete
         #  setblocking(0) = socket non-blocking -> it will never wait for the operation to complete
         self.open_session.setblocking(True)
 
-        print('*IDN?: ')
+        print("*IDN?: ")
         inst_query_idn = self.query("*idn?", error_check=False)
         print(inst_query_idn)
         if "Keysight Technologies,M8195A" in inst_query_idn:
-            print('success!')
+            print("success!")
         else:
             self.close_session()
-            raise NameError('could not communicate with device, or not a Keysight Technologies, M8195A')
+            raise NameError(
+                "could not communicate with device, or not a Keysight Technologies, M8195A"
+            )
 
     def close_session(self):
-        """
-        Closes the socket connection :return: TCPIP socket connection.
-        """
+        """Closes the socket connection :return: TCPIP socket connection."""
         print("Closing socket session and connection ...")
         self.open_session.shutdown(socket.SHUT_RDWR)
         self.open_session.close()
 
     def error_check(self):
-        """
-        Checks an instrument for errors, print them out, and clears error queue. Raises SocketInstrumentError with the
-        info of the error encountered.
+        """Checks an instrument for errors, print them out, and clears error
+        queue.
+
+        Raises SocketInstrumentError with the info of the error
+        encountered.
         :return: Returns True if any errors are encountered
         """
         err = []
@@ -103,15 +95,14 @@ class M8195Connection:
         return response
 
     def query(self, command, error_check=False):
-        """
-        Sends a query to an instrument and reads the output buffer immediately afterward
-        :param command: text containing an instrument command (Documented SCPI); Should end with "?"
-        :param error_check: [Optional] Check for instrument errors (default False)
-        :return: Returns the query response.
-        """
+        """Sends a query to an instrument and reads the output buffer
+        immediately afterward :param command: text containing an instrument
+        command (Documented SCPI); Should end with "?" :param error_check:
+        [Optional] Check for instrument errors (default False) :return: Returns
+        the query response."""
 
         if not isinstance(command, str):
-            raise SocketInstrumentError('command must be a string.')
+            raise SocketInstrumentError("command must be a string.")
 
         if "?" not in command:
             raise SocketInstrumentError('Query must end with "?"')
@@ -126,16 +117,15 @@ class M8195Connection:
                     print(f"Query - local: {error_check}, command: {command}")
 
         except socket.timeout:
-            print('Query error:')
+            print("Query error:")
             self.error_check()
             response = "<Timeout Error>"
 
         return response
 
     def read(self):
-        """
-        Reads from a socket until a newline is read :return: Returns the data read.
-        """
+        """Reads from a socket until a newline is read :return: Returns the
+        data read."""
         response = b""
         while response[-1:] != b"\n":
             response += self.open_session.recv(4096)
@@ -143,14 +133,11 @@ class M8195Connection:
         return response.decode().strip()
 
     def write(self, command, error_check=False):
-        """
-        write a command to an instrument :param command: text containing an instrument command; i.e. Documented SCPI
-        command
-        :param error_check: [Optional] Check for instrument errors (default False)
-        :return:
-        """
+        """Write a command to an instrument :param command: text containing an
+        instrument command; i.e. Documented SCPI command :param error_check:
+        [Optional] Check for instrument errors (default False) :return:"""
         if not isinstance(command, str):
-            raise SocketInstrumentError('Argument must be a string.')
+            raise SocketInstrumentError("Argument must be a string.")
 
         command = f"{command}\n"
         self.open_session.sendall(command.encode())
@@ -161,13 +148,10 @@ class M8195Connection:
 
 
 class M8195AConfiguration:  # pylint: disable=too-many-public-methods
-    """
-    This is a class to configure M8195A.
-    """
-    def __init__(self):
-        """
+    """This is a class to configure M8195A."""
 
-        """
+    def __init__(self):
+        """"""
         self.established_connection = M8195Connection(ip_address="0.0.0.0", port=5025)
         self._min_max_list = ("MIN", "MAX", "MINimum", "MAXimum")
         self._on_list = (1, "1", "on", "ON", True)
@@ -175,25 +159,21 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         self._channel_list = (1, 2, 3, 4)
 
     def open_io_session(self):
-        """
-        Open IO session
-        :return:
-        """
+        """Open IO session :return:"""
         self.established_connection.open_session()
 
     def close_io_session(self):
-        """
-        Close IO session
-        :return:
-        """
+        """Close IO session :return:"""
         self.established_connection.close_session()
 
     #####################################################################
     # 6.5 System Related Commands (SYSTem Subsystem) ####################
     #####################################################################
     def set_event_in_trigger_out_switch(self, switch):
-        """
-        The Event In and Trigger Out functionality use a shared connector on the front panel. This command switches
+        """The Event In and Trigger Out functionality use a shared connector on
+        the front panel.
+
+        This command switches
         between trigger output and event input functionality. When Trigger Out functionality is active, Event In
         functionality is disabled and vice versa.
         Note: Trigger Out is for future use. There are no plans to support Trigger Out functionality directly from
@@ -207,11 +187,13 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":SYST:EIN:MODE {switch}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid switch in set_event_in_trigger_out_switch')
+            raise NameError("M8195A: Invalid switch in set_event_in_trigger_out_switch")
 
     def get_event_in_trigger_out_switch(self):
-        """
-        The Event In and Trigger Out functionality use a shared connector on the front panel. This command switches
+        """The Event In and Trigger Out functionality use a shared connector on
+        the front panel.
+
+        This command switches
         between trigger output and event input functionality. When Trigger Out functionality is active, Event In
         functionality is disabled and vice versa.
         Note: Trigger Out is for future use. There are no plans to support Trigger Out functionality directly from
@@ -219,24 +201,29 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         or later).
         :return: 'EIN', 'TOUT'
         """
-        self.established_connection.query(':SYST:EIN:MODE?', error_check=True)
+        self.established_connection.query(":SYST:EIN:MODE?", error_check=True)
 
     def get_error(self):
-        """
-        Read and clear one error from the instrument’s error queue. A record of up to 30 command syntax or hardware
-        errors can be stored in the error queue. Errors are retrieved in first-in-first-out (FIFO) order. The first
-        error returned is the first error that was stored. Errors are cleared as you read them. If more than 30
-        errors have occurred, the last error stored in the queue (the most recent error) is replaced with
-        “Queue overflow”. No additional errors are stored until you remove errors from the queue.
+        """Read and clear one error from the instrument’s error queue. A record
+        of up to 30 command syntax or hardware errors can be stored in the
+        error queue. Errors are retrieved in first-in-first-out (FIFO) order.
+        The first error returned is the first error that was stored. Errors are
+        cleared as you read them. If more than 30 errors have occurred, the
+        last error stored in the queue (the most recent error) is replaced with
+        “Queue overflow”. No additional errors are stored until you remove
+        errors from the queue.
 
-        *CLS command: The error queue is cleared, when the power is cycled, or when the Soft Front Panel is re-started.
-        *RST command: The error queue is not cleared by a reset.
+        *CLS command: The error queue is cleared, when the power is
+        cycled, or when the Soft Front Panel is re-started. *RST
+        command: The error queue is not cleared by a reset.
 
-        :return: The error messages have the following format (the error string may contain up to 255 characters):
-        error number,”Description”, e.g. -113,"Undefined header" If no errors have occurred when you read the error
-        queue, the instrument responds with 0,“No error”.
+        :return: The error messages have the following format (the error
+            string may contain up to 255 characters): error
+            number,”Description”, e.g. -113,"Undefined header" If no
+            errors have occurred when you read the error queue, the
+            instrument responds with 0,“No error”.
         """
-        self.established_connection.query(':SYST:ERR?', error_check=True)
+        self.established_connection.query(":SYST:ERR?", error_check=True)
 
     def get_scpi_list(self):
         """The HEADers?
@@ -250,14 +237,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         SCPI format. The short form uses uppercase characters while the additional characters for the long form are
         in lowercase characters. Default nodes are surrounded by square brackets ([]).
         """
-        self.established_connection.query(':SYST:HELP:HEAD?', error_check=True)
+        self.established_connection.query(":SYST:HELP:HEAD?", error_check=True)
 
     def get_license(self):
         """This query lists the licenses installed.
 
         :return:
         """
-        self.established_connection.query(':SYST:LIC:EXT:LIST?', error_check=True)
+        self.established_connection.query(":SYST:LIC:EXT:LIST?", error_check=True)
 
     def set_instrument_setting(self, binary_data):
         """In set form, the block data must be a complete instrument set-up
@@ -278,13 +265,13 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         format, not ASCII, and cannot be edited. This command has the
         same functionality as the *LRN command.
         """
-        self.established_connection.query(':SYST:SET?', error_check=True)
+        self.established_connection.query(":SYST:SET?", error_check=True)
 
     def get_scpi_version(self):
         """Query SCPI version number :return: a formatted numeric value
         corresponding to the SCPI version number for which the instrument
         complies."""
-        self.established_connection.query(':SYST:VERS?', error_check=True)
+        self.established_connection.query(":SYST:VERS?", error_check=True)
 
     def get_softfrontpanel_connections(self):
         """These queries return information about the instrument Soft Front
@@ -301,27 +288,27 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return: If a connection is not available, the returned value is
             -1.
         """
-        self.established_connection.query(':SYST:COMM:*?', error_check=True)
+        self.established_connection.query(":SYST:COMM:*?", error_check=True)
 
     def get_softfrontpanel_vxi11number(self):
         """Query VXI-11 instrument number :return: This query returns the
         VXI-11 instrument number used by the Soft Front Panel."""
-        self.established_connection.query(':SYST:COMM:INST?', error_check=True)
+        self.established_connection.query(":SYST:COMM:INST?", error_check=True)
 
     def get_softfrontpanel_hislipnumber(self):
         """Query HiSLIP number :return: This query returns the HiSLIP number
         used by the Soft Front Panel."""
-        self.established_connection.query(':SYST:COMM:HISL?', error_check=True)
+        self.established_connection.query(":SYST:COMM:HISL?", error_check=True)
 
     def get_softfrontpanel_socketport(self):
         """Query socket port :return: This query returns the socket port used
         by the Soft Front Panel."""
-        self.established_connection.query(':SYST:COMM:SOCK?', error_check=True)
+        self.established_connection.query(":SYST:COMM:SOCK?", error_check=True)
 
     def get_softfrontpanel_telnetport(self):
         """Query telnet port :return: This query returns the telnet port used
         by the Soft Front Panel."""
-        self.established_connection.query(':SYST:COMM:TELN?', error_check=True)
+        self.established_connection.query(":SYST:COMM:TELN?", error_check=True)
 
     def get_softfrontpanel_tcpport(self):
         """
@@ -329,7 +316,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return: This query returns the port number of the control connection. You can use the control port to send
         control commands (for example “Device Clear”) to the instrument.
         """
-        self.established_connection.query(':SYST:COMM:TCP:CONT?', error_check=True)
+        self.established_connection.query(":SYST:COMM:TCP:CONT?", error_check=True)
 
     #####################################################################
     # 6.6 Common Command List ###########################################
@@ -347,7 +334,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         h= Hardware revision number
         :return:
         """
-        self.established_connection.query('*IDN?', error_check=True)
+        self.established_connection.query("*IDN?", error_check=True)
 
     def clear_event_register(self):
         """Clear the event register in all register groups.
@@ -356,7 +343,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         operation. It doesn't clear the enable register.
         :return:
         """
-        self.established_connection.write('*CLS', error_check=True)
+        self.established_connection.write("*CLS", error_check=True)
 
     def set_status_register_bit5(self):
         """Enable bits in the Standard Event Status Register to be reported in
@@ -367,7 +354,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         by a *CLS command. Value Range: 0–255.
         :return:
         """
-        self.established_connection.write('*ESE', error_check=True)
+        self.established_connection.write("*ESE", error_check=True)
 
     def get_status_register_bit5(self):
         """The *ESE?
@@ -377,7 +364,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Range: 0–255.
         :return:
         """
-        self.established_connection.query('*ESE?', error_check=True)
+        self.established_connection.query("*ESE?", error_check=True)
 
     def get_standard_event_status_register(self):
         """Query the Standard Event Status Register.
@@ -388,7 +375,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         binary-weighted sum of all bits set in the register.
         :return:
         """
-        self.established_connection.query('ESR?', error_check=True)
+        self.established_connection.query("ESR?", error_check=True)
 
     def set_operation_complete(self):
         """Set the “Operation Complete” bit (bit 0) in the Standard Event
@@ -396,7 +383,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.write('*OPC', error_check=True)
+        self.established_connection.write("*OPC", error_check=True)
 
     def get_operation_complete(self):
         """Return "1" to the output buffer after the previous commands have
@@ -405,7 +392,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Other commands cannot be executed until this command completes.
         :return:
         """
-        self.established_connection.query('*OPC?', error_check=True)
+        self.established_connection.query("*OPC?", error_check=True)
 
     def get_installed_options(self):
         """Read the installed options.
@@ -414,14 +401,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         commas.
         :return:
         """
-        self.established_connection.query('*OPT?', error_check=True)
+        self.established_connection.query("*OPT?", error_check=True)
 
     def instrument_reset(self):
         """Reset instrument to its factory default state.
 
         :return:
         """
-        self.established_connection.write('*RST', error_check=True)
+        self.established_connection.write("*RST", error_check=True)
 
     def set_service_request_enable_bits(self, bits):
         """Enable bits in the Status Byte to generate a Service Request.
@@ -438,7 +425,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             self.established_connection.write(f"*SRE {bits}", error_check=True)
         else:
             raise ValueError(
-                'M8195A: Invalid bits (not decimal) in set_service_request_enable_bits'
+                "M8195A: Invalid bits (not decimal) in set_service_request_enable_bits"
             )
 
     def get_service_request_enable_bits(self):
@@ -448,7 +435,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         weighted sum of all bits enabled by the *SRE command.
         :return:
         """
-        self.established_connection.query('*SRE?', error_check=True)
+        self.established_connection.query("*SRE?", error_check=True)
 
     def get_status_byte_register(self):
         """Query the summary (status byte condition) register in this register
@@ -460,7 +447,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         not cleared by the *STB? command.
         :return:
         """
-        self.established_connection.query('*STB?', error_check=True)
+        self.established_connection.query("*STB?", error_check=True)
 
     def get_self_test(self):
         """Execute Self Tests.
@@ -470,7 +457,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         use :TEST:TST?
         :return:
         """
-        self.established_connection.query('*TST?', error_check=True)
+        self.established_connection.query("*TST?", error_check=True)
 
     def get_instrument_setting_learn(self):
         """Query the instrument and return a binary block of data containing
@@ -482,7 +469,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :SYST:SET to send the learn string. See :SYSTem:SET[?].
         :return:
         """
-        self.established_connection.query('*LRN?', error_check=True)
+        self.established_connection.query("*LRN?", error_check=True)
 
     def get_wait_current_command_execution(self):
         """Prevents the instrument from executing any further commands until
@@ -490,7 +477,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query('*WAI?', error_check=True)
+        self.established_connection.query("*WAI?", error_check=True)
 
     #####################################################################
     # 6.7 Status Model ##################################################
@@ -503,7 +490,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         ENABle = 0x0000, PTR = 0xffff, NTR = 0x0000
         :return:
         """
-        self.established_connection.write(':STAT:PRES', error_check=True)
+        self.established_connection.write(":STAT:PRES", error_check=True)
 
     # 6.7.3 Questionable Data Register Command Subsystem ################
     # 6.7.5 Voltage Status Subsystem ####################################
@@ -537,9 +524,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         if sub_register is None:
             if event is None:
-                self.established_connection.query(':STAT:QUES?', error_check=True)
+                self.established_connection.query(":STAT:QUES?", error_check=True)
             else:
-                self.established_connection.query(':STAT:QUES:EVEN?', error_check=True)
+                self.established_connection.query(":STAT:QUES:EVEN?", error_check=True)
         elif sub_register in ("VOLT", "FREQ", "CONN", "SEQ", "DUC"):
             if event is None:
                 self.established_connection.query(
@@ -575,7 +562,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:QUES:COND?', error_check=True)
+            self.established_connection.query(":STAT:QUES:COND?", error_check=True)
         elif sub_register in ("VOLT", "FREQ", "CONN", "SEQ", "DUC"):
             self.established_connection.query(
                 f":STAT:QUES:{sub_register}:COND?", error_check=True
@@ -645,7 +632,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:QUES:ENAB?', error_check=True)
+            self.established_connection.query(":STAT:QUES:ENAB?", error_check=True)
         elif sub_register in ("VOLT", "FREQ", "CONN", "SEQ", "DUC"):
             self.established_connection.query(
                 f":STAT:QUES:{sub_register}:ENAB?", error_check=True
@@ -723,7 +710,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:QUES:NTR?', error_check=True)
+            self.established_connection.query(":STAT:QUES:NTR?", error_check=True)
         elif sub_register in ("VOLT", "FREQ", "CONN", "SEQ", "DUC"):
             self.established_connection.query(
                 f":STAT:QUES:{sub_register}:NTR?", error_check=True
@@ -801,7 +788,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:QUES:PTR?', error_check=True)
+            self.established_connection.query(":STAT:QUES:PTR?", error_check=True)
         elif sub_register in ("VOLT", "FREQ", "CONN", "SEQ", "DUC"):
             self.established_connection.query(
                 f":STAT:QUES:{sub_register}:PTR?", error_check=True
@@ -828,9 +815,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         if sub_register is None:
             if event is None:
-                self.established_connection.query(':STAT:OPER?', error_check=True)
+                self.established_connection.query(":STAT:OPER?", error_check=True)
             else:
-                self.established_connection.query(':STAT:OPER:EVEN?', error_check=True)
+                self.established_connection.query(":STAT:OPER:EVEN?", error_check=True)
         elif sub_register == "RUN":
             if event is None:
                 self.established_connection.query(
@@ -855,7 +842,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:OPER:COND?', error_check=True)
+            self.established_connection.query(":STAT:OPER:COND?", error_check=True)
         elif sub_register == "RUN":
             self.established_connection.query(
                 f":STAT:OPER:{sub_register}:COND?", error_check=True
@@ -887,7 +874,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":STAT:OPER:{sub_register}:ENAB {decimal_value}", error_check=True
             )
         else:
-            raise NameError("M8195A: Invalid sub_register in set_operation_status_enable")
+            raise NameError(
+                "M8195A: Invalid sub_register in set_operation_status_enable"
+            )
 
     def get_operation_status_enable(self, sub_register=None):
         """Queries the enable register in the operation status group. The
@@ -901,13 +890,15 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:OPER:ENAB?', error_check=True)
+            self.established_connection.query(":STAT:OPER:ENAB?", error_check=True)
         elif sub_register == "RUN":
             self.established_connection.query(
                 f":STAT:OPER:{sub_register}:ENAB?", error_check=True
             )
         else:
-            raise NameError("M8195A: Invalid sub_register in get_operation_status_enable")
+            raise NameError(
+                "M8195A: Invalid sub_register in get_operation_status_enable"
+            )
 
     def set_operation_status_neg_transition(self, allow, sub_register=None):
         """Sets the negative-transition register in the operation status group.
@@ -937,7 +928,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     "M8195A: Invalid sub_register in set_operation_status_neg_transition"
                 )
         else:
-            raise NameError("M8195A: Invalid allow in set_operation_status_neg_transition")
+            raise NameError(
+                "M8195A: Invalid allow in set_operation_status_neg_transition"
+            )
 
     def get_operation_status_neg_transition(self, sub_register=None):
         """Queries the negative-transition register in the operation status
@@ -953,7 +946,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:OPER:NTR?', error_check=True)
+            self.established_connection.query(":STAT:OPER:NTR?", error_check=True)
         elif sub_register == "RUN":
             self.established_connection.query(
                 f":STAT:OPER:{sub_register}:NTR?", error_check=True
@@ -990,7 +983,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     "M8195A: Invalid sub_register in set_operation_status_pos_transition"
                 )
         else:
-            raise NameError("M8195A: Invalid allow in set_operation_status_pos_transition")
+            raise NameError(
+                "M8195A: Invalid allow in set_operation_status_pos_transition"
+            )
 
     def get_operation_status_pos_transition(self, sub_register=None):
         """Set the positive-transition register in the operation status group.
@@ -1006,7 +1001,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if sub_register is None:
-            self.established_connection.query(':STAT:OPER:PTR?', error_check=True)
+            self.established_connection.query(":STAT:OPER:PTR?", error_check=True)
         elif sub_register == "RUN":
             self.established_connection.query(
                 f":STAT:OPER:{sub_register}:PTR?", error_check=True
@@ -1025,7 +1020,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         The channel suffix is ignored.
         :return:
         """
-        self.established_connection.write(':ABOR', error_check=True)
+        self.established_connection.write(":ABOR", error_check=True)
 
     def set_module_delay(self, delay):
         """Set the module delay settings (see section 1.5.3) .
@@ -1053,7 +1048,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Parameter Suffix: [s|ms|us|ns|ps]
         :return:
         """
-        self.established_connection.query(':ARM:MDEL?', error_check=True)
+        self.established_connection.query(":ARM:MDEL?", error_check=True)
 
     def set_sample_clock_delay(self, delay, channel):
         """Set the channel-specific sample delay in integral DAC sample clock
@@ -1084,7 +1079,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     "M8195A: delay is neither integer nor proper string in set_sample_clock_delay"
                 )
         else:
-            raise ValueError("M8195A: Invalid channel in set_sample_clock_delay")  # ChannelSampleDelaySet?
+            raise ValueError(
+                "M8195A: Invalid channel in set_sample_clock_delay"
+            )  # ChannelSampleDelaySet?
 
     def get_sample_clock_delay(self, channel):
         """Query the channel-specific sample delay in integral DAC sample clock
@@ -1108,14 +1105,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":INIT:CONT:ENAB {arm_mode}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid arm_mode in set_arm_mode')
+            raise NameError("M8195A: Invalid arm_mode in set_arm_mode")
 
     def get_arm_mode(self):
         """Query the arming mode.
 
         :return:
         """
-        self.established_connection.query(':INIT:CONT:ENAB?', error_check=True)
+        self.established_connection.query(":INIT:CONT:ENAB?", error_check=True)
 
     def set_continuous_mode(self, continuous_mode):
         """Set the continuous mode. This command must be used together with
@@ -1128,11 +1125,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if continuous_mode in self._on_list:
-            self.established_connection.write(':INIT:CONT:STAT ON', error_check=True)
+            self.established_connection.write(":INIT:CONT:STAT ON", error_check=True)
         elif continuous_mode in self._off_list:
-            self.established_connection.write(':INIT:CONT:STAT OFF', error_check=True)
+            self.established_connection.write(":INIT:CONT:STAT OFF", error_check=True)
         else:
-            raise NameError('M8195A: Invalid continuous_mode in set_continuous_mode')
+            raise NameError("M8195A: Invalid continuous_mode in set_continuous_mode")
 
     def get_continuous_mode(self):
         """Query the continuous mode. This command must be used together with
@@ -1143,7 +1140,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - 0/OFF – Continuous mode is off. If gate mode is off, the trigger mode is “triggered”, else it is “gated”.
             - 1/ON – Continuous mode is on. Trigger mode is “automatic”. The value of gate mode is not relevant.
         """
-        self.established_connection.query(':INIT:CONT:STAT?', error_check=True)
+        self.established_connection.query(":INIT:CONT:STAT?", error_check=True)
 
     def set_gate_mode(self, gate_mode):
         """Set the gate mode. This command must be used together with INIT:CONT
@@ -1156,11 +1153,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if gate_mode in self._on_list:
-            self.established_connection.write(':INIT:GATE:STAT ON', error_check=True)
+            self.established_connection.write(":INIT:GATE:STAT ON", error_check=True)
         elif gate_mode in self._off_list:
-            self.established_connection.write(':INIT:GATE:STAT OFF', error_check=True)
+            self.established_connection.write(":INIT:GATE:STAT OFF", error_check=True)
         else:
-            raise NameError('M8195A: Invalid gate_mode in set_gate_mode')
+            raise NameError("M8195A: Invalid gate_mode in set_gate_mode")
 
     def get_gate_mode(self):
         """Query the gate mode. This command must be used together with
@@ -1171,7 +1168,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - 0/OFF – Gate mode is off.
             - 1/ON – Gate mode is on. If continuous mode is off, the trigger mode is “gated”.
         """
-        self.established_connection.query(':INIT:GATE:STAT?', error_check=True)
+        self.established_connection.query(":INIT:GATE:STAT?", error_check=True)
 
     def signal_generation_start(self):
         """Start signal generation on all channels.
@@ -1179,7 +1176,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         The channel suffix is ignored. :INIT:IMM[1|2|3|4]
         :return:
         """
-        self.established_connection.write(':INIT:IMM', error_check=True)
+        self.established_connection.write(":INIT:IMM", error_check=True)
 
     def set_trigger_input_threshold_level(self, level):
         """Set the trigger input threshold level.
@@ -1188,12 +1185,16 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if isinstance(level, int):
-            self.established_connection.write(f":ARM:TRIG:LEV {level}", error_check=True)
+            self.established_connection.write(
+                f":ARM:TRIG:LEV {level}", error_check=True
+            )
         elif level in self._min_max_list:
-            self.established_connection.write(f":ARM:TRIG:LEV {level}", error_check=True)
+            self.established_connection.write(
+                f":ARM:TRIG:LEV {level}", error_check=True
+            )
         else:
             raise ValueError(
-                'M8195A: level is neither integer nor proper string in set_trigger_input_threshold_level'
+                "M8195A: level is neither integer nor proper string in set_trigger_input_threshold_level"
             )
 
     def get_trigger_input_threshold_level(self):
@@ -1201,7 +1202,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query(':ARM:TRIG:LEV?', error_check=True)
+        self.established_connection.query(":ARM:TRIG:LEV?", error_check=True)
 
     def set_trigger_input_slope(self, slope):
         """Set the trigger input slope.
@@ -1218,7 +1219,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":ARM:TRIG:SLOP {slope}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid slope in set_trigger_input_slope')
+            raise NameError("M8195A: Invalid slope in set_trigger_input_slope")
 
     def get_trigger_input_slope(self):
         """Query the trigger input slope.
@@ -1228,7 +1229,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - NEGative: falling edge
             - EITHer: both
         """
-        self.established_connection.query(':ARM:TRIG:SLOP?', error_check=True)
+        self.established_connection.query(":ARM:TRIG:SLOP?", error_check=True)
 
     def set_trigger_function_source(self, source):
         """Set the source for the trigger function.
@@ -1245,7 +1246,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":ARM:TRIG:SOUR {source}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid source in set_trigger_function_source')
+            raise NameError("M8195A: Invalid source in set_trigger_function_source")
 
     def get_trigger_function_source(self):
         """Query the source for the trigger function.
@@ -1255,7 +1256,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - EVENt: event input
             - INTernal: internal trigger generator
         """
-        self.established_connection.query(':ARM:TRIG:SOUR?', error_check=True)
+        self.established_connection.query(":ARM:TRIG:SOUR?", error_check=True)
 
     def set_internal_trigger_freq(self, frequency):
         """Set the frequency of the internal trigger generator.
@@ -1273,7 +1274,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: frequency is neither integer nor proper string in set_internal_trigger_freq'
+                "M8195A: frequency is neither integer nor proper string in set_internal_trigger_freq"
             )
 
     def get_internal_trigger_freq(self):
@@ -1281,7 +1282,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query(':ARM:TRIG:FREQ?', error_check=True)
+        self.established_connection.query(":ARM:TRIG:FREQ?", error_check=True)
 
     def set_input_trigger_event_operation_mode(self, operation_mode):
         """Set the operation mode for the trigger and event input.
@@ -1297,7 +1298,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise NameError(
-                'M8195A: Invalid operation_mode in set_internal_trigger_freq'
+                "M8195A: Invalid operation_mode in set_internal_trigger_freq"
             )
 
     def get_input_trigger_event_operation_mode(self):
@@ -1307,7 +1308,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - ASYNchronous: asynchronous operation (see section 1.5.2)
             - SYNChronous: synchronous operation (see section 1.5.2)
         """
-        self.established_connection.query(':ARM:TRIG:OPER?', error_check=True)
+        self.established_connection.query(":ARM:TRIG:OPER?", error_check=True)
 
     def set_event_in_threshold_level(self, level):
         """Set the input threshold level.
@@ -1316,12 +1317,16 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if isinstance(level, int):
-            self.established_connection.write(f":ARM:EVEN:LEV {level}", error_check=True)
+            self.established_connection.write(
+                f":ARM:EVEN:LEV {level}", error_check=True
+            )
         elif level in self._min_max_list:
-            self.established_connection.write(f":ARM:EVEN:LEV {level}", error_check=True)
+            self.established_connection.write(
+                f":ARM:EVEN:LEV {level}", error_check=True
+            )
         else:
             raise ValueError(
-                'M8195A: level is neither integer nor proper string in InputThresholdLevelSet'
+                "M8195A: level is neither integer nor proper string in InputThresholdLevelSet"
             )
 
     def get_event_in_threshold_level(self):
@@ -1329,7 +1334,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query(':ARM:EVEN:LEV?', error_check=True)
+        self.established_connection.query(":ARM:EVEN:LEV?", error_check=True)
 
     def set_event_input_slope(self, slope):
         """Set the event input slope.
@@ -1345,7 +1350,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":ARM:EVEN:SLOP {slope}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid slope in set_event_input_slope')
+            raise NameError("M8195A: Invalid slope in set_event_input_slope")
 
     def get_event_input_slope(self):
         """Query the event input slope.
@@ -1355,7 +1360,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - NEGative: falling edge
             - EITHer: both
         """
-        self.established_connection.query(':ARM:EVEN:SLOP?', error_check=True)
+        self.established_connection.query(":ARM:EVEN:SLOP?", error_check=True)
 
     def set_enable_event_source(self, source):
         """Set the source for the enable event.
@@ -1370,7 +1375,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":TRIG:SOUR:ENAB {source}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid source in set_enable_event_source')
+            raise NameError("M8195A: Invalid source in set_enable_event_source")
 
     def get_enable_event_source(self):
         """Query the source for the enable event.
@@ -1379,7 +1384,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - TRIGger: trigger input
             - EVENt: event input
         """
-        self.established_connection.query(':TRIG:SOUR:ENAB?', error_check=True)
+        self.established_connection.query(":TRIG:SOUR:ENAB?", error_check=True)
 
     def set_hw_input_disable_state_enable_function(self, state):
         """Set the hardware input disable state for the enable function.
@@ -1393,12 +1398,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if state in self._on_list:
-            self.established_connection.write(':TRIG:ENAB:HWD ON', error_check=True)
+            self.established_connection.write(":TRIG:ENAB:HWD ON", error_check=True)
         elif state in self._off_list:
-            self.established_connection.write(':TRIG:ENAB:HWD OFF', error_check=True)
+            self.established_connection.write(":TRIG:ENAB:HWD OFF", error_check=True)
         else:
             raise NameError(
-                'M8195A: Invalid state in set_hw_input_disable_state_enable_function'
+                "M8195A: Invalid state in set_hw_input_disable_state_enable_function"
             )
 
     def get_hw_input_disable_state_enable_function(self):
@@ -1411,7 +1416,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         command or by a signal present at the trigger or event input.
         :return: OFF|ON
         """
-        self.established_connection.query(':TRIG:ENAB:HWD?', error_check=True)
+        self.established_connection.query(":TRIG:ENAB:HWD?", error_check=True)
 
     def set_hw_input_disable_state_trigger_function(self, state):
         """Set the hardware input disable state for the trigger function.
@@ -1426,12 +1431,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if state in self._on_list:
-            self.established_connection.write(':TRIG:BEG:HWD ON', error_check=True)
+            self.established_connection.write(":TRIG:BEG:HWD ON", error_check=True)
         elif state in self._off_list:
-            self.established_connection.write(':TRIG:BEG:HWD OFF', error_check=True)
+            self.established_connection.write(":TRIG:BEG:HWD OFF", error_check=True)
         else:
             raise NameError(
-                'M8195A: Invalid state in set_hw_input_disable_state_trigger_function'
+                "M8195A: Invalid state in set_hw_input_disable_state_trigger_function"
             )
 
     def get_hw_input_disable_state_trigger_function(self):
@@ -1445,7 +1450,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         internal trigger generator.
         :return: OFF|ON
         """
-        self.established_connection.query(':TRIG:BEG:HWD?', error_check=True)
+        self.established_connection.query(":TRIG:BEG:HWD?", error_check=True)
 
     def set_hw_input_disable_state_advance_function(self, state):
         """Set the hardware input disable state for the advancement function.
@@ -1460,12 +1465,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if state in self._on_list:
-            self.established_connection.write(':TRIG:ADV:HWD ON', error_check=True)
+            self.established_connection.write(":TRIG:ADV:HWD ON", error_check=True)
         elif state in self._off_list:
-            self.established_connection.write(':TRIG:ADV:HWD OFF', error_check=True)
+            self.established_connection.write(":TRIG:ADV:HWD OFF", error_check=True)
         else:
             raise NameError(
-                'M8195A: Invalid state in set_hw_input_disable_state_advance_function'
+                "M8195A: Invalid state in set_hw_input_disable_state_advance_function"
             )
 
     def get_hw_input_disable_state_advance_function(self):
@@ -1479,7 +1484,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         event input.
         :return: OFF|ON
         """
-        self.established_connection.query(':TRIG:ADV:HWD?', error_check=True)
+        self.established_connection.query(":TRIG:ADV:HWD?", error_check=True)
 
     #####################################################################
     # 6.9 Trigger - Trigger Input #######################################
@@ -1498,7 +1503,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":TRIG:SOUR:ADV {source}", error_check=True
             )
         else:
-            raise NameError('8195A: Invalid source in set_advance_event_source')
+            raise NameError("8195A: Invalid source in set_advance_event_source")
 
     def get_advance_event_source(self):
         """Query the source for the advancement event.
@@ -1508,21 +1513,21 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - EVENt: event input
             - INTernal: internal trigger generator
         """
-        self.established_connection.query(':TRIG:SOUR:ADV?', error_check=True)
+        self.established_connection.query(":TRIG:SOUR:ADV?", error_check=True)
 
     def trigger_enable_event(self):
         """Send the enable event to a channel.
 
         :return:
         """
-        self.established_connection.write(':TRIG:ENAB', error_check=True)
+        self.established_connection.write(":TRIG:ENAB", error_check=True)
 
     def trigger_begin_event(self):
         """In triggered mode send the start/begin event to a channel.
 
         :return:
         """
-        self.established_connection.write(':TRIG:BEG', error_check=True)
+        self.established_connection.write(":TRIG:BEG", error_check=True)
 
     def set_trigger_gated_mode(self, stat):
         """In gated mode send a "gate open" (ON|1) or "gate close" (OFF|0) to a
@@ -1532,11 +1537,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if stat in self._off_list:
-            self.established_connection.write(':TRIG:BEG:GATE OFF', error_check=True)
+            self.established_connection.write(":TRIG:BEG:GATE OFF", error_check=True)
         elif stat in self._on_list:
-            self.established_connection.write(':TRIG:BEG:GATE ON', error_check=True)
+            self.established_connection.write(":TRIG:BEG:GATE ON", error_check=True)
         else:
-            raise NameError('M8195A: Invalid stat in set_trigger_gated_mode')
+            raise NameError("M8195A: Invalid stat in set_trigger_gated_mode")
 
     def get_trigger_gated_mode(self):
         """In gated mode send a "gate open" (ON|1) or "gate close" (OFF|0) to a
@@ -1544,14 +1549,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return: OFF|ON|0|1
         """
-        self.established_connection.query(':TRIG:BEG:GATE?', error_check=True)
+        self.established_connection.query(":TRIG:BEG:GATE?", error_check=True)
 
     def trigger_advance_event(self):
         """Send the advancement event to a channel.
 
         :return:
         """
-        self.established_connection.write(':TRIG:ADV', error_check=True)
+        self.established_connection.write(":TRIG:ADV", error_check=True)
 
     #####################################################################
     # 6.10 Format Subsystem #############################################
@@ -1571,7 +1576,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if order in ("NORM", "NORMal", "SWAP", "SWAPped"):
             self.established_connection.write(f":FORM:BORD {order}", error_check=True)
         else:
-            raise NameError('M8195A: Invalid order in set_format_byte_order')
+            raise NameError("M8195A: Invalid order in set_format_byte_order")
 
     def get_format_byte_order(self):
         """Byte ORDer. Query whether binary data is transferred in normal (“big
@@ -1584,7 +1589,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                             - OUTPut:FILTer:QRATe
         :return: NORMal|SWAPped
         """
-        self.established_connection.query(':FORM:BORD?', error_check=True)
+        self.established_connection.query(":FORM:BORD?", error_check=True)
 
     #####################################################################
     # 6.11 Instrument Subsystem #########################################
@@ -1594,7 +1599,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query(':INST:SLOT?', error_check=True)
+        self.established_connection.query(":INST:SLOT?", error_check=True)
 
     def instrument_access_led_start(self, seconds=False):
         """Identify the instrument by flashing the green "Access" LED on the
@@ -1607,9 +1612,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if isinstance(seconds, int):
             self.established_connection.write(f":INST:IDEN {seconds}", error_check=True)
         elif seconds is None:
-            self.established_connection.write(':INST:IDEN', error_check=True)
+            self.established_connection.write(":INST:IDEN", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid seconds in instrument_access_led_start')
+            raise ValueError("M8195A: Invalid seconds in instrument_access_led_start")
 
     def instrument_access_led_stop(self):
         """Stop the flashing of the green "Access" LED before the flashing
@@ -1617,14 +1622,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.write(':INST:IDEN:STOP', error_check=True)
+        self.established_connection.write(":INST:IDEN:STOP", error_check=True)
 
     def hw_revision_number(self):
         """Returns the M8195A hardware revision number.
 
         :return:
         """
-        self.established_connection.query(':INST:HWR?', error_check=True)
+        self.established_connection.query(":INST:HWR?", error_check=True)
 
     def set_dac_operation_mode(self, dac_mode):
         """Use this command to set the operation mode of the DAC.
@@ -1663,9 +1668,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             "DCMarker",
         )
         if dac_mode in dac_mode_list:
-            self.established_connection.write(f":INST:DACM {dac_mode}", error_check=True)
+            self.established_connection.write(
+                f":INST:DACM {dac_mode}", error_check=True
+            )
         else:
-            raise NameError('M8195A: Invalid dac_mode in DACOperationMode')
+            raise NameError("M8195A: Invalid dac_mode in DACOperationMode")
 
     def get_dac_operation_mode(self):
         """Check set_dac_operation_mode for more information :return:
@@ -1682,7 +1689,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         on channel 3 and 4. channel 2 can generate signals without
         markers.
         """
-        self.established_connection.query(':INST:DACM?', error_check=True)
+        self.established_connection.query(":INST:DACM?", error_check=True)
 
     def set_extended_mem_sample_rate_divider(self, divider):
         """Use this command to set the Sample Rate divider of the Extended
@@ -1698,7 +1705,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":INST:MEM:EXT:RDIV DIV{divider}", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid divider in set_extended_mem_sample_rate_divider')
+            raise ValueError(
+                "M8195A: Invalid divider in set_extended_mem_sample_rate_divider"
+            )
 
     def get_extended_mem_sample_rate_divider(self):
         """Use this query to get the Sample Rate divider of the Extended
@@ -1708,14 +1717,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Memory for each channel (see section 1.5.5).
         :return: DIV1|DIV2|DIV4
         """
-        self.established_connection.query(':INST:MEM:EXT:RDIV?', error_check=True)
+        self.established_connection.query(":INST:MEM:EXT:RDIV?", error_check=True)
 
     def get_multi_module_config_mode(self):
         """This query returns the state of the multimodule configuration mode.
 
         :return: 0: disabled, 1: enabled
         """
-        self.established_connection.query(':INST:MMOD:CONF?', error_check=True)
+        self.established_connection.query(":INST:MMOD:CONF?", error_check=True)
 
     def get_multi_module_mode(self):
         """This query returns the multi-module mode.
@@ -1724,7 +1733,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - NORMal: Module does not belong to a multi-module group.
             - SLAVe: Module is a slave in a multi-module group
         """
-        self.established_connection.query(':INST:MMOD:MODE?', error_check=True)
+        self.established_connection.query(":INST:MMOD:MODE?", error_check=True)
 
     #####################################################################
     # 6.12 :Memory Subsystem ############################################
@@ -1746,7 +1755,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         and both <file_type> and <file_size> are empty.
         :return:
         """
-        self.established_connection.query(':MMEM:CAT?', error_check=True)
+        self.established_connection.query(":MMEM:CAT?", error_check=True)
 
     def set_default_dir(self, path):
         r"""Changes the default directory for a mass memory file system.
@@ -1764,14 +1773,18 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if is_directory is True:
             self.established_connection.write(f":MMEM:CDIR {path}", error_check=True)
         elif is_directory is False:
-            raise OSError('M8195A: path is not a directory in set_default_dir')
+            raise OSError("M8195A: path is not a directory in set_default_dir")
         elif path is None:
             rst_path = r"""C:\Users\reza-\Documents"""
-            self.established_connection.write(f":MMEM:CDIR {rst_path}", error_check=True)
+            self.established_connection.write(
+                f":MMEM:CDIR {rst_path}", error_check=True
+            )
             rst_path = r"C:\Users\reza-\Documents"
-            self.established_connection.write(f":MMEM:CDIR {rst_path}", error_check=True)
+            self.established_connection.write(
+                f":MMEM:CDIR {rst_path}", error_check=True
+            )
         else:
-            raise NameError('M8195A: Unknown error in set_default_dir')
+            raise NameError("M8195A: Unknown error in set_default_dir")
 
     def get_default_dir(self):
         """MMEMory:CDIRectory?
@@ -1779,7 +1792,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         — Query returns full path of the default directory.
         :return:
         """
-        self.established_connection.query(':MMEM:CDIR?', error_check=True)
+        self.established_connection.query(":MMEM:CDIR?", error_check=True)
 
     def set_copy_file_or_dir(self, src, dst):
         """Copies an existing file to a new file or an existing directory to a
@@ -1803,7 +1816,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":MMEM:COPY {src}, {dst}", error_check=True
             )
         else:
-            raise OSError('M8195A: src/dst is(are) neither file(s) not directory(s) in set_copy_file_or_dir')
+            raise OSError(
+                "M8195A: src/dst is(are) neither file(s) not directory(s) in set_copy_file_or_dir"
+            )
 
     def set_copy_file_and_dir(self, src_file, src_dir, dst_file, dst_dir):
         """Copies an existing file to a new file or an existing directory to a
@@ -1833,9 +1848,13 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     error_check=True,
                 )
             else:
-                raise OSError('M8195A: src_file/dst_file is (are) not file(s) in set_copy_file_and_dir')
+                raise OSError(
+                    "M8195A: src_file/dst_file is (are) not file(s) in set_copy_file_and_dir"
+                )
         else:
-            raise OSError("M8195A: src_dir/dst_dir is (are) not directory(s) in set_copy_file_and_dir")
+            raise OSError(
+                "M8195A: src_dir/dst_dir is (are) not directory(s) in set_copy_file_and_dir"
+            )
 
     def set_remove_file(self, file, directory=None):
         """Removes a file from the specified directory.
@@ -1855,9 +1874,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                         f":MMEM:DEL {file}, {directory}", error_check=True
                     )
                 else:
-                    raise OSError('M8195A: directory is not a directory in set_remove_file')
+                    raise OSError(
+                        "M8195A: directory is not a directory in set_remove_file"
+                    )
         else:
-            raise OSError('M8195A: file is not a file in set_remove_file')
+            raise OSError("M8195A: file is not a file in set_remove_file")
 
     def load_data_in_file(self, file, data):
         """The command form is MMEMory:DATA <file>,<data>.
@@ -1880,7 +1901,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":MMEM:DATA {file}, {data}", error_check=True
             )
         else:
-            raise OSError('M8195A: file is not a file in load_data_in_file')
+            raise OSError("M8195A: file is not a file in load_data_in_file")
 
     def get_data_in_file(self, file):
         """The query form is MMEMory:DATA?
@@ -1894,7 +1915,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if is_file is True:
             self.established_connection.query(f":MMEM:DATA? {file}", error_check=True)
         else:
-            raise OSError('M8195A: file is not a file in get_data_in_file')
+            raise OSError("M8195A: file is not a file in get_data_in_file")
 
     def dir_create(self, directory):
         """Creates a new directory.
@@ -1905,9 +1926,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         is_dir = os.path.isdir(directory)
         if is_dir is True:
-            self.established_connection.write(f":MMEM:MDIR {directory}", error_check=True)
+            self.established_connection.write(
+                f":MMEM:MDIR {directory}", error_check=True
+            )
         else:
-            raise OSError('M8195A: directory is not a Directory in dir_create')
+            raise OSError("M8195A: directory is not a Directory in dir_create")
 
     def set_move_file_or_dir(self, src, dst):
         """Moves an existing file to a new file or an existing directory to a
@@ -1931,7 +1954,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":MMEM:MOVE {src}, {dst}", error_check=True
             )
         else:
-            raise OSError("M8195A: src/dst is(are) neither file(s) not directory(s) in set_move_file_or_dir")
+            raise OSError(
+                "M8195A: src/dst is(are) neither file(s) not directory(s) in set_move_file_or_dir"
+            )
 
     def set_move_file_and_dir(self, src_file, src_dir, dst_file, dst_dir):
         """Moves an existing file to a new file or an existing directory to a
@@ -1962,11 +1987,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise OSError(
-                    'M8195A: src_file/dst_file is (are) not file(s) in set_move_file_and_dir'
+                    "M8195A: src_file/dst_file is (are) not file(s) in set_move_file_and_dir"
                 )
         else:
             raise OSError(
-                'M8195A: src_dir/dst_dir is (are) not directory(s) in set_move_file_and_dir'
+                "M8195A: src_dir/dst_dir is (are) not directory(s) in set_move_file_and_dir"
             )
 
     def dir_remove(self, directory):
@@ -1980,9 +2005,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         is_dir = os.path.isdir(directory)
         if is_dir is True:
-            self.established_connection.write(f":MMEM:RDIR {directory}", error_check=True)
+            self.established_connection.write(
+                f":MMEM:RDIR {directory}", error_check=True
+            )
         else:
-            raise OSError('M8195A: directory is not a directory in dir_remove')
+            raise OSError("M8195A: directory is not a directory in dir_remove")
 
     def load_instrument_state(self, file):
         """Current state of instrument is loaded from a file.
@@ -1992,9 +2019,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         is_file = os.path.isfile(file)
         if is_file is True:
-            self.established_connection.write(f":MMEM:LOAD:CST {file}", error_check=True)
+            self.established_connection.write(
+                f":MMEM:LOAD:CST {file}", error_check=True
+            )
         else:
-            raise OSError('M8195A: file is not a file in load_instrument_state')
+            raise OSError("M8195A: file is not a file in load_instrument_state")
 
     def set_instrument_state(self, file):
         """Current state of instrument is stored to a file.
@@ -2004,9 +2033,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         is_file = os.path.isfile(file)
         if is_file is True:
-            self.established_connection.write(f":MMEM:STOR:CST {file}", error_check=True)
+            self.established_connection.write(
+                f":MMEM:STOR:CST {file}", error_check=True
+            )
         else:
-            raise OSError('M8195A: file is not a file in set_instrument_state')
+            raise OSError("M8195A: file is not a file in set_instrument_state")
 
     #####################################################################
     # 6.13 :OUTPut Subsystem ############################################
@@ -2022,22 +2053,24 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         if channel is None:
             if state in self._on_list:
-                self.established_connection.write(':OUTP ON', error_check=True)
+                self.established_connection.write(":OUTP ON", error_check=True)
             elif state in self._off_list:
-                self.established_connection.write(':OUTP OFF', error_check=True)
+                self.established_connection.write(":OUTP OFF", error_check=True)
             else:
-                raise NameError('M8195A: Invalid state in set_output_amplifier')
+                raise NameError("M8195A: Invalid state in set_output_amplifier")
         elif channel in self._channel_list:
             if state in self._on_list:
-                self.established_connection.write(f":OUTP{channel} ON", error_check=True)
+                self.established_connection.write(
+                    f":OUTP{channel} ON", error_check=True
+                )
             elif state in self._off_list:
                 self.established_connection.write(
                     f":OUTP{channel} OFF", error_check=True
                 )
             else:
-                raise NameError('M8195A: Invalid state in set_output_amplifier')
+                raise NameError("M8195A: Invalid state in set_output_amplifier")
         else:
-            raise ValueError('M8195A: Invalid channel in set_output_amplifier')
+            raise ValueError("M8195A: Invalid channel in set_output_amplifier")
 
     def get_output_amplifier(self, channel):
         """Query the amplifier of the output path for a channel on or off.
@@ -2050,7 +2083,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":OUTP{channel}?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in set_output_amplifier')
+            raise ValueError("M8195A: Invalid channel in set_output_amplifier")
 
     def set_output_clock_source(self, source):
         """Select which signal source is routed to the reference clock output.
@@ -2068,7 +2101,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":OUTP:ROSC:SOUR {source}", error_check=True
             )
         else:
-            raise NameError('M8195A: Invalid source in set_output_clock_source')
+            raise NameError("M8195A: Invalid source in set_output_clock_source")
 
     def get_output_clock_source(self):
         """Query which signal source is routed to the reference clock output.
@@ -2080,7 +2113,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - SCLK1: DAC sample clock with variable divider and variable delay
             - SCLK2: DAC sample clock with fixed divider (32 and 8)
         """
-        self.established_connection.query(':OUTP:ROSC:SOUR?', error_check=True)
+        self.established_connection.query(":OUTP:ROSC:SOUR?", error_check=True)
 
     def set_dac_sample_freq_divider(self, divider):
         """Set the divider of the DAC sample clock signal routed to the
@@ -2101,7 +2134,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: divider is neither integer not string in set_dac_sample_freq_divider'
+                "M8195A: divider is neither integer not string in set_dac_sample_freq_divider"
             )
 
     def get_dac_sample_freq_divider(self):
@@ -2112,7 +2145,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Revision 2 :param
         :return: divider
         """
-        self.established_connection.query(':OUTP:ROSC:SCD?', error_check=True)
+        self.established_connection.query(":OUTP:ROSC:SCD?", error_check=True)
 
     def set_ref_clock_freq_divider1(self, divider1):
         """Set the first divider of the reference clock signal routed to the
@@ -2133,7 +2166,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: divider1 is neither integer not string in set_ref_clock_freq_divider1'
+                "M8195A: divider1 is neither integer not string in set_ref_clock_freq_divider1"
             )
 
     def get_ref_clock_freq_divider1(self):
@@ -2144,7 +2177,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Revision 2
         :return:
         """
-        self.established_connection.query(':OUTP:ROSC:RCD1?', error_check=True)
+        self.established_connection.query(":OUTP:ROSC:RCD1?", error_check=True)
 
     def set_ref_clock_freq_divider2(self, divider2):
         """Set the first divider of the reference clock signal routed to the
@@ -2165,7 +2198,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: divider2 is neither integer not string in set_ref_clock_freq_divider2'
+                "M8195A: divider2 is neither integer not string in set_ref_clock_freq_divider2"
             )
 
     def get_ref_clock_freq_divider2(self):
@@ -2176,7 +2209,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Revision 2
         :return:
         """
-        self.established_connection.query(':OUTP:ROSC:RCD2?', error_check=True)
+        self.established_connection.query(":OUTP:ROSC:RCD2?", error_check=True)
 
     def differential_offset(self, channel, value):
         """
@@ -2200,7 +2233,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: value is neither integer nor string in differential_offset'
+                    "M8195A: value is neither integer nor string in differential_offset"
                 )
         elif channel in self._channel_list:
             if isinstance(value, int):
@@ -2213,10 +2246,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: value is neither integer nor string in differential_offset'
+                    "M8195A: value is neither integer nor string in differential_offset"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in differential_offset')
+            raise ValueError("M8195A: Invalid channel in differential_offset")
 
     def get_differential_offset(self, channel):
         """
@@ -2255,7 +2288,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         elif value == 4:
             code = "QRAT"
         else:
-            raise ValueError('M8195A: Invalid value in sample_rate_divider')
+            raise ValueError("M8195A: Invalid value in sample_rate_divider")
         return code
 
     def set_fir_coefficient(self, channel, divider, value):
@@ -2283,7 +2316,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":OUTP{channel}:FILT:{code}:{value}", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid channel in set_fir_coefficient')
+            raise ValueError("M8195A: Invalid channel in set_fir_coefficient")
 
     def get_fir_coefficient(self, channel, divider):
         """Get the FIR filter coefficients for a channel to be used when the
@@ -2301,7 +2334,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":OUTP{channel}:FILT:{code}?", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid channel in get_fir_coefficient')
+            raise ValueError("M8195A: Invalid channel in get_fir_coefficient")
 
     def set_fir_type(self, channel, divider, types):
         """Set the predefined FIR filter type for a channel to be used when the
@@ -2329,7 +2362,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                         f":OUTP:FILT:{code}:TYPE {types}", error_check=True
                     )
                 else:
-                    raise NameError('M8195A: Invalid types for divider=1 in set_fir_type')
+                    raise NameError(
+                        "M8195A: Invalid types for divider=1 in set_fir_type"
+                    )
             elif divider == (2 or 4):
                 if types in ("NYQuist", "NYQ", "LINear", "ZOH", "USER"):
                     self.established_connection.write(
@@ -2337,12 +2372,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     )
                 else:
                     raise NameError(
-                        'M8195A: Invalid types for divider=1|2 in set_fir_type'
+                        "M8195A: Invalid types for divider=1|2 in set_fir_type"
                     )
             else:
-                raise ValueError('M8195A: Invalid divider in set_fir_type')
+                raise ValueError("M8195A: Invalid divider in set_fir_type")
         else:
-            raise ValueError('M8195A: Invalid channel in set_fir_type')
+            raise ValueError("M8195A: Invalid channel in set_fir_type")
 
     def get_fir_type(self, channel, divider):
         """Get the predefined FIR filter type for a channel to be used when the
@@ -2365,7 +2400,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":OUTP{channel}:FILT:{code}:TYPE?", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid channel in get_fir_type')
+            raise ValueError("M8195A: Invalid channel in get_fir_type")
 
     def set_fir_scaling_factor(self, channel, divider, scale):
         """Set the FIR filter scaling factor for a channel to be used when the
@@ -2389,7 +2424,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: scale is neither proper integer nor proper string in set_fir_scaling_factor'
+                    "M8195A: scale is neither proper integer nor proper string in set_fir_scaling_factor"
                 )
         else:
             raise ValueError("M8195A: Invalid channel in set_fir_scaling_factor")
@@ -2409,7 +2444,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":OUTP{channel}:FILT:{code}:SCAL?", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid channel in get_fir_scaling_factor')
+            raise ValueError("M8195A: Invalid channel in get_fir_scaling_factor")
 
     def set_fir_delay(self, channel, divider, delay):
         """Set the FIR filter delay for a channel to be used when the Sample
@@ -2431,7 +2466,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         code = self.sample_rate_divider(divider)
         if channel not in self._channel_list:
-            raise ValueError('M8195A: Invalid channel in set_fir_delay')
+            raise ValueError("M8195A: Invalid channel in set_fir_delay")
 
         # if divider == 1 and abs(delay) > 50:
         #     raise Exception("M8195A: Invalid delay for divider=1 in set_fir_delay")
@@ -2440,9 +2475,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         # if divider == 4 and abs(delay) > 200:
         #     raise Exception("M8195A: Invalid delay for divider=4 in set_fir_delay")
         if divider in (1, 2, 4) and abs(delay) > 50 * divider:
-            raise ValueError('M8195A: Invalid delay for divider in set_fir_delay')
+            raise ValueError("M8195A: Invalid delay for divider in set_fir_delay")
 
-        self.established_connection.write(f"OUTP{channel}:FILT:{code}:DEL {delay}ps", error_check=True)
+        self.established_connection.write(
+            f"OUTP{channel}:FILT:{code}:DEL {delay}ps", error_check=True
+        )
 
     def get_fir_delay(self, channel, divider):
         """Set the FIR filter delay for a channel to be used when the Sample
@@ -2464,7 +2501,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f"OUTP{channel}:FILT:{code}:DEL?", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid channel in get_fir_delay')
+            raise ValueError("M8195A: Invalid channel in get_fir_delay")
 
     #####################################################################
     # 6.14 Sampling Frequency Commands ##################################
@@ -2485,7 +2522,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: frequency is neither integer nor proper string in DACSampleFreq'
+                "M8195A: frequency is neither integer nor proper string in DACSampleFreq"
             )
 
     def get_dac_sample_freq(self):
@@ -2493,7 +2530,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query(':FREQ:RAST?', error_check=True)
+        self.established_connection.query(":FREQ:RAST?", error_check=True)
 
     #####################################################################
     # 6.15 Reference Oscillator Commands ################################
@@ -2513,7 +2550,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if source in ("EXTernal", "EXT", "AXI", "INTernal", "INT"):
             self.established_connection.write(f":ROSC:SOUR {source}", error_check=True)
         else:
-            raise NameError('M8195A: Invalid source in set_ref_clock_source')
+            raise NameError("M8195A: Invalid source in set_ref_clock_source")
 
     def get_ref_clock_source(self):
         """Query the reference clock source. Check "Figure 13: Clock tab" page
@@ -2525,7 +2562,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             - INTernal: reference is taken from module internal reference oscillator. May not be available with every
                         hardware.
         """
-        self.established_connection.query(':ROSC:SOUR?', error_check=True)
+        self.established_connection.query(":ROSC:SOUR?", error_check=True)
 
     def ref_clock_source_availability(self, source):
         """Check if a reference clock source is available.
@@ -2539,9 +2576,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":ROSC:SOUR:CHEC? {source}", error_check=True
             )
         else:
-            raise NameError(
-                'M8195A: Invalid source in ref_clock_source_availability'
-            )
+            raise NameError("M8195A: Invalid source in ref_clock_source_availability")
 
     def set_external_clock_source_freq(self, freq):
         """Set the expected reference clock frequency, if the external
@@ -2552,12 +2587,16 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         """
         if self.get_ref_clock_source() == ("EXT" or "EXTernal"):
             if isinstance(freq, int):
-                self.established_connection.write(f":ROSC:FREQ {freq}", error_check=True)
+                self.established_connection.write(
+                    f":ROSC:FREQ {freq}", error_check=True
+                )
             elif freq in self._min_max_list:
-                self.established_connection.write(f":ROSC:FREQ {freq}", error_check=True)
+                self.established_connection.write(
+                    f":ROSC:FREQ {freq}", error_check=True
+                )
             else:
                 raise ValueError(
-                    'M8195A: frequency is neither integer nor proper string in set_external_clock_source_freq'
+                    "M8195A: frequency is neither integer nor proper string in set_external_clock_source_freq"
                 )
         else:
             raise ValueError(
@@ -2571,7 +2610,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return: Frequency (<frequency>|MINimum|MAXimum)
         """
         if self.get_ref_clock_source() == ("EXT" or "EXTernal"):
-            self.established_connection.query(':ROSC:FREQ?', error_check=True)
+            self.established_connection.query(":ROSC:FREQ?", error_check=True)
         else:
             raise ValueError(
                 'M8195A: Reference clock source is not "EXTernal" in get_external_clock_source_freq'
@@ -2592,7 +2631,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     f":ROSC:RANG {ranges}", error_check=True
                 )
             else:
-                raise ValueError('M8195A: Invalid ranges in set_external_clock_source_range')
+                raise ValueError(
+                    "M8195A: Invalid ranges in set_external_clock_source_range"
+                )
         else:
             raise ValueError(
                 'M8195A: Reference clock source is not "EXTernal" in set_external_clock_source_range'
@@ -2607,7 +2648,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     - RANG2: 210MHz…17GHz
         """
         if self.get_ref_clock_source() == ("EXT" or "EXTernal"):
-            self.established_connection.query(':ROSC:RANG?', error_check=True)
+            self.established_connection.query(":ROSC:RANG?", error_check=True)
         else:
             raise ValueError(
                 'M8195A: Reference clock source is not "EXTernal" in get_external_clock_source_range'
@@ -2634,11 +2675,13 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                         f":ROSC:{ranges}:FREQ {freq}", error_check=True
                     )
                 else:
-                    raise ValueError('M8195A: frequency is neither integer nor proper string in '
-                                     'set_external_clock_source_range_freq')
+                    raise ValueError(
+                        "M8195A: frequency is neither integer nor proper string in "
+                        "set_external_clock_source_range_freq"
+                    )
             else:
                 raise ValueError(
-                    'M8195A: Invalid ranges in set_external_clock_source_range_freq'
+                    "M8195A: Invalid ranges in set_external_clock_source_range_freq"
                 )
         else:
             raise ValueError(
@@ -2661,7 +2704,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: Invalid ranges in ExternalClockSourceRangeFreqSet'
+                    "M8195A: Invalid ranges in ExternalClockSourceRangeFreqSet"
                 )
         else:
             raise ValueError(
@@ -2690,10 +2733,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: level is neither integer nor proper string in set_output_amplitude'
+                    "M8195A: level is neither integer nor proper string in set_output_amplitude"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_output_amplitude')
+            raise ValueError("M8195A: Invalid channel in set_output_amplitude")
 
     def get_output_amplitude(self, channel):
         """Query the output amplitude.
@@ -2704,7 +2747,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":VOLT{channel}?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in set_output_amplitude')
+            raise ValueError("M8195A: Invalid channel in set_output_amplitude")
 
     def output_offset(self, channel, offset):
         """Set the output offset.
@@ -2724,10 +2767,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: offset is neither integer nor proper string in output_offset'
+                    "M8195A: offset is neither integer nor proper string in output_offset"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in output_offset')
+            raise ValueError("M8195A: Invalid channel in output_offset")
 
     def get_output_offset(self, channel):
         """Query the output offset.
@@ -2738,7 +2781,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":VOLT{channel}:OFFS?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_output_offset')
+            raise ValueError("M8195A: Invalid channel in get_output_offset")
 
     def set_output_high_level(self, channel, high_level):
         """Set the output high level.
@@ -2758,10 +2801,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: high_level is neither integer nor proper string in set_output_high_level'
+                    "M8195A: high_level is neither integer nor proper string in set_output_high_level"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_output_high_level')
+            raise ValueError("M8195A: Invalid channel in set_output_high_level")
 
     def get_output_high_level(self, channel):
         """Query the output high level.
@@ -2772,7 +2815,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":VOLT{channel}:HIGH?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_output_high_level')
+            raise ValueError("M8195A: Invalid channel in get_output_high_level")
 
     def set_output_low_level(self, channel, low_level):
         """Set the output low level.
@@ -2792,10 +2835,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: low_level is neither integer nor proper string in set_output_low_level'
+                    "M8195A: low_level is neither integer nor proper string in set_output_low_level"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_output_low_level')
+            raise ValueError("M8195A: Invalid channel in set_output_low_level")
 
     def get_output_low_level(self, channel):
         """Query the output low level.
@@ -2806,7 +2849,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":VOLT{channel}:LOW?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_output_low_level')
+            raise ValueError("M8195A: Invalid channel in get_output_low_level")
 
     def set_termination_voltage(self, channel, level):
         """Set the termination voltage level.
@@ -2826,10 +2869,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: level is neither integer nor proper string in set_termination_voltage'
+                    "M8195A: level is neither integer nor proper string in set_termination_voltage"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_termination_voltage')
+            raise ValueError("M8195A: Invalid channel in set_termination_voltage")
 
     def get_termination_voltage(self, channel):
         """Set the termination voltage level.
@@ -2840,7 +2883,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":VOLT{channel}:TERM?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_termination_voltage')
+            raise ValueError("M8195A: Invalid channel in get_termination_voltage")
 
     #####################################################################
     # 6.17 Source:Function:MODE #########################################
@@ -2858,7 +2901,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if types in ("ARB", "ARBitrary", "STS", "STSequence", "STSC", "STSCenario"):
             self.established_connection.write(f":FUNC:MODE {types}", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid types in set_waveform_type')
+            raise ValueError("M8195A: Invalid types in set_waveform_type")
 
     def get_waveform_type(self):
         """Use this command to query the type of waveform that will be
@@ -2870,7 +2913,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             segment [STS, STSequence]: sequence [STSC, STSCenario]:
             scenario
         """
-        self.established_connection.query(':FUNC:MODE?', error_check=True)
+        self.established_connection.query(":FUNC:MODE?", error_check=True)
 
     #####################################################################
     # 6.18 :STABle Subsystem ############################################
@@ -2887,7 +2930,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.write(':STAB:RES', error_check=True)
+        self.established_connection.write(":STAB:RES", error_check=True)
 
     def set_sequence_data(
         self,
@@ -2964,7 +3007,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             # 0011 = 3 * (0001) = 196,608
             control += 3 * (2**16)
         else:
-            raise ValueError('M8195A: Invalid segment advancement mode')
+            raise ValueError("M8195A: Invalid segment advancement mode")
 
         if seq_adv_mode == "AUTO":
             control = control  # pylint: disable=self-assigning-variable
@@ -2978,7 +3021,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             # 0011 = 3 * (0001) = 3,145,728
             control += 3 * (2**20)
         else:
-            raise ValueError('M8195A: Invalid sequence advancement mode')
+            raise ValueError("M8195A: Invalid sequence advancement mode")
 
         if marker_enab is True:
             control += 2**24
@@ -3086,7 +3129,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         ):
             pass
         else:
-            raise ValueError('M8195A: Invalid idle_delay in set_sequence_idle')
+            raise ValueError("M8195A: Invalid idle_delay in set_sequence_idle")
 
         self.established_connection.write(
             f"STAB:DATA {index},2147483648,{seq_loop},0,{idle_sample},{idle_delay},0",
@@ -3149,11 +3192,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: index is neither integer nor proper string in set_sequence_starting_index'
+                    "M8195A: index is neither integer nor proper string in set_sequence_starting_index"
                 )
         else:
             raise ValueError(
-                'M8195A: get_waveform_type is not STSequence in set_sequence_starting_index'
+                "M8195A: get_waveform_type is not STSequence in set_sequence_starting_index"
             )
 
     def get_sequence_starting_index(self):
@@ -3163,10 +3206,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return: index -> <sequence_table_index>|MINimum|MAXimum
         """
         if self.get_waveform_type() == ("STS" or "STSequence"):
-            self.established_connection.query(':STAB:SEQ:SEL?', error_check=True)
+            self.established_connection.query(":STAB:SEQ:SEL?", error_check=True)
         else:
             raise ValueError(
-                'M8195A: get_waveform_type is not STSequence in get_sequence_starting_index'
+                "M8195A: get_waveform_type is not STSequence in get_sequence_starting_index"
             )
 
     def sequence_executation_state_and_index_entry(self):
@@ -3181,7 +3224,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             Index of currently executed sequence table entry. In Idle
             state the value is undefined.
         """
-        self.established_connection.query(':STAB:SEQ:STAT?', error_check=True)
+        self.established_connection.query(":STAB:SEQ:STAT?", error_check=True)
 
     def set_dynamic_mode(self, mode):
         """Use this command to enable or disable dynamic mode. If dynamic mode
@@ -3200,11 +3243,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if mode in self._on_list:
-            self.established_connection.write(':STAB:DYN ON', error_check=True)
+            self.established_connection.write(":STAB:DYN ON", error_check=True)
         elif mode in self._off_list:
-            self.established_connection.write(':STAB:DYN OFF', error_check=True)
+            self.established_connection.write(":STAB:DYN OFF", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid Mode in set_dynamic_mode')
+            raise ValueError("M8195A: Invalid Mode in set_dynamic_mode")
 
     def get_dynamic_mode(self):
         """Use this command to query whether the dynamic mode is enabled or
@@ -3213,7 +3256,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         Check the description in set_dynamic_mode.
         :return:
         """
-        self.established_connection.query(':STAB:DYN?', error_check=True)
+        self.established_connection.query(":STAB:DYN?", error_check=True)
 
     def set_dynamic_starting_index(self, index):
         """When the dynamic mode for segments or sequences is active, set the
@@ -3228,10 +3271,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     f":STAB:DYN:SEL {index}", error_check=True
                 )
             else:
-                raise ValueError('M8195A: Invalid index in set_dynamic_starting_index')
+                raise ValueError("M8195A: Invalid index in set_dynamic_starting_index")
         else:
             raise ValueError(
-                'M8195A: get_dynamic_mode is not enabled in set_dynamic_starting_index'
+                "M8195A: get_dynamic_mode is not enabled in set_dynamic_starting_index"
             )
 
     def set_scenario_starting_index(self, index):
@@ -3252,11 +3295,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: index is neither integer nor proper string in set_scenario_starting_index'
+                    "M8195A: index is neither integer nor proper string in set_scenario_starting_index"
                 )
         else:
             raise ValueError(
-                'M8195A: get_waveform_type is not STSCenario in set_scenario_starting_index'
+                "M8195A: get_waveform_type is not STSCenario in set_scenario_starting_index"
             )
 
     def get_scenario_starting_index(self):
@@ -3266,10 +3309,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return: Index: Sequence table index
         """
         if self.get_waveform_type() == ("STSC" or "STSCenario"):
-            self.established_connection.query(':STAB:SCEN:SEL?', error_check=True)
+            self.established_connection.query(":STAB:SCEN:SEL?", error_check=True)
         else:
             raise ValueError(
-                'M8195A: get_waveform_type is not STSCenario in get_scenario_starting_index'
+                "M8195A: get_waveform_type is not STSCenario in get_scenario_starting_index"
             )
 
     def set_advancement_mode_scenario(self, mode):
@@ -3279,16 +3322,18 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return:
         """
         if mode in ("AUTO", "COND", "REP", "SING"):
-            self.established_connection.write(f":STAB:SCEN:ADV {mode}", error_check=True)
+            self.established_connection.write(
+                f":STAB:SCEN:ADV {mode}", error_check=True
+            )
         else:
-            raise ValueError('M8195A: Invalid mode in set_advancement_mode_scenario')
+            raise ValueError("M8195A: Invalid mode in set_advancement_mode_scenario")
 
     def get_advancement_mode_scenario(self):
         """Query the advancement mode for scenarios.
 
         :return: AUTO | COND | REP | SING
         """
-        self.established_connection.query(':STAB:SCEN:ADV?', error_check=True)
+        self.established_connection.query(":STAB:SCEN:ADV?", error_check=True)
 
     def set_scenario_loop_count(self, count):
         """Set the loop count for scenarios.
@@ -3307,7 +3352,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: count is neither proper integer nor proper string in set_scenario_loop_count'
+                "M8195A: count is neither proper integer nor proper string in set_scenario_loop_count"
             )
 
     def get_scenario_loop_count(self):
@@ -3316,7 +3361,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :return: <count>|MINimum|MAXimum
                         - <count> – 1..4G-1: number of times the scenario is repeated. (4G-1 = 2**32-1 = 4,294,967,295)
         """
-        self.established_connection.query(':STAB:SCEN:COUN?', error_check=True)
+        self.established_connection.query(":STAB:SCEN:COUN?", error_check=True)
 
     #####################################################################
     # 6.19 Frequency and Phase Response Data Access #####################
@@ -3351,7 +3396,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":CHAR{channel}?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_freq_and_phase_resp_data')
+            raise ValueError("M8195A: Invalid channel in get_freq_and_phase_resp_data")
 
     #####################################################################
     # 6.21 :TRACe Subsystem #############################################
@@ -3383,9 +3428,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     f":TRAC{channel}:MMOD {source}", error_check=True
                 )
             else:
-                raise ValueError('M8195A: Invalid source in set_waveform_mem_source')
+                raise ValueError("M8195A: Invalid source in set_waveform_mem_source")
         else:
-            raise ValueError('M8195A: Invalid channel in set_waveform_mem_source')
+            raise ValueError("M8195A: Invalid channel in set_waveform_mem_source")
 
     def get_waveform_mem_source(self, channel):
         """Check description for 'def set_waveform_mem_source' :param channel:
@@ -3398,7 +3443,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":TRAC{channel}:MMOD?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in channelMemoryModeQuery')  # channelMemoryModeQuery?
+            raise ValueError(
+                "M8195A: Invalid channel in channelMemoryModeQuery"
+            )  # channelMemoryModeQuery?
 
     def set_waveform_mem_segment(
         self, channel, segm_id, length, init_value=0, write_only=False
@@ -3412,8 +3459,8 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         sourced from Extended Memory.
         :param channel: channel number (1|2|3|4)
         :param segm_id: ID of the segment
-        :param length: length of the segment in samples, marker samples do
-            not count
+        :param length: length of the segment in samples, marker samples
+            do not count
         :param init_value: [Optional] optional initialization DAC value
         :param write_only: The segment will be flagged write-only, so it
             cannot be read back or stored.
@@ -3436,7 +3483,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                         )
                 else:
                     raise ValueError(
-                        'M8195A: Invalid init_value in set_waveform_mem_segment'
+                        "M8195A: Invalid init_value in set_waveform_mem_segment"
                     )
             else:
                 if write_only:
@@ -3449,10 +3496,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     )
         else:
             raise ValueError(
-                'M8195A: Invalid (channel, segm_id, length) in set_waveform_mem_segment'
+                "M8195A: Invalid (channel, segm_id, length) in set_waveform_mem_segment"
             )
 
-    def set_waveform_mem_new_segment(self, channel, length, init_value=0, write_only=False):
+    def set_waveform_mem_new_segment(
+        self, channel, length, init_value=0, write_only=False
+    ):
         """Use this query to define the size of a waveform memory segment.
 
         If init_value is specified, all values in the segment are
@@ -3461,8 +3510,8 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         same segment is defined on all other channels sourced from
         Extended Memory.
         :param channel: channel number (1|2|3|4)
-        :param length: length of the segment in samples, marker samples do
-            not count
+        :param length: length of the segment in samples, marker samples
+            do not count
         :param init_value: [Optional] optional initialization DAC value
         :param write_only: The segment will be flagged write-only, so it
             cannot be read back or stored.
@@ -3484,7 +3533,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                         )
                 else:
                     raise ValueError(
-                        'M8195A: Invalid init_value in set_waveform_mem_new_segment'
+                        "M8195A: Invalid init_value in set_waveform_mem_new_segment"
                     )
             else:
                 if write_only:
@@ -3497,7 +3546,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     )
         else:
             raise ValueError(
-                'M8195A: Invalid (channel, length) in set_waveform_mem_new_segment'
+                "M8195A: Invalid (channel, length) in set_waveform_mem_new_segment"
             )
 
     def set_waveform_data_in_mem(self, channel, segm_id, offset, value):
@@ -3541,10 +3590,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             )
         else:
             raise ValueError(
-                'M8195A: Invalid (channel, segm_id, Offset, value) in set_waveform_data_in_mem'
+                "M8195A: Invalid (channel, segm_id, Offset, value) in set_waveform_data_in_mem"
             )
 
-    def get_waveform_data_in_mem(self, channel, segm_id, offset, length, bloc=False):  # pylint: disable=too-many-arguments
+    def get_waveform_data_in_mem(
+        self, channel, segm_id, offset, length, bloc=False
+    ):  # pylint: disable=too-many-arguments
         """Check description for 'def set_waveform_data_in_mem'.
 
         :param channel: 1|2|3|4
@@ -3560,7 +3611,8 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if all(isinstance(i, int) for i in [channel, segm_id, offset, length]):
             if bloc is False:
                 self.established_connection.query(
-                    f":TRAC{channel}:DATA? {segm_id},{offset},{length}", error_check=True
+                    f":TRAC{channel}:DATA? {segm_id},{offset},{length}",
+                    error_check=True,
                 )
             elif bloc is True:
                 self.established_connection.query(
@@ -3569,7 +3621,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
         else:
             raise ValueError(
-                'M8195A: Invalid (channel, segm_id, offset, length) in get_waveform_data_in_mem'
+                "M8195A: Invalid (channel, segm_id, offset, length) in get_waveform_data_in_mem"
             )
 
     def waveform_data_from_file_import(
@@ -3640,27 +3692,37 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         ):
             pass
         else:
-            raise ValueError('M8195A: Invalid file_type in waveform_data_from_file_import')
+            raise ValueError(
+                "M8195A: Invalid file_type in waveform_data_from_file_import"
+            )
 
         if data_type in ("IONL", "IONLy", "QONL", "QONLy", "BOTH"):
             pass
         else:
-            raise ValueError('M8195A: Invalid data_type in waveform_data_from_file_import')
+            raise ValueError(
+                "M8195A: Invalid data_type in waveform_data_from_file_import"
+            )
 
         if marker_flag in self._on_list or self._off_list:
             pass
         else:
-            raise ValueError('M8195A: Invalid marker_flag in waveform_data_from_file_import')
+            raise ValueError(
+                "M8195A: Invalid marker_flag in waveform_data_from_file_import"
+            )
 
         if padding in ("ALEN", "ALENgth", "FILL"):
             pass
         else:
-            raise ValueError('M8195A: Invalid padding in waveform_data_from_file_import')
+            raise ValueError(
+                "M8195A: Invalid padding in waveform_data_from_file_import"
+            )
 
         if ignore_header_parameters in self._on_list or self._off_list:
             pass
         else:
-            raise ValueError('M8195A: Invalid marker_flag in waveform_data_from_file_import')
+            raise ValueError(
+                "M8195A: Invalid marker_flag in waveform_data_from_file_import"
+            )
 
         self.established_connection.write(
             f":TRAC{channel}:IMP {segm_id},{file_name},{file_type},{data_type},"
@@ -3707,9 +3769,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     f":TRAC{channel}:IMP:SCAL OFF", error_check=True
                 )
             else:
-                raise ValueError('M8195A: Invalid state in set_file_import_scaling_state')
+                raise ValueError(
+                    "M8195A: Invalid state in set_file_import_scaling_state"
+                )
         else:
-            raise ValueError('M8195A: Invalid channel in set_file_import_scaling_state')
+            raise ValueError("M8195A: Invalid channel in set_file_import_scaling_state")
 
     def get_file_import_scaling_state(self, channel):
         """Query the scaling state for the file import.
@@ -3738,9 +3802,11 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     f":TRAC{channel}:DEL {segm_id}", error_check=True
                 )
             else:
-                raise ValueError('M8195A: Invalid segm_id (segment ID) in delete_segment')
+                raise ValueError(
+                    "M8195A: Invalid segm_id (segment ID) in delete_segment"
+                )
         else:
-            raise ValueError('M8195A: Invalid channel in delete_segment')
+            raise ValueError("M8195A: Invalid channel in delete_segment")
 
     def delete_all_segment(self, channel):
         """Delete all segments.
@@ -3756,7 +3822,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 f":TRAC{channel}:DEL:ALL", error_check=True
             )
         else:
-            raise ValueError('M8195A: Invalid channel in delete_all_segment')
+            raise ValueError("M8195A: Invalid channel in delete_all_segment")
 
     def get_segments_id_length(self, channel):
         """The query returns a comma-separated list of segment-ids that are
@@ -3771,7 +3837,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":TRAC{channel}:CAT?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_segments_id_length')
+            raise ValueError("M8195A: Invalid channel in get_segments_id_length")
 
     def mem_space_waveform_data(self, channel):
         """
@@ -3783,7 +3849,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":TRAC{channel}:FREE?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in mem_space_waveform_data')
+            raise ValueError("M8195A: Invalid channel in mem_space_waveform_data")
 
     def set_segment_name(self, channel, segm_id, name):
         """This command associates a name to a segment.
@@ -3801,12 +3867,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     )
                 else:
                     raise ValueError(
-                        'M8195A: Invalid name (not string or improper length) in set_segment_name'
+                        "M8195A: Invalid name (not string or improper length) in set_segment_name"
                     )
             else:
-                raise ValueError('M8195A: Invalid segm_id (Segment ID) in set_segment_name')
+                raise ValueError(
+                    "M8195A: Invalid segm_id (Segment ID) in set_segment_name"
+                )
         else:
-            raise ValueError('M8195A: Invalid channel in set_segment_name')
+            raise ValueError("M8195A: Invalid channel in set_segment_name")
 
     def get_segment_name(self, channel, segm_id):
         """The query gets the name for a segment.
@@ -3822,10 +3890,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: Invalid segm_id (Segment ID) in get_segment_name'
+                    "M8195A: Invalid segm_id (Segment ID) in get_segment_name"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in get_segment_name')
+            raise ValueError("M8195A: Invalid channel in get_segment_name")
 
     def set_segment_comment(self, channel, segm_id, comment):
         """This command associates a comment to a segment.
@@ -3843,14 +3911,14 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     )
                 else:
                     raise ValueError(
-                        'M8195A: Invalid comment (not string or improper length) in set_segment_comment'
+                        "M8195A: Invalid comment (not string or improper length) in set_segment_comment"
                     )
             else:
                 raise ValueError(
-                    'M8195A: Invalid segm_id (Segment ID) in set_segment_comment'
+                    "M8195A: Invalid segm_id (Segment ID) in set_segment_comment"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_segment_comment')
+            raise ValueError("M8195A: Invalid channel in set_segment_comment")
 
     def get_segment_comment(self, channel, segm_id):
         """The query gets the comment for a segment.
@@ -3866,10 +3934,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: Invalid segm_id (Segment ID) in get_segment_comment'
+                    "M8195A: Invalid segm_id (Segment ID) in get_segment_comment"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in get_segment_comment')
+            raise ValueError("M8195A: Invalid channel in get_segment_comment")
 
     def set_segment_select(self, channel, segm_id):
         """Selects the segment, which is output by the instrument in arbitrary
@@ -3894,10 +3962,10 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: segm_id is neither integer nor proper string in set_segment_select'
+                    "M8195A: segm_id is neither integer nor proper string in set_segment_select"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_segment_select')
+            raise ValueError("M8195A: Invalid channel in set_segment_select")
 
     def get_segment_select(self, channel):
         """Query the selected segment, which is output by the instrument in
@@ -3912,7 +3980,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":TRAC{channel}:SEL?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_segment_select')
+            raise ValueError("M8195A: Invalid channel in get_segment_select")
 
     def set_advancement_mode_segment(self, channel, mode):
         """Use this command to set the advancement mode for the selected
@@ -3932,9 +4000,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                     f":TRAC{channel}:ADV {mode}", error_check=True
                 )
             else:
-                raise ValueError('M8195A: Invalid Mode in set_advancement_mode_segment')
+                raise ValueError("M8195A: Invalid Mode in set_advancement_mode_segment")
         else:
-            raise ValueError('M8195A: Invalid channel in set_advancement_mode_segment')
+            raise ValueError("M8195A: Invalid channel in set_advancement_mode_segment")
 
     def get_advancement_mode_segment(self, channel):
         """Use this query to get the advancement mode for the selected segment.
@@ -3949,7 +4017,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":TRAC{channel}:ADV?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_advancement_mode_segment')
+            raise ValueError("M8195A: Invalid channel in get_advancement_mode_segment")
 
     def set_selected_segment_loop_count(self, channel, count):
         """Use this command to set the segment loop count for the selected
@@ -3974,10 +4042,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: count is neither integer nor proper string in set_selected_segment_loop_count'
+                    "M8195A: count is neither integer nor proper string in set_selected_segment_loop_count"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_selected_segment_loop_count')
+            raise ValueError(
+                "M8195A: Invalid channel in set_selected_segment_loop_count"
+            )
 
     def get_selected_segment_loop_count(self, channel):
         """Use this query to get the segment loop count for the selected
@@ -3993,7 +4063,9 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         if channel in self._channel_list:
             self.established_connection.query(f":TRAC{channel}:COUN?", error_check=True)
         else:
-            raise ValueError('M8195A: Invalid channel in get_selected_segment_loop_count')
+            raise ValueError(
+                "M8195A: Invalid channel in get_selected_segment_loop_count"
+            )
 
     def set_selected_segment_marker_state(self, channel, state):
         """Use this command to enable or disable markers for the selected
@@ -4017,10 +4089,12 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
                 )
             else:
                 raise ValueError(
-                    'M8195A: Invalid state in set_selected_segment_marker_state'
+                    "M8195A: Invalid state in set_selected_segment_marker_state"
                 )
         else:
-            raise ValueError('M8195A: Invalid channel in set_selected_segment_marker_state')
+            raise ValueError(
+                "M8195A: Invalid channel in set_selected_segment_marker_state"
+            )
 
     def get_selected_segment_marker_state(self, channel):
         """The query form gets the current marker state.
@@ -4033,7 +4107,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
             self.established_connection.query(f":TRAC{channel}:MARK?", error_check=True)
         else:
             raise ValueError(
-                'M8195A: Invalid channel in get_selected_segment_marker_state'
+                "M8195A: Invalid channel in get_selected_segment_marker_state"
             )
 
     #####################################################################
@@ -4044,7 +4118,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
 
         :return:
         """
-        self.established_connection.query(':TEST:PON?', error_check=True)
+        self.established_connection.query(":TEST:PON?", error_check=True)
 
     def get_self_tests_power_result_messsage(self):
         """Same as *TST?
@@ -4053,7 +4127,7 @@ class M8195AConfiguration:  # pylint: disable=too-many-public-methods
         :TEST:PON?
         :return:
         """
-        self.established_connection.query(':TEST:TST?', error_check=True)
+        self.established_connection.query(":TEST:TST?", error_check=True)
 
 
 #################################
