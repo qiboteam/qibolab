@@ -16,7 +16,7 @@ class DCChannelConfig:
 
 
 @dataclass(frozen=True)
-class LOConfig:
+class OscillatorConfig:
     """Configuration for a local oscillator."""
 
     frequency: float
@@ -50,7 +50,7 @@ class IQChannelConfig:
 
     frequency: float
     """The carrier frequency of the channel."""
-    lo_config: Optional[LOConfig]
+    lo_config: Optional[OscillatorConfig]
     """Configuration for the corresponding LO.
 
     None if the channel does not use an LO.
@@ -67,8 +67,12 @@ class AcquisitionChannelConfig:
     """Configuration for acquisition channels."""
 
     type: AcquisitionType
-    twpa_frequency: float
-    twpa_power: float
+    """Type of acquisition."""
+    twpa_pump_config: Optional[OscillatorConfig]
+    """Config for the corresponding TWPA pump.
+
+    None if the channel does not feature a TWPA.
+    """
 
 
 ChannelConfig = Union[DCChannelConfig, IQChannelConfig, AcquisitionChannelConfig]
