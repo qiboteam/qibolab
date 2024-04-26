@@ -19,24 +19,14 @@ TIME_OF_FLIGHT = 500
 FOLDER = pathlib.Path(__file__).parent
 
 
-def create(folder: pathlib.Path = FOLDER):
+def create():
     """QuantWare 5q-chip controlled using qblox cluster.
 
     Args:
         runcard_path (str): Path to the runcard file.
     """
 
-    runcard = load_runcard(folder)
-    modules = {}
-
-    # DEBUG: debug folder = report folder
-    # import os
-    # folder = os.path.dirname(runcard) + "/debug/"
-    # if not os.path.exists(folder):
-    #     os.makedirs(folder)
-    # for name in modules:
-    #     modules[name]._debug_folder = folder
-
+    runcard = load_runcard(FOLDER)
     modules = {
         "qcm_bb0": QcmBb("qcm_bb0", f"{ADDRESS}:2"),
         "qcm_bb1": QcmBb("qcm_bb1", f"{ADDRESS}:4"),

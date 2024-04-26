@@ -9,9 +9,9 @@ from qualang_tools.simulator_tools import create_simulator_controller_connection
 
 from qibolab import AveragingMode
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.unrolling import batch_max_sequences
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
+from qibolab.unrolling import Bounds
 
 from .acquisition import declare_acquisitions, fetch_results
 from .config import SAMPLING_RATE, QMConfig
@@ -23,7 +23,6 @@ from .sweepers import sweep
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
-MAX_BATCH_SIZE = 30
 
 
 def declare_octaves(octaves, host, calibration_path=None):
@@ -124,6 +123,8 @@ class QMController(Controller):
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
     """Smearing used for hardware signal integration."""
+    bounds: Bounds = Bounds(0, 0, 0)
+    """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[str] = None
     """Path to the JSON file that contains the mixer calibration."""
     script_file_name: Optional[str] = None
@@ -158,6 +159,12 @@ class QMController(Controller):
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
+        # redefine bounds because abstract instrument overwrites them
+        self.bounds = Bounds(
+            waveforms=int(4e4),
+            readout=30,
+            instructions=int(1e6),
+        )
         # convert lists to dicts
         if not isinstance(self.opxs, dict):
             self.opxs = {instr.name: instr for instr in self.opxs}
@@ -209,13 +216,11 @@ class QMController(Controller):
         self.manager = QuantumMachinesManager(
             host=host, port=int(port), octave=octave, credentials=credentials
         )
-
-    def setup(self):
-        """Deprecated method."""
+        self.is_connected = True
 
     def disconnect(self):
         """Disconnect from QM manager."""
-        if self.is_connected:
+        if self.manager is not None:
             self.manager.close_all_quantum_machines()
             self.manager.close()
             self.is_connected = False
@@ -363,6 +368,3 @@ class QMController(Controller):
         else:
             result = self.execute_program(experiment)
             return fetch_results(result, acquisitions)
-
-    def split_batches(self, sequences):
-        return batch_max_sequences(sequences, MAX_BATCH_SIZE)

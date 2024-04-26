@@ -15,7 +15,7 @@ from qibolab.serialize import (
 FOLDER = pathlib.Path(__file__).parent
 
 
-def create(folder: pathlib.Path = FOLDER):
+def create():
     """Dummy platform using QICK project on the RFSoC4x2 board.
 
     Used in ``test_instruments_rfsoc.py``.

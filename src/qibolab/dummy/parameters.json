@@ -36,6 +36,13 @@
         ]
     },
     "instruments": {
+        "dummy": {
+            "bounds": {
+                "waveforms": 0,
+                "readout": 0,
+                "instructions": 0
+            }
+        },
         "twpa_pump": {
             "power": 10,
             "frequency": 1000000000.0
