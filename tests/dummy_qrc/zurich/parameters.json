@@ -36,6 +36,13 @@
         "relaxation_time": 300000
     },
     "instruments": {
+        "EL_ZURO": {
+            "bounds": {
+                "instructions": 1000000,
+                "readout": 250,
+                "waveforms": 40000
+            }
+        },
         "lo_readout": {
             "frequency": 5500000000
         },

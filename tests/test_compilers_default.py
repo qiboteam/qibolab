@@ -3,7 +3,6 @@ import pytest
 from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.models import Circuit
-from qibo.transpiler import Passes
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
@@ -30,13 +29,6 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-def transpile_circuit(circuit, platform):
-    """Transpile a circuit to native gates and connectivity."""
-    transpiler = Passes(connectivity=platform.topology)
-    native_circuit, _ = transpiler(circuit)
-    return native_circuit
-
-
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
     compiler = Compiler.default()
@@ -48,38 +40,36 @@ def compile_circuit(circuit, platform):
     "gateargs",
     [
         (gates.I,),
-        (gates.X,),
-        (gates.Y,),
         (gates.Z,),
-        (gates.RX, np.pi / 8),
-        (gates.RY, -np.pi / 8),
+        (gates.GPI, np.pi / 8),
+        (gates.GPI2, -np.pi / 8),
         (gates.RZ, np.pi / 4),
         (gates.U3, 0.1, 0.2, 0.3),
     ],
 )
 def test_compile(platform, gateargs):
     nqubits = platform.nqubits
-    if gateargs[0] in (gates.I, gates.Z, gates.RZ):
-        nseq = 0
-    else:
+    if gateargs[0] is gates.U3:
         nseq = 2
+    elif gateargs[0] in (gates.GPI, gates.GPI2):
+        nseq = 1
+    else:
+        nseq = 0
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
-    circuit = transpile_circuit(circuit, platform)
     sequence = compile_circuit(circuit, platform)
     assert len(sequence) == (nseq + 1) * nqubits
 
 
 def test_compile_two_gates(platform):
     circuit = Circuit(1)
-    circuit.add(gates.RX(0, theta=0.1))
-    circuit.add(gates.RY(0, theta=0.2))
+    circuit.add(gates.GPI2(0, phi=0.1))
+    circuit.add(gates.U3(0, theta=0.1, phi=0.2, lam=0.3))
     circuit.add(gates.M(0))
 
-    circuit = transpile_circuit(circuit, platform)
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence.pulses) == 5
-    assert len(sequence.qd_pulses) == 4
+    assert len(sequence.pulses) == 4
+    assert len(sequence.qd_pulses) == 3
     assert len(sequence.ro_pulses) == 1
 
 
@@ -186,13 +176,11 @@ def test_cz_to_sequence(platform):
         )
 
     circuit = Circuit(3)
-    circuit.add(gates.X(0))
     circuit.add(gates.CZ(1, 2))
 
-    circuit = transpile_circuit(circuit, platform)
     sequence = compile_circuit(circuit, platform)
     test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
-    assert len(sequence.pulses) == len(test_sequence) + 2
+    assert sequence == test_sequence
 
 
 def test_cnot_to_sequence():

@@ -30,7 +30,7 @@ def get_platforms_path():
     return Path(profiles)
 
 
-def create_platform(name, path: Path = None) -> Platform:
+def create_platform(name) -> Platform:
     """A platform for executing quantum algorithms.
 
     It consists of a quantum processor QPU and a set of controlling instruments.
@@ -53,19 +53,15 @@ def create_platform(name, path: Path = None) -> Platform:
     spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-
-    if path is None:
-        return module.create()
-    return module.create(path)
+    return module.create()
 
 
-def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshots=1000):
+def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
     """Executes a QASM circuit.
 
     Args:
         circuit (str): the QASM circuit.
         platform (str): the platform where to execute the circuit.
-        runcard (pathlib.Path): the path to the runcard used for the platform.
         initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
         nshots (int): Number of shots to sample from the experiment.
@@ -76,6 +72,6 @@ def execute_qasm(circuit: str, platform, runcard=None, initial_state=None, nshot
     from qibolab.backends import QibolabBackend
 
     circuit = Circuit.from_qasm(circuit)
-    return QibolabBackend(platform, runcard).execute_circuit(
+    return QibolabBackend(platform).execute_circuit(
         circuit, initial_state=initial_state, nshots=nshots
     )

@@ -30,6 +30,13 @@
         ]
     ],
     "instruments": {
+        "qm": {
+            "bounds": {
+                "waveforms" : 10000,
+                "readout": 30,
+                "instructions": 1000000
+            }
+        },
         "con1": {
             "i1": {
                 "gain": 0

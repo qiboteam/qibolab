@@ -503,7 +503,7 @@ def test_update_cfg(mocker, dummy_qrc):
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
     assert instrument.cfg.reps == nshots
     relax_time = relax_time * 1e-3
-    assert instrument.cfg.repetition_duration == relax_time
+    assert instrument.cfg.relaxation_time == relax_time
 
 
 def test_classify_shots(dummy_qrc):

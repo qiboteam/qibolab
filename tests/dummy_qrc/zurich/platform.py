@@ -21,12 +21,9 @@ FOLDER = pathlib.Path(__file__).parent
 N_QUBITS = 5
 
 
-def create(path: pathlib.Path = FOLDER):
-    """IQM 5q-chip controlled Zurich Instruments (Zh) SHFQC, HDAWGs and PQSC.
-
-    Args:
-        path (str): Path to configuration folder.
-    """
+def create():
+    """IQM 5q-chip controlled Zurich Instruments (Zh) SHFQC, HDAWGs and
+    PQSC."""
 
     device_setup = DeviceSetup("EL_ZURO")
     # Dataserver
@@ -86,7 +83,6 @@ def create(path: pathlib.Path = FOLDER):
     controller = Zurich(
         "EL_ZURO",
         device_setup=device_setup,
-        use_emulation=False,
         time_of_flight=75,
         smearing=50,
     )
@@ -171,8 +167,8 @@ def create(path: pathlib.Path = FOLDER):
         channels[ch].local_oscillator = local_oscillators[lo]
 
     # create qubit objects
-    runcard = load_runcard(path)
-    kernels = Kernels.load(path)
+    runcard = load_runcard(FOLDER)
+    kernels = Kernels.load(FOLDER)
     qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
