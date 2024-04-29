@@ -108,16 +108,4 @@ class MetaBackend:
 
     def list_available(self) -> dict:
         """Lists all the available qibolab platforms."""
-        available_platforms = {}
-        for platform in get_available_platforms():
-            try:
-                MetaBackend.load(platform)
-                available_platforms[platform] = True
-            except:
-                available_platforms[platform] = False
-        if len(available_platforms) == 0:
-            raise_error(
-                RuntimeError,
-                f"No valid platform found in the QIBOLAB_PLATFORMS directory: {os.environ.get(PLATFORMS)}. Please make sure that each platform has its corresponding `platform.py` file.",
-            )
-        return available_platforms
+        return {platform: True for platform in get_available_platforms()}
