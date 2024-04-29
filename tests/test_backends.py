@@ -195,7 +195,7 @@ def test_metabackend_load(dummy_qrc):
     for platform in Path("tests/dummy_qrc/").iterdir():
         backend = MetaBackend.load(platform.name)
         assert isinstance(backend, QibolabBackend)
-        assert backend.platform.name == platform.name
+        assert Path(backend.platform.name).name == platform.name
 
 
 def test_metabackend_list_available(dummy_qrc):
