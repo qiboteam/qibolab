@@ -2,7 +2,7 @@
 
 from dataclasses import fields
 from enum import Enum
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -51,18 +51,8 @@ class Pulse(Model):
     """
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
-    channel: Optional[str] = None
-    """Channel on which the pulse should be played.
-
-    When a sequence of pulses is sent to the platform for execution,
-    each pulse is sent to the instrument responsible for playing pulses
-    the pulse channel. The connection of instruments with channels is
-    defined in the platform runcard.
-    """
     type: PulseType = PulseType.DRIVE
     """Pulse type, as an element of PulseType enumeration."""
-    qubit: int = 0
-    """Qubit or coupler addressed by the pulse."""
 
     @classmethod
     def flux(cls, **kwargs):
@@ -125,8 +115,6 @@ class Delay(Model):
 
     duration: int
     """Delay duration in ns."""
-    channel: str
-    """Channel on which the delay should be implemented."""
     type: PulseType = PulseType.DELAY
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
@@ -136,10 +124,6 @@ class VirtualZ(Model):
 
     phase: float
     """Phase that implements the rotation."""
-    channel: Optional[str] = None
-    """Channel on which the virtual phase should be added."""
-    qubit: int = 0
-    """Qubit on the drive of which the virtual phase should be added."""
     type: PulseType = PulseType.VIRTUALZ
 
     @property
