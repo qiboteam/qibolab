@@ -1,6 +1,6 @@
 import pytest
 
-from qibolab.instruments.channels import Channel, ChannelMap
+from qibolab.channel import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyPort
 
 
