@@ -6,7 +6,7 @@ from laboneq.dsl.device.instruments import HDAWG, PQSC, SHFQC
 from laboneq.simple import DeviceSetup
 
 from qibolab import Platform
-from qibolab.instruments.channels import Channel, ChannelMap
+from qibolab.channel import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.zhinst import Zurich
 from qibolab.kernels import Kernels
