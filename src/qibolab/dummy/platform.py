@@ -1,7 +1,7 @@
 import itertools
 import pathlib
 
-from qibolab.instruments.channels import Channel, ChannelMap
+from qibolab.channel import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform

@@ -1,9 +1,17 @@
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional
 
-from .execution_parameters import AcquisitionType
+from qibolab.execution_parameters import AcquisitionType
 
 """Common configuration for various channels."""
+
+__all__ = [
+    "DCChannelConfig",
+    "IQChannelConfig",
+    "AcquisitionChannelConfig",
+    "OscillatorConfig",
+    "IQMixerConfig",
+]
 
 
 @dataclass(frozen=True)
@@ -73,6 +81,3 @@ class AcquisitionChannelConfig:
 
     None if the channel does not feature a TWPA.
     """
-
-
-ChannelConfig = Union[DCChannelConfig, IQChannelConfig, AcquisitionChannelConfig]
