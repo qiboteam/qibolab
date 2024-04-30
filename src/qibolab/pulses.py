@@ -491,7 +491,6 @@ class Drag(PulseShape):
                 self.beta
                 * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
                 * i
-                * sampling_rate
             )
             waveform = Waveform(q)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
