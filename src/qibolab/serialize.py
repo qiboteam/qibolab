@@ -10,8 +10,6 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
 
-from pydantic import ConfigDict, TypeAdapter
-
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -23,8 +21,7 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.pulses import Pulse, PulseSequence, PulseType
-from qibolab.pulses.pulse import PulseLike
+from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 RUNCARD = "parameters.json"
@@ -100,37 +97,25 @@ def load_qubits(
     return qubits, couplers, pairs
 
 
-_PulseLike = TypeAdapter(PulseLike, config=ConfigDict(extra="ignore"))
-"""Parse a pulse-like object.
-
-.. note::
-
-    Extra arguments are ignored, in order to standardize the qubit handling, since the
-    :cls:`Delay` object has no `qubit` field.
-    This will be removed once there won't be any need for dedicated couplers handling.
-"""
-
-
-def _load_pulse(pulse_kwargs: dict, qubit: Qubit):
-    coupler = "coupler" in pulse_kwargs
-    pulse_kwargs["qubit"] = pulse_kwargs.pop(
-        "coupler" if coupler else "qubit", qubit.name
-    )
-
-    return _PulseLike.validate_python(pulse_kwargs)
+def _load_pulse(pulse_kwargs):
+    if "phase" in pulse_kwargs:
+        return VirtualZ(**pulse_kwargs)
+    if "amplitude" not in pulse_kwargs:
+        return Delay(**pulse_kwargs)
+    if "frequency" not in pulse_kwargs:
+        return Pulse.flux(**pulse_kwargs)
+    return Pulse(**pulse_kwargs)
 
 
-def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
-    """Parse native gates of the qubit from the runcard.
+def _load_single_qubit_natives(gates) -> SingleQubitNatives:
+    """Parse native gates from the runcard.
 
     Args:
-        qubit (:class:`qibolab.qubits.Qubit`): Qubit object that the
-            native gates are acting on.
         gates (dict): Dictionary with native gate pulse parameters as loaded
             from the runcard.
     """
     return SingleQubitNatives(
-        **{name: _load_pulse(kwargs, qubit) for name, kwargs in gates.items()}
+        **{name: _load_pulse(kwargs) for name, kwargs in gates.items()}
     )
 
 

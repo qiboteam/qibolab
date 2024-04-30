@@ -16,16 +16,12 @@ def identity_rule(gate, qubit):
 
 def z_rule(gate, qubit):
     """Z gate applied virtually."""
-    return PulseSequence(
-        [VirtualZ(phase=math.pi, channel=qubit.drive.name, qubit=qubit.name)]
-    )
+    return PulseSequence([VirtualZ(phase=math.pi)])
 
 
 def rz_rule(gate, qubit):
     """RZ gate applied virtually."""
-    return PulseSequence(
-        [VirtualZ(phase=gate.parameters[0], channel=qubit.drive.name, qubit=qubit.name)]
-    )
+    return PulseSequence([VirtualZ(phase=gate.parameters[0])])
 
 
 def gpi2_rule(gate, qubit):

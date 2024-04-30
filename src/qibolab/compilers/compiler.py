@@ -121,6 +121,7 @@ class Compiler:
             raise NotImplementedError(f"{type(gate)} is not a native gate.")
         return gate_sequence
 
+    # FIXME: pulse.qubit and pulse.channel do not exist anymore
     def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
 
