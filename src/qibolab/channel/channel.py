@@ -2,15 +2,29 @@ from dataclasses import dataclass, field
 
 from qibo.config import raise_error
 
-from . import Channel
+from .configs import ChannelConfig
 
-__all__ = ["ChannelMap"]
+__all__ = ["Channel", "ChannelMap"]
+
+
+@dataclass(frozen=True)
+class Channel:
+    """Channel is an abstract concept that defines means of communication
+    between users and a quantum computer.
+
+    A quantum computer can be perceived as just a set of channels where
+    signals can be sent to or received from. Channels are identified
+    with a unique name. The type of a channel is inferred from the type
+    of config it accepts.
+    """
+
+    name: str
+    config: ChannelConfig
 
 
 @dataclass
 class ChannelMap:
-    """Collection of :class:`qibolab.designs.channel.Channel` objects
-    identified by name.
+    """Collection of :class:`Channel` objects identified by name.
 
     Essentially, it allows creating a mapping of names to channels just
     specifying the names.
