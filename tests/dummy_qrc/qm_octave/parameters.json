@@ -206,6 +206,7 @@
             "amplitude": 0.055,
             "envelope": { "kind": "rectangular" },
             "qubit": 2,
+            "frequency": 0,
             "type": "qf"
           },
           {
@@ -227,6 +228,7 @@
             "amplitude": -0.0513,
             "envelope": { "kind": "rectangular" },
             "qubit": 3,
+            "frequency": 0,
             "type": "qf"
           },
           {
