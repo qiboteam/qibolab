@@ -155,7 +155,7 @@ class QubitPair:
     cz_fidelity: float = 0.0
     """Gate fidelity from CZ interleaved RB."""
 
-    coupler: Optional[Coupler] = None
+    coupler: Optional[Qubit] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
 

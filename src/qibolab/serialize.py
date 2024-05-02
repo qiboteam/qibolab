@@ -12,7 +12,6 @@ from typing import Optional, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
-from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ConfigUpdate
 from qibolab.kernels import Kernels
 from qibolab.native import (
@@ -22,7 +21,6 @@ from qibolab.native import (
     TwoQubitNatives,
 )
 from qibolab.platform.platform import (
-    CouplerMap,
     InstrumentMap,
     Platform,
     QubitMap,
@@ -58,7 +56,7 @@ def load_qubit_name(name: str) -> QubitId:
 
 def load_qubits(
     runcard: dict, kernels: Kernels = None
-) -> tuple[QubitMap, CouplerMap, QubitPairMap]:
+) -> tuple[QubitMap, QubitMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard to
@@ -85,7 +83,7 @@ def load_qubits(
     two_qubit_characterization = runcard["characterization"].get("two_qubit", {})
     if "coupler" in runcard["characterization"]:
         couplers = {
-            load_qubit_name(c): Coupler(load_qubit_name(c), **char)
+            load_qubit_name(c): Qubit(load_qubit_name(c), **char)
             for c, char in runcard["characterization"]["coupler"].items()
         }
         for c, pair in runcard["topology"].items():
@@ -158,7 +156,7 @@ def _load_two_qubit_natives(gates) -> TwoQubitNatives:
 
 
 def register_gates(
-    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
+    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: QubitMap = None
 ) -> tuple[QubitMap, QubitPairMap]:
     """Register single qubit native gates to ``Qubit`` objects from the
     runcard.
@@ -230,7 +228,7 @@ def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
 
 
 def dump_native_gates(
-    qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
+    qubits: QubitMap, pairs: QubitPairMap, couplers: QubitMap = None
 ) -> dict:
     """Dump native gates section to dictionary following the runcard format,
     using qubit and pair objects."""
@@ -254,7 +252,7 @@ def dump_native_gates(
 
 
 def dump_characterization(
-    qubits: QubitMap, pairs: QubitPairMap = None, couplers: CouplerMap = None
+    qubits: QubitMap, pairs: QubitPairMap = None, couplers: QubitMap = None
 ) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
