@@ -208,6 +208,7 @@
               "g": 0.1
             },
             "qubit": 3,
+            "frequency": 0,
             "type": "qf"
           },
           {
@@ -234,6 +235,7 @@
               "g": 0.1
             },
             "qubit": 2,
+            "frequency": 0,
             "type": "qf"
           }
         ]
@@ -250,6 +252,7 @@
               "g": 0.1
             },
             "qubit": 2,
+            "frequency": 0,
             "type": "qf"
           },
           {
