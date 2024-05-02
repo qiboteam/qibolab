@@ -157,6 +157,7 @@
           "type": "cf",
           "duration": 1000,
           "amplitude": 0.5,
+          "frequency": 0,
           "envelope": { "kind": "rectangular" }
         }
       },
@@ -165,6 +166,7 @@
           "type": "cf",
           "duration": 1000,
           "amplitude": 0.5,
+          "frequency": 0,
           "envelope": { "kind": "rectangular" }
         }
       },
@@ -173,6 +175,7 @@
           "type": "cf",
           "duration": 1000,
           "amplitude": 0.5,
+          "frequency": 0,
           "envelope": { "kind": "rectangular" }
         }
       },
@@ -181,6 +184,7 @@
           "type": "cf",
           "duration": 1000,
           "amplitude": 0.5,
+          "frequency": 0,
           "envelope": { "kind": "rectangular" }
         }
       }
@@ -198,6 +202,7 @@
               "g": 0.1
             },
             "qubit": 3,
+            "frequency": 0,
             "type": "qf"
           },
           {

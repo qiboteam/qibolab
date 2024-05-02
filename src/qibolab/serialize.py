@@ -202,8 +202,6 @@ def dump_qubit_name(name: QubitId) -> str:
 
 def _dump_pulse(pulse: Pulse):
     data = pulse.model_dump()
-    if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
-        del data["frequency"]
     data["type"] = data["type"].value
     if "channel" in data:
         del data["channel"]
