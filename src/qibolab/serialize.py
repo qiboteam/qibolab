@@ -55,7 +55,7 @@ def load_qubit_name(name: str) -> QubitId:
 
 
 def load_qubits(
-    runcard: dict, kernels: Kernels = None
+    runcard: dict, kernels: Optional[Kernels] = None
 ) -> tuple[QubitMap, QubitMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
@@ -156,8 +156,11 @@ def _load_two_qubit_natives(gates) -> TwoQubitNatives:
 
 
 def register_gates(
-    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: QubitMap = None
-) -> tuple[QubitMap, QubitPairMap]:
+    runcard: dict,
+    qubits: QubitMap,
+    pairs: QubitPairMap,
+    couplers: Optional[QubitMap] = None,
+) -> tuple[QubitMap, QubitPairMap, QubitMap]:
     """Register single qubit native gates to ``Qubit`` objects from the
     runcard.
 
@@ -228,7 +231,7 @@ def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
 
 
 def dump_native_gates(
-    qubits: QubitMap, pairs: QubitPairMap, couplers: QubitMap = None
+    qubits: QubitMap, pairs: QubitPairMap, couplers: Optional[QubitMap] = None
 ) -> dict:
     """Dump native gates section to dictionary following the runcard format,
     using qubit and pair objects."""
@@ -252,7 +255,9 @@ def dump_native_gates(
 
 
 def dump_characterization(
-    qubits: QubitMap, pairs: QubitPairMap = None, couplers: QubitMap = None
+    qubits: QubitMap,
+    pairs: Optional[QubitPairMap] = None,
+    couplers: Optional[QubitMap] = None,
 ) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
