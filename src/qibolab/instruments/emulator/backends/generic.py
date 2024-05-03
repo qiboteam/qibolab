@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,30 +30,6 @@ def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
         y -= coeff * sub_dim
 
     return output_list
-
-
-def make_comp_basis(
-    qubit_list: List[Union[int, str]], qid_nlevels_map: dict[Union[int, str], int]
-) -> np.ndarray:
-    """Generates the computational basis states of the Hilbert space.
-
-    Args:
-        qubit_list (list): List of target qubit indices to generate the local Hilbert space of the qubits that respects the order given by qubit_list.
-        qid_nlevels_map (dict): Dictionary mapping the qubit IDs given in qubit_list to their respective Hilbert space dimensions.
-
-    Returns:
-        `np.ndarray`: The list of computation basis states of the local Hilbert space in a numpy array.
-    """
-    nqubits = len(qubit_list)
-
-    qid_list = [str(qubit) for qubit in qubit_list]
-    nlevels = [qid_nlevels_map[qid] for qid in qid_list]
-    comp_basis_list = []
-    comp_dim = np.prod(nlevels)
-    for ind in range(comp_dim):
-        comp_basis_list.append(dec_to_basis_string(ind, nlevels=nlevels))
-
-    return np.array(comp_basis_list)
 
 
 def op_from_instruction(
@@ -147,7 +123,7 @@ def op_from_instruction(
         return coeff, op_list[0]
 
 
-def print_Hamiltonian(model_config, op_qid_list: list = None):
+def print_hamiltonian(model_config, op_qid_list: list = None):
     """Prints Hamiltonian the model configuration.
 
     Args:

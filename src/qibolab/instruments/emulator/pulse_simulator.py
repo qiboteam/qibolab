@@ -10,7 +10,7 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.emulator.backends.generic import make_comp_basis
+from qibolab.instruments.emulator.backends.generic import dec_to_basis_string
 from qibolab.instruments.emulator.backends.qutip_backend import QutipSimulator
 from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
@@ -709,3 +709,27 @@ def apply_readout_noise(
                 )
 
     return noisy_samples
+
+
+def make_comp_basis(
+    qubit_list: List[Union[int, str]], qid_nlevels_map: dict[Union[int, str], int]
+) -> np.ndarray:
+    """Generates the computational basis states of the Hilbert space.
+
+    Args:
+        qubit_list (list): List of target qubit indices to generate the local Hilbert space of the qubits that respects the order given by qubit_list.
+        qid_nlevels_map (dict): Dictionary mapping the qubit IDs given in qubit_list to their respective Hilbert space dimensions.
+
+    Returns:
+        `np.ndarray`: The list of computation basis states of the local Hilbert space in a numpy array.
+    """
+    nqubits = len(qubit_list)
+
+    qid_list = [str(qubit) for qubit in qubit_list]
+    nlevels = [qid_nlevels_map[qid] for qid in qid_list]
+    comp_basis_list = []
+    comp_dim = np.prod(nlevels)
+    for ind in range(comp_dim):
+        comp_basis_list.append(dec_to_basis_string(ind, nlevels=nlevels))
+
+    return np.array(comp_basis_list)
