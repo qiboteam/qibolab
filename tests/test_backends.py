@@ -70,11 +70,15 @@ def test_measurement_samples():
 
 def test_execute_circuits():
     backend = QibolabBackend("dummy")
+    initial_state_circuit = Circuit(3)
+    initial_state_circuit.add(gates.GPI(0, phi=np.pi / 2))
     circuit = Circuit(3)
     circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(3))
     circuit.add(gates.M(0, 1, 2))
 
-    results = backend.execute_circuits(5 * [circuit], nshots=100)
+    results = backend.execute_circuits(
+        5 * [circuit], initial_states=initial_state_circuit, nshots=100
+    )
     assert len(results) == 5
     for result in results:
         assert result.samples().shape == (100, 3)

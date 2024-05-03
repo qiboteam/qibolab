@@ -126,7 +126,7 @@ class QibolabBackend(NumpyBackend):
         """
         if isinstance(initial_states, Circuit):
             return self.execute_circuits(
-                circuit=[initial_states + circuit for circuit in circuits],
+                circuits=[initial_states + circuit for circuit in circuits],
                 nshots=nshots,
             )
         if initial_states is not None:
