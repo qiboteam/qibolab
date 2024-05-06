@@ -11,7 +11,6 @@ from laboneq.dsl.device import create_connection
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
@@ -372,7 +371,7 @@ class Zurich(Controller):
     def experiment_flow(
         self,
         qubits: dict[str, Qubit],
-        couplers: dict[str, Coupler],
+        couplers: dict[str, Qubit],
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
@@ -383,7 +382,7 @@ class Zurich(Controller):
 
         Args:
             qubits (dict[str, Qubit]): qubits for the platform.
-            couplers (dict[str, Coupler]): couplers for the platform.
+            couplers (dict[str, Qubit]): couplers for the platform.
             sequence (PulseSequence): sequence of pulses to be played in the experiment.
         """
         self.sequence = self.sequence_zh(sequence, qubits)

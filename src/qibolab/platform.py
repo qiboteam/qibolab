@@ -8,7 +8,6 @@ import networkx as nx
 from qibo.config import log, raise_error
 
 from .channel import ChannelConfig
-from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
 from .pulses import Delay, Drag, PulseSequence, PulseType
@@ -19,7 +18,6 @@ from .unrolling import batch
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
-CouplerMap = Dict[QubitId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
 
 NS_TO_SEC = 1e-9
@@ -105,9 +103,8 @@ class Platform:
     Default is 3D for single-qubit chips and 2D for multi-qubit.
     """
 
-    couplers: CouplerMap = field(default_factory=dict)
-    """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler`
-    objects."""
+    couplers: QubitMap = field(default_factory=dict)
+    """Dictionary mapping coupler names to :class:`Qubit` objects."""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""

@@ -21,7 +21,6 @@ class PulseType(Enum):
     READOUT = "ro"
     DRIVE = "qd"
     FLUX = "qf"
-    COUPLERFLUX = "cf"
     DELAY = "dl"
     VIRTUALZ = "vz"
 

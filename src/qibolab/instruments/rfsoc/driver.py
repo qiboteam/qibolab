@@ -13,7 +13,7 @@ from qibosoq import client
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.platform import Coupler, Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import BIAS, Sweeper
@@ -140,7 +140,7 @@ class RFSoC(Controller):
     def play(
         self,
         qubits: dict[int, Qubit],
-        couplers: dict[int, Coupler],
+        couplers: dict[int, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, Union[IntegratedResults, SampleResults]]:
@@ -259,7 +259,7 @@ class RFSoC(Controller):
     def play_sequence_in_sweep_recursion(
         self,
         qubits: dict[int, Qubit],
-        couplers: dict[int, Coupler],
+        couplers: dict[int, Qubit],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
@@ -286,7 +286,7 @@ class RFSoC(Controller):
     def recursive_python_sweep(
         self,
         qubits: dict[int, Qubit],
-        couplers: dict[int, Coupler],
+        couplers: dict[int, Qubit],
         sequence: PulseSequence,
         or_sequence: PulseSequence,
         *sweepers: rfsoc.Sweeper,
@@ -510,7 +510,7 @@ class RFSoC(Controller):
     def sweep(
         self,
         qubits: dict[int, Qubit],
-        couplers: dict[int, Coupler],
+        couplers: dict[int, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweepers: Sweeper,

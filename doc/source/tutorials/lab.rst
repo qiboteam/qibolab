@@ -163,7 +163,6 @@ hold the parameters of the two-qubit gates.
     )
 
 Some architectures may also have coupler qubits that mediate the interactions.
-We can also interact with them defining the :class:`qibolab.couplers.Coupler` objects.
 Then we add them to their corresponding :class:`qibolab.qubits.QubitPair` objects according
 to the chip topology. We neglected characterization parameters associated to the
 coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
@@ -171,7 +170,6 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
 
 .. testcode::  python
 
-    from qibolab.couplers import Coupler
     from qibolab.qubits import Qubit, QubitPair
     from qibolab.pulses import PulseType, Pulse, PulseSequence
     from qibolab.native import (
@@ -182,7 +180,7 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # create the qubit and coupler objects
     qubit0 = Qubit(0)
     qubit1 = Qubit(1)
-    coupler_01 = Coupler(0)
+    coupler_01 = Qubit(100)
 
     # assign single-qubit native gates to each qubit
     # Look above example

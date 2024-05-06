@@ -4,7 +4,6 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 from qibolab.channel import Channel
-from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -142,6 +141,6 @@ class QubitPair:
     Acts as target on two-qubit gates.
     """
 
-    coupler: Optional[Coupler] = None
+    coupler: Optional[Qubit] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)

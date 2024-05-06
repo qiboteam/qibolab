@@ -8,19 +8,11 @@ example for more details.
 import json
 from dataclasses import asdict, fields
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
-from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import (
-    CouplerMap,
-    InstrumentMap,
-    Platform,
-    QubitMap,
-    QubitPairMap,
-    Settings,
-)
+from qibolab.platform import InstrumentMap, Platform, QubitMap, QubitPairMap, Settings
 from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
 from qibolab.qubits import Qubit, QubitPair
 
@@ -39,8 +31,8 @@ def load_settings(runcard: dict) -> Settings:
 
 
 def load_qubits(
-    runcard: dict, kernels: Kernels = None
-) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
+    runcard: dict, kernels: Optional[Kernels] = None
+) -> Tuple[QubitMap, QubitMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard to
@@ -65,7 +57,7 @@ def load_qubits(
     pairs = {}
     if "coupler" in runcard["characterization"]:
         couplers = {
-            json.loads(c): Coupler(json.loads(c), **char)
+            json.loads(c): Qubit(json.loads(c), **char)
             for c, char in runcard["characterization"]["coupler"].items()
         }
 
@@ -118,8 +110,11 @@ def _load_two_qubit_natives(gates) -> TwoQubitNatives:
 
 
 def register_gates(
-    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
-) -> Tuple[QubitMap, QubitPairMap]:
+    runcard: dict,
+    qubits: QubitMap,
+    pairs: QubitPairMap,
+    couplers: Optional[QubitMap] = None,
+) -> Tuple[QubitMap, QubitPairMap, QubitMap]:
     """Register single qubit native gates to ``Qubit`` objects from the
     runcard.
 
@@ -151,7 +146,7 @@ def register_gates(
 
 def _dump_pulse(pulse: Pulse):
     data = pulse.model_dump()
-    if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
+    if pulse.type is PulseType.FLUX:
         del data["frequency"]
     data["type"] = data["type"].value
     if "channel" in data:
@@ -186,7 +181,7 @@ def _dump_two_qubit_natives(natives: TwoQubitNatives):
 
 
 def dump_native_gates(
-    qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
+    qubits: QubitMap, pairs: QubitPairMap, couplers: Optional[QubitMap] = None
 ) -> dict:
     """Dump native gates section to dictionary following the runcard format,
     using qubit and pair objects."""
@@ -215,7 +210,9 @@ def dump_native_gates(
     return native_gates
 
 
-def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict:
+def dump_characterization(
+    qubits: QubitMap, couplers: Optional[QubitMap] = None
+) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
     characterization = {

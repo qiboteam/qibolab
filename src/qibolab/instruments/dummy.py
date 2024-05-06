@@ -5,7 +5,7 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.platform import Coupler, Qubit
+from qibolab.platform import Qubit
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import QubitId
 from qibolab.sweeper import Sweeper
@@ -113,7 +113,7 @@ class DummyInstrument(Controller):
     def play(
         self,
         qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        couplers: Dict[QubitId, Qubit],
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
@@ -134,7 +134,7 @@ class DummyInstrument(Controller):
     def sweep(
         self,
         qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        couplers: Dict[QubitId, Qubit],
         sequence: PulseSequence,
         options: ExecutionParameters,
         *sweepers: List[Sweeper],
