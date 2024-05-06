@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from qibolab.channel_configs import DCChannelConfig, IQChannelConfig
+from qibolab.channel.configs import DCChannelConfig, IQChannelConfig
+
+__all__ = ["ZurichDCChannelConfig", "ZurichIQChannelConfig"]
 
 
 @dataclass(frozen=True)
