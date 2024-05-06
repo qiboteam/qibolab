@@ -1,3 +1,4 @@
+from .channel import *
 from .executor import Zurich
 from .pulse import ZhPulse
 from .sweep import ProcessedSweeps, classify_sweepers

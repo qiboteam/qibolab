@@ -72,14 +72,12 @@ class ProcessedSweeps:
                     if ptype is PulseType.READOUT:
                         ch = measure_channel_name(qubit)
                         intermediate_frequency = (
-                            qubit.readout_frequency
-                            - qubit.readout.local_oscillator.frequency
+                            qubit.readout.frequency - qubit.readout.lo_config.frequency
                         )
                     elif ptype is PulseType.DRIVE:
                         ch = qubit.drive.name
                         intermediate_frequency = (
-                            qubit.drive_frequency
-                            - qubit.drive.local_oscillator.frequency
+                            qubit.drive.frequency - qubit.drive.lo_config.frequency
                         )
                     else:
                         raise ValueError(
@@ -114,28 +112,15 @@ class ProcessedSweeps:
                     pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
                 parallel_sweeps.append((sweeper, sweep_param))
 
-            for qubit in sweeper.qubits or []:
+            for channel in sweeper.channels or []:
                 if sweeper.parameter is not Parameter.bias:
                     raise ValueError(
-                        f"Sweeping {sweeper.parameter.name} for {qubit} is not supported"
+                        f"Sweeping {sweeper.parameter.name} for {channel} is not supported"
                     )
                 sweep_param = laboneq.SweepParameter(
-                    values=sweeper.values + qubit.flux.offset
+                    values=sweeper.values + channel.config.offset
                 )
-                channel_sweeps.append((qubit.flux.name, sweeper.parameter, sweep_param))
-                parallel_sweeps.append((sweeper, sweep_param))
-
-            for coupler in sweeper.couplers or []:
-                if sweeper.parameter is not Parameter.bias:
-                    raise ValueError(
-                        f"Sweeping {sweeper.parameter.name} for {coupler} is not supported"
-                    )
-                sweep_param = laboneq.SweepParameter(
-                    values=sweeper.values + coupler.flux.offset
-                )
-                channel_sweeps.append(
-                    (coupler.flux.name, sweeper.parameter, sweep_param)
-                )
+                channel_sweeps.append((channel, sweeper.parameter, sweep_param))
                 parallel_sweeps.append((sweeper, sweep_param))
 
         self._pulse_sweeps = pulse_sweeps
