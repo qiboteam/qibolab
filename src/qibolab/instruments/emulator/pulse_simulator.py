@@ -90,8 +90,8 @@ class PulseSimulator(Controller):
             self.simulation_engine_name
         ](self.model_config, self.sim_opts)
 
-        self.platform2simulator_channels = self.model_config[
-            "platform2simulator_channels"
+        self.platform_to_simulator_channels = self.model_config[
+            "platform_to_simulator_channels"
         ]
 
         self.sim_sampling_boost = self.simulation_config["sim_sampling_boost"]
@@ -268,7 +268,7 @@ class PulseSimulator(Controller):
         # extract waveforms from pulse sequence
         channel_waveforms = ps_to_waveform_dict(
             sequence,
-            self.platform2simulator_channels,
+            self.platform_to_simulator_channels,
             self.sampling_rate,
             self.sim_sampling_boost,
             self.runcard_duration_in_dt_units,
@@ -520,7 +520,7 @@ _sweeper_operation = {
 
 def ps_to_waveform_dict(
     sequence: PulseSequence,
-    platform2simulator_channels: dict,
+    platform_to_simulator_channels: dict,
     sampling_rate=1,
     sim_sampling_boost=1,
     runcard_duration_in_dt_units=False,
@@ -530,7 +530,7 @@ def ps_to_waveform_dict(
 
     Args:
         sequence (`qibolab.pulses.PulseSequence`): Pulse sequence to simulate.
-        platform2simulator_channels (dict): A dictionary that maps platform channel names to simulator channel names.
+        platform_to_simulator_channels (dict): A dictionary that maps platform channel names to simulator channel names.
         sampling_rate (float): Sampling rate in units of samples/ns. Defaults to 1.
         sim_sampling_boost (int): Additional factor multiplied to sampling_rate for improving numerical accuracy in simulation. Defaults to 1.
         runcard_duration_in_dt_units (bool): If True, assumes that all time-related quantities in the runcard are expressed in units of inverse sampling rate and implements the necessary routines to account for that. If False, assumes that runcard time units are in ns. Defaults to False.
@@ -546,10 +546,10 @@ def ps_to_waveform_dict(
         """Option to add frequency specific channel operators."""
         try:
             # frequency dependent channel operation
-            return platform2simulator_channels[platform_channel_name + frequency]
+            return platform_to_simulator_channels[platform_channel_name + frequency]
         except:
             # frequency independent channel operation (default)
-            return platform2simulator_channels[platform_channel_name]
+            return platform_to_simulator_channels[platform_channel_name]
 
     if runcard_duration_in_dt_units:
         """Assumes pulse duration in runcard is in units of dt=1/sampling_rate,

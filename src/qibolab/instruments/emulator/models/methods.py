@@ -11,7 +11,7 @@ def load_model_params(path: Path) -> dict:
     return json.loads((path / MODEL_PARAMS).read_text())
 
 
-def default_noflux_platform2simulator_channels(
+def default_noflux_platform_to_simulator_channels(
     qubits_list: list, couplers_list: list
 ) -> dict:
     """Returns the default dictionary that maps platform channel names to simulator channel names.

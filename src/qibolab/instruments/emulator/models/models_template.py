@@ -1,7 +1,7 @@
 import numpy as np
 
 from qibolab.instruments.emulator.models.methods import (
-    default_noflux_platform2simulator_channels,
+    default_noflux_platform_to_simulator_channels,
 )
 
 
@@ -171,7 +171,7 @@ def generate_model_config(
         "dissipation": dissipation_dict,
         "method": "master_equation",
         "readout_error": readout_error,
-        "platform2simulator_channels": default_noflux_platform2simulator_channels(
+        "platform_to_simulator_channels": default_noflux_platform_to_simulator_channels(
             qubits_list, couplers_list
         ),
     }
