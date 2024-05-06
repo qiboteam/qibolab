@@ -1,10 +1,11 @@
+import os
 import pathlib
 
 import numpy as np
 import pytest
 from qutip import Options, identity, tensor
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.emulator.engines.generic import op_from_instruction
 from qibolab.instruments.emulator.engines.qutip_engine import (
     QutipSimulator,
@@ -19,16 +20,29 @@ from qibolab.instruments.emulator.models.methods import load_model_params
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
-from .emulators import default_q0
+# from .emulators import default_q0
+test_emulators_path = pathlib.Path(os.path.abspath("")).parent / "tests/emulators/"
+os.environ["QIBOLAB_PLATFORMS"] = test_emulators_path.as_posix()
 
 SWEPT_POINTS = 2
-EMULATORS = [default_q0]
+EMULATORS = ["default_q0"]
 MODELS = [models_template, general_no_coupler_model]
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
 def test_emulator_initialization(emulator):
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
+    platform.connect()
+    platform.disconnect()
+
+
+PLATFORM_NAMES = ["dummy", "dummy_couplers"]
+
+
+@pytest.mark.parametrize("name", PLATFORM_NAMES)
+def test_dummy_initialization(name):
+    platform = create_platform(name)
     platform.connect()
     platform.disconnect()
 
@@ -40,7 +54,8 @@ def test_emulator_initialization(emulator):
 )
 def test_emulator_execute_pulse_sequence(emulator, acquisition):
     nshots = 10  # 100
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
@@ -58,7 +73,8 @@ def test_emulator_execute_pulse_sequence(emulator, acquisition):
 
 @pytest.mark.parametrize("emulator", EMULATORS)
 def test_emulator_execute_pulse_sequence_fast_reset(emulator):
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(
@@ -76,7 +92,8 @@ def test_emulator_execute_pulse_sequence_fast_reset(emulator):
 def test_emulator_single_sweep(
     emulator, fast_reset, parameter, average, acquisition, nshots
 ):
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     sequence = PulseSequence()
     pulse = platform.create_qubit_readout_pulse(qubit=0, start=0)
     if parameter is Parameter.amplitude:
@@ -120,7 +137,8 @@ def test_emulator_single_sweep(
 def test_emulator_double_sweep(
     emulator, parameter1, parameter2, average, acquisition, nshots
 ):
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     sequence = PulseSequence()
     pulse = platform.create_qubit_drive_pulse(qubit=0, start=0, duration=2)
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=pulse.finish)
@@ -181,7 +199,8 @@ def test_emulator_double_sweep(
 def test_emulator_single_sweep_multiplex(
     emulator, parameter, average, acquisition, nshots
 ):
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     sequence = PulseSequence()
     ro_pulses = {}
     for qubit in platform.qubits:
@@ -229,7 +248,8 @@ def test_emulator_single_sweep_multiplex(
 # pulse_simulator
 def test_pulse_simulator_initialization():
     emulator = default_q0
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
     pulse_simulator = platform.instruments["pulse_simulator"]
     pulse_simulator.update_sim_opts(sim_opts)
@@ -240,7 +260,8 @@ def test_pulse_simulator_initialization():
 
 def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exception():
     emulator = default_q0
-    platform = emulator.create()
+    # platform = emulator.create()
+    platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
     pulse_simulator.model_config.update({"readout_error": {1: [0.1, 0.1]}})
     pulse_simulator.model_config.update({"runcard_duration_in_dt_units": True})
