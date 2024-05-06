@@ -233,12 +233,10 @@ class PulseSimulator(Controller):
                 values = np.array(samples[ro_pulse.qubit]).reshape(shape)
                 processed_values = SampleResults(values)
 
-                if execution_parameters.averaging_mode is AveragingMode.SINGLESHOT:
-                    pass
-                elif execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
                     processed_values = (
                         processed_values.average
-                    )  # generaetes AveragedSampleResults
+                    )  # generates AveragedSampleResults
 
             elif execution_parameters.acquisition_type is AcquisitionType.RAW:
                 raise TypeError("Emulator does not support raw measurement")
