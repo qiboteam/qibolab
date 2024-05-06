@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 import laboneq.simple as laboneq
 import numpy as np
+from laboneq.dsl.device import create_connection
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
@@ -17,6 +18,7 @@ from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
+from . import ZIChannel
 from .pulse import ZhPulse
 from .sweep import ProcessedSweeps, classify_sweepers
 from .util import (
@@ -71,13 +73,25 @@ class Zurich(Controller):
     """Driver for a collection of ZI instruments that are automatically
     synchronized via ZSync protocol."""
 
-    def __init__(self, name, device_setup, time_of_flight=0.0, smearing=0.0):
+    def __init__(
+        self,
+        name,
+        device_setup,
+        channels: list[ZIChannel],
+        time_of_flight=0.0,
+        smearing=0.0,
+    ):
         super().__init__(name, None)
 
         self.signal_map = {}
         "Signals to lines mapping"
         self.calibration = laboneq.Calibration()
         "Zurich calibration object)"
+
+        for ch in channels:
+            device_setup.add_connections(
+                ch.device, create_connection(to_signal=ch.name, ports=ch.path)
+            )
 
         self.device_setup = device_setup
         self.session = None
@@ -397,12 +411,8 @@ class Zurich(Controller):
         zhsequence = defaultdict(list)
 
         # Fill the sequences with pulses according to their lines in temporal order
-        for pulse in sequence:
-            if pulse.type == PulseType.READOUT:
-                ch = measure_channel_name(qubits[pulse.qubit])
-            else:
-                ch = pulse.channel
-            zhsequence[ch].append(ZhPulse(pulse))
+        for ch, pulses in sequence:
+            zhsequence[ch].extend(ZhPulse(p) for p in pulses)
 
         if self.processed_sweeps:
             for ch, zhpulses in zhsequence.items():
