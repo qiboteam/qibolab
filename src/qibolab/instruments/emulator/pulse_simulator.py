@@ -124,12 +124,6 @@ class PulseSimulator(Controller):
     def setup(self, *args, **kwargs):
         log.info(f"Setting up {self.emulator_name}.")
 
-    def start(self):
-        log.info(f"Starting {self.emulator_name}.")
-
-    def stop(self):
-        log.info(f"Stopping {self.emulator_name}.")
-
     def get_samples(
         self,
         nshots: int,

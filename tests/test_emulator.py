@@ -235,8 +235,6 @@ def test_pulse_simulator_initialization():
     pulse_simulator.update_sim_opts(sim_opts)
     pulse_simulator.connect()
     pulse_simulator.setup()
-    pulse_simulator.start()
-    pulse_simulator.stop()
     pulse_simulator.disconnect()
 
 
