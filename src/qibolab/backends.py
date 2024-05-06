@@ -109,7 +109,7 @@ class QibolabBackend(NumpyBackend):
         self.assign_measurements(measurement_map, readout)
         return result
 
-    def execute_circuits(self, circuits, initial_state=None, nshots=1000):
+    def execute_circuits(self, circuits, initial_states=None, nshots=1000):
         """Executes multiple quantum circuits with a single communication with
         the control electronics.
 
@@ -117,19 +117,19 @@ class QibolabBackend(NumpyBackend):
 
         Args:
             circuits (list): List of circuits to execute.
-            initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
+            initial_states (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
             nshots (int): Number of shots to sample from the experiment.
 
         Returns:
             List of ``MeasurementOutcomes`` objects containing the results acquired from the execution of each circuit.
         """
-        if isinstance(initial_state, Circuit):
+        if isinstance(initial_states, Circuit):
             return self.execute_circuits(
-                circuit=[initial_state + circuit for circuit in circuits],
+                circuits=[initial_states + circuit for circuit in circuits],
                 nshots=nshots,
             )
-        if initial_state is not None:
+        if initial_states is not None:
             raise_error(
                 ValueError,
                 "Hardware backend only supports circuits as initial states.",
