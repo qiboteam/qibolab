@@ -119,7 +119,7 @@ def _load_single_qubit_natives(gates) -> SingleQubitNatives:
     )
 
 
-def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
+def _load_two_qubit_natives(gates) -> TwoQubitNatives:
     sequences = {}
     for name, seq_kwargs in gates.items():
         if isinstance(seq_kwargs, dict):
@@ -127,11 +127,7 @@ def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
 
         sequence = PulseSequence()
         for kwargs in seq_kwargs:
-            if "coupler" in kwargs:
-                qubit = couplers[kwargs["coupler"]]
-            else:
-                qubit = qubits[kwargs["qubit"]]
-            sequence.append(_load_pulse(kwargs, qubit))
+            sequence.append(_load_pulse(kwargs))
         sequences[name] = sequence
 
     return TwoQubitNatives(**sequences)
@@ -160,7 +156,7 @@ def register_gates(
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
-        native_gates = _load_two_qubit_natives(qubits, couplers, gatedict)
+        native_gates = _load_two_qubit_natives(gatedict)
         coupler = pairs[(q0, q1)].coupler
         pairs[(q0, q1)] = QubitPair(
             qubits[q0], qubits[q1], coupler=coupler, native_gates=native_gates
