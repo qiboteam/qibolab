@@ -114,7 +114,7 @@ class PulseSimulator(Controller):
 
     def update_sim_opts(self, updated_sim_opts):
         self.sim_opts = updated_sim_opts
-        self.simulation_backend.update_sim_opts(updated_sim_opts)
+        self.simulation_engine.update_sim_opts(updated_sim_opts)
 
     def connect(self):
         log.info(f"Connecting to {self.emulator_name}.")
@@ -280,7 +280,7 @@ class PulseSimulator(Controller):
         self.pulse_sequence_history.append(sequence.copy())
         self.channel_waveforms_history.append(channel_waveforms)
         # execute pulse simulation in emulator
-        ro_reduced_dm, rdm_qubit_list = self.simulation_backend.qevolve(
+        ro_reduced_dm, rdm_qubit_list = self.simulation_engine.qevolve(
             channel_waveforms, self.simulate_dissipation
         )
 
@@ -338,8 +338,8 @@ class PulseSimulator(Controller):
         print("Final simualtion time:", full_time_list[-1])
         print("Simualtion time step (dt):", full_time_list[1])
         print("Total number of time steps:", len(full_time_list))
-        print("Static dissipators:", self.simulation_backend.static_dissipators)
-        print("Simulation options:", self.simulation_backend.sim_opts)
+        print("Static dissipators:", self.simulation_engine.static_dissipators)
+        print("Simulation options:", self.simulation_engine.sim_opts)
 
     ### sweeper adapted from icarusqfpga ###
     def sweep(
