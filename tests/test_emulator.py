@@ -5,7 +5,13 @@ import numpy as np
 import pytest
 from qutip import Options, identity, tensor
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab import (
+    PLATFORMS,
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+    create_platform,
+)
 from qibolab.instruments.emulator.engines.generic import op_from_instruction
 from qibolab.instruments.emulator.engines.qutip_engine import (
     QutipSimulator,
@@ -20,8 +26,7 @@ from qibolab.instruments.emulator.models.methods import load_model_params
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
-test_emulators_path = pathlib.Path(os.path.abspath("")).parent / "tests/emulators/"
-os.environ["QIBOLAB_PLATFORMS"] = test_emulators_path.as_posix()
+os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators/")
 
 SWEPT_POINTS = 2
 EMULATORS = ["default_q0"]
