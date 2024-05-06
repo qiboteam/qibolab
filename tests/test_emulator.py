@@ -5,11 +5,8 @@ import pytest
 from qutip import Options, identity, tensor
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.emulator.backends.generic import (
-    op_from_instruction,
-    print_Hamiltonian,
-)
-from qibolab.instruments.emulator.backends.qutip_backend import (
+from qibolab.instruments.emulator.engines.generic import op_from_instruction
+from qibolab.instruments.emulator.engines.qutip_engine import (
     QutipSimulator,
     extend_op_dim,
     function_from_array,
@@ -57,7 +54,6 @@ def test_emulator_execute_pulse_sequence(emulator, acquisition):
             platform.execute_pulse_sequence(sequence, options)
         assert "Emulator does not support" in str(excinfo.value)
     pulse_simulator.print_sim_details()
-    pulse_simulator.simulation_backend.plot_fidelity_history()
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
@@ -245,9 +241,6 @@ def test_pulse_simulator_initialization():
 
 
 def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exception():
-    # import matplotlib
-
-    # matplotlib.use("TkAgg")
     emulator = default_q0
     platform = emulator.create()
     pulse_simulator = platform.instruments["pulse_simulator"]
@@ -256,7 +249,6 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     pulse_simulator.simulation_config.update({"simulate_dissipation": False})
     pulse_simulator.model_config["drift"].update({"two_body": []})
     pulse_simulator.model_config["dissipation"].update({"t1": []})
-    print_Hamiltonian(pulse_simulator.model_config)
     pulse_simulator.update()
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
@@ -264,7 +256,6 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     with pytest.raises(ValueError) as excinfo:
         pulse_simulator.play({0: 0}, {}, sequence)
     assert "not present in ro_error_dict" in str(excinfo.value)
-    pulse_simulator.simulation_backend.plot_fidelity_history(time_in_dt=True)
 
 
 # models.methods
@@ -274,12 +265,6 @@ def test_load_model_params():
     device_name = "ibmfakebelem_q01"
     model_params_folder = emulators_folder / device_name
     load_model_params(model_params_folder)
-
-
-@pytest.mark.parametrize("model", MODELS)
-def test_print_Hamiltonian(model):
-    model_config = model.generate_model_config()
-    print_Hamiltonian(model_config)
 
 
 def test_op_from_instruction():
@@ -293,19 +278,19 @@ def test_op_from_instruction():
     op_from_instruction(test_inst3, multiply_coeff=False)
 
 
-# backends.qutip_backend
+# engines.qutip_engine
 @pytest.mark.parametrize("model", MODELS)
 def test_update_sim_opts(model):
     model_config = model.generate_model_config()
-    simulation_backend = QutipSimulator(model_config)
+    simulation_engine = QutipSimulator(model_config)
     sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
 
 
 @pytest.mark.parametrize("model", MODELS)
 def test_make_arbitrary_state(model):
     model_config = model.generate_model_config()
-    simulation_backend = QutipSimulator(model_config)
-    zerostate = simulation_backend.psi0.copy()
+    simulation_engine = QutipSimulator(model_config)
+    zerostate = simulation_engine.psi0.copy()
     dim = zerostate.shape[0]
     qibo_statevector = np.zeros(dim)
     qibo_statevector[2] = 1
@@ -313,10 +298,10 @@ def test_make_arbitrary_state(model):
     qibo_statedm = np.kron(
         qibo_statevector.reshape([dim, 1]), qibo_statevector.reshape([1, dim])
     )
-    teststate = simulation_backend.make_arbitrary_state(
+    teststate = simulation_engine.make_arbitrary_state(
         qibo_statevector, is_qibo_state_vector=True
     )
-    teststatedm = simulation_backend.make_arbitrary_state(
+    teststatedm = simulation_engine.make_arbitrary_state(
         qibo_statedm, is_qibo_state_vector=True
     )
 
@@ -324,10 +309,10 @@ def test_make_arbitrary_state(model):
 @pytest.mark.parametrize("model", MODELS)
 def test_state_from_basis_vector_exception(model):
     model_config = model.generate_model_config()
-    simulation_backend = QutipSimulator(model_config)
-    basis_vector0 = [0 for i in range(simulation_backend.nqubits)]
-    cbasis_vector0 = [0 for i in range(simulation_backend.ncouplers)]
-    simulation_backend.state_from_basis_vector(basis_vector0, None)
+    simulation_engine = QutipSimulator(model_config)
+    basis_vector0 = [0 for i in range(simulation_engine.nqubits)]
+    cbasis_vector0 = [0 for i in range(simulation_engine.ncouplers)]
+    simulation_engine.state_from_basis_vector(basis_vector0, None)
     combined_vector_list = [
         [basis_vector0 + [0], cbasis_vector0, "basis_vector"],
         [basis_vector0, cbasis_vector0 + [0], "cbasis_vector"],
@@ -335,7 +320,7 @@ def test_state_from_basis_vector_exception(model):
     for combined_vector in combined_vector_list:
         with pytest.raises(Exception) as excinfo:
             basis_vector, cbasis_vector, error_vector = combined_vector
-            simulation_backend.state_from_basis_vector(basis_vector, cbasis_vector)
+            simulation_engine.state_from_basis_vector(basis_vector, cbasis_vector)
         assert f"length of {error_vector} does not match" in str(excinfo.value)
 
 

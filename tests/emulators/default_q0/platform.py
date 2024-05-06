@@ -14,7 +14,7 @@ log.setLevel(logging.INFO)  # log.setLevel(logging.ERROR)
 FOLDER = pathlib.Path(__file__).parent
 
 simulation_config = {
-    "simulation_backend_name": "Qutip",
+    "simulation_engine_name": "Qutip",
     "default_nshots": 100,
     "sim_sampling_boost": 10,  # 20
     "simulate_dissipation": True,

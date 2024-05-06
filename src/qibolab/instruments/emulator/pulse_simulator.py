@@ -10,8 +10,8 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.emulator.backends.generic import dec_to_basis_string
-from qibolab.instruments.emulator.backends.qutip_backend import QutipSimulator
+from qibolab.instruments.emulator.engines.generic import dec_to_basis_string
+from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, ReadoutPulse
@@ -57,13 +57,13 @@ class PulseSimulator(Controller):
         Args:
             simulation_config (dict): Simulation configuration dictionary.
             model_config (dict): Model configuration dictionary.
-            sim_opts (optional): Simulation backend specific object specifying simulation options.
+            sim_opts (optional): Simulation engine specific object specifying simulation options.
         """
         self.simulation_config = simulation_config
         self.model_config = model_config
         self.sim_opts = sim_opts
 
-        self.all_simulation_backends = {"Qutip": QutipSimulator}
+        self.all_simulation_engines = {"Qutip": QutipSimulator}
 
         self.available_sweep_parameters = {
             Parameter.amplitude,
@@ -82,12 +82,12 @@ class PulseSimulator(Controller):
     def update(self):
         """Updates the pulse simulator by loading all parameters from
         `self.model_config` and `self.simulation_config`."""
-        self.simulation_backend_name = self.simulation_config["simulation_backend_name"]
+        self.simulation_engine_name = self.simulation_config["simulation_engine_name"]
         self.device_name = self.model_config["device_name"]
         self.model_name = self.model_config["model_name"]
-        self.emulator_name = f"{self.device_name} emulator running {self.model_name} on {self.simulation_backend_name} backend"
-        self.simulation_backend = self.all_simulation_backends[
-            self.simulation_backend_name
+        self.emulator_name = f"{self.device_name} emulator running {self.model_name} on {self.simulation_engine_name} engine"
+        self.simulation_engine = self.all_simulation_engines[
+            self.simulation_engine_name
         ](self.model_config, self.sim_opts)
 
         self.platform2simulator_channels = self.model_config[
@@ -114,7 +114,7 @@ class PulseSimulator(Controller):
 
     def update_sim_opts(self, updated_sim_opts):
         self.sim_opts = updated_sim_opts
-        self.simulation_backend.update_sim_opts(updated_sim_opts)
+        self.simulation_engine.update_sim_opts(updated_sim_opts)
 
     def connect(self):
         log.info(f"Connecting to {self.emulator_name}.")
@@ -179,7 +179,7 @@ class PulseSimulator(Controller):
 
         # create array of computational basis states of the reduced (measured) Hilbert space
         reduced_computation_basis = make_comp_basis(
-            ro_qubit_list, self.simulation_backend.qid_nlevels_map
+            ro_qubit_list, self.simulation_engine.qid_nlevels_map
         )
 
         # sample computation basis index nshots times from distribution
@@ -280,7 +280,7 @@ class PulseSimulator(Controller):
         self.pulse_sequence_history.append(sequence.copy())
         self.channel_waveforms_history.append(channel_waveforms)
         # execute pulse simulation in emulator
-        ro_reduced_dm, rdm_qubit_list = self.simulation_backend.qevolve(
+        ro_reduced_dm, rdm_qubit_list = self.simulation_engine.qevolve(
             channel_waveforms, self.simulate_dissipation
         )
 
@@ -330,16 +330,16 @@ class PulseSimulator(Controller):
 
         Defaults to -1, i.e. the last simulation.
         """
-        full_time_list = self.simulation_backend.pulse_sim_time_list[sim_index]
-        print("Hamiltonian:", self.simulation_backend.H[sim_index])
-        print("Initial state:", self.simulation_backend.psi0)
+        full_time_list = self.simulation_engine.pulse_sim_time_list[sim_index]
+        print("Hamiltonian:", self.simulation_engine.H[sim_index])
+        print("Initial state:", self.simulation_engine.psi0)
         # print("Full time list:", full_time_list)
         print("Initial simualtion time:", full_time_list[0])
         print("Final simualtion time:", full_time_list[-1])
         print("Simualtion time step (dt):", full_time_list[1])
         print("Total number of time steps:", len(full_time_list))
-        print("Static dissipators:", self.simulation_backend.static_dissipators)
-        print("Simulation options:", self.simulation_backend.sim_opts)
+        print("Static dissipators:", self.simulation_engine.static_dissipators)
+        print("Simulation options:", self.simulation_engine.sim_opts)
 
     ### sweeper adapted from icarusqfpga ###
     def sweep(
