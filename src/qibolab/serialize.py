@@ -121,13 +121,10 @@ def _load_single_qubit_natives(gates) -> SingleQubitNatives:
 
 def _load_two_qubit_natives(gates) -> TwoQubitNatives:
     sequences = {}
-    for name, seq_kwargs in gates.items():
-        if isinstance(seq_kwargs, dict):
-            seq_kwargs = [seq_kwargs]
-
+    for name, raw_sequence in gates.items():
         sequence = PulseSequence()
-        for kwargs in seq_kwargs:
-            sequence.append(_load_pulse(kwargs))
+        for channel, pulses in raw_sequence.items():
+            sequence[channel] = [_load_pulse(kwargs) for kwargs in pulses]
         sequences[name] = sequence
 
     return TwoQubitNatives(**sequences)
