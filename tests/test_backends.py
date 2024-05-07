@@ -199,11 +199,16 @@ def test_metabackend_load(dummy_qrc):
         assert isinstance(backend, QibolabBackend)
         assert Path(backend.platform.name).name == platform.name
 
-        
-TMP_PLATFORM_DIR = "tests/tmp_platforms"        
+
+TMP_PLATFORM_DIR = "tests/tmp_platforms"
+
+
 def test_metabackend_list_available():
     platforms_dir = Path(TMP_PLATFORM_DIR)
-    for platform in ("valid_platform/platform.py", "invalid_platform/invalid_platform.py"):
+    for platform in (
+        "valid_platform/platform.py",
+        "invalid_platform/invalid_platform.py",
+    ):
         path = Path(f"{platforms_dir}/{platform}")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
