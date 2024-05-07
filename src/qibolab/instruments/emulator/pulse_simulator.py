@@ -19,6 +19,14 @@ from qibolab.qubits import QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+AVAILABLE_SWEEP_PARAMETERS = {
+    Parameter.amplitude,
+    Parameter.duration,
+    Parameter.frequency,
+    Parameter.relative_phase,
+    Parameter.start,
+}
+
 
 @dataclass
 class DummyPort(Port):
@@ -64,14 +72,6 @@ class PulseSimulator(Controller):
         self.sim_opts = sim_opts
 
         self.all_simulation_engines = {"Qutip": QutipSimulator}
-
-        self.available_sweep_parameters = {
-            Parameter.amplitude,
-            Parameter.duration,
-            Parameter.frequency,
-            Parameter.relative_phase,
-            Parameter.start,
-        }
 
         self.update()
 
@@ -310,7 +310,7 @@ class PulseSimulator(Controller):
             results objects.
 
         Raises:
-            NotImplementedError: If sweep.parameter is not in self.available_sweep_parameters.
+            NotImplementedError: If sweep.parameter is not in AVAILABLE_SWEEP_PARAMETERS.
         """
         append_to_shape = [len(sweep.values) for sweep in sweeper]
 
@@ -318,7 +318,7 @@ class PulseSimulator(Controller):
         bsv = []
         for sweep in sweeper:
             param_name = sweep.parameter.name.lower()
-            if sweep.parameter not in self.available_sweep_parameters:
+            if sweep.parameter not in AVAILABLE_SWEEP_PARAMETERS:
                 raise NotImplementedError(
                     "Sweep parameter requested not available", param_name
                 )

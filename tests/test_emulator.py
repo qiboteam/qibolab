@@ -23,6 +23,7 @@ from qibolab.instruments.emulator.models import (
     models_template,
 )
 from qibolab.instruments.emulator.models.methods import load_model_params
+from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
@@ -105,7 +106,7 @@ def test_emulator_single_sweep(
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    if parameter in platform.instruments["pulse_simulator"].available_sweep_parameters:
+    if parameter in AVAILABLE_SWEEP_PARAMETERS:
         results = platform.sweep(sequence, options, sweeper)
 
         assert pulse.serial and pulse.qubit in results
@@ -162,9 +163,8 @@ def test_emulator_double_sweep(
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
 
     if (
-        parameter1 in platform.instruments["pulse_simulator"].available_sweep_parameters
-        and parameter2
-        in platform.instruments["pulse_simulator"].available_sweep_parameters
+        parameter1 in AVAILABLE_SWEEP_PARAMETERS
+        and parameter2 in AVAILABLE_SWEEP_PARAMETERS
     ):
         results = platform.sweep(sequence, options, sweeper1, sweeper2)
 
@@ -221,7 +221,7 @@ def test_emulator_single_sweep_multiplex(
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    if parameter in platform.instruments["pulse_simulator"].available_sweep_parameters:
+    if parameter in AVAILABLE_SWEEP_PARAMETERS:
         results = platform.sweep(sequence, options, sweeper1)
 
         for ro_pulse in ro_pulses.values():
