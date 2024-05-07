@@ -190,6 +190,10 @@ def _dump_pulse(pulse: Pulse):
     return data
 
 
+def _dump_sequence(sequence: PulseSequence):
+    return {ch: [_dump_pulse(p) for p in pulses] for ch, pulses in sequence.items()}
+
+
 def _dump_single_qubit_natives(natives: SingleQubitNatives):
     data = {}
     for fld in fields(natives):
@@ -201,17 +205,9 @@ def _dump_single_qubit_natives(natives: SingleQubitNatives):
 
 
 def _dump_two_qubit_natives(natives: TwoQubitNatives):
-    data = {}
-    for fld in fields(natives):
-        sequence = getattr(natives, fld.name)
-        if len(sequence) > 0:
-            data[fld.name] = []
-            for pulse in sequence:
-                pulse_serial = _dump_pulse(pulse)
-                if pulse.type == PulseType.COUPLERFLUX:
-                    pulse_serial["coupler"] = pulse_serial.pop("qubit")
-                data[fld.name].append(pulse_serial)
-    return data
+    return {
+        fld.name: _dump_sequence(getattr(natives, fld.name)) for fld in fields(natives)
+    }
 
 
 def dump_native_gates(
