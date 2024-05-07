@@ -155,6 +155,15 @@ def register_gates(
     return qubits, pairs, couplers
 
 
+def load_instrument_settings(
+    runcard: dict, instruments: InstrumentMap
+) -> InstrumentMap:
+    """Setup instruments according to the settings given in the runcard."""
+    for name, settings in runcard.get("instruments", {}).items():
+        instruments[name].setup(**settings)
+    return instruments
+
+
 def _dump_pulse(pulse: Pulse):
     data = pulse.model_dump()
     data["type"] = data["type"].value
