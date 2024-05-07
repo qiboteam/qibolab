@@ -137,7 +137,7 @@ class PulseSimulator(Controller):
         Args:
             nshots (int): Number of shots corresponding to the number of samples in the output.
             ro_reduced_dm (np.ndarray): Input density matrix.
-            rdm_qubit_list (list): Qubit indices corresponding to the Hilbert space structure of the reduced density matrix (ro_reduced_dm).
+            ro_qubit_list (list): Qubit indices corresponding to the Hilbert space structure of the reduced density matrix (ro_reduced_dm).
             readout_error (dict, optional): Dictionary that specifies the prepare 0 measure 1 and prepare 1 measure 0 probability for each qubit.
 
         Returns:
@@ -161,12 +161,10 @@ class PulseSimulator(Controller):
         ro_probability_distribution = np.diag(ro_reduced_dm).real
 
         # preprocess distribution
-        ro_probability_distribution = [
-            (elem if np.isclose(1e-10, elem) == False else 0)
-            for elem in ro_probability_distribution
-        ]  # to remove small negative values
+        ro_probability_distribution = np.maximum(
+            ro_probability_distribution, 0
+        )  # to remove small negative values
         ro_probability_sum = np.sum(ro_probability_distribution)
-        print(f"ro_probability_sum: {ro_probability_sum}")
         ro_probability_distribution = ro_probability_distribution / ro_probability_sum
         ro_qubits_dim = len(ro_probability_distribution)
 
@@ -177,7 +175,7 @@ class PulseSimulator(Controller):
 
         # sample computation basis index nshots times from distribution
         sample_all_ro_list = np.random.choice(
-            range(ro_qubits_dim), nshots, True, ro_probability_distribution
+            ro_qubits_dim, nshots, True, ro_probability_distribution
         )
 
         samples = {}

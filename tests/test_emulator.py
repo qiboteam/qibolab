@@ -57,9 +57,11 @@ def test_emulator_execute_pulse_sequence(emulator, acquisition):
         result = platform.execute_pulse_sequence(sequence, options)
         assert result[0].samples.shape == (nshots,)
     else:
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:
             platform.execute_pulse_sequence(sequence, options)
-        assert "Emulator does not support" in str(excinfo.value)
+        assert "Current emulator only supports AcquisitionType.DISCRIMINATION!" in str(
+            excinfo.value
+        )
     pulse_simulator.print_sim_details()
 
 
