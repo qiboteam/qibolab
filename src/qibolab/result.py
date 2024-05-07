@@ -40,6 +40,11 @@ class IntegratedResults:
         """Signal phase in radians."""
         return np.angle(self.voltage_i + 1.0j * self.voltage_q)
 
+    @cached_property
+    def phase_std(self):
+        """Signal phase in radians."""
+        return np.std(self.phase, axis=0, ddof=1) / np.sqrt(self.phase.shape[0])
+
     @property
     def serialize(self):
         """Serialize as a dictionary."""
@@ -76,6 +81,16 @@ class AveragedIntegratedResults(IntegratedResults):
         new_res = super().__add__(data)
         new_res.std = np.append(self.std, data.std)
         return new_res
+
+    @property
+    def average(self):
+        """Perform average over i and q."""
+        return self
+
+    @cached_property
+    def phase_std(self):
+        """Signal phase in radians."""
+        return np.array([])
 
 
 class RawWaveformResults(IntegratedResults):
