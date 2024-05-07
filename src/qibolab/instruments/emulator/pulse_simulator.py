@@ -102,10 +102,6 @@ class PulseSimulator(Controller):
         self.readout_error = {
             int(k): v for k, v in self.model_config["readout_error"].items()
         }
-        self.exec_params = ExecutionParameters
-        self.default_nshots = self.simulation_config["default_nshots"]
-        self.exec_params.nshots = self.default_nshots
-        self.exec_params.acquisition_type = AcquisitionType.DISCRIMINATION
         self.simulate_dissipation = self.simulation_config["simulate_dissipation"]
 
         self.pulse_sequence_history = []
@@ -235,7 +231,7 @@ class PulseSimulator(Controller):
         qubits: Dict[QubitId, Qubit],
         couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
-        execution_parameters: Optional[ExecutionParameters] = None,
+        execution_parameters: ExecutionParameters,
     ) -> dict[str, Union[IntegratedResults, SampleResults]]:
         """Executes the sequence of instructions and generates readout results.
 
@@ -248,15 +244,11 @@ class PulseSimulator(Controller):
                                                         fast_reset,
                                                         acquisition_type,
                                                         averaging_mode)
-                                                        Defaults to None, for which case it uses the values stored in self.exec_params.
 
         Returns:
             dict: A dictionary mapping the readout pulses serial and respective qubits to
             Qibolab results object.
         """
-        if execution_parameters is None:
-            execution_parameters = self.exec_params
-
         nshots = execution_parameters.nshots
         ro_pulse_list = sequence.ro_pulses
         ro_reduced_dm, rdm_qubit_list = self.run_pulse_simulation(

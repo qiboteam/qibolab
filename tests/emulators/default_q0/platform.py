@@ -15,7 +15,6 @@ FOLDER = pathlib.Path(__file__).parent
 
 simulation_config = {
     "simulation_engine_name": "Qutip",
-    "default_nshots": 100,
     "sim_sampling_boost": 10,  # 20
     "simulate_dissipation": True,
     "instant_measurement": True,
