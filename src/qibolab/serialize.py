@@ -200,7 +200,6 @@ def _dump_single_qubit_natives(natives: SingleQubitNatives):
         pulse = getattr(natives, fld.name)
         if pulse is not None:
             data[fld.name] = _dump_pulse(pulse)
-            del data[fld.name]["qubit"]
     return data
 
 
