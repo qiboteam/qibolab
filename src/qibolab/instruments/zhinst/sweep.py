@@ -10,6 +10,7 @@ from qibolab.pulses import Pulse, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
+from . import ZIChannel
 from .util import NANO_TO_SECONDS, measure_channel_name
 
 
@@ -56,7 +57,12 @@ class ProcessedSweeps:
     in the sweep loop definition
     """
 
-    def __init__(self, sweepers: Iterable[Sweeper], qubits: dict[str, Qubit]):
+    def __init__(
+        self,
+        sweepers: Iterable[Sweeper],
+        qubits: dict[str, Qubit],
+        channels: dict[str, ZIChannel],
+    ):
         pulse_sweeps = []
         channel_sweeps = []
         parallel_sweeps = []
@@ -67,26 +73,6 @@ class ProcessedSweeps:
                         values=sweeper.values * NANO_TO_SECONDS
                     )
                     pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
-                elif sweeper.parameter is Parameter.frequency:
-                    ptype, qubit = pulse.type, qubits[pulse.qubit]
-                    if ptype is PulseType.READOUT:
-                        ch = measure_channel_name(qubit)
-                        intermediate_frequency = (
-                            qubit.readout.frequency - qubit.readout.lo_config.frequency
-                        )
-                    elif ptype is PulseType.DRIVE:
-                        ch = qubit.drive.name
-                        intermediate_frequency = (
-                            qubit.drive.frequency - qubit.drive.lo_config.frequency
-                        )
-                    else:
-                        raise ValueError(
-                            f"Cannot sweep frequency of pulse of type {ptype}, because it does not have associated frequency"
-                        )
-                    sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values + intermediate_frequency
-                    )
-                    channel_sweeps.append((ch, sweeper.parameter, sweep_param))
                 elif (
                     pulse.type is PulseType.READOUT
                     and sweeper.parameter is Parameter.amplitude
@@ -102,7 +88,7 @@ class ProcessedSweeps:
 
                     channel_sweeps.append(
                         (
-                            measure_channel_name(qubits[pulse.qubit]),
+                            measure_channel_name(qubits[pulse.qubit]),  # FIXME
                             sweeper.parameter,
                             sweep_param,
                         )
@@ -112,15 +98,23 @@ class ProcessedSweeps:
                     pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
                 parallel_sweeps.append((sweeper, sweep_param))
 
-            for channel in sweeper.channels or []:
-                if sweeper.parameter is not Parameter.bias:
-                    raise ValueError(
-                        f"Sweeping {sweeper.parameter.name} for {channel} is not supported"
+            for ch in sweeper.channels or []:
+                if sweeper.parameter is Parameter.bias:
+                    sweep_param = laboneq.SweepParameter(
+                        values=sweeper.values + ch.config.offset
                     )
-                sweep_param = laboneq.SweepParameter(
-                    values=sweeper.values + channel.config.offset
-                )
-                channel_sweeps.append((channel, sweeper.parameter, sweep_param))
+                elif sweeper.parameter is Parameter.frequency:
+                    intermediate_frequency = (
+                        channels[ch].frequency - channels[ch].lo_config.frequency
+                    )
+                    sweep_param = laboneq.SweepParameter(
+                        values=sweeper.values + intermediate_frequency
+                    )
+                else:
+                    raise ValueError(
+                        f"Sweeping {sweeper.parameter.name} for {ch} is not supported"
+                    )
+                channel_sweeps.append((ch, sweeper.parameter, sweep_param))
                 parallel_sweeps.append((sweeper, sweep_param))
 
         self._pulse_sweeps = pulse_sweeps
