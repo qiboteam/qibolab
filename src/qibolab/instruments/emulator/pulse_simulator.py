@@ -120,74 +120,6 @@ class PulseSimulator(Controller):
     def setup(self, *args, **kwargs):
         log.info(f"Setting up {self.emulator_name}.")
 
-    def get_samples(
-        self,
-        nshots: int,
-        ro_reduced_dm: np.ndarray,
-        ro_qubit_list: list,
-        readout_error: Optional[dict] = None,
-    ) -> dict[Union[str, int], list]:
-        """Gets samples from a the density matrix corresponding to the system
-        or subsystem specified by the ordered qubit indices.
-
-        Args:
-            nshots (int): Number of shots corresponding to the number of samples in the output.
-            ro_reduced_dm (np.ndarray): Input density matrix.
-            ro_qubit_list (list): Qubit indices corresponding to the Hilbert space structure of the reduced density matrix (ro_reduced_dm).
-            readout_error (dict, optional): Dictionary that specifies the prepare 0 measure 1 and prepare 1 measure 0 probability for each qubit.
-
-        Returns:
-            dict: The sampled qubit values for each qubit labelled by its index.
-
-        Raises:
-            ValueError: If any ro_qubit in ro_qubit_list is not in ro_error_dict.
-        """
-        # load readout error from model_config if not specified
-        if readout_error is None:
-            readout_error = self.readout_error
-        # check if readout error is consistent with ro qubits
-        if readout_error is not None:
-            for ro_qubit in ro_qubit_list:
-                if ro_qubit not in readout_error.keys():
-                    raise ValueError(
-                        f"ro_qubit {ro_qubit} not present in ro_error_dict"
-                    )
-
-        # use the real diagonal part of the reduced density matrix as the probability distribution
-        ro_probability_distribution = np.diag(ro_reduced_dm).real
-
-        # preprocess distribution
-        ro_probability_distribution = np.maximum(
-            ro_probability_distribution, 0
-        )  # to remove small negative values
-        ro_probability_sum = np.sum(ro_probability_distribution)
-        ro_probability_distribution = ro_probability_distribution / ro_probability_sum
-        ro_qubits_dim = len(ro_probability_distribution)
-
-        # create array of computational basis states of the reduced (measured) Hilbert space
-        reduced_computation_basis = make_comp_basis(
-            ro_qubit_list, self.simulation_engine.qid_nlevels_map
-        )
-
-        # sample computation basis index nshots times from distribution
-        sample_all_ro_list = np.random.choice(
-            ro_qubits_dim, nshots, True, ro_probability_distribution
-        )
-
-        samples = {}
-        for ind, ro_qubit in enumerate(ro_qubit_list):
-            # extracts sampled values for each readout qubit from sample_all_ro_list
-            outcomes = [
-                reduced_computation_basis[outcome][ind]
-                for outcome in sample_all_ro_list
-            ]
-            samples[ro_qubit] = outcomes
-
-        if readout_error is not None:
-            samples = apply_readout_noise(samples, readout_error)
-
-        return samples
-
     def run_pulse_simulation(
         self,
         sequence: PulseSequence,
@@ -254,7 +186,16 @@ class PulseSimulator(Controller):
         ro_reduced_dm, rdm_qubit_list = self.run_pulse_simulation(
             sequence, self.instant_measurement
         )
-        samples = self.get_samples(nshots, ro_reduced_dm, rdm_qubit_list)
+        samples = get_samples(
+            nshots,
+            ro_reduced_dm,
+            rdm_qubit_list,
+            self.simulation_engine.qid_nlevels_map,
+        )
+        # apply default readout noise
+        if self.readout_error is not None:
+            samples = apply_readout_noise(samples, self.readout_error)
+        # generate result object
         results = get_results_from_samples(ro_pulse_list, samples, execution_parameters)
 
         return results
@@ -419,7 +360,15 @@ class PulseSimulator(Controller):
             sequence, self.instant_measurement
         )
         # generate samples
-        samples = self.get_samples(nshots, ro_reduced_dm, rdm_qubit_list)
+        samples = get_samples(
+            nshots,
+            ro_reduced_dm,
+            rdm_qubit_list,
+            self.simulation_engine.qid_nlevels_map,
+        )
+        # apply default readout noise
+        if self.readout_error is not None:
+            samples = apply_readout_noise(samples, self.readout_error)
 
         return samples
 
@@ -620,14 +569,21 @@ def apply_readout_noise(
     """Applies readout noise to samples.
 
     Args:
-        samples (dict): Samples generated from self.get_samples.
+        samples (dict): Samples generated from get_samples.
         readout_error (dict): Dictionary specifying the readout noise for each qubit. Readout noise is specified by a list containing probabilities of prepare 0 measure 1, and prepare 1 measure 0.
 
     Returns:
         dict: The noisy sampled qubit values for each qubit labelled by its index.
+
+    Raises:
+        ValueError: If the readout qubits given by samples.keys() is not a subset of the qubits with readout errors specified in readout_error.
     """
+    # check if readout error is specified for all ro qubits
+    ro_qubit_list = list(samples.keys())
+    if not set(ro_qubit_list).issubset(readout_error.keys()):
+        raise ValueError(f"Not all readout qubits are present in readout_error!")
     noisy_samples = {}
-    for ro_qubit in samples.keys():
+    for ro_qubit in ro_qubit_list:  # samples.keys():
         noisy_samples.update({ro_qubit: []})
         p0m1, p1m0 = readout_error[ro_qubit]
         qubit_values = samples[ro_qubit]
@@ -658,7 +614,6 @@ def make_comp_basis(
         `np.ndarray`: The list of computation basis states of the local Hilbert space in a numpy array.
     """
     nqubits = len(qubit_list)
-
     qid_list = [str(qubit) for qubit in qubit_list]
     nlevels = [qid_nlevels_map[qid] for qid in qid_list]
     comp_basis_list = []
@@ -679,7 +634,7 @@ def get_results_from_samples(
 
     Args:
         ro_pulse_list (list): List of readout pulse sequences.
-        samples (dict): Samples generated by self.get_samples.
+        samples (dict): Samples generated by get_samples.
         append_to_shape (list): Specifies additional dimensions for the shape of the results. Defaults to empty list.
         execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
                                                     relaxation_time,
@@ -711,3 +666,51 @@ def get_results_from_samples(
 
         results[ro_pulse.qubit] = results[ro_pulse.serial] = processed_values
     return results
+
+
+def get_samples(
+    nshots: int,
+    ro_reduced_dm: np.ndarray,
+    ro_qubit_list: list,
+    qid_nlevels_map: dict[Union[int, str], int],
+) -> dict[Union[str, int], list]:
+    """Gets samples from the density matrix corresponding to the system or
+    subsystem specified by the ordered qubit indices.
+
+    Args:
+        nshots (int): Number of shots corresponding to the number of samples in the output.
+        ro_reduced_dm (np.ndarray): Input density matrix.
+        ro_qubit_list (list): Qubit indices corresponding to the Hilbert space structure of the reduced density matrix (ro_reduced_dm).
+        qid_nlevels_map (dict): Dictionary mapping the qubit IDs given in qubit_list to their respective Hilbert space dimensions.
+
+    Returns:
+        dict: The sampled qubit values for each qubit labelled by its index.
+    """
+    # use the real diagonal part of the reduced density matrix as the probability distribution
+    ro_probability_distribution = np.diag(ro_reduced_dm).real
+
+    # preprocess distribution
+    ro_probability_distribution = np.maximum(
+        ro_probability_distribution, 0
+    )  # to remove small negative values
+    ro_probability_sum = np.sum(ro_probability_distribution)
+    ro_probability_distribution = ro_probability_distribution / ro_probability_sum
+    ro_qubits_dim = len(ro_probability_distribution)
+
+    # create array of computational basis states of the reduced (measured) Hilbert space
+    reduced_computation_basis = make_comp_basis(ro_qubit_list, qid_nlevels_map)
+
+    # sample computation basis index nshots times from distribution
+    sample_all_ro_list = np.random.choice(
+        ro_qubits_dim, nshots, True, ro_probability_distribution
+    )
+
+    samples = {}
+    for ind, ro_qubit in enumerate(ro_qubit_list):
+        # extracts sampled values for each readout qubit from sample_all_ro_list
+        outcomes = [
+            reduced_computation_basis[outcome][ind] for outcome in sample_all_ro_list
+        ]
+        samples[ro_qubit] = outcomes
+
+    return samples

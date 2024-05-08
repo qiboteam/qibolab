@@ -263,7 +263,7 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
     execution_parameters = ExecutionParameters(nshots=10)
     with pytest.raises(ValueError) as excinfo:
         pulse_simulator.play({0: 0}, {}, sequence, execution_parameters)
-    assert "not present in ro_error_dict" in str(excinfo.value)
+    assert "Not all readout qubits are present in readout_error!" in str(excinfo.value)
 
 
 # models.methods
