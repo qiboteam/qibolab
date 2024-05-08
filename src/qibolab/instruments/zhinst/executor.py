@@ -304,16 +304,6 @@ class Zurich(Controller):
         )
         self.results = self.session.run(compiled_experiment)
 
-    @staticmethod
-    def frequency_from_pulses(qubits, sequence):
-        """Gets the frequencies from the pulses to the qubits."""
-        for pulse in sequence:
-            qubit = qubits[pulse.qubit]
-            if pulse.type is PulseType.READOUT:
-                qubit.readout_frequency = pulse.frequency
-            if pulse.type is PulseType.DRIVE:
-                qubit.drive_frequency = pulse.frequency
-
     def create_sub_sequences(
         self, qubits: list[Qubit]
     ) -> tuple[list[SubSequence], set[str]]:
