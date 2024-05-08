@@ -38,7 +38,7 @@ class IntegratedResults:
     @cached_property
     def phase(self):
         """Signal phase in radians."""
-        return np.angle(self.voltage_i + 1.0j * self.voltage_q)
+        return np.unwrap(np.angle(self.voltage_i + 1.0j * self.voltage_q))
 
     @cached_property
     def phase_std(self):
