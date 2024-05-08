@@ -92,10 +92,11 @@ class Zurich(Controller):
             device_setup.add_connections(
                 ch.device, create_connection(to_signal=ch.name, ports=ch.path)
             )
-
         self.device_setup = device_setup
         self.session = None
         "Zurich device parameters for connection"
+
+        self.channels = {ch.name: ch for ch in channels}
 
         self.time_of_flight = time_of_flight
         self.smearing = smearing
@@ -321,7 +322,7 @@ class Zurich(Controller):
         Returns list of subsequences and a set of channel names that
         were not split
         """
-        measure_channels = {measure_channel_name(qb) for qb in qubits}
+        measure_channels = {qb.readout.name for qb in qubits}
         other_channels = set(self.sequence.keys()) - measure_channels
 
         measurement_groups = defaultdict(list)
@@ -411,7 +412,7 @@ class Zurich(Controller):
         zhsequence = defaultdict(list)
 
         # Fill the sequences with pulses according to their lines in temporal order
-        for ch, pulses in sequence:
+        for ch, pulses in sequence.items():
             zhsequence[ch].extend(ZhPulse(p) for p in pulses)
 
         if self.processed_sweeps:
@@ -710,8 +711,7 @@ class Zurich(Controller):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}
-        self.frequency_from_pulses(qubits, sequence)
-        self.processed_sweeps = ProcessedSweeps(sweepers, qubits)
+        self.processed_sweeps = ProcessedSweeps(sweepers, qubits, self.channels)
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(sweepers)
 
         self.acquisition_type = None
