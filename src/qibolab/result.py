@@ -84,13 +84,18 @@ class AveragedIntegratedResults(IntegratedResults):
 
     @property
     def average(self):
-        """Perform average over i and q."""
+        """Average on AveragedIntegratedResults is itself."""
         return self
 
     @cached_property
     def phase_std(self):
-        """Signal phase in radians."""
+        """Standard deviation is None for AveragedIntegratedResults."""
         return None
+
+    @cached_property
+    def phase(self):
+        """Phase not unwrapped because it is a single value."""
+        return np.arctan2(self.voltage_i, self.voltage_q)
 
 
 class RawWaveformResults(IntegratedResults):
