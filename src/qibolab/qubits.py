@@ -65,6 +65,7 @@ class Qubit:
     """Effective temperature."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
+    resonator_depletion_time: int = 0
     T1: int = 0
     T2: int = 0
     T2_spin_echo: int = 0
