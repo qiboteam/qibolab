@@ -73,7 +73,7 @@ class AveragedIntegratedResults(IntegratedResults):
     or the averages of ``IntegratedResults``
     """
 
-    def __init__(self, data: np.ndarray, std: np.ndarray = np.array([])):
+    def __init__(self, data: np.ndarray, std: Optional[np.ndarray] = None):
         super().__init__(data)
         self.std: Optional[npt.NDArray[np.float64]] = std
 
@@ -90,7 +90,7 @@ class AveragedIntegratedResults(IntegratedResults):
     @cached_property
     def phase_std(self):
         """Signal phase in radians."""
-        return np.array([])
+        return None
 
 
 class RawWaveformResults(IntegratedResults):
