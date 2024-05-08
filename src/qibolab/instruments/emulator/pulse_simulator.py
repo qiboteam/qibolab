@@ -2,7 +2,6 @@
 device."""
 
 import operator
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -12,7 +11,6 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.generic import dec_to_basis_string
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
-from qibolab.instruments.port import Port
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.qubits import QubitId
@@ -26,8 +24,7 @@ AVAILABLE_SWEEP_PARAMETERS = {
     Parameter.relative_phase,
     Parameter.start,
 }
-
-
+'''
 @dataclass
 class DummyPort(Port):
     """Placeholder.
@@ -43,6 +40,7 @@ class DummyPort(Port):
     attenuation: int = 0
     power_range: int = 0
     filters: Optional[dict] = None
+'''
 
 
 class PulseSimulator(Controller):
@@ -52,7 +50,9 @@ class PulseSimulator(Controller):
     access to hardware.
     """
 
-    PortType = DummyPort  # Placeholder. Copied over from dummy, may not be required.
+    PortType = (
+        None  # DummyPort  # Placeholder. Copied over from dummy, may not be required.
+    )
 
     def __init__(
         self,
