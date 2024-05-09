@@ -1,6 +1,7 @@
 """Pulse simulator module for running quantum dynamics simulation of model of
 device."""
 
+import copy
 import operator
 from typing import Dict, List, Optional, Union
 
@@ -24,23 +25,6 @@ AVAILABLE_SWEEP_PARAMETERS = {
     Parameter.relative_phase,
     Parameter.start,
 }
-'''
-@dataclass
-class DummyPort(Port):
-    """Placeholder.
-
-    Copied over from dummy, may not be required.
-    """
-
-    name: str
-    offset: float = 0.0
-    lo_frequency: int = 0
-    lo_power: int = 0
-    gain: int = 0
-    attenuation: int = 0
-    power_range: int = 0
-    filters: Optional[dict] = None
-'''
 
 
 class PulseSimulator(Controller):
@@ -50,9 +34,7 @@ class PulseSimulator(Controller):
     access to hardware.
     """
 
-    PortType = (
-        None  # DummyPort  # Placeholder. Copied over from dummy, may not be required.
-    )
+    PortType = None
 
     def __init__(
         self,
@@ -136,9 +118,7 @@ class PulseSimulator(Controller):
         """
         # reduces measurement time to 1 dt to save simulation time
         if instant_measurement:
-            for i in range(len(sequence)):
-                if type(sequence[i]) is ReadoutPulse:
-                    sequence[i].duration = 1
+            sequence = truncate_ro_pulses(sequence)
 
         # extract waveforms from pulse sequence
         channel_waveforms = ps_to_waveform_dict(
@@ -714,3 +694,23 @@ def get_samples(
         samples[ro_qubit] = outcomes
 
     return samples
+
+
+def truncate_ro_pulses(
+    sequence: PulseSequence,
+) -> PulseSequence:
+    """Creates a deepcopy of the original sequence with truncated readout
+    pulses to one time step.
+
+    Args:
+        sequence (`qibolab.pulses.PulseSequence`): Pulse sequence.
+
+    Returns:
+        `qibolab.pulses.PulseSequence`: Modified pulse sequence with one time step readout pulses.
+    """
+    sequence = copy.deepcopy(sequence)
+    for i in range(len(sequence)):
+        if type(sequence[i]) is ReadoutPulse:
+            sequence[i].duration = 1
+
+    return sequence
