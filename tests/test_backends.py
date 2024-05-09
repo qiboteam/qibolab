@@ -1,7 +1,6 @@
 import os
 import warnings
 from pathlib import Path
-from shutil import rmtree
 
 import numpy as np
 import pytest
@@ -200,19 +199,14 @@ def test_metabackend_load(dummy_qrc):
         assert Path(backend.platform.name).name == platform.name
 
 
-TMP_PLATFORM_DIR = "tests/tmp_platforms"
-
-
-def test_metabackend_list_available():
-    platforms_dir = Path(TMP_PLATFORM_DIR)
+def test_metabackend_list_available(tmpdir):
     for platform in (
         "valid_platform/platform.py",
         "invalid_platform/invalid_platform.py",
     ):
-        path = Path(f"{platforms_dir}/{platform}")
+        path = Path(tmpdir / platform)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
-    os.environ["QIBOLAB_PLATFORMS"] = TMP_PLATFORM_DIR
+    os.environ["QIBOLAB_PLATFORMS"] = str(tmpdir)
     available_platforms = {"valid_platform": True}
     assert MetaBackend().list_available() == available_platforms
-    rmtree(platforms_dir)
