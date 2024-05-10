@@ -1,5 +1,4 @@
 from collections import deque
-from typing import Callable, Optional
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -29,27 +28,12 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
-        self.transpiler: Optional[Callable] = None
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
     def apply_gate_density_matrix(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
-
-    def transpile(self, circuit):
-        """Applies the transpiler to a single circuit.
-
-        This transforms the circuit into proper connectivity and native
-        gates.
-        """
-        # TODO: Move this method to transpilers
-        if self.transpiler is None or self.transpiler.is_satisfied(circuit):
-            native = circuit
-            qubit_map = {q: q for q in range(circuit.nqubits)}
-        else:
-            native, qubit_map = self.transpiler(circuit)  # pylint: disable=E1102
-        return native, qubit_map
 
     def assign_measurements(self, measurement_map, readout):
         """Assigning measurement outcomes to
@@ -92,8 +76,7 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        native_circuit, qubit_map = self.transpile(circuit)
-        sequence, measurement_map = self.compiler.compile(native_circuit, self.platform)
+        sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
         if not self.platform.is_connected:
             self.platform.connect()
@@ -136,12 +119,8 @@ class QibolabBackend(NumpyBackend):
             )
 
         # TODO: Maybe these loops can be parallelized
-        native_circuits, _ = zip(*(self.transpile(circuit) for circuit in circuits))
         sequences, measurement_maps = zip(
-            *(
-                self.compiler.compile(circuit, self.platform)
-                for circuit in native_circuits
-            )
+            *(self.compiler.compile(circuit, self.platform) for circuit in circuits)
         )
 
         if not self.platform.is_connected:

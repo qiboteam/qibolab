@@ -659,11 +659,11 @@ This procedure typically involves the following steps:
 2. All gates are transpiled to native gates, which represent the universal set of gates that can be implemented (via pulses) in the chip.
 3. Native gates are compiled to a pulse sequence.
 
-The transpilation and compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend` when a circuit is executed, using circuit transpilers provided by Qibo and :class:`qibolab.compilers.compiler.Compiler`.
 The transpiler is responsible for steps 1 and 2, while the compiler for step 3 of the list above.
-For more information on the transpiler please refer the `examples in the Qibo documentation <https://qibo.science/qibo/stable/code-examples/advancedexamples.html#how-to-modify-the-transpiler>`_.
+To be executed in Qibolab, a circuit should be already transpiled. It possible to use the transpilers provided by Qibo to do it. For more information, please refer the `examples in the Qibo documentation <https://qibo.science/qibo/stable/code-examples/advancedexamples.html#how-to-modify-the-transpiler>`_.
+On the other hand, the compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend`.
 
-Once a circuit has been transpiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
+Once a circuit has been compiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
 This is a container of rules which define how each native gate can be translated to pulses.
 A rule is a Python function that accepts a Qibo gate and a platform object and returns the :class:`qibolab.pulses.PulseSequence` implementing this gate and a dictionary with potential virtual-Z phases that need to be applied in later pulses.
 Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which defines the default rules used by Qibolab.
