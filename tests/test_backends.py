@@ -1,11 +1,13 @@
+import os
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab import create_platform
+from qibolab import MetaBackend, create_platform
 from qibolab.backends import QibolabBackend
 
 
@@ -192,3 +194,23 @@ def test_superposition_for_all_qubits(connected_backend):
 
 # TODO: test_circuit_result_tensor
 # TODO: test_circuit_result_representation
+
+
+def test_metabackend_load(dummy_qrc):
+    for platform in Path("tests/dummy_qrc/").iterdir():
+        backend = MetaBackend.load(platform.name)
+        assert isinstance(backend, QibolabBackend)
+        assert Path(backend.platform.name).name == platform.name
+
+
+def test_metabackend_list_available(tmpdir):
+    for platform in (
+        "valid_platform/platform.py",
+        "invalid_platform/invalid_platform.py",
+    ):
+        path = Path(tmpdir / platform)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    os.environ["QIBOLAB_PLATFORMS"] = str(tmpdir)
+    available_platforms = {"valid_platform": True}
+    assert MetaBackend().list_available() == available_platforms
