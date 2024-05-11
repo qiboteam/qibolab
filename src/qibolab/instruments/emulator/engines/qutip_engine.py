@@ -6,15 +6,15 @@ This module provides a engine for Quantum Toolbox in Python (QuTiP) to simulate 
 
 from collections import OrderedDict
 from timeit import default_timer as timer
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
-from qutip import Options, Qobj, basis, expect, ket2dm, mesolve, ptrace
+from qutip import Options, Qobj, basis, fidelity, ket2dm, mesolve, ptrace
 from qutip.operators import identity as Id
 from qutip.tensor import tensor
 from qutip.ui.progressbar import EnhancedTextProgressBar
 
-from qibolab.instruments.emulator.engines.generic import (  # plot_fidelity_history,
+from qibolab.instruments.emulator.engines.generic import (
     dec_to_basis_string,
     op_from_instruction,
 )
@@ -131,11 +131,6 @@ class QutipSimulator:
                 self.psi0 = self.basis_list[qind][0]
             else:
                 self.psi0 = tensor(self.psi0, self.basis_list[qind][0])
-
-        self.H = []
-        self.pulse_sim_time = []
-        self.pulse_sim_history = []
-        self.pulse_sim_time_list = []
 
         ### build dictionary of base qutip operators ###
         self.op_dict.update(
@@ -290,7 +285,7 @@ class QutipSimulator:
             simulate_dissipation (bool): Flag to add (True) or not (False) the dissipation terms associated with T1 and T2 times.
 
         Returns:
-            tuple: A tuple containing the reduced density matrix of the quantum state at the end of simulation in the Hilbert space specified by the qubits present in the readout channels (little endian), as well as the corresponding list of qubit indices.
+            tuple: A tuple containing a dictionary of time-related information (sequence duration, simulation time step, and simulation time), the reduced density matrix of the quantum state at the end of simulation in the Hilbert space specified by the qubits present in the readout channels (little endian), as well as the corresponding list of qubit indices.
         """
         full_time_list = channel_waveforms["time"]
         channel_names = list(channel_waveforms["channels"].keys())
@@ -323,7 +318,6 @@ class QutipSimulator:
         H = [drift]
         for i, op in enumerate(scheduled_operators):
             H.append([op, fp_list[i]])
-        self.H.append(H)
 
         sim_start_time = timer()
         if self.sim_method == "master_equation":
@@ -341,14 +335,23 @@ class QutipSimulator:
         sim_end_time = timer()
         sim_time = sim_end_time - sim_start_time
 
-        final_state = result.states[-1]
-        # saves history of states (in little endian, opposite to qibo convention)
-        self.pulse_sim_history.append(result.states)
-        self.pulse_sim_time_list.append(full_time_list)
-        self.pulse_sim_time.append(sim_time)
+        final_state = result.states[
+            -1
+        ]  # result.states in little endian, opposite to qibo convention
+
+        times_dict = {
+            "sequence_duration": full_time_list[-1],
+            "simulation_dt": full_time_list[1],
+            "simulation_time": sim_time,
+        }
+
         print("simulation time", sim_time)
 
-        return self.qobj_to_reduced_dm(final_state, ro_qubit_list)
+        return (
+            times_dict,
+            result.states,
+            *self.qobj_to_reduced_dm(final_state, ro_qubit_list),
+        )
 
     def qobj_to_reduced_dm(
         self, emu_qstate: Qobj, qubit_list: List[int]
@@ -414,49 +417,41 @@ class QutipSimulator:
 
         return fullstate
 
-    def fidelity_history(
+    def compute_fidelities(
         self,
-        sim_index: int = -1,
-        reference_states: Optional[list] = None,
-    ) -> tuple:
-        """Calculates the fidelity history, i.e. the overlaps between the
-        device quantum state at each time step in the pulse simulation with
-        respect to the input reference states.
+        target_states: List[Qobj],
+        reference_states: Optional[Dict[str, Qobj]] = None,
+    ) -> dict:
+        """Calculates the fidelities between a list of target device states,
+        with respect to a list of reference device states.
 
         Args:
-            sim_index (int, optional): Specifies the pulse sequence simulations stored in the simulation engine of interest. Defaults to -1, i.e. the last simulation.
-            reference_states (list, optional): List of reference states to compare the pulse simulation with.
-            If not provided, all computational basis states will be assigned.
+            target_states (list): List of target states (`qutip.Qobj`) of interest.
+            reference_states (dict, optional): Reference states labelled by their respective keys to compare `target_states` with.
+            If not provided, all basis states of the full device Hilbert space labelled by their generalized bitstrings will be used.
 
         Returns:
-            tuple: Tuple with the list of times used in simulation, fidelity histories for each reference state, as well as the labels.
+            dict: Fidelities for each target state with each reference state.
         """
-        labels = None
-        fid_list_all = []
         if reference_states is None:
-            reference_states = []
-            labels = []
+            reference_states = {}
 
             full_HS_dim = np.product(self.nlevels_HS)
             for state_id in range(full_HS_dim):
                 basis_string = dec_to_basis_string(state_id, self.nlevels_HS)
-                labels.append(basis_string)
                 basis_state = self.state_from_basis_vector(
                     basis_string[: self.nqubits], basis_string[self.nqubits :]
                 )
-                psi0 = ket2dm(basis_state)
-                reference_states.append(psi0)
+                psi = ket2dm(basis_state)
+                reference_states.update({str(basis_string): psi})
 
-        time_list = self.pulse_sim_time_list[sim_index]
-        total_samples = len(time_list)
-        for ref_state in reference_states:
-            fid_list = [
-                expect(ref_state, self.pulse_sim_history[sim_index][i])
-                for i in range(total_samples)
-            ]
-            fid_list_all.append(fid_list)
+        total_samples = len(target_states)
+        all_fidelities = {}
+        for label, ref_state in reference_states.items():
+            fid_list = [fidelity(ref_state, state) for state in target_states]
+            all_fidelities.update({label: fid_list})
 
-        return time_list, fid_list_all, labels
+        return all_fidelities
 
 
 def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:

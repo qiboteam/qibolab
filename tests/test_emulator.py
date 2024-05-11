@@ -63,7 +63,6 @@ def test_emulator_execute_pulse_sequence(emulator, acquisition):
         assert "Current emulator only supports AcquisitionType.DISCRIMINATION!" in str(
             excinfo.value
         )
-    pulse_simulator.print_sim_details()
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)

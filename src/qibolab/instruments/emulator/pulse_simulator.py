@@ -10,7 +10,6 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.emulator.engines.generic import dec_to_basis_string
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, ReadoutPulse
@@ -65,6 +64,7 @@ class PulseSimulator(Controller):
         """Updates the pulse simulator by loading all parameters from
         `self.model_config` and `self.simulation_config`."""
         self.simulation_engine_name = self.simulation_config["simulation_engine_name"]
+        self.output_state_history = self.simulation_config["output_state_history"]
         self.device_name = self.model_config["device_name"]
         self.model_name = self.model_config["model_name"]
         self.emulator_name = f"{self.device_name} emulator running {self.model_name} on {self.simulation_engine_name} engine"
@@ -85,9 +85,6 @@ class PulseSimulator(Controller):
             int(k): v for k, v in self.model_config["readout_error"].items()
         }
         self.simulate_dissipation = self.simulation_config["simulate_dissipation"]
-
-        self.pulse_sequence_history = []
-        self.channel_waveforms_history = []
 
     def update_sim_opts(self, updated_sim_opts):
         self.sim_opts = updated_sim_opts
@@ -114,7 +111,7 @@ class PulseSimulator(Controller):
             instant_measurement (bool): Collapses readout pulses to duration of 1 if True. Defaults to True.
 
         Returns:
-            tuple: Reduced density matrix of final state specified by readout qubits as well as the list of readout qubits in, both in little endian order.
+            tuple: A tuple containing a dictionary of time-related information (sequence duration, simulation time step, and simulation time), the reduced density matrix of the quantum state at the end of simulation in the Hilbert space specified by the qubits present in the readout channels (little endian), as well as the corresponding list of qubit indices.
         """
         # reduces measurement time to 1 dt to save simulation time
         if instant_measurement:
@@ -129,14 +126,12 @@ class PulseSimulator(Controller):
             self.runcard_duration_in_dt_units,
         )
 
-        self.pulse_sequence_history.append(sequence.copy())
-        self.channel_waveforms_history.append(channel_waveforms)
         # execute pulse simulation in emulator
-        ro_reduced_dm, rdm_qubit_list = self.simulation_engine.qevolve(
+        simulation_results = self.simulation_engine.qevolve(
             channel_waveforms, self.simulate_dissipation
         )
 
-        return ro_reduced_dm, rdm_qubit_list
+        return simulation_results
 
     def play(
         self,
@@ -145,7 +140,8 @@ class PulseSimulator(Controller):
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-        """Executes the sequence of instructions and generates readout results.
+        """Executes the sequence of instructions and generates readout results,
+        as well as simulation-related time and states data.
 
         Args:
             qubits (dict): Qubits involved in the device. Does not affect emulator.
@@ -159,13 +155,16 @@ class PulseSimulator(Controller):
 
         Returns:
             dict: A dictionary mapping the readout pulses serial and respective qubits to
-            Qibolab results object.
+            Qibolab results object, as well as simulation-related time and states data.
         """
         nshots = execution_parameters.nshots
         ro_pulse_list = sequence.ro_pulses
-        ro_reduced_dm, rdm_qubit_list = self.run_pulse_simulation(
-            sequence, self.instant_measurement
+        times_dict, output_states, ro_reduced_dm, rdm_qubit_list = (
+            self.run_pulse_simulation(sequence, self.instant_measurement)
         )
+        if not self.output_state_history:
+            output_states = output_states[-1]
+
         samples = get_samples(
             nshots,
             ro_reduced_dm,
@@ -177,24 +176,27 @@ class PulseSimulator(Controller):
             samples = apply_readout_noise(samples, self.readout_error)
         # generate result object
         results = get_results_from_samples(ro_pulse_list, samples, execution_parameters)
+        results["simulation"] = {
+            "sequence_duration": times_dict["sequence_duration"],
+            "simulation_dt": times_dict["simulation_dt"],
+            "simulation_time": times_dict["simulation_time"],
+            "output_states": output_states,
+        }
 
         return results
 
-    def print_sim_details(self, sim_index=-1):
-        """Print simulation details of any of the previously run simulations.
+    '''
+    def append_sim_details(self):
+        """Creates a dictionary with relevant information pertaining the the last pulse simulation"""
+        return {
+            'Full time list': self.simulation_engine.pulse_sim_time_list,
+            'Hamiltonian': self.simulation_engine.H,
+            'Static dissipators': self.simulation_engine.static_dissipators),
+            'Initial state': self.simulation_engine.psi0,
+            'Simulation options': self.simulation_engine.sim_opts),
+        }
 
-        Defaults to -1, i.e. the last simulation.
-        """
-        full_time_list = self.simulation_engine.pulse_sim_time_list[sim_index]
-        print("Hamiltonian:", self.simulation_engine.H[sim_index])
-        print("Initial state:", self.simulation_engine.psi0)
-        # print("Full time list:", full_time_list)
-        print("Initial simualtion time:", full_time_list[0])
-        print("Final simualtion time:", full_time_list[-1])
-        print("Simualtion time step (dt):", full_time_list[1])
-        print("Total number of time steps:", len(full_time_list))
-        print("Static dissipators:", self.simulation_engine.static_dissipators)
-        print("Simulation options:", self.simulation_engine.sim_opts)
+    '''
 
     ### sweeper adapted from icarusqfpga ###
     def sweep(
@@ -204,8 +206,9 @@ class PulseSimulator(Controller):
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweeper: List[Sweeper],
-    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-        """Executes the sweep and generates readout results.
+    ) -> dict[str, Union[IntegratedResults, SampleResults, dict]]:
+        """Executes the sweep and generates readout results, as well as
+        simulation-related time and states data.
 
         Args:
             qubits (dict): Qubits involved in the device. Does not affect emulator.
@@ -220,12 +223,12 @@ class PulseSimulator(Controller):
 
         Returns:
             dict: A dictionary mapping the readout pulses serial and respective qubits to
-            results objects.
+            Qibolab results objects, as well as simulation-related time and states data.
 
         Raises:
             NotImplementedError: If sweep.parameter is not in AVAILABLE_SWEEP_PARAMETERS.
         """
-        append_to_shape = [len(sweep.values) for sweep in sweeper]
+        sweeper_shape = [len(sweep.values) for sweep in sweeper]
 
         # Record pulse values before sweeper modification
         bsv = []
@@ -241,10 +244,29 @@ class PulseSimulator(Controller):
         sweep_samples = self._sweep_recursion(
             qubits, couplers, sequence, execution_parameters, *sweeper
         )
+        output_states_list = sweep_samples.pop("output_states")
+        sequence_duration_array = sweep_samples.pop("sequence_duration")
+        simulation_dt_array = sweep_samples.pop("simulation_dt")
+        simulation_time_array = sweep_samples.pop("simulation_time")
+
+        # reshape output_states to sweeper dimensions
+        output_states_array = np.ndarray(sweeper_shape, dtype=list)
+        listlen = len(output_states_list) // np.prod(sweeper_shape)
+        array_indices = np.indices(sweeper_shape).reshape(len(sweeper_shape), -1).T
+        for index in array_indices:
+            output_states_array[tuple(index)] = output_states_list[:listlen]
+            output_states_list = output_states_list[listlen:]
+
+        # reshape time data to sweeper dimensions
+        sequence_duration_array = np.array(sequence_duration_array).reshape(
+            sweeper_shape
+        )
+        simulation_dt_array = np.array(simulation_dt_array).reshape(sweeper_shape)
+        simulation_time_array = np.array(simulation_time_array).reshape(sweeper_shape)
 
         # reshape and reformat samples to results format
         results = get_results_from_samples(
-            sequence.ro_pulses, sweep_samples, execution_parameters, append_to_shape
+            sequence.ro_pulses, sweep_samples, execution_parameters, sweeper_shape
         )
 
         # Reset pulse values back to original values
@@ -252,6 +274,17 @@ class PulseSimulator(Controller):
             param_name = sweep.parameter.name.lower()
             for pulse, value in zip(sweep.pulses, base_sweeper_values):
                 setattr(pulse, param_name, value)
+
+        results.update(
+            {
+                "simulation": {
+                    "sequence_duration": sequence_duration_array,
+                    "simulation_dt": simulation_dt_array,
+                    "simulation_time": simulation_time_array,
+                    "output_states": output_states_array,
+                }
+            }
+        )
 
         return results
 
@@ -263,8 +296,8 @@ class PulseSimulator(Controller):
         execution_parameters: ExecutionParameters,
         *sweeper: Sweeper,
     ) -> dict[Union[str, int], list]:
-        """Performs sweep by recursion. Appends sampled lists obtained from
-        each call of `self._sweep_play`.
+        """Performs sweep by recursion. Appends sampled lists and other
+        simulation data obtained from each call of `self._sweep_play`.
 
         Args:
             qubits (dict): Qubits involved in the device. Does not affect emulator.
@@ -278,11 +311,18 @@ class PulseSimulator(Controller):
             *sweepers (`qibolab.Sweeper`): Sweeper objects.
 
         Returns:
-            dict: A dictionary mapping the qubit indices to list of sampled values.
+            dict: A dictionary mapping the qubit indices to list of sampled values, simulation-related time data, and simulated states data.
         """
 
         if len(sweeper) == 0:
-            samples = self._sweep_play(qubits, couplers, sequence, execution_parameters)
+            times_dict, output_states, samples = self._sweep_play(
+                qubits, couplers, sequence, execution_parameters
+            )
+            if not self.output_state_history:
+                output_states = [output_states[-1]]
+            samples.update({"output_states": output_states})
+            for k, v in times_dict.items():
+                samples.update({k: [v]})
             return samples
 
         sweep = sweeper[0]
@@ -317,7 +357,8 @@ class PulseSimulator(Controller):
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[Union[str, int], list]:
-        """Generates samples list labelled by qubit index.
+        """Generates simulation-related time data, simulated states data, and
+        samples list labelled by qubit index.
 
         Args:
             qubits (dict): Qubits involved in the device. Does not affect emulator.
@@ -330,14 +371,14 @@ class PulseSimulator(Controller):
                                                         averaging_mode)
 
         Returns:
-            dict: A dictionary mapping the qubit indices to list of sampled values.
+            dict: A tuple with dictionary containing simulation-related time data, a list of states at each time step in the simulation, and a dictionary mapping the qubit indices to list of sampled values.
         """
         nshots = execution_parameters.nshots
         ro_pulse_list = sequence.ro_pulses
 
         # run pulse simulation
-        ro_reduced_dm, rdm_qubit_list = self.run_pulse_simulation(
-            sequence, self.instant_measurement
+        times_dict, state_history, ro_reduced_dm, rdm_qubit_list = (
+            self.run_pulse_simulation(sequence, self.instant_measurement)
         )
         # generate samples
         samples = get_samples(
@@ -350,13 +391,13 @@ class PulseSimulator(Controller):
         if self.readout_error is not None:
             samples = apply_readout_noise(samples, self.readout_error)
 
-        return samples
+        return times_dict, state_history, samples
 
     @staticmethod
     def merge_sweep_results(
-        dict_a: """dict[str, Union[IntegratedResults, SampleResults]]""",
-        dict_b: """dict[str, Union[IntegratedResults, SampleResults]]""",
-    ) -> """dict[str, Union[IntegratedResults, SampleResults]]""":
+        dict_a: """dict[str, Union[IntegratedResults, SampleResults, list]]""",
+        dict_b: """dict[str, Union[IntegratedResults, SampleResults, list]]""",
+    ) -> """dict[str, Union[IntegratedResults, SampleResults, list]]""":
         """Merges two dictionary mapping pulse serial to Qibolab results
         object.
 
@@ -596,12 +637,14 @@ def make_comp_basis(
     nqubits = len(qubit_list)
     qid_list = [str(qubit) for qubit in qubit_list]
     nlevels = [qid_nlevels_map[qid] for qid in qid_list]
-    comp_basis_list = []
-    comp_dim = np.prod(nlevels)
-    for ind in range(comp_dim):
-        comp_basis_list.append(dec_to_basis_string(ind, nlevels=nlevels))
 
-    return np.array(comp_basis_list)
+    return make_array_index_list(nlevels)
+
+
+def make_array_index_list(array_shape: list):
+    """Generates all indices of an array of arbitrary shape in ascending
+    order."""
+    return np.indices(array_shape).reshape(len(array_shape), -1).T
 
 
 def get_results_from_samples(

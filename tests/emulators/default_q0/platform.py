@@ -18,6 +18,7 @@ simulation_config = {
     "sim_sampling_boost": 10,  # 20
     "simulate_dissipation": True,
     "instant_measurement": True,
+    "output_state_history": True,  # False, #
 }
 
 
