@@ -9,7 +9,7 @@ from timeit import default_timer as timer
 from typing import Dict, List, Optional
 
 import numpy as np
-from qutip import Options, Qobj, basis, fidelity, ket2dm, mesolve, ptrace
+from qutip import Options, Qobj, basis, expect, ket2dm, mesolve, ptrace
 from qutip.operators import identity as Id
 from qutip.tensor import tensor
 from qutip.ui.progressbar import EnhancedTextProgressBar
@@ -448,7 +448,7 @@ class QutipSimulator:
         total_samples = len(target_states)
         all_fidelities = {}
         for label, ref_state in reference_states.items():
-            fid_list = [fidelity(ref_state, state) for state in target_states]
+            fid_list = [expect(ref_state, state) for state in target_states]
             all_fidelities.update({label: fid_list})
 
         return all_fidelities
