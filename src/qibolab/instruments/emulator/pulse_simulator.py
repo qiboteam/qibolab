@@ -252,7 +252,7 @@ class PulseSimulator(Controller):
         # reshape output_states to sweeper dimensions
         output_states_array = np.ndarray(sweeper_shape, dtype=list)
         listlen = len(output_states_list) // np.prod(sweeper_shape)
-        array_indices = np.indices(sweeper_shape).reshape(len(sweeper_shape), -1).T
+        array_indices = make_array_index_list(sweeper_shape)
         for index in array_indices:
             output_states_array[tuple(index)] = output_states_list[:listlen]
             output_states_list = output_states_list[listlen:]
