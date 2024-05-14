@@ -10,6 +10,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
 
+from qibolab.channel import IQMixerConfig, OscillatorConfig
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -162,6 +163,19 @@ def load_instrument_settings(
     for name, settings in runcard.get("instruments", {}).items():
         instruments[name].setup(**settings)
     return instruments
+
+
+def load_channel_configs(runcard: dict) -> dict[str, dict]:
+    """Load configurations for channels."""
+    configs = runcard["channels"]
+    for ch, cfg in configs.items():
+        if "lo_config" in cfg and cfg["lo_config"] is not None:
+            cfg["lo_config"] = OscillatorConfig(**cfg["lo_config"])
+        if "twpa_pump_config" in cfg and cfg["twpa_pump_config"] is not None:
+            cfg["twpa_pump_config"] = OscillatorConfig(**cfg["twpa_pump_config"])
+        if "mixer_config" in cfg and cfg["mixer_config"] is not None:
+            cfg["mixer_config"] = IQMixerConfig(**cfg["mixer_config"])
+    return configs
 
 
 def _dump_pulse(pulse: Pulse):
