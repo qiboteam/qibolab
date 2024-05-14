@@ -38,7 +38,12 @@ class SweeperType(Enum):
     OFFSET = operator.add
 
 
-ChannelParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
+ChannelParameter = {
+    Parameter.frequency,
+    Parameter.bias,
+    Parameter.attenuation,
+    Parameter.gain,
+}
 
 
 @dataclass
