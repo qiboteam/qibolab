@@ -34,7 +34,7 @@ class PulseSequence(defaultdict):
         """Duration of the given channel."""
         return sum(item.duration for item in self[channel])
 
-    def append(self, other: "PulseSequence") -> None:
+    def extend(self, other: "PulseSequence") -> None:
         """Appends other in-place such that the result is self + necessary
         delays to synchronize channels + other."""
         tol = 1e-12
@@ -42,5 +42,5 @@ class PulseSequence(defaultdict):
         max_duration = max(durations.values(), default=0.0)
         for ch, duration in durations.items():
             if delay := round(max_duration - duration, int(1 / tol)) > 0:
-                self[ch].append(Delay(duration=delay))
+                self[ch].extend(Delay(duration=delay))
             self[ch].extend(other[ch])
