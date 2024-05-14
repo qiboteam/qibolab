@@ -18,7 +18,7 @@ from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
-from . import ZIChannel
+from . import ZiChannel
 from .pulse import ZhPulse
 from .sweep import ProcessedSweeps, classify_sweepers
 from .util import NANO_TO_SECONDS, SAMPLING_RATE
@@ -72,7 +72,7 @@ class Zurich(Controller):
         self,
         name,
         device_setup,
-        channels: list[ZIChannel],
+        channels: list[ZiChannel],
         time_of_flight=0.0,
         smearing=0.0,
     ):
