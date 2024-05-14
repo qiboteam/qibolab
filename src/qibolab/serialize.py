@@ -10,6 +10,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
 
+from qibolab.channel import IQMixerConfig, OscillatorConfig
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -21,7 +22,7 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.pulses import Delay, Pulse, PulseSequence, PulseType, VirtualZ
+from qibolab.pulses import Delay, Pulse, PulseSequence, VirtualZ
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 RUNCARD = "parameters.json"
@@ -178,6 +179,19 @@ def dump_qubit_name(name: QubitId) -> str:
     if isinstance(name, int):
         return str(name)
     return name
+
+
+def load_channel_configs(runcard: dict) -> dict[str, dict]:
+    """Load configurations for channels."""
+    configs = runcard["channels"]
+    for ch, cfg in configs.items():
+        if "lo_config" in cfg and cfg["lo_config"] is not None:
+            cfg["lo_config"] = OscillatorConfig(**cfg["lo_config"])
+        if "twpa_pump_config" in cfg and cfg["twpa_pump_config"] is not None:
+            cfg["twpa_pump_config"] = OscillatorConfig(**cfg["twpa_pump_config"])
+        if "mixer_config" in cfg and cfg["mixer_config"] is not None:
+            cfg["mixer_config"] = IQMixerConfig(**cfg["mixer_config"])
+    return configs
 
 
 def _dump_pulse(pulse: Pulse):
