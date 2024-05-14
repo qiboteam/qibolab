@@ -6,7 +6,7 @@ from .configs import *
 
 
 @dataclass(frozen=True)
-class ZIChannel(Channel):
+class ZiChannel(Channel):
     """Channel for Zurich Instruments (ZI) devices."""
 
     device: str
@@ -16,4 +16,4 @@ class ZIChannel(Channel):
 
 
 @dataclass(frozen=True)
-class ZiAcquisitionChannel(WithExternalTwpaPump, ZIChannel): ...
+class ZiAcquisitionChannel(WithExternalTwpaPump, ZiChannel): ...

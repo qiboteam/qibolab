@@ -1,20 +1,16 @@
 from dataclasses import dataclass
 
-from qibolab.channel.configs import (
-    AcquisitionChannelConfig,
-    DCChannelConfig,
-    IQChannelConfig,
-)
+from qibolab.channel.configs import AcquisitionConfig, DcConfig, IqConfig
 
 __all__ = [
-    "ZurichDCChannelConfig",
-    "ZurichIQChannelConfig",
-    "ZurichAcquisitionChannelConfig",
+    "ZiDcConfig",
+    "ZiIqConfig",
+    "ZiAcquisitionConfig",
 ]
 
 
 @dataclass(frozen=True)
-class ZurichDCChannelConfig(DCChannelConfig):
+class ZiDcConfig(DcConfig):
     """DC channel config using ZI HDAWG."""
 
     power_range: float
@@ -25,7 +21,7 @@ class ZurichDCChannelConfig(DCChannelConfig):
 
 
 @dataclass(frozen=True)
-class ZurichIQChannelConfig(IQChannelConfig):
+class ZiIqConfig(IqConfig):
     """IQ channel config for ZI SHF* line instrument."""
 
     power_range: float
@@ -36,7 +32,7 @@ class ZurichIQChannelConfig(IQChannelConfig):
 
 
 @dataclass(frozen=True)
-class ZurichAcquisitionChannelConfig(AcquisitionChannelConfig):
+class ZiAcquisitionConfig(AcquisitionConfig):
     """Acquisition config for ZI SHF* line instrument."""
 
     power_range: float

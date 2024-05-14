@@ -3,7 +3,7 @@ from typing import Union
 
 from .configs import *
 
-ChannelConfig = Union[DCChannelConfig, IQChannelConfig, AcquisitionChannelConfig]
+ChannelConfig = Union[DcConfig, IqConfig, AcquisitionConfig]
 
 
 @dataclass(frozen=True)
