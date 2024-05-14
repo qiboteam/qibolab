@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Optional, Union
 
 from .configs import *
 
@@ -37,8 +37,11 @@ class WithExternalTwpaPump:
     definitions, in case the instrument does not have built-in oscillator
     dedicated as TWPA pump and an external TWPA pump should be used."""
 
-    twpa_pump: str
-    """The name of the oscillator instrument used as TWPA pump."""
+    twpa_pump: Optional[str]
+    """The name of the oscillator instrument used as TWPA pump.
+
+    None, if the TWPA pump/TWPA is not installed in the setup.
+    """
 
 
 def external_config(channel: Channel) -> dict[str, str]:
