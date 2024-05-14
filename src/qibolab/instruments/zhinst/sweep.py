@@ -10,7 +10,7 @@ from qibolab.pulses import Pulse, PulseType
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
-from . import ZIChannel
+from . import ZiChannel
 from .util import NANO_TO_SECONDS, measure_channel_name
 
 
@@ -61,7 +61,7 @@ class ProcessedSweeps:
         self,
         sweepers: Iterable[Sweeper],
         qubits: dict[str, Qubit],
-        channels: dict[str, ZIChannel],
+        channels: dict[str, ZiChannel],
     ):
         pulse_sweeps = []
         channel_sweeps = []

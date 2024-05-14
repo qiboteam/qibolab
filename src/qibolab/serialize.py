@@ -10,7 +10,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple
 
-from qibolab.channel import IQMixerConfig, OscillatorConfig
+from qibolab.channel import IqMixerConfig, OscillatorConfig
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -190,7 +190,7 @@ def load_channel_configs(runcard: dict) -> dict[str, dict]:
         if "twpa_pump_config" in cfg and cfg["twpa_pump_config"] is not None:
             cfg["twpa_pump_config"] = OscillatorConfig(**cfg["twpa_pump_config"])
         if "mixer_config" in cfg and cfg["mixer_config"] is not None:
-            cfg["mixer_config"] = IQMixerConfig(**cfg["mixer_config"])
+            cfg["mixer_config"] = IqMixerConfig(**cfg["mixer_config"])
     return configs
 
 

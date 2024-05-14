@@ -6,16 +6,16 @@ from qibolab.execution_parameters import AcquisitionType
 """Common configuration for various channels."""
 
 __all__ = [
-    "DCChannelConfig",
-    "IQChannelConfig",
-    "AcquisitionChannelConfig",
+    "DcConfig",
+    "IqConfig",
+    "AcquisitionConfig",
     "OscillatorConfig",
-    "IQMixerConfig",
+    "IqMixerConfig",
 ]
 
 
 @dataclass(frozen=True)
-class DCChannelConfig:
+class DcConfig:
     """Configuration for a channel that can be used to send DC pulses (i.e.
     just envelopes without modulation)."""
 
@@ -32,7 +32,7 @@ class OscillatorConfig:
 
 
 @dataclass(frozen=True)
-class IQMixerConfig:
+class IqMixerConfig:
     """Configuration for IQ mixer.
 
     Mixers usually have various imperfections, and one needs to
@@ -53,7 +53,7 @@ class IQMixerConfig:
 
 
 @dataclass(frozen=True)
-class IQChannelConfig:
+class IqConfig:
     """Configuration for an IQ channel."""
 
     frequency: float
@@ -63,7 +63,7 @@ class IQChannelConfig:
 
     None if the channel does not use an LO.
     """
-    mixer_config: Optional[IQMixerConfig]
+    mixer_config: Optional[IqMixerConfig]
     """Configuration for the corresponding IQ mixer.
 
     None if the channel does not feature a mixer.
@@ -71,7 +71,7 @@ class IQChannelConfig:
 
 
 @dataclass(frozen=True)
-class AcquisitionChannelConfig:
+class AcquisitionConfig:
     """Configuration for acquisition channels."""
 
     type: AcquisitionType
