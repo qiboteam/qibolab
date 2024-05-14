@@ -101,11 +101,12 @@ class ProcessedSweeps:
             for ch in sweeper.channels or []:
                 if sweeper.parameter is Parameter.bias:
                     sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values + ch.config.offset
+                        values=sweeper.values + channels[ch].config.offset
                     )
                 elif sweeper.parameter is Parameter.frequency:
                     intermediate_frequency = (
-                        channels[ch].frequency - channels[ch].lo_config.frequency
+                        channels[ch].config.frequency
+                        - channels[ch].config.lo_config.frequency
                     )
                     sweep_param = laboneq.SweepParameter(
                         values=sweeper.values + intermediate_frequency
