@@ -369,7 +369,7 @@ class Platform:
 
     def create_MZ_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
-        return replace(qubit.native_gates.MZ)
+        return qubit.native_gates.MZ
 
     def create_qubit_drive_pulse(self, qubit, duration, relative_phase=0):
         qubit = self.get_qubit(qubit)
@@ -389,7 +389,7 @@ class Platform:
             pulse = replace(pulse, duration=duration)
         if amplitude is not None:
             pulse = replace(pulse, amplitude=amplitude)
-        return replace(pulse)
+        return pulse
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
