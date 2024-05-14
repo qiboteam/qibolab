@@ -47,7 +47,6 @@ class Qubit:
     """Readout dressed frequency."""
     drive_frequency: int = 0
     anharmonicity: int = 0
-    sweetspot: float = 0.0
     asymmetry: float = 0.0
     crosstalk_matrix: dict[QubitId, float] = field(default_factory=dict)
     """Crosstalk matrix for voltages."""
