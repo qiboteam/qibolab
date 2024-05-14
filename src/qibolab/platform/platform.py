@@ -167,14 +167,14 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, sequence, channel_cfg, options, **kwargs):
+    def _execute(self, sequences, channel_cfg, options, **kwargs):
         """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, channel_cfg, options
+                    self.qubits, self.couplers, sequences, channel_cfg, options
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -262,9 +262,8 @@ class Platform:
 
         results = defaultdict(list)
         bounds = kwargs.get("bounds", self._controller.bounds)
-        for b in batch(sequences, bounds):
-            sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, channel_cfg, options, **kwargs)
+        for seq_batch in batch(sequences, bounds):
+            result = self._execute(seq_batch, channel_cfg, options, **kwargs)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
@@ -329,7 +328,7 @@ class Platform:
                 new_result = instrument.sweep(
                     self.qubits,
                     self.couplers,
-                    sequence,
+                    [sequence],
                     channel_cfg,
                     options,
                     *sweepers,
