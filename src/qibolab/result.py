@@ -38,7 +38,12 @@ class IntegratedResults:
     @cached_property
     def phase(self):
         """Signal phase in radians."""
-        return np.angle(self.voltage_i + 1.0j * self.voltage_q)
+        return np.unwrap(np.arctan2(self.voltage_i, self.voltage_q))
+
+    @cached_property
+    def phase_std(self):
+        """Signal phase in radians."""
+        return np.std(self.phase, axis=0, ddof=1) / np.sqrt(self.phase.shape[0])
 
     @property
     def serialize(self):
@@ -68,7 +73,7 @@ class AveragedIntegratedResults(IntegratedResults):
     or the averages of ``IntegratedResults``
     """
 
-    def __init__(self, data: np.ndarray, std: np.ndarray = np.array([])):
+    def __init__(self, data: np.ndarray, std: Optional[np.ndarray] = None):
         super().__init__(data)
         self.std: Optional[npt.NDArray[np.float64]] = std
 
@@ -76,6 +81,21 @@ class AveragedIntegratedResults(IntegratedResults):
         new_res = super().__add__(data)
         new_res.std = np.append(self.std, data.std)
         return new_res
+
+    @property
+    def average(self):
+        """Average on AveragedIntegratedResults is itself."""
+        return self
+
+    @cached_property
+    def phase_std(self):
+        """Standard deviation is None for AveragedIntegratedResults."""
+        return None
+
+    @cached_property
+    def phase(self):
+        """Phase not unwrapped because it is a single value."""
+        return np.arctan2(self.voltage_i, self.voltage_q)
 
 
 class RawWaveformResults(IntegratedResults):
