@@ -1,10 +1,9 @@
 """Executing pulse sequences on a Zurich Instruments devices."""
 
 import re
-from collections import defaultdict
 from dataclasses import dataclass
 from itertools import chain
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import laboneq.simple as laboneq
 import numpy as np
@@ -13,13 +12,13 @@ from laboneq.dsl.device import create_connection
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import PulseSequence
+from qibolab.pulses import Delay, Pulse, PulseSequence
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
 from . import ZiChannel
-from .pulse import ZhPulse
+from .pulse import select_pulse
 from .sweep import ProcessedSweeps, classify_sweepers
 from .util import NANO_TO_SECONDS, SAMPLING_RATE
 
@@ -112,8 +111,8 @@ class Zurich(Controller):
         self.acquisition_type = None
         "To store if the AcquisitionType.SPECTROSCOPY needs to be enabled by parsing the sequence"
 
-        self.sequences = defaultdict(list)
-        "Zurich pulse sequences"
+        self.sequences: list[PulseSequence] = []
+        "Pulse sequences"
 
         self.processed_sweeps: Optional[ProcessedSweeps] = None
         self.nt_sweeps: list[Sweeper] = []
@@ -292,7 +291,7 @@ class Zurich(Controller):
             sequences: list of sequences to be played in the experiment.
             options: execution options/parameters
         """
-        self.sequences = [self.sequence_zh(seq, qubits) for seq in sequences]
+        self.sequences = sequences
         self.calibration_step(qubits, couplers, options)
         self.create_exp(qubits, options)
 
@@ -300,32 +299,6 @@ class Zurich(Controller):
     def play(self, qubits, couplers, sequence, channel_cfg, options):
         """Play pulse sequence."""
         return self.sweep(qubits, couplers, sequence, channel_cfg, options)
-
-    def sequence_zh(
-        self, sequence: PulseSequence, qubits: dict[str, Qubit]
-    ) -> dict[str, list[ZhPulse]]:
-        """Convert Qibo sequence to a sequence where all pulses are replaced
-        with ZhPulse instances.
-
-        The resulting object is a dictionary mapping from channel name
-        to corresponding sequence of ZhPulse instances
-        """
-        # Define and assign the sequence
-        zhsequence = defaultdict(list)
-
-        # Fill the sequences with pulses according to their lines in temporal order
-        for ch, pulses in sequence.items():
-            zhsequence[ch].extend(ZhPulse(p) for p in pulses)
-
-        if self.processed_sweeps:
-            for ch, zhpulses in zhsequence.items():
-                for zhpulse in zhpulses:
-                    for param, sweep in self.processed_sweeps.sweeps_for_pulse(
-                        zhpulse.pulse
-                    ):
-                        zhpulse.add_sweeper(param, sweep)
-
-        return zhsequence
 
     def create_exp(self, qubits, options):
         """Zurich experiment initialization using their Experiment class."""
@@ -480,16 +453,12 @@ class Zurich(Controller):
                 with exp.section(uid=f"sequence_{i}_control"):
                     for ch in other_channels:
                         for pulse in seq[ch]:
-                            if pulse.delay_sweeper:
-                                exp.delay(signal=ch, time=pulse.delay_sweeper)
-                            if pulse.zhsweepers:
-                                self.play_sweep(exp, ch, pulse)
-                            else:
-                                exp.play(
-                                    signal=ch,
-                                    pulse=pulse.zhpulse,
-                                    phase=pulse.pulse.relative_phase,
-                                )
+                            self.play_pulse(
+                                exp,
+                                ch,
+                                pulse,
+                                self.processed_sweeps.sweeps_for_pulse(pulse),
+                            )
                 for ch in set(seq.keys()) - other_channels:
                     for j, pulse in enumerate(seq[ch]):
                         with exp.section(uid=f"sequence_{i}_measure_{j}"):
@@ -520,9 +489,9 @@ class Zurich(Controller):
                                 integration_kernel_parameters=None,
                                 integration_length=None,
                                 measure_signal=qubit.readout.name,
-                                measure_pulse=pulse.zhpulse,
+                                measure_pulse=select_pulse(pulse),
                                 measure_pulse_length=round(
-                                    pulse.pulse.duration * NANO_TO_SECONDS, 9
+                                    pulse.duration * NANO_TO_SECONDS, 9
                                 ),
                                 measure_pulse_parameters=measure_pulse_parameters,
                                 measure_pulse_amplitude=None,
@@ -551,7 +520,7 @@ class Zurich(Controller):
                         samples=np.ones(
                             [
                                 int(
-                                    pulse.pulse.duration * 2
+                                    pulse.duration * 2
                                     - 3 * self.smearing * NANO_TO_SECONDS
                                 )
                             ]
@@ -561,7 +530,7 @@ class Zurich(Controller):
                     weights[qubit.name] = weight
                 else:
                     weight = laboneq.pulse_library.const(
-                        length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
+                        length=round(pulse.duration * NANO_TO_SECONDS, 9)
                         - 1.5 * self.smearing * NANO_TO_SECONDS,
                         amplitude=1,
                     )
@@ -573,23 +542,40 @@ class Zurich(Controller):
         return weight
 
     @staticmethod
-    def play_sweep(exp, channel_name, pulse):
-        """Play Zurich pulse when a single sweeper is involved."""
-        play_parameters = {}
-        for p, zhs in pulse.zhsweepers:
-            if p is Parameter.amplitude:
-                max_value = max(np.abs(zhs.values))
-                pulse.zhpulse.amplitude *= max_value
-                zhs.values /= max_value
-                play_parameters["amplitude"] = zhs
-            if p is Parameter.duration:
-                play_parameters["length"] = zhs
-            if p is Parameter.relative_phase:
-                play_parameters["phase"] = zhs
-        if "phase" not in play_parameters:
-            play_parameters["phase"] = pulse.pulse.relative_phase
-
-        exp.play(signal=channel_name, pulse=pulse.zhpulse, **play_parameters)
+    def play_pulse(
+        exp,
+        channel: str,
+        pulse: Union[Pulse, Delay],
+        sweeps: list[tuple[Parameter, laboneq.SweepParameter]],
+    ):
+        """Play a pulse or delay by taking care of setting parameters to any
+        associated sweeps."""
+        if isinstance(pulse, Delay):
+            duration = pulse.duration
+            for p, zhs in sweeps:
+                if p is Parameter.duration:
+                    duration = zhs
+                else:
+                    raise ValueError(f"Cannot sweep parameter {p} of a delay.")
+            exp.delay(signal=channel, time=duration)
+        elif isinstance(pulse, Pulse):
+            zhpulse = select_pulse(pulse)
+            play_parameters = {}
+            for p, zhs in sweeps:
+                if p is Parameter.amplitude:
+                    max_value = max(np.abs(zhs.values))
+                    zhpulse.amplitude *= max_value
+                    zhs.values /= max_value
+                    play_parameters["amplitude"] = zhs
+                if p is Parameter.duration:
+                    play_parameters["length"] = zhs
+                if p is Parameter.relative_phase:
+                    play_parameters["phase"] = zhs
+            if "phase" not in play_parameters:
+                play_parameters["phase"] = pulse.relative_phase
+            exp.play(signal=channel, pulse=pulse.zhpulse, **play_parameters)
+        else:
+            raise ValueError(f"Cannot play pulse: {pulse}")
 
     def sweep(
         self,
@@ -634,7 +620,7 @@ class Zurich(Controller):
                         np.ones(data.shape) - data.real
                     )  # Probability inversion patch
 
-                id_ = ropulse.pulse.id
+                id_ = ropulse.id
                 # qubit = ropulse.pulse.qubit
                 results[id_] = results[qubit.name] = options.results_type(data)
 
