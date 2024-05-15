@@ -1,9 +1,40 @@
 {
-    "nqubits": 5,
+    "device_name": "ibmfakebelem_q0",
+    "nqubits": 1,
+    "ncouplers": 0,
     "description": "IBM 5-qubit device FakeBelem, q0 only",
     "settings": {
         "nshots": 4096,
         "relaxation_time": 300000
+    },
+    "instruments": {
+        "model_params": {
+                "device_name": "ibmfakebelem_q0",
+                "topology": [],
+                "nqubits": 1,
+                "ncouplers": 0,
+                "qubits_list": ["0"],
+                "couplers_list": [],
+                "nlevels_q": [3],
+                "nlevels_c": [],
+                "sampling_rate": 4.5,
+                "readout_error": {"0": [0.01, 0.02]},
+                "drive_freq": {"0": 5.090167234445013},
+                "T1": {"0": 88578.48970762537},
+                "T2": {"0": 106797.94866226273},
+                "lo_freq": {"0": 5.090167234445013},
+                "rabi_freq": {"0": 0.12545753819061986},
+                "anharmonicity": {"0": -0.3361230051821652},
+                "coupling_strength": {}
+        },
+        "simulation_config": {
+                "simulation_engine_name": "Qutip",
+                "sampling_rate": 4.5,
+                "sim_sampling_boost": 10,
+                "simulate_dissipation": "True",
+                "instant_measurement": "True",
+                "output_state_history": "True"
+        }
     },
     "qubits": [
         0
@@ -37,14 +68,14 @@
     "characterization": {
         "single_qubit": {
             "0": {
-                "readout_frequency": 7301661824.000001,
-                "drive_frequency": 5090167234.445013,
-                "anharmonicity": -336123005.1821652,
+                "readout_frequency": 7.301661824000001,
+                "drive_frequency": 5.090167234445013,
+                "anharmonicity": -0.3361230051821652,
                 "Ec": 0,
                 "Ej": 0,
                 "g": 0,
-                "T1": 0.0,
-                "T2": 0.0,
+                "T1": 88578.48970762537,
+                "T2": 106797.94866226273,
                 "sweetspot": 0,
                 "mean_gnd_states": "1.5417+0.1817j",
                 "mean_exc_states": "2.5332-0.5914j",

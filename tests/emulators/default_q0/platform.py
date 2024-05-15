@@ -3,7 +3,6 @@ import pathlib
 
 from qibolab.channels import ChannelMap
 from qibolab.instruments.emulator.models import general_no_coupler_model
-from qibolab.instruments.emulator.models.methods import load_model_params
 from qibolab.instruments.emulator.pulse_simulator import PulseSimulator
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
@@ -13,34 +12,24 @@ log.setLevel(logging.INFO)  # log.setLevel(logging.ERROR)
 
 FOLDER = pathlib.Path(__file__).parent
 
-simulation_config = {
-    "simulation_engine_name": "Qutip",
-    "sim_sampling_boost": 10,  # 20
-    "simulate_dissipation": True,
-    "instant_measurement": True,
-    "output_state_history": True,  # False, #
-}
 
-
-def create(nlevel: int = 3):
+def create():
     """Create a one qubit emulator platform."""
 
     # load runcard and model params
-    original_runcard = load_runcard(FOLDER)
     runcard = load_runcard(FOLDER)
-    model_params = load_model_params(FOLDER)
+    model_params = runcard["instruments"]["model_params"]
+    simulation_config = runcard["instruments"]["simulation_config"]
 
     # construct model and set up pulse simulator
-    model_config = general_no_coupler_model.generate_model_config(
-        model_params, nlevels_q=[nlevel]
-    )
+    model_config = general_no_coupler_model.generate_model_config(model_params)
     pulse_simulator = PulseSimulator(simulation_config, model_config)
 
     emulator_name = pulse_simulator.emulator_name
     qubits_list = model_config["qubits_list"]
     couplers_list = model_config["couplers_list"]
-    runcard_qubits_list = original_runcard["qubits"]
-    runcard_couplers_list = original_runcard["couplers"]
+    runcard_qubits_list = runcard["qubits"]
+    runcard_couplers_list = runcard["couplers"]
 
     log.info(emulator_name)
     log.info(f"emulator qubits: {qubits_list}")

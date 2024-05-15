@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from qibolab.instruments.emulator.models.methods import (
@@ -15,6 +17,8 @@ def generate_default_params():
         "ncouplers": 0,
         "qubits_list": ["0", "1"],
         "couplers_list": [],
+        "nlevels_q": [2, 2],
+        "nlevels_c": [],
         "sampling_rate": 2.0,  # units of samples/ns
         "readout_error": {
             # same key datatype as per runcard
@@ -54,14 +58,14 @@ def generate_default_params():
 
 def generate_model_config(
     model_params: dict = None,
-    nlevels_q: list = None,
-    topology: list = None,
+    nlevels_q: Optional[list] = None,
+    topology: Optional[list] = None,
 ) -> dict:
     """Generates the model configuration dictionary.
 
     Args:
         model_params(dict): Dictionary containing the model parameters.
-        nlevels_q(list, optional): List of the dimensions of each qubit to be simulated, in big endian order. Defaults to none, in which case a list of 2s with the same length as model_params['qubits_list'] will be used.
+        nlevels_q(list, optional): List of the dimensions of each qubit to be simulated, in big endian order. Defaults to None, in which case it will use the values of model_params['nlevels_q'] will be used.
         topology(list, optional): List containing all pairs of qubit indices that are nearest neighbours. Defaults to none, in which case the value of model_params['topology'] will be used.
 
     Returns:
@@ -82,7 +86,7 @@ def generate_model_config(
     rabi_freq_dict = model_params["rabi_freq"]
 
     if nlevels_q is None:
-        nlevels_q = [2 for q in qubits_list]
+        nlevels_q = model_params["nlevels_q"]
 
     drift_hamiltonian_dict = {"one_body": [], "two_body": []}
     drive_hamiltonian_dict = {}
