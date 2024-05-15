@@ -201,7 +201,7 @@ class QcmBb(ClusterModule):
         """
         pass
 
-    def _get_next_sequencer(self, port, frequency, qubits: dict):
+    def _get_next_sequencer(self, port, frequency, qubits: dict, couplers: dict = {}):
         """Retrieves and configures the next avaliable sequencer.
 
         The parameters of the new sequencer are copied from those of the default sequencer, except for the
@@ -209,17 +209,33 @@ class QcmBb(ClusterModule):
         Args:
             port (str):
             frequency ():
-            qubit ():
+            qubits ():
+            couplers ():
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
-        # select the qubit with flux line, if present, connected to the specific port
+        # check if this port is responsible for the flux of any qubit or coupler
         qubit = None
         for _qubit in qubits.values():
-            name = _qubit.flux.port.name
-            module = _qubit.flux.port.module
-            if _qubit.flux is not None and (name, module) == (port, self):
-                qubit = _qubit
+            if _qubit.flux.port is not None:
+                if (
+                    _qubit.flux.port.name == port
+                    and _qubit.flux.port.module.name == self.name
+                ):
+                    qubit = _qubit
+            else:
+                log.warning(f"Qubit {_qubit.name} has no flux line connected")
+
+        coupler = None
+        for _coupler in couplers.values():
+            if _coupler.flux.port is not None:
+                if (
+                    _coupler.flux.port.name == port
+                    and _coupler.flux.port.module.name == self.name
+                ):
+                    coupler = _coupler
+            else:
+                log.warning(f"Coupler {_coupler.name} has no flux line connected")
 
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
@@ -245,6 +261,13 @@ class QcmBb(ClusterModule):
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
+            if qubit:
+                self._ports[port].offset = qubit.sweetspot
+            elif coupler:
+                self._ports[port].offset = coupler.sweetspot
+            else:
+                self._ports[port].offset = 0
+
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit.name if qubit else None
@@ -267,6 +290,7 @@ class QcmBb(ClusterModule):
     def process_pulse_sequence(
         self,
         qubits: dict,
+        couplers: dict,
         instrument_pulses: PulseSequence,
         navgs: int,
         nshots: int,
@@ -349,6 +373,7 @@ class QcmBb(ClusterModule):
                         port=port,
                         frequency=self.get_if(non_overlapping_pulses[0]),
                         qubits=qubits,
+                        couplers=couplers,
                     )
                     # add the sequencer to the list of sequencers required by the port
                     self._sequencers[port].append(sequencer)
@@ -383,12 +408,13 @@ class QcmBb(ClusterModule):
                                 port=port,
                                 frequency=self.get_if(non_overlapping_pulses[0]),
                                 qubits=qubits,
+                                couplers=couplers,
                             )
                             # add the sequencer to the list of sequencers required by the port
                             self._sequencers[port].append(sequencer)
             else:
                 sequencer = self._get_next_sequencer(
-                    port=port, frequency=0, qubits=qubits
+                    port=port, frequency=0, qubits=qubits, couplers=couplers
                 )
                 # add the sequencer to the list of sequencers required by the port
                 self._sequencers[port].append(sequencer)
