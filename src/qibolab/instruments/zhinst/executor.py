@@ -1,7 +1,6 @@
 """Executing pulse sequences on a Zurich Instruments devices."""
 
 import re
-from dataclasses import dataclass
 from itertools import chain
 from typing import Any, Optional, Union
 
@@ -39,28 +38,6 @@ AVERAGING_MODE = {
     AveragingMode.CYCLIC: laboneq.AveragingMode.CYCLIC,
     AveragingMode.SINGLESHOT: laboneq.AveragingMode.SINGLE_SHOT,
 }
-
-
-@dataclass
-class SubSequence:
-    """A subsequence is a slice (in time) of a sequence that contains at most
-    one measurement per qubit.
-
-    When the driver is asked to execute a sequence, it will first split
-    it into sub-sequences. This is needed so that we can create a
-    separate laboneq section for each measurement (multiple measurements
-    per section are not allowed). When splitting a sequence, it is
-    assumed that 1. a measurement operation can be parallel (in time) to
-    another measurement operation (i.e. measuring multiple qubits
-    simultaneously), but other channels (e.g. drive) do not contain any
-    pulses parallel to measurements, 2. ith measurement on some channel
-    is in the same subsequence as the ith measurement (if any) on
-    another measurement channel, 3. all measurements in one subsequence
-    happen at the same time.
-    """
-
-    measurements: list[tuple[str, ZhPulse]]
-    control_sequence: dict[str, list[ZhPulse]]
 
 
 class Zurich(Controller):
