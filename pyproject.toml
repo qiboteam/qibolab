@@ -35,7 +35,7 @@ qualang-tools = { version = "^0.15.0", optional = true }
 setuptools = { version = ">67.0.0", optional = true }
 laboneq = { version = "==2.25.0", optional = true }
 qibosoq = { version = ">=0.1.2,<0.2", optional = true }
-qutip = { version = "^4.7.5", optional = true }
+qutip = { version = "^4.7.6", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -63,7 +63,7 @@ qcodes_contrib_drivers = "0.18.0"
 qibosoq = ">=0.0.4,<0.2"
 qualang-tools = "^0.15.0"
 laboneq = "==2.25.0"
-qutip = "^4.7.5"
+qutip = "^4.7.6"
 
 [tool.poetry.group.tests]
 optional = true
