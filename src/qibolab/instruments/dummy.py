@@ -4,10 +4,14 @@ from typing import Dict, List, Optional
 import numpy as np
 from qibo.config import log
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.platform import Coupler, Qubit
+from qibolab.couplers import Coupler
+from qibolab.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab.pulses import PulseSequence
-from qibolab.qubits import QubitId
+from qibolab.qubits import Qubit, QubitId
 from qibolab.sweeper import Sweeper
 from qibolab.unrolling import Bounds
 

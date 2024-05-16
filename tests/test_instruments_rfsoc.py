@@ -14,8 +14,8 @@ from qibolab.instruments.rfsoc.convert import (
     convert_units_sweeper,
     replace_pulse_shape,
 )
-from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.qubits import Qubit
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedSampleResults,

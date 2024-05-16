@@ -13,7 +13,7 @@ from typing import Tuple
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import (
+from qibolab.platform.platform import (
     CouplerMap,
     InstrumentMap,
     Platform,

@@ -7,13 +7,13 @@ from typing import Dict, List, Optional, Tuple
 import networkx as nx
 from qibo.config import log, raise_error
 
-from .couplers import Coupler
-from .execution_parameters import ExecutionParameters
-from .instruments.abstract import Controller, Instrument, InstrumentId
-from .pulses import Drag, FluxPulse, PulseSequence, ReadoutPulse
-from .qubits import Qubit, QubitId, QubitPair, QubitPairId
-from .sweeper import Sweeper
-from .unrolling import batch
+from qibolab.couplers import Coupler
+from qibolab.execution_parameters import ExecutionParameters
+from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
+from qibolab.pulses import Drag, FluxPulse, PulseSequence, ReadoutPulse
+from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.sweeper import Sweeper
+from qibolab.unrolling import batch
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]
