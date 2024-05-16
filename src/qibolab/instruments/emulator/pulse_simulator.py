@@ -25,6 +25,12 @@ AVAILABLE_SWEEP_PARAMETERS = {
     Parameter.start,
 }
 
+SIMULATION_ENGINES = {
+    "Qutip": QutipSimulator,
+}
+
+TF_DICT = {"True": True, "False": False}
+
 
 class PulseSimulator(Controller):
     """Runs quantum dynamics simulation of model of device.
@@ -48,43 +54,39 @@ class PulseSimulator(Controller):
             model_config (dict): Model configuration dictionary.
             sim_opts (optional): Simulation engine specific object specifying simulation options.
         """
-        self.simulation_config = simulation_config
-        self.model_config = model_config
-        self.sim_opts = sim_opts
-
-        self.all_simulation_engines = {"Qutip": QutipSimulator}
-
-        self.update()
+        self.setup(simulation_config, model_config, sim_opts)
 
     @property
     def sampling_rate(self):
-        return self.model_config["sampling_rate"]
+        return self._sampling_rate
 
-    def update(self):
+    def setup(self, simulation_config, model_config, sim_opts):
         """Updates the pulse simulator by loading all parameters from
-        `self.model_config` and `self.simulation_config`."""
-        self.simulation_engine_name = self.simulation_config["simulation_engine_name"]
-        self.output_state_history = self.simulation_config["output_state_history"]
-        self.device_name = self.model_config["device_name"]
-        self.model_name = self.model_config["model_name"]
-        self.emulator_name = f"{self.device_name} emulator running {self.model_name} on {self.simulation_engine_name} engine"
-        self.simulation_engine = self.all_simulation_engines[
-            self.simulation_engine_name
-        ](self.model_config, self.sim_opts)
+        `model_config` and `simulation_config`."""
+        simulation_engine_name = simulation_config["simulation_engine_name"]
+        device_name = model_config["device_name"]
+        model_name = model_config["model_name"]
+        self.emulator_name = f"{device_name} emulator running {model_name} on {simulation_engine_name} engine"
+        self.simulation_engine = SIMULATION_ENGINES[simulation_engine_name](
+            model_config, sim_opts
+        )
 
-        self.platform_to_simulator_channels = self.model_config[
+        # Settings for pulse processing
+        self._sampling_rate = simulation_config["sampling_rate"]
+        self.sim_sampling_boost = simulation_config["sim_sampling_boost"]
+        self.runcard_duration_in_dt_units = TF_DICT[
+            simulation_config["runcard_duration_in_dt_units"]
+        ]
+        self.instant_measurement = TF_DICT[simulation_config["instant_measurement"]]
+        self.platform_to_simulator_channels = model_config[
             "platform_to_simulator_channels"
         ]
 
-        self.sim_sampling_boost = self.simulation_config["sim_sampling_boost"]
-        self.instant_measurement = self.simulation_config["instant_measurement"]
-        self.runcard_duration_in_dt_units = self.model_config[
-            "runcard_duration_in_dt_units"
-        ]
         self.readout_error = {
-            int(k): v for k, v in self.model_config["readout_error"].items()
+            int(k): v for k, v in model_config["readout_error"].items()
         }
-        self.simulate_dissipation = self.simulation_config["simulate_dissipation"]
+        self.simulate_dissipation = TF_DICT[simulation_config["simulate_dissipation"]]
+        self.output_state_history = TF_DICT[simulation_config["output_state_history"]]
 
     def update_sim_opts(self, updated_sim_opts):
         self.sim_opts = updated_sim_opts
@@ -95,9 +97,6 @@ class PulseSimulator(Controller):
 
     def disconnect(self):
         log.info(f"Disconnecting {self.emulator_name}.")
-
-    def setup(self, *args, **kwargs):
-        log.info(f"Setting up {self.emulator_name}.")
 
     def run_pulse_simulation(
         self,

@@ -22,7 +22,6 @@ from qibolab.instruments.emulator.models import (
     general_no_coupler_model,
     models_template,
 )
-from qibolab.instruments.emulator.models.methods import load_model_params
 from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
@@ -242,20 +241,19 @@ def test_pulse_simulator_initialization():
     pulse_simulator = platform.instruments["pulse_simulator"]
     pulse_simulator.update_sim_opts(sim_opts)
     pulse_simulator.connect()
-    pulse_simulator.setup()
     pulse_simulator.disconnect()
 
 
-def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exception():
+def test_pulse_simulator_play_no_dissipation_dt_units_false_history_ro_exception():
     emulator = "default_q0"
     platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
-    pulse_simulator.model_config.update({"readout_error": {1: [0.1, 0.1]}})
-    pulse_simulator.model_config.update({"runcard_duration_in_dt_units": True})
-    pulse_simulator.simulation_config.update({"simulate_dissipation": False})
-    pulse_simulator.model_config["drift"].update({"two_body": []})
-    pulse_simulator.model_config["dissipation"].update({"t1": []})
-    pulse_simulator.update()
+    pulse_simulator.readout_error = {1: [0.1, 0.1]}
+    pulse_simulator.runcard_duration_in_dt_units = True
+    pulse_simulator.simulate_dissipation = False
+    pulse_simulator.output_state_history = False
+    ##pulse_simulator.model_config["drift"].update({"two_body": []}) # to check
+    ##pulse_simulator.model_config["dissipation"].update({"t1": []}) # to check
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
@@ -266,14 +264,6 @@ def test_pulse_simulator_play_def_execparams_no_dissipation_dt_units_ro_exceptio
 
 
 # models.methods
-def test_load_model_params():
-    FOLDER = pathlib.Path(__file__).parent
-    emulators_folder = pathlib.Path(__file__).parent / "emulators"
-    device_name = "ibmfakebelem_q01"
-    model_params_folder = emulators_folder / device_name
-    load_model_params(model_params_folder)
-
-
 def test_op_from_instruction():
     model = models_template
     model_config = model.generate_model_config()

@@ -1,14 +1,5 @@
-import json
 import operator
 from functools import reduce
-from pathlib import Path
-
-MODEL_PARAMS = "model.json"
-
-
-def load_model_params(path: Path) -> dict:
-    """Load model parameters JSON to a dictionary."""
-    return json.loads((path / MODEL_PARAMS).read_text())
 
 
 def default_noflux_platform_to_simulator_channels(

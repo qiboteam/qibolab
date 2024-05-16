@@ -17,7 +17,6 @@
                 "couplers_list": [],
                 "nlevels_q": [3],
                 "nlevels_c": [],
-                "sampling_rate": 4.5,
                 "readout_error": {"0": [0.01, 0.02]},
                 "drive_freq": {"0": 5.090167234445013},
                 "T1": {"0": 88578.48970762537},
@@ -31,8 +30,9 @@
                 "simulation_engine_name": "Qutip",
                 "sampling_rate": 4.5,
                 "sim_sampling_boost": 10,
-                "simulate_dissipation": "True",
+                "runcard_duration_in_dt_units": "False",
                 "instant_measurement": "True",
+                "simulate_dissipation": "True",
                 "output_state_history": "True"
         }
     },

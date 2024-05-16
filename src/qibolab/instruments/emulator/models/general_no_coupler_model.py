@@ -19,7 +19,6 @@ def generate_default_params():
         "couplers_list": [],
         "nlevels_q": [2, 2],
         "nlevels_c": [],
-        "sampling_rate": 2.0,  # units of samples/ns
         "readout_error": {
             # same key datatype as per runcard
             0: [0.01, 0.02],
@@ -79,7 +78,6 @@ def generate_model_config(
         topology = model_params["topology"]
 
     device_name = model_params["device_name"]
-    sampling_rate = model_params["sampling_rate"]
     readout_error = model_params["readout_error"]
     qubits_list = model_params["qubits_list"]
 
@@ -140,8 +138,6 @@ def generate_model_config(
     model_config = {
         "model_name": "general no coupler CR drive model",
         "device_name": device_name,
-        "sampling_rate": sampling_rate,
-        "runcard_duration_in_dt_units": False,
         "topology": topology,
         "qubits_list": qubits_list,
         "nlevels_q": nlevels_q,
