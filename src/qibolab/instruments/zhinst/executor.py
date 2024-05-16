@@ -273,9 +273,9 @@ class Zurich(Controller):
         self.create_exp(qubits, options)
 
     # pylint: disable=W0221
-    def play(self, qubits, couplers, sequence, channel_cfg, options):
+    def play(self, qubits, couplers, sequence, options):
         """Play pulse sequence."""
-        return self.sweep(qubits, couplers, sequence, channel_cfg, options)
+        return self.sweep(qubits, couplers, sequence, options)
 
     def create_exp(self, qubits, options):
         """Zurich experiment initialization using their Experiment class."""
@@ -559,7 +559,6 @@ class Zurich(Controller):
         qubits,
         couplers,
         sequences: list[PulseSequence],
-        channel_cfg,
         options,
         *sweepers,
     ):

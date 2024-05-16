@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 import networkx as nx
 from qibo.config import log, raise_error
 
-from .channel import ChannelConfig
 from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
@@ -167,14 +166,14 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _execute(self, sequences, channel_cfg, options, **kwargs):
+    def _execute(self, sequences, options, **kwargs):
         """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequences, channel_cfg, options
+                    self.qubits, self.couplers, sequences, options
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -184,22 +183,17 @@ class Platform:
     def execute_pulse_sequence(
         self,
         sequence: PulseSequence,
-        channel_cfg: dict[str, ChannelConfig],
         options: ExecutionParameters,
         **kwargs,
     ):
         """
         Args:
             sequence (:class:`qibolab.pulses.PulseSequence`): Pulse sequences to execute.
-            channel_cfg: configs to override for given channels.
             options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
         """
-        if channel_cfg:
-            raise ValueError("Currently, overriding channel configs is not supported.")
-
         options = self.settings.fill(options)
 
         time = (
@@ -207,7 +201,7 @@ class Platform:
         )
         log.info(f"Minimal execution time (sequence): {time}")
 
-        return self._execute(sequence, channel_cfg, options, **kwargs)
+        return self._execute(sequence, options, **kwargs)
 
     @property
     def _controller(self):
@@ -228,7 +222,6 @@ class Platform:
     def execute_pulse_sequences(
         self,
         sequences: List[PulseSequence],
-        channel_cfg: dict[str, ChannelConfig],
         options: ExecutionParameters,
         **kwargs,
     ):
@@ -240,9 +233,6 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
-        if channel_cfg:
-            raise ValueError("Currently, overriding channel configs is not supported.")
-
         options = self.settings.fill(options)
 
         duration = sum(seq.duration for seq in sequences)
@@ -263,7 +253,7 @@ class Platform:
         results = defaultdict(list)
         bounds = kwargs.get("bounds", self._controller.bounds)
         for seq_batch in batch(sequences, bounds):
-            result = self._execute(seq_batch, channel_cfg, options, **kwargs)
+            result = self._execute(seq_batch, options, **kwargs)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
@@ -275,7 +265,6 @@ class Platform:
     def sweep(
         self,
         sequence: PulseSequence,
-        channel_cfg: dict[str, ChannelConfig],
         options: ExecutionParameters,
         *sweepers: Sweeper,
     ):
@@ -306,9 +295,6 @@ class Platform:
         Returns:
             Readout results acquired by after execution.
         """
-        if channel_cfg:
-            raise ValueError("Currently, overriding channel configs is not supported.")
-
         if options.nshots is None:
             options = replace(options, nshots=self.settings.nshots)
 
@@ -329,7 +315,6 @@ class Platform:
                     self.qubits,
                     self.couplers,
                     [sequence],
-                    channel_cfg,
                     options,
                     *sweepers,
                 )
