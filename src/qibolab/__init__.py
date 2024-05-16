@@ -108,7 +108,8 @@ def _available_platforms() -> list[str]:
     """Returns the platforms found in the $QIBOLAB_PLATFORMS directory."""
     return [
         d.name
-        for d in _platforms_paths().iterdir()
+        for platforms in _platforms_paths()
+        for d in platforms.iterdir()
         if d.is_dir()
         and Path(f"{os.environ.get(PLATFORMS)}/{d.name}/platform.py") in d.iterdir()
     ]
