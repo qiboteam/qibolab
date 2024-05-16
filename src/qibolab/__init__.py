@@ -27,7 +27,6 @@ __all__ = [
 ]
 
 PLATFORMS = "QIBOLAB_PLATFORMS"
-_SEPARATOR = ":"
 
 
 def _platforms_paths() -> list[Path]:
@@ -39,7 +38,7 @@ def _platforms_paths() -> list[Path]:
     if paths is None:
         raise_error(RuntimeError, f"Platforms path ${PLATFORMS} unset.")
 
-    return [Path(p) for p in paths.split(_SEPARATOR)]
+    return [Path(p) for p in paths.split(os.pathsep)]
 
 
 def _search(name: str, paths: list[Path]) -> Path:
