@@ -58,6 +58,11 @@ def dummy_qrc():
     set_platform_profile()
 
 
+@pytest.fixture
+def emulators():
+    os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators")
+
+
 def find_instrument(platform, instrument_type):
     for instrument in platform.instruments.values():
         if isinstance(instrument, instrument_type):

@@ -34,7 +34,7 @@ MODELS = [models_template, general_no_coupler_model]
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
-def test_emulator_initialization(emulator):
+def test_emulator_initialization(emulators, emulator):
     platform = create_platform(emulator)
     platform.connect()
     platform.disconnect()
@@ -45,7 +45,7 @@ def test_emulator_initialization(emulator):
     "acquisition",
     [AcquisitionType.DISCRIMINATION, AcquisitionType.INTEGRATION, AcquisitionType.RAW],
 )
-def test_emulator_execute_pulse_sequence(emulator, acquisition):
+def test_emulator_execute_pulse_sequence(emulators, emulator, acquisition):
     nshots = 10  # 100
     platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
@@ -65,7 +65,7 @@ def test_emulator_execute_pulse_sequence(emulator, acquisition):
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
-def test_emulator_execute_pulse_sequence_fast_reset(emulator):
+def test_emulator_execute_pulse_sequence_fast_reset(emulators, emulator):
     platform = create_platform(emulator)
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
@@ -82,7 +82,7 @@ def test_emulator_execute_pulse_sequence_fast_reset(emulator):
 @pytest.mark.parametrize("acquisition", [AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
 def test_emulator_single_sweep(
-    emulator, fast_reset, parameter, average, acquisition, nshots
+    emulators, emulator, fast_reset, parameter, average, acquisition, nshots
 ):
     platform = create_platform(emulator)
     sequence = PulseSequence()
@@ -126,7 +126,7 @@ def test_emulator_single_sweep(
 @pytest.mark.parametrize("acquisition", [AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
 def test_emulator_double_sweep(
-    emulator, parameter1, parameter2, average, acquisition, nshots
+    emulators, emulator, parameter1, parameter2, average, acquisition, nshots
 ):
     platform = create_platform(emulator)
     sequence = PulseSequence()
@@ -186,7 +186,7 @@ def test_emulator_double_sweep(
 @pytest.mark.parametrize("acquisition", [AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
 def test_emulator_single_sweep_multiplex(
-    emulator, parameter, average, acquisition, nshots
+    emulators, emulator, parameter, average, acquisition, nshots
 ):
     platform = create_platform(emulator)
     sequence = PulseSequence()
@@ -234,7 +234,7 @@ def test_emulator_single_sweep_multiplex(
 
 
 # pulse_simulator
-def test_pulse_simulator_initialization():
+def test_pulse_simulator_initialization(emulators):
     emulator = "default_q0"
     platform = create_platform(emulator)
     sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
@@ -244,7 +244,9 @@ def test_pulse_simulator_initialization():
     pulse_simulator.disconnect()
 
 
-def test_pulse_simulator_play_no_dissipation_dt_units_false_history_ro_exception():
+def test_pulse_simulator_play_no_dissipation_dt_units_false_history_ro_exception(
+    emulators,
+):
     emulator = "default_q0"
     platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
