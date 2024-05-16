@@ -16,21 +16,55 @@ from qibolab.serialize import PLATFORM
 
 __version__ = im.version(__package__)
 
+__all__ = [
+    "AcquisitionType",
+    "AveragingMode",
+    "ExecutionParameters",
+    "MetaBackend",
+    "Platform",
+    "create_platform",
+    "execute_qasm",
+]
+
 PLATFORMS = "QIBOLAB_PLATFORMS"
+_SEPARATOR = ":"
 
 
-def get_platforms_path():
+def _platforms_paths() -> list[Path]:
     """Get path to repository containing the platforms.
 
     Path is specified using the environment variable QIBOLAB_PLATFORMS.
     """
-    profiles = os.environ.get(PLATFORMS)
-    if profiles is None or not os.path.exists(profiles):
-        raise_error(RuntimeError, f"Profile directory {profiles} does not exist.")
-    return Path(profiles)
+    paths = os.environ.get(PLATFORMS)
+    if paths is None:
+        raise_error(RuntimeError, f"Platforms path ${PLATFORMS} unset.")
+
+    return [Path(p) for p in paths.split(_SEPARATOR)]
 
 
-def create_platform(name) -> Platform:
+def _search(name: str, paths: list[Path]) -> Path:
+    """Search paths for given platform name."""
+    for path in _platforms_paths():
+        platform = path / name
+        if platform.exists():
+            return platform
+
+    raise_error(
+        ValueError,
+        f"Platform {name} not found. Check ${PLATFORMS} environment variable.",
+    )
+
+
+def _load(platform: Path) -> Platform:
+    """Load the platform module."""
+    module_name = "platform"
+    spec = importlib.util.spec_from_file_location(module_name, platform / PLATFORM)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.create()
+
+
+def create_platform(name: str) -> Platform:
     """A platform for executing quantum algorithms.
 
     It consists of a quantum processor QPU and a set of controlling instruments.
@@ -46,17 +80,7 @@ def create_platform(name) -> Platform:
 
         return create_dummy(with_couplers=name == "dummy_couplers")
 
-    platform = get_platforms_path() / f"{name}"
-    if not platform.exists():
-        raise_error(
-            ValueError,
-            f"Platform {name} does not exist. Please pick one within the platforms found available {get_available_platforms()}.",
-        )
-
-    spec = importlib.util.spec_from_file_location("platform", platform / PLATFORM)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.create()
+    return _load(_search(name, _platforms_paths()))
 
 
 def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
@@ -80,11 +104,11 @@ def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
     )
 
 
-def get_available_platforms() -> list[str]:
+def _available_platforms() -> list[str]:
     """Returns the platforms found in the $QIBOLAB_PLATFORMS directory."""
     return [
         d.name
-        for d in get_platforms_path().iterdir()
+        for d in _platforms_paths().iterdir()
         if d.is_dir()
         and Path(f"{os.environ.get(PLATFORMS)}/{d.name}/platform.py") in d.iterdir()
     ]
@@ -108,4 +132,4 @@ class MetaBackend:
 
     def list_available(self) -> dict:
         """Lists all the available qibolab platforms."""
-        return {platform: True for platform in get_available_platforms()}
+        return {platform: True for platform in _available_platforms()}
