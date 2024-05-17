@@ -80,8 +80,8 @@ class QutipSimulator:
             self.couplers_list + self.qubits_list
         )  # as per runcard, big endian
         self.HS_list = np.flip(self.combined_list)
-        print("Hilbert space structure: ", self.HS_list.tolist())
-        print("Hilbert space dimensions: ", self.nlevels_HS)
+        ##print("Hilbert space structure: ", self.HS_list.tolist())
+        ##print("Hilbert space dimensions: ", self.nlevels_HS)
 
         self.topology = self.model_config["topology"]
         self.nqubits = len(self.qubits_list)
@@ -345,7 +345,7 @@ class QutipSimulator:
             "simulation_time": sim_time,
         }
 
-        print("simulation time", sim_time)
+        # print("simulation time", sim_time)
 
         return (
             times_dict,

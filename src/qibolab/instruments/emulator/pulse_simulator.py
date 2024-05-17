@@ -6,7 +6,6 @@ import operator
 from typing import Dict, List, Optional, Union
 
 import numpy as np
-from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
@@ -16,6 +15,9 @@ from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.qubits import QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
+
+# from qibo.config import log
+
 
 AVAILABLE_SWEEP_PARAMETERS = {
     Parameter.amplitude,
@@ -93,10 +95,12 @@ class PulseSimulator(Controller):
         self.simulation_engine.update_sim_opts(updated_sim_opts)
 
     def connect(self):
-        log.info(f"Connecting to {self.emulator_name}.")
+        # log.info(f"Connecting to {self.emulator_name}.")
+        pass
 
     def disconnect(self):
-        log.info(f"Disconnecting {self.emulator_name}.")
+        # log.info(f"Disconnecting {self.emulator_name}.")
+        pass
 
     def run_pulse_simulation(
         self,

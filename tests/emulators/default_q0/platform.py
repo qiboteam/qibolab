@@ -1,4 +1,4 @@
-import logging
+##import logging
 import pathlib
 
 from qibolab.channels import ChannelMap
@@ -7,8 +7,10 @@ from qibolab.instruments.emulator.pulse_simulator import PulseSimulator
 from qibolab.platform import Platform
 from qibolab.serialize import load_qubits, load_runcard, load_settings
 
+"""
 log = logging.getLogger()
 log.setLevel(logging.INFO)  # log.setLevel(logging.ERROR)
+"""
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -30,14 +32,14 @@ def create():
     couplers_list = model_config["couplers_list"]
     runcard_qubits_list = runcard["qubits"]
     runcard_couplers_list = runcard["couplers"]
+    """log.info(emulator_name) log.info(f"emulator qubits: {qubits_list}")
+    log.info(f"emulator couplers: {couplers_list}") log.info(f"runcard qubits:
 
-    log.info(emulator_name)
-    log.info(f"emulator qubits: {qubits_list}")
-    log.info(f"emulator couplers: {couplers_list}")
-    log.info(f"runcard qubits: {runcard_qubits_list}")
-    log.info(f"runcard couplers: {runcard_couplers_list}")
-    log.info(f"sampling rate: {pulse_simulator.sampling_rate}GHz")
-    log.info(f"simulation sampling boost: {pulse_simulator.sim_sampling_boost}")
+    {runcard_qubits_list}") log.info(f"runcard couplers:
+    {runcard_couplers_list}") log.info(f"sampling rate:
+    {pulse_simulator.sampling_rate}GHz") log.info(f"simulation sampling
+    boost: {pulse_simulator.sim_sampling_boost}")
+    """
 
     # Create channel object
     channels = ChannelMap()
