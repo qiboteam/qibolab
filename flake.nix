@@ -43,7 +43,7 @@
 
           modules = [
             {
-              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter];
 
               env.QIBOLAB_PLATFORMS = platforms;
 
