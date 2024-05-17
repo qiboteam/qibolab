@@ -81,16 +81,19 @@ def test_create_platform_multipath(tmp_path: Path):
                 from qibolab.platform import Platform
 
                 def create():
-                    return Platform("{p}", {{}}, {{}}, {{}})
+                    return Platform("{p.parent.name}-{p.name}", {{}}, {{}}, {{}})
                 """
             )
         )
 
     os.environ[PLATFORMS] = f"{some}{os.pathsep}{others}"
 
-    assert Path(create_platform("platform0").name).relative_to(some)
-    assert Path(create_platform("platform1").name).relative_to(some)
-    assert Path(create_platform("platform2").name).relative_to(others)
+    def path(name):
+        return tmp_path / Path(create_platform(name).name.replace("-", os.sep))
+
+    assert path("platform0").relative_to(some)
+    assert path("platform1").relative_to(some)
+    assert path("platform2").relative_to(others)
     with pytest.raises(ValueError):
         create_platform("platform3")
 
