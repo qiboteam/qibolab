@@ -81,7 +81,7 @@ pytest-mock = ">=3.10.0"
 optional = true
 
 [tool.poetry.group.analysis.dependencies]
-pylint = ">=2.16.0"
+pylint = "3.1.0"
 
 [tool.poetry.extras]
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
