@@ -131,6 +131,12 @@ QiboLab supports the use of emulators to simulate the behavior of quantum device
 .. testcode:: python
 
     import os
+    import pathlib
+
+    path_to_emulator_runcard = str(
+        pathlib.Path(__file__).parent.parent.parent.parent / "tests/emulators/"
+    )
+    emulator_runcard_name = "default_q0"
 
     os.environ["QIBOLAB_PLATFORM"] = path_to_emulator_runcard  # can also be set beforehand
 
@@ -138,7 +144,7 @@ QiboLab supports the use of emulators to simulate the behavior of quantum device
 
     platform = create_platform(emulator_runcard_name)
 
-This platform is equivalent to real platforms in terms of attributes and functions, but returns simulated results.
+An emulator platform is equivalent to real platforms in terms of attributes and functions, but returns simulated results.
 It is useful for testbedding and calibrating pulses, and testing calibration and characterization routines for the corresponding real device especially when access to the real device is limited or when it is unavailable.
 
 
