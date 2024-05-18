@@ -929,6 +929,15 @@ class Pulse:
                 self.channel,
                 self.qubit,
             )
+        elif type(self) == CouplerFluxPulse:
+            return CouplerFluxPulse(
+                self.start,
+                self.duration,
+                self.amplitude,
+                self._shape,
+                self.channel,
+                self.qubit,
+            )
         else:
             # return eval(self.serial)
             return Pulse(
@@ -1221,6 +1230,7 @@ class PulseConstructor(Enum):
     READOUT = ReadoutPulse
     DRIVE = DrivePulse
     FLUX = FluxPulse
+    COUPLERFLUX = CouplerFluxPulse
 
 
 class PulseSequence:

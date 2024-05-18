@@ -102,7 +102,7 @@ class QbloxController(Controller):
         log.warning("QbloxController: all modules are disconnected.")
         exit(0)
 
-    def _set_module_channel_map(self, module: QrmRf, qubits: dict):
+    def _set_module_channel_map(self, module: QrmRf, qubits: dict, couplers: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
         This method updates the `channel_port_map` attribute of the
@@ -113,6 +113,10 @@ class QbloxController(Controller):
         """
         for qubit in qubits.values():
             for channel in qubit.channels:
+                if channel.port and channel.port.module.name == module.name:
+                    module.channel_map[channel.name] = channel
+        for coupler in couplers.values():
+            for channel in coupler.channels:
                 if channel.port and channel.port.module.name == module.name:
                     module.channel_map[channel.name] = channel
         return list(module.channel_map)
@@ -173,7 +177,7 @@ class QbloxController(Controller):
         data = {}
         for name, module in self.modules.items():
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_channels = self._set_module_channel_map(module, qubits)
+            module_channels = self._set_module_channel_map(module, qubits, couplers)
             module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
             #  ask each module to generate waveforms & program and upload them to the device
@@ -271,6 +275,7 @@ class QbloxController(Controller):
                     values=sweeper.values,
                     pulses=ps,
                     qubits=sweeper.qubits,
+                    couplers=sweeper.couplers,
                     type=sweeper.type,
                 )
             )
@@ -445,6 +450,7 @@ class QbloxController(Controller):
                             values=_values,
                             pulses=sweeper.pulses,
                             qubits=sweeper.qubits,
+                            couplers=sweeper.couplers,
                         )
                         self._sweep_recursion(
                             qubits,
