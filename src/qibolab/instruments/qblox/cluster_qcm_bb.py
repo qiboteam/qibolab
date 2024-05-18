@@ -520,13 +520,12 @@ class QcmBb(ClusterModule):
                             )
 
                     else:  # qubit_sweeper_parameters
-
                         if (
                             sweeper.qubits
-                            and sequencer.qubit in [q.name for q in sweeper.qubits]
+                            and sequencer.qubit in [_.name for _ in sweeper.qubits]
                         ) or (
                             sweeper.couplers
-                            and sequencer.coupler in [c.name for c in sweeper.couplers]
+                            and sequencer.coupler in [_.name for _ in sweeper.couplers]
                         ):
                             # plays an active role
                             if sweeper.parameter == Parameter.bias:
@@ -650,7 +649,10 @@ class QcmBb(ClusterModule):
                         and pulses[n].sweeper.type == QbloxSweeperType.duration
                     ):
                         RI = pulses[n].sweeper.register
-                        if pulses[n].type == PulseType.FLUX:
+                        if (
+                            pulses[n].type == PulseType.FLUX
+                            or pulses[n].type == PulseType.COUPLERFLUX
+                        ):
                             RQ = pulses[n].sweeper.register
                         else:
                             RQ = pulses[n].sweeper.aux_register
