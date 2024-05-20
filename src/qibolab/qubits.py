@@ -43,9 +43,6 @@ class Qubit:
     name: QubitId
 
     bare_resonator_frequency: int = 0
-    readout_frequency: int = 0
-    """Readout dressed frequency."""
-    drive_frequency: int = 0
     anharmonicity: int = 0
     asymmetry: float = 0.0
     crosstalk_matrix: dict[QubitId, float] = field(default_factory=dict)
