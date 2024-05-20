@@ -1,12 +1,13 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
 from qibo.config import log, raise_error
 
+from .channel import Channel, external_config
 from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
@@ -114,6 +115,12 @@ class Platform:
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
 
+    channels: dict[str, Channel] = field(default_factory=dict, init=False)
+    """Channels of this platform.
+
+    Mapping channel name to channel.
+    """
+
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
@@ -123,6 +130,15 @@ class Platform:
         self.topology.add_edges_from(
             [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
         )
+
+        for qubit in self.qubits.values():
+            self.channels[qubit.drive.name] = qubit.drive
+            self.channels[qubit.readout.name] = qubit.readout
+            self.channels[qubit.acquisition.name] = qubit.acquisition
+            if qubit.flux is not None:
+                self.channels[qubit.flux.name] = qubit.flux
+        for coupler in self.couplers.values():
+            self.channels[coupler.flux.name] = coupler.flux
 
     def __str__(self):
         return self.name
@@ -307,6 +323,11 @@ class Platform:
         for sweep in sweepers:
             time *= len(sweep.values)
         log.info(f"Minimal execution time (sweep): {time}")
+
+        if options.channel_cfg is not None:
+            for ch, cfg in options.channel_cfg.items():
+                for attr, inst in external_config(self.channels[ch]):
+                    self.instruments[inst].setup(**asdict(getattr(cfg, attr)))
 
         result = {}
         for instrument in self.instruments.values():
