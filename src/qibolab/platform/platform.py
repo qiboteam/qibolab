@@ -259,22 +259,16 @@ class Platform:
         )
         log.info(f"Minimal execution time (unrolling): {time}")
 
-        # find readout pulses
-        ro_pulses = {
-            pulse.id: pulse.qubit
-            for sequence in sequences
-            for pulse in sequence.ro_pulses
-        }
-
         results = defaultdict(list)
         bounds = kwargs.get("bounds", self._controller.bounds)
         for seq_batch in batch(sequences, bounds):
             result = self._execute(seq_batch, options, **kwargs)
-            for serial, new_serials in readouts.items():
-                results[serial].extend(result[ser] for ser in new_serials)
+            for serial, data in result.items():
+                results[serial].extend(data)
 
-        for serial, qubit in ro_pulses.items():
-            results[qubit] = results[serial]
+        # FIXME: is this really needed? What if a single qubit has multiple measurements?
+        # for serial, qubit in ro_pulses.items():
+        #     results[qubit] = results[serial]
 
         return results
 
