@@ -702,9 +702,9 @@ class Zurich(Controller):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}
+        self.frequency_from_pulses(qubits, sequence)
         self.processed_sweeps = ProcessedSweeps(sweepers, qubits)
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(sweepers)
-        self.frequency_from_pulses(qubits, sequence)
 
         self.acquisition_type = None
         for sweeper in sweepers:
