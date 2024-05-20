@@ -4,14 +4,12 @@ from collections.abc import Iterable
 from copy import copy
 
 import laboneq.simple as laboneq
-import numpy as np
 
 from qibolab.pulses import Pulse, PulseType
-from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 
 from . import ZiChannel
-from .util import NANO_TO_SECONDS, measure_channel_name
+from .util import NANO_TO_SECONDS
 
 
 def classify_sweepers(
@@ -60,7 +58,6 @@ class ProcessedSweeps:
     def __init__(
         self,
         sweepers: Iterable[Sweeper],
-        qubits: dict[str, Qubit],
         channels: dict[str, ZiChannel],
     ):
         pulse_sweeps = []
@@ -73,26 +70,6 @@ class ProcessedSweeps:
                         values=sweeper.values * NANO_TO_SECONDS
                     )
                     pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
-                elif (
-                    pulse.type is PulseType.READOUT
-                    and sweeper.parameter is Parameter.amplitude
-                ):
-                    max_value = max(np.abs(sweeper.values))
-                    sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values / max_value
-                    )
-                    # FIXME: this implicitly relies on the fact that pulse is the same python object as appears in the
-                    # sequence that is being executed, hence the mutation is propagated. This is bad programming and
-                    # should be fixed once things become simpler
-                    pulse.amplitude *= max_value
-
-                    channel_sweeps.append(
-                        (
-                            measure_channel_name(qubits[pulse.qubit]),  # FIXME
-                            sweeper.parameter,
-                            sweep_param,
-                        )
-                    )
                 else:
                     sweep_param = laboneq.SweepParameter(values=copy(sweeper.values))
                     pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
