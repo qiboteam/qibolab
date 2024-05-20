@@ -450,31 +450,26 @@ class Zurich(Controller):
                                 weights, qubit, pulse, i, exp_options
                             )
 
-                            measure_pulse_parameters = {"phase": 0}
-
-                            if j == len(seq[ch]) - 1:
-                                reset_delay = (
-                                    exp_options.relaxation_time * NANO_TO_SECONDS
-                                )
-                            else:
-                                reset_delay = 0.0
-
-                            exp.measure(
-                                acquire_signal=qubit.acquisition.name,
-                                handle=f"sequence{qubit.name}_{i}",
-                                integration_kernel=weight,
-                                integration_kernel_parameters=None,
-                                integration_length=None,
-                                measure_signal=qubit.readout.name,
-                                measure_pulse=select_pulse(pulse),
-                                measure_pulse_length=round(
-                                    pulse.duration * NANO_TO_SECONDS, 9
-                                ),
-                                measure_pulse_parameters=measure_pulse_parameters,
-                                measure_pulse_amplitude=None,
-                                acquire_delay=self.time_of_flight * NANO_TO_SECONDS,
-                                reset_delay=reset_delay,
+                            self.play_pulse(
+                                exp,
+                                qubit.readout.name,
+                                pulse,
+                                self.processed_sweeps.sweeps_for_pulse(pulse),
                             )
+                            exp.delay(
+                                signal=qubit.acquisition.name,
+                                time=self.time_of_flight * NANO_TO_SECONDS,
+                            )  # FIXME
+                            exp.acquire(
+                                signal=qubit.acquisition.name,
+                                handle=f"sequence{qubit.name}_{i}",
+                                kernel=weight,
+                            )
+                            if j == len(seq[ch]) - 1:
+                                exp.delay(
+                                    signal=qubit.acquisition.name,
+                                    time=exp_options.relaxation_time * NANO_TO_SECONDS,
+                                )
 
             previous_section = section_uid
 
@@ -566,7 +561,7 @@ class Zurich(Controller):
 
         self.chanel_to_qubit = {qb.readout.name: qb for qb in qubits.values()}
         self.signal_map = {}
-        self.processed_sweeps = ProcessedSweeps(sweepers, qubits, self.channels)
+        self.processed_sweeps = ProcessedSweeps(sweepers, self.channels)
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(sweepers)
 
         self.acquisition_type = None
