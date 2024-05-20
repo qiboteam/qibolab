@@ -385,13 +385,15 @@ class Platform:
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
 
-    def create_qubit_flux_pulse(self, qubit, start, duration, amplitude=1):
+    def create_qubit_flux_pulse(self, qubit, start, duration, amplitude=1, shape=None):
         qubit = self.get_qubit(qubit)
+        if shape is None:
+            shape = "Rectangular()"
         pulse = FluxPulse(
             start=start,
             duration=duration,
             amplitude=amplitude,
-            shape="Rectangular",
+            shape=shape,
             channel=self.qubits[qubit].flux.name,
             qubit=qubit,
         )
