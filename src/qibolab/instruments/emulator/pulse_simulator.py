@@ -16,9 +16,6 @@ from qibolab.qubits import QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-# from qibo.config import log
-
-
 AVAILABLE_SWEEP_PARAMETERS = {
     Parameter.amplitude,
     Parameter.duration,
@@ -95,11 +92,9 @@ class PulseSimulator(Controller):
         self.simulation_engine.update_sim_opts(updated_sim_opts)
 
     def connect(self):
-        # log.info(f"Connecting to {self.emulator_name}.")
         pass
 
     def disconnect(self):
-        # log.info(f"Disconnecting {self.emulator_name}.")
         pass
 
     def run_pulse_simulation(
@@ -187,19 +182,6 @@ class PulseSimulator(Controller):
         }
 
         return results
-
-    '''
-    def append_sim_details(self):
-        """Creates a dictionary with relevant information pertaining the the last pulse simulation"""
-        return {
-            'Full time list': self.simulation_engine.pulse_sim_time_list,
-            'Hamiltonian': self.simulation_engine.H,
-            'Static dissipators': self.simulation_engine.static_dissipators),
-            'Initial state': self.simulation_engine.psi0,
-            'Simulation options': self.simulation_engine.sim_opts),
-        }
-
-    '''
 
     ### sweeper adapted from icarusqfpga ###
     def sweep(

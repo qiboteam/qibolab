@@ -4,6 +4,33 @@ from typing import List, Optional
 import numpy as np
 
 
+def specify_hilbert_space(model_config: dict, little_endian: bool) -> tuple:
+    """Creates a tuple that specifies the Hilbert Space to be used by the
+    quantum dynamics simulation.
+
+    Args:
+        model_config (dict): Model configuration dictionary.
+        little_endian (bool): Flag to indicate if Hilbert Space is in little endian (True) or big endian (False).
+
+    Returns:
+        tuple: Contains the ordered list of qubit and coupler indices and the corresponding ordered list of nlevels.
+    """
+
+    nlevels_q = model_config["nlevels_q"]  # as per runcard, big endian
+    nlevels_c = model_config["nlevels_c"]  # as per runcard, big endian
+    qubits_list = model_config["qubits_list"]  # as per runcard, big endian
+    couplers_list = model_config["couplers_list"]  # as per runcard, big endian
+
+    nlevels_HS = np.flip(
+        nlevels_c + nlevels_q
+    ).tolist()  # little endian, qubits first then couplers
+    HS_list = np.flip(
+        couplers_list + qubits_list
+    )  # little endian, qubits first then couplers
+
+    return HS_list, nlevels_HS
+
+
 def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
     """Converts an integer to a generalized bitstring in the computation basis
     of the full Hilbert space.

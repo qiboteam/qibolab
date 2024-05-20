@@ -17,7 +17,10 @@ from qutip.ui.progressbar import EnhancedTextProgressBar
 from qibolab.instruments.emulator.engines.generic import (
     dec_to_basis_string,
     op_from_instruction,
+    specify_hilbert_space,
 )
+
+LITTLE_ENDIAN = True
 
 
 def get_default_qutip_sim_opts():
@@ -67,21 +70,23 @@ class QutipSimulator:
         ### from model_config ###
         self.nlevels_q = self.model_config["nlevels_q"]  # as per runcard, big endian
         self.nlevels_c = self.model_config["nlevels_c"]  # as per runcard, big endian
-        self.nlevels_HS = np.flip(
-            self.nlevels_c + self.nlevels_q
-        ).tolist()  # little endian, qubits first then couplers
         self.qubits_list = self.model_config[
             "qubits_list"
         ]  # as per runcard, big endian
         self.couplers_list = self.model_config[
             "couplers_list"
         ]  # as per runcard, big endian
-        self.combined_list = (
-            self.couplers_list + self.qubits_list
-        )  # as per runcard, big endian
-        self.HS_list = np.flip(self.combined_list)
-        ##print("Hilbert space structure: ", self.HS_list.tolist())
-        ##print("Hilbert space dimensions: ", self.nlevels_HS)
+        self.HS_list, self.nlevels_HS = specify_hilbert_space(
+            self.model_config, LITTLE_ENDIAN
+        )
+        """self.nlevels_HS = np.flip(
+
+        self.nlevels_c + self.nlevels_q ).tolist()  # little endian,
+        qubits first then couplers self.HS_list =
+        np.flip(self.combined_list) ##print("Hilbert space structure: ",
+        self.HS_list.tolist()) ##print("Hilbert space dimensions: ",
+        self.nlevels_HS)
+        """
 
         self.topology = self.model_config["topology"]
         self.nqubits = len(self.qubits_list)
@@ -345,8 +350,6 @@ class QutipSimulator:
             "simulation_time": sim_time,
         }
 
-        # print("simulation time", sim_time)
-
         return (
             times_dict,
             result.states,
@@ -406,24 +409,23 @@ class QutipSimulator:
         basis_list = self.op_dict["basis"]
         fullstate = Qobj(1)
 
-        combined_basis_vector = (
-            cbasis_vector + basis_vector
-        )  # basis_vector + cbasis_vector #
+        combined_basis_vector = cbasis_vector + basis_vector
+        combined_list = self.couplers_list + self.qubits_list
         for ind, coeff in enumerate(combined_basis_vector):
-            qind = self.combined_list[ind]
+            qind = combined_list[ind]
             fullstate = tensor(
                 basis_list[qind][coeff], fullstate
             )  # constructs little endian HS, qubits first then couplers, as per evolution
 
         return fullstate
 
-    def compute_fidelities(
+    def compute_overlaps(
         self,
         target_states: List[Qobj],
         reference_states: Optional[Dict[str, Qobj]] = None,
     ) -> dict:
-        """Calculates the fidelities between a list of target device states,
-        with respect to a list of reference device states.
+        """Calculates the overlaps between a list of target device states, with
+        respect to a list of reference device states.
 
         Args:
             target_states (list): List of target states (`qutip.Qobj`) of interest.
@@ -431,7 +433,7 @@ class QutipSimulator:
             If not provided, all basis states of the full device Hilbert space labelled by their generalized bitstrings will be used.
 
         Returns:
-            dict: Fidelities for each target state with each reference state.
+            dict: Overlaps for each target state with each reference state.
         """
         if reference_states is None:
             reference_states = {}
@@ -446,12 +448,12 @@ class QutipSimulator:
                 reference_states.update({str(basis_string): psi})
 
         total_samples = len(target_states)
-        all_fidelities = {}
+        all_overlaps = {}
         for label, ref_state in reference_states.items():
             fid_list = [expect(ref_state, state) for state in target_states]
-            all_fidelities.update({label: fid_list})
+            all_overlaps.update({label: fid_list})
 
-        return all_fidelities
+        return all_overlaps
 
 
 def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:
