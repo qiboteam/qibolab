@@ -685,20 +685,20 @@
         },
         "two_qubit":{
             "0-2": {
-                "twoq_fidelity": 0.0,
-                "CZ_fidelity": 0.0
+                "gate_fidelity": 0.0,
+                "cZ_fidelity": 0.0
             },
             "1-2": {
-                "twoq_fidelity": 0.0,
-                "CZ_fidelity": 0.0
+                "gate_fidelity": 0.0,
+                "cZ_fidelity": 0.0
             },
             "3-2": {
-                "twoq_fidelity": 0.0,
-                "CZ_fidelity": 0.0
+                "gate_fidelity": 0.0,
+                "cZ_fidelity": 0.0
             },
             "4-2": {
-                "twoq_fidelity": 0.0,
-                "CZ_fidelity": 0.0
+                "gate_fidelity": 0.0,
+                "cZ_fidelity": 0.0
             }
         },
         "coupler": {

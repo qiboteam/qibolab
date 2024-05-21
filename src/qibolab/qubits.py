@@ -166,10 +166,10 @@ class QubitPair:
     Acts as target on two-qubit gates.
     """
 
-    twoq_gate_fidelity: float = 0.0
+    gate_fidelity: float = 0.0
     """Gate fidelity from standard 2q RB."""
 
-    Cz_gate_fidelity: float = 0.0
+    cz_fidelity: float = 0.0
     """Gate fidelity from CZ interleaved RB."""
 
     coupler: Optional[Coupler] = None
