@@ -68,15 +68,23 @@ def load_qubits(
             for c, char in runcard["characterization"]["coupler"].items()
         }
 
-        for c, pair in runcard["topology"].items():
+        for pair, char in zip(
+            runcard["topology"].items(),
+            runcard["characterization"]["two_qubit"].values(),
+        ):
+            q0, q1 = pair[1]
+            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
+                qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(pair[0])]
+            )
+
+    else:
+        for pair, char in zip(
+            runcard["topology"], runcard["characterization"]["two_qubit"].values()
+        ):
             q0, q1 = pair
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], couplers[json.loads(c)]
+                qubits[q0], qubits[q1], **char, coupler=None
             )
-    else:
-        for pair in runcard["topology"]:
-            q0, q1 = pair
-            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], None)
 
     qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
 
