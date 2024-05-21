@@ -510,8 +510,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
-                "gate_fidelity": 0.0,
+                "assignment_fidelity": [0.0, 0.0],
+                "gate_fidelity": [0.0, 0.0],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -547,8 +547,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
-                "gate_fidelity": 0.0,
+                "assignment_fidelity": [0.0, 0.0],
+                "gate_fidelity": [0.0, 0.0],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -584,8 +584,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
-                "gate_fidelity": 0.0,
+                "assignment_fidelity": [0.0, 0.0],
+                "gate_fidelity": [0.0, 0.0],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -621,8 +621,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
-                "gate_fidelity": 0.0,
+                "assignment_fidelity": [0.0, 0.0],
+                "gate_fidelity": [0.0, 0.0],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -658,8 +658,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
-                "gate_fidelity": 0.0,
+                "assignment_fidelity": [0.0, 0.0],
+                "gate_fidelity": [0.0, 0.0],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -685,20 +685,20 @@
         },
         "two_qubit":{
             "0-2": {
-                "gate_fidelity": 0.0,
-                "cz_fidelity": 0.0
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             },
             "1-2": {
-                "gate_fidelity": 0.0,
-                "cz_fidelity": 0.0
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             },
             "3-2": {
-                "gate_fidelity": 0.0,
-                "cz_fidelity": 0.0
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             },
             "4-2": {
-                "gate_fidelity": 0.0,
-                "cz_fidelity": 0.0
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             }
         },
         "coupler": {
