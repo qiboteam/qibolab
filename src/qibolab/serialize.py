@@ -118,8 +118,7 @@ def register_gates(
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
         native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
-        coupler = pairs[(q0, q1)].coupler
-        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], coupler, native_gates)
+        pairs[(q0, q1)].native_gates = native_gates
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
 
@@ -170,6 +169,11 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
             json.dumps(q): qubit.characterization for q, qubit in qubits.items()
         },
     }
+
+    if couplers:
+        characterization["coupler"] = {
+            json.dumps(c.name): {"sweetspot": c.sweetspot} for c in couplers.values()
+        }
 
     if couplers:
         characterization["coupler"] = {
@@ -229,6 +233,7 @@ def dump_runcard(platform: Platform, path: Path):
     settings["native_gates"] = dump_native_gates(
         platform.qubits, platform.pairs, platform.couplers
     )
+
     settings["characterization"] = dump_characterization(
         platform.qubits, platform.couplers
     )
