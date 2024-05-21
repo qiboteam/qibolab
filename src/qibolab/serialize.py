@@ -6,11 +6,12 @@ example for more details.
 """
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, fields
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
-from qibolab.channel import IqMixerConfig, OscillatorConfig
+from qibolab.channel import Channel, IqMixerConfig, OscillatorConfig
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -108,6 +109,13 @@ def _load_pulse(pulse_kwargs):
     return Pulse(**pulse_kwargs)
 
 
+def _load_sequence(raw_sequence):
+    seq = PulseSequence()
+    for ch, pulses in raw_sequence.items():
+        seq[ch] = [_load_pulse(raw_pulse) for raw_pulse in pulses]
+    return seq
+
+
 def _load_single_qubit_natives(gates) -> SingleQubitNatives:
     """Parse native gates from the runcard.
 
@@ -116,19 +124,20 @@ def _load_single_qubit_natives(gates) -> SingleQubitNatives:
             from the runcard.
     """
     return SingleQubitNatives(
-        **{name: _load_pulse(kwargs) for name, kwargs in gates.items()}
+        **{
+            gate_name: _load_sequence(raw_sequence)
+            for gate_name, raw_sequence in gates.items()
+        }
     )
 
 
 def _load_two_qubit_natives(gates) -> TwoQubitNatives:
-    sequences = {}
-    for name, raw_sequence in gates.items():
-        sequence = PulseSequence()
-        for channel, pulses in raw_sequence.items():
-            sequence[channel] = [_load_pulse(kwargs) for kwargs in pulses]
-        sequences[name] = sequence
-
-    return TwoQubitNatives(**sequences)
+    return TwoQubitNatives(
+        **{
+            gate_name: _load_sequence(raw_sequence)
+            for gate_name, raw_sequence in gates.items()
+        }
+    )
 
 
 def register_gates(
@@ -208,19 +217,13 @@ def _dump_sequence(sequence: PulseSequence):
     return {ch: [_dump_pulse(p) for p in pulses] for ch, pulses in sequence.items()}
 
 
-def _dump_single_qubit_natives(natives: SingleQubitNatives):
+def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
     data = {}
     for fld in fields(natives):
-        pulse = getattr(natives, fld.name)
-        if pulse is not None:
-            data[fld.name] = _dump_pulse(pulse)
+        seq = getattr(natives, fld.name)
+        if seq is not None:
+            data[fld.name] = _dump_sequence(seq)
     return data
-
-
-def _dump_two_qubit_natives(natives: TwoQubitNatives):
-    return {
-        fld.name: _dump_sequence(getattr(natives, fld.name)) for fld in fields(natives)
-    }
 
 
 def dump_native_gates(
@@ -231,21 +234,21 @@ def dump_native_gates(
     # single-qubit native gates
     native_gates = {
         "single_qubit": {
-            dump_qubit_name(q): _dump_single_qubit_natives(qubit.native_gates)
+            dump_qubit_name(q): _dump_natives(qubit.native_gates)
             for q, qubit in qubits.items()
         }
     }
 
     if couplers:
         native_gates["coupler"] = {
-            dump_qubit_name(c): _dump_single_qubit_natives(coupler.native_gates)
+            dump_qubit_name(c): _dump_natives(coupler.native_gates)
             for c, coupler in couplers.items()
         }
 
     # two-qubit native gates
     native_gates["two_qubit"] = {}
     for pair in pairs.values():
-        natives = _dump_two_qubit_natives(pair.native_gates)
+        natives = _dump_natives(pair.native_gates)
         if len(natives) > 0:
             pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
             native_gates["two_qubit"][pair_name] = natives
@@ -303,6 +306,11 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     return data
 
 
+def dump_channels(channels: Iterable[Channel]) -> dict:
+    """Dump channel configs."""
+    return {ch.name: asdict(ch.config) for ch in channels}
+
+
 def dump_runcard(platform: Platform, path: Path):
     """Serializes the platform and saves it as a json runcard file.
 
@@ -319,6 +327,7 @@ def dump_runcard(platform: Platform, path: Path):
         "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
+        "channels": dump_channels(platform.channels.values()),
     }
 
     if platform.couplers:
