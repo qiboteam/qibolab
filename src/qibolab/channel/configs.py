@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from qibolab.execution_parameters import AcquisitionType
-
 """Common configuration for various channels."""
 
 __all__ = [
@@ -74,8 +72,6 @@ class IqConfig:
 class AcquisitionConfig:
     """Configuration for acquisition channels."""
 
-    type: AcquisitionType
-    """Type of acquisition."""
     twpa_pump_config: Optional[OscillatorConfig]
     """Config for the corresponding TWPA pump.
 
