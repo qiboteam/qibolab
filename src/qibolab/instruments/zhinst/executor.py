@@ -127,13 +127,13 @@ class Zurich(Controller):
             if any(len(seq[qubit.drive.name]) != 0 for seq in self.sequences):
                 self.register_drive_line(
                     qubit=qubit,
-                    intermediate_frequency=qubit.drive_frequency
+                    intermediate_frequency=qubit.drive.config.frequency
                     - qubit.drive.config.lo_config.frequency,
                 )
             if any(len(seq[qubit.readout.name]) != 0 for seq in self.sequences):
                 self.register_readout_line(
                     qubit=qubit,
-                    intermediate_frequency=qubit.readout_frequency
+                    intermediate_frequency=qubit.readout.config.frequency
                     - qubit.readout.config.lo_config.frequency,
                     options=options,
                 )
@@ -545,7 +545,7 @@ class Zurich(Controller):
                     play_parameters["phase"] = zhs
             if "phase" not in play_parameters:
                 play_parameters["phase"] = pulse.relative_phase
-            exp.play(signal=channel, pulse=pulse.zhpulse, **play_parameters)
+            exp.play(signal=channel, pulse=zhpulse, **play_parameters)
         else:
             raise ValueError(f"Cannot play pulse: {pulse}")
 
