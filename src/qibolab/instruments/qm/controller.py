@@ -298,7 +298,7 @@ class QMController(Controller):
             if pulse.type is PulseType.READOUT:
                 self.config.register_port(qubit.feedback.port)
 
-            self.config.register_element(
+            element = self.config.register_element(
                 qubit, pulse, self.time_of_flight, self.smearing
             )
             if (
@@ -310,9 +310,11 @@ class QMController(Controller):
                 qmpulse.bake(self.config, durations=[pulse.duration])
             else:
                 qmpulse = QMPulse(pulse)
+                if element is not None:
+                    qmpulse.element = element
                 if pulse.type is PulseType.READOUT:
                     ro_pulses.append(qmpulse)
-                self.config.register_pulse(qubit, qmpulse)
+                self.config.register_pulse(qubit, qmpulse, element)
             qmsequence.add(qmpulse)
 
         qmsequence.shift()

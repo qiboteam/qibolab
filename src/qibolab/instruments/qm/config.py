@@ -132,14 +132,18 @@ class QMConfig:
                     "operations": {},
                 }
             )
+            return f"drive{qubit.name}"
         else:
-            self.elements[f"drive{qubit.name}"][
+            new_element = f"drive{qubit.name}_{intermediate_frequency}"
+            self.elements[new_element] = dict(self.elements[f"drive{qubit.name}"])
+            self.elements[new_element][
                 "intermediate_frequency"
             ] = intermediate_frequency
             if isinstance(qubit.drive.port, OPXIQ):
-                self.mixers[f"mixer_drive{qubit.name}"][0][
-                    "intermediate_frequency"
-                ] = intermediate_frequency
+                raise NotImplementedError(
+                    "Cannot play two different frequencies on the same drive line."
+                )
+            return new_element
 
     def register_readout_element(
         self, qubit, intermediate_frequency=0, time_of_flight=0, smearing=0
@@ -226,10 +230,11 @@ class QMConfig:
         if pulse.type is PulseType.DRIVE:
             # register drive element
             if_frequency = pulse.frequency - math.floor(qubit.drive.lo_frequency)
-            self.register_drive_element(qubit, if_frequency)
+            element = self.register_drive_element(qubit, if_frequency)
             # register flux element (if available)
             if qubit.flux:
                 self.register_flux_element(qubit)
+            return element
         elif pulse.type is PulseType.READOUT:
             # register readout element (if it does not already exist)
             if_frequency = pulse.frequency - math.floor(qubit.readout.lo_frequency)
@@ -241,7 +246,7 @@ class QMConfig:
             # register flux element
             self.register_flux_element(qubit, pulse.frequency)
 
-    def register_pulse(self, qubit, qmpulse):
+    def register_pulse(self, qubit, qmpulse, element=None):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
@@ -266,7 +271,7 @@ class QMConfig:
                     "digital_marker": "ON",
                 }
                 # register drive pulse in elements
-                self.elements[f"drive{qubit.name}"]["operations"][
+                self.elements[qmpulse.element]["operations"][
                     qmpulse.operation
                 ] = qmpulse.operation
 
@@ -280,7 +285,7 @@ class QMConfig:
                     },
                 }
                 # register flux pulse in elements
-                self.elements[f"flux{qubit.name}"]["operations"][
+                self.elements[qmpulse.element]["operations"][
                     qmpulse.operation
                 ] = qmpulse.operation
 
@@ -303,7 +308,7 @@ class QMConfig:
                     "digital_marker": "ON",
                 }
                 # register readout pulse in elements
-                self.elements[f"readout{qubit.name}"]["operations"][
+                self.elements[qmpulse.element]["operations"][
                     qmpulse.operation
                 ] = qmpulse.operation
 
