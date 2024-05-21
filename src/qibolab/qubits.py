@@ -61,6 +61,9 @@ class Qubit:
     """Assignment fidelity."""
     readout_fidelity: float = 0.0
     """Readout fidelity."""
+    gate_fidelity: float = 0.0
+    """Gate fidelity from standard RB."""
+
     effective_temperature: float = 0.0
     """Effective temperature."""
     peak_voltage: float = 0
@@ -162,6 +165,12 @@ class QubitPair:
 
     Acts as target on two-qubit gates.
     """
+
+    twoq_gate_fidelity: float = 0.0
+    """Gate fidelity from standard 2q RB."""
+
+    Cz_gate_fidelity: float = 0.0
+    """Gate fidelity from CZ interleaved RB."""
 
     coupler: Optional[Coupler] = None
 

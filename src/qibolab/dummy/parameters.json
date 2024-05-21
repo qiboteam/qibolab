@@ -511,6 +511,7 @@
                 "Ej": 0.0,
                 "g": 0.0,
                 "assignment_fidelity": 0.0,
+                "gate_fidelity": 0.0,
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -547,6 +548,7 @@
                 "Ej": 0.0,
                 "g": 0.0,
                 "assignment_fidelity": 0.0,
+                "gate_fidelity": 0.0,
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -583,6 +585,7 @@
                 "Ej": 0.0,
                 "g": 0.0,
                 "assignment_fidelity": 0.0,
+                "gate_fidelity": 0.0,
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -619,6 +622,7 @@
                 "Ej": 0.0,
                 "g": 0.0,
                 "assignment_fidelity": 0.0,
+                "gate_fidelity": 0.0,
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -655,6 +659,7 @@
                 "Ej": 0.0,
                 "g": 0.0,
                 "assignment_fidelity": 0.0,
+                "gate_fidelity": 0.0,
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -676,6 +681,24 @@
                 "mixer_drive_phi": 0.0,
                 "mixer_readout_g": 0.0,
                 "mixer_readout_phi": 0.0
+            }
+        },
+        "two_qubit":{
+            "0-2": {
+                "twoq_fidelity": 0.0,
+                "CZ_fidelity": 0.0
+            },
+            "1-2": {
+                "twoq_fidelity": 0.0,
+                "CZ_fidelity": 0.0
+            },
+            "3-2": {
+                "twoq_fidelity": 0.0,
+                "CZ_fidelity": 0.0
+            },
+            "4-2": {
+                "twoq_fidelity": 0.0,
+                "CZ_fidelity": 0.0
             }
         },
         "coupler": {
