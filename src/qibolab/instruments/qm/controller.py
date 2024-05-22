@@ -306,12 +306,10 @@ class QMController(Controller):
                 or pulse.duration < 16
                 or pulse.serial in pulses_to_bake
             ):
-                qmpulse = BakedPulse(pulse)
+                qmpulse = BakedPulse(pulse, element)
                 qmpulse.bake(self.config, durations=[pulse.duration])
             else:
-                qmpulse = QMPulse(pulse)
-                if element is not None:
-                    qmpulse.element = element
+                qmpulse = QMPulse(pulse, element)
                 if pulse.type is PulseType.READOUT:
                     ro_pulses.append(qmpulse)
                 self.config.register_pulse(qubit, qmpulse, element)

@@ -354,6 +354,37 @@ def test_qm_register_flux_pulse(qmplatform):
     assert target_pulse["waveforms"]["single"] in controller.config.waveforms
 
 
+def test_qm_register_pulses_with_different_frequencies(qmplatform):
+    platform = qmplatform
+    controller = platform.instruments["qm"]
+    qubit = next(iter(platform.qubits.keys()))
+    qd_pulse1 = platform.create_RX_pulse(qubit, start=0)
+    qd_pulse2 = platform.create_RX_pulse(qubit, start=qd_pulse1.finish)
+    qd_pulse2.frequency = qd_pulse2.frequency - int(5e6)
+    ro_pulse1 = platform.create_MZ_pulse(qubit, start=qd_pulse2.finish)
+    ro_pulse2 = platform.create_MZ_pulse(qubit, start=qd_pulse2.finish)
+    ro_pulse2.frequency = ro_pulse2.frequency + int(5e6)
+
+    sequence = PulseSequence()
+    sequence.add(qd_pulse1)
+    sequence.add(qd_pulse2)
+    sequence.add(ro_pulse1)
+    sequence.add(ro_pulse2)
+
+    if qmplatform.name == "qm_octave":
+        qmsequence, ro_pulses = controller.create_sequence(
+            platform.qubits, sequence, []
+        )
+        assert len(qmsequence.qmpulses) == 4
+        elements = {qmpulse.element for qmpulse in qmsequence.qmpulses}
+        assert len(elements) == 4
+    else:
+        with pytest.raises(NotImplementedError):
+            qmsequence, ro_pulses = controller.create_sequence(
+                platform.qubits, sequence, []
+            )
+
+
 @pytest.mark.parametrize("duration", [0, 30])
 def test_qm_register_baked_pulse(qmplatform, duration):
     platform = qmplatform
