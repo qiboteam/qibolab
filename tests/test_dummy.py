@@ -71,7 +71,7 @@ def test_dummy_execute_coupler_pulse():
 def test_dummy_execute_pulse_sequence_couplers():
     platform = create_platform("dummy_couplers")
     qubit_ordered_pair = QubitPair(
-        platform.qubits[1], platform.qubits[2], platform.couplers[1]
+        platform.qubits[1], platform.qubits[2], coupler=platform.couplers[1]
     )
     sequence = PulseSequence()
 

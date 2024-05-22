@@ -150,12 +150,13 @@ def dump_native_gates(
         }
 
     # two-qubit native gates
-    native_gates["two_qubit"] = {}
-    for pair in pairs.values():
-        natives = pair.native_gates.raw
-        if len(natives) > 0:
-            pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
-            native_gates["two_qubit"][pair_name] = natives
+    if pairs:
+        native_gates["two_qubit"] = {}
+        for pair in pairs.values():
+            natives = pair.native_gates.raw
+            if len(natives) > 0:
+                pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
+                native_gates["two_qubit"][pair_name] = natives
 
     return native_gates
 
