@@ -76,8 +76,7 @@ def load_qubits(
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
                 qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(pair[0])]
             )
-
-    else:
+    elif "two_qubit" in runcard["characterization"]:
         for pair, char in zip(
             runcard["topology"], runcard["characterization"]["two_qubit"].values()
         ):
@@ -161,7 +160,9 @@ def dump_native_gates(
     return native_gates
 
 
-def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict:
+def dump_characterization(
+    qubits: QubitMap, pairs: QubitPairMap = None, couplers: CouplerMap = None
+) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
     characterization = {
@@ -170,9 +171,9 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
         },
     }
 
-    if couplers:
-        characterization["coupler"] = {
-            json.dumps(c.name): {"sweetspot": c.sweetspot} for c in couplers.values()
+    if pairs:
+        characterization["two_qubit"] = {
+            json.dumps(p): pair.characterization for p, pair in pairs.items()
         }
 
     if couplers:
@@ -235,7 +236,7 @@ def dump_runcard(platform: Platform, path: Path):
     )
 
     settings["characterization"] = dump_characterization(
-        platform.qubits, platform.couplers
+        platform.qubits, platform.pairs, platform.couplers
     )
 
     (path / RUNCARD).write_text(json.dumps(settings, sort_keys=False, indent=4))

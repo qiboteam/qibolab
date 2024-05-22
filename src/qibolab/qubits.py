@@ -175,3 +175,12 @@ class QubitPair:
     coupler: Optional[Coupler] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
+
+    @property
+    def characterization(self):
+        """Dictionary containing characterization parameters."""
+        return {
+            fld.name: getattr(self, fld.name)
+            for fld in fields(self)
+            if fld.name not in EXCLUDED_FIELDS
+        }

@@ -400,6 +400,24 @@
                 "iq_angle": 7.997,
                 "threshold": 0.002323
             }
+        },
+        "two_qubit":{
+            "0-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "1-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "3-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "4-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            }
         }
     }
 }
