@@ -266,6 +266,8 @@ class SingleQubitNatives:
     """Pulse to drive to qubit from state 1 to state 2."""
     MZ: Optional[NativePulse] = None
     """Measurement pulse."""
+    MZ1: Optional[NativePulse] = None
+    """Measurement pulse."""
 
     @property
     def RX90(self) -> NativePulse:
