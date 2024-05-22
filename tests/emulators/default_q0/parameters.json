@@ -8,32 +8,40 @@
         "relaxation_time": 300000
     },
     "instruments": {
-        "model_params": {
-                "device_name": "ibmfakebelem_q0",
-                "topology": [],
-                "nqubits": 1,
-                "ncouplers": 0,
-                "qubits_list": ["0"],
-                "couplers_list": [],
-                "nlevels_q": [3],
-                "nlevels_c": [],
-                "readout_error": {"0": [0.01, 0.02]},
-                "drive_freq": {"0": 5.090167234445013},
-                "T1": {"0": 88578.48970762537},
-                "T2": {"0": 106797.94866226273},
-                "lo_freq": {"0": 5.090167234445013},
-                "rabi_freq": {"0": 0.12545753819061986},
-                "anharmonicity": {"0": -0.3361230051821652},
-                "coupling_strength": {}
-        },
-        "simulation_config": {
-                "simulation_engine_name": "Qutip",
-                "sampling_rate": 4.5,
-                "sim_sampling_boost": 10,
-                "runcard_duration_in_dt_units": "False",
-                "instant_measurement": "True",
-                "simulate_dissipation": "True",
-                "output_state_history": "True"
+        "pulse_simulator": {
+            "model_params": {
+                    "device_name": "ibmfakebelem_q0",
+                    "topology": [],
+                    "nqubits": 1,
+                    "ncouplers": 0,
+                    "qubits_list": ["0"],
+                    "couplers_list": [],
+                    "nlevels_q": [3],
+                    "nlevels_c": [],
+                    "readout_error": {"0": [0.01, 0.02]},
+                    "drive_freq": {"0": 5.090167234445013},
+                    "T1": {"0": 88578.48970762537},
+                    "T2": {"0": 106797.94866226273},
+                    "lo_freq": {"0": 5.090167234445013},
+                    "rabi_freq": {"0": 0.12545753819061986},
+                    "anharmonicity": {"0": -0.3361230051821652},
+                    "coupling_strength": {}
+            },
+            "simulation_config": {
+                    "simulation_engine_name": "Qutip",
+                    "sampling_rate": 4.5,
+                    "sim_sampling_boost": 10,
+                    "runcard_duration_in_dt_units": "False",
+                    "instant_measurement": "True",
+                    "simulate_dissipation": "True",
+                    "output_state_history": "True"
+            },
+            "sim_opts": null,
+            "bounds": {
+                "waveforms": 1,
+                "readout": 1,
+                "instructions": 1
+            }
         }
     },
     "qubits": [

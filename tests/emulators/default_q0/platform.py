@@ -1,16 +1,14 @@
-##import logging
 import pathlib
 
 from qibolab.channels import ChannelMap
-from qibolab.instruments.emulator.models import general_no_coupler_model
 from qibolab.instruments.emulator.pulse_simulator import PulseSimulator
 from qibolab.platform import Platform
-from qibolab.serialize import load_qubits, load_runcard, load_settings
-
-"""
-log = logging.getLogger()
-log.setLevel(logging.INFO)  # log.setLevel(logging.ERROR)
-"""
+from qibolab.serialize import (
+    load_instrument_settings,
+    load_qubits,
+    load_runcard,
+    load_settings,
+)
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -20,46 +18,30 @@ def create():
 
     # load runcard and model params
     runcard = load_runcard(FOLDER)
-    model_params = runcard["instruments"]["model_params"]
-    simulation_config = runcard["instruments"]["simulation_config"]
 
-    # construct model and set up pulse simulator
-    model_config = general_no_coupler_model.generate_model_config(model_params)
-    pulse_simulator = PulseSimulator(simulation_config, model_config)
+    # Specify emulator controller
+    pulse_simulator = PulseSimulator()
+    instruments = {"pulse_simulator": pulse_simulator}
+    instruments = load_instrument_settings(runcard, instruments)
 
     emulator_name = pulse_simulator.emulator_name
-    qubits_list = model_config["qubits_list"]
-    couplers_list = model_config["couplers_list"]
-    runcard_qubits_list = runcard["qubits"]
-    runcard_couplers_list = runcard["couplers"]
-    """log.info(emulator_name) log.info(f"emulator qubits: {qubits_list}")
-    log.info(f"emulator couplers: {couplers_list}") log.info(f"runcard qubits:
-
-    {runcard_qubits_list}") log.info(f"runcard couplers:
-    {runcard_couplers_list}") log.info(f"sampling rate:
-    {pulse_simulator.sampling_rate}GHz") log.info(f"simulation sampling
-    boost: {pulse_simulator.sim_sampling_boost}")
-    """
-
-    # Create channel object
-    channels = ChannelMap()
-    channels |= (f"readout-{q}" for q in qubits_list)
-    channels |= (f"drive-{q}" for q in qubits_list)
 
     # extract quantities from runcard for platform declaration
     qubits, couplers, pairs = load_qubits(runcard)
     settings = load_settings(runcard)
 
-    # Specify emulator controller
-    instruments = {"pulse_simulator": pulse_simulator}
+    # Create channel object
+    channels = ChannelMap()
+    channels |= (f"readout-{q}" for q in qubits.keys())
+    channels |= (f"drive-{q}" for q in qubits.keys())
 
     # map channels to qubits
-    for q in runcard_qubits_list:
-        qubits[q].readout = channels[f"readout-{q}"]
-        qubits[q].drive = channels[f"drive-{q}"]
+    for q, qubit in qubits.items():
+        qubit.readout = channels[f"readout-{q}"]
+        qubit.drive = channels[f"drive-{q}"]
 
-        channels[f"drive-{q}"].qubit = qubits[q]
-        qubits[q].sweetspot = 0  # not used
+        channels[f"drive-{q}"].qubit = qubit
+        qubit.sweetspot = 0  # not used
 
     return Platform(
         emulator_name, qubits, pairs, instruments, settings, resonator_type="2D"

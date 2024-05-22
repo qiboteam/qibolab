@@ -79,14 +79,6 @@ class QutipSimulator:
         self.HS_list, self.nlevels_HS = specify_hilbert_space(
             self.model_config, LITTLE_ENDIAN
         )
-        """self.nlevels_HS = np.flip(
-
-        self.nlevels_c + self.nlevels_q ).tolist()  # little endian,
-        qubits first then couplers self.HS_list =
-        np.flip(self.combined_list) ##print("Hilbert space structure: ",
-        self.HS_list.tolist()) ##print("Hilbert space dimensions: ",
-        self.nlevels_HS)
-        """
 
         self.topology = self.model_config["topology"]
         self.nqubits = len(self.qubits_list)

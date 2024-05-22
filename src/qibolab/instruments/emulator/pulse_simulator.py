@@ -3,13 +3,14 @@ device."""
 
 import copy
 import operator
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 import numpy as np
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
+from qibolab.instruments.emulator.models import general_no_coupler_model
 from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, ReadoutPulse
 from qibolab.qubits import QubitId
@@ -40,28 +41,23 @@ class PulseSimulator(Controller):
 
     PortType = None
 
-    def __init__(
-        self,
-        simulation_config: dict,
-        model_config: dict,
-        sim_opts: Optional[None] = None,
-    ):
-        """Set emulator configuration.
-
-        Args:
-            simulation_config (dict): Simulation configuration dictionary.
-            model_config (dict): Model configuration dictionary.
-            sim_opts (optional): Simulation engine specific object specifying simulation options.
-        """
-        self.setup(simulation_config, model_config, sim_opts)
+    def __init__(self):
+        super().__init__(name=None, address=None)
 
     @property
     def sampling_rate(self):
         return self._sampling_rate
 
-    def setup(self, simulation_config, model_config, sim_opts):
+    def setup(self, **settings):
         """Updates the pulse simulator by loading all parameters from
         `model_config` and `simulation_config`."""
+        super().setup(settings["bounds"])
+
+        simulation_config = settings["simulation_config"]
+        model_params = settings["model_params"]
+        sim_opts = settings["sim_opts"]
+        model_config = general_no_coupler_model.generate_model_config(model_params)
+
         simulation_engine_name = simulation_config["simulation_engine_name"]
         device_name = model_config["device_name"]
         model_name = model_config["model_name"]
@@ -96,6 +92,14 @@ class PulseSimulator(Controller):
 
     def disconnect(self):
         pass
+
+    """
+    def dump(self):
+        mysettings: dict
+        # add your settings
+        ...
+        return mysettings | super().dump()
+    """
 
     def run_pulse_simulation(
         self,
