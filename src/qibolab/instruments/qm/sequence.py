@@ -68,7 +68,8 @@ class QMPulse:
     def __post_init__(self):
         pulse_type = self.pulse.type.name.lower()
         amplitude = format(self.pulse.amplitude, ".6f").rstrip("0").rstrip(".")
-        self.element: str = f"{pulse_type}{self.pulse.qubit}"
+        if self.element is None:
+            self.element = f"{pulse_type}{self.pulse.qubit}"
         self.operation: str = (
             f"{pulse_type}({self.pulse.duration}, {amplitude}, {self.pulse.shape})"
         )
