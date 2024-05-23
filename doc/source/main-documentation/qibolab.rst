@@ -131,11 +131,12 @@ QiboLab supports the use of emulators to simulate the behavior of quantum device
 .. testcode:: python
 
     import os
-    import pathlib
+    from pathlib import Path
 
     path_to_emulator_runcard = str(
-        pathlib.Path(__file__).parent.parent.parent.parent / "tests/emulators/"
+        Path.cwd().parent.parent.parent.parent / "tests/emulators/"
     )
+
     emulator_runcard_name = "default_q0"
 
     os.environ["QIBOLAB_PLATFORM"] = path_to_emulator_runcard  # can also be set beforehand
