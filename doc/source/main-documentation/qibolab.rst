@@ -137,7 +137,7 @@ QiboLab supports the use of emulators to simulate the behavior of quantum device
 
     emulator_runcard_name = "default_q0"
 
-    os.environ["QIBOLAB_PLATFORM"] = path_to_emulator_runcard  # can also be set beforehand
+    os.environ["QIBOLAB_PLATFORMS"] = path_to_emulator_runcard  # can also be set beforehand
 
     from qibolab import create_platform
 
