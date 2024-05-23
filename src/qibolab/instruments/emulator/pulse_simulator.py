@@ -52,6 +52,7 @@ class PulseSimulator(Controller):
         """Updates the pulse simulator by loading all parameters from
         `model_config` and `simulation_config`."""
         super().setup(settings["bounds"])
+        self.settings = settings
 
         simulation_config = settings["simulation_config"]
         model_params = settings["model_params"]
@@ -83,23 +84,14 @@ class PulseSimulator(Controller):
         self.simulate_dissipation = TF_DICT[simulation_config["simulate_dissipation"]]
         self.output_state_history = TF_DICT[simulation_config["output_state_history"]]
 
-    def update_sim_opts(self, updated_sim_opts):
-        self.sim_opts = updated_sim_opts
-        self.simulation_engine.update_sim_opts(updated_sim_opts)
-
     def connect(self):
         pass
 
     def disconnect(self):
         pass
 
-    """
     def dump(self):
-        mysettings: dict
-        # add your settings
-        ...
-        return mysettings | super().dump()
-    """
+        return self.settings | super().dump()
 
     def run_pulse_simulation(
         self,

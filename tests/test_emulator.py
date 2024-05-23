@@ -239,9 +239,9 @@ def test_pulse_simulator_initialization(emulators):
     platform = create_platform(emulator)
     sim_opts = Options(atol=1e-11, rtol=1e-9, nsteps=int(1e6))
     pulse_simulator = platform.instruments["pulse_simulator"]
-    pulse_simulator.update_sim_opts(sim_opts)
     pulse_simulator.connect()
     pulse_simulator.disconnect()
+    pulse_simulator.dump()
 
 
 def test_pulse_simulator_play_no_dissipation_dt_units_false_history_ro_exception(

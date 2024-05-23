@@ -430,7 +430,7 @@ class QutipSimulator:
         if reference_states is None:
             reference_states = {}
 
-            full_HS_dim = np.product(self.nlevels_HS)
+            full_HS_dim = np.prod(self.nlevels_HS)
             for state_id in range(full_HS_dim):
                 basis_string = dec_to_basis_string(state_id, self.nlevels_HS)
                 basis_state = self.state_from_basis_vector(
@@ -458,7 +458,7 @@ def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:
     Returns:
         `qutip.Qobj`: The quantum state object.
     """
-    shape = (np.product(dims[0]), np.product(dims[1]))
+    shape = (np.prod(dims[0]), np.prod(dims[1]))
     if shape[1] == 1:
         statetype = "ket"
     elif shape[0] == shape[1]:
