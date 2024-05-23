@@ -128,7 +128,7 @@ Emulator platform
 
 QiboLab supports the use of emulators to simulate the behavior of quantum devices. It uses :class:`qibolab.instruments.emulator.pulse_simulator.PulseSimulator`, which is a controller that utilizes a simulation engine to numerically solve the dynamics of the device in the presence of control pulse sequences specified by :class:`qibolab.pulses.PulseSequence`. The emulator platform for a specific device requires its own platform folder and can be initialized in the same way as any other real platforms:
 
-.. testcode:: python
+.. testcode:: python_emulator
 
     import os
     from pathlib import Path
