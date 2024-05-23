@@ -103,6 +103,7 @@ class RawAcquisition(Acquisition):
         pass
 
     def measure(self, operation, element):
+        qua.reset_phase(element)
         qua.measure(operation, element, self.adc_stream)
 
     def download(self, *dimensions):
