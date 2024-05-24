@@ -45,7 +45,9 @@ def test_emulator_initialization(emulators, emulator):
     "acquisition",
     [AcquisitionType.DISCRIMINATION, AcquisitionType.INTEGRATION, AcquisitionType.RAW],
 )
-def test_emulator_execute_pulse_sequence(emulators, emulator, acquisition):
+def test_emulator_execute_pulse_sequence_compute_overlaps(
+    emulators, emulator, acquisition
+):
     nshots = 10  # 100
     platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
@@ -55,6 +57,8 @@ def test_emulator_execute_pulse_sequence(emulators, emulator, acquisition):
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
     if acquisition is AcquisitionType.DISCRIMINATION:
         result = platform.execute_pulse_sequence(sequence, options)
+        simulated_states = results["simulation"]["output_states"]
+        overlaps = pulse_simulator.simulation_engine.compute_overlaps(simulated_states)
         assert result[0].samples.shape == (nshots,)
     else:
         with pytest.raises(ValueError) as excinfo:
@@ -125,10 +129,12 @@ def test_emulator_single_sweep(
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
 @pytest.mark.parametrize("acquisition", [AcquisitionType.DISCRIMINATION])
 @pytest.mark.parametrize("nshots", [10, 20])
-def test_emulator_double_sweep(
+def test_emulator_double_sweep_false_history(
     emulators, emulator, parameter1, parameter2, average, acquisition, nshots
 ):
     platform = create_platform(emulator)
+    pulse_simulator = platform.instruments["pulse_simulator"]
+    pulse_simulator.output_state_history = False
     sequence = PulseSequence()
     pulse = platform.create_qubit_drive_pulse(qubit=0, start=0, duration=2)
     ro_pulse = platform.create_qubit_readout_pulse(qubit=0, start=pulse.finish)

@@ -1,5 +1,5 @@
 {
-    "device_name": "ibmfakebelem_q0",
+    "device_name": "default_q0",
     "nqubits": 1,
     "ncouplers": 0,
     "description": "IBM 5-qubit device FakeBelem, q0 only",
@@ -10,7 +10,7 @@
     "instruments": {
         "pulse_simulator": {
             "model_params": {
-                    "device_name": "ibmfakebelem_q0",
+                    "model_name": "general_no_coupler_model",
                     "topology": [],
                     "nqubits": 1,
                     "ncouplers": 0,

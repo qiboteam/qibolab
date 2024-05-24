@@ -1,5 +1,7 @@
 {
-    "nqubits": 5,
+    "device_name": "ibmfakebelem_q01",
+    "nqubits": 2,
+    "ncouplers": 0,
     "description": "IBM 5-qubit device FakeBelem, q0 and q1 only",
     "settings": {
         "nshots": 4096,
@@ -8,7 +10,7 @@
     "instruments": {
         "pulse_simulator": {
             "model_params": {
-                "device_name": "ibmfakebelem_q01",
+                "model_name": "general_no_coupler_model",
                 "topology": [
                     [0, 1]
                 ],
@@ -54,7 +56,7 @@
                 "sim_sampling_boost": 10,
                 "runcard_duration_in_dt_units": "False",
                 "instant_measurement": "True",
-                "simulate_dissipation": "True,
+                "simulate_dissipation": "True",
                 "output_state_history": "True"
             },
             "sim_opts": null,

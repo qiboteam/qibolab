@@ -5,11 +5,12 @@ from qibolab.instruments.emulator.models.methods import (
 )
 
 
+# model template for 0-c1-1 system
 def generate_default_params():
     # all time in ns and frequency in GHz
     """Returns template model parameters dictionary."""
     model_params = {
-        "device_name": "model template for 0-c1-1 system",
+        "model_name": "models_template",
         "topology": [[0, 1]],
         "nqubits": 2,
         "ncouplers": 1,
@@ -56,6 +57,7 @@ def generate_default_params():
     return model_params
 
 
+# template for general (no flux) model
 def generate_model_config(
     model_params: dict = None,
     nlevels_q: list = None,
@@ -80,7 +82,7 @@ def generate_model_config(
     if topology is None:
         topology = model_params["topology"]
 
-    device_name = model_params["device_name"]
+    model_name = model_params["model_name"]
     sampling_rate = model_params["sampling_rate"]
     readout_error = model_params["readout_error"]
     qubits_list = model_params["qubits_list"]
@@ -157,10 +159,7 @@ def generate_model_config(
         )
 
     model_config = {
-        "model_name": "template for general (no flux) model",
-        "device_name": device_name,
-        "sampling_rate": sampling_rate,
-        "runcard_duration_in_dt_units": False,
+        "model_name": model_name,
         "topology": topology,
         "qubits_list": qubits_list,
         "nlevels_q": nlevels_q,

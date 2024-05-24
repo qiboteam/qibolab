@@ -29,6 +29,10 @@ SIMULATION_ENGINES = {
     "Qutip": QutipSimulator,
 }
 
+MODELS = {
+    "general_no_coupler_model": general_no_coupler_model,
+}
+
 TF_DICT = {"True": True, "False": False}
 
 
@@ -57,12 +61,11 @@ class PulseSimulator(Controller):
         simulation_config = settings["simulation_config"]
         model_params = settings["model_params"]
         sim_opts = settings["sim_opts"]
-        model_config = general_no_coupler_model.generate_model_config(model_params)
+
+        model_name = model_params["model_name"]
+        model_config = MODELS[model_name].generate_model_config(model_params)
 
         simulation_engine_name = simulation_config["simulation_engine_name"]
-        device_name = model_config["device_name"]
-        model_name = model_config["model_name"]
-        self.emulator_name = f"{device_name} emulator running {model_name} on {simulation_engine_name} engine"
         self.simulation_engine = SIMULATION_ENGINES[simulation_engine_name](
             model_config, sim_opts
         )

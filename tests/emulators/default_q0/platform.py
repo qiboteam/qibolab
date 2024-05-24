@@ -18,13 +18,12 @@ def create():
 
     # load runcard and model params
     runcard = load_runcard(FOLDER)
+    device_name = runcard["device_name"]
 
     # Specify emulator controller
     pulse_simulator = PulseSimulator()
     instruments = {"pulse_simulator": pulse_simulator}
     instruments = load_instrument_settings(runcard, instruments)
-
-    emulator_name = pulse_simulator.emulator_name
 
     # extract quantities from runcard for platform declaration
     qubits, couplers, pairs = load_qubits(runcard)
@@ -44,5 +43,11 @@ def create():
         qubit.sweetspot = 0  # not used
 
     return Platform(
-        emulator_name, qubits, pairs, instruments, settings, resonator_type="2D"
+        # emulator_name, qubits, pairs, instruments, settings, resonator_type="2D"
+        device_name,
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
     )

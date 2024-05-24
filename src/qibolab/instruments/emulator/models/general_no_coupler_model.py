@@ -7,11 +7,12 @@ from qibolab.instruments.emulator.models.methods import (
 )
 
 
+# model template for 0-1 system
 def generate_default_params():
     # all time in ns and frequency in GHz
     """Returns template model parameters dictionary."""
     model_params = {
-        "device_name": "model template for 0-1 system",
+        "model_name": "general_no_coupler_model",
         "topology": [[0, 1]],
         "nqubits": 2,
         "ncouplers": 0,
@@ -77,7 +78,7 @@ def generate_model_config(
     if topology is None:
         topology = model_params["topology"]
 
-    device_name = model_params["device_name"]
+    model_name = model_params["model_name"]
     readout_error = model_params["readout_error"]
     qubits_list = model_params["qubits_list"]
 
@@ -136,8 +137,7 @@ def generate_model_config(
         )
 
     model_config = {
-        "model_name": "general no coupler CR drive model",
-        "device_name": device_name,
+        "model_name": model_name,
         "topology": topology,
         "qubits_list": qubits_list,
         "nlevels_q": nlevels_q,

@@ -61,9 +61,6 @@ class QutipSimulator:
         self.sim_opts = sim_opts
         self.update()
 
-    def update_sim_opts(self, updated_sim_opts: Options):
-        self.sim_opts = updated_sim_opts
-
     def update(self):
         """Updates the simulation engine by loading all parameters from
         `self.model_config` and `self.sim_opts`."""
