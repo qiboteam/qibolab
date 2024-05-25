@@ -378,6 +378,21 @@ def test_qm_register_pulses_with_different_frequencies(qmplatform):
         assert len(qmsequence.qmpulses) == 4
         elements = {qmpulse.element for qmpulse in qmsequence.qmpulses}
         assert len(elements) == 4
+        for element in elements:
+            if "readout" in element:
+                assert (
+                    controller.config.elements[element]["RF_inputs"]
+                    == controller.config.elements["readout0"]["RF_inputs"]
+                )
+                assert (
+                    controller.config.elements[element]["RF_outputs"]
+                    == controller.config.elements["readout0"]["RF_outputs"]
+                )
+            else:
+                assert (
+                    controller.config.elements[element]["RF_inputs"]
+                    == controller.config.elements["drive0"]["RF_inputs"]
+                )
     else:
         with pytest.raises(NotImplementedError):
             qmsequence, ro_pulses = controller.create_sequence(

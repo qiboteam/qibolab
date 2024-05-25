@@ -104,7 +104,7 @@ class QMConfig:
                 f"Cannot play two different frequencies on the same {mode} line."
             )
         new_element = f"{element}_{intermediate_frequency}"
-        self.elements[new_element] = dict(self.elements[f"drive{qubit.name}"])
+        self.elements[new_element] = dict(self.elements[element])
         self.elements[new_element]["intermediate_frequency"] = intermediate_frequency
         return new_element
 
@@ -251,7 +251,7 @@ class QMConfig:
             element = self.register_flux_element(qubit, pulse.frequency)
         return element
 
-    def register_pulse(self, qubit, qmpulse, element=None):
+    def register_pulse(self, qubit, qmpulse):
         """Registers pulse, waveforms and integration weights in QM config.
 
         Args:
