@@ -18,6 +18,8 @@
                 "ncouplers": 0,
                 "qubits_list": ["0", "1"],
                 "couplers_list": [],
+                "nlevels_q": [2, 2],
+                "nlevels_c": [],
                 "readout_error": {
                     "0": [0.01, 0.02],
                     "1": [0.01, 0.02]
