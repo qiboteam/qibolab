@@ -56,7 +56,7 @@
                 "simulation_engine_name": "Qutip",
                 "sampling_rate": 4.5,
                 "sim_sampling_boost": 10,
-                "runcard_duration_in_dt_units": "False",
+                "runcard_duration_in_dt_units": "True",
                 "instant_measurement": "True",
                 "simulate_dissipation": "True",
                 "output_state_history": "True"
@@ -119,7 +119,7 @@
         },
         "two_qubit": {
             "0-1": {
-                "CZ": [
+                "CNOT": [
                     {
                         "type": "virtual_z",
                         "phase": -3.141592653589793,
