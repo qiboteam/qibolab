@@ -375,6 +375,10 @@ class Platform:
         qubit = self.get_qubit(qubit)
         return self.qubits[qubit].native_gates.MZ.pulse(start)
 
+    def create_MZ1_pulse(self, qubit, start):
+        qubit = self.get_qubit(qubit)
+        return self.qubits[qubit].native_gates.MZ1.pulse(start)
+
     def create_qubit_drive_pulse(self, qubit, start, duration, relative_phase=0):
         qubit = self.get_qubit(qubit)
         pulse = self.qubits[qubit].native_gates.RX.pulse(start, relative_phase)

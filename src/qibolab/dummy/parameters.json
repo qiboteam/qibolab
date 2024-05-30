@@ -77,7 +77,17 @@
                     "relative_start": 0,
                     "phase": 0,
                     "type": "ro"
+                },
+                "MZ1": {
+                    "duration": 2000,
+                    "amplitude": 0.1,
+                    "shape": "GaussianSquare(5, 0)",
+                    "frequency": 1.0,
+                    "relative_start": 0,
+                    "phase": 0,
+                    "type": "ro"
                 }
+
             },
             "1": {
                 "RX": {
@@ -103,6 +113,16 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 4900000000.0,
+                    "relative_start": 0,
+                    "phase": 0,
+                    "type": "ro"
+                },
+
+                "MZ1": {
+                    "duration": 2000,
+                    "amplitude": 0.1,
+                    "shape": "GaussianSquare(5, 0)",
+                    "frequency": 1.0,
                     "relative_start": 0,
                     "phase": 0,
                     "type": "ro"
@@ -135,6 +155,15 @@
                     "relative_start": 0,
                     "phase": 0,
                     "type": "ro"
+                },
+                "MZ1": {
+                    "duration": 2000,
+                    "amplitude": 0.1,
+                    "shape": "GaussianSquare(5, 0)",
+                    "frequency": 1.0,
+                    "relative_start": 0,
+                    "phase": 0,
+                    "type": "ro"
                 }
             },
             "3": {
@@ -164,6 +193,15 @@
                     "relative_start": 0,
                     "phase": 0,
                     "type": "ro"
+                },
+                "MZ1": {
+                    "duration": 2000,
+                    "amplitude": 0.1,
+                    "shape": "GaussianSquare(5, 0)",
+                    "frequency": 1.0,
+                    "relative_start": 0,
+                    "phase": 0,
+                    "type": "ro"
                 }
             },
             "4": {
@@ -190,6 +228,15 @@
                     "amplitude": 0.1,
                     "shape": "GaussianSquare(5, 0.75)",
                     "frequency": 5500000000.0,
+                    "relative_start": 0,
+                    "phase": 0,
+                    "type": "ro"
+                },
+                "MZ1": {
+                    "duration": 2000,
+                    "amplitude": 0.1,
+                    "shape": "GaussianSquare(5, 0)",
+                    "frequency": 1.0,
                     "relative_start": 0,
                     "phase": 0,
                     "type": "ro"
