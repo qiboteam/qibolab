@@ -54,6 +54,8 @@ class IqMixerConfig:
 class IqConfig:
     """Configuration for an IQ channel."""
 
+    frequency: float
+    """The carrier frequency of the channel."""
     lo_config: Optional[OscillatorConfig]
     """Configuration for the corresponding LO.
 
