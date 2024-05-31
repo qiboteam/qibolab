@@ -400,8 +400,10 @@ class Platform:
         pulse.duration = duration
         return pulse
 
-    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
+    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None, shape=None):
         coupler = self.get_coupler(coupler)
+        if shape is None:
+            shape = "Rectangular()"
         pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
         if duration is not None:
             pulse.duration = duration
