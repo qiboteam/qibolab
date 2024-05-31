@@ -53,7 +53,7 @@
         "single_qubit": {
             "0": {
                 "RX": {
-                    "duration": 36.042,
+                    "duration": 25.687,
                     "amplitude":0.1,
                     "frequency": 5090167234.445013,
                     "shape": "Drag(4, -4)",
