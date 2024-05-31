@@ -312,7 +312,7 @@ class QMController(Controller):
                 qmpulse = QMPulse(pulse, element)
                 if pulse.type is PulseType.READOUT:
                     ro_pulses.append(qmpulse)
-                self.config.register_pulse(qubit, qmpulse, element)
+                self.config.register_pulse(qubit, qmpulse)
             qmsequence.add(qmpulse)
 
         qmsequence.shift()
