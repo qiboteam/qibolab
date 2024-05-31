@@ -412,9 +412,9 @@ _sweeper_operation = {
 def ps_to_waveform_dict(
     sequence: PulseSequence,
     platform_to_simulator_channels: dict,
-    sampling_rate=1,
-    sim_sampling_boost=1,
-    runcard_duration_in_dt_units=False,
+    sampling_rate: float = 1.0,
+    sim_sampling_boost: int = 1,
+    runcard_duration_in_dt_units: bool = False,
 ) -> dict[str, Union[np.ndarray, dict[str, np.ndarray]]]:
     """Converts pulse sequence to dictionary of time and channel separated
     waveforms.
@@ -456,7 +456,7 @@ def ps_to_waveform_dict(
             for channel in qubit_pulses.channels:
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    start = pulse.start
+                    start = int(pulse.start * sim_sampling_boost)
                     actual_pulse_frequency = (
                         pulse.frequency
                     )  # store actual pulse frequency for channel_translator
@@ -469,12 +469,8 @@ def ps_to_waveform_dict(
                     q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
 
                     # Qubit drive microwave signals
-                    end = start + len(i_env) / sim_sampling_boost
-                    t = (
-                        np.arange(start * sim_sampling_boost, end * sim_sampling_boost)
-                        / sampling_rate
-                        / sim_sampling_boost
-                    )
+                    end = start + len(i_env)
+                    t = np.arange(start, end) / sampling_rate / sim_sampling_boost
                     cosalpha = np.cos(
                         2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
                     )
