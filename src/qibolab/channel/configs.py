@@ -62,16 +62,24 @@ class IqConfig:
     mixer_config: Optional[IqMixerConfig]
     """Configuration for the corresponding IQ mixer.
 
-    None if the channel does not feature a mixer.
+    None if the channel does not feature a mixer, or the mixer does not
+    require calibration.
     """
 
 
 @dataclass(frozen=True)
 class AcquisitionConfig:
-    """Configuration for acquisition channels."""
+    """Configuration for acquisition channel.
+
+    Currently, in qibolab, acquisition channels are FIXME:
+    """
 
     twpa_pump_config: Optional[OscillatorConfig]
     """Config for the corresponding TWPA pump.
 
     None if the channel does not feature a TWPA.
     """
+    delay: float
+    """Delay between readout pulse start and acquisition start."""
+    smearing: float
+    """FIXME:"""
