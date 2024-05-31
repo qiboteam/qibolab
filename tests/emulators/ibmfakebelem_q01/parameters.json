@@ -78,8 +78,8 @@
         "single_qubit": {
             "0": {
                 "RX": {
-                    "duration": 160,
-                    "amplitude": 0.24045125169257026,
+                    "duration": 61.117,
+                    "amplitude": 0.5,
                     "frequency": 5090167234.445013,
                     "shape": "Drag(4, -2.4305800297101414)",
                     "type": "qd",
@@ -98,8 +98,8 @@
             },
             "1": {
                 "RX": {
-                    "duration": 160,
-                    "amplitude": 0.24840043468596693,
+                    "duration": 63.394,
+                    "amplitude": 0.5,
                     "frequency": 5245306068.285917,
                     "shape": "Drag(4, 0.6571522139248822)",
                     "type": "qd",
