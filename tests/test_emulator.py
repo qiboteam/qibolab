@@ -55,15 +55,21 @@ def test_emulator_execute_pulse_sequence_compute_overlaps(
     sequence.add(platform.create_RX_pulse(0, 0))
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
-    if acquisition is AcquisitionType.DISCRIMINATION:
+    if (
+        acquisition is AcquisitionType.DISCRIMINATION
+        or acquisition is AcquisitionType.INTEGRATION
+    ):
         results = platform.execute_pulse_sequence(sequence, options)
         simulated_states = results["simulation"]["output_states"]
         overlaps = pulse_simulator.simulation_engine.compute_overlaps(simulated_states)
-        assert results[0].samples.shape == (nshots,)
+        if acquisition is AcquisitionType.DISCRIMINATION:
+            assert results[0].samples.shape == (nshots,)
+        else:
+            assert results[0].voltage.shape == (nshots,)
     else:
         with pytest.raises(ValueError) as excinfo:
             platform.execute_pulse_sequence(sequence, options)
-        assert "Current emulator only supports AcquisitionType.DISCRIMINATION!" in str(
+        assert "Current emulator does not support requested AcquisitionType" in str(
             excinfo.value
         )
 
