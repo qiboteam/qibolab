@@ -11,7 +11,13 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple, Union
 
-from qibolab.channel import Channel, IqMixerConfig, OscillatorConfig
+from qibolab.channel import (
+    AcquisitionConfig,
+    Channel,
+    ChannelConfig,
+    IqMixerConfig,
+    OscillatorConfig,
+)
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -190,17 +196,28 @@ def dump_qubit_name(name: QubitId) -> str:
     return name
 
 
-def load_channel_configs(runcard: dict) -> dict[str, dict]:
-    """Load configurations for channels."""
-    configs = runcard["channels"]
-    for ch, cfg in configs.items():
-        if "lo_config" in cfg and cfg["lo_config"] is not None:
-            cfg["lo_config"] = OscillatorConfig(**cfg["lo_config"])
-        if "twpa_pump_config" in cfg and cfg["twpa_pump_config"] is not None:
-            cfg["twpa_pump_config"] = OscillatorConfig(**cfg["twpa_pump_config"])
-        if "mixer_config" in cfg and cfg["mixer_config"] is not None:
-            cfg["mixer_config"] = IqMixerConfig(**cfg["mixer_config"])
-    return configs
+def load_channel_config(
+    runcard: dict,
+    channel: str,
+    config_class: type,
+    *,
+    lo_config_class: type = OscillatorConfig,
+    mixer_config_class: type = IqMixerConfig,
+    acquisition_config_class: type = AcquisitionConfig,
+    twpa_pump_config_class: type = OscillatorConfig,
+) -> ChannelConfig:
+    """Load configuration for given channel."""
+    config_dict = runcard["channels"][channel]
+    nested_cfg = {
+        "lo_config": lo_config_class,
+        "mixer_config": mixer_config_class,
+        "acquisition_config": acquisition_config_class,
+        "twpa_pump_config": twpa_pump_config_class,
+    }
+    for attr, class_ in nested_cfg.items():
+        if config_dict.get(attr) is not None:
+            config_dict[attr] = class_(**config_dict[attr])
+    return config_class(**config_dict)
 
 
 def _dump_pulse(pulse: Pulse):

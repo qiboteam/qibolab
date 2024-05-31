@@ -280,10 +280,9 @@ class Platform:
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
-        if options.channel_cfg is not None:
-            for ch, cfg in options.channel_cfg.items():
-                for attr, inst in external_config(self.channels[ch]):
-                    self.instruments[inst].setup(**asdict(getattr(cfg, attr)))
+        for name, ch in self.channels.items():
+            for inst, cfg in external_config(ch, options.channel_cfg.get(name)):
+                self.instruments[inst].setup(**asdict(cfg))
 
         # find readout pulses
         ro_pulses = {

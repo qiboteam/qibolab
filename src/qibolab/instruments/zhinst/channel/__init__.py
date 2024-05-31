@@ -16,4 +16,6 @@ class ZiChannel(Channel):
 
 
 @dataclass(frozen=True)
-class ZiAcquisitionChannel(WithExternalTwpaPump, ZiChannel): ...
+class ZiAcquisitionChannel(WithExternalTwpaPump, ZiChannel):
+
+    config: ZiAcquisitionConfig
