@@ -16,6 +16,7 @@ from qutip.ui.progressbar import EnhancedTextProgressBar
 
 from qibolab.instruments.emulator.engines.generic import (
     dec_to_basis_string,
+    function_from_array,
     op_from_instruction,
     specify_hilbert_space,
 )
@@ -418,8 +419,7 @@ class QutipSimulator:
 
         Args:
             target_states (list): List of target states (`qutip.Qobj`) of interest.
-            reference_states (dict, optional): Reference states labelled by their respective keys to compare `target_states` with.
-            If not provided, all basis states of the full device Hilbert space labelled by their generalized bitstrings will be used.
+            reference_states (dict, optional): Reference states labelled by their respective keys to compare `target_states` with. If not provided, all basis states of the full device Hilbert space labelled by their generalized bitstrings will be used.
 
         Returns:
             dict: Overlaps for each target state with each reference state.
@@ -462,22 +462,6 @@ def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:
         statetype = "oper"
 
     return Qobj(statedata, dims=dims, shape=shape, type=statetype)
-
-
-def function_from_array(y: np.ndarray, x: np.ndarray):
-    """Return function given a data array y and time array x."""
-
-    if y.shape[0] != x.shape[0]:
-        raise ValueError("y and x must have the same first dimension")
-
-    yx = np.column_stack((y, x))
-    yx = yx[yx[:, -1].argsort()]
-
-    def func(t, args):
-        idx = np.searchsorted(yx[1:, -1], t, side="right")
-        return yx[idx, 0]
-
-    return func
 
 
 def extend_op_dim(

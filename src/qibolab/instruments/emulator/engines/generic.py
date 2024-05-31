@@ -31,6 +31,22 @@ def specify_hilbert_space(model_config: dict, little_endian: bool) -> tuple:
     return HS_list, nlevels_HS
 
 
+def function_from_array(y: np.ndarray, x: np.ndarray):
+    """Return function given a data array y and time array x."""
+
+    if y.shape[0] != x.shape[0]:
+        raise ValueError("y and x must have the same first dimension")
+
+    yx = np.column_stack((y, x))
+    yx = yx[yx[:, -1].argsort()]
+
+    def func(t, args):
+        idx = np.searchsorted(yx[1:, -1], t, side="right")
+        return yx[idx, 0]
+
+    return func
+
+
 def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
     """Converts an integer to a generalized bitstring in the computation basis
     of the full Hilbert space.
