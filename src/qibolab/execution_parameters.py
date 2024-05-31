@@ -72,7 +72,7 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    channel_cfg: dict[str, ChannelConfig] = None
+    channel_cfg: dict[str, ChannelConfig] = {}
     """Configuration for various channels (maps channel name to respective
     config).
 
