@@ -650,26 +650,31 @@ def get_results_from_samples(
                                                     averaging_mode)
 
     Returns:
-        dict: Qibolab results for AcquisitionType.DISCRIMINATION.
+        dict: Qibolab result data.
 
     Raises:
-        ValueError: If execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION.
+        ValueError: If execution_parameters.acquisition_type is not supported.
     """
     shape = [execution_parameters.nshots] + append_to_shape
     results = {}
     for ro_pulse in ro_pulse_list:
+        values = np.array(samples[ro_pulse.qubit]).reshape(shape)
+
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-            values = np.array(samples[ro_pulse.qubit]).reshape(shape)
             processed_values = SampleResults(values)
 
-            if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                processed_values = (
-                    processed_values.average
-                )  # generates AveragedSampleResults
+        elif execution_parameters.acquisition_type is AcquisitionType.INTEGRATION:
+            processed_values = IntegratedResults(values.astype(np.complex128))
+
         else:
             raise ValueError(
-                "Current emulator only supports AcquisitionType.DISCRIMINATION!"
+                "Current emulator does not support requested AcquisitionType"
             )
+
+        if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+            processed_values = (
+                processed_values.average
+            )  # generates AveragedSampleResults
 
         results[ro_pulse.qubit] = results[ro_pulse.serial] = processed_values
     return results
