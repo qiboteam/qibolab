@@ -456,7 +456,6 @@ def ps_to_waveform_dict(
             for channel in qubit_pulses.channels:
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-
                     start = pulse.start
                     actual_pulse_frequency = (
                         pulse.frequency
@@ -466,22 +465,31 @@ def ps_to_waveform_dict(
                     # need to first set pulse._if in GHz to use modulated_waveform_i method
                     pulse._if = pulse.frequency / 1e9
 
-                    pulse_signal = pulse.modulated_waveform_i(
-                        sim_sampling_boost
-                    ).data  # *np.sqrt(2)
-                    end = start + len(pulse_signal) / sim_sampling_boost
+                    i_env = pulse.envelope_waveform_i(sim_sampling_boost).data
+                    q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
+
+                    # Qubit drive microwave signals
+                    end = start + len(i_env) / sim_sampling_boost
                     t = (
                         np.arange(start * sim_sampling_boost, end * sim_sampling_boost)
                         / sampling_rate
                         / sim_sampling_boost
                     )
+                    cosalpha = np.cos(
+                        2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
+                    )
+                    sinalpha = np.sin(
+                        2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
+                    )
+                    pulse_signal = i_env * sinalpha + q_env * cosalpha
+                    # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
 
                     times_list.append(t)
                     signals_list.append(pulse_signal)
 
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
-                    ## to add during flux pulse update
+                    # TODO: to add during flux pulse update
                     # elif pulse.type.value == "qf":
                     #   platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
@@ -513,22 +521,28 @@ def ps_to_waveform_dict(
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
                     sim_sampling_rate = sampling_rate * sim_sampling_boost
+
                     start = int(pulse.start * sim_sampling_rate)
                     # need to first set pulse._if in GHz to use modulated_waveform_i method
                     pulse._if = pulse.frequency / 1e9
 
-                    pulse_signal = pulse.modulated_waveform_i(
-                        sim_sampling_rate
-                    ).data  # *np.sqrt(2)
-                    end = start + len(pulse_signal)
+                    i_env = pulse.envelope_waveform_i(sim_sampling_rate).data
+                    q_env = pulse.envelope_waveform_q(sim_sampling_rate).data
+
+                    # Qubit drive microwave signals
+                    end = start + len(i_env)
                     t = np.arange(start, end) / sim_sampling_rate
+                    cosalpha = np.cos(2 * np.pi * pulse._if * t + pulse.relative_phase)
+                    sinalpha = np.sin(2 * np.pi * pulse._if * t + pulse.relative_phase)
+                    pulse_signal = i_env * sinalpha + q_env * cosalpha
+                    # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
 
                     times_list.append(t)
                     signals_list.append(pulse_signal)
 
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
-                    ## to add during flux pulse update
+                    # TODO: add during flux pulse update
                     # elif pulse.type.value == "qf":
                     # platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
