@@ -837,7 +837,7 @@ Currently does not support:
 .. admonition:: Qibocal compatibility
 
     The following protocols are currently compatible with the emulator platform (``default_q0``):
-    
+
     - `rabi_length_sequences`
     - `t1_sequences`
     - `t2_sequences`
