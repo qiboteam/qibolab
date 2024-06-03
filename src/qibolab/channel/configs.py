@@ -9,6 +9,7 @@ __all__ = [
     "AcquisitionConfig",
     "OscillatorConfig",
     "IqMixerConfig",
+    "AuxIqConfig",
 ]
 
 
@@ -67,6 +68,19 @@ class IqConfig:
     None if the channel does not feature a mixer, or the mixer does not
     require calibration.
     """
+
+
+@dataclass(frozen=True)
+class AuxIqConfig:
+    """Configuration for auxiliary IQ channels.
+
+    These channels share most of the configuration with the
+    corresponding main channel, only the frequency is supposed to be
+    different.
+    """
+
+    frequency: float
+    """The carrier frequency of the channel."""
 
 
 @dataclass(frozen=True)
