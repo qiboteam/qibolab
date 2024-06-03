@@ -33,7 +33,7 @@ MODELS = {
     "general_no_coupler_model": general_no_coupler_model,
 }
 
-TF_DICT = {"True": True, "False": False}
+GHZ = 1e9
 
 
 class PulseSimulator(Controller):
@@ -52,15 +52,15 @@ class PulseSimulator(Controller):
     def sampling_rate(self):
         return self._sampling_rate
 
-    def setup(self, **settings):
+    def setup(self, **kwargs):
         """Updates the pulse simulator by loading all parameters from
         `model_config` and `simulation_config`."""
-        super().setup(settings["bounds"])
-        self.settings = settings
+        super().setup(kwargs["bounds"])
+        self.settings = kwargs
 
-        simulation_config = settings["simulation_config"]
-        model_params = settings["model_params"]
-        sim_opts = settings["sim_opts"]
+        simulation_config = kwargs["simulation_config"]
+        model_params = kwargs["model_params"]
+        sim_opts = kwargs["sim_opts"]
 
         model_name = model_params["model_name"]
         model_config = MODELS[model_name].generate_model_config(model_params)
@@ -73,10 +73,10 @@ class PulseSimulator(Controller):
         # Settings for pulse processing
         self._sampling_rate = simulation_config["sampling_rate"]
         self.sim_sampling_boost = simulation_config["sim_sampling_boost"]
-        self.runcard_duration_in_dt_units = TF_DICT[
-            simulation_config["runcard_duration_in_dt_units"]
+        self.runcard_duration_in_dt_units = simulation_config[
+            "runcard_duration_in_dt_units"
         ]
-        self.instant_measurement = TF_DICT[simulation_config["instant_measurement"]]
+        self.instant_measurement = simulation_config["instant_measurement"]
         self.platform_to_simulator_channels = model_config[
             "platform_to_simulator_channels"
         ]
@@ -84,8 +84,8 @@ class PulseSimulator(Controller):
         self.readout_error = {
             int(k): v for k, v in model_config["readout_error"].items()
         }
-        self.simulate_dissipation = TF_DICT[simulation_config["simulate_dissipation"]]
-        self.output_state_history = TF_DICT[simulation_config["output_state_history"]]
+        self.simulate_dissipation = simulation_config["simulate_dissipation"]
+        self.output_state_history = simulation_config["output_state_history"]
 
     def connect(self):
         pass
@@ -317,9 +317,6 @@ class PulseSimulator(Controller):
         sweeper_op = _sweeper_operation.get(sweep.type)
         ret = {}
 
-        print("sweep param:", param_name)
-        print("values", sweep.values)
-
         for value in sweep.values:
             for idx, pulse in enumerate(sweep.pulses):
                 base = base_sweeper_values[idx]
@@ -463,7 +460,7 @@ def ps_to_waveform_dict(
                     # rescale frequency to be compatible with sampling_rate = 1
                     pulse.frequency = pulse.frequency / sampling_rate
                     # need to first set pulse._if in GHz to use modulated_waveform_i method
-                    pulse._if = pulse.frequency / 1e9
+                    pulse._if = pulse.frequency / GHZ
 
                     i_env = pulse.envelope_waveform_i(sim_sampling_boost).data
                     q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
@@ -493,7 +490,7 @@ def ps_to_waveform_dict(
 
                     # restore pulse frequency values
                     pulse.frequency = actual_pulse_frequency
-                    pulse._if = pulse.frequency / 1e9
+                    pulse._if = pulse.frequency / GHZ
 
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
@@ -520,7 +517,7 @@ def ps_to_waveform_dict(
 
                     start = int(pulse.start * sim_sampling_rate)
                     # need to first set pulse._if in GHz to use modulated_waveform_i method
-                    pulse._if = pulse.frequency / 1e9
+                    pulse._if = pulse.frequency / GHZ
 
                     i_env = pulse.envelope_waveform_i(sim_sampling_rate).data
                     q_env = pulse.envelope_waveform_q(sim_sampling_rate).data
@@ -678,7 +675,7 @@ def get_results_from_samples(
 
         else:
             raise ValueError(
-                "Current emulator does not support requested AcquisitionType"
+                f"Current emulator does not support requested AcquisitionType {execution_parameters.acquisition_type}"
             )
 
         if execution_parameters.averaging_mode is AveragingMode.CYCLIC:

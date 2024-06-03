@@ -56,10 +56,10 @@
                 "simulation_engine_name": "Qutip",
                 "sampling_rate": 4.5,
                 "sim_sampling_boost": 10,
-                "runcard_duration_in_dt_units": "True",
-                "instant_measurement": "True",
-                "simulate_dissipation": "True",
-                "output_state_history": "True"
+                "runcard_duration_in_dt_units": true,
+                "instant_measurement": true,
+                "simulate_dissipation": true,
+                "output_state_history": true
             },
             "sim_opts": null,
             "bounds": {

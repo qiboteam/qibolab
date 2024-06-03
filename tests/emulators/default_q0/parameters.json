@@ -31,10 +31,10 @@
                     "simulation_engine_name": "Qutip",
                     "sampling_rate": 4.5,
                     "sim_sampling_boost": 10,
-                    "runcard_duration_in_dt_units": "False",
-                    "instant_measurement": "True",
-                    "simulate_dissipation": "True",
-                    "output_state_history": "True"
+                    "runcard_duration_in_dt_units": false,
+                    "instant_measurement": true,
+                    "simulate_dissipation": true,
+                    "output_state_history": true
             },
             "sim_opts": null,
             "bounds": {
@@ -76,9 +76,9 @@
     "characterization": {
         "single_qubit": {
             "0": {
-                "readout_frequency": 7.301661824000001,
-                "drive_frequency": 5.090167234445013,
-                "anharmonicity": -0.3361230051821652,
+                "readout_frequency": 7301661824.000001,
+                "drive_frequency": 5090167234.445013,
+                "anharmonicity": -336123005.1821652,
                 "Ec": 0,
                 "Ej": 0,
                 "g": 0,

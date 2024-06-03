@@ -43,7 +43,6 @@ def create():
         qubit.sweetspot = 0  # not used
 
     return Platform(
-        # emulator_name, qubits, pairs, instruments, settings, resonator_type="2D"
         device_name,
         qubits,
         pairs,
