@@ -213,6 +213,10 @@ class QrmRf(ClusterModule):
                         self._ports["o1"].lo_frequency = self.settings["o1"][
                             "lo_frequency"
                         ]
+                    if "mixer_calibration" in self.settings["o1"]:
+                        self._ports["o1"].mixer_calibration = self.settings["o1"][
+                            "mixer_calibration"
+                        ]
                     self._ports["o1"].hardware_mod_en = True
                     self._ports["o1"].nco_freq = 0
                     self._ports["o1"].nco_phase_offs = 0

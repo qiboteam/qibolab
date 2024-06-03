@@ -197,6 +197,10 @@ class QcmRf(ClusterModule):
                         self._ports[port].lo_frequency = self.settings[port][
                             "lo_frequency"
                         ]
+                    if "mixer_calibration" in self.settings[port]:
+                        self._ports[port].mixer_calibration = self.settings[port][
+                            "mixer_calibration"
+                        ]
                     self._ports[port].attenuation = self.settings[port]["attenuation"]
                     self._ports[port].hardware_mod_en = True
                     self._ports[port].nco_freq = 0
