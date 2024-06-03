@@ -31,8 +31,8 @@ def create():
 
     # Create channel object
     channels = ChannelMap()
-    channels |= (f"readout-{q}" for q in qubits.keys())
-    channels |= (f"drive-{q}" for q in qubits.keys())
+    channels |= (f"readout-{q}" for q in qubits)
+    channels |= (f"drive-{q}" for q in qubits)
 
     # map channels to qubits
     for q, qubit in qubits.items():
