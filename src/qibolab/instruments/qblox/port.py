@@ -19,6 +19,8 @@ class QbloxOutputPort_Settings:
     nco_phase_offs: float = 0
     lo_enabled: bool = True
     lo_frequency: int = 2_000_000_000
+    i_offset: float = 0
+    q_offset: float = 0
 
 
 @dataclass
@@ -220,6 +222,45 @@ class QbloxOutputPort(Port):
                 )
             elif self.module.device.is_qcm_type:
                 self.module.device.set(f"out{self.port_number}_lo_freq", value=value)
+
+    @property
+    def mixer_calibration(self):
+        """Parameters for calibrating mixer output.
+
+        i and q offsets are supported.
+        """
+        if self.module.device:
+            self._settings.i_offset = self.module.device.get(
+                f"out{self.port_number}_offset_path0"
+            )
+            self._settings.q_offset = self.module.device.get(
+                f"out{self.port_number}_offset_path1"
+            )
+        return [self._settings.i_offset, self._settings.q_offset]
+
+    @mixer_calibration.setter
+    def mixer_calibration(self, value):
+        if not isinstance(value, list) or len(value) != 2:
+            raise_error(
+                ValueError,
+                f"Invalid mixer calibration parameters {value}. A list [i_offset, q_offset] is required.",
+            )
+        self._settings.i_offset, self._settings.q_offset = value
+
+        if self.module.device:
+            self.module._set_device_parameter(
+                self.module.device,
+                f"out{self.port_number}_offset_path0",
+                value=self._settings.i_offset,
+            )
+            self.module._set_device_parameter(
+                self.module.device,
+                f"out{self.port_number}_offset_path1",
+                value=self._settings.q_offset,
+            )
+        else:
+            pass
+            # TODO: This case regards a connection error of the module
 
 
 class QbloxInputPort:
