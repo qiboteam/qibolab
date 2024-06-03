@@ -3,7 +3,8 @@ import pathlib
 
 import pytest
 
-from qibolab import PLATFORMS, create_platform
+from qibolab.platform import create_platform
+from qibolab.platform.load import PLATFORMS
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 TESTING_PLATFORM_NAMES = [

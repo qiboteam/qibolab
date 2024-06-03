@@ -1,9 +1,12 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`."""
 
+import inspect
+import os
 import pathlib
 import pickle
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -19,8 +22,10 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
+from qibolab.platform.load import PLATFORMS
 from qibolab.pulses import Drag, PulseSequence, Rectangular
 from qibolab.serialize import (
+    PLATFORM,
     dump_kernels,
     dump_platform,
     dump_runcard,
@@ -55,6 +60,42 @@ def test_create_platform(platform):
 def test_create_platform_error():
     with pytest.raises(ValueError):
         platform = create_platform("nonexistent")
+
+
+def test_create_platform_multipath(tmp_path: Path):
+    some = tmp_path / "some"
+    others = tmp_path / "others"
+    some.mkdir()
+    others.mkdir()
+
+    for p in [
+        some / "platform0",
+        some / "platform1",
+        others / "platform1",
+        others / "platform2",
+    ]:
+        p.mkdir()
+        (p / PLATFORM).write_text(
+            inspect.cleandoc(
+                f"""
+                from qibolab.platform import Platform
+
+                def create():
+                    return Platform("{p.parent.name}-{p.name}", {{}}, {{}}, {{}})
+                """
+            )
+        )
+
+    os.environ[PLATFORMS] = f"{some}{os.pathsep}{others}"
+
+    def path(name):
+        return tmp_path / Path(create_platform(name).name.replace("-", os.sep))
+
+    assert path("platform0").relative_to(some)
+    assert path("platform1").relative_to(some)
+    assert path("platform2").relative_to(others)
+    with pytest.raises(ValueError):
+        create_platform("platform3")
 
 
 def test_platform_sampling_rate(platform):

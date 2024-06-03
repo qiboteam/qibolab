@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, Rectangular
+from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
 

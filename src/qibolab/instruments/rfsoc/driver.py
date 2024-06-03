@@ -11,10 +11,11 @@ from qibo.config import log
 from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, PulseType
+from qibolab.qubits import Qubit
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import BIAS, Sweeper
 
