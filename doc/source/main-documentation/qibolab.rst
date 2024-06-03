@@ -827,7 +827,7 @@ Available simulation engines:
 
 - ``qutip``
 
-Currently ``AcquisitionType.DISCRIMINATION`` and   ``AcquisitionType.INTEGRATION`` are supported. Note that for ``AcquistionType.INTEGRATION`` samples are projected onto the I component. 
+Currently ``AcquisitionType.DISCRIMINATION`` and   ``AcquisitionType.INTEGRATION`` are supported. Note that for ``AcquistionType.INTEGRATION`` samples are projected onto the I component.
 
 Currently does not support:
 
