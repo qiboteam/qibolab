@@ -366,7 +366,20 @@ class RFSoC(Controller):
                 execution_parameters=execution_parameters,
             )
             results = self.merge_sweep_results(results, res)
+        results = self.squeeze_results(results)
         return results  # already in the right format
+
+    def squeeze_results(self, res):
+        new_res = {}
+        for key in res:
+            cls = res[key].__class__
+            data = (
+                res[key].voltage
+                if isinstance(res[key], IntegratedResults)
+                else res[key].samples
+            )
+            new_res[key] = cls(np.squeeze(data))
+        return new_res
 
     @staticmethod
     def merge_sweep_results(
