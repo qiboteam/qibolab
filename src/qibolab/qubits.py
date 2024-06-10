@@ -15,7 +15,15 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "kernel", "_flux")
+EXCLUDED_FIELDS = CHANNEL_NAMES + (
+    "name",
+    "native_gates",
+    "kernel",
+    "_flux",
+    "qubit1",
+    "qubit2",
+    "coupler",
+)
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
@@ -61,6 +69,9 @@ class Qubit:
     """Assignment fidelity."""
     readout_fidelity: float = 0.0
     """Readout fidelity."""
+    gate_fidelity: float = 0.0
+    """Gate fidelity from standard RB."""
+
     effective_temperature: float = 0.0
     """Effective temperature."""
     peak_voltage: float = 0
@@ -163,6 +174,21 @@ class QubitPair:
     Acts as target on two-qubit gates.
     """
 
+    gate_fidelity: float = 0.0
+    """Gate fidelity from standard 2q RB."""
+
+    cz_fidelity: float = 0.0
+    """Gate fidelity from CZ interleaved RB."""
+
     coupler: Optional[Coupler] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
+
+    @property
+    def characterization(self):
+        """Dictionary containing characterization parameters."""
+        return {
+            fld.name: getattr(self, fld.name)
+            for fld in fields(self)
+            if fld.name not in EXCLUDED_FIELDS
+        }

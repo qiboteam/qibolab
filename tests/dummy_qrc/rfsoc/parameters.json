@@ -56,8 +56,7 @@
                     "phase": 0
                 }
             }
-        },
-        "two_qubit": {}
+        }
     },
     "characterization": {
         "single_qubit": {

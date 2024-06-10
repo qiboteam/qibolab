@@ -338,6 +338,24 @@
                 "mixer_readout_g": 0.0,
                 "mixer_readout_phi": 0.0
             }
+        },
+        "two_qubit":{
+            "0-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "1-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-3": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-4": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            }
         }
     }
 }
