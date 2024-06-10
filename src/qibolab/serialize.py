@@ -62,6 +62,7 @@ def load_qubits(
 
     couplers = {}
     pairs = {}
+    two_qubit_characterization = runcard["characterization"].get("two_qubit", {})
     if "coupler" in runcard["characterization"]:
         couplers = {
             json.loads(c): Coupler(json.loads(c), **char)
@@ -69,14 +70,14 @@ def load_qubits(
         }
         for c, pair in runcard["topology"].items():
             q0, q1 = pair
-            char = runcard["characterization"]["two_qubit"][str(q0) + "-" + str(q1)]
+            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
                 qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(c)]
             )
-    elif "two_qubit" in runcard["characterization"]:
+    else:
         for pair in runcard["topology"]:
             q0, q1 = pair
-            char = runcard["characterization"]["two_qubit"][str(q0) + "-" + str(q1)]
+            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
                 qubits[q0], qubits[q1], **char, coupler=None
             )
