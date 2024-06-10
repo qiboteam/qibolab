@@ -348,11 +348,11 @@
                 "gate_fidelity": [0.0, 0.0],
                 "cz_fidelity": [0.0, 0.0]
             },
-            "3-2": {
+            "2-3": {
                 "gate_fidelity": [0.0, 0.0],
                 "cz_fidelity": [0.0, 0.0]
             },
-            "4-2": {
+            "2-4": {
                 "gate_fidelity": [0.0, 0.0],
                 "cz_fidelity": [0.0, 0.0]
             }

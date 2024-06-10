@@ -67,20 +67,16 @@ def load_qubits(
             json.loads(c): Coupler(json.loads(c), **char)
             for c, char in runcard["characterization"]["coupler"].items()
         }
-
-        for (c, pair), char in zip(
-            runcard["topology"].items(),
-            runcard["characterization"]["two_qubit"].values(),
-        ):
-            q0, q1 = pair[1]
+        for c, pair in runcard["topology"].items():
+            q0, q1 = pair
+            char = runcard["characterization"]["two_qubit"][str(q0) + "-" + str(q1)]
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(pair[0])]
+                qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(c)]
             )
     elif "two_qubit" in runcard["characterization"]:
-        for (c, pair), char in zip(
-            runcard["topology"], runcard["characterization"]["two_qubit"].values()
-        ):
+        for pair in runcard["topology"]:
             q0, q1 = pair
+            char = runcard["characterization"]["two_qubit"][str(q0) + "-" + str(q1)]
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
                 qubits[q0], qubits[q1], **char, coupler=None
             )
@@ -150,7 +146,7 @@ def dump_native_gates(
         }
 
     # two-qubit native gates
-    if pairs is not None:
+    if len(pairs) > 0:
         native_gates["two_qubit"] = {}
         for pair in pairs.values():
             natives = pair.native_gates.raw
@@ -172,7 +168,7 @@ def dump_characterization(
         },
     }
 
-    if pairs is not None:
+    if len(pairs) > 0:
         characterization["two_qubit"] = {
             json.dumps(p): pair.characterization for p, pair in pairs.items()
         }
