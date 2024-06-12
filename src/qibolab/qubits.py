@@ -3,14 +3,14 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.channel import Channel
+from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
 """Type for qubit names."""
 
-CHANNEL_NAMES = ("readout", "acquisition", "drive", "flux", "twpa")
+CHANNEL_NAMES = ("measure", "acquisition", "drive", "flux")
 """Names of channels that belong to a qubit.
 
 Not all channels are required to operate a qubit.
@@ -31,8 +31,6 @@ class Qubit:
         name (int, str): Qubit number or name.
         readout (:class:`qibolab.platforms.utils.Channel`): Channel used to
             readout pulses to the qubit.
-        feedback (:class:`qibolab.platforms.utils.Channel`): Channel used to
-            get readout feedback from the qubit.
         drive (:class:`qibolab.platforms.utils.Channel`): Channel used to
             send drive pulses to the qubit.
         flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
@@ -83,10 +81,10 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
-    readout: Optional[Channel] = None
-    acquisition: Optional[Channel] = None
-    drive: Optional[Channel] = None
-    flux: Optional[Channel] = None
+    measure: Optional[IqChannel] = None
+    acquisition: Optional[AcquireChannel] = None
+    drive: Optional[IqChannel] = None
+    flux: Optional[DcChannel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 

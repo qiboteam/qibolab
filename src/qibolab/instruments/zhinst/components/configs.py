@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from qibolab.channel.configs import AcquisitionConfig, DcConfig, IqConfig
+from qibolab.components import AcquisitionConfig, DcConfig, IqConfig
 
 __all__ = [
     "ZiDcConfig",
