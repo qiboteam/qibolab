@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import networkx as nx
 from qibo.config import log, raise_error
 
-from .channel import Channel, external_config
+from .components import Config
 from .couplers import Coupler
 from .execution_parameters import ExecutionParameters
 from .instruments.abstract import Controller, Instrument, InstrumentId
@@ -93,6 +93,8 @@ class Platform:
     pairs: QubitPairMap
     """Dictionary mapping tuples of qubit names to
     :class:`qibolab.qubits.QubitPair` objects."""
+    components: dict[str, Config]
+    """Maps name of component to its default config."""
     instruments: InstrumentMap
     """Dictionary mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
@@ -115,12 +117,6 @@ class Platform:
     topology: nx.Graph = field(default_factory=nx.Graph)
     """Graph representing the qubit connectivity in the quantum chip."""
 
-    channels: dict[str, Channel] = field(default_factory=dict, init=False)
-    """Channels of this platform.
-
-    Mapping channel name to channel.
-    """
-
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
@@ -130,15 +126,6 @@ class Platform:
         self.topology.add_edges_from(
             [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
         )
-
-        for qubit in self.qubits.values():
-            self.channels[qubit.drive.name] = qubit.drive
-            self.channels[qubit.readout.name] = qubit.readout
-            self.channels[qubit.acquisition.name] = qubit.acquisition
-            if qubit.flux is not None:
-                self.channels[qubit.flux.name] = qubit.flux
-        for coupler in self.couplers.values():
-            self.channels[coupler.flux.name] = coupler.flux
 
     def __str__(self):
         return self.name
@@ -181,6 +168,30 @@ class Platform:
             for instrument in self.instruments.values():
                 instrument.disconnect()
         self.is_connected = False
+
+    def _apply_config_updates(
+        self, updates: list[dict[str, Config]]
+    ) -> dict[str, Config]:
+        """Apply given list of config updates to the default configuration and
+        return the updated config dict.
+
+        Args:
+            updates: list of updates, where each entry is a dict mapping component name to new config. Later entries
+                     in the list override earlier entries (if they happen to update the same thing).
+        """
+        components = self.components.copy()
+        for update in updates:
+            for name, cfg in update.items():
+                if name not in components:
+                    raise ValueError(
+                        f"Cannot update configuration for unknown component {name}"
+                    )
+                if type(cfg) is not type(components[name]):
+                    raise ValueError(
+                        f"Configuration of component {name} with type {type(components[name])} cannot be updated with configuration of type {type(cfg)}"
+                    )
+                components[name] = cfg
+        return components
 
     def _execute(self, sequences, options, **kwargs):
         """Executes sequence on the controllers."""
@@ -318,9 +329,13 @@ class Platform:
             time *= len(sweep.values)
         log.info(f"Minimal execution time (sweep): {time}")
 
-        for name, ch in self.channels.items():
-            for inst, cfg in external_config(ch, options.channel_cfg.get(name)):
-                self.instruments[inst].setup(**asdict(cfg))
+        configs = self._apply_config_updates(options.component_configs)
+
+        # for components that represent aux external instruments (e.g. lo) to the main control instrument
+        # set the config directly
+        for name, cfg in configs.items():
+            if name in self.instruments:
+                self.instruments[name].setup(**asdict(cfg))
 
         result = {}
         for instrument in self.instruments.values():
@@ -328,6 +343,7 @@ class Platform:
                 new_result = instrument.sweep(
                     self.qubits,
                     self.couplers,
+                    configs,
                     [sequence],
                     options,
                     *sweepers,

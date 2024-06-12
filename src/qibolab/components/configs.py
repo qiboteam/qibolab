@@ -1,14 +1,22 @@
-from dataclasses import dataclass
-from typing import Optional
+"""Configuration for various components.
 
-"""Common configuration for various channels."""
+These represent the minimal needed configuration that needs to be
+exposed to users. Specific definitions of components can expose more,
+and that can be used in any troubleshooting or debugging purposes by
+users, but in general any user tool should try to depend only on the
+configuration defined by these classes.
+"""
+
+from dataclasses import dataclass
+from typing import Union
 
 __all__ = [
     "DcConfig",
     "IqConfig",
     "AcquisitionConfig",
-    "OscillatorConfig",
     "IqMixerConfig",
+    "OscillatorConfig",
+    "Config",
 ]
 
 
@@ -23,7 +31,7 @@ class DcConfig:
 
 @dataclass(frozen=True)
 class OscillatorConfig:
-    """Configuration for a local oscillator."""
+    """Configuration for an oscillator."""
 
     frequency: float
     power: float
@@ -56,17 +64,6 @@ class IqConfig:
 
     frequency: float
     """The carrier frequency of the channel."""
-    lo_config: Optional[OscillatorConfig]
-    """Configuration for the corresponding LO.
-
-    None if the channel does not use an LO.
-    """
-    mixer_config: Optional[IqMixerConfig]
-    """Configuration for the corresponding IQ mixer.
-
-    None if the channel does not feature a mixer, or the mixer does not
-    require calibration.
-    """
 
 
 @dataclass(frozen=True)
@@ -76,12 +73,10 @@ class AcquisitionConfig:
     Currently, in qibolab, acquisition channels are FIXME:
     """
 
-    twpa_pump_config: Optional[OscillatorConfig]
-    """Config for the corresponding TWPA pump.
-
-    None if the channel does not feature a TWPA.
-    """
     delay: float
     """Delay between readout pulse start and acquisition start."""
     smearing: float
     """FIXME:"""
+
+
+Config = Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig]

@@ -6,18 +6,11 @@ example for more details.
 """
 
 import json
-from collections.abc import Iterable
 from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple, Union
 
-from qibolab.channel import (
-    AcquisitionConfig,
-    Channel,
-    ChannelConfig,
-    IqMixerConfig,
-    OscillatorConfig,
-)
+from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -180,28 +173,13 @@ def load_instrument_settings(
     return instruments
 
 
-def load_channel_config(
+def load_component_config(
     runcard: dict,
-    channel: str,
+    component: str,
     config_class: type,
-    *,
-    lo_config_class: type = OscillatorConfig,
-    mixer_config_class: type = IqMixerConfig,
-    acquisition_config_class: type = AcquisitionConfig,
-    twpa_pump_config_class: type = OscillatorConfig,
-) -> ChannelConfig:
-    """Load configuration for given channel."""
-    config_dict = runcard["channels"][channel]
-    nested_cfg = {
-        "lo_config": lo_config_class,
-        "mixer_config": mixer_config_class,
-        "acquisition_config": acquisition_config_class,
-        "twpa_pump_config": twpa_pump_config_class,
-    }
-    for attr, class_ in nested_cfg.items():
-        if config_dict.get(attr) is not None:
-            config_dict[attr] = class_(**config_dict[attr])
-    return config_class(**config_dict)
+) -> Config:
+    """Load configuration for given component."""
+    return config_class(**runcard["components"][component])
 
 
 def _dump_pulse(pulse: Pulse):
@@ -303,9 +281,9 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     return data
 
 
-def dump_channels(channels: Iterable[Channel]) -> dict:
+def dump_components(components) -> dict:
     """Dump channel configs."""
-    return {ch.name: asdict(ch.config) for ch in channels}
+    return {name: asdict(cfg) for name, cfg in components.items()}
 
 
 def dump_runcard(platform: Platform, path: Path):
@@ -324,7 +302,7 @@ def dump_runcard(platform: Platform, path: Path):
         "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
-        "channels": dump_channels(platform.channels.values()),
+        "components": dump_components(platform.components),
     }
 
     if platform.couplers:

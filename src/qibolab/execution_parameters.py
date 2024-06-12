@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import Optional
 
-from qibolab.channel import ChannelConfig
+from qibolab.components import Config
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedRawWaveformResults,
@@ -72,11 +72,12 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    channel_cfg: dict[str, ChannelConfig] = {}
-    """Configuration for various channels (maps channel name to respective
+    component_configs: list[dict[str, Config]] = []
+    """Configuration for various components (maps component name to respective
     config).
 
-    This takes precedence over platform defaults.
+    This takes precedence over platform defaults, and can be only a
+    subset of components (i.e. only the ones that need to be updated).
     """
 
     @property
