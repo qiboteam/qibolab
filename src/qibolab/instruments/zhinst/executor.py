@@ -9,14 +9,14 @@ import numpy as np
 from laboneq.dsl.device import create_connection
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Delay, Pulse, PulseSequence
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
-from . import ZiChannel
+from ...components import AcquireChannel, Config, DcChannel, IqChannel
+from .components import ZiChannel
 from .pulse import select_pulse
 from .sweep import ProcessedSweeps, classify_sweepers
 from .util import NANO_TO_SECONDS, SAMPLING_RATE
@@ -61,13 +61,14 @@ class Zurich(Controller):
 
         for ch in channels:
             device_setup.add_connections(
-                ch.device, create_connection(to_signal=ch.name, ports=ch.path)
+                ch.device,
+                create_connection(to_signal=ch.logical_channel.name, ports=ch.path),
             )
         self.device_setup = device_setup
         self.session = None
         "Zurich device parameters for connection"
 
-        self.channels = {ch.name: ch for ch in channels}
+        self.channels = {ch.logical_channel.name: ch for ch in channels}
 
         self.chanel_to_qubit = {}
 
@@ -112,70 +113,59 @@ class Zurich(Controller):
             _ = self.session.disconnect()
             self.is_connected = False
 
-    def calibration_step(self, qubits, couplers, options):
+    def calibration_step(self, configs: dict[str, Config], options):
         """Zurich general pre experiment calibration definitions.
 
         Change to get frequencies from sequence
         """
 
-        for coupler in couplers.values():
-            self.register_couplerflux_line(coupler)
-
-        for qubit in qubits.values():
-            if qubit.flux is not None:
-                self.register_flux_line(qubit)
-            if any(len(seq[qubit.drive.name]) != 0 for seq in self.sequences):
-                self.register_drive_line(
-                    qubit=qubit,
-                    intermediate_frequency=qubit.drive.config.frequency
-                    - qubit.drive.config.lo_config.frequency,
-                )
-            if any(len(seq[qubit.readout.name]) != 0 for seq in self.sequences):
-                self.register_readout_line(
-                    qubit=qubit,
-                    intermediate_frequency=qubit.readout.config.frequency
-                    - qubit.readout.config.lo_config.frequency,
-                    options=options,
-                )
+        for ch in self.channels.values():
+            if isinstance(ch.logical_channel, DcChannel):
+                self.configure_dc_line(ch.logical_channel, configs)
+            if isinstance(ch.logical_channel, IqChannel):
+                self.configure_iq_line(ch.logical_channel, configs)
+            if isinstance(ch.logical_channel, AcquireChannel):
+                self.configure_acquire_line(ch.logical_channel, configs)
         self.device_setup.set_calibration(self.calibration)
 
-    def register_readout_line(self, qubit, intermediate_frequency, options):
-        """Registers qubit measure and acquire lines to calibration and signal
-        map.
+    def configure_dc_line(self, channel: DcChannel, configs: dict[str, Config]):
+        signal = self.device_setup.logical_signal_by_uid(channel.name)
+        self.signal_map[channel.name] = signal
+        self.calibration[signal.name] = laboneq.SignalCalibration(
+            range=configs[channel.name].power_range,
+            port_delay=None,
+            delay_signal=0,
+            voltage_offset=configs[channel.name].offset,
+        )
 
-        Note
-        ----
-        To allow debugging with and oscilloscope, just set the following::
-
-            self.calibration[f"/logical_signal_groups/q{q}/measure_line"] = lo.SignalCalibration(
-                ...,
-                local_oscillator=lo.Oscillator(
-                    ...
-                    frequency=0.0,
-                ),
-                ...,
-                port_mode=lo.PortMode.LF,
-                ...,
-            )
-        """
-
-        measure_signal = self.device_setup.logical_signal_by_uid(qubit.readout.name)
-        self.signal_map[qubit.readout.name] = measure_signal
-        self.calibration[measure_signal.path] = laboneq.SignalCalibration(
+    def configure_iq_line(self, channel: IqChannel, configs: dict[str, Config]):
+        intermediate_frequency = (
+            configs[channel.name].frequency - configs[channel.lo].frequency
+        )
+        signal = self.device_setup.logical_signal_by_uid(channel.name)
+        self.signal_map[channel.name] = signal
+        self.calibration[signal.path] = laboneq.SignalCalibration(
             oscillator=laboneq.Oscillator(
                 frequency=intermediate_frequency,
-                modulation_type=laboneq.ModulationType.SOFTWARE,
+                modulation_type=laboneq.ModulationType.HARDWARE,
             ),
             local_oscillator=laboneq.Oscillator(
-                frequency=int(qubit.readout.config.lo_config.frequency),
+                frequency=int(configs[channel.lo].frequency),
             ),
-            range=qubit.readout.config.power_range,
+            range=configs[channel.name].power_range,
             port_delay=None,
             delay_signal=0,
         )
 
-        acquire_signal = self.device_setup.logical_signal_by_uid(qubit.acquisition.name)
-        self.signal_map[qubit.acquisition.name] = acquire_signal
+    def configure_acquire_line(
+        self, channel: AcquireChannel, configs: dict[str, Config]
+    ):
+        intermediate_frequency = (
+            configs[channel.measure].frequency
+            - configs[self.channels[channel.measure].logical_channel.lo].frequency
+        )
+        acquire_signal = self.device_setup.logical_signal_by_uid(channel.name)
+        self.signal_map[channel.name] = acquire_signal
 
         oscillator = laboneq.Oscillator(
             frequency=intermediate_frequency,
@@ -183,58 +173,20 @@ class Zurich(Controller):
         )
         threshold = None
 
-        if options.acquisition_type == AcquisitionType.DISCRIMINATION:
-            if qubit.kernel is not None:
-                # Kernels don't work with the software modulation on the acquire signal
-                oscillator = None
-            else:
-                # To keep compatibility with angle and threshold discrimination (Remove when possible)
-                threshold = qubit.threshold
+        # FIXME:
+        # if options.acquisition_type == AcquisitionType.DISCRIMINATION:
+        #     if qubit.kernel is not None:
+        #         # Kernels don't work with the software modulation on the acquire signal
+        #         oscillator = None
+        #     else:
+        #         # To keep compatibility with angle and threshold discrimination (Remove when possible)
+        #         threshold = qubit.threshold
 
         self.calibration[acquire_signal.path] = laboneq.SignalCalibration(
             oscillator=oscillator,
-            range=qubit.acquisition.config.power_range,
+            range=configs[channel.name].power_range,
             port_delay=self.time_of_flight * NANO_TO_SECONDS,
             threshold=threshold,
-        )
-
-    def register_drive_line(self, qubit, intermediate_frequency):
-        """Registers qubit drive line to calibration and signal map."""
-        drive_signal = self.device_setup.logical_signal_by_uid(qubit.drive.name)
-        self.signal_map[qubit.drive.name] = drive_signal
-        self.calibration[drive_signal.path] = laboneq.SignalCalibration(
-            oscillator=laboneq.Oscillator(
-                frequency=intermediate_frequency,
-                modulation_type=laboneq.ModulationType.HARDWARE,
-            ),
-            local_oscillator=laboneq.Oscillator(
-                frequency=int(qubit.drive.config.lo_config.frequency),
-            ),
-            range=qubit.drive.config.power_range,
-            port_delay=None,
-            delay_signal=0,
-        )
-
-    def register_flux_line(self, qubit):
-        """Registers qubit flux line to calibration and signal map."""
-        flux_signal = self.device_setup.logical_signal_by_uid(qubit.flux.name)
-        self.signal_map[qubit.flux.name] = flux_signal
-        self.calibration[flux_signal.name] = laboneq.SignalCalibration(
-            range=qubit.flux.config.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=qubit.flux.config.offset,
-        )
-
-    def register_couplerflux_line(self, coupler):
-        """Registers qubit flux line to calibration and signal map."""
-        flux_signal = self.device_setup.logical_signal_by_uid(coupler.flux.name)
-        self.signal_map[coupler.flux.name] = flux_signal
-        self.calibration[flux_signal.path] = laboneq.SignalCalibration(
-            range=coupler.flux.config.power_range,
-            port_delay=None,
-            delay_signal=0,
-            voltage_offset=coupler.flux.config.offset,
         )
 
     def run_exp(self):
@@ -253,7 +205,7 @@ class Zurich(Controller):
     def experiment_flow(
         self,
         qubits: dict[str, Qubit],
-        couplers: dict[str, Coupler],
+        configs: dict[str, Config],
         sequences: list[PulseSequence],
         options: ExecutionParameters,
     ):
@@ -264,18 +216,17 @@ class Zurich(Controller):
 
         Args:
             qubits: qubits for the platform.
-            couplers: couplers for the platform.
             sequences: list of sequences to be played in the experiment.
             options: execution options/parameters
         """
         self.sequences = sequences
-        self.calibration_step(qubits, couplers, options)
+        self.calibration_step(configs, options)
         self.create_exp(qubits, options)
 
     # pylint: disable=W0221
-    def play(self, qubits, couplers, sequence, options):
+    def play(self, qubits, configs, sequence, options):
         """Play pulse sequence."""
-        return self.sweep(qubits, couplers, sequence, options)
+        return self.sweep(qubits, configs, sequence, options)
 
     def create_exp(self, qubits, options):
         """Zurich experiment initialization using their Experiment class."""
@@ -552,7 +503,7 @@ class Zurich(Controller):
     def sweep(
         self,
         qubits,
-        couplers,
+        configs: dict[str, Config],
         sequences: list[PulseSequence],
         options,
         *sweepers,
@@ -574,7 +525,7 @@ class Zurich(Controller):
                     if ch in readout_channels:
                         self.acquisition_type = laboneq.AcquisitionType.SPECTROSCOPY
 
-        self.experiment_flow(qubits, couplers, sequences, options)
+        self.experiment_flow(qubits, configs, sequences, options)
         self.run_exp()
 
         #  Get the results back
