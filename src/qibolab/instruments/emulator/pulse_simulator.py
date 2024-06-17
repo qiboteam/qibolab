@@ -642,7 +642,7 @@ def get_results_from_samples(
     ro_pulse_list: list,
     samples: dict[Union[str, int], list],
     execution_parameters: ExecutionParameters,
-    append_to_shape: list = [],
+    prepend_to_shape: list = [],
 ) -> dict[str, Union[IntegratedResults, SampleResults]]:
     """Converts samples into Qibolab results format.
 
@@ -662,10 +662,12 @@ def get_results_from_samples(
     Raises:
         ValueError: If execution_parameters.acquisition_type is not supported.
     """
-    shape = [execution_parameters.nshots] + append_to_shape
+    shape = prepend_to_shape + [execution_parameters.nshots]
+    tshape = [-1]+list(range(len(prepend_to_shape)))
+
     results = {}
     for ro_pulse in ro_pulse_list:
-        values = np.array(samples[ro_pulse.qubit]).reshape(shape)
+        values = np.array(samples[ro_pulse.qubit]).reshape(shape).transpose(tshape)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
             processed_values = SampleResults(values)

@@ -266,8 +266,6 @@ def test_pulse_simulator_play_no_dissipation_dt_units_false_history_ro_exception
     pulse_simulator.runcard_duration_in_dt_units = True
     pulse_simulator.simulate_dissipation = False
     pulse_simulator.output_state_history = False
-    ##pulse_simulator.model_config["drift"].update({"two_body": []}) # to check
-    ##pulse_simulator.model_config["dissipation"].update({"t1": []}) # to check
     sequence = PulseSequence()
     sequence.add(platform.create_RX_pulse(0, 0))
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
