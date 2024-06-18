@@ -428,7 +428,10 @@ def test_sweep(mocker, dummy_qrc):
     )
 
     nshots = 100
-    server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
+    server_results = (
+        [[[np.random.rand(nshots)] * 10]],
+        [[[np.random.rand(nshots)] * 10]],
+    )
     mocker.patch("qibosoq.client.connect", return_value=server_results)
     parameters = ExecutionParameters(
         nshots=nshots,

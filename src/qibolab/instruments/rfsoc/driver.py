@@ -24,6 +24,8 @@ from .convert import convert, convert_units_sweeper
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
 
+my_count = 0
+
 
 @dataclass
 class RFSoCPort(Port):
@@ -354,7 +356,9 @@ class RFSoC(Controller):
                     setattr(
                         sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx]
                     )
-                elif sweeper is rfsoc.Parameter.DELAY:
+                    if sweeper_parameter is rfsoc.Parameter.DURATION:
+                        sequence[1].start = sequence[0].duration
+                elif sweeper_parameter is rfsoc.Parameter.DELAY:
                     sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
@@ -366,7 +370,7 @@ class RFSoC(Controller):
                 execution_parameters=execution_parameters,
             )
             results = self.merge_sweep_results(results, res)
-        return results  # already in the right format
+        return results
 
     @staticmethod
     def merge_sweep_results(
@@ -386,12 +390,12 @@ class RFSoC(Controller):
         """
         for serial in dict_b:
             if serial in dict_a:
-                cls = dict_a[serial].__class__
-                if isinstance(dict_a[serial], IntegratedResults):
-                    new_data = np.append(dict_a[serial].voltage, dict_b[serial].voltage)
-                elif isinstance(dict_a[serial], SampleResults):
-                    new_data = np.append(dict_a[serial].samples, dict_b[serial].samples)
-                dict_a[serial] = cls(new_data)
+                data = lambda res: (
+                    res.voltage if isinstance(res, IntegratedResults) else res.samples
+                )
+                dict_a[serial] = type(dict_a[serial])(
+                    np.append(data(dict_a[serial]), data(dict_b[serial]))
+                )
             else:
                 dict_a[serial] = dict_b[serial]
         return dict_a
@@ -497,12 +501,30 @@ class RFSoC(Controller):
                     discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
                         discriminated_shots = np.mean(discriminated_shots, axis=0)
-                    result = execution_parameters.results_type(discriminated_shots)
+                        result = execution_parameters.results_type(
+                            None, discriminated_shots  # TODO: What is the stat_freq?
+                        )
+                    else:
+                        result = execution_parameters.results_type(discriminated_shots)
+
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
         return results
+
+    @staticmethod
+    def reshape_sweep_results(results, sweepers, execution_parameters):
+        shape = [len(sweeper.values) for sweeper in sweepers]
+        if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+            shape.insert(0, execution_parameters.nshots)
+        data = lambda res: (
+            res.voltage if isinstance(res, IntegratedResults) else res.samples
+        )
+        return {
+            key: type(value)(data(value).reshape(shape))
+            for key, value in results.items()
+        }
 
     def sweep(
         self,
@@ -566,20 +588,9 @@ class RFSoC(Controller):
             execution_parameters=execution_parameters,
         )
 
-        shape = [len(sweeper.values) for sweeper in sweepers]
-        if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-            shape.insert(0, execution_parameters.nshots)
-        data = lambda res: (
-            res.voltage if isinstance(res, IntegratedResults) else res.samples
-        )
-        results = {
-            key: type(value)(data(value).reshape(shape))
-            for key, value in results.items()
-        }
-
         if bias_change:
             for idx, qubit in enumerate(qubits.values()):
                 if qubit.flux is not None:
                     qubit.flux.offset = initial_biases[idx]
 
-        return results
+        return self.reshape_sweep_results(results, sweepers, execution_parameters)
