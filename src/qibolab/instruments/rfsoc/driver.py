@@ -16,7 +16,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
-from qibolab.result import IntegratedResults, SampleResults
+from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResults
 from qibolab.sweeper import BIAS, Sweeper
 
 from .convert import convert, convert_units_sweeper
@@ -200,8 +200,15 @@ class RFSoC(Controller):
                         i_pulse, q_pulse, qubits[ro_pulse.qubit]
                     )
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, axis=0)
-                    result = execution_parameters.results_type(discriminated_shots)
+                        _, counts = np.unique(
+                            discriminated_shots, return_counts=True, axis=0
+                        )
+                        freqs = counts / np.shape(discriminated_shots)[0]
+                        result = execution_parameters.results_type(
+                            freqs, discriminated_shots
+                        )
+                    else:
+                        result = execution_parameters.results_type(discriminated_shots)
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
@@ -499,9 +506,12 @@ class RFSoC(Controller):
                     qubit = qubits[ro_pulse.qubit]
                     discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
                     if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, axis=0)
+                        _, counts = np.unique(
+                            discriminated_shots, return_counts=True, axis=0
+                        )
+                        freqs = counts / np.shape(discriminated_shots)[0]
                         result = execution_parameters.results_type(
-                            None, discriminated_shots  # TODO: What is the stat_freq?
+                            freqs, discriminated_shots
                         )
                     else:
                         result = execution_parameters.results_type(discriminated_shots)
@@ -517,13 +527,16 @@ class RFSoC(Controller):
         shape = [len(sweeper.values) for sweeper in sweepers]
         if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
             shape.insert(0, execution_parameters.nshots)
-        data = lambda res: (
-            res.voltage if isinstance(res, IntegratedResults) else res.samples
-        )
-        return {
-            key: type(value)(data(value).reshape(shape))
-            for key, value in results.items()
-        }
+        new_res = {}
+        for key, value in results.items():
+            if isinstance(value, IntegratedResults):
+                data = value.voltage
+            elif isinstance(value, AveragedSampleResults):
+                data = value.statistical_frequency
+            else:
+                data = value.samples
+            new_res[key] = type(value)(data.reshape(shape))
+        return new_res
 
     def sweep(
         self,
