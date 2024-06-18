@@ -24,8 +24,6 @@ from .convert import convert, convert_units_sweeper
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
 
-my_count = 0
-
 
 @dataclass
 class RFSoCPort(Port):
@@ -357,7 +355,8 @@ class RFSoC(Controller):
                         sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx]
                     )
                     if sweeper_parameter is rfsoc.Parameter.DURATION:
-                        sequence[1].start = sequence[0].duration
+                        for pulse_idx in range(kdx + 1, len(sequence)):
+                            sequence[pulse_idx].start = sequence[pulse_idx - 1].duration
                 elif sweeper_parameter is rfsoc.Parameter.DELAY:
                     sequence[kdx].start_delay = values[jdx][idx]
 
