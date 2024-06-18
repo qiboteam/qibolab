@@ -366,20 +366,7 @@ class RFSoC(Controller):
                 execution_parameters=execution_parameters,
             )
             results = self.merge_sweep_results(results, res)
-        results = self.squeeze_results(results)
         return results  # already in the right format
-
-    def squeeze_results(self, res):
-        new_res = {}
-        for key in res:
-            cls = res[key].__class__
-            data = (
-                res[key].voltage
-                if isinstance(res[key], IntegratedResults)
-                else res[key].samples
-            )
-            new_res[key] = cls(np.squeeze(data))
-        return new_res
 
     @staticmethod
     def merge_sweep_results(
@@ -401,9 +388,7 @@ class RFSoC(Controller):
             if serial in dict_a:
                 cls = dict_a[serial].__class__
                 if isinstance(dict_a[serial], IntegratedResults):
-                    new_data = np.column_stack(
-                        [dict_a[serial].voltage, dict_b[serial].voltage]
-                    )
+                    new_data = np.append(dict_a[serial].voltage, dict_b[serial].voltage)
                 elif isinstance(dict_a[serial], SampleResults):
                     new_data = np.append(dict_a[serial].samples, dict_b[serial].samples)
                 dict_a[serial] = cls(new_data)
@@ -580,6 +565,17 @@ class RFSoC(Controller):
             *rfsoc_sweepers,
             execution_parameters=execution_parameters,
         )
+
+        shape = [len(sweeper.values) for sweeper in sweepers]
+        if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+            shape.insert(0, execution_parameters.nshots)
+        data = lambda res: (
+            res.voltage if isinstance(res, IntegratedResults) else res.samples
+        )
+        results = {
+            key: type(value)(data(value).reshape(shape))
+            for key, value in results.items()
+        }
 
         if bias_change:
             for idx, qubit in enumerate(qubits.values()):
