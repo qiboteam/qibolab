@@ -362,7 +362,10 @@ class RFSoC(Controller):
                         sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx]
                     )
                     if sweeper_parameter is rfsoc.Parameter.DURATION:
-                        for pulse_idx in range(kdx + 1, len(sequence)):
+                        for pulse_idx in range(
+                            kdx + 1,
+                            len(sequence.get_qubit_pulses(qubits[list(qubits)[kdx]])),
+                        ):
                             sequence[pulse_idx].start = sequence[pulse_idx - 1].duration
                 elif sweeper_parameter is rfsoc.Parameter.DELAY:
                     sequence[kdx].start_delay = values[jdx][idx]
