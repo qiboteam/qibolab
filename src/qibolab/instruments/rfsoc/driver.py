@@ -127,14 +127,15 @@ class RFSoC(Controller):
         Returns:
             Lists of I and Q value measured
         """
-        for sweeper in sweepers:
-            convert_units_sweeper(sweeper, sequence, qubits)
+        converted_sweepers = [
+            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
+        ]
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "sweepers": [sweeper.serialized for sweeper in sweepers],
+            "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
         }
         return self._try_to_execute(server_commands, self.host, self.port)
 
@@ -364,9 +365,9 @@ class RFSoC(Controller):
                     if sweeper_parameter is rfsoc.Parameter.DURATION:
                         for pulse_idx in range(
                             kdx + 1,
-                            len(sequence.get_qubit_pulses(qubits[list(qubits)[kdx]])),
+                            len(sequence.get_qubit_pulses(sequence[kdx].qubit)),
                         ):
-                            sequence[pulse_idx].start = sequence[pulse_idx - 1].duration
+                            sequence[pulse_idx].start = sequence[pulse_idx - 1].finish
                 elif sweeper_parameter is rfsoc.Parameter.DELAY:
                     sequence[kdx].start_delay = values[jdx][idx]
 

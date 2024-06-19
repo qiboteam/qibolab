@@ -55,8 +55,9 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
 
 def convert_units_sweeper(
     sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
-):
+) -> rfsoc.Sweeper:
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
+    sweeper = rfsoc.Sweeper(**asdict(sweeper))
     for idx, jdx in enumerate(sweeper.indexes):
         parameter = sweeper.parameters[idx]
         if parameter is rfsoc.Parameter.FREQUENCY:
@@ -70,6 +71,7 @@ def convert_units_sweeper(
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
             sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
+    return sweeper
 
 
 @singledispatch

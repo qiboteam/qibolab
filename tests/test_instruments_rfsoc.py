@@ -210,7 +210,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[10e6],
         expts=100,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
 
     assert sweeper.starts == [-1]
     assert sweeper.stops == [9]
@@ -223,7 +223,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[10e6],
         expts=100,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
     assert sweeper.starts == [0]
     assert sweeper.stops == [10]
 
@@ -235,7 +235,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[100, 140],
         expts=100,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
     assert (sweeper.starts == [0, 0.04]).all()
     assert (sweeper.stops == [0.1, 0.14]).all()
 
@@ -247,7 +247,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[np.pi],
         expts=180,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
     assert sweeper.starts == [0]
     assert sweeper.stops == [180]
 
