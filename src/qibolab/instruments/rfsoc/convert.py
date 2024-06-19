@@ -1,5 +1,6 @@
 """Convert helper functions for rfsoc driver."""
 
+from copy import deepcopy
 from dataclasses import asdict
 from functools import singledispatch
 
@@ -57,7 +58,7 @@ def convert_units_sweeper(
     sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
 ) -> rfsoc.Sweeper:
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
-    sweeper = rfsoc.Sweeper(**asdict(sweeper))
+    sweeper = deepcopy(sweeper)
     for idx, jdx in enumerate(sweeper.indexes):
         parameter = sweeper.parameters[idx]
         if parameter is rfsoc.Parameter.FREQUENCY:
