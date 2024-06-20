@@ -667,7 +667,7 @@ def get_results_from_samples(
         ValueError: If execution_parameters.acquisition_type is not supported.
     """
     shape = prepend_to_shape + [execution_parameters.nshots]
-    tshape = [-1]+list(range(len(prepend_to_shape)))
+    tshape = [-1] + list(range(len(prepend_to_shape)))
 
     results = {}
     for ro_pulse in ro_pulse_list:
