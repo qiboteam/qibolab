@@ -12,7 +12,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
 from qibolab.platform import Coupler, Qubit
-from qibolab.pulses import PulseSequence, ReadoutPulse
+from qibolab.pulses import PulseSequence, ReadoutPulse, PulseType
 from qibolab.qubits import QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -247,18 +247,22 @@ class PulseSimulator(Controller):
         )
         simulation_dt_array = np.array(simulation_dt_array).reshape(sweeper_shape)
         simulation_time_array = np.array(simulation_time_array).reshape(sweeper_shape)
-
+        
         # reshape and reformat samples to results format
         results = get_results_from_samples(
             sequence.ro_pulses, sweep_samples, execution_parameters, sweeper_shape
         )
 
-        # Reset pulse values back to original values
+        # Reset pulse values back to original values (following icarusqfpga)
         for sweep, base_sweeper_values in zip(sweeper, bsv):
             param_name = sweep.parameter.name.lower()
             for pulse, value in zip(sweep.pulses, base_sweeper_values):
                 setattr(pulse, param_name, value)
-
+                # Since the sweeper will modify the readout pulse serial, we collate the results with the qubit number.
+                # This is only for qibocal compatiability and will be removed with IcarusQ v2.
+                if pulse.type is PulseType.READOUT:
+                    results[pulse.serial] = results[pulse.qubit]
+                    
         results.update(
             {
                 "simulation": {
@@ -269,7 +273,7 @@ class PulseSimulator(Controller):
                 }
             }
         )
-
+        
         return results
 
     def _sweep_recursion(
