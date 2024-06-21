@@ -121,6 +121,32 @@ It is useful for testing parts of the code that do not necessarily require acces
 will create a dummy platform that also has coupler qubits.
 
 
+.. _main_doc_emulator:
+
+Emulator platform
+^^^^^^^^^^^^^^^^^
+
+QiboLab supports the use of emulators to simulate the behavior of quantum devices. It uses :class:`qibolab.instruments.emulator.pulse_simulator.PulseSimulator`, which is a controller that utilizes a simulation engine to numerically solve the dynamics of the device in the presence of control pulse sequences specified by :class:`qibolab.pulses.PulseSequence`. The emulator platform for a specific device requires its own platform folder and can be initialized in the same way as any other real platforms:
+
+.. testcode:: python_emulator
+
+    import os
+    from pathlib import Path
+
+    path_to_emulator_runcard = str(Path.cwd().parent / "tests" / "emulators")
+
+    emulator_runcard_name = "default_q0"
+
+    os.environ["QIBOLAB_PLATFORMS"] = path_to_emulator_runcard  # can also be set beforehand
+
+    from qibolab import create_platform
+
+    platform = create_platform(emulator_runcard_name)
+
+An emulator platform is equivalent to real platforms in terms of attributes and functions, but returns simulated results.
+It is useful for testbedding and calibrating pulses, and testing calibration and characterization routines for the corresponding real device especially when access to the real device is limited or when it is unavailable.
+
+
 .. _main_doc_qubits:
 
 Qubits
@@ -702,6 +728,7 @@ A list of all the supported instruments follows:
 
 Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
+    - PulseSimulator Instrument: :class:`qibolab.instruments.emulator.pulse_simulator.PulseSimulator`
     - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
     - Quantum Machines: :class:`qibolab.instruments.qm.controller.QMController`
     - Qblox: :class:`qibolab.instruments.qblox.controller.QbloxCluster`
@@ -790,3 +817,33 @@ Compatible and tested with:
 - Xilinx ZCU216
 
 Technically compatible with any board running ``qibosoq``.
+
+Pulse Simulator
+^^^^^^^^^^^^^^^
+
+The simulation controller that is used exclusively by the emulator. It serves primarily to implement the device model using the selected quantum dynamics simulation library (engine), as well as translate and communicate between objects from ``qibolab`` and the selected engine.
+
+Available simulation engines:
+
+- ``qutip``
+
+Currently ``AcquisitionType.DISCRIMINATION`` and   ``AcquisitionType.INTEGRATION`` are supported. Note that for ``AcquistionType.INTEGRATION`` samples are projected onto the I component.
+
+Currently does not support:
+
+- Couplers
+- Flux pulses
+
+.. admonition:: Qibocal compatibility
+
+    The following protocols are currently compatible with the emulator platform (``default_q0``):
+
+    - `1D Rabi experiments`
+    - `Ramsey experiments`
+    - `T1`
+    - `T2`
+    - `T2 echo`
+    - `Flipping experiments`
+    - `Single Qubit State Tomography`
+    - `AllXY`
+    - `Standard RB`
