@@ -5,13 +5,7 @@ import numpy as np
 import pytest
 from qutip import Options, identity, tensor
 
-from qibolab import (
-    PLATFORMS,
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-    create_platform,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.emulator.engines.generic import op_from_instruction
 from qibolab.instruments.emulator.engines.qutip_engine import (
     QutipSimulator,
@@ -23,6 +17,7 @@ from qibolab.instruments.emulator.models import (
     models_template,
 )
 from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS
+from qibolab.platform.load import PLATFORMS
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
 
