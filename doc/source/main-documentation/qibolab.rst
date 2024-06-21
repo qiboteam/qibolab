@@ -838,10 +838,11 @@ Currently does not support:
 
     The following protocols are currently compatible with the emulator platform (``default_q0``):
 
-    - `1D Rabi experiment`
+    - `1D Rabi experiments`
     - `Ramsey experiments`
-    - `T1 only with sequences`
-    - `T2 only with sequences`
+    - `T1`
+    - `T2`
+    - `T2 echo`
     - `Flipping experiments`
     - `Single Qubit State Tomography`
     - `AllXY`
