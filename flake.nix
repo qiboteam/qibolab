@@ -42,7 +42,7 @@
           inherit inputs pkgs;
 
           modules = [
-            {
+            ({lib, ...}: {
               packages = with pkgs; [pre-commit poethepoet jupyter];
 
               env.QIBOLAB_PLATFORMS = platforms;
@@ -59,9 +59,15 @@
                 enable = true;
                 poetry = {
                   enable = true;
-                  install.enable = true;
-                  install.groups = ["dev" "tests"];
-                  install.allExtras = true;
+                  install = {
+                    enable = true;
+                    groups = ["dev" "tests"];
+                    extras = [
+                      (lib.strings.concatStrings
+                        (lib.strings.intersperse " -E "
+                          ["qblox" "qm" "zh" "rfsoc" "los"]))
+                    ];
+                  };
                 };
                 version = "3.11";
               };
@@ -70,7 +76,7 @@
                 enable = true;
                 channel = "stable";
               };
-            }
+            })
           ];
         };
       });

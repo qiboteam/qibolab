@@ -8,12 +8,12 @@ from typing import Dict, List, Union
 import numpy as np
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
-from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse
-from qibolab.qubits import QubitId
+from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
