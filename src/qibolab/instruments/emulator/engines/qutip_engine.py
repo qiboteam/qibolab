@@ -10,8 +10,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 from qutip import Options, Qobj, basis, expect, ket2dm, mesolve, ptrace
-from qutip.operators import identity as Id
-from qutip.tensor import tensor
+from qutip.core.operators import identity as Id
+from qutip.core.tensor import tensor
 from qutip.ui.progressbar import EnhancedTextProgressBar
 
 from qibolab.instruments.emulator.engines.generic import (
