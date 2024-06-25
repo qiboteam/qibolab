@@ -6,10 +6,6 @@
       url = "github:cachix/devenv";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixpkgs-python = {
-      url = "github:cachix/nixpkgs-python";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -49,7 +45,7 @@
               config,
               ...
             }: {
-              packages = with pkgs; [pre-commit poethepoet jupyter zlib];
+              packages = with pkgs; [pre-commit poethepoet jupyter];
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
@@ -65,6 +61,7 @@
 
               languages.python = {
                 enable = true;
+                libraries = with pkgs; [zlib];
                 poetry = {
                   enable = true;
                   install = {
@@ -77,7 +74,6 @@
                     ];
                   };
                 };
-                version = "3.11";
               };
 
               languages.rust = {
