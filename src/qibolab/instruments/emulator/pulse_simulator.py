@@ -12,7 +12,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
-from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse
+from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -22,7 +22,6 @@ AVAILABLE_SWEEP_PARAMETERS = {
     Parameter.duration,
     Parameter.frequency,
     Parameter.relative_phase,
-    Parameter.start,
 }
 
 SIMULATION_ENGINES = {
@@ -755,7 +754,7 @@ def truncate_ro_pulses(
     """
     sequence = copy.deepcopy(sequence)
     for i in range(len(sequence)):
-        if type(sequence[i]) is ReadoutPulse:
+        if sequence[i].type is PulseType.READOUT:
             sequence[i].duration = 1
 
     return sequence
