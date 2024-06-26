@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import networkx as nx
+import numpy as np
 from qibo.config import log, raise_error
 
 from .components import Config
@@ -346,15 +347,22 @@ class Platform:
             if name in self.instruments:
                 self.instruments[name].setup(**asdict(cfg))
 
+        # maps acquisition channel name to corresponding kernel and iq_angle
+        # FIXME: this is temporary solution to deliver the information to drivers
+        # until we make acquisition channels first class citizens in the sequences
+        # so that each acquisition command carries the info with it.
+        integration_setup: dict[str, tuple[np.ndarray, float]] = {}
+        for qubit in self.qubits.values():
+            integration_setup[qubit.acquisition.name] = (qubit.kernel, qubit.iq_angle)
+
         result = {}
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.sweep(
-                    self.qubits,
-                    self.couplers,
                     configs,
                     [sequence],
                     options,
+                    integration_setup,
                     *sweepers,
                 )
                 if isinstance(new_result, dict):
