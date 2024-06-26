@@ -120,7 +120,7 @@ class Platform:
     pairs: QubitPairMap
     """Dictionary mapping tuples of qubit names to
     :class:`qibolab.qubits.QubitPair` objects."""
-    components: dict[str, Config]
+    component_configs: dict[str, Config]
     """Maps name of component to its default config."""
     instruments: InstrumentMap
     """Dictionary mapping instrument names to
@@ -174,6 +174,15 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 return instrument.sampling_rate
+
+    @property
+    def components(self) -> set[str]:
+        """Names of all components available in the platform."""
+        return set(self.component_configs.keys())
+
+    def config(self, name: str) -> Config:
+        """Returns configuration of given component."""
+        return self.component_configs[name]
 
     def connect(self):
         """Connect to all instruments."""
