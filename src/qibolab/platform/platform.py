@@ -6,6 +6,7 @@ from math import prod
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import networkx as nx
+import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
@@ -246,14 +247,14 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, configs, options, sweepers):
+    def _execute(self, sequence, configs, options, integration_setup, sweepers):
         """Execute sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, configs, sequence, options, sweepers
+                    configs, sequence, options, integration_setup, sweepers
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -308,6 +309,14 @@ class Platform:
             if name in self.instruments:
                 self.instruments[name].setup(**asdict(cfg))
 
+        # maps acquisition channel name to corresponding kernel and iq_angle
+        # FIXME: this is temporary solution to deliver the information to drivers
+        # until we make acquisition channels first class citizens in the sequences
+        # so that each acquisition command carries the info with it.
+        integration_setup: dict[str, tuple[np.ndarray, float]] = {}
+        for qubit in self.qubits.values():
+            integration_setup[qubit.acquisition.name] = (qubit.kernel, qubit.iq_angle)
+
         # find readout pulses
         ro_pulses = {
             pulse.id: pulse.qubit
@@ -318,7 +327,9 @@ class Platform:
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, configs, options, sweepers)
+            result = self._execute(
+                sequence, configs, options, integration_setup, sweepers
+            )
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 

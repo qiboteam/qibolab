@@ -301,9 +301,9 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     return data
 
 
-def dump_components(components) -> dict:
+def dump_component_configs(component_configs) -> dict:
     """Dump channel configs."""
-    return {name: asdict(cfg) for name, cfg in components.items()}
+    return {name: asdict(cfg) for name, cfg in component_configs.items()}
 
 
 def dump_runcard(platform: Platform, path: Path):
@@ -322,7 +322,7 @@ def dump_runcard(platform: Platform, path: Path):
         "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
-        "components": dump_components(platform.components),
+        "components": dump_component_configs(platform.component_configs),
     }
 
     if platform.couplers:
