@@ -2,7 +2,7 @@
 
 from dataclasses import fields
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 
@@ -146,3 +146,6 @@ class VirtualZ(Model):
     def duration(self):
         """Duration of the virtual gate should always be zero."""
         return 0
+
+
+PulseLike = Union[Pulse, Delay, VirtualZ]
