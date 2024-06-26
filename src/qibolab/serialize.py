@@ -177,7 +177,9 @@ def register_gates(
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
         native_gates = _load_two_qubit_natives(qubits, couplers, gatedict)
         coupler = pairs[(q0, q1)].coupler
-        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], coupler, native_gates)
+        pairs[(q0, q1)] = QubitPair(
+            qubits[q0], qubits[q1], coupler=coupler, native_gates=native_gates
+        )
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
 
