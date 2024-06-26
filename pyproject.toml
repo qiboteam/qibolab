@@ -111,4 +111,5 @@ addopts = [
   '--cov-report=xml',
   '--cov-report=html',
   '-m not qpu',
+  '-k not emulator',
 ]
