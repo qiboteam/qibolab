@@ -216,7 +216,7 @@ class Platform:
             updates: list of updates, where each entry is a dict mapping component name to new config. Later entries
                      in the list override earlier entries (if they happen to update the same thing).
         """
-        components = self.components.copy()
+        components = self.component_configs.copy()
         for update in updates:
             for name, cfg in update.items():
                 if name not in components:
