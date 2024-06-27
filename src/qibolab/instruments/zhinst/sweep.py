@@ -71,10 +71,9 @@ class ProcessedSweeps:
                     sweep_param = laboneq.SweepParameter(
                         values=sweeper.values * NANO_TO_SECONDS
                     )
-                    pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
                 else:
                     sweep_param = laboneq.SweepParameter(values=copy(sweeper.values))
-                    pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
+                pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
                 parallel_sweeps.append((sweeper, sweep_param))
 
             for ch in sweeper.channels or []:
