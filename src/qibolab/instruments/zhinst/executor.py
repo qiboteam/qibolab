@@ -156,7 +156,7 @@ class Zurich(Controller):
         self.calibration[signal.path] = laboneq.SignalCalibration(
             oscillator=laboneq.Oscillator(
                 frequency=intermediate_frequency,
-                modulation_type=laboneq.ModulationType.HARDWARE,
+                modulation_type=laboneq.ModulationType.HARDWARE if channel.acquisition is None else laboneq.ModulationType.SOFTWARE,
             ),
             local_oscillator=laboneq.Oscillator(
                 frequency=int(configs[channel.lo].frequency),
@@ -516,7 +516,7 @@ class Zurich(Controller):
         """Play pulse and sweepers sequence."""
 
         self.signal_map = {}
-        self.processed_sweeps = ProcessedSweeps(sweepers, self.channels)
+        self.processed_sweeps = ProcessedSweeps(sweepers, self.channels, configs)
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(sweepers)
 
         self.acquisition_type = None
