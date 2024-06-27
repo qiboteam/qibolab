@@ -5,6 +5,7 @@ from copy import copy
 
 import laboneq.simple as laboneq
 
+from qibolab.components import Config
 from qibolab.pulses import Pulse, PulseType
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -59,6 +60,7 @@ class ProcessedSweeps:
         self,
         sweepers: Iterable[Sweeper],
         channels: dict[str, ZiChannel],
+        configs: dict[str, Config]
     ):
         pulse_sweeps = []
         channel_sweeps = []
@@ -76,14 +78,15 @@ class ProcessedSweeps:
                 parallel_sweeps.append((sweeper, sweep_param))
 
             for ch in sweeper.channels or []:
+                logical_channel = channels[ch].logical_channel
                 if sweeper.parameter is Parameter.bias:
                     sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values + channels[ch].config.offset
+                        values=sweeper.values + configs[logical_channel.name].offset
                     )
                 elif sweeper.parameter is Parameter.frequency:
                     intermediate_frequency = (
-                        channels[ch].config.frequency
-                        - channels[ch].config.lo_config.frequency
+                        configs[logical_channel.name].frequency
+                        - configs[logical_channel.lo].frequency
                     )
                     sweep_param = laboneq.SweepParameter(
                         values=sweeper.values + intermediate_frequency
