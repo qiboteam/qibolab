@@ -41,6 +41,6 @@ class PulseSequence(defaultdict):
         durations = {ch: self.channel_duration(ch) for ch in other}
         max_duration = max(durations.values(), default=0.0)
         for ch, duration in durations.items():
-            if delay := round(max_duration - duration, int(1 / tol)) > 0:
-                self[ch].extend(Delay(duration=delay))
+            if (delay := round(max_duration - duration, int(1 / tol))) > 0:
+                self[ch].append(Delay(duration=delay))
             self[ch].extend(other[ch])
