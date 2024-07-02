@@ -210,7 +210,7 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequences, options
+                    options.component_configs, sequences, options, {}
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -238,7 +238,7 @@ class Platform:
         )
         log.info(f"Minimal execution time (sequence): {time}")
 
-        return self._execute(sequence, options, **kwargs)
+        return self._execute([sequence], options, **kwargs)
 
     @property
     def _controller(self):
@@ -264,8 +264,8 @@ class Platform:
     ):
         """
         Args:
-            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
+            sequences: Pulse sequences to execute.
+            options: Object holding the execution options.
             **kwargs: May need them for something
         Returns:
             Readout results acquired by after execution.
@@ -393,26 +393,17 @@ class Platform:
         except KeyError:
             return list(self.couplers.values())[coupler]
 
-    def create_RX90_pulse(self, qubit, relative_phase=0):
+    def create_RX90_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX90,
-            relative_phase=relative_phase,
-        )
+        return qubit.native_gates.RX90.copy()
 
-    def create_RX_pulse(self, qubit, relative_phase=0):
+    def create_RX_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX,
-            relative_phase=relative_phase,
-        )
+        return qubit.native_gates.RX.copy()
 
-    def create_RX12_pulse(self, qubit, relative_phase=0):
+    def create_RX12_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX12,
-            relative_phase=relative_phase,
-        )
+        return qubit.native_gates.RX12.copy()
 
     def create_CZ_pulse_sequence(self, qubits):
         pair = tuple(self.get_qubit(q).name for q in qubits)
@@ -444,26 +435,6 @@ class Platform:
     def create_MZ_pulse(self, qubit):
         qubit = self.get_qubit(qubit)
         return qubit.native_gates.MZ
-
-    def create_qubit_drive_pulse(self, qubit, duration, relative_phase=0):
-        qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX,
-            duration=duration,
-            relative_phase=relative_phase,
-        )
-
-    def create_qubit_readout_pulse(self, qubit):
-        return self.create_MZ_pulse(qubit)
-
-    def create_coupler_pulse(self, coupler, duration=None, amplitude=None):
-        coupler = self.get_coupler(coupler)
-        pulse = coupler.native_gates.CP
-        if duration is not None:
-            pulse = replace(pulse, duration=duration)
-        if amplitude is not None:
-            pulse = replace(pulse, amplitude=amplitude)
-        return pulse
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
     # TODO Add RY90 and RY pulses
