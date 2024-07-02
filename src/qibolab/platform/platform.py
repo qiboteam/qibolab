@@ -8,15 +8,15 @@ import networkx as nx
 import numpy as np
 from qibo.config import log, raise_error
 
-from .components import Config
-from .couplers import Coupler
-from .execution_parameters import ExecutionParameters
-from .instruments.abstract import Controller, Instrument, InstrumentId
-from .pulses import Delay, Drag, PulseSequence, PulseType
-from .qubits import Qubit, QubitId, QubitPair, QubitPairId
-from .serialize_ import replace
-from .sweeper import Sweeper
-from .unrolling import batch
+from qibolab.components import Config
+from qibolab.couplers import Coupler
+from qibolab.execution_parameters import ExecutionParameters
+from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
+from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
+from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.serialize_ import replace
+from qibolab.sweeper import Sweeper
+from qibolab.unrolling import batch
 
 InstrumentMap = Dict[InstrumentId, Instrument]
 QubitMap = Dict[QubitId, Qubit]

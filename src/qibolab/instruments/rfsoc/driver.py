@@ -283,27 +283,6 @@ class RFSoC(Controller):
 
         return results
 
-    @staticmethod
-    def validate_input_command(
-        sequence: PulseSequence,
-        execution_parameters: ExecutionParameters,
-        sweep: bool,
-    ):
-        """Check if sequence and execution_parameters are supported."""
-        if execution_parameters.acquisition_type is AcquisitionType.RAW:
-            if sweep:
-                raise NotImplementedError(
-                    "Raw data acquisition is not compatible with sweepers"
-                )
-            if len(sequence.ro_pulses) != 1:
-                raise NotImplementedError(
-                    "Raw data acquisition is compatible only with a single readout"
-                )
-            if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-                raise NotImplementedError("Raw data acquisition can only be averaged")
-        if execution_parameters.fast_reset:
-            raise NotImplementedError("Fast reset is not supported")
-
     def update_cfg(self, execution_parameters: ExecutionParameters):
         """Update rfsoc.Config object with new parameters."""
         if execution_parameters.nshots is not None:

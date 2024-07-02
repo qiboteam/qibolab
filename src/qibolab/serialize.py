@@ -22,7 +22,7 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Delay, Pulse, PulseSequence, VirtualZ
 from qibolab.qubits import Qubit, QubitPair
 
 RUNCARD = "parameters.json"
