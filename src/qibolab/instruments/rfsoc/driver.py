@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import asdict, dataclass
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -33,6 +33,8 @@ class RFSoCPort(Port):
     """DAC number."""
     offset: float = 0.0
     """Amplitude factor for biasing."""
+    mixer_frequency: Optional[int] = None
+    """Mixer frequency for interpolatd channels."""
 
 
 class RFSoC(Controller):
@@ -64,6 +66,7 @@ class RFSoC(Controller):
 
     @property
     def sampling_rate(self):
+        """Return platform sampling rate."""
         return self._sampling_rate
 
     def connect(self):
@@ -71,6 +74,18 @@ class RFSoC(Controller):
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
+
+    def prepare_interpolated_channels(self, sequence: list[dict]):
+        """Subtract and set mixer frequency for interpolated channel."""
+        for pulse in sequence:
+            mix_freq = self.ports(pulse["dac"]).mixer_frequency
+            if mix_freq is not None:
+                pulse["mixer_frequency"] = mix_freq
+                pulse["frequency"] = pulse["frequency"] - mix_freq
+                log.info(
+                    "Setting DAC %d mixer_frequency. If it is not interpolated it will fail.",
+                    pulse["dac"],
+                )
 
     @staticmethod
     def _try_to_execute(server_commands, host, port):
@@ -184,6 +199,7 @@ class RFSoC(Controller):
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
+        self.prepare_interpolated_channels(server_commands["sequence"])
         return self._try_to_execute(server_commands, self.host, self.port)
 
     def _execute_sweeps(
@@ -211,6 +227,7 @@ class RFSoC(Controller):
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
             "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
         }
+        self.prepare_interpolated_channels(server_commands["sequence"])
         return self._try_to_execute(server_commands, self.host, self.port)
 
     def play(
