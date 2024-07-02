@@ -150,3 +150,42 @@ def test_extend():
     assert sequence1.channel_duration("ch1") == 40
     assert sequence1.channel_duration("ch2") == 60 + 80
     assert sequence1.channel_duration("ch3") == 60 + 100
+
+
+def test_copy():
+    sequence = PulseSequence()
+    sequence["ch1"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+        )
+    )
+
+    sequence["ch2"].append(
+        Pulse(
+            duration=60,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+        )
+    )
+    sequence["ch2"].append(
+        Pulse(
+            duration=80,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+        )
+    )
+
+    sequence_copy = sequence.copy()
+    assert isinstance(sequence_copy, PulseSequence)
+    assert sequence_copy == sequence
+
+    sequence_copy["ch3"].append(
+        Pulse(
+            duration=100,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+        )
+    )
+    assert "ch3" not in sequence

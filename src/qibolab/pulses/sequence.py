@@ -44,3 +44,9 @@ class PulseSequence(defaultdict):
             if (delay := round(max_duration - duration, int(1 / tol))) > 0:
                 self[ch].append(Delay(duration=delay))
             self[ch].extend(other[ch])
+
+    def copy(self) -> "PulseSequence":
+        """Return shallow copy of self."""
+        ps = PulseSequence()
+        ps.extend(self)
+        return ps
