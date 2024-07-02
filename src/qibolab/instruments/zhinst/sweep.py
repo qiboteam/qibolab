@@ -60,7 +60,7 @@ class ProcessedSweeps:
         self,
         sweepers: Iterable[Sweeper],
         channels: dict[str, ZiChannel],
-        configs: dict[str, Config]
+        configs: dict[str, Config],
     ):
         pulse_sweeps = []
         channel_sweeps = []
