@@ -16,16 +16,12 @@ def identity_rule(gate, qubit):
 
 def z_rule(gate, qubit):
     """Z gate applied virtually."""
-    return PulseSequence(
-        [VirtualZ(phase=math.pi, channel=qubit.drive.name, qubit=qubit.name)]
-    )
+    return PulseSequence([VirtualZ(phase=math.pi)])
 
 
 def rz_rule(gate, qubit):
     """RZ gate applied virtually."""
-    return PulseSequence(
-        [VirtualZ(phase=gate.parameters[0], channel=qubit.drive.name, qubit=qubit.name)]
-    )
+    return PulseSequence([VirtualZ(phase=gate.parameters[0])])
 
 
 def gpi2_rule(gate, qubit):
@@ -55,15 +51,15 @@ def u3_rule(gate, qubit):
     # apply RZ(lam)
     virtual_z_phases = {qubit.name: lam}
     sequence = PulseSequence()
-    sequence.append(VirtualZ(phase=lam, channel=qubit.drive.name, qubit=qubit.name))
+    sequence.append(VirtualZ(phase=lam))
     # Fetch pi/2 pulse from calibration and apply RX(pi/2)
     sequence.append(qubit.native_gates.RX90)
     # apply RZ(theta)
-    sequence.append(VirtualZ(phase=theta, channel=qubit.drive.name, qubit=qubit.name))
+    sequence.append(VirtualZ(phase=theta))
     # Fetch pi/2 pulse from calibration and apply RX(-pi/2)
     sequence.append(replace(qubit.native_gates.RX90, relative_phase=-math.pi))
     # apply RZ(phi)
-    sequence.append(VirtualZ(phase=phi, channel=qubit.drive.name, qubit=qubit.name))
+    sequence.append(VirtualZ(phase=phi))
     return sequence
 
 

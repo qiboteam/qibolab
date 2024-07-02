@@ -4,8 +4,6 @@ from typing import Optional
 
 from qibolab.unrolling import Bounds
 
-from .port import Port
-
 InstrumentId = str
 
 
@@ -55,9 +53,6 @@ class Instrument(ABC):
 class Controller(Instrument):
     """Instrument that can play pulses (using waveform generator)."""
 
-    PortType = Port
-    """Class used by the instrument to instantiate ports."""
-
     def __init__(self, name, address):
         super().__init__(name, address)
         self._ports = {}
@@ -78,21 +73,6 @@ class Controller(Instrument):
         """Sampling rate of control electronics in giga samples per second
         (GSps)."""
 
-    def ports(self, port_name, *args, **kwargs):
-        """Get ports associated to this controller.
-
-        Args:
-            port_name: Identifier for the port. The type of the identifier
-                depends on the specialized port defined for each instrument.
-
-        Returns:
-            :class:`qibolab.instruments.port.Port` object providing the interface
-            for setting instrument parameters.
-        """
-        if port_name not in self._ports:
-            self._ports[port_name] = self.PortType(port_name)
-        return self._ports[port_name]
-
     @abstractmethod
     def play(self, *args, **kwargs):
         """Play a pulse sequence and retrieve feedback.
@@ -110,10 +90,3 @@ class Controller(Instrument):
             (dict) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
-
-
-class InstrumentException(Exception):
-    def __init__(self, instrument: Instrument, message: str):
-        header = f"InstrumentException with {instrument.signature}"
-        full_msg = header + ": " + message
-        super().__init__(full_msg)

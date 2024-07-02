@@ -10,13 +10,13 @@ class SingleQubitNatives:
     """Container with the native single-qubit gates acting on a specific
     qubit."""
 
-    RX: Optional[Pulse] = None
+    RX: Optional[PulseSequence] = None
     """Pulse to drive the qubit from state 0 to state 1."""
-    RX12: Optional[Pulse] = None
+    RX12: Optional[PulseSequence] = None
     """Pulse to drive to qubit from state 1 to state 2."""
-    MZ: Optional[Pulse] = None
+    MZ: Optional[PulseSequence] = None
     """Measurement pulse."""
-    CP: Optional[Pulse] = None
+    CP: Optional[PulseSequence] = None
     """Pulse to activate a coupler."""
 
     @property
