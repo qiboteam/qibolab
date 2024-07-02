@@ -2,10 +2,10 @@
 
 from qibolab.pulses import (
     DrivePulse,
-    ReadoutPulse,
-    PulseSequence,
-    Rectangular,
     Gaussian,
+    PulseSequence,
+    ReadoutPulse,
+    Rectangular,
 )
 
 # Define PulseSequence

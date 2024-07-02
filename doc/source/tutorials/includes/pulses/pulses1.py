@@ -1,6 +1,7 @@
+from pulses0 import sequence
+
 from qibolab import create_platform
 from qibolab.execution_parameters import ExecutionParameters
-from pulses0 import sequence
 
 # Define platform and load specific runcard
 platform = create_platform("dummy")
