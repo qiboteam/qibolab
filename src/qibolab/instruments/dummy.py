@@ -1,37 +1,16 @@
-from dataclasses import dataclass
-from typing import Dict, Optional
-
 import numpy as np
 from qibo.config import log
 
-from qibolab.couplers import Coupler
-from qibolab.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.pulses import PulseSequence
-from qibolab.qubits import Qubit, QubitId
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
 
+from ..components import Config
 from .abstract import Controller
 from .oscillator import LocalOscillator
-from .port import Port
 
 SAMPLING_RATE = 1
-
-
-@dataclass
-class DummyPort(Port):
-    name: str
-    offset: float = 0.0
-    lo_frequency: int = 0
-    lo_power: int = 0
-    gain: int = 0
-    attenuation: int = 0
-    power_range: int = 0
-    filters: Optional[dict] = None
 
 
 class DummyDevice:
@@ -82,8 +61,6 @@ class DummyInstrument(Controller):
 
     BOUNDS = Bounds(1, 1, 1)
 
-    PortType = DummyPort
-
     @property
     def sampling_rate(self):
         return SAMPLING_RATE
@@ -116,11 +93,11 @@ class DummyInstrument(Controller):
 
     def play(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
-        sequence: PulseSequence,
+        configs: dict[str, Config],
+        sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
+        integration_setup: dict[str, tuple[np.ndarray, float]],
     ):
         results = {}
 
@@ -133,10 +110,9 @@ class DummyInstrument(Controller):
                 min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
             )
 
-        for ro_pulse in sequence.ro_pulses:
-            values = self.get_values(options, ro_pulse, shape)
-            results[ro_pulse.qubit] = results[ro_pulse.id] = options.results_type(
-                values
-            )
+        for seq in sequences:
+            for ro_pulse in seq.ro_pulses:
+                values = self.get_values(options, ro_pulse, shape)
+                results[ro_pulse.id] = options.results_type(values)
 
         return results
