@@ -84,6 +84,8 @@ class Qubit:
     measure: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
     drive: Optional[IqChannel] = None
+    drive12: Optional[IqChannel] = None
+    drive_cross: Optional[dict[QubitId, IqChannel]] = None
     flux: Optional[DcChannel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
