@@ -156,7 +156,11 @@ class Zurich(Controller):
         self.calibration[signal.path] = laboneq.SignalCalibration(
             oscillator=laboneq.Oscillator(
                 frequency=intermediate_frequency,
-                modulation_type=laboneq.ModulationType.HARDWARE if channel.acquisition is None else laboneq.ModulationType.SOFTWARE,
+                modulation_type=(
+                    laboneq.ModulationType.HARDWARE
+                    if channel.acquisition is None
+                    else laboneq.ModulationType.SOFTWARE
+                ),
             ),
             local_oscillator=laboneq.Oscillator(
                 frequency=int(configs[channel.lo].frequency),
