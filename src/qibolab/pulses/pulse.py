@@ -38,11 +38,6 @@ class Pulse(Model):
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: float
-    """Pulse Intermediate Frequency in Hz.
-
-    The value has to be in the range [10e6 to 300e6].
-    """
     envelope: Envelope
     """The pulse envelope shape.
 
@@ -61,7 +56,6 @@ class Pulse(Model):
         It provides a simplified syntax for the :cls:`Pulse` constructor, by applying
         suitable defaults.
         """
-        kwargs["frequency"] = 0
         kwargs["relative_phase"] = 0
         if "type" not in kwargs:
             kwargs["type"] = PulseType.FLUX
