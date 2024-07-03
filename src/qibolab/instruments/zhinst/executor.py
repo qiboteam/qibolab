@@ -16,9 +16,9 @@ from qibolab.unrolling import Bounds
 
 from ...components import AcquireChannel, Config, DcChannel, IqChannel
 from .components import ZiChannel
+from .constants import NANO_TO_SECONDS, SAMPLING_RATE
 from .pulse import select_pulse
 from .sweep import ProcessedSweeps, classify_sweepers
-from .util import NANO_TO_SECONDS, SAMPLING_RATE
 
 COMPILER_SETTINGS = {
     "SHFSG_MIN_PLAYWAVE_HINT": 32,

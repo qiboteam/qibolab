@@ -10,7 +10,7 @@ from qibolab.pulses import Pulse, PulseType
 from qibolab.sweeper import Parameter, Sweeper
 
 from . import ZiChannel
-from .util import NANO_TO_SECONDS
+from .constants import NANO_TO_SECONDS
 
 
 def classify_sweepers(

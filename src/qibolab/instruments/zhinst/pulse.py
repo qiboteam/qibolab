@@ -9,7 +9,7 @@ from laboneq.dsl.experiment.pulse_library import (
 
 from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rectangular
 
-from .util import NANO_TO_SECONDS, SAMPLING_RATE
+from .constants import NANO_TO_SECONDS, SAMPLING_RATE
 
 
 def select_pulse(pulse: Pulse):
