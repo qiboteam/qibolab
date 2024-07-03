@@ -7,57 +7,57 @@ from qibolab.unrolling import Bounds, batch
 
 
 def test_bounds_update():
-    p1 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        frequency=int(100e6),
-        envelope=Drag(rel_sigma=0.2, beta=1),
-        channel="3",
-        type=PulseType.DRIVE,
+    ps = PulseSequence()
+    ps["ch3"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+            type=PulseType.DRIVE,
+        )
     )
-    p2 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        frequency=int(100e6),
-        envelope=Drag(rel_sigma=0.2, beta=1),
-        channel="2",
-        type=PulseType.DRIVE,
+    ps["ch2"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+            type=PulseType.DRIVE,
+        )
     )
-    p3 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        frequency=int(100e6),
-        envelope=Drag(rel_sigma=0.2, beta=1),
-        channel="1",
-        type=PulseType.DRIVE,
-    )
-
-    p4 = Pulse(
-        duration=1000,
-        amplitude=0.9,
-        frequency=int(20e6),
-        envelope=Rectangular(),
-        channel="3",
-        type=PulseType.READOUT,
-    )
-    p5 = Pulse(
-        duration=1000,
-        amplitude=0.9,
-        frequency=int(20e6),
-        envelope=Rectangular(),
-        channel="2",
-        type=PulseType.READOUT,
-    )
-    p6 = Pulse(
-        duration=1000,
-        amplitude=0.9,
-        frequency=int(20e6),
-        envelope=Rectangular(),
-        channel="1",
-        type=PulseType.READOUT,
+    ps["ch1"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+            type=PulseType.DRIVE,
+        )
     )
 
-    ps = PulseSequence([p1, p2, p3, p4, p5, p6])
+    ps["ch3"].append(
+        Pulse(
+            duration=1000,
+            amplitude=0.9,
+            envelope=Rectangular(),
+            type=PulseType.READOUT,
+        )
+    )
+    ps["ch2"].append(
+        Pulse(
+            duration=1000,
+            amplitude=0.9,
+            envelope=Rectangular(),
+            type=PulseType.READOUT,
+        )
+    )
+    ps["ch1"].append(
+        Pulse(
+            duration=1000,
+            amplitude=0.9,
+            envelope=Rectangular(),
+            type=PulseType.READOUT,
+        )
+    )
+
     bounds = Bounds.update(ps)
 
     assert bounds.waveforms >= 40
@@ -93,57 +93,56 @@ def test_bounds_comparison():
     ],
 )
 def test_batch(bounds):
-    p1 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        frequency=int(100e6),
-        envelope=Drag(rel_sigma=0.2, beta=1),
-        channel="3",
-        type=PulseType.DRIVE,
+    ps = PulseSequence()
+    ps["ch3"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+            type=PulseType.DRIVE,
+        )
     )
-    p2 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        frequency=int(100e6),
-        envelope=Drag(rel_sigma=0.2, beta=1),
-        channel="2",
-        type=PulseType.DRIVE,
+    ps["ch2"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+            type=PulseType.DRIVE,
+        )
     )
-    p3 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        frequency=int(100e6),
-        envelope=Drag(rel_sigma=0.2, beta=1),
-        channel="1",
-        type=PulseType.DRIVE,
-    )
-
-    p4 = Pulse(
-        duration=1000,
-        amplitude=0.9,
-        frequency=int(20e6),
-        envelope=Rectangular(),
-        channel="3",
-        type=PulseType.READOUT,
-    )
-    p5 = Pulse(
-        duration=1000,
-        amplitude=0.9,
-        frequency=int(20e6),
-        envelope=Rectangular(),
-        channel="2",
-        type=PulseType.READOUT,
-    )
-    p6 = Pulse(
-        duration=1000,
-        amplitude=0.9,
-        frequency=int(20e6),
-        envelope=Rectangular(),
-        channel="1",
-        type=PulseType.READOUT,
+    ps["ch1"].append(
+        Pulse(
+            duration=40,
+            amplitude=0.9,
+            envelope=Drag(rel_sigma=0.2, beta=1),
+            type=PulseType.DRIVE,
+        )
     )
 
-    ps = PulseSequence([p1, p2, p3, p4, p5, p6])
+    ps["ch3"].append(
+        Pulse(
+            duration=1000,
+            amplitude=0.9,
+            envelope=Rectangular(),
+            type=PulseType.READOUT,
+        )
+    )
+    ps["ch2"].append(
+        Pulse(
+            duration=1000,
+            amplitude=0.9,
+            envelope=Rectangular(),
+            type=PulseType.READOUT,
+        )
+    )
+    ps["ch1"].append(
+        Pulse(
+            duration=1000,
+            amplitude=0.9,
+            envelope=Rectangular(),
+            type=PulseType.READOUT,
+        )
+    )
 
     sequences = 10 * [ps]
 
