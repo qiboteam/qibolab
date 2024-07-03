@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.platform.platform import Platform
 from qibolab.pulses import PulseSequence
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -17,14 +16,15 @@ NSWEEP1 = 5
 NSWEEP2 = 8
 
 
-def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
+def execute(platform, acquisition_type, averaging_mode, sweep=False):
     qubit = next(iter(platform.qubits))
 
-    qd_pulse = platform.create_RX_pulse(qubit, start=0)
-    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.finish)
+    qd_seq = platform.create_RX_pulse(qubit)
+    mz_seq = platform.create_MZ_pulse(qubit)
+    mz_pulse = next(iter(mz_seq.values()))[0]
     sequence = PulseSequence()
-    sequence.append(qd_pulse)
-    sequence.append(ro_pulse)
+    sequence.extend(qd_seq)
+    sequence.extend(mz_seq)
 
     options = ExecutionParameters(
         nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode
@@ -32,13 +32,15 @@ def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
     if sweep:
         amp_values = np.arange(0.01, 0.06, 0.01)
         freq_values = np.arange(-4e6, 4e6, 1e6)
-        sweeper1 = Sweeper(Parameter.bias, amp_values, qubits=[platform.qubits[qubit]])
+        sweeper1 = Sweeper(
+            Parameter.bias, amp_values, channels=[platform.qubits[qubit].flux.name]
+        )
         # sweeper1 = Sweeper(Parameter.amplitude, amp_values, pulses=[qd_pulse])
-        sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[ro_pulse])
-        results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
+        sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[mz_pulse])
+        results = platform.sweep(sequence, options, sweeper1, sweeper2)
     else:
-        results = platform.execute([sequence], options)
-    return results[qubit][0]
+        results = platform.execute_pulse_sequence(sequence, options)
+    return results[qubit]
 
 
 @pytest.mark.qpu
