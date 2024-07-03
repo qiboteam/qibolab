@@ -92,18 +92,20 @@ class Sweeper:
 
     def __post_init__(self):
         if self.pulses is not None and self.channels is not None:
-            raise ValueError("Cannot use a sweeper on both pulses and channels.")
+            raise ValueError(
+                "Cannot create a sweeper by using both pulses and channels."
+            )
         if self.pulses is not None and self.parameter in ChannelParameter:
             raise ValueError(
-                f"Cannot sweep {self.parameter} without specifying channels."
+                f"Cannot create a sweeper for {self.parameter} without specifying channels."
             )
         if self.parameter not in ChannelParameter and (self.channels is not None):
             raise ValueError(
-                f"Cannot sweep {self.parameter} without specifying pulses."
+                f"Cannot create a sweeper for {self.parameter} without specifying pulses."
             )
         if self.pulses is None and self.channels is None:
             raise ValueError(
-                "Cannot use a sweeper without specifying pulses, qubits or couplers."
+                "Cannot create a sweeper without specifying pulses or channels."
             )
 
     def get_values(self, base_value):
