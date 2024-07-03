@@ -18,11 +18,18 @@ from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
-from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORMS
-from qibolab.pulses import Delay, Drag, PulseSequence, Rectangular
+from qibolab.pulses import (
+    Delay,
+    Drag,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    PulseType,
+    Rectangular,
+)
 from qibolab.serialize import (
     PLATFORM,
     dump_kernels,
@@ -40,17 +47,18 @@ nshots = 1024
 def test_unroll_sequences(platform):
     qubit = next(iter(platform.qubits))
     sequence = PulseSequence()
-    qd_pulse = platform.create_RX_pulse(qubit)
-    ro_pulse = platform.create_MZ_pulse(qubit)
-    sequence.append(qd_pulse)
-    sequence.append(
-        Delay(duration=qd_pulse.duration, channel=platform.qubits[qubit].readout.name)
+    qd_seq = platform.create_RX_pulse(qubit)
+    mz_seq = platform.create_MZ_pulse(qubit)
+    mz_pulse = next(iter(mz_seq.values()))[0]
+    sequence.extend(qd_seq)
+    sequence[platform.qubits[qubit].readout.name].append(
+        Delay(duration=qd_seq.duration)
     )
-    sequence.append(ro_pulse)
+    sequence.extend(mz_seq)
     total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence.ro_pulses) == 10
     assert len(readouts) == 1
-    assert len(readouts[ro_pulse.id]) == 10
+    assert len(readouts[mz_pulse.id]) == 10
 
 
 def test_create_platform(platform):
@@ -176,17 +184,30 @@ def test_platform_execute_empty(qpu_platform):
     # an empty pulse sequence
     platform = qpu_platform
     sequence = PulseSequence()
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    result = platform.execute_pulse_sequence(
+        sequence, ExecutionParameters(nshots=nshots)
+    )
+    assert result is not None
 
 
 @pytest.mark.qpu
 def test_platform_execute_one_drive_pulse(qpu_platform):
     # One drive pulse
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit = next(iter(platform.qubits.values()))
     sequence = PulseSequence()
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    sequence[qubit.drive.name].append(
+        Pulse(
+            duration=200,
+            amplitude=0.07,
+            envelope=Gaussian(5),
+            type=PulseType.DRIVE,
+        )
+    )
+    result = platform.execute_pulse_sequence(
+        sequence, ExecutionParameters(nshots=nshots)
+    )
+    assert result is not None
 
 
 @pytest.mark.qpu
@@ -195,41 +216,55 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
     platform = qpu_platform
     if len(platform.couplers) == 0:
         pytest.skip("The platform does not have couplers")
-    coupler = next(iter(platform.couplers))
+    coupler = next(iter(platform.couplers.values()))
     sequence = PulseSequence()
-    sequence.append(platform.create_coupler_pulse(coupler, duration=200, amplitude=1))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
-    assert len(sequence.cf_pulses) > 0
+    sequence[coupler.flux.name].append(
+        Pulse(
+            duration=200,
+            amplitude=0.31,
+            envelope=Rectangular(),
+            type=PulseType.COUPLERFLUX,
+        )
+    )
+    result = platform.execute_pulse_sequence(
+        sequence, ExecutionParameters(nshots=nshots)
+    )
+    assert result is not None
 
 
 @pytest.mark.qpu
 def test_platform_execute_one_flux_pulse(qpu_platform):
     # One flux pulse
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit = next(iter(platform.qubits.values()))
     sequence = PulseSequence()
-    sequence.add(platform.create_qubit_flux_pulse(qubit, duration=200, amplitude=1))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
-    assert len(sequence.qf_pulses) == 1
-    assert len(sequence) == 1
+    sequence[qubit.flux.name].append(
+        Pulse(
+            duration=200,
+            amplitude=0.28,
+            envelope=Rectangular(),
+            type=PulseType.FLUX,
+        )
+    )
+    result = platform.execute_pulse_sequence(
+        sequence, ExecutionParameters(nshots=nshots)
+    )
+    assert result is not None
 
 
 @pytest.mark.qpu
 def test_platform_execute_one_long_drive_pulse(qpu_platform):
     # Long duration
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
-    pulse = platform.create_qubit_drive_pulse(qubit, duration=8192 + 200)
+    qubit = next(iter(platform.qubits.values()))
+    pulse = Pulse(
+        duration=8192 + 200, amplitude=0.12, envelope=Gaussian(5), type=PulseType.DRIVE
+    )
     sequence = PulseSequence()
-    sequence.append(pulse)
+    sequence[qubit.drive.name].append(pulse)
     options = ExecutionParameters(nshots=nshots)
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
-            platform.execute_pulse_sequence(sequence, options)
-    elif find_instrument(platform, RFSoC) is not None and not isinstance(
-        pulse.shape, Rectangular
-    ):
-        with pytest.raises(RuntimeError):
             platform.execute_pulse_sequence(sequence, options)
     else:
         platform.execute_pulse_sequence(sequence, options)
@@ -239,18 +274,18 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
 def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     # Extra Long duration
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
-    pulse = platform.create_qubit_drive_pulse(qubit, duration=2 * 8192 + 200)
+    qubit = next(iter(platform.qubits.values()))
+    pulse = Pulse(
+        duration=2 * 8192 + 200,
+        amplitude=0.12,
+        envelope=Gaussian(5),
+        type=PulseType.DRIVE,
+    )
     sequence = PulseSequence()
-    sequence.append(pulse)
+    sequence[qubit.drive.name].append(pulse)
     options = ExecutionParameters(nshots=nshots)
     if find_instrument(platform, QbloxController) is not None:
         with pytest.raises(NotImplementedError):
-            platform.execute_pulse_sequence(sequence, options)
-    elif find_instrument(platform, RFSoC) is not None and not isinstance(
-        pulse.shape, Rectangular
-    ):
-        with pytest.raises(RuntimeError):
             platform.execute_pulse_sequence(sequence, options)
     else:
         platform.execute_pulse_sequence(sequence, options)
@@ -260,11 +295,11 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
 def test_platform_execute_one_drive_one_readout(qpu_platform):
     """One drive pulse and one readout pulse."""
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(Delay(200, platform.qubits[qubit].readout.name))
-    sequence.append(platform.create_qubit_readout_pulse(qubit))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence[qubit.measure.name].append(Delay(duration=200))
+    sequence.extend(platform.create_MZ_pulse(qubit_id))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
@@ -272,15 +307,15 @@ def test_platform_execute_one_drive_one_readout(qpu_platform):
 def test_platform_execute_multiple_drive_pulses_one_readout(qpu_platform):
     """Multiple qubit drive pulses and one readout pulse."""
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(Delay(4, platform.qubits[qubit].drive.name))
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(Delay(4, platform.qubits[qubit].drive.name))
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=400))
-    sequence.append(Delay(808, platform.qubits[qubit].readout.name))
-    sequence.append(platform.create_qubit_readout_pulse(qubit))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence[qubit.drive.name].append(Delay(duration=4))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence[qubit.drive.name].append(Delay(duration=4))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence[qubit.measure.name].append(Delay(duration=808))
+    sequence.extend(platform.create_MZ_pulse(qubit_id))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
@@ -291,13 +326,13 @@ def test_platform_execute_multiple_drive_pulses_one_readout_no_spacing(
     """Multiple qubit drive pulses and one readout pulse with no spacing
     between them."""
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=400))
-    sequence.append(Delay(800, platform.qubits[qubit].readout.name))
-    sequence.append(platform.create_qubit_readout_pulse(qubit))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence.extend(platform.create_RX_pulse(qubit_id))
+    sequence[qubit.measure.name].append(Delay(duration=800))
+    sequence.extend(platform.create_MZ_pulse(qubit_id))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
@@ -306,15 +341,16 @@ def test_platform_execute_multiple_overlaping_drive_pulses_one_readout(
     qpu_platform,
 ):
     """Multiple overlapping qubit drive pulses and one readout pulse."""
-    # TODO: This requires defining different logical channels on the same qubit
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=200))
-    sequence.append(platform.create_qubit_drive_pulse(qubit, duration=400))
-    sequence.append(Delay(800, platform.qubits[qubit].readout.name))
-    sequence.append(platform.create_qubit_readout_pulse(qubit))
+    pulse = Pulse(
+        duration=200, amplitude=0.08, envelope=Gaussian(7), type=PulseType.DRIVE
+    )
+    sequence[qubit.drive.name].append(pulse)
+    sequence[qubit.drive12.name].append(pulse.copy())
+    sequence[qubit.measure.name].append(Delay(duration=800))
+    sequence.extend(platform.create_MZ_pulse(qubit_id))
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
@@ -322,21 +358,19 @@ def test_platform_execute_multiple_overlaping_drive_pulses_one_readout(
 def test_platform_execute_multiple_readout_pulses(qpu_platform):
     """Multiple readout pulses."""
     platform = qpu_platform
-    qubit = next(iter(platform.qubits))
+    qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
-    qd_pulse1 = platform.create_qubit_drive_pulse(qubit, duration=200)
-    ro_pulse1 = platform.create_qubit_readout_pulse(qubit)
-    qd_pulse2 = platform.create_qubit_drive_pulse(qubit, duration=400)
-    ro_pulse2 = platform.create_qubit_readout_pulse(qubit)
-    sequence.append(qd_pulse1)
-    sequence.append(Delay(200, platform.qubits[qubit].readout.name))
-    sequence.append(ro_pulse1)
-    sequence.append(Delay(200 + ro_pulse1.duration, platform.qubits[qubit].drive.name))
-    sequence.append(qd_pulse2)
-    sequence.append(
-        Delay(200 + ro_pulse1.duration + 400, platform.qubits[qubit].readout.name)
-    )
-    sequence.append(ro_pulse2)
+    qd_seq1 = platform.create_RX_pulse(qubit_id)
+    ro_seq1 = platform.create_MZ_pulse(qubit_id)
+    qd_seq2 = platform.create_RX_pulse(qubit_id)
+    ro_seq2 = platform.create_MZ_pulse(qubit_id)
+    sequence.extend(qd_seq1)
+    sequence[qubit.measure.name].append(Delay(duration=qd_seq1.duration))
+    sequence.extend(ro_seq1)
+    sequence[qubit.drive.name].append(Delay(duration=ro_seq1.duration))
+    sequence.extend(qd_seq2)
+    sequence[qubit.measure.name].append(Delay(duration=qd_seq2.duration))
+    sequence.extend(ro_seq2)
     platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
 
 
@@ -347,21 +381,19 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
 )
 def test_excited_state_probabilities_pulses(qpu_platform):
     platform = qpu_platform
-    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
     backend = QibolabBackend(platform)
     sequence = PulseSequence()
-    for qubit in qubits:
-        qd_pulse = platform.create_RX_pulse(qubit)
-        ro_pulse = platform.create_MZ_pulse(qubit)
-        sequence.append(qd_pulse)
-        sequence.append(Delay(qd_pulse.duration, platform.qubits[qubit].readout.name))
-        sequence.append(ro_pulse)
+    for qubit_id, qubit in platform.qubits.items():
+        sequence.extend(platform.create_RX_pulse(qubit_id))
+        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence.extend(platform.create_MZ_pulse(qubit_id))
     result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
 
-    nqubits = len(qubits)
+    nqubits = len(platform.qubits)
     cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
     probs = [
-        backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits
+        backend.circuit_result_probabilities(cr, qubits=[qubit])
+        for qubit in platform.qubits
     ]
     warnings.warn(f"Excited state probabilities: {probs}")
     target_probs = np.zeros((nqubits, 2))
@@ -377,26 +409,24 @@ def test_excited_state_probabilities_pulses(qpu_platform):
 )
 def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     platform = qpu_platform
-    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
     backend = QibolabBackend(platform)
     sequence = PulseSequence()
-    for qubit in qubits:
+    for qubit_id, qubit in platform.qubits.items():
         if not start_zero:
-            qd_pulse = platform.create_RX_pulse(qubit)
-            sequence.append(
+            sequence[qubit.measure.name].append(
                 Delay(
-                    duration=qd_pulse.duration,
+                    duration=platform.create_RX_pulse(qubit_id).duration,
                     channel=platform.qubits[qubit].readout.name,
                 )
             )
-        ro_pulse = platform.create_MZ_pulse(qubit)
-        sequence.append(ro_pulse)
+        sequence.extend(platform.create_MZ_pulse(qubit_id))
     result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
 
-    nqubits = len(qubits)
+    nqubits = len(platform.qubits)
     cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
     probs = [
-        backend.circuit_result_probabilities(cr, qubits=[qubit]) for qubit in qubits
+        backend.circuit_result_probabilities(cr, qubits=[qubit])
+        for qubit in platform.qubits
     ]
     warnings.warn(f"Ground state probabilities: {probs}")
     target_probs = np.zeros((nqubits, 2))
