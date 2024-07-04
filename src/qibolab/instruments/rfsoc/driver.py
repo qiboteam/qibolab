@@ -13,7 +13,6 @@ from qibosoq import client
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
 from qibolab.pulses import PulseSequence, PulseType
 from qibolab.qubits import Qubit
 from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResults
@@ -26,7 +25,7 @@ NS_TO_US = 1e-3
 
 
 @dataclass
-class RFSoCPort(Port):
+class RFSoCPort:
     """Port object of the RFSoC."""
 
     name: int

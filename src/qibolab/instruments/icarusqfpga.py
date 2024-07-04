@@ -13,7 +13,6 @@ from qibolab.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
@@ -25,7 +24,7 @@ ICARUSQ_PORT = 8080
 
 
 @dataclass
-class RFSOCPort(Port):
+class RFSOCPort:
     name: str
     dac: int = None
     adc: int = None
