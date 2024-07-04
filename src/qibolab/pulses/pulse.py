@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Union
 
 import numpy as np
-from pydantic import BaseModel
 
 from qibolab.serialize_ import Model
 
@@ -27,13 +26,7 @@ class PulseType(Enum):
     VIRTUALZ = "vz"
 
 
-class _PulseLike(Model):
-    @property
-    def id(self) -> int:
-        return id(self)
-
-
-class Pulse(_PulseLike):
+class Pulse(Model):
     """A pulse to be sent to the QPU."""
 
     duration: float
@@ -66,6 +59,10 @@ class Pulse(_PulseLike):
         if "type" not in kwargs:
             kwargs["type"] = PulseType.FLUX
         return cls(**kwargs)
+
+    @property
+    def id(self) -> int:
+        return id(self)
 
     def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
@@ -102,18 +99,20 @@ class Pulse(_PulseLike):
     def __hash__(self):
         """Hash the content.
 
-    #    .. warning::
+        #    .. warning::
 
-    #        unhashable attributes are not taken into account, so there will be more
-    #        clashes than those usually expected with a regular hash
+        #        unhashable attributes are not taken into account, so there will be more
+        #        clashes than those usually expected with a regular hash
 
-    #    .. todo::
+        #    .. todo::
 
-    #        This method should be eventually dropped, and be provided automatically by
-    #        freezing the dataclass (i.e. setting ``frozen=true`` in the decorator).
-    #        However, at the moment is not possible nor desired, because it contains
-    #        unhashable attributes and because some instances are mutated inside Qibolab.
-    #    """
+        #        This method should be eventually dropped, and be provided automatically by
+        #        freezing the dataclass (i.e. setting ``frozen=true`` in the decorator).
+        #        However, at the moment is not possible nor desired, because it contains
+        #        unhashable attributes and because some instances are mutated inside Qibolab.
+        #
+        """
+
     #    return hash(self)
     #    #    tuple(
     #    #        getattr(self, f.name)
@@ -129,7 +128,8 @@ class Pulse(_PulseLike):
             return PulseSequence(self, *other)
         raise TypeError(f"Expected Pulse or PulseSequence; got {type(other).__name__}")
 
-class Delay(_PulseLike):
+
+class Delay(Model):
     """A wait instruction during which we are not sending any pulses to the
     QPU."""
 
@@ -139,7 +139,7 @@ class Delay(_PulseLike):
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
 
-class VirtualZ(_PulseLike):
+class VirtualZ(Model):
     """Implementation of Z-rotations using virtual phase."""
 
     phase: float
