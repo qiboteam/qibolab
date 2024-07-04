@@ -1,5 +1,7 @@
 """Plotting tools for pulses and related entities."""
 
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -23,7 +25,7 @@ def waveform(wf: Waveform, filename=None):
         filename (str): a file path. If provided the plot is save to a file.
     """
     plt.figure(figsize=(14, 5), dpi=200)
-    plt.plot(wf.data, c="C0", linestyle="dashed")
+    plt.plot(wf, c="C0", linestyle="dashed")
     plt.xlabel("Sample Number")
     plt.ylabel("Amplitude")
     plt.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
@@ -53,14 +55,14 @@ def pulse(pulse_: Pulse, filename=None):
     ax1 = plt.subplot(gs[0])
     ax1.plot(
         time,
-        waveform_i.data,
+        waveform_i,
         label="envelope i",
         c="C0",
         linestyle="dashed",
     )
     ax1.plot(
         time,
-        waveform_q.data,
+        waveform_q,
         label="envelope q",
         c="C1",
         linestyle="dashed",
@@ -75,37 +77,25 @@ def pulse(pulse_: Pulse, filename=None):
     ax1.set_ylabel("Amplitude")
 
     ax1.grid(visible=True, which="both", axis="both", color="#888888", linestyle="-")
-    start = float(pulse_.start)
-    finish = float(pulse._finish) if pulse._finish is not None else 0.0
+    start = 0
+    finish = float(pulse_.duration)
     ax1.axis((start, finish, -1.0, 1.0))
     ax1.legend()
 
-    modulated_i = pulse_.shape.modulated_waveform_i(sampling_rate).data
-    modulated_q = pulse_.shape.modulated_waveform_q(sampling_rate).data
     ax2 = plt.subplot(gs[1])
+    ax2.plot(modulated[0], modulated[1], label="modulated", c="C3")
+    ax2.plot(waveform_i, waveform_q, label="envelope", c="C2")
     ax2.plot(
-        modulated_i,
-        modulated_q,
-        label="modulated",
-        c="C3",
-    )
-    ax2.plot(
-        waveform_i.data,
-        waveform_q.data,
-        label="envelope",
-        c="C2",
-    )
-    ax2.plot(
-        modulated_i[0],
-        modulated_q[0],
+        modulated[0][0],
+        modulated[1][0],
         marker="o",
         markersize=5,
         label="start",
         c="lightcoral",
     )
     ax2.plot(
-        modulated_i[-1],
-        modulated_q[-1],
+        modulated[0][-1],
+        modulated[1][-1],
         marker="o",
         markersize=5,
         label="finish",
