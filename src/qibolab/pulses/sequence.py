@@ -1,4 +1,5 @@
 """PulseSequence class."""
+
 import numpy as np
 
 
