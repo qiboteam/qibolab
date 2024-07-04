@@ -3,8 +3,6 @@ from dataclasses import dataclass
 import numpy as np
 from qibo.config import log, raise_error
 
-from qibolab.instruments.port import Port
-
 FREQUENCY_LIMIT = 500e6
 MAX_OFFSET = 2.5
 MIN_PULSE_DURATION = 4
@@ -29,7 +27,7 @@ class QbloxInputPort_Settings:
     hardware_demod_en: bool = True
 
 
-class QbloxOutputPort(Port):
+class QbloxOutputPort:
     """qibolab.instruments.port.Port interface implementation for Qblox
     instruments."""
 
