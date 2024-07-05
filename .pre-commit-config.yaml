@@ -2,7 +2,7 @@ ci:
   autofix_prs: true
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -10,7 +10,7 @@ repos:
       - id: check-toml
       - id: debug-statements
   - repo: https://github.com/psf/black
-    rev: 24.2.0
+    rev: 24.4.2
     hooks:
       - id: black
   - repo: https://github.com/pycqa/isort
@@ -25,7 +25,7 @@ repos:
         additional_dependencies: [tomli]
         args: [--in-place, --config, ./pyproject.toml]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
+    rev: v3.16.0
     hooks:
       - id: pyupgrade
   - repo: https://github.com/hadialqattan/pycln
@@ -36,7 +36,7 @@ repos:
           - --config=pyproject.toml
           - --all
   - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.16.0
+    rev: 1.18.0
     hooks:
       - id: blacken-docs
   - repo: https://github.com/pycqa/pydocstyle

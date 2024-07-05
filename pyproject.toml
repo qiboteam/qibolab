@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibolab"
-version = "0.1.6"
+version = "0.1.9"
 description = "Quantum hardware module and drivers for Qibo"
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -22,19 +22,23 @@ include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-qibo = ">=0.2.3"
+qibo = ">=0.2.6"
 networkx = "^3.0"
-numpy = "==1.24.4"
+numpy = "^1.26.4"
 more-itertools = "^9.1.0"
-qblox-instruments = { version = "0.11.0", optional = true }
+qblox-instruments = { version = "0.12.0", optional = true }
 qcodes = { version = "^0.37.0", optional = true }
 qcodes_contrib_drivers = { version = "0.18.0", optional = true }
 pyvisa-py = { version = "0.5.3", optional = true }
-qm-qua = { version = "==1.1.1", optional = true }
-qualang-tools = { version = "==0.14.0", optional = true }
+qm-qua = { version = "==1.1.6", optional = true }
+qualang-tools = { version = "^0.15.0", optional = true }
 setuptools = { version = ">67.0.0", optional = true }
-laboneq = { version = "==2.24.0", optional = true }
-qibosoq = { version = ">=0.0.4,<0.2", optional = true }
+laboneq = { version = "==2.25.0", optional = true }
+qibosoq = { version = ">=0.1.2,<0.2", optional = true }
+# TODO: unlock version
+qutip = { version = "4.7.5", optional = true }
+# TODO: remove this constraint, only needed for qutip 4.7.5
+scipy = { version = "<1.13.0", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -56,12 +60,13 @@ nbsphinx = "^0.9.1"
 ipython = "^8.12.0"
 sphinx-copybutton = "^0.5.1"
 # extras
-qblox-instruments = "0.11.0"
+qblox-instruments = "0.12.0"
 qcodes = "^0.37.0"
 qcodes_contrib_drivers = "0.18.0"
-qibosoq = ">=0.0.4,<0.2"
-qualang-tools = "==0.14.0"
-laboneq = "==2.24.0"
+qibosoq = ">=0.1.2,<0.2"
+qualang-tools = "^0.15.0"
+laboneq = "==2.25.0"
+qutip = "^4.7.5"
 
 [tool.poetry.group.tests]
 optional = true
@@ -76,15 +81,16 @@ pytest-mock = ">=3.10.0"
 optional = true
 
 [tool.poetry.group.analysis.dependencies]
-pylint = ">=2.16.0"
+pylint = "3.1.0"
 
 [tool.poetry.extras]
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq"]
-los = ["qcodes", "qcodes_contrib_drivers"]
 icarusq = ["qcodes_contrib_drivers", "pyvisa-py"]
+los = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
+emulator = ["qutip", "scipy"]
 
 
 [tool.poe.tasks]

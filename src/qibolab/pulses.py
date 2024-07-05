@@ -218,7 +218,7 @@ class PulseShape(ABC):
         shape_name = re.findall(r"(\w+)", value)[0]
         if shape_name not in globals():
             raise ValueError(f"shape {value} not found")
-        shape_parameters = re.findall(r"[\w+\d\.\d]+", value)[1:]
+        shape_parameters = re.findall(r"[-\w+\d\.\d]+", value)[1:]
         # TODO: create multiple tests to prove regex working correctly
         return globals()[shape_name](*shape_parameters)
 
@@ -491,7 +491,6 @@ class Drag(PulseShape):
                 self.beta
                 * (-(x - (num_samples - 1) / 2) / ((num_samples / self.rel_sigma) ** 2))
                 * i
-                * sampling_rate
             )
             waveform = Waveform(q)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"

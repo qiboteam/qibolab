@@ -14,8 +14,8 @@ from qibolab.instruments.rfsoc.convert import (
     convert_units_sweeper,
     replace_pulse_shape,
 )
-from qibolab.platform import Qubit
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.qubits import Qubit
 from qibolab.result import (
     AveragedIntegratedResults,
     AveragedSampleResults,
@@ -210,7 +210,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[10e6],
         expts=100,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
 
     assert sweeper.starts == [-1]
     assert sweeper.stops == [9]
@@ -223,7 +223,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[10e6],
         expts=100,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
     assert sweeper.starts == [0]
     assert sweeper.stops == [10]
 
@@ -235,7 +235,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[100, 140],
         expts=100,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
     assert (sweeper.starts == [0, 0.04]).all()
     assert (sweeper.stops == [0.1, 0.14]).all()
 
@@ -247,7 +247,7 @@ def test_convert_units_sweeper(dummy_qrc):
         stops=[np.pi],
         expts=180,
     )
-    convert_units_sweeper(sweeper, seq, platform.qubits)
+    sweeper = convert_units_sweeper(sweeper, seq, platform.qubits)
     assert sweeper.starts == [0]
     assert sweeper.stops == [180]
 
@@ -428,7 +428,10 @@ def test_sweep(mocker, dummy_qrc):
     )
 
     nshots = 100
-    server_results = ([[np.random.rand(nshots)]], [[np.random.rand(nshots)]])
+    server_results = (
+        [[[np.random.rand(nshots)] * 10]],
+        [[[np.random.rand(nshots)] * 10]],
+    )
     mocker.patch("qibosoq.client.connect", return_value=server_results)
     parameters = ExecutionParameters(
         nshots=nshots,
@@ -503,7 +506,7 @@ def test_update_cfg(mocker, dummy_qrc):
     results = instrument.play(platform.qubits, platform.couplers, seq, parameters)
     assert instrument.cfg.reps == nshots
     relax_time = relax_time * 1e-3
-    assert instrument.cfg.repetition_duration == relax_time
+    assert instrument.cfg.relaxation_time == relax_time
 
 
 def test_classify_shots(dummy_qrc):

@@ -1,9 +1,12 @@
 """Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
 :class:`qibolab.platforms.platform.DesignPlatform`."""
 
+import inspect
+import os
 import pathlib
 import pickle
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -19,8 +22,10 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rfsoc.driver import RFSoC
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
-from qibolab.pulses import PulseSequence, Rectangular
+from qibolab.platform.load import PLATFORMS
+from qibolab.pulses import Drag, PulseSequence, Rectangular
 from qibolab.serialize import (
+    PLATFORM,
     dump_kernels,
     dump_platform,
     dump_runcard,
@@ -55,6 +60,42 @@ def test_create_platform(platform):
 def test_create_platform_error():
     with pytest.raises(ValueError):
         platform = create_platform("nonexistent")
+
+
+def test_create_platform_multipath(tmp_path: Path):
+    some = tmp_path / "some"
+    others = tmp_path / "others"
+    some.mkdir()
+    others.mkdir()
+
+    for p in [
+        some / "platform0",
+        some / "platform1",
+        others / "platform1",
+        others / "platform2",
+    ]:
+        p.mkdir()
+        (p / PLATFORM).write_text(
+            inspect.cleandoc(
+                f"""
+                from qibolab.platform import Platform
+
+                def create():
+                    return Platform("{p.parent.name}-{p.name}", {{}}, {{}}, {{}})
+                """
+            )
+        )
+
+    os.environ[PLATFORMS] = f"{some}{os.pathsep}{others}"
+
+    def path(name):
+        return tmp_path / Path(create_platform(name).name.replace("-", os.sep))
+
+    assert path("platform0").relative_to(some)
+    assert path("platform1").relative_to(some)
+    assert path("platform2").relative_to(others)
+    with pytest.raises(ValueError):
+        create_platform("platform3")
 
 
 def test_platform_sampling_rate(platform):
@@ -358,3 +399,19 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     target_probs = np.zeros((nqubits, 2))
     target_probs[:, 0] = 1
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
+
+
+def test_create_RX_drag_pulses():
+    platform = create_dummy()
+    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
+    beta = 0.1234
+    for qubit in qubits:
+        drag_pi = platform.create_RX_drag_pulse(qubit, 0, beta=beta)
+        assert drag_pi.shape == Drag(drag_pi.shape.rel_sigma, beta=beta)
+        drag_pi_half = platform.create_RX90_drag_pulse(qubit, drag_pi.finish, beta=beta)
+        assert drag_pi_half.shape == Drag(drag_pi_half.shape.rel_sigma, beta=beta)
+        np.testing.assert_almost_equal(drag_pi.amplitude, 2 * drag_pi_half.amplitude)
+
+        # to check ShapeInitError
+        drag_pi.shape.envelope_waveforms()
+        drag_pi_half.shape.envelope_waveforms()

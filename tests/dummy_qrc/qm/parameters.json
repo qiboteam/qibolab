@@ -30,6 +30,27 @@
         ]
     ],
     "instruments": {
+        "qm": {
+            "bounds": {
+                "waveforms" : 10000,
+                "readout": 30,
+                "instructions": 1000000
+            }
+        },
+        "con1": {
+            "i1": {"gain": 0},
+            "i2": {"gain": 0}
+        },
+        "con2": {
+            "o2": {
+                "filter": {
+                    "feedforward": [1.0684635881381783, -1.0163217174522334],
+                    "feedback": [0.947858129314055]
+                }
+            },
+            "i1": {"gain": 0},
+            "i2": {"gain": 0}
+        },
         "lo_readout_a": {
             "frequency": 7300000000,
             "power": 18
@@ -316,6 +337,24 @@
                 "mixer_drive_phi": 0.0,
                 "mixer_readout_g": 0.0,
                 "mixer_readout_phi": 0.0
+            }
+        },
+        "two_qubit":{
+            "0-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "1-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-3": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-4": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             }
         }
     }

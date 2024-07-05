@@ -1,19 +1,22 @@
 """RFSoC FPGA driver."""
 
+import re
 from dataclasses import asdict, dataclass
 from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 import qibosoq.components.base as rfsoc
+from qibo.config import log
 from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.port import Port
-from qibolab.platform import Coupler, Qubit
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import IntegratedResults, SampleResults
+from qibolab.qubits import Qubit
+from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResults
 from qibolab.sweeper import BIAS, Sweeper
 
 from .convert import convert, convert_units_sweeper
@@ -69,8 +72,96 @@ class RFSoC(Controller):
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
 
-    def setup(self):
-        """Empty deprecated method."""
+    @staticmethod
+    def _try_to_execute(server_commands, host, port):
+        try:
+            return client.connect(server_commands, host, port)
+        except RuntimeError as e:
+            if "exception in readout loop" in str(e):
+                log.warning(
+                    "%s %s",
+                    "Exception in readout loop. Attempting again",
+                    "You may want to increase the relaxation time.",
+                )
+                return client.connect(server_commands, host, port)
+            buffer_overflow = r"buffer length must be \d+ samples or less"
+            if re.search(buffer_overflow, str(e)) is not None:
+                log.warning("Buffer full! Use shorter pulses.")
+            raise e
+
+    @staticmethod
+    def convert_and_discriminate_samples(discriminated_shots, execution_parameters):
+        if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+            _, counts = np.unique(discriminated_shots, return_counts=True, axis=0)
+            freqs = counts / discriminated_shots.shape[0]
+            result = execution_parameters.results_type(freqs, discriminated_shots)
+        else:
+            result = execution_parameters.results_type(discriminated_shots)
+        return result
+
+    @staticmethod
+    def validate_input_command(
+        sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool
+    ):
+        """Check if sequence and execution_parameters are supported."""
+        if execution_parameters.acquisition_type is AcquisitionType.RAW:
+            if sweep:
+                raise NotImplementedError(
+                    "Raw data acquisition is not compatible with sweepers"
+                )
+            if len(sequence.ro_pulses) != 1:
+                raise NotImplementedError(
+                    "Raw data acquisition is compatible only with a single readout"
+                )
+            if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+                raise NotImplementedError("Raw data acquisition can only be averaged")
+        if execution_parameters.fast_reset:
+            raise NotImplementedError("Fast reset is not supported")
+
+    @staticmethod
+    def merge_sweep_results(
+        dict_a: dict[str, Union[IntegratedResults, SampleResults]],
+        dict_b: dict[str, Union[IntegratedResults, SampleResults]],
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        """Merge two dictionary mapping pulse serial to Results object.
+
+        If dict_b has a key (serial) that dict_a does not have, simply add it,
+        otherwise sum the two results
+
+        Args:
+            dict_a (dict): dict mapping ro pulses serial to qibolab res objects
+            dict_b (dict): dict mapping ro pulses serial to qibolab res objects
+        Returns:
+            A dict mapping the readout pulses serial to qibolab results objects
+        """
+        for serial in dict_b:
+            if serial in dict_a:
+                data = lambda res: (
+                    res.voltage if isinstance(res, IntegratedResults) else res.samples
+                )
+                dict_a[serial] = type(dict_a[serial])(
+                    np.append(data(dict_a[serial]), data(dict_b[serial]))
+                )
+            else:
+                dict_a[serial] = dict_b[serial]
+        return dict_a
+
+    @staticmethod
+    def reshape_sweep_results(results, sweepers, execution_parameters):
+        shape = [len(sweeper.values) for sweeper in sweepers]
+        if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+            shape.insert(0, execution_parameters.nshots)
+
+        def data(value):
+            if isinstance(value, IntegratedResults):
+                data = value.voltage
+            elif isinstance(value, AveragedSampleResults):
+                data = value.statistical_frequency
+            else:
+                data = value.samples
+            return type(value)(data.reshape(shape))
+
+        return {key: data(value) for key, value in results.items()}
 
     def _execute_pulse_sequence(
         self,
@@ -93,7 +184,7 @@ class RFSoC(Controller):
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
-        return client.connect(server_commands, self.host, self.port)
+        return self._try_to_execute(server_commands, self.host, self.port)
 
     def _execute_sweeps(
         self,
@@ -110,16 +201,17 @@ class RFSoC(Controller):
         Returns:
             Lists of I and Q value measured
         """
-        for sweeper in sweepers:
-            convert_units_sweeper(sweeper, sequence, qubits)
+        converted_sweepers = [
+            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
+        ]
         server_commands = {
             "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
             "cfg": asdict(self.cfg),
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "sweepers": [sweeper.serialized for sweeper in sweepers],
+            "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
         }
-        return client.connect(server_commands, self.host, self.port)
+        return self._try_to_execute(server_commands, self.host, self.port)
 
     def play(
         self,
@@ -146,6 +238,11 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             qibolab results objects
         """
+        if couplers != {}:
+            raise NotImplementedError(
+                "The RFSoC driver currently does not support couplers."
+            )
+
         self.validate_input_command(sequence, execution_parameters, sweep=False)
         self.update_cfg(execution_parameters)
 
@@ -177,42 +274,21 @@ class RFSoC(Controller):
                     discriminated_shots = self.classify_shots(
                         i_pulse, q_pulse, qubits[ro_pulse.qubit]
                     )
-                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, axis=0)
-                    result = execution_parameters.results_type(discriminated_shots)
+                    result = self.convert_and_discriminate_samples(
+                        discriminated_shots, execution_parameters
+                    )
                 else:
                     result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
 
         return results
 
-    @staticmethod
-    def validate_input_command(
-        sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool
-    ):
-        """Check if sequence and execution_parameters are supported."""
-        if execution_parameters.acquisition_type is AcquisitionType.RAW:
-            if sweep:
-                raise NotImplementedError(
-                    "Raw data acquisition is not compatible with sweepers"
-                )
-            if len(sequence.ro_pulses) != 1:
-                raise NotImplementedError(
-                    "Raw data acquisition is compatible only with a single readout"
-                )
-            if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-                raise NotImplementedError("Raw data acquisition can only be averaged")
-        if execution_parameters.fast_reset:
-            raise NotImplementedError("Fast reset is not supported")
-
     def update_cfg(self, execution_parameters: ExecutionParameters):
         """Update rfsoc.Config object with new parameters."""
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
-            self.cfg.repetition_duration = (
-                execution_parameters.relaxation_time * NS_TO_US
-            )
+            self.cfg.relaxation_time = execution_parameters.relaxation_time * NS_TO_US
 
     def classify_shots(
         self,
@@ -232,7 +308,7 @@ class RFSoC(Controller):
         )
         shots = np.heaviside(np.array(rotated) - threshold, 0)
         if isinstance(shots, float):
-            return [shots]
+            return np.array([shots])
         return shots
 
     def play_sequence_in_sweep_recursion(
@@ -334,8 +410,14 @@ class RFSoC(Controller):
                     setattr(
                         sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx]
                     )
-                elif sweeper is rfsoc.Parameter.DELAY:
-                    start_delay = values[jdx][idx]
+                    if sweeper_parameter is rfsoc.Parameter.DURATION:
+                        for pulse_idx in range(
+                            kdx + 1,
+                            len(sequence.get_qubit_pulses(sequence[kdx].qubit)),
+                        ):
+                            # TODO: this is a patch and works just for simple experiments
+                            sequence[pulse_idx].start = sequence[pulse_idx - 1].finish
+                elif sweeper_parameter is rfsoc.Parameter.DELAY:
                     sequence[kdx].start_delay = values[jdx][idx]
 
             res = self.recursive_python_sweep(
@@ -347,30 +429,7 @@ class RFSoC(Controller):
                 execution_parameters=execution_parameters,
             )
             results = self.merge_sweep_results(results, res)
-        return results  # already in the right format
-
-    @staticmethod
-    def merge_sweep_results(
-        dict_a: dict[str, Union[IntegratedResults, SampleResults]],
-        dict_b: dict[str, Union[IntegratedResults, SampleResults]],
-    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-        """Merge two dictionary mapping pulse serial to Results object.
-
-        If dict_b has a key (serial) that dict_a does not have, simply add it,
-        otherwise sum the two results
-
-        Args:
-            dict_a (dict): dict mapping ro pulses serial to qibolab res objects
-            dict_b (dict): dict mapping ro pulses serial to qibolab res objects
-        Returns:
-            A dict mapping the readout pulses serial to qibolab results objects
-        """
-        for serial in dict_b:
-            if serial in dict_a:
-                dict_a[serial] = dict_a[serial] + dict_b[serial]
-            else:
-                dict_a[serial] = dict_b[serial]
-        return dict_a
+        return results
 
     def get_if_python_sweep(
         self, sequence: PulseSequence, *sweepers: rfsoc.Sweeper
@@ -457,7 +516,7 @@ class RFSoC(Controller):
                 for pulse in original_ro
                 if qubits[pulse.qubit].feedback.port.name == k_val
             ]
-            for i, (ro_pulse, original_ro_pulse) in enumerate(zip(adc_ro, original_ro)):
+            for i, ro_pulse in enumerate(adc_ro):
                 i_vals = np.array(toti[k][i])
                 q_vals = np.array(totq[k][i])
 
@@ -469,15 +528,16 @@ class RFSoC(Controller):
                     execution_parameters.acquisition_type
                     is AcquisitionType.DISCRIMINATION
                 ):
-                    qubit = qubits[original_ro_pulse.qubit]
+                    qubit = qubits[ro_pulse.qubit]
                     discriminated_shots = self.classify_shots(i_vals, q_vals, qubit)
-                    if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-                        discriminated_shots = np.mean(discriminated_shots, axis=0)
-                    result = execution_parameters.results_type(discriminated_shots)
+                    result = self.convert_and_discriminate_samples(
+                        discriminated_shots, execution_parameters
+                    )
+
                 else:
                     result = execution_parameters.results_type(i_vals + 1j * q_vals)
 
-                results[original_ro_pulse.qubit] = results[ro_pulse.serial] = result
+                results[ro_pulse.qubit] = results[ro_pulse.serial] = result
         return results
 
     def sweep(
@@ -507,6 +567,11 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             results objects
         """
+        if couplers != {}:
+            raise NotImplementedError(
+                "The RFSoC driver currently does not support couplers."
+            )
+
         self.validate_input_command(sequence, execution_parameters, sweep=True)
         self.update_cfg(execution_parameters)
 
@@ -542,4 +607,4 @@ class RFSoC(Controller):
                 if qubit.flux is not None:
                     qubit.flux.offset = initial_biases[idx]
 
-        return results
+        return self.reshape_sweep_results(results, sweepers, execution_parameters)

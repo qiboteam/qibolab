@@ -30,6 +30,13 @@
         ]
     ],
     "instruments": {
+        "qblox_controller": {
+            "bounds": {
+                "instructions": 1000000,
+                "readout": 250,
+                "waveforms": 40000
+            }
+        },
         "twpa_pump": {
             "frequency": 6535900000,
             "power": 4
@@ -392,6 +399,24 @@
                 "sweetspot": 0.589,
                 "iq_angle": 7.997,
                 "threshold": 0.002323
+            }
+        },
+        "two_qubit":{
+            "0-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "1-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-3": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-4": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             }
         }
     }

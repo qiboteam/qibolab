@@ -36,6 +36,13 @@
         ]
     },
     "instruments": {
+        "dummy": {
+            "bounds": {
+                "waveforms": 0,
+                "readout": 0,
+                "instructions": 0
+            }
+        },
         "twpa_pump": {
             "power": 10,
             "frequency": 1000000000.0
@@ -503,7 +510,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
+                "assignment_fidelity": [0.5, 0.1],
+                "gate_fidelity": [0.5, 0.1],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -539,7 +547,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
+                "assignment_fidelity": [0.5, 0.1],
+                "gate_fidelity": [0.5, 0.1],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -575,7 +584,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
+                "assignment_fidelity": [0.5, 0.1],
+                "gate_fidelity": [0.5, 0.1],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -611,7 +621,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
+                "assignment_fidelity": [0.5, 0.1],
+                "gate_fidelity": [0.5, 0.1],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -647,7 +658,8 @@
                 "Ec": 0.0,
                 "Ej": 0.0,
                 "g": 0.0,
-                "assignment_fidelity": 0.0,
+                "assignment_fidelity": [0.5, 0.1],
+                "gate_fidelity": [0.5, 0.1],
                 "peak_voltage": 0,
                 "pi_pulse_amplitude": 0,
                 "T1": 0.0,
@@ -669,6 +681,24 @@
                 "mixer_drive_phi": 0.0,
                 "mixer_readout_g": 0.0,
                 "mixer_readout_phi": 0.0
+            }
+        },
+        "two_qubit":{
+            "0-2": {
+                "gate_fidelity": [0.5, 0.1],
+                "cz_fidelity": [0.5, 0.1]
+            },
+            "1-2": {
+                "gate_fidelity": [0.5, 0.1],
+                "cz_fidelity": [0.5, 0.1]
+            },
+            "2-3": {
+                "gate_fidelity": [0.5, 0.1],
+                "cz_fidelity": [0.5, 0.1]
+            },
+            "2-4": {
+                "gate_fidelity": [0.5, 0.1],
+                "cz_fidelity": [0.5, 0.1]
             }
         },
         "coupler": {

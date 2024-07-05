@@ -1,0 +1,284 @@
+{
+    "device_name": "ibmfakebelem_q01",
+    "nqubits": 2,
+    "ncouplers": 0,
+    "description": "IBM 5-qubit device FakeBelem, q0 and q1 only",
+    "settings": {
+        "nshots": 4096,
+        "relaxation_time": 300000
+    },
+    "instruments": {
+        "pulse_simulator": {
+            "model_params": {
+                "model_name": "general_no_coupler_model",
+                "topology": [
+                    [0, 1]
+                ],
+                "nqubits": 2,
+                "ncouplers": 0,
+                "qubits_list": ["0", "1"],
+                "couplers_list": [],
+                "nlevels_q": [2, 2],
+                "nlevels_c": [],
+                "readout_error": {
+                    "0": [0.01, 0.02],
+                    "1": [0.01, 0.02]
+                },
+                "drive_freq": {
+                    "0": 5.090167234445013,
+                    "1": 5.245306068285918
+                },
+                "T1": {
+                    "0": 88578.48970762537,
+                    "1": 78050.43996837796
+                },
+                "T2": {
+                    "0": 106797.94866226273,
+                    "1": 63765.78004446571
+                },
+                "lo_freq": {
+                    "0": 5.090167234445013,
+                    "1": 5.245306068285918
+                },
+                "rabi_freq": {
+                    "0": 0.12545753819061986,
+                    "1": 0.12144270034090286
+                },
+                "anharmonicity": {
+                    "0": -0.3361230051821652,
+                    "1": -0.316572131412737
+                },
+                "coupling_strength": {
+                    "1_0": 0.0018736137364449845
+                }
+            },
+            "simulation_config": {
+                "simulation_engine_name": "Qutip",
+                "sampling_rate": 4.5,
+                "sim_sampling_boost": 10,
+                "runcard_duration_in_dt_units": true,
+                "instant_measurement": true,
+                "simulate_dissipation": true,
+                "output_state_history": true
+            },
+            "sim_opts": null,
+            "bounds": {
+                "waveforms": 1,
+                "readout": 1,
+                "instructions": 1
+            }
+        }
+    },
+    "qubits": [0, 1],
+    "couplers": [],
+    "topology": [
+        [0, 1]
+    ],
+    "native_gates": {
+        "single_qubit": {
+            "0": {
+                "RX": {
+                    "duration": 61.117,
+                    "amplitude": 0.5,
+                    "frequency": 5090167234.445013,
+                    "shape": "Drag(4, -2.4305800297101414)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 22400,
+                    "amplitude": 0.03,
+                    "frequency": 7301661824.000001,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": 1.5636758979377372
+                }
+            },
+            "1": {
+                "RX": {
+                    "duration": 63.394,
+                    "amplitude": 0.5,
+                    "frequency": 5245306068.285917,
+                    "shape": "Drag(4, 0.6571522139248822)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 22400,
+                    "amplitude": 0.056500000000000015,
+                    "frequency": 7393428047.0,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": -3.022547221302854
+                }
+            }
+        },
+        "two_qubit": {
+            "0-1": {
+                "CNOT": [
+                    {
+                        "type": "virtual_z",
+                        "phase": -3.141592653589793,
+                        "qubit": 0
+                    },
+                    {
+                        "type": "virtual_z",
+                        "phase": -1.5707963267948966,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 160,
+                        "amplitude": 0.11622814090041741,
+                        "frequency": 5090167234.445013,
+                        "shape": "Drag(4, -2.4030014266125312)",
+                        "type": "qd",
+                        "relative_start": 0,
+                        "phase": 1.6155738267853115,
+                        "qubit": 0
+                    },
+                    {
+                        "duration": 160,
+                        "amplitude": 0.11976666126366188,
+                        "frequency": 5245306068.285917,
+                        "shape": "Drag(4, 0.6889687213780946)",
+                        "type": "qd",
+                        "relative_start": 0,
+                        "phase": 0.02175043021781017,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 1584,
+                        "amplitude": 0.023676707660000004,
+                        "frequency": 5090167234.445013,
+                        "shape": "GaussianSquare(6.4, 1328)",
+                        "type": "qd",
+                        "relative_start": 160,
+                        "phase": 0.16645972884560645,
+                        "qubit": 0
+                    },
+                    {
+                        "type": "virtual_z",
+                        "phase": -1.5707963267948966,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 1584,
+                        "amplitude": 0.14343084605450945,
+                        "frequency": 5090167234.445013,
+                        "shape": "GaussianSquare(6.4, 1328)",
+                        "type": "qd",
+                        "relative_start": 160,
+                        "phase": -2.9352017171062608,
+                        "qubit": 1
+                    },
+                    {
+                        "type": "virtual_z",
+                        "phase": 1.5707963267948966,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 160,
+                        "amplitude": 0.24840043468596693,
+                        "frequency": 5245306068.285917,
+                        "shape": "Drag(4, 0.6571522139248822)",
+                        "type": "qd",
+                        "relative_start": 1744,
+                        "phase": 0.0,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 1584,
+                        "amplitude": 0.023676707660000004,
+                        "frequency": 5090167234.445013,
+                        "shape": "GaussianSquare(6.4, 1328)",
+                        "type": "qd",
+                        "relative_start": 1904,
+                        "phase": -2.975132924744187,
+                        "qubit": 0
+                    },
+                    {
+                        "type": "virtual_z",
+                        "phase": -1.5707963267948966,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 1584,
+                        "amplitude": 0.14343084605450945,
+                        "frequency": 5090167234.445013,
+                        "shape": "GaussianSquare(6.4, 1328)",
+                        "type": "qd",
+                        "relative_start": 1904,
+                        "phase": 0.20639093648353235,
+                        "qubit": 1
+                    },
+                    {
+                        "type": "virtual_z",
+                        "phase": -1.5707963267948966,
+                        "qubit": 0
+                    },
+                    {
+                        "type": "virtual_z",
+                        "phase": 1.5707963267948966,
+                        "qubit": 1
+                    },
+                    {
+                        "duration": 160,
+                        "amplitude": 0.11622814090041741,
+                        "frequency": 5090167234.445013,
+                        "shape": "Drag(4, -2.4030014266125312)",
+                        "type": "qd",
+                        "relative_start": 3488,
+                        "phase": 0.04477749999041481,
+                        "qubit": 0
+                    },
+                    {
+                        "duration": 160,
+                        "amplitude": 0.11976666126366188,
+                        "frequency": 5245306068.285917,
+                        "shape": "Drag(4, 0.6889687213780946)",
+                        "type": "qd",
+                        "relative_start": 3488,
+                        "phase": -1.549045896577087,
+                        "qubit": 1
+                    }
+                ]
+            }
+        }
+    },
+    "characterization": {
+        "single_qubit": {
+            "0": {
+                "readout_frequency": 7301661824.000001,
+                "drive_frequency": 5090167234.445013,
+                "anharmonicity": -336123005.1821652,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "T1": 0.0,
+                "T2": 0.0,
+                "sweetspot": 0,
+                "mean_gnd_states": "1.5417+0.1817j",
+                "mean_exc_states": "2.5332-0.5914j",
+                "threshold": 1.5435,
+                "iq_angle": 2.602
+            },
+            "1": {
+                "readout_frequency": 7393428047.0,
+                "drive_frequency": 5245306068.285917,
+                "anharmonicity": -316572131.412737,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "T1": 0.0,
+                "T2": 0.0,
+                "sweetspot": 0,
+                "mean_gnd_states": "(0+0j)",
+                "mean_exc_states": "(0+0j)"
+            }
+        }
+    }
+}

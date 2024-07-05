@@ -36,6 +36,13 @@
         "relaxation_time": 300000
     },
     "instruments": {
+        "EL_ZURO": {
+            "bounds": {
+                "instructions": 1000000,
+                "readout": 250,
+                "waveforms": 40000
+            }
+        },
         "lo_readout": {
             "frequency": 5500000000
         },
@@ -370,6 +377,24 @@
                 ],
                 "threshold": 0.233806,
                 "iq_angle": 0.481
+            }
+        },
+        "two_qubit":{
+            "0-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "1-2": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-3": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
+            },
+            "2-4": {
+                "gate_fidelity": [0.0, 0.0],
+                "cz_fidelity": [0.0, 0.0]
             }
         },
         "coupler": {

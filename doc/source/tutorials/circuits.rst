@@ -20,11 +20,11 @@ circuits definition that we leave to the `Qibo
     circuit = Circuit(1)
 
     # attach Hadamard gate and a measurement
-    circuit.add(gates.H(0))
+    circuit.add(gates.GPI2(0, phi=np.pi / 2))
     circuit.add(gates.M(0))
 
     # execute on quantum hardware
-    qibo.set_backend("qibolab", "dummy")
+    qibo.set_backend("qibolab", platform="dummy")
     hardware_result = circuit(nshots=5000)
 
     # retrieve measured probabilities
@@ -80,7 +80,7 @@ results:
         circuit = Circuit(1)
 
         # attach Rotation on X-Pauli with angle = 0
-        circuit.add(gates.RX(0, theta=0))
+        circuit.add(gates.GPI2(0, phi=0))
         circuit.add(gates.M(0))
 
         # define range of angles from [0, 2pi]
@@ -104,7 +104,7 @@ results:
 
 
     # execute on quantum hardware
-    qibo.set_backend("qibolab", "dummy")
+    qibo.set_backend("qibolab", platform="dummy")
     hardware = execute_rotation()
 
     # execute with classical quantum simulation
@@ -129,7 +129,7 @@ Returns the following plot:
    :class: only-dark
 
 .. note::
-   Executing circuits using the Qibolab backend results to automatic application of the transpilation and compilation pipelines (:ref:`main_doc_compiler`) which convert the circuit to a pulse sequence that is executed by the given platform.
+   Executing circuits using the Qibolab backend results to automatic application of the compilation pipeline (:ref:`main_doc_compiler`) which convert the circuit to a pulse sequence that is executed by the given platform.
    It is possible to modify these pipelines following the instructions in the :ref:`tutorials_compiler` example.
 
 QASM Execution
@@ -144,10 +144,9 @@ Qibolab also supports the execution of circuits starting from a QASM string. The
    include "qelib1.inc";
    qreg q[3];
    creg a[2];
-   cx q[0],q[2];
-   x q[1];
-   swap q[0],q[1];
-   cx q[1],q[0];
+   cz q[0],q[2];
+   gpi2(0.3) q[1];
+   cz q[1],q[2];
    measure q[0] -> a[0];
    measure q[2] -> a[1];"""
 

@@ -35,13 +35,17 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
+        pwd = builtins.getEnv "PWD";
+        platforms = builtins.toPath "${pwd}/../qibolab_platforms_qrc/";
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
 
           modules = [
-            {
-              packages = with pkgs; [pre-commit poethepoet jupyter stdenv.cc.cc.lib zlib];
+            ({lib, ...}: {
+              packages = with pkgs; [pre-commit poethepoet jupyter];
+
+              env.QIBOLAB_PLATFORMS = platforms;
 
               languages.c = {
                 enable = true;
@@ -55,9 +59,15 @@
                 enable = true;
                 poetry = {
                   enable = true;
-                  install.enable = true;
-                  install.groups = ["dev" "tests"];
-                  install.allExtras = true;
+                  install = {
+                    enable = true;
+                    groups = ["dev" "tests"];
+                    extras = [
+                      (lib.strings.concatStrings
+                        (lib.strings.intersperse " -E "
+                          ["qblox" "qm" "zh" "rfsoc" "los"]))
+                    ];
+                  };
                 };
                 version = "3.11";
               };
@@ -66,7 +76,7 @@
                 enable = true;
                 channel = "stable";
               };
-            }
+            })
           ];
         };
       });

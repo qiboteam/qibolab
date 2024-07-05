@@ -35,6 +35,20 @@ def gpi2_rule(gate, platform):
     return sequence, {}
 
 
+def gpi_rule(gate, platform):
+    """Rule for GPI."""
+    qubit = gate.target_qubits[0]
+    theta = gate.parameters[0]
+    sequence = PulseSequence()
+    # the following definition has a global phase difference compare to
+    # to the matrix representation. See
+    # https://github.com/qiboteam/qibolab/pull/804#pullrequestreview-1890205509
+    # for more detail.
+    pulse = platform.create_RX_pulse(qubit, start=0, relative_phase=theta)
+    sequence.add(pulse)
+    return sequence, {}
+
+
 def u3_rule(gate, platform):
     """U3 applied as RZ-RX90-RZ-RX90-RZ."""
     qubit = gate.target_qubits[0]

@@ -1,15 +1,15 @@
 .. _tutorials_compiler:
 
-How to modify the default circuit transpilation.
-================================================
+How to modify the default circuit compilation
+=============================================
 
 A Qibolab platform can execute pulse sequences.
 As shown in :ref:`tutorials_circuits`, Qibo circuits can be executed by invoking the :class:`qibolab.backends.QibolabBackend`, which is the object integrating Qibolab to Qibo.
-When a Qibo circuit is executed, the backend will automatically transpile and compile it to a pulse sequence, which will be sent to the platform for execution.
-The default transpiler and compiler outlined in the :ref:`main_doc_compiler` section will be used in this process.
+When a Qibo circuit is executed, the backend will automatically compile it to a pulse sequence, which will be sent to the platform for execution.
+The default compiler outlined in the :ref:`main_doc_compiler` section will be used in this process.
 In this tutorial we will demonstrate how the user can modify this process for custom applications.
 
-The ``transpiler`` and ``compiler`` objects used when executing a circuit are attributes of :class:`qibolab.backends.QibolabBackend`.
+The ``compiler`` object used when executing a circuit are attributes of :class:`qibolab.backends.QibolabBackend`.
 Creating an instance of the backend provides access to these objects:
 
 .. testcode:: python
@@ -18,44 +18,23 @@ Creating an instance of the backend provides access to these objects:
 
     backend = QibolabBackend(platform="dummy")
 
-    print(type(backend.transpiler))
     print(type(backend.compiler))
 
 .. testoutput:: python
     :hide:
 
-    <class 'qibo.transpiler.pipeline.Passes'>
     <class 'qibolab.compilers.compiler.Compiler'>
 
 The transpiler is responsible for transforming any circuit to one that respects
 the chip connectivity and native gates. The compiler then transforms this circuit
-to the equivalent pulse sequence.
-The user can modify the default transpilation and compilation process by changing
-the ``transpiler`` and ``compiler`` attributes of the ``QibolabBackend``.
-
-.. testcode:: python
-
-    from qibo import gates
-    from qibo.models import Circuit
-    from qibolab.backends import QibolabBackend
-
-    # define circuit
-    circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
-    circuit.add(gates.M(0))
-
-    backend = QibolabBackend(platform="dummy")
-    # disable the transpiler
-    backend.transpiler = None
-
-    # execute circuit
-    result = backend.execute_circuit(circuit, nshots=1000)
-
-completely disables the transpilation steps and the circuit is sent directly to the compiler.
+to the equivalent pulse sequence. Note that there is no transpiler in Qibolab, therefore
+the backend can only execute circuits that contain native gates by default.
+The user can modify the compilation process by changing the  ``compiler`` attributes of
+the ``QibolabBackend``.
 
 In this example, we executed circuits using the backend ``backend.execute_circuit`` method,
 unlike the previous example (:ref:`tutorials_circuits`) where circuits were executed directly using ``circuit(nshots=1000)``.
-It is possible to perform transpiler and compiler manipulation in both approaches.
+It is possible to perform compiler manipulation in both approaches.
 When using ``circuit(nshots=1000)``, Qibo is automatically initializing a ``GlobalBackend()`` singleton that is used to execute the circuit.
 Therefore the previous manipulations can be done as follows:
 
@@ -73,8 +52,6 @@ Therefore the previous manipulations can be done as follows:
 
     # set backend to qibolab
     qibo.set_backend("qibolab", platform="dummy")
-    # disable the transpiler
-    GlobalBackend().transpiler = None
 
     # execute circuit
     result = circuit(nshots=1000)
@@ -87,7 +64,7 @@ The compiler can be modified by adding new compilation rules or changing existin
 As explained in :ref:`main_doc_compiler` section, a rule is a function that accepts a Qibo gate and a Qibolab platform
 and returns the pulse sequence implementing this gate.
 
-The following example shows how to modify the transpiler and compiler in order to execute a circuit containing a Pauli X gate using a single pi-pulse:
+The following example shows how to modify the compiler in order to execute a circuit containing a Pauli X gate using a single pi-pulse:
 
 .. testcode:: python
 
@@ -114,19 +91,14 @@ The following example shows how to modify the transpiler and compiler in order t
     # the empty dictionary is needed because the X gate does not require any virtual Z-phases
 
     backend = QibolabBackend(platform="dummy")
-    # disable the transpiler
-    backend.transpiler = None
     # register the new X rule in the compiler
     backend.compiler[gates.X] = x_rule
 
     # execute the circuit
     result = backend.execute_circuit(circuit, nshots=1000)
 
-Here we completely disabled the transpiler to avoid transforming the X gate to a different gate and we added a rule that instructs the compiler how to transform the X gate.
-
 The default set of compiler rules is defined in :py:mod:`qibolab.compilers.default`.
 
 .. note::
    If the compiler receives a circuit that contains a gate for which it has no rule, an error will be raised.
    This means that the native gate set that the transpiler uses, should be compatible with the available compiler rules.
-   If the transpiler is disabled, a rule should be available for all gates in the original circuit.

@@ -3,10 +3,18 @@ import pathlib
 
 import pytest
 
-from qibolab import PLATFORMS, create_platform
+from qibolab.platform import create_platform
+from qibolab.platform.load import PLATFORMS
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
-TESTING_PLATFORM_NAMES = ["dummy_couplers", "qm", "qblox", "rfsoc", "zurich"]
+TESTING_PLATFORM_NAMES = [
+    "dummy_couplers",
+    "qm",
+    "qm_octave",
+    "qblox",
+    "rfsoc",
+    "zurich",
+]
 """Platforms used for testing without access to real instruments."""
 
 
@@ -49,6 +57,11 @@ def set_platform_profile():
 @pytest.fixture
 def dummy_qrc():
     set_platform_profile()
+
+
+@pytest.fixture
+def emulators():
+    os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators")
 
 
 def find_instrument(platform, instrument_type):

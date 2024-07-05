@@ -13,7 +13,7 @@ from typing import Tuple
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import CouplerNatives, SingleQubitNatives, TwoQubitNatives
-from qibolab.platform import (
+from qibolab.platform.platform import (
     CouplerMap,
     InstrumentMap,
     Platform,
@@ -48,31 +48,39 @@ def load_qubits(
     :class: `qibolab.qubits.QubitPair`
     objects.
     """
-    qubits = {
-        json.loads(q): Qubit(json.loads(q), **char)
-        for q, char in runcard["characterization"]["single_qubit"].items()
-    }
+    qubits = {}
+    for q, char in runcard["characterization"]["single_qubit"].items():
+        raw_qubit = Qubit(json.loads(q), **char)
+        raw_qubit.crosstalk_matrix = {
+            json.loads(key): value for key, value in raw_qubit.crosstalk_matrix.items()
+        }
+        qubits[json.loads(q)] = raw_qubit
+
     if kernels is not None:
         for q in kernels:
             qubits[q].kernel = kernels[q]
 
     couplers = {}
     pairs = {}
+    two_qubit_characterization = runcard["characterization"].get("two_qubit", {})
     if "coupler" in runcard["characterization"]:
         couplers = {
             json.loads(c): Coupler(json.loads(c), **char)
             for c, char in runcard["characterization"]["coupler"].items()
         }
-
         for c, pair in runcard["topology"].items():
             q0, q1 = pair
+            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], couplers[json.loads(c)]
+                qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(c)]
             )
     else:
         for pair in runcard["topology"]:
             q0, q1 = pair
-            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], None)
+            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
+            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
+                qubits[q0], qubits[q1], **char, coupler=None
+            )
 
     qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
 
@@ -106,8 +114,7 @@ def register_gates(
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
         native_gates = TwoQubitNatives.from_dict(qubits, couplers, gatedict)
-        coupler = pairs[(q0, q1)].coupler
-        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], coupler, native_gates)
+        pairs[(q0, q1)].native_gates = native_gates
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
 
@@ -140,17 +147,20 @@ def dump_native_gates(
         }
 
     # two-qubit native gates
-    native_gates["two_qubit"] = {}
-    for pair in pairs.values():
-        natives = pair.native_gates.raw
-        if len(natives) > 0:
-            pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
-            native_gates["two_qubit"][pair_name] = natives
+    if len(pairs) > 0:
+        native_gates["two_qubit"] = {}
+        for pair in pairs.values():
+            natives = pair.native_gates.raw
+            if len(natives) > 0:
+                pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
+                native_gates["two_qubit"][pair_name] = natives
 
     return native_gates
 
 
-def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict:
+def dump_characterization(
+    qubits: QubitMap, pairs: QubitPairMap = None, couplers: CouplerMap = None
+) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
     characterization = {
@@ -158,6 +168,11 @@ def dump_characterization(qubits: QubitMap, couplers: CouplerMap = None) -> dict
             json.dumps(q): qubit.characterization for q, qubit in qubits.items()
         },
     }
+
+    if len(pairs) > 0:
+        characterization["two_qubit"] = {
+            json.dumps(p): pair.characterization for p, pair in pairs.items()
+        }
 
     if couplers:
         characterization["coupler"] = {
@@ -172,12 +187,20 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     # Qblox modules settings are dictionaries and not dataclasses
     data = {}
     for name, instrument in instruments.items():
-        settings = instrument.settings
-        if settings is not None:
-            if isinstance(settings, dict):
+        try:
+            # TODO: Migrate all instruments to this approach
+            # (I think it is also useful for qblox)
+            settings = instrument.dump()
+            if len(settings) > 0:
                 data[name] = settings
-            else:
-                data[name] = settings.dump()
+        except AttributeError:
+            settings = instrument.settings
+            if settings is not None:
+                if isinstance(settings, dict):
+                    data[name] = settings
+                else:
+                    data[name] = settings.dump()
+
     return data
 
 
@@ -209,8 +232,9 @@ def dump_runcard(platform: Platform, path: Path):
     settings["native_gates"] = dump_native_gates(
         platform.qubits, platform.pairs, platform.couplers
     )
+
     settings["characterization"] = dump_characterization(
-        platform.qubits, platform.couplers
+        platform.qubits, platform.pairs, platform.couplers
     )
 
     (path / RUNCARD).write_text(json.dumps(settings, sort_keys=False, indent=4))

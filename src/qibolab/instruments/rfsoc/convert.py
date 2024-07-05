@@ -1,5 +1,6 @@
 """Convert helper functions for rfsoc driver."""
 
+from copy import deepcopy
 from dataclasses import asdict
 from functools import singledispatch
 
@@ -7,8 +8,8 @@ import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 
-from qibolab.platform import Qubit
 from qibolab.pulses import Pulse, PulseSequence, PulseShape
+from qibolab.qubits import Qubit
 from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6
@@ -55,8 +56,9 @@ def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
 
 def convert_units_sweeper(
     sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
-):
+) -> rfsoc.Sweeper:
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
+    sweeper = deepcopy(sweeper)
     for idx, jdx in enumerate(sweeper.indexes):
         parameter = sweeper.parameters[idx]
         if parameter is rfsoc.Parameter.FREQUENCY:
@@ -70,6 +72,7 @@ def convert_units_sweeper(
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
             sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
+    return sweeper
 
 
 @singledispatch
@@ -152,7 +155,6 @@ def _(
         for qubit in sweeper.qubits:
             parameters.append(rfsoc.Parameter.BIAS)
             indexes.append(list(qubits.values()).index(qubit))
-
             base_value = qubit.flux.offset
             values = sweeper.get_values(base_value)
             starts.append(values[0])

@@ -15,7 +15,15 @@ CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "kernel", "_flux")
+EXCLUDED_FIELDS = CHANNEL_NAMES + (
+    "name",
+    "native_gates",
+    "kernel",
+    "_flux",
+    "qubit1",
+    "qubit2",
+    "coupler",
+)
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
@@ -61,10 +69,14 @@ class Qubit:
     """Assignment fidelity."""
     readout_fidelity: float = 0.0
     """Readout fidelity."""
+    gate_fidelity: float = 0.0
+    """Gate fidelity from standard RB."""
+
     effective_temperature: float = 0.0
     """Effective temperature."""
     peak_voltage: float = 0
     pi_pulse_amplitude: float = 0
+    resonator_depletion_time: int = 0
     T1: int = 0
     T2: int = 0
     T2_spin_echo: int = 0
@@ -121,6 +133,22 @@ class Qubit:
             if fld.name not in EXCLUDED_FIELDS
         }
 
+    @property
+    def mixer_frequencies(self):
+        """Get local oscillator and intermediate frequencies of native gates.
+
+        Assumes RF = LO + IF.
+        """
+        freqs = {}
+        for gate in fields(self.native_gates):
+            native = getattr(self.native_gates, gate.name)
+            if native is not None:
+                channel_type = native.pulse_type.name.lower()
+                _lo = getattr(self, channel_type).lo_frequency
+                _if = native.frequency - _lo
+                freqs[gate.name] = _lo, _if
+        return freqs
+
 
 QubitPairId = Tuple[QubitId, QubitId]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
@@ -146,6 +174,21 @@ class QubitPair:
     Acts as target on two-qubit gates.
     """
 
+    gate_fidelity: float = 0.0
+    """Gate fidelity from standard 2q RB."""
+
+    cz_fidelity: float = 0.0
+    """Gate fidelity from CZ interleaved RB."""
+
     coupler: Optional[Coupler] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
+
+    @property
+    def characterization(self):
+        """Dictionary containing characterization parameters."""
+        return {
+            fld.name: getattr(self, fld.name)
+            for fld in fields(self)
+            if fld.name not in EXCLUDED_FIELDS
+        }
