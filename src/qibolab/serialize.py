@@ -163,12 +163,15 @@ def dump_characterization(
 ) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
-    characterization = {
-        "single_qubit": {
-            json.dumps(q): qubit.characterization for q, qubit in qubits.items()
-        },
-    }
+    single_qubit = {}
+    for q, qubit in qubits.items():
+        char = qubit.characterization
+        char["crosstalk_matrix"] = {
+            json.dumps(q): c for q, c in qubit.crosstalk_matrix.items()
+        }
+        single_qubit[json.dumps(q)] = char
 
+    characterization = {"single_qubit": single_qubit}
     if len(pairs) > 0:
         characterization["two_qubit"] = {
             json.dumps(p): pair.characterization for p, pair in pairs.items()
