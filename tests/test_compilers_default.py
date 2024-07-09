@@ -44,7 +44,6 @@ def compile_circuit(circuit, platform):
         ((gates.GPI, np.pi / 8), 3),
         ((gates.GPI2, -np.pi / 8), 3),
         ((gates.RZ, np.pi / 4), 2),
-        ((gates.U3, 0.1, 0.2, 0.3), 10),
     ],
 )
 def test_compile(platform, gateargs, sequence_len):
@@ -57,13 +56,13 @@ def test_compile(platform, gateargs, sequence_len):
 def test_compile_two_gates(platform):
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0.1))
-    circuit.add(gates.U3(0, theta=0.1, phi=0.2, lam=0.3))
+    circuit.add(gates.GPI(0, 0.2))
     circuit.add(gates.M(0))
 
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence) == 13
-    assert len(sequence.qd_pulses) == 3
+    assert len(sequence) == 5
+    assert len(sequence.qd_pulses) == 2
     assert len(sequence.ro_pulses) == 1
 
 
@@ -115,45 +114,6 @@ def test_gpi2_to_sequence(platform):
     assert sequence == s
 
 
-def test_u3_to_sequence(platform):
-    circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
-
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == 8
-    assert len(sequence.qd_pulses) == 2
-
-    rx90_pulse1 = platform.create_RX90_pulse(0, relative_phase=0.3)
-    rx90_pulse2 = platform.create_RX90_pulse(0, relative_phase=0.4 - np.pi)
-    s = PulseSequence([rx90_pulse1, rx90_pulse2])
-
-    np.testing.assert_allclose(
-        sequence.duration, rx90_pulse1.duration + rx90_pulse2.duration
-    )
-    # assert sequence == s
-
-
-def test_two_u3_to_sequence(platform):
-    circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
-    circuit.add(gates.U3(0, 0.4, 0.6, 0.5))
-
-    sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == 18
-    assert len(sequence.qd_pulses) == 4
-
-    rx90_pulse = platform.create_RX90_pulse(0)
-
-    np.testing.assert_allclose(sequence.duration, 2 * 2 * rx90_pulse.duration)
-
-    rx90_pulse1 = platform.create_RX90_pulse(0, relative_phase=0.3)
-    rx90_pulse2 = platform.create_RX90_pulse(0, relative_phase=0.4 - np.pi)
-    rx90_pulse3 = platform.create_RX90_pulse(0, relative_phase=1.1)
-    rx90_pulse4 = platform.create_RX90_pulse(0, relative_phase=1.5 - np.pi)
-    s = PulseSequence([rx90_pulse1, rx90_pulse2, rx90_pulse3, rx90_pulse4])
-    # assert sequence == s
-
-
 def test_cz_to_sequence():
     platform = create_platform("dummy")
     circuit = Circuit(3)
@@ -177,11 +137,12 @@ def test_cnot_to_sequence():
 
 def test_add_measurement_to_sequence(platform):
     circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
+    circuit.add(gates.GPI2(0, 0.1))
+    circuit.add(gates.GPI2(0, 0.2))
     circuit.add(gates.M(0))
 
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence) == 10
+    assert len(sequence) == 5
     assert len(sequence.qd_pulses) == 2
     assert len(sequence.ro_pulses) == 1
 
