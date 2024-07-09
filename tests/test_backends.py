@@ -43,7 +43,6 @@ def test_execute_circuit_initial_state():
         (gates.Z, {}),
         (gates.GPI, {"phi": np.pi / 8}),
         (gates.GPI2, {"phi": np.pi / 8}),
-        (gates.U3, {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
     ],
 )
 def test_execute_circuit(gate, kwargs):

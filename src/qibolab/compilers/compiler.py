@@ -12,7 +12,6 @@ from qibolab.compilers.default import (
     identity_rule,
     measurement_rule,
     rz_rule,
-    u3_rule,
     z_rule,
 )
 from qibolab.pulses import Delay, PulseSequence
@@ -49,7 +48,6 @@ class Compiler:
                 gates.I: identity_rule,
                 gates.Z: z_rule,
                 gates.RZ: rz_rule,
-                gates.U3: u3_rule,
                 gates.CZ: cz_rule,
                 gates.CNOT: cnot_rule,
                 gates.GPI2: gpi2_rule,
