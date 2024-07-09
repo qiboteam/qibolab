@@ -47,7 +47,7 @@ Therefore the previous manipulations can be done as follows:
 
     # define circuit
     circuit = Circuit(1)
-    circuit.add(gates.U3(0, 0.1, 0.2, 0.3))
+    circuit.add(gates.GPI2(0, 0.1))
     circuit.add(gates.M(0))
 
     # set backend to qibolab
