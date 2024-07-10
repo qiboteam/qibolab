@@ -6,8 +6,8 @@ May be reused by different instruments.
 from dataclasses import asdict, dataclass, field, fields
 from functools import total_ordering
 
-from .pulses.envelope import Rectangular
 from .pulses import Pulse, PulseSequence
+from .pulses.envelope import Rectangular
 
 
 def _waveform(sequence: PulseSequence):
