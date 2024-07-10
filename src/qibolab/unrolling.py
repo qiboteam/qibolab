@@ -6,16 +6,23 @@ May be reused by different instruments.
 from dataclasses import asdict, dataclass, field, fields
 from functools import total_ordering
 
-from .pulses import PulseSequence
+from .pulses.envelope import Rectangular
+from .pulses import Pulse, PulseSequence
 
 
 def _waveform(sequence: PulseSequence):
     # TODO: deduplicate pulses (Not yet as drivers may not support it yet)
-    # TODO: count Rectangular and delays separately (Zurich Instruments supports this)
-    # TODO: Any constant part of a pulse should be counted only once (Zurich Instruments supports this)
-    # TODO: check if readout duration is faithful for the readout pulse (I would only check the control pulses)
-    # TODO: Handle multiple qubits or do all devices have the same memory for each channel ?
-    return sequence.duration - sequence.ro_pulses.duration
+    # TODO: VirtualZ deserves a separate handling
+    # TODO: any constant part of a pulse should be counted only once (Zurich Instruments supports this)
+    # TODO: handle multiple qubits or do all devices have the same memory for each channel ?
+    return sum(
+        (
+            (pulse.duration if not isinstance(pulse.envelope, Rectangular) else 1)
+            if isinstance(pulse, Pulse)
+            else 1
+        )
+        for pulse in sequence
+    )
 
 
 def _readout(sequence: PulseSequence):
