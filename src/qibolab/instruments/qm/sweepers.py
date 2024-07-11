@@ -6,7 +6,6 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
-from qibolab.instruments.qm.sequence import BakedPulse
 from qibolab.pulses import PulseType
 
 from .config import element, operation
@@ -40,40 +39,38 @@ def check_max_offset(offset, max_offset):
         )
 
 
-def _update_baked_pulses(sweeper, qmsequence, config):
-    """Updates baked pulse if duration sweeper is used."""
-    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].id]
-    is_baked = isinstance(qmpulse, BakedPulse)
-    for pulse in sweeper.pulses:
-        qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
-        if isinstance(qmpulse, BakedPulse):
-            if not is_baked:
-                raise_error(
-                    TypeError,
-                    "Duration sweeper cannot contain both baked and not baked pulses.",
-                )
-            values = np.array(sweeper.values).astype(int)
-            qmpulse.bake(config, values)
+# def _update_baked_pulses(sweeper, qmsequence, config):
+#    """Updates baked pulse if duration sweeper is used."""
+#    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].id]
+#    is_baked = isinstance(qmpulse, BakedPulse)
+#    for pulse in sweeper.pulses:
+#        qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
+#        if isinstance(qmpulse, BakedPulse):
+#            if not is_baked:
+#                raise_error(
+#                    TypeError,
+#                    "Duration sweeper cannot contain both baked and not baked pulses.",
+#                )
+#            values = np.array(sweeper.values).astype(int)
+#            qmpulse.bake(config, values)
 
 
-def sweep(sweepers, qubits, sequence, parameters, relaxation_time):
+def sweep(sweepers, sequence, parameters, relaxation_time):
     """Public sweep function that is called by the driver."""
     # for sweeper in sweepers:
     #    if sweeper.parameter is Parameter.duration:
     #        _update_baked_pulses(sweeper, instructions, config)
-    _sweep_recursion(sweepers, qubits, sequence, parameters, relaxation_time)
+    _sweep_recursion(sweepers, sequence, parameters, relaxation_time)
 
 
-def _sweep_recursion(sweepers, qubits, sequence, parameters, relaxation_time):
+def _sweep_recursion(sweepers, sequence, parameters, relaxation_time):
     """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
     using recursion."""
     if len(sweepers) > 0:
         parameter = sweepers[0].parameter.name
         func_name = f"_sweep_{parameter}"
         if func_name in globals():
-            globals()[func_name](
-                sweepers, qubits, sequence, parameters, relaxation_time
-            )
+            globals()[func_name](sweepers, sequence, parameters, relaxation_time)
         else:
             raise_error(
                 NotImplementedError, f"Sweeper for {parameter} is not implemented."
@@ -82,6 +79,7 @@ def _sweep_recursion(sweepers, qubits, sequence, parameters, relaxation_time):
         play(sequence, parameters, relaxation_time)
 
 
+# TODO: Remove ``qubits`` from all ``_sweep`` functions
 def _sweep_frequency(sweepers, qubits, sequence, parameters, relaxation_time):
     sweeper = sweepers[0]
     freqs0 = []
