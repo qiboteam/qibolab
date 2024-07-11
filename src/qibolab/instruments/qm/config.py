@@ -4,7 +4,7 @@ import numpy as np
 
 from qibolab.pulses import PulseType, Rectangular
 
-from .ports import OPXIQ
+from .components import QmChannel
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
@@ -157,7 +157,8 @@ class QMConfig:
                 LO connected to the same channel.
         """
         element = channel.logical_channel.name
-        if isinstance(qubit.drive.port, OPXIQ):
+        if False:
+            # if isinstance(qubit.drive.port, OPXIQ):
             raise NotImplementedError
             # lo_frequency = math.floor(qubit.drive.lo_frequency)
             # self.elements[element] = {
@@ -207,7 +208,8 @@ class QMConfig:
                 LO connected to the same channel.
         """
         element = measure_channel.logical_channel.name
-        if isinstance(qubit.readout.port, OPXIQ):
+        if False:
+            # if isinstance(qubit.readout.port, OPXIQ):
             raise NotImplementedError
             # lo_frequency = math.floor(qubit.readout.lo_frequency)
             # self.elements[element] = {
@@ -286,7 +288,7 @@ class QMConfig:
         serial_i = self.register_waveform(pulse, "i")
         serial_q = self.register_waveform(pulse, "q")
         self.register_integration_weights(element, pulse.duration, kernel)
-        self.pulses[qmpulse.operation] = {
+        self.pulses[op] = {
             "operation": "measurement",
             "length": pulse.duration,
             "waveforms": {

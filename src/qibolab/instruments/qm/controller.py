@@ -1,7 +1,7 @@
 import shutil
 import tempfile
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -12,12 +12,14 @@ from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab import AveragingMode
+from qibolab.components import Config, DcChannel, IqChannel
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Delay, PulseType
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
 from .acquisition import create_acquisition, fetch_results
+from .components import QmChannel
 from .config import SAMPLING_RATE, QMConfig, operation
 from .devices import Octave, OPXplus
 from .program import Parameters
@@ -403,7 +405,7 @@ class QMController(Controller):
         return acquisitions, parameters
 
     def play(self, configs, sequences, options, integration_setup):
-        return self.sweep(configs, sequences, options, integration_weights)
+        return self.sweep(configs, sequences, options, integration_setup)
 
     def sweep(self, configs, sequences, options, integration_setup, *sweepers):
         if len(sequences) > 1:
