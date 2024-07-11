@@ -18,9 +18,8 @@ from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
 from .acquisition import create_acquisition, fetch_results
-from .config import SAMPLING_RATE, QMConfig, element, operation
+from .config import SAMPLING_RATE, QMConfig, operation
 from .devices import Octave, OPXplus
-from .ports import OPXIQ
 from .program import Parameters
 from .sweepers import sweep
 
@@ -68,6 +67,7 @@ def find_baking_pulses(sweepers):
     return to_bake
 
 
+# TODO: Remove time of flight and smearing
 def controllers_config(qubits, time_of_flight, smearing=0):
     """Create a Quantum Machines configuration without pulses.
 
@@ -118,17 +118,14 @@ class QMController(Controller):
     Has the form XXX.XXX.XXX.XXX:XXX.
     """
 
-    opxs: dict[int, OPXplus] = field(default_factory=dict)
+    opxs: dict[str, OPXplus]
     """Dictionary containing the
     :class:`qibolab.instruments.qm.devices.OPXplus` instruments being used."""
-    octaves: dict[int, Octave] = field(default_factory=dict)
+    octaves: dict[str, Octave]
     """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
     instruments being used."""
+    channels: dict[str, QmChannel]
 
-    time_of_flight: int = 0
-    """Time of flight used for hardware signal integration."""
-    smearing: int = 0
-    """Smearing used for hardware signal integration."""
     bounds: Bounds = Bounds(0, 0, 0)
     """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[str] = None
@@ -181,41 +178,10 @@ class QMController(Controller):
             readout=30,
             instructions=int(1e6),
         )
-        # convert lists to dicts
-        if not isinstance(self.opxs, dict):
-            self.opxs = {instr.name: instr for instr in self.opxs}
-        if not isinstance(self.octaves, dict):
-            self.octaves = {instr.name: instr for instr in self.octaves}
 
         if self.simulation_duration is not None:
             # convert simulation duration from ns to clock cycles
             self.simulation_duration //= 4
-
-    def ports(self, name, output=True):
-        """Provides instrument ports to the user.
-
-        Note that individual ports can also be accessed from the corresponding devices
-        using :meth:`qibolab.instruments.qm.devices.QMDevice.ports`.
-
-        Args:
-            name (tuple): Contains the numbers of controller and port to be obtained.
-                For example ``((conX, Y),)`` returns port-Y of OPX+ controller X.
-                ``((conX, Y), (conX, Z))`` returns port-Y and Z of OPX+ controller X
-                as an :class:`qibolab.instruments.qm.ports.OPXIQ` port pair.
-            output (bool): ``True`` for obtaining an output port, otherwise an
-                input port is returned. Default is ``True``.
-        """
-        if len(name) == 1:
-            con, port = name[0]
-            return self.opxs[con].ports(port, output)
-        elif len(name) == 2:
-            (con1, port1), (con2, port2) = name
-            return OPXIQ(
-                self.opxs[con1].ports(port1, output),
-                self.opxs[con2].ports(port2, output),
-            )
-        else:
-            raise ValueError(f"Invalid port {name} for Quantum Machines controller.")
 
     @property
     def sampling_rate(self):
@@ -270,6 +236,7 @@ class QMController(Controller):
         if isinstance(qubits, dict):
             qubits = list(qubits.values())
 
+        # TODO: Remove time of flight and smearing
         config = controllers_config(qubits, self.time_of_flight, self.smearing)
         machine = self.manager.open_qm(config.__dict__)
         for qubit in qubits:
@@ -304,7 +271,74 @@ class QMController(Controller):
         )
         return self.manager.simulate(self.config.__dict__, program, simulation_config)
 
-    def register_pulses(self, qubits, sequence, options):
+    def configure_dc_line(self, channel: QmChannel, configs: dict[str, Config]):
+        config = configs[channel.logical_channel.name]
+        self.config.register_opx_output(
+            channel.device, channel.port, digital_port=None, **asdict(config)
+        )
+        self.config.register_dc_element(channel)
+
+    def configure_iq_line(self, channel: QmChannel, configs: dict[str, Config]):
+        if "octave" in channel.device:
+            opx = self.octaves[channel.device].connectivity
+            opx_i = 2 * channel.port - 1
+            opx_q = 2 * channel.port
+            config = configs[channel.logical_channel.name]
+            self.config.register_opx_output(
+                opx, opx_i, digital_port=opx_i, offset=config.offset
+            )
+            self.config.register_opx_output(
+                opx, opx_q, digital_port=opx_i, offset=config.offset
+            )
+
+            lo_config = configs[channel.logical_channel.lo]
+            self.config.register_octave_output(
+                channel.device, channel.port, opx, asdict(lo_config)
+            )
+
+            intermediate_frequency = config.frequency - lo_config.frequency
+            self.config.register_iq_element(channel, intermediate_frequency, opx)
+        else:
+            raise NotImplementedError
+
+    def configure_acquire_line(self, channel: QmChannel, configs: dict[str, Config]):
+        if "octave" in channel.device:
+            opx = self.octaves[channel.device].connectivity
+            opx_i = 2 * channel.port - 1
+            opx_q = 2 * channel.port
+            config = configs[channel.logical_channel.name]
+            self.config.register_opx_input(
+                opx, opx_i, offset=config.offset, gain=config.gain
+            )
+            self.config.register_opx_input(
+                opx, opx_q, offset=config.offset, gain=config.gain
+            )
+
+            measure_channel = self.channels[logical_channel.measure]
+            lo_config = configs[measure_channel.logical_channel.lo]
+            self.config.register_octave_input(
+                channel.device, channel.port, lo_config.frequency
+            )
+
+            self.config.register_acquire_element(
+                channel, time_of_flight=config.delay, smearing=config.smearing
+            )
+        else:
+            raise NotImplementedError
+
+    def configure_channel(self, channel, configs):
+        channel = self.channels[channel_name]
+        logical_channel = channel.logical_channel
+        if isinstance(logical_channel, DcChannel):
+            self.configure_dc_line(channel, configs)
+        elif isinstance(logical_channel, IqChannel):
+            self.configure_iq_line(channel, configs)
+            if logical_channel.acquisition is not None:
+                self.configure_channel(
+                    self.channels[logical_channel.acquisition], configs
+                )
+
+    def register_pulses(self, sequence, configs, options):
         """Translates a :class:`qibolab.pulses.PulseSequence` to
         :class:`qibolab.instruments.qm.instructions.Instructions`.
 
@@ -318,69 +352,82 @@ class QMController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
             parameters (dict):
         """
-        # Current driver cannot play overlapping pulses on drive and flux channels
-        # If we want to play overlapping pulses we need to define different elements on the same ports
-        # like we do for readout multiplex
+        self.register_channels(sequence, configs)
 
         acquisitions = {}
         parameters = defaultdict(Parameters)
-        for pulse in sequence:
-            if isinstance(pulse, Delay):
-                continue
+        for channel_name, channel_sequence in sequence.items():
+            channel = self.channels[channel_name]
+            self.configure_channel(channel, configs)
 
-            qubit = qubits[pulse.qubit]
-            self.config.register_port(getattr(qubit, pulse.type.name.lower()).port)
-            if pulse.type is PulseType.READOUT:
-                self.config.register_port(qubit.feedback.port)
+            for pulse in channel_sequence:
+                if isinstance(pulse, (Delay, VirtualZ)):
+                    continue
 
-            element = self.config.register_element(
-                qubit, pulse, self.time_of_flight, self.smearing
-            )
-            if (
-                pulse.duration % 4 != 0
-                or pulse.duration < 16
-                or pulse.id in pulses_to_bake
-            ):
-                qmpulse = BakedPulse(pulse, element)
-                qmpulse.bake(self.config, durations=[pulse.duration])
-            else:
-                qmpulse = QMPulse(pulse, element)
-                if pulse.type is PulseType.READOUT:
-                    ro_pulses.append(qmpulse)
-                self.config.register_pulse(qubit, qmpulse)
-            qmsequence.add(qmpulse)
+                # if (
+                #    pulse.duration % 4 != 0
+                #    or pulse.duration < 16
+                #    or pulse.id in pulses_to_bake
+                # ):
+                #    qmpulse = BakedPulse(pulse, element)
+                #    qmpulse.bake(self.config, durations=[pulse.duration])
+                # else:
+                logical_channel = channel.logical_channel
+                if isinstance(logical_channel, DcChannel):
+                    self.config.register_dc_pulse(channel_name, pulse)
+                else:
+                    if logical_channel.acquisition is None:
+                        self.config.register_iq_pulse(channel_name, pulse)
+                    else:
+                        acquisition = self.channels[
+                            logical_channel.acquisition
+                        ].logical_channel
 
-            op = self.config.register_pulse(pulse, qubit)
-            if pulse.type is PulseType.READOUT:
-                if op not in acquisitions:
-                    el = element(pulse)
-                    acquisitions[op] = create_acquisition(
-                        op, el, pulse.qubit, options, qubit.threshold, qubit.iq_angle
-                    )
-                parameters[op].acquisition = acquisitions[op]
-                acquisitions[op].keys.append(pulse.id)
+                        kernel, threshold, iq_angle = integration_setup[
+                            acquisition.name
+                        ]
+                        op = self.config.register_acquisition_pulse(
+                            channel_name, pulse, kernel
+                        )
+                        if op not in acquisitions:
+                            acquisitions[op] = create_acquisition(
+                                op,
+                                channel_name,
+                                pulse.qubit,
+                                options,
+                                threshold,
+                                iq_angle,
+                            )
+                        parameters[op].acquisition = acquisitions[op]
+                        acquisitions[op].keys.append(pulse.id)
 
         return acquisitions, parameters
 
-    def play(self, qubits, couplers, sequence, options):
-        return self.sweep(qubits, couplers, sequence, options)
+    def play(self, configs, sequences, options, integration_setup):
+        return self.sweep(configs, sequences, options, integration_weights)
 
-    def sweep(self, qubits, couplers, sequence, options, *sweepers):
-        if not sequence:
+    def sweep(self, configs, sequences, options, integration_setup, *sweepers):
+        if len(sequences) > 1:
+            raise NotImplementedError
+        elif len(sequences) == 0:
+            return {}
+
+        sequence = sequences[0]
+        if len(sequence) == 0:
             return {}
 
         buffer_dims = [len(sweeper.values) for sweeper in reversed(sweepers)]
         if options.averaging_mode is AveragingMode.SINGLESHOT:
             buffer_dims.append(options.nshots)
 
-        # register flux elements for all qubits so that they are
-        # always at sweetspot even when they are not used
-        for qubit in qubits.values():
-            if qubit.flux:
-                self.config.register_port(qubit.flux.port)
+        # register DC elements so that all qubits are
+        # sweetspot even when they are not used
+        for channel in self.channels.values():
+            if isinstance(channel.logical_channel, DcChannel):
+                self.configure_dc_line(channel, configs)
                 self.config.register_flux_element(qubit)
 
-        acquisitions, parameters = self.register_pulses(qubits, sequence, options)
+        acquisitions, parameters = self.register_pulses(configs, sequence, options)
         with qua.program() as experiment:
             n = declare(int)
             # declare acquisition variables
@@ -390,7 +437,6 @@ class QMController(Controller):
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(
                     list(sweepers),
-                    qubits,
                     sequence,
                     parameters,
                     options.relaxation_time,
