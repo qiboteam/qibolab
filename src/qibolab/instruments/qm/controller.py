@@ -393,7 +393,6 @@ class QMController(Controller):
                             acquisitions[op] = create_acquisition(
                                 op,
                                 channel_name,
-                                pulse.qubit,
                                 options,
                                 threshold,
                                 iq_angle,
@@ -425,7 +424,7 @@ class QMController(Controller):
         for channel in self.channels.values():
             if isinstance(channel.logical_channel, DcChannel):
                 self.configure_dc_line(channel, configs)
-                self.config.register_flux_element(qubit)
+                self.config.register_dc_element(channel)
 
         acquisitions, parameters = self.register_pulses(configs, sequence, options)
         with qua.program() as experiment:
@@ -459,7 +458,7 @@ class QMController(Controller):
             results = {}
             for pulse in sequence:
                 if pulse.type is PulseType.READOUT:
-                    results[pulse.qubit] = results[pulse.id] = result
+                    results[pulse.id] = result
             return results
 
         result = self.execute_program(experiment)
