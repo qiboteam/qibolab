@@ -207,7 +207,7 @@ class QMConfig:
                 will send to this qubit. This frequency will be mixed with the
                 LO connected to the same channel.
         """
-        element = measure_channel.logical_channel.name
+        element = channel.logical_channel.measure
         if False:
             # if isinstance(qubit.readout.port, OPXIQ):
             raise NotImplementedError
