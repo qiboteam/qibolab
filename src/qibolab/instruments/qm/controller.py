@@ -14,7 +14,7 @@ from qualang_tools.simulator_tools import create_simulator_controller_connection
 from qibolab import AveragingMode
 from qibolab.components import Config, DcChannel, IqChannel
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, PulseType, VirtualZ
+from qibolab.pulses import Delay, VirtualZ
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
@@ -410,9 +410,10 @@ class QMController(Controller):
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for pulse in sequence:
-                if pulse.type is PulseType.READOUT:
-                    results[pulse.id] = result
+            for channel_name, pulses in sequence.items():
+                if self.channels[channel_name].logical_channel.acquisition is not None:
+                    for pulse in pulses:
+                        results[pulse.id] = result
             return results
 
         result = self.execute_program(experiment)
