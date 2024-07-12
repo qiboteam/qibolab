@@ -13,7 +13,12 @@ from typing import Tuple, Union
 from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.native import (
+    FixedSequenceFactory,
+    RxyFactory,
+    SingleQubitNatives,
+    TwoQubitNatives,
+)
 from qibolab.platform.platform import (
     CouplerMap,
     InstrumentMap,
@@ -124,7 +129,11 @@ def _load_single_qubit_natives(gates) -> SingleQubitNatives:
     """
     return SingleQubitNatives(
         **{
-            gate_name: _load_sequence(raw_sequence)
+            gate_name: (
+                RxyFactory(_load_sequence(raw_sequence))
+                if gate_name == "RX"
+                else FixedSequenceFactory(_load_sequence(raw_sequence))
+            )
             for gate_name, raw_sequence in gates.items()
         }
     )
@@ -133,7 +142,7 @@ def _load_single_qubit_natives(gates) -> SingleQubitNatives:
 def _load_two_qubit_natives(gates) -> TwoQubitNatives:
     return TwoQubitNatives(
         **{
-            gate_name: _load_sequence(raw_sequence)
+            gate_name: FixedSequenceFactory(_load_sequence(raw_sequence))
             for gate_name, raw_sequence in gates.items()
         }
     )
@@ -215,9 +224,9 @@ def _dump_sequence(sequence: PulseSequence):
 def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
     data = {}
     for fld in fields(natives):
-        seq = getattr(natives, fld.name)
-        if seq is not None:
-            data[fld.name] = _dump_sequence(seq)
+        factory = getattr(natives, fld.name)
+        if factory is not None:
+            data[fld.name] = _dump_sequence(factory._seq)
     return data
 
 
@@ -233,12 +242,6 @@ def dump_native_gates(
             for q, qubit in qubits.items()
         }
     }
-
-    if couplers:
-        native_gates["coupler"] = {
-            dump_qubit_name(c): _dump_natives(coupler.native_gates)
-            for c, coupler in couplers.items()
-        }
 
     # two-qubit native gates
     native_gates["two_qubit"] = {}
