@@ -14,7 +14,7 @@ from qualang_tools.simulator_tools import create_simulator_controller_connection
 from qibolab import AveragingMode
 from qibolab.components import Config, DcChannel, IqChannel
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, PulseType
+from qibolab.pulses import Delay, PulseType, VirtualZ
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
@@ -256,11 +256,12 @@ class QMController(Controller):
             raise NotImplementedError
 
     def configure_acquire_line(self, channel: QmChannel, configs: dict[str, Config]):
+        logical_channel = channel.logical_channel
         if "octave" in channel.device:
             opx = self.octaves[channel.device].connectivity
             opx_i = 2 * channel.port - 1
             opx_q = 2 * channel.port
-            config = configs[channel.logical_channel.name]
+            config = configs[logical_channel.name]
             self.config.register_opx_input(
                 opx, opx_i, offset=config.offset, gain=config.gain
             )
@@ -281,7 +282,6 @@ class QMController(Controller):
             raise NotImplementedError
 
     def configure_channel(self, channel, configs):
-        channel = self.channels[channel_name]
         logical_channel = channel.logical_channel
         if isinstance(logical_channel, DcChannel):
             self.configure_dc_line(channel, configs)
@@ -292,7 +292,7 @@ class QMController(Controller):
                     self.channels[logical_channel.acquisition], configs
                 )
 
-    def register_pulses(self, sequence, configs, options):
+    def register_pulses(self, sequence, configs, integration_setup, options):
         """Translates a :class:`qibolab.pulses.PulseSequence` to
         :class:`qibolab.instruments.qm.instructions.Instructions`.
 
@@ -306,8 +306,6 @@ class QMController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
             parameters (dict):
         """
-        self.register_channels(sequence, configs)
-
         acquisitions = {}
         parameters = defaultdict(Parameters)
         for channel_name, channel_sequence in sequence.items():
@@ -380,7 +378,9 @@ class QMController(Controller):
                 self.configure_dc_line(channel, configs)
                 self.config.register_dc_element(channel)
 
-        acquisitions, parameters = self.register_pulses(configs, sequence, options)
+        acquisitions, parameters = self.register_pulses(
+            configs, sequence, integration_setup, options
+        )
         with qua.program() as experiment:
             n = declare(int)
             # declare acquisition variables

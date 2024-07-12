@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from qibolab.components import AcquisitionConfig, DcConfig
+from qibolab.components import AcquisitionConfig, DcConfig, OscillatorConfig
 
 __all__ = [
     "OpxDcConfig",

@@ -6,7 +6,7 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
-from .config import element, operation
+from .config import operation
 from .program import play
 
 MAX_OFFSET = 0.5
@@ -101,8 +101,8 @@ def _sweep_frequency(sweepers, sequence, parameters, configs, relaxation_time):
     # is it fine to have this declaration inside the ``nshots`` QUA loop?
     f = declare(int)
     with for_(*from_array(f, sweeper.values.astype(int))):
-        for pulse, f0 in zip(sweeper.pulses, freqs0):
-            qua.update_frequency(element(pulse), f + f0)
+        for channel, f0 in zip(sweeper.channels, freqs0):
+            qua.update_frequency(channel.name, f + f0)
 
         _sweep_recursion(sweepers[1:], sequence, parameters, configs, relaxation_time)
 
