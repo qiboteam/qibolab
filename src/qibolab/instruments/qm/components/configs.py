@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 
-from qibolab.components import AcquisitionConfig, DcConfig, OscillatorConfig
+from qibolab.components import AcquisitionConfig, DcConfig
 
 __all__ = [
     "OpxDcConfig",
     "QmAcquisitionConfig",
-    "OctaveOscillatorConfig",
 ]
 
 
@@ -39,16 +38,3 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """
     # offset: float = 0.0
     # """Constant voltage to be applied on the input."""
-
-
-@dataclass(frozen=True)
-class OctaveOscillatorConfig(OscillatorConfig):
-    """Octave internal local oscillator config."""
-
-    frequency: float
-    """Octave local oscillator frequency in Hz."""
-    power: float
-    """Octave local oscillator gain in dB.
-
-    Possible values are -20dB to 20dB in steps of 0.5dB.
-    """
