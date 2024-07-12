@@ -18,7 +18,7 @@ from qibolab.unrolling import Bounds
 from .acquisition import create_acquisition, fetch_results
 from .components import QmChannel
 from .config import SAMPLING_RATE, QMConfig, operation
-from .devices import Octave, OPXplus
+from .octave import Octave
 from .program import Parameters
 from .sweepers import sweep
 
@@ -89,9 +89,6 @@ class QMController(Controller):
     Has the form XXX.XXX.XXX.XXX:XXX.
     """
 
-    opxs: dict[str, OPXplus]
-    """Dictionary containing the
-    :class:`qibolab.instruments.qm.devices.OPXplus` instruments being used."""
     octaves: dict[str, Octave]
     """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
     instruments being used."""
