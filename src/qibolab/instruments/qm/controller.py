@@ -69,32 +69,6 @@ def find_baking_pulses(sweepers):
     return to_bake
 
 
-# TODO: Remove time of flight and smearing
-def controllers_config(qubits, time_of_flight, smearing=0):
-    """Create a Quantum Machines configuration without pulses.
-
-    This contains the readout and drive elements and controllers and
-    is used by :meth:`qibolab.instruments.qm.controller.QMController.calibrate_mixers`.
-
-    Args:
-        qubits (list): List of :class:`qibolab.qubits.Qubit` objects to be
-            included in the config.
-        time_of_flight (int): Time of flight used on readout elements.
-        smearing (int): Smearing used on readout elements.
-    """
-    config = QMConfig()
-    for qubit in qubits:
-        if qubit.readout is not None:
-            config.register_port(qubit.readout.port)
-            config.register_readout_element(
-                qubit, qubit.mixer_frequencies["MZ"][1], time_of_flight, smearing
-            )
-        if qubit.drive is not None:
-            config.register_port(qubit.drive.port)
-            config.register_drive_element(qubit, qubit.mixer_frequencies["RX"][1])
-    return config
-
-
 @dataclass
 class QMController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
@@ -106,7 +80,7 @@ class QMController(Controller):
     written in QUA language.
     The ``config`` file is generated in parts in :class:`qibolab.instruments.qm.config.QMConfig`.
     Controllers, elements and pulses are all registered after a pulse sequence is given, so that
-    the config contains only elements related to the participating qubits.
+    the config contains only elements related to the participating channels.
     The QUA program for executing an arbitrary :class:`qibolab.pulses.PulseSequence` is written in
     :meth:`qibolab.instruments.qm.controller.QMController.play` and executed in
     :meth:`qibolab.instruments.qm.controller.QMController.execute_program`.
@@ -228,28 +202,6 @@ class QMController(Controller):
             self.manager.close()
             self.is_connected = False
 
-    def calibrate_mixers(self, qubits):
-        """Calibrate Octave mixers for readout and drive lines of given qubits.
-
-        Args:
-            qubits (list): List of :class:`qibolab.qubits.Qubit` objects for
-                which mixers will be calibrated.
-        """
-        if isinstance(qubits, dict):
-            qubits = list(qubits.values())
-
-        # TODO: Remove time of flight and smearing
-        config = controllers_config(qubits, self.time_of_flight, self.smearing)
-        machine = self.manager.open_qm(config.__dict__)
-        for qubit in qubits:
-            print(f"Calibrating mixers for qubit {qubit.name}")
-            if qubit.readout is not None:
-                _lo, _if = qubit.mixer_frequencies["MZ"]
-                machine.calibrate_element(f"readout{qubit.name}", {_lo: (_if,)})
-            if qubit.drive is not None:
-                _lo, _if = qubit.mixer_frequencies["RX"]
-                machine.calibrate_element(f"drive{qubit.name}", {_lo: (_if,)})
-
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language.
 
@@ -345,9 +297,9 @@ class QMController(Controller):
         :class:`qibolab.instruments.qm.instructions.Instructions`.
 
         Args:
-            qubits (list): List of :class:`qibolab.platforms.abstract.Qubit` objects
-                passed from the platform.
             sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
+            configs (dict):
+            options:
             sweepers (list): List of sweeper objects so that pulses that require baking are identified.
 
         Returns:
