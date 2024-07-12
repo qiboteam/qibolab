@@ -13,7 +13,7 @@ from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
+from qibolab.pulses import Delay, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import replace
 from qibolab.sweeper import ParallelSweepers
@@ -361,69 +361,3 @@ class Platform:
             return self.couplers[coupler]
         except KeyError:
             return list(self.couplers.values())[coupler]
-
-    def create_RX90_pulse(self, qubit):
-        qubit = self.get_qubit(qubit)
-        return qubit.native_gates.RX90.copy()
-
-    def create_RX_pulse(self, qubit):
-        qubit = self.get_qubit(qubit)
-        return qubit.native_gates.RX.copy()
-
-    def create_RX12_pulse(self, qubit):
-        qubit = self.get_qubit(qubit)
-        return qubit.native_gates.RX12.copy()
-
-    def create_CZ_pulse_sequence(self, qubits):
-        pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or len(self.pairs[pair].native_gates.CZ) == 0:
-            raise_error(
-                ValueError,
-                f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
-            )
-        return self.pairs[pair].native_gates.CZ
-
-    def create_iSWAP_pulse_sequence(self, qubits):
-        pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or len(self.pairs[pair].native_gates.iSWAP) == 0:
-            raise_error(
-                ValueError,
-                f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
-            )
-        return self.pairs[pair].native_gates.iSWAP
-
-    def create_CNOT_pulse_sequence(self, qubits):
-        pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or len(self.pairs[pair].native_gates.CNOT) == 0:
-            raise_error(
-                ValueError,
-                f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
-            )
-        return self.pairs[pair].native_gates.CNOT
-
-    def create_MZ_pulse(self, qubit):
-        qubit = self.get_qubit(qubit)
-        return qubit.native_gates.MZ
-
-    # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
-    # TODO Add RY90 and RY pulses
-
-    def create_RX90_drag_pulse(self, qubit, beta, relative_phase=0):
-        """Create native RX90 pulse with Drag shape."""
-        qubit = self.get_qubit(qubit)
-        pulse = qubit.native_gates.RX90
-        return replace(
-            pulse,
-            relative_phase=relative_phase,
-            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
-        )
-
-    def create_RX_drag_pulse(self, qubit, beta, relative_phase=0):
-        """Create native RX pulse with Drag shape."""
-        qubit = self.get_qubit(qubit)
-        pulse = qubit.native_gates.RX
-        return replace(
-            pulse,
-            relative_phase=relative_phase,
-            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
-        )
