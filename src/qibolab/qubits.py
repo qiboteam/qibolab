@@ -15,7 +15,14 @@ CHANNEL_NAMES = ("measure", "acquisition", "drive", "flux")
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + ("name", "native_gates", "kernel", "flux")
+EXCLUDED_FIELDS = CHANNEL_NAMES + (
+    "name",
+    "native_gates",
+    "kernel",
+    "qubit1",
+    "qubit2",
+    "coupler",
+)
 """Qubit dataclass fields that are excluded by the ``characterization``
 property."""
 
