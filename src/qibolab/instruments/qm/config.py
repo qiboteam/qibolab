@@ -9,7 +9,7 @@ from .components import QmChannel
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
 
-DEFAULT_INPUTS = {1: {}, 2: {}}
+DEFAULT_INPUTS = {"1": {}, "2": {}}
 """Default controller config section.
 
 Inputs are always registered to avoid issues with automatic mixer
@@ -75,7 +75,7 @@ class QMConfig:
     ):
         if device not in self.controllers:
             self.controllers[device] = {
-                "analog_inputs": DEFAULT_INPUTS,
+                "analog_inputs": dict(DEFAULT_INPUTS),
                 "digital_outputs": {},
                 "analog_outputs": {},
             }
@@ -105,7 +105,7 @@ class QMConfig:
         frequency: int,
         power: int = 0,
     ):
-        if device not in self.controllers:
+        if device not in self.octaves:
             self.octaves[device] = {
                 "RF_outputs": {},
                 "connectivity": connectivity,
