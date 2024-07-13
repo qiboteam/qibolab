@@ -102,8 +102,8 @@ class QMConfig:
         device: str,
         port: int,
         connectivity: str,
-        frequency: int = None,
-        power: int = None,
+        frequency: int,
+        power: int = 0,
     ):
         if device not in self.controllers:
             self.octaves[device] = {
@@ -118,7 +118,7 @@ class QMConfig:
             "output_mode": "triggered",
         }
 
-    def register_octave_input(self, device: str, port: int, frequency: int = None):
+    def register_octave_input(self, device: str, port: int, frequency: int):
         # assumes output is already registered
         self.octaves[device]["RF_inputs"][str(port)] = {
             "LO_frequency": frequency,
@@ -183,7 +183,7 @@ class QMConfig:
                 "RF_inputs": {"port": (channel.device, channel.port)},
                 "digitalInputs": {
                     "output_switch": {
-                        "port": (opx, 2 * channel.device - 1),
+                        "port": (opx, 2 * channel.port - 1),
                         "delay": DIGITAL_DELAY,
                         "buffer": DIGITAL_BUFFER,
                     },

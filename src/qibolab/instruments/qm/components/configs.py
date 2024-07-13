@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from qibolab.components import AcquisitionConfig, DcConfig
 
@@ -17,7 +17,7 @@ class OpxDcConfig(DcConfig):
 
     Possible values are -0.5V to 0.5V.
     """
-    filter: dict[str, float]
+    filter: dict[str, float] = field(default_factory=dict)
     """FIR and IIR filters to be applied for correcting signal distortions.
 
     See
