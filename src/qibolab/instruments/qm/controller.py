@@ -402,8 +402,9 @@ class QmController(Controller):
 
         if self.script_file_name is not None:
             script = generate_qua_script(experiment, self.config.__dict__)
-            for pulse in sequence:
-                script = script.replace(operation(pulse), str(pulse))
+            for pulses in sequence.values():
+                for pulse in pulses:
+                    script = script.replace(operation(pulse), str(pulse))
             with open(self.script_file_name, "w") as file:
                 file.write(script)
 
