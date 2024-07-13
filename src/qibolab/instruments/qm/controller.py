@@ -65,7 +65,7 @@ def find_baking_pulses(sweepers):
 
 
 @dataclass
-class QMController(Controller):
+class QmController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
     a Quantum Machines cluster.
 
