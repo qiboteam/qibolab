@@ -17,5 +17,3 @@ class QmChannel:
     """Name of the device."""
     port: int
     """Number of port."""
-    output: bool = True  # FIXME: Probably not needed
-    """Distinguish output from input ports when they have the same numbers."""
