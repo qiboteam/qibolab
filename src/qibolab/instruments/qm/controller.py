@@ -1,3 +1,4 @@
+import warnings
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from typing import Optional
@@ -202,12 +203,8 @@ class QmController(Controller):
             opx_i = 2 * channel.port - 1
             opx_q = 2 * channel.port
             config = configs[channel.logical_channel.name]
-            self.config.register_opx_output(
-                opx, opx_i, digital_port=opx_i, offset=config.offset
-            )
-            self.config.register_opx_output(
-                opx, opx_q, digital_port=opx_i, offset=config.offset
-            )
+            self.config.register_opx_output(opx, opx_i, digital_port=opx_i)
+            self.config.register_opx_output(opx, opx_q, digital_port=opx_i)
 
             lo_config = configs[channel.logical_channel.lo]
             self.config.register_octave_output(
@@ -226,12 +223,8 @@ class QmController(Controller):
             opx_i = 2 * channel.port - 1
             opx_q = 2 * channel.port
             config = configs[logical_channel.name]
-            self.config.register_opx_input(
-                opx, opx_i, offset=config.offset, gain=config.gain
-            )
-            self.config.register_opx_input(
-                opx, opx_q, offset=config.offset, gain=config.gain
-            )
+            self.config.register_opx_input(opx, opx_i, gain=config.gain)
+            self.config.register_opx_input(opx, opx_q, gain=config.gain)
 
             measure_channel = self.channels[logical_channel.measure]
             lo_config = configs[measure_channel.logical_channel.lo]
@@ -256,7 +249,7 @@ class QmController(Controller):
                     self.channels[logical_channel.acquisition], configs
                 )
 
-    def register_pulses(self, sequence, configs, integration_setup, options):
+    def register_pulses(self, configs, sequence, integration_setup, options):
         """Translates a :class:`qibolab.pulses.PulseSequence` to
         :class:`qibolab.instruments.qm.instructions.Instructions`.
 
@@ -356,13 +349,19 @@ class QmController(Controller):
                     list(sweepers),
                     sequence,
                     parameters,
+                    configs,
                     options.relaxation_time,
-                    # self.config,
                 )
             # download acquisitions
             with qua.stream_processing():
                 for acquisition in acquisitions.values():
                     acquisition.download(*buffer_dims)
+
+        if self.manager is None:
+            warnings.warn(
+                "Not connected to Quantum Machines. Returning program and config."
+            )
+            return {"program": experiment, "config": self.config.__dict__}
 
         if self.script_file_name is not None:
             script = generate_qua_script(experiment, self.config.__dict__)
