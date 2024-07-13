@@ -13,7 +13,7 @@ from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab import AveragingMode
-from qibolab.components import Config, DcChannel, IqChannel
+from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Delay, VirtualZ
 from qibolab.sweeper import Parameter
@@ -241,7 +241,7 @@ class QmController(Controller):
 
             lo_config = configs[channel.logical_channel.lo]
             self.config.register_octave_output(
-                channel.device, channel.port, opx, asdict(lo_config)
+                channel.device, channel.port, opx, **asdict(lo_config)
             )
 
             intermediate_frequency = config.frequency - lo_config.frequency
@@ -281,6 +281,10 @@ class QmController(Controller):
                 self.configure_channel(
                     self.channels[logical_channel.acquisition], configs
                 )
+        elif isinstance(logical_channel, AcquireChannel):
+            self.configure_acquire_line(channel, configs)
+        else:
+            raise TypeError(f"Unknown channel type: {type(channel)}.")
 
     def register_pulses(self, configs, sequence, integration_setup, options):
         """Translates a :class:`qibolab.pulses.PulseSequence` to
