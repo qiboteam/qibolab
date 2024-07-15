@@ -89,6 +89,8 @@ class RFSOC(Controller):
 
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
         for pulse in sequence.pulses:
+            # pylint: disable=no-member
+            # FIXME: ignore complaint about non-existent ports and _ports properties, until we upgrade this driver to qibolab 0.2
             if pulse.channel not in self._ports:
                 continue
 
