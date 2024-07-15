@@ -10,7 +10,6 @@ from qibolab.pulses import (
     PulseSequence,
     PulseType,
 )
-from qibolab.qubits import QubitPair
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 SWEPT_POINTS = 5
@@ -31,11 +30,11 @@ def test_dummy_initialization(name):
 def test_dummy_execute_pulse_sequence(name, acquisition):
     nshots = 100
     platform = create_platform(name)
-    mz_seq = platform.create_MZ_pulse(0)
+    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     mz_pulse = next(iter(mz_seq.values()))[0]
     sequence = PulseSequence()
     sequence.extend(mz_seq)
-    sequence.extend(platform.create_RX12_pulse(0))
+    sequence.extend(platform.qubits[0].native_gates.RX12.create_sequence())
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute_pulse_sequence(sequence, options)
     if acquisition is AcquisitionType.INTEGRATION:
@@ -63,19 +62,15 @@ def test_dummy_execute_coupler_pulse():
 
 def test_dummy_execute_pulse_sequence_couplers():
     platform = create_platform("dummy_couplers")
-    qubit_ordered_pair = QubitPair(
-        platform.qubits[1], platform.qubits[2], coupler=platform.couplers[1]
-    )
     sequence = PulseSequence()
 
-    cz = platform.create_CZ_pulse_sequence(
-        qubits=(qubit_ordered_pair.qubit1.name, qubit_ordered_pair.qubit2.name),
-    )
+    cz = platform.pairs[(1, 2)].native_gates.CZ.create_sequence()
+
     sequence.extend(cz)
     sequence[platform.qubits[0].measure.name].append(Delay(duration=40))
     sequence[platform.qubits[2].measure.name].append(Delay(duration=40))
-    sequence.extend(platform.create_MZ_pulse(0))
-    sequence.extend(platform.create_MZ_pulse(2))
+    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
+    sequence.extend(platform.qubits[2].native_gates.MZ.create_sequence())
     options = ExecutionParameters(nshots=None)
     result = platform.execute_pulse_sequence(sequence, options)
 
@@ -84,7 +79,7 @@ def test_dummy_execute_pulse_sequence_couplers():
 def test_dummy_execute_pulse_sequence_fast_reset(name):
     platform = create_platform(name)
     sequence = PulseSequence()
-    sequence.extend(platform.create_MZ_pulse(0))
+    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
     options = ExecutionParameters(nshots=None, fast_reset=True)
     result = platform.execute_pulse_sequence(sequence, options)
 
@@ -101,12 +96,12 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
     platform.instruments["dummy"].UNROLLING_BATCH_SIZE = batch_size
     sequences = []
     sequence = PulseSequence()
-    sequence.extend(platform.create_MZ_pulse(0))
+    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
     for _ in range(nsequences):
         sequences.append(sequence)
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
     result = platform.execute_pulse_sequences(sequences, options)
-    assert len(result[0]) == nsequences
+    assert len(next(iter(result.values()))) == nsequences
     for r in result[0]:
         if acquisition is AcquisitionType.INTEGRATION:
             assert r.magnitude.shape == (nshots,)
@@ -118,7 +113,7 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
 def test_dummy_single_sweep_raw(name):
     platform = create_platform(name)
     sequence = PulseSequence()
-    mz_seq = platform.create_MZ_pulse(qubit=0)
+    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     pulse = next(iter(mz_seq.values()))[0]
 
     parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
@@ -153,7 +148,7 @@ def test_dummy_single_sweep_coupler(
 ):
     platform = create_platform("dummy_couplers")
     sequence = PulseSequence()
-    mz_seq = platform.create_MZ_pulse(qubit=0)
+    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     mz_pulse = next(iter(mz_seq.values()))[0]
     coupler_pulse = Pulse.flux(
         duration=40,
@@ -209,7 +204,7 @@ def test_dummy_single_sweep_coupler(
 def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, nshots):
     platform = create_platform(name)
     sequence = PulseSequence()
-    mz_seq = platform.create_MZ_pulse(qubit=0)
+    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     pulse = next(iter(mz_seq.values()))[0]
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
@@ -264,7 +259,7 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
     pulse = Pulse(
         duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5), type=PulseType.DRIVE
     )
-    mz_seq = platform.create_MZ_pulse(qubit=0)
+    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     mz_pulse = next(iter(mz_seq.values()))[0]
     sequence[platform.get_qubit(0).drive.name].append(pulse)
     sequence[platform.qubits[0].measure.name].append(Delay(duration=pulse.duration))
@@ -338,7 +333,7 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
     sequence = PulseSequence()
     mz_pulses = {}
     for qubit in platform.qubits:
-        mz_seq = platform.create_MZ_pulse(qubit=qubit)
+        mz_seq = platform.qubits[qubit].native_gates.MZ.create_sequence()
         mz_pulses[qubit] = next(iter(mz_seq.values()))[0]
         sequence.extend(mz_seq)
     parameter_range = (
