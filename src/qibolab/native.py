@@ -51,7 +51,7 @@ class RxyFactory:
 
         self._seq = sequence
 
-    def create_sequence(self, theta: float, phi: float) -> PulseSequence:
+    def create_sequence(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
         """Create a sequence for single-qubit rotation.
 
         Args:
