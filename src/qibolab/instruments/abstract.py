@@ -55,7 +55,6 @@ class Controller(Instrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
-        self._ports = {}
         self.bounds: Bounds = Bounds(0, 0, 0)
         """Estimated limitations of the device memory."""
 
