@@ -219,7 +219,7 @@
           ]
         },
         "MZ": {
-          "qubit_2/drive": [
+          "qubit_2/measure": [
             {
               "duration": 2000,
               "amplitude": 0.1,
