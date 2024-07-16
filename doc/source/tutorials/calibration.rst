@@ -65,7 +65,7 @@ We then define the execution parameters and launch the experiment.
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
 In few seconds, the experiment will be finished and we can proceed to plot it.
 
@@ -73,7 +73,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     import matplotlib.pyplot as plt
 
-    amplitudes = results[readout_pulse.id].magnitude
+    amplitudes = results[readout_pulse.id][0].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + readout_pulse.frequency
 
     plt.title("Resonator Spectroscopy")
@@ -153,9 +153,9 @@ We can now proceed to launch on hardware:
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
-    amplitudes = results[readout_pulse.id].magnitude
+    amplitudes = results[readout_pulse.id][0].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + drive_pulse.frequency
 
     plt.title("Resonator Spectroscopy")
@@ -246,13 +246,13 @@ and its impact on qubit states in the IQ plane.
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[readout_pulse1.id].voltage_i,
-        results_one[readout_pulse1.id].voltage_q,
+        results_one[readout_pulse1.id][0].voltage_i,
+        results_one[readout_pulse1.id][0].voltage_q,
         label="One state",
     )
     plt.scatter(
-        results_zero[readout_pulse2.id].voltage_i,
-        results_zero[readout_pulse2.id].voltage_q,
+        results_zero[readout_pulse2.id][0].voltage_i,
+        results_zero[readout_pulse2.id][0].voltage_q,
         label="Zero state",
     )
     plt.show()
