@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.platform.platform import Platform
 from qibolab.pulses import PulseSequence
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -16,7 +17,7 @@ NSWEEP1 = 5
 NSWEEP2 = 8
 
 
-def execute(platform, acquisition_type, averaging_mode, sweep=False):
+def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
     qubit = next(iter(platform.qubits))
 
     qd_pulse = platform.create_RX_pulse(qubit, start=0)
@@ -34,10 +35,10 @@ def execute(platform, acquisition_type, averaging_mode, sweep=False):
         sweeper1 = Sweeper(Parameter.bias, amp_values, qubits=[platform.qubits[qubit]])
         # sweeper1 = Sweeper(Parameter.amplitude, amp_values, pulses=[qd_pulse])
         sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[ro_pulse])
-        results = platform.sweep(sequence, options, sweeper1, sweeper2)
+        results = platform.execute([sequence], options, sweeper1, sweeper2)
     else:
-        results = platform.execute_pulse_sequence(sequence, options)
-    return results[qubit]
+        results = platform.execute([sequence], options)
+    return results[qubit][0]
 
 
 @pytest.mark.qpu

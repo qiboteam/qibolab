@@ -892,7 +892,7 @@ def test_connections(instrument):
 
 
 @pytest.mark.qpu
-def test_experiment_execute_pulse_sequence_qpu(connected_platform, instrument):
+def test_experiment_execute_qpu(connected_platform, instrument):
     platform = connected_platform
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], "c0": platform.qubits["c0"]}
@@ -922,12 +922,9 @@ def test_experiment_execute_pulse_sequence_qpu(connected_platform, instrument):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    results = platform.execute_pulse_sequence(
-        sequence,
-        options,
-    )
+    results = platform.execute([sequence], options)
 
-    assert len(results[ro_pulses[q].id]) > 0
+    assert len(results[ro_pulses[q][0].id]) > 0
 
 
 @pytest.mark.qpu

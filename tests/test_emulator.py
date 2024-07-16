@@ -40,9 +40,7 @@ def test_emulator_initialization(emulators, emulator):
     "acquisition",
     [AcquisitionType.DISCRIMINATION, AcquisitionType.INTEGRATION, AcquisitionType.RAW],
 )
-def test_emulator_execute_pulse_sequence_compute_overlaps(
-    emulators, emulator, acquisition
-):
+def test_emulator_execute_compute_overlaps(emulators, emulator, acquisition):
     nshots = 10  # 100
     platform = create_platform(emulator)
     pulse_simulator = platform.instruments["pulse_simulator"]
@@ -54,30 +52,30 @@ def test_emulator_execute_pulse_sequence_compute_overlaps(
         acquisition is AcquisitionType.DISCRIMINATION
         or acquisition is AcquisitionType.INTEGRATION
     ):
-        results = platform.execute_pulse_sequence(sequence, options)
+        results = platform.execute([sequence], options)
         simulated_states = results["simulation"]["output_states"]
         overlaps = pulse_simulator.simulation_engine.compute_overlaps(simulated_states)
         if acquisition is AcquisitionType.DISCRIMINATION:
-            assert results[0].samples.shape == (nshots,)
+            assert results[0][0].samples.shape == (nshots,)
         else:
-            assert results[0].voltage.shape == (nshots,)
+            assert results[0][0].voltage.shape == (nshots,)
     else:
         with pytest.raises(ValueError) as excinfo:
-            platform.execute_pulse_sequence(sequence, options)
+            platform.execute(sequence, options)
         assert "Current emulator does not support requested AcquisitionType" in str(
             excinfo.value
         )
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
-def test_emulator_execute_pulse_sequence_fast_reset(emulators, emulator):
+def test_emulator_execute_fast_reset(emulators, emulator):
     platform = create_platform(emulator)
     sequence = PulseSequence()
     sequence.add(platform.create_qubit_readout_pulse(0, 0))
     options = ExecutionParameters(
         nshots=None, fast_reset=True
     )  # fast_reset does nothing in emulator
-    result = platform.execute_pulse_sequence(sequence, options)
+    result = platform.execute([sequence], options)
 
 
 @pytest.mark.parametrize("emulator", EMULATORS)
@@ -110,17 +108,17 @@ def test_emulator_single_sweep(
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     if parameter in AVAILABLE_SWEEP_PARAMETERS:
-        results = platform.sweep(sequence, options, sweeper)
+        results = platform.execute([sequence], options, sweeper)
 
         assert pulse.serial and pulse.qubit in results
         if average:
-            results_shape = results[pulse.qubit].statistical_frequency.shape
+            results_shape = results[pulse.qubit][0].statistical_frequency.shape
         else:
-            results_shape = results[pulse.qubit].samples.shape
+            results_shape = results[pulse.qubit][0].samples.shape
         assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
     else:
         with pytest.raises(NotImplementedError) as excinfo:
-            platform.sweep(sequence, options, sweeper)
+            platform.execute([sequence], options, sweeper)
         assert "Sweep parameter requested not available" in str(excinfo.value)
 
 
@@ -171,14 +169,14 @@ def test_emulator_double_sweep_false_history(
         parameter1 in AVAILABLE_SWEEP_PARAMETERS
         and parameter2 in AVAILABLE_SWEEP_PARAMETERS
     ):
-        results = platform.sweep(sequence, options, sweeper1, sweeper2)
+        results = platform.execute([sequence], options, sweeper1, sweeper2)
 
         assert ro_pulse.serial and ro_pulse.qubit in results
 
         if average:
-            results_shape = results[pulse.qubit].statistical_frequency.shape
+            results_shape = results[pulse.qubit][0].statistical_frequency.shape
         else:
-            results_shape = results[pulse.qubit].samples.shape
+            results_shape = results[pulse.qubit][0].samples.shape
 
         assert (
             results_shape == (SWEPT_POINTS, SWEPT_POINTS)
@@ -227,14 +225,14 @@ def test_emulator_single_sweep_multiplex(
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
     if parameter in AVAILABLE_SWEEP_PARAMETERS:
-        results = platform.sweep(sequence, options, sweeper1)
+        results = platform.execute([sequence], options, sweeper1)
 
         for ro_pulse in ro_pulses.values():
             assert ro_pulse.serial and ro_pulse.qubit in results
             if average:
-                results_shape = results[ro_pulse.qubit].statistical_frequency.shape
+                results_shape = results[ro_pulse.qubit][0].statistical_frequency.shape
             else:
-                results_shape = results[ro_pulse.qubit].samples.shape
+                results_shape = results[ro_pulse.qubit][0].samples.shape
             assert (
                 results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
             )
