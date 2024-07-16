@@ -14,6 +14,7 @@ from qibolab.kernels import Kernels
 from qibolab.platform import Platform
 from qibolab.serialize import (
     load_component_config,
+    load_instrument_settings,
     load_qubits,
     load_runcard,
     load_settings,
@@ -104,6 +105,7 @@ def create_dummy(with_couplers: bool = True):
             )
 
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
+    instruments = load_instrument_settings(runcard, instruments)
     name = "dummy_couplers" if with_couplers else "dummy"
     return Platform(
         name,
