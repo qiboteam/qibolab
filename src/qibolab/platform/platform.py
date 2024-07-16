@@ -250,7 +250,7 @@ class Platform:
         sequences: List[PulseSequence],
         options: ExecutionParameters,
         *sweepers: Sweeper,
-    ):
+    ) -> dict[str, list]:
         """Executes a pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values of sweeped parameters.
