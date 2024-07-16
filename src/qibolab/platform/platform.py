@@ -2,7 +2,8 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Tuple
+from math import prod
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import networkx as nx
 from qibo.config import log, raise_error
@@ -13,7 +14,7 @@ from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import replace
-from qibolab.sweeper import Sweeper
+from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import batch
 
 InstrumentMap = Dict[InstrumentId, Instrument]
@@ -22,6 +23,15 @@ CouplerMap = Dict[QubitId, Coupler]
 QubitPairMap = Dict[QubitPairId, QubitPair]
 
 NS_TO_SEC = 1e-9
+
+# TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
+T = TypeVar("T")
+
+
+# TODO: lift for general usage in Qibolab
+def default(value: Optional[T], default: T) -> T:
+    """None replacement shortcut."""
+    return value if value is not None else default
 
 
 def unroll_sequences(
@@ -58,6 +68,23 @@ def unroll_sequences(
             total_sequence.append(Delay(duration=delay, channel=channel))
 
     return total_sequence, readout_map
+
+
+def estimate_duration(
+    sequences: list[PulseSequence],
+    options: ExecutionParameters,
+    sweepers: list[ParallelSweepers],
+) -> float:
+    """Estimate experiment duration."""
+    duration = sum(seq.duration for seq in sequences)
+    relaxation = default(options.relaxation_time, 0)
+    nshots = default(options.nshots, 0)
+    return (
+        (duration + len(sequences) * relaxation)
+        * nshots
+        * NS_TO_SEC
+        * prod(len(s[0].values) for s in sweepers)
+    )
 
 
 @dataclass
@@ -231,14 +258,14 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, options, *sweepers):
+    def _execute(self, sequence, options, sweepers):
         """Executes sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, options, *sweepers
+                    self.qubits, self.couplers, sequence, options, sweepers
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -249,11 +276,14 @@ class Platform:
         self,
         sequences: List[PulseSequence],
         options: ExecutionParameters,
-        *sweepers: Sweeper,
+        sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[Any, list]:
         """Execute a pulse sequences.
 
-        If any sweeper is passed, the execution is performed for the different values of sweeped parameters.
+        If any sweeper is passed, the execution is performed for the different values
+        of sweeped parameters.
+
+        Returns readout results acquired by after execution.
 
         Example:
             .. testcode::
@@ -271,26 +301,15 @@ class Platform:
                 pulse = platform.create_qubit_readout_pulse(qubit=0)
                 sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
-                sweeper = Sweeper(parameter, parameter_range, [pulse])
-                platform.execute([sequence], ExecutionParameters(), sweeper)
-
-        Args:
-            sequence (List[:class:`qibolab.pulses.PulseSequence`]): Pulse sequences to execute.
-            options (:class:`qibolab.platforms.platform.ExecutionParameters`): Object holding the execution options.
-            **kwargs: May need them for something
-        Returns:
-            Readout results acquired by after execution.
+                sweeper = [Sweeper(parameter, parameter_range, [pulse])]
+                platform.execute([sequence], ExecutionParameters(), [sweeper])
         """
+        if sweepers is None:
+            sweepers = []
+
         options = self.settings.fill(options)
 
-        duration = sum(seq.duration for seq in sequences)
-        time = (
-            (duration + len(sequences) * options.relaxation_time)
-            * options.nshots
-            * NS_TO_SEC
-        )
-        for sweep in sweepers:
-            time *= len(sweep.values)
+        time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
         # find readout pulses
@@ -303,7 +322,7 @@ class Platform:
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, options, *sweepers)
+            result = self._execute(sequence, options, sweepers)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
