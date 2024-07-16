@@ -216,11 +216,12 @@ class Platform:
 
     @property
     def _controller(self):
-        """Controller instrument used for splitting the unrolled sequences to
-        batches.
+        """Identify controller instrument.
 
-        Used only by :meth:`qibolab.platform.Platform.execute_pulse_sequences` (unrolling).
-        This method does not support platforms with more than one controller instruments.
+        Used for splitting the unrolled sequences to batches.
+
+        This method does not support platforms with more than one
+        controller instruments.
         """
         controllers = [
             instr
