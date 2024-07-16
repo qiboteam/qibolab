@@ -13,7 +13,7 @@ from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Delay, PulseSequence, PulseType
+from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import replace
 from qibolab.sweeper import ParallelSweepers
@@ -55,16 +55,14 @@ def unroll_sequences(
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
-    channels = {pulse.channel for sequence in sequences for pulse in sequence}
     for sequence in sequences:
-        total_sequence += sequence
+        total_sequence.extend(sequence)
         # TODO: Fix unrolling results
-        for pulse in sequence:
-            if pulse.type is PulseType.READOUT:
-                readout_map[pulse.id].append(pulse.id)
+        for pulse in sequence.ro_pulses:
+            readout_map[pulse.id].append(pulse.id)
 
         length = sequence.duration + relaxation_time
-        for channel in channels:
+        for channel in sequence.keys():
             delay = length - sequence.channel_duration(channel)
             total_sequence[channel].append(Delay(duration=delay))
 
