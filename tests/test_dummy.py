@@ -213,15 +213,15 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
     assert pulse.id and pulse.qubit in results
     if average:
         results_shape = (
-            results[pulse.qubit].magnitude.shape
+            results[pulse.qubit][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.qubit].statistical_frequency.shape
+            else results[pulse.qubit][0].statistical_frequency.shape
         )
     else:
         results_shape = (
-            results[pulse.qubit].magnitude.shape
+            results[pulse.qubit][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.qubit].samples.shape
+            else results[pulse.qubit][0].samples.shape
         )
     assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 
