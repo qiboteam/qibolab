@@ -213,52 +213,62 @@ def test_processed_sweeps_pulse_properties(dummy_qrc):
 
 def test_zhinst_setup(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
-    assert IQM5q.time_of_flight == 75
+    zi_instrument = platform.instruments["EL_ZURO"]
+    assert zi_instrument.time_of_flight == 75
 
 
 def test_zhinst_configure_acquire_line(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
 
-    IQM5q.configure_acquire_line(qubit.acquisition.name, platform.component_configs)
+    zi_instrument.configure_acquire_line(
+        qubit.acquisition.name, platform.component_configs
+    )
 
-    assert qubit.acquisition.name in IQM5q.signal_map
+    assert qubit.acquisition.name in zi_instrument.signal_map
     assert (
-        "/logical_signal_groups/q0/acquire_line" in IQM5q.calibration.calibration_items
+        "/logical_signal_groups/q0/acquire_line"
+        in zi_instrument.calibration.calibration_items
     )
 
 
 def test_zhinst_configure_iq_line(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
-    IQM5q.configure_iq_line(qubit.drive.name, platform.component_configs)
-    IQM5q.configure_iq_line(qubit.measure.name, platform.component_configs)
+    zi_instrument.configure_iq_line(qubit.drive.name, platform.component_configs)
+    zi_instrument.configure_iq_line(qubit.measure.name, platform.component_configs)
 
-    assert qubit.drive.name in IQM5q.signal_map
-    assert "/logical_signal_groups/q0/drive_line" in IQM5q.calibration.calibration_items
-
-    assert qubit.measure.name in IQM5q.signal_map
+    assert qubit.drive.name in zi_instrument.signal_map
     assert (
-        "/logical_signal_groups/q0/measure_line" in IQM5q.calibration.calibration_items
+        "/logical_signal_groups/q0/drive_line"
+        in zi_instrument.calibration.calibration_items
+    )
+
+    assert qubit.measure.name in zi_instrument.signal_map
+    assert (
+        "/logical_signal_groups/q0/measure_line"
+        in zi_instrument.calibration.calibration_items
     )
 
 
 def test_zhinst_configure_dc_line(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
-    IQM5q.configure_dc_line(qubit.flux.name, platform.component_configs)
+    zi_instrument.configure_dc_line(qubit.flux.name, platform.component_configs)
 
-    assert qubit.flux.name in IQM5q.signal_map
-    assert "/logical_signal_groups/q0/flux_line" in IQM5q.calibration.calibration_items
+    assert qubit.flux.name in zi_instrument.signal_map
+    assert (
+        "/logical_signal_groups/q0/flux_line"
+        in zi_instrument.calibration.calibration_items
+    )
 
 
 def test_experiment_flow(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -282,16 +292,16 @@ def test_experiment_flow(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].flux.name in IQM5q.experiment.signals
-    assert qubits[0].measure.name in IQM5q.experiment.signals
-    assert qubits[0].acquisition.name in IQM5q.experiment.signals
+    assert qubits[0].flux.name in zi_instrument.experiment.signals
+    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_experiment_flow_coupler(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -326,17 +336,17 @@ def test_experiment_flow_coupler(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].flux.name in IQM5q.experiment.signals
-    assert qubits[0].measure.name in IQM5q.experiment.signals
-    assert qubits[0].acquisition.name in IQM5q.experiment.signals
+    assert qubits[0].flux.name in zi_instrument.experiment.signals
+    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_sweep_and_play_sim(dummy_qrc):
     """Test end-to-end experiment run using ZI emulated connection."""
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -362,14 +372,14 @@ def test_sweep_and_play_sim(dummy_qrc):
     )
 
     # check play
-    IQM5q.session = lo.Session(IQM5q.device_setup)
-    IQM5q.session.connect(do_emulation=True)
-    res = IQM5q.play(qubits, couplers, sequence, options)
+    zi_instrument.session = lo.Session(zi_instrument.device_setup)
+    zi_instrument.session.connect(do_emulation=True)
+    res = zi_instrument.play(qubits, couplers, sequence, options)
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
     # check sweep with empty list of sweeps
-    res = IQM5q.sweep(qubits, couplers, sequence, options)
+    res = zi_instrument.sweep(qubits, couplers, sequence, options)
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
@@ -382,7 +392,7 @@ def test_sweep_and_play_sim(dummy_qrc):
     sweep_2 = Sweeper(
         Parameter.bias, np.array([1, 2, 3]), channels=[qubits[0].flux.name]
     )
-    res = IQM5q.sweep(qubits, couplers, sequence, options, sweep_1, sweep_2)
+    res = zi_instrument.sweep(qubits, couplers, sequence, options, sweep_1, sweep_2)
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
@@ -390,7 +400,7 @@ def test_sweep_and_play_sim(dummy_qrc):
 @pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single(dummy_qrc, parameter1):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubit_id, qubit = 0, platform.qubits[0]
     couplers = {}
@@ -418,17 +428,17 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow({qubit_id: qubit}, couplers, sequence, options)
+    zi_instrument.experiment_flow({qubit_id: qubit}, couplers, sequence, options)
 
-    assert qubit.drive.name in IQM5q.experiment.signals
-    assert qubit.measure.name in IQM5q.experiment.signals
-    assert qubit.acquisition.name in IQM5q.experiment.signals
+    assert qubit.drive.name in zi_instrument.experiment.signals
+    assert qubit.measure.name in zi_instrument.experiment.signals
+    assert qubit.acquisition.name in zi_instrument.experiment.signals
 
 
 @pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
     couplers = {0: platform.couplers[0]}
@@ -471,12 +481,12 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert couplers[0].flux.name in IQM5q.experiment.signals
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert qubits[0].measure.name in IQM5q.experiment.signals
-    assert qubits[0].acquisition.name in IQM5q.experiment.signals
+    assert couplers[0].flux.name in zi_instrument.experiment.signals
+    assert qubits[0].drive.name in zi_instrument.experiment.signals
+    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 SweeperParameter = {
@@ -491,7 +501,7 @@ SweeperParameter = {
 @pytest.mark.parametrize("parameter2", Parameter)
 def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0]}
     couplers = {}
@@ -546,16 +556,16 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert qubits[0].measure.name in IQM5q.experiment.signals
-    assert qubits[0].acquisition.name in IQM5q.experiment.signals
+    assert qubits[0].drive.name in zi_instrument.experiment.signals
+    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_experiment_sweep_2d_specific(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0]}
     couplers = {}
@@ -593,11 +603,11 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert qubits[0].measure.name in IQM5q.experiment.signals
-    assert qubits[0].acquisition.name in IQM5q.experiment.signals
+    assert qubits[0].drive.name in zi_instrument.experiment.signals
+    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 @pytest.mark.parametrize(
@@ -605,7 +615,7 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
 )
 def test_experiment_sweep_punchouts(dummy_qrc, parameter):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0]}
     couplers = {}
@@ -657,10 +667,10 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].measure.name in IQM5q.experiment.signals
-    assert qubits[0].acquisition.name in IQM5q.experiment.signals
+    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_batching(dummy_qrc):
