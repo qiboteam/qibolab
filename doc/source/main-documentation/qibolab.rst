@@ -15,7 +15,7 @@ In the platform, the main methods can be divided in different sections:
 
 - functions save and change qubit parameters (``dump``, ``update``)
 - functions to coordinate the instruments (``connect``, ``setup``, ``disconnect``)
-- functions to execute experiments (``execute_pulse_sequence``, ``execute_pulse_sequences``, ``sweep``)
+- a unique interface to execute experiments (``execute``)
 - functions to initialize gates (``create_RX90_pulse``, ``create_RX_pulse``, ``create_CZ_pulse``, ``create_MZ_pulse``, ``create_qubit_drive_pulse``, ``create_qubit_readout_pulse``, ``create_RX90_drag_pulse``, ``create_RX_drag_pulse``)
 - setters and getters of channel/qubit parameters (local oscillator parameters, attenuations, gain and biases)
 
@@ -86,7 +86,7 @@ Now we can execute the sequence on hardware:
         acquisition_type=AcquisitionType.INTEGRATION,
         averaging_mode=AveragingMode.CYCLIC,
     )
-    results = platform.execute_pulse_sequence(ps, options=options)
+    results = platform.execute([ps], options=options)
 
 Finally, we can stop instruments and close connections.
 
@@ -390,7 +390,7 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
 
 .. testcode:: python
 
-    result = platform.execute_pulse_sequence(sequence, options=options)
+    result = platform.execute([sequence], options=options)
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
 Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
@@ -415,7 +415,7 @@ Typical experiments may include both pre-defined pulses and new ones:
     )
     sequence.append(platform.create_MZ_pulse(0))
 
-    results = platform.execute_pulse_sequence(sequence, options=options)
+    results = platform.execute([sequence], options=options)
 
 .. note::
 
@@ -562,8 +562,7 @@ In the course of several examples, you've encountered the ``options`` argument i
 
 .. testcode:: python
 
-   res = platform.execute_pulse_sequence(sequence, options=options)
-   res = platform.sweep(sequence, options=options)
+   res = platform.execute([sequence], options=options)
 
 Let's now delve into the details of the ``options`` parameter and understand its components.
 
@@ -636,7 +635,7 @@ Let's now delve into a typical use case for result objects within the qibolab fr
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    res = platform.execute_pulse_sequence(sequence, options=options)
+    res = platform.execute([sequence], options=options)
 
 The ``res`` object will manifest as a dictionary, mapping the measurement pulse serial to its corresponding results.
 
@@ -734,10 +733,8 @@ Instruments all implement a set of methods:
 - setup
 - disconnect
 
-While the controllers, the main instruments in a typical setup, add other two methods:
-
-- execute_pulse_sequence
-- sweep
+While the controllers, the main instruments in a typical setup, add another, i.e.
+execute.
 
 Some more detail on the interal functionalities of instruments is given in :doc:`/tutorials/instrument`
 
