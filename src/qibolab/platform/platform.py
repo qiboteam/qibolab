@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field, fields
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import networkx as nx
 from qibo.config import log, raise_error
@@ -250,8 +250,8 @@ class Platform:
         sequences: List[PulseSequence],
         options: ExecutionParameters,
         *sweepers: Sweeper,
-    ) -> dict[str, list]:
-        """Executes a pulse sequences.
+    ) -> dict[Any, list]:
+        """Execute a pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values of sweeped parameters.
 
