@@ -7,12 +7,12 @@ from qibolab.platform import create_platform
 from qibolab.platform.load import PLATFORMS
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
-TESTING_PLATFORM_NAMES = [
+TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to 0.2
     "dummy_couplers",
-    "qm",
-    "qm_octave",
-    "qblox",
-    "rfsoc",
+    # "qm",
+    # "qm_octave",
+    # "qblox",
+    # "rfsoc",
     "zurich",
 ]
 """Platforms used for testing without access to real instruments."""
