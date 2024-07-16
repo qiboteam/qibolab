@@ -496,7 +496,7 @@ A tipical resonator spectroscopy experiment could be defined with:
         type=SweeperType.OFFSET,
     )
 
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
 .. note::
 
@@ -543,7 +543,7 @@ For example:
         type=SweeperType.FACTOR,
     )
 
-    results = platform.sweep(sequence, options, sweeper_freq, sweeper_amp)
+    results = platform.execute([sequence], options, sweeper_freq, sweeper_amp)
 
 Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an amplitude of 0.3, the parameter space probed will be:
 
