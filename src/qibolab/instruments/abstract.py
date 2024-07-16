@@ -97,17 +97,11 @@ class Controller(Instrument):
     def play(self, *args, **kwargs):
         """Play a pulse sequence and retrieve feedback.
 
+        If :cls:`qibolab.sweeper.Sweeper` objects are passed as arguments, they are
+        executed in real-time. If not possible, an error is raised.
+
         Returns:
             (Dict[ResultType]) mapping the serial of the readout pulses used to
-            the acquired :class:`qibolab.result.ExecutionResults` object.
-        """
-
-    @abstractmethod
-    def sweep(self, *args, **kwargs):
-        """Play a pulse sequence while sweeping one or more parameters.
-
-        Returns:
-            (dict) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
 
