@@ -30,11 +30,11 @@ def test_dummy_execute_pulse_sequence(name, acquisition):
     sequence.append(platform.create_MZ_pulse(0))
     sequence.append(platform.create_RX12_pulse(0))
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
-    result = platform.execute_pulse_sequence(sequence, options)
+    result = platform.execute([sequence], options)
     if acquisition is AcquisitionType.INTEGRATION:
-        assert result[0].magnitude.shape == (nshots,)
+        assert result[0][0].magnitude.shape == (nshots,)
     elif acquisition is AcquisitionType.RAW:
-        assert result[0].magnitude.shape == (nshots * ro_pulse.duration,)
+        assert result[0][0].magnitude.shape == (nshots * ro_pulse.duration,)
 
 
 def test_dummy_execute_coupler_pulse():
@@ -45,7 +45,7 @@ def test_dummy_execute_coupler_pulse():
     sequence.append(pulse)
 
     options = ExecutionParameters(nshots=None)
-    result = platform.execute_pulse_sequence(sequence, options)
+    result = platform.execute([sequence], options)
 
 
 def test_dummy_execute_pulse_sequence_couplers():
@@ -66,7 +66,7 @@ def test_dummy_execute_pulse_sequence_couplers():
     sequence.append(platform.create_MZ_pulse(0))
     sequence.append(platform.create_MZ_pulse(2))
     options = ExecutionParameters(nshots=None)
-    result = platform.execute_pulse_sequence(sequence, options)
+    result = platform.execute([sequence], options)
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -75,7 +75,7 @@ def test_dummy_execute_pulse_sequence_fast_reset(name):
     sequence = PulseSequence()
     sequence.append(platform.create_MZ_pulse(0))
     options = ExecutionParameters(nshots=None, fast_reset=True)
-    result = platform.execute_pulse_sequence(sequence, options)
+    result = platform.execute([sequence], options)
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -94,7 +94,7 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
     for _ in range(nsequences):
         sequences.append(sequence)
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
-    result = platform.execute_pulse_sequences(sequences, options)
+    result = platform.execute(sequences, options)
     assert len(result[0]) == nsequences
     for r in result[0]:
         if acquisition is AcquisitionType.INTEGRATION:
@@ -117,9 +117,9 @@ def test_dummy_single_sweep_raw(name):
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.RAW,
     )
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
     assert pulse.id and pulse.qubit in results
-    shape = results[pulse.qubit].magnitude.shape
+    shape = results[pulse.qubit][0].magnitude.shape
     assert shape == (pulse.duration * SWEPT_POINTS,)
 
 
@@ -162,20 +162,20 @@ def test_dummy_single_sweep_coupler(
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
     assert ro_pulse.id and ro_pulse.qubit in results
     if average:
         results_shape = (
-            results[ro_pulse.qubit].magnitude.shape
+            results[ro_pulse.qubit][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[ro_pulse.qubit].statistical_frequency.shape
+            else results[ro_pulse.qubit][0].statistical_frequency.shape
         )
     else:
         results_shape = (
-            results[ro_pulse.qubit].magnitude.shape
+            results[ro_pulse.qubit][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[ro_pulse.qubit].samples.shape
+            else results[ro_pulse.qubit][0].samples.shape
         )
     assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 
@@ -208,7 +208,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
     assert pulse.id and pulse.qubit in results
     if average:
@@ -270,21 +270,21 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper1, sweeper2)
+    results = platform.execute([sequence], options, sweeper1, sweeper2)
 
     assert ro_pulse.id and ro_pulse.qubit in results
 
     if average:
         results_shape = (
-            results[pulse.qubit].magnitude.shape
+            results[pulse.qubit][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.qubit].statistical_frequency.shape
+            else results[pulse.qubit][0].statistical_frequency.shape
         )
     else:
         results_shape = (
-            results[pulse.qubit].magnitude.shape
+            results[pulse.qubit][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.qubit].samples.shape
+            else results[pulse.qubit][0].samples.shape
         )
 
     assert (
@@ -333,21 +333,21 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper1)
+    results = platform.execute([sequence], options, sweeper1)
 
     for ro_pulse in ro_pulses.values():
         assert ro_pulse.id and ro_pulse.qubit in results
         if average:
             results_shape = (
-                results[ro_pulse.qubit].magnitude.shape
+                results[ro_pulse.qubit][0].magnitude.shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[ro_pulse.qubit].statistical_frequency.shape
+                else results[ro_pulse.qubit][0].statistical_frequency.shape
             )
         else:
             results_shape = (
-                results[ro_pulse.qubit].magnitude.shape
+                results[ro_pulse.qubit][0].magnitude.shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[ro_pulse.qubit].samples.shape
+                else results[ro_pulse.qubit][0].samples.shape
             )
         assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 
