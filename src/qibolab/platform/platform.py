@@ -249,7 +249,6 @@ class Platform:
         sequences: List[PulseSequence],
         options: ExecutionParameters,
         *sweepers: Sweeper,
-        **kwargs,
     ):
         """Executes a pulse sequences.
 
@@ -301,8 +300,7 @@ class Platform:
         }
 
         results = defaultdict(list)
-        bounds = kwargs.get("bounds", self._controller.bounds)
-        for b in batch(sequences, bounds):
+        for b in batch(sequences, self._controller.bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
             result = self._execute(sequence, options, *sweepers)
             for serial, new_serials in readouts.items():
