@@ -546,7 +546,6 @@
               "duration": 40,
               "amplitude": 0.3,
               "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "frequency": 4150000000.0,
               "type": "qd"
             }
           ]
