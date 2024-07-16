@@ -111,3 +111,7 @@ class Sweeper:
     def get_values(self, base_value):
         """Convert sweeper values depending on the sweeper type."""
         return self.type.value(self.values, base_value)
+
+
+ParallelSweepers = list[Sweeper]
+"""Sweepers that should be iterated in parallel."""
