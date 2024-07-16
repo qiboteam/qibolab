@@ -121,6 +121,7 @@ class WaveformsBuffer:
             NotEnoughMemory: If the memory needed to store the waveforms in more than the memory avalible.
         """
         # In order to generate waveforms for each duration value, the pulse will need to be modified.
+        values = np.round(values).astype(int)
         # To avoid any conflicts, make a copy of the pulse first.
         pulse_copy = pulse.copy()
 
