@@ -102,10 +102,11 @@ class QibolabBackend(NumpyBackend):
         if not self.platform.is_connected:
             self.platform.connect()
 
-        readout = self.platform.execute(
+        readout_ = self.platform.execute(
             [sequence],
             ExecutionParameters(nshots=nshots),
-        )[0]
+        )
+        readout = {k: v[0] for k, v in readout_.items()}
 
         self.platform.disconnect()
 
