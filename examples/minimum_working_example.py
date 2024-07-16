@@ -38,7 +38,7 @@ platform = create_platform("tii1q", runcard)
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
 # Executes a pulse sequence.
-results = platform.execute_pulse_sequence(sequence, nshots=3000)
+results = platform.execute([sequence], nshots=3000)
 print(f"results (amplitude, phase, i, q): {results}")
 # Disconnect from the instruments
 platform.disconnect()
