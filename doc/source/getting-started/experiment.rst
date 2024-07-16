@@ -208,10 +208,10 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
     # plot the results
-    amplitudes = results[ro_pulse.id].magnitude
+    amplitudes = results[ro_pulse.id][0].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + ro_pulse.frequency
 
     plt.title("Resonator Spectroscopy")
