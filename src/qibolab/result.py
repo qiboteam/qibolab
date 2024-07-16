@@ -6,9 +6,7 @@ import numpy.typing as npt
 
 
 class IntegratedResults:
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
-    act.AbstractPlatform.execute_pulse_sequence`
-    :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    """Data structure to deal with the execution output.
 
     Associated with AcquisitionType.INTEGRATION and
     AveragingMode.SINGLESHOT
@@ -65,9 +63,7 @@ class IntegratedResults:
 
 
 class AveragedIntegratedResults(IntegratedResults):
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
-    act.AbstractPlatform.execute_pulse_sequence`
-    :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    """Data structure to deal with the execution output.
 
     Associated with AcquisitionType.INTEGRATION and AveragingMode.CYCLIC
     or the averages of ``IntegratedResults``
@@ -99,9 +95,7 @@ class AveragedIntegratedResults(IntegratedResults):
 
 
 class RawWaveformResults(IntegratedResults):
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
-    act.AbstractPlatform.execute_pulse_sequence`
-    :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    """Data structure to deal with the execution output.
 
     Associated with AcquisitionType.RAW and AveragingMode.SINGLESHOT may
     also be used to store the integration weights ?
@@ -109,9 +103,7 @@ class RawWaveformResults(IntegratedResults):
 
 
 class AveragedRawWaveformResults(AveragedIntegratedResults):
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
-    act.AbstractPlatform.execute_pulse_sequence`
-    :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    """Data structure to deal with the execution output.
 
     Associated with AcquisitionType.RAW and AveragingMode.CYCLIC
     or the averages of ``RawWaveformResults``
@@ -119,9 +111,7 @@ class AveragedRawWaveformResults(AveragedIntegratedResults):
 
 
 class SampleResults:
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
-    act.AbstractPlatform.execute_pulse_sequence`
-    :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    """Data structure to deal with the execution output.
 
     Associated with AcquisitionType.DISCRIMINATION and
     AveragingMode.SINGLESHOT
@@ -156,9 +146,7 @@ class SampleResults:
 
 
 class AveragedSampleResults(SampleResults):
-    """Data structure to deal with the output of :func:`qibolab.platforms.abstr
-    act.AbstractPlatform.execute_pulse_sequence`
-    :func:`qibolab.platforms.abstract.AbstractPlatform.sweep`
+    """Data structure to deal with the execution output.
 
     Associated with AcquisitionType.DISCRIMINATION and AveragingMode.CYCLIC
     or the averages of ``SampleResults``
