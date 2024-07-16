@@ -230,7 +230,7 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, options, *sweepers, **kwargs):
+    def _execute(self, sequence, options, *sweepers):
         """Executes sequence on the controllers."""
         result = {}
 
@@ -304,7 +304,7 @@ class Platform:
         bounds = kwargs.get("bounds", self._controller.bounds)
         for b in batch(sequences, bounds):
             sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, options, *sweepers, **kwargs)
+            result = self._execute(sequence, options, *sweepers)
             for serial, new_serials in readouts.items():
                 results[serial].extend(result[ser] for ser in new_serials)
 
