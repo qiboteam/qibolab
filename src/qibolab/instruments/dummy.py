@@ -120,27 +120,6 @@ class DummyInstrument(Controller):
         couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
-    ):
-        exp_points = (
-            1 if options.averaging_mode is AveragingMode.CYCLIC else options.nshots
-        )
-        shape = (exp_points,)
-        results = {}
-
-        for ro_pulse in sequence.ro_pulses:
-            values = np.squeeze(self.get_values(options, ro_pulse, shape))
-            results[ro_pulse.qubit] = results[ro_pulse.id] = options.results_type(
-                values
-            )
-
-        return results
-
-    def sweep(
-        self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
-        sequence: PulseSequence,
-        options: ExecutionParameters,
         *sweepers: List[Sweeper],
     ):
         results = {}
