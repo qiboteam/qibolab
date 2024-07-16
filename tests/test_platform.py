@@ -21,15 +21,7 @@ from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORMS
-from qibolab.pulses import (
-    Delay,
-    Drag,
-    Gaussian,
-    Pulse,
-    PulseSequence,
-    PulseType,
-    Rectangular,
-)
+from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.serialize import (
     PLATFORM,
     dump_kernels,
@@ -45,20 +37,15 @@ nshots = 1024
 
 
 def test_unroll_sequences(platform):
-    qubit = next(iter(platform.qubits))
+    qubit = next(iter(platform.qubits.values()))
     sequence = PulseSequence()
-    qd_seq = platform.create_RX_pulse(qubit)
-    mz_seq = platform.create_MZ_pulse(qubit)
-    mz_pulse = next(iter(mz_seq.values()))[0]
-    sequence.extend(qd_seq)
-    sequence[platform.qubits[qubit].readout.name].append(
-        Delay(duration=qd_seq.duration)
-    )
-    sequence.extend(mz_seq)
+    sequence.extend(qubit.native_gates.RX.create_sequence())
+    sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+    sequence.extend(qubit.native_gates.MZ.create_sequence())
     total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence.ro_pulses) == 10
     assert len(readouts) == 1
-    assert len(readouts[mz_pulse.id]) == 10
+    assert all(len(readouts[pulse.id]) == 10 for pulse in sequence.ro_pulses)
 
 
 def test_create_platform(platform):
@@ -89,7 +76,7 @@ def test_create_platform_multipath(tmp_path: Path):
                 from qibolab.platform import Platform
 
                 def create():
-                    return Platform("{p.parent.name}-{p.name}", {{}}, {{}}, {{}})
+                    return Platform("{p.parent.name}-{p.name}", {{}}, {{}}, {{}}, {{}})
                 """
             )
         )
@@ -432,20 +419,3 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
     target_probs = np.zeros((nqubits, 2))
     target_probs[:, 0] = 1
     np.testing.assert_allclose(probs, target_probs, atol=0.05)
-
-
-def test_create_RX_drag_pulses():
-    platform = create_dummy()
-    qubits = [q for q, qb in platform.qubits.items() if qb.drive is not None]
-    beta = 0.1234
-    for qubit in qubits:
-        drag_pi = platform.create_RX_drag_pulse(qubit, beta=beta)
-        assert drag_pi.envelope == Drag(rel_sigma=drag_pi.envelope.rel_sigma, beta=beta)
-        drag_pi_half = platform.create_RX90_drag_pulse(qubit, beta=beta)
-        assert drag_pi_half.envelope == Drag(
-            rel_sigma=drag_pi_half.envelope.rel_sigma, beta=beta
-        )
-        np.testing.assert_almost_equal(drag_pi.amplitude, 2 * drag_pi_half.amplitude)
-
-        drag_pi.envelopes(sampling_rate=1)
-        drag_pi_half.envelopes(sampling_rate=1)
