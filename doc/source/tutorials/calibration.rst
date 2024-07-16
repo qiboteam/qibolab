@@ -239,8 +239,8 @@ and its impact on qubit states in the IQ plane.
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results_one = platform.execute_pulse_sequence(one_sequence, options)
-    results_zero = platform.execute_pulse_sequence(zero_sequence, options)
+    results_one = platform.execute([one_sequence], options)
+    results_zero = platform.execute([zero_sequence], options)
 
     plt.title("Single shot classification")
     plt.xlabel("I [a.u.]")

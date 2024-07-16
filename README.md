@@ -69,7 +69,7 @@ platform.connect()
 
 # Execute a pulse sequence
 options = ExecutionParameters(nshots=1000)
-results = platform.execute_pulse_sequence(sequence, options)
+results = platform.execute([sequence], options)
 
 # Print the acquired shots
 print(results.samples)
