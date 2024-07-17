@@ -10,6 +10,8 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Tuple, Union
 
+from pydantic import ConfigDict, TypeAdapter
+
 from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
@@ -27,7 +29,8 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.pulses import Delay, Pulse, PulseSequence, VirtualZ
+from qibolab.pulses import Pulse, PulseSequence
+from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 RUNCARD = "parameters.json"
@@ -103,14 +106,19 @@ def load_qubits(
     return qubits, couplers, pairs
 
 
-def _load_pulse(pulse_kwargs):
-    if "phase" in pulse_kwargs:
-        return VirtualZ(**pulse_kwargs)
-    if "amplitude" not in pulse_kwargs:
-        return Delay(**pulse_kwargs)
-    if "frequency" not in pulse_kwargs:
-        return Pulse.flux(**pulse_kwargs)
-    return Pulse(**pulse_kwargs)
+_PulseLike = TypeAdapter(PulseLike, config=ConfigDict(extra="ignore"))
+"""Parse a pulse-like object.
+
+.. note::
+
+    Extra arguments are ignored, in order to standardize the qubit handling, since the
+    :cls:`Delay` object has no `qubit` field.
+    This will be removed once there won't be any need for dedicated couplers handling.
+"""
+
+
+def _load_pulse(pulse_kwargs: dict):
+    return _PulseLike.validate_python(pulse_kwargs)
 
 
 def _load_sequence(raw_sequence):
@@ -162,11 +170,11 @@ def register_gates(
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
         qubit = qubits[load_qubit_name(q)]
-        qubit.native_gates = _load_single_qubit_natives(qubit, gates)
+        qubit.native_gates = _load_single_qubit_natives(gates)
 
     for c, gates in native_gates.get("coupler", {}).items():
         coupler = couplers[load_qubit_name(c)]
-        coupler.native_gates = _load_single_qubit_natives(coupler, gates)
+        coupler.native_gates = _load_single_qubit_natives(gates)
 
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
