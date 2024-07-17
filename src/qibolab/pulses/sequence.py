@@ -2,10 +2,10 @@
 
 from collections import defaultdict
 
-from .pulse import Delay, PulseType
+from .pulse import Delay, PulseLike, PulseType
 
 
-class PulseSequence(defaultdict):
+class PulseSequence(defaultdict[str, list[PulseLike]]):
     """Synchronized sequence of control instructions across multiple channels.
 
     The keys are names of channels, and the values are lists of pulses
