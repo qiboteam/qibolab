@@ -15,19 +15,19 @@ def identity_rule(gate, platform):
 
 def z_rule(gate, platform):
     """Z gate applied virtually."""
-    qubit = gate.target_qubits[0]
+    qubit = list(platform.qubits)[gate.target_qubits[0]]
     return PulseSequence(), {qubit: math.pi}
 
 
 def rz_rule(gate, platform):
     """RZ gate applied virtually."""
-    qubit = gate.target_qubits[0]
+    qubit = list(platform.qubits)[gate.target_qubits[0]]
     return PulseSequence(), {qubit: gate.parameters[0]}
 
 
 def gpi2_rule(gate, platform):
     """Rule for GPI2."""
-    qubit = gate.target_qubits[0]
+    qubit = list(platform.qubits)[gate.target_qubits[0]]
     theta = gate.parameters[0]
     sequence = PulseSequence()
     pulse = platform.create_RX90_pulse(qubit, start=0, relative_phase=theta)
@@ -37,7 +37,7 @@ def gpi2_rule(gate, platform):
 
 def gpi_rule(gate, platform):
     """Rule for GPI."""
-    qubit = gate.target_qubits[0]
+    qubit = list(platform.qubits)[gate.target_qubits[0]]
     theta = gate.parameters[0]
     sequence = PulseSequence()
     # the following definition has a global phase difference compare to
@@ -51,7 +51,7 @@ def gpi_rule(gate, platform):
 
 def u3_rule(gate, platform):
     """U3 applied as RZ-RX90-RZ-RX90-RZ."""
-    qubit = gate.target_qubits[0]
+    qubit = list(platform.qubits)[gate.target_qubits[0]]
     # Transform gate to U3 and add pi/2-pulses
     theta, phi, lam = gate.parameters
     # apply RZ(lam)
