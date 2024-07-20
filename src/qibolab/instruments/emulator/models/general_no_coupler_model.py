@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, List
 
 import numpy as np
 
@@ -6,6 +6,7 @@ from qibolab.instruments.emulator.models.methods import (
     default_noflux_platform_to_simulator_channels,
 )
 
+GHZ = 1e9
 
 # model template for 0-1 system
 def generate_default_params():
@@ -54,6 +55,82 @@ def generate_default_params():
         },
     }
     return model_params
+
+
+def get_model_params(
+    platform_data_dict:dict,
+    nlevels_q: Union[int, List[int]],
+) -> dict:
+    """Generates the model paramters for the general no coupler model.
+
+    Args:
+        platform_data_dict(dict): Dictionary containing the device data extracted from a device platform.
+        nlevels_q(int, list): Number of levels for each qubit. If int, the same value gets assigned to all qubits.
+        
+    Returns:
+        dict: Model parameters dictionary with all frequencies in GHz and times in ns that is required as an input to emulator runcards.
+
+    Raises:
+        ValueError: If length of nlevels_q does not match number of qubits when nlevels_q is a list.
+    """
+    model_params_dict = {'model_name': 'general_no_coupler_model'}
+    model_params_dict |= {'topology': platform_data_dict['topology']}
+    qubits_list = platform_data_dict['qubits_list']
+    couplers_list = [] #platform_data_dict['couplers_list']
+    characterization_dict = platform_data_dict['characterization']
+    qubit_characterization_dict = characterization_dict['qubits']
+    
+    model_params_dict |= {'nqubits': len(qubits_list)}
+    model_params_dict |= {'ncouplers': len(couplers_list)}
+    model_params_dict |= {'qubits_list': [str(q) for q in qubits_list]}
+    model_params_dict |= {'couplers_list': [str(c) for c in couplers_list]}
+
+    if type(nlevels_q) == int:
+        model_params_dict |= {'nlevels_q': [nlevels_q for q in qubits_list]}
+    elif type(nlevels_q) == list:
+        if len(nlevels_q)==len(qubits_list):
+            model_params_dict |= {'nlevels_q': nlevels_q}
+        else:
+            raise ValueError(
+                "Length of nlevels_q does not match number of qubits", len(qubits_list)
+            )
+    model_params_dict |= {'nlevels_c': []}
+
+    drive_freq_dict = {}
+    T1_dict = {}
+    T2_dict = {}
+    lo_freq_dict = {}
+    rabi_freq_dict = {}
+    anharmonicity_dict = {}
+    readout_error_dict = {}
+
+    for q in qubits_list:
+        af = qubit_characterization_dict[q]['assignment_fidelity']
+        if af == 0:
+            readout_error_dict |= {str(q): [0.0, 0.0]}
+        else:
+            if type(af) is float:
+                p0m1 = p1m0 = 1 - af
+            else:
+                p0m1, p1m0 = 1 - np.array(af)
+            readout_error_dict |= {str(q): [p0m1,p1m0]}
+        drive_freq_dict |= {str(q): qubit_characterization_dict[q]['drive_frequency']/GHZ}
+        T1_dict |= {str(q): qubit_characterization_dict[q]['T1']}
+        T2_dict |= {str(q): qubit_characterization_dict[q]['T2']}
+        lo_freq_dict |= {str(q): qubit_characterization_dict[q]['drive_frequency']/GHZ}
+        rabi_freq_dict |= {str(q): qubit_characterization_dict[q]['rabi_frequency']/GHZ}
+        anharmonicity_dict |= {str(q): qubit_characterization_dict[q]['anharmonicity']/GHZ}
+
+    model_params_dict |= {'readout_error': readout_error_dict}
+    model_params_dict |= {'drive_freq': drive_freq_dict}
+    model_params_dict |= {'T1': T1_dict}
+    model_params_dict |= {'T2': T2_dict}
+    model_params_dict |= {'lo_freq': lo_freq_dict}
+    model_params_dict |= {'rabi_freq': rabi_freq_dict}
+    model_params_dict |= {'anharmonicity': anharmonicity_dict}    
+    model_params_dict |= {'coupling_strength': {}}
+    
+    return model_params_dict
 
 
 def generate_model_config(
