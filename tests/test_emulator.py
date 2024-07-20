@@ -16,7 +16,7 @@ from qibolab.instruments.emulator.models import (
     general_no_coupler_model,
     models_template,
 )
-from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS
+from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS, make_emulator_runcard
 from qibolab.platform.load import PLATFORMS
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
@@ -350,3 +350,8 @@ def test_extend_op_dim_exceptions():
         with pytest.raises(Exception) as excinfo:
             extend_op_dim(op_qobj, *index_list)
         assert "mismatch" in str(excinfo.value)
+
+
+def test_make_emulator_runcard():
+    platform = create_platform("dummy_couplers")
+    make_emulator_runcard(platform)
