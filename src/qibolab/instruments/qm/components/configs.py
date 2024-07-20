@@ -31,10 +31,10 @@ class OpxDcConfig(DcConfig):
 class QmAcquisitionConfig(AcquisitionConfig):
     """Acquisition config for QM OPX+."""
 
-    gain: int
+    gain: int = 0
     """Input gain in dB.
 
     Possible values are -12dB to 20dB in steps of 1dB.
     """
-    # offset: float = 0.0
-    # """Constant voltage to be applied on the input."""
+    offset: float = 0.0
+    """Constant voltage to be applied on the input."""
