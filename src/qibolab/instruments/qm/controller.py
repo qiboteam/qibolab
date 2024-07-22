@@ -1,6 +1,6 @@
 import warnings
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Optional
 
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script, qua
@@ -10,7 +10,7 @@ from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab import AveragingMode
-from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
+from qibolab.components import Config, DcChannel, IqChannel
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Delay, VirtualZ
 from qibolab.sweeper import Parameter
@@ -167,89 +167,37 @@ class QmController(Controller):
             self.manager.close()
             self.is_connected = False
 
-    def execute_program(self, program):
-        """Executes an arbitrary program written in QUA language.
-
-        Args:
-            program: QUA program.
-        """
-        machine = self.manager.open_qm(self.config.__dict__)
-        return machine.execute(program)
-
-    def simulate_program(self, program):
-        """Simulates an arbitrary program written in QUA language.
-
-        Args:
-            program: QUA program.
-        """
-        ncontrollers = len(self.config.controllers)
-        controller_connections = create_simulator_controller_connections(ncontrollers)
-        simulation_config = SimulationConfig(
-            duration=self.simulation_duration,
-            controller_connections=controller_connections,
-        )
-        return self.manager.simulate(self.config.__dict__, program, simulation_config)
-
-    def configure_dc_line(self, channel: QmChannel, configs: dict[str, Config]):
-        config = configs[channel.logical_channel.name]
-        self.config.register_opx_output(
-            channel.device, channel.port, digital_port=None, **asdict(config)
-        )
-        self.config.register_dc_element(channel)
-
-    def configure_iq_line(self, channel: QmChannel, configs: dict[str, Config]):
-        if "octave" in channel.device:
-            opx = self.octaves[channel.device].connectivity
-            opx_i = 2 * channel.port - 1
-            opx_q = 2 * channel.port
-            config = configs[channel.logical_channel.name]
-            self.config.register_opx_output(opx, opx_i, digital_port=opx_i)
-            self.config.register_opx_output(opx, opx_q, digital_port=opx_i)
-
-            lo_config = configs[channel.logical_channel.lo]
-            self.config.register_octave_output(
-                channel.device, channel.port, opx, **asdict(lo_config)
-            )
-
-            intermediate_frequency = config.frequency - lo_config.frequency
-            self.config.register_iq_element(channel, intermediate_frequency, opx)
+    def configure_device(self, device: str):
+        if "octave" in device:
+            self.config.add_octave(device, self.octaves[device].connectivity)
         else:
-            raise NotImplementedError
+            self.config.add_controller(device)
 
-    def configure_acquire_line(self, channel: QmChannel, configs: dict[str, Config]):
+    def configure_channel(self, channel: QmChannel, configs: dict[str, Config]):
         logical_channel = channel.logical_channel
-        if "octave" in channel.device:
-            opx = self.octaves[channel.device].connectivity
-            opx_i = 2 * channel.port - 1
-            opx_q = 2 * channel.port
-            config = configs[logical_channel.name]
-            self.config.register_opx_input(opx, opx_i, gain=config.gain)
-            self.config.register_opx_input(opx, opx_q, gain=config.gain)
+        channel_config = configs[logical_channel.name]
+        self.configure_device(channel.device)
 
-            measure_channel = self.channels[logical_channel.measure]
-            lo_config = configs[measure_channel.logical_channel.lo]
-            self.config.register_octave_input(
-                channel.device, channel.port, lo_config.frequency
-            )
-
-            self.config.register_acquire_element(
-                channel, time_of_flight=config.delay, smearing=config.smearing
-            )
-        else:
-            raise NotImplementedError
-
-    def configure_channel(self, channel, configs):
-        logical_channel = channel.logical_channel
         if isinstance(logical_channel, DcChannel):
-            self.configure_dc_line(channel, configs)
+            self.config.configure_dc_line(channel, channel_config)
+
         elif isinstance(logical_channel, IqChannel):
-            self.configure_iq_line(channel, configs)
-            if logical_channel.acquisition is not None:
-                self.configure_channel(
-                    self.channels[logical_channel.acquisition], configs
+            lo_config = configs[logical_channel.lo]
+            if logical_channel.acquisition is None:
+                self.config.configure_iq_line(channel, channel_config, lo_config)
+
+            else:
+                acquisition = logical_channel.acquisition
+                acquire_channel = self.channels[acquisition]
+                self.configure_device(config, acquire_channel.device)
+                self.config.configure_acquire_line(
+                    acquire_channel,
+                    channel,
+                    configs[acquisition],
+                    channel_config,
+                    lo_config,
                 )
-        elif isinstance(logical_channel, AcquireChannel):
-            self.configure_acquire_line(channel, configs)
+
         else:
             raise TypeError(f"Unknown channel type: {type(channel)}.")
 
@@ -314,6 +262,29 @@ class QmController(Controller):
                         acquisitions[op].keys.append(pulse.id)
 
         return acquisitions, parameters
+
+    def execute_program(self, program):
+        """Executes an arbitrary program written in QUA language.
+
+        Args:
+            program: QUA program.
+        """
+        machine = self.manager.open_qm(self.config.__dict__)
+        return machine.execute(program)
+
+    def simulate_program(self, program):
+        """Simulates an arbitrary program written in QUA language.
+
+        Args:
+            program: QUA program.
+        """
+        ncontrollers = len(self.config.controllers)
+        controller_connections = create_simulator_controller_connections(ncontrollers)
+        simulation_config = SimulationConfig(
+            duration=self.simulation_duration,
+            controller_connections=controller_connections,
+        )
+        return self.manager.simulate(self.config.__dict__, program, simulation_config)
 
     def play(self, configs, sequences, options, integration_setup):
         return self.sweep(configs, sequences, options, integration_setup)

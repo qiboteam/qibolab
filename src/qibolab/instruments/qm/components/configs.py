@@ -3,13 +3,13 @@ from dataclasses import dataclass, field
 from qibolab.components import AcquisitionConfig, DcConfig
 
 __all__ = [
-    "OpxDcConfig",
+    "OpxOutputConfig",
     "QmAcquisitionConfig",
 ]
 
 
 @dataclass(frozen=True)
-class OpxDcConfig(DcConfig):
+class OpxOutputConfig(DcConfig):
     """DC channel config using QM OPX+."""
 
     offset: float
