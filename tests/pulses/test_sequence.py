@@ -17,6 +17,30 @@ def test_init():
     assert len(sequence) == 0
 
 
+def test_init_with_dict():
+    seq_dict = {
+        "some channel": [
+            Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=3)),
+            Pulse(duration=30, amplitude=0.5, envelope=Gaussian(rel_sigma=3)),
+        ],
+        "other channel": [
+            Pulse(duration=40, amplitude=0.2, envelope=Gaussian(rel_sigma=3))
+        ],
+        "chanel #5": [
+            Pulse(duration=45, amplitude=1.0, envelope=Gaussian(rel_sigma=3)),
+            Pulse(duration=50, amplitude=0.7, envelope=Gaussian(rel_sigma=3)),
+            Pulse(duration=60, amplitude=-0.65, envelope=Gaussian(rel_sigma=3)),
+        ],
+    }
+    seq = PulseSequence(seq_dict)
+
+    assert len(seq) == 3
+    assert set(seq.keys()) == set(seq_dict.keys())
+    assert len(seq["some channel"]) == 2
+    assert len(seq["other channel"]) == 1
+    assert len(seq["chanel #5"]) == 3
+
+
 def test_default_factory():
     sequence = PulseSequence()
     some = sequence["some channel"]

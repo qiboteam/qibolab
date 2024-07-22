@@ -1,6 +1,7 @@
 """PulseSequence class."""
 
 from collections import defaultdict
+from typing import Optional
 
 from .pulse import Delay, PulseLike, PulseType
 
@@ -12,8 +13,9 @@ class PulseSequence(defaultdict[str, list[PulseLike]]):
     and delays
     """
 
-    def __init__(self):
-        super().__init__(list)
+    def __init__(self, seq_dict: Optional[dict[str, list[PulseLike]]] = None):
+        initial_content = seq_dict if seq_dict is not None else {}
+        super().__init__(list, **initial_content)
 
     @property
     def ro_pulses(self):
