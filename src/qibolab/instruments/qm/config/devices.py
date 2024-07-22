@@ -1,6 +1,23 @@
 from dataclasses import dataclass, field
 
-from ..components import OpxOutputConfig
+from qibolab.components.configs import OscillatorConfig
+
+from ..components import OpxOutputConfig, QmAcquisitionConfig
+
+__all__ = [
+    "OctaveOutput",
+    "OctaveInput",
+    "Controller",
+    "Octave",
+]
+
+
+DEFAULT_INPUTS = {"1": {}, "2": {}}
+"""Default controller config section.
+
+Inputs are always registered to avoid issues with automatic mixer
+calibration when using Octaves.
+"""
 
 
 @dataclass(frozen=True)
@@ -43,7 +60,9 @@ class OctaveInput:
 class Controller:
     analog_outputs: dict[str, dict[str, OpxOutputConfig]] = field(default_factory=dict)
     digital_outputs: dict[str, dict[str, dict]] = field(default_factory=dict)
-    analog_inputs: dict[str, dict[str, AnalogInput]] = field(default_factory=dict)
+    analog_inputs: dict[str, dict[str, AnalogInput]] = field(
+        default_factory=lambda: dict(DEFAULT_INPUTS)
+    )
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
