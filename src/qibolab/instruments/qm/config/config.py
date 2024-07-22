@@ -1,8 +1,13 @@
 from dataclasses import dataclass, field
 
+from qibolab.components.configs import IqConfig
+
+from ..components import OpxOutputConfig, QmChannel
 from .devices import *
 from .elements import *
 from .pulses import *
+
+__all__ = ["QmConfig"]
 
 
 @dataclass
@@ -32,7 +37,7 @@ class QmConfig:
             self.add_controller(connectivity)
             self.octaves[device] = Octave(connectivity)
 
-    def configure_dc_line(self, channel: QmChannel, config: OpxDcConfig):
+    def configure_dc_line(self, channel: QmChannel, config: OpxOutputConfig):
         controller = self.controllers[channel.device]
         controller.analog_outputs[str(channel.port)] = config
         self.elements[channel.logical_channel.name] = DcElement(channel.serial)
@@ -42,7 +47,7 @@ class QmConfig:
     ):
         port = channel.port
         octave = self.octaves[channel.device]
-        octave.RF_outputs[str(port)] = OctaveOuput.from_config(lo_config)
+        octave.RF_outputs[str(port)] = OctaveOutput.from_config(lo_config)
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = config.frequency - lo_config.frequency
@@ -63,15 +68,15 @@ class QmConfig:
         port = acquire_channel.port
         octave = self.octaves[acquire_channel.device]
         octave.RF_inputs[str(port)] = OctaveInput(lo_config.frequency)
-        self.controllers[octave.connectivity].add_octave_input(port, config)
+        self.controllers[octave.connectivity].add_octave_input(port, acquire_config)
 
         port = probe_channel.port
         octave = self.octaves[probe_channel.device]
-        octave.RF_outputs[str(port)] = OctaveOuput.from_config(lo_config)
+        octave.RF_outputs[str(port)] = OctaveOutput.from_config(lo_config)
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
-        self.elements[channel.logical_channel.name] = AcquireOctaveElement(
+        self.elements[probe_channel.logical_channel.name] = AcquireOctaveElement(
             probe_channel.serial,
             acquire_channel.serial,
             output_switch(octave.connectivity, probe_channel.port),
@@ -88,6 +93,7 @@ class QmConfig:
             waveforms = waveforms_from_pulse(pulse)
             for mode in ["I", "Q"]:
                 self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+        return op
 
     def register_dc_pulse(self, element: str, pulse: Pulse):
         op = operation(pulse)
@@ -95,13 +101,13 @@ class QmConfig:
             self.pulses[op] = qmpulse = QmPulse.from_dc_pulse(pulse)
             self.elements[element].operations[op] = op
             self.waveforms[qmpulse.waveforms["I"]] = waveforms_from_pulse(pulse)["I"]
+        return op
 
     def register_acquisition_pulse(self, element: str, pulse: Pulse, kernel=None):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(pulse)
         if op not in self.pulses:
-            self.register_integration_weights(element, pulse.duration, kernel)
-            self.pulses[op] = qmpulse = QmAcquisition.from_pulse(pulse, element)
+            self.pulses[op] = qmpulse = QmAcquisition.from_pulse(pulse)
             self.elements[element]["operations"][op] = op
             waveforms = waveforms_from_pulse(pulse)
             for mode in ["I", "Q"]:
@@ -109,3 +115,4 @@ class QmConfig:
             self.integration_weights.update(
                 qmpulse.register_integration_weights(element, kernel)
             )
+        return op

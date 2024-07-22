@@ -1,6 +1,6 @@
 import warnings
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script, qua
@@ -18,7 +18,7 @@ from qibolab.unrolling import Bounds
 
 from .acquisition import create_acquisition, fetch_results
 from .components import QmChannel
-from .config import SAMPLING_RATE, QMConfig, operation
+from .config import SAMPLING_RATE, QmConfig, operation
 from .octave import Octave
 from .program import Parameters
 from .sweepers import sweep
@@ -74,7 +74,7 @@ class QmController(Controller):
 
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
     written in QUA language.
-    The ``config`` file is generated in parts in :class:`qibolab.instruments.qm.config.QMConfig`.
+    The ``config`` file is generated in parts in :class:`qibolab.instruments.qm.config.QmConfig`.
     Controllers, elements and pulses are all registered after a pulse sequence is given, so that
     the config contains only elements related to the participating channels.
     The QUA program for executing an arbitrary :class:`qibolab.pulses.PulseSequence` is written in
@@ -111,7 +111,7 @@ class QmController(Controller):
     is_connected: bool = False
     """Boolean that shows whether we are connected to the QM manager."""
 
-    config: QMConfig = field(default_factory=QMConfig)
+    config: QmConfig = field(default_factory=QmConfig)
     """Configuration dictionary required for pulse execution on the OPXs."""
 
     simulation_duration: Optional[int] = None
@@ -189,7 +189,7 @@ class QmController(Controller):
             else:
                 acquisition = logical_channel.acquisition
                 acquire_channel = self.channels[acquisition]
-                self.configure_device(config, acquire_channel.device)
+                self.configure_device(acquire_channel.device)
                 self.config.configure_acquire_line(
                     acquire_channel,
                     channel,

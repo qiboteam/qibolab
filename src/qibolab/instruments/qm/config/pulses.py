@@ -1,4 +1,9 @@
 from dataclasses import dataclass, field
+from typing import Union
+
+import numpy as np
+
+from qibolab.pulses import Pulse, Rectangular
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""

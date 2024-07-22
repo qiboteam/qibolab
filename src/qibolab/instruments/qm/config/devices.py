@@ -34,7 +34,7 @@ class AnalogInput:
 
 
 @dataclass(frozen=True)
-class OctaveOuput:
+class OctaveOutput:
     LO_frequency: int
     gain: int = 0
     LO_source: str = "internal"
@@ -80,5 +80,5 @@ class Controller:
 @dataclass
 class Octave:
     connectivity: str
-    RF_outputs: dict[str, dict[str, OctaveOuput]] = field(default_factory=dict)
+    RF_outputs: dict[str, dict[str, OctaveOutput]] = field(default_factory=dict)
     RF_inputs: dict[str, dict[str, OctaveInput]] = field(default_factory=dict)
