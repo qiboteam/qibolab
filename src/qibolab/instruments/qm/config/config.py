@@ -1,4 +1,8 @@
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
+
+from .devices import *
+from .elements import *
+from .pulses import *
 
 
 @dataclass
@@ -9,8 +13,10 @@ class QmConfig:
     controllers: dict[str, Controller] = field(default_factory=dict)
     octaves: dict[str, Octave] = field(default_factory=dict)
     elements: dict[str, Element] = field(default_factory=dict)
-    pulses: dict = field(default_factory=dict)
-    waveforms: dict = field(default_factory=dict)
+    pulses: dict[str, QmPulse | QmAcquisition] = field(default_factory=dict)
+    waveforms: dict[str, ConstantWaveform | ArbitraryWaveform] = field(
+        default_factory=dict
+    )
     digital_waveforms: dict = field(
         default_factory=lambda: {"ON": {"samples": [(1, 0)]}}
     )
@@ -28,7 +34,7 @@ class QmConfig:
 
     def configure_dc_line(self, channel: QmChannel, config: OpxDcConfig):
         controller = self.controllers[channel.device]
-        controller.analog_outputs[str(channel.port)] = asdict(config)
+        controller.analog_outputs[str(channel.port)] = config
         self.elements[channel.logical_channel.name] = DcElement(channel.serial)
 
     def configure_iq_line(
@@ -65,7 +71,7 @@ class QmConfig:
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
-        self.elements[channel.logical_channel.name] = RfOctaveElement(
+        self.elements[channel.logical_channel.name] = AcquireOctaveElement(
             probe_channel.serial,
             acquire_channel.serial,
             output_switch(octave.connectivity, probe_channel.port),
@@ -73,3 +79,33 @@ class QmConfig:
             time_of_flight=acquire_config.delay,
             smearing=acquire_config.smearing,
         )
+
+    def register_iq_pulse(self, element: str, pulse: Pulse):
+        op = operation(pulse)
+        if op not in self.pulses:
+            self.pulses[op] = qmpulse = QmPulse.from_pulse(pulse)
+            self.elements[element].operations[op] = op
+            waveforms = waveforms_from_pulse(pulse)
+            for mode in ["I", "Q"]:
+                self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+
+    def register_dc_pulse(self, element: str, pulse: Pulse):
+        op = operation(pulse)
+        if op not in self.pulses:
+            self.pulses[op] = qmpulse = QmPulse.from_dc_pulse(pulse)
+            self.elements[element].operations[op] = op
+            self.waveforms[qmpulse.waveforms["I"]] = waveforms_from_pulse(pulse)["I"]
+
+    def register_acquisition_pulse(self, element: str, pulse: Pulse, kernel=None):
+        """Registers pulse, waveforms and integration weights in QM config."""
+        op = operation(pulse)
+        if op not in self.pulses:
+            self.register_integration_weights(element, pulse.duration, kernel)
+            self.pulses[op] = qmpulse = QmAcquisition.from_pulse(pulse, element)
+            self.elements[element]["operations"][op] = op
+            waveforms = waveforms_from_pulse(pulse)
+            for mode in ["I", "Q"]:
+                self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+            self.integration_weights.update(
+                qmpulse.register_integration_weights(element, kernel)
+            )

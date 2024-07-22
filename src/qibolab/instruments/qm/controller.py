@@ -302,7 +302,7 @@ class QmController(Controller):
         Args:
             program: QUA program.
         """
-        machine = self.manager.open_qm(self.config.__dict__)
+        machine = self.manager.open_qm(asdict(self.config))
         return machine.execute(program)
 
     def simulate_program(self, program):
@@ -317,7 +317,7 @@ class QmController(Controller):
             duration=self.simulation_duration,
             controller_connections=controller_connections,
         )
-        return self.manager.simulate(self.config.__dict__, program, simulation_config)
+        return self.manager.simulate(asdict(self.config), program, simulation_config)
 
     def play(self, configs, sequences, options, integration_setup):
         return self.sweep(configs, sequences, options, integration_setup)
@@ -340,8 +340,8 @@ class QmController(Controller):
         # sweetspot even when they are not used
         for channel in self.channels.values():
             if isinstance(channel.logical_channel, DcChannel):
-                self.configure_dc_line(channel, configs)
-                self.config.register_dc_element(channel)
+                name = channel.logical_channel.name
+                self.config.configure_dc_line(channel, configs[name])
 
         acquisitions, parameters = self.register_pulses(
             configs, sequence, integration_setup, options
@@ -369,10 +369,10 @@ class QmController(Controller):
             warnings.warn(
                 "Not connected to Quantum Machines. Returning program and config."
             )
-            return {"program": experiment, "config": self.config.__dict__}
+            return {"program": experiment, "config": asdict(self.config)}
 
         if self.script_file_name is not None:
-            script = generate_qua_script(experiment, self.config.__dict__)
+            script = generate_qua_script(experiment, asdict(self.config))
             for pulses in sequence.values():
                 for pulse in pulses:
                     script = script.replace(operation(pulse), str(pulse))
