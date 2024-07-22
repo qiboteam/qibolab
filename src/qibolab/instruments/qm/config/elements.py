@@ -1,6 +1,14 @@
 from dataclasses import dataclass, field
 
-__all__ = ["output_switch", "DcElement", "RfOctaveElement", "AcquireOctaveElement"]
+import numpy as np
+
+__all__ = [
+    "output_switch",
+    "DcElement",
+    "RfOctaveElement",
+    "AcquireOctaveElement",
+    "Element",
+]
 
 
 def iq_imbalance(g, phi):
@@ -66,4 +74,4 @@ class AcquireOctaveElement:
     operations: dict[str, str] = field(default_factory=dict)
 
 
-Element = DcElement | RfElement | AcquireElement
+Element = DcElement | RfOctaveElement | AcquireOctaveElement
