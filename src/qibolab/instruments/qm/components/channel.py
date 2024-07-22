@@ -17,3 +17,7 @@ class QmChannel:
     """Name of the device."""
     port: int
     """Number of port."""
+
+    @property
+    def serial(self):
+        return {"port": (self.device, self.port)}
