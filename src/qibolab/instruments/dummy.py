@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import numpy as np
 from qibo.config import log
@@ -12,7 +12,7 @@ from qibolab.execution_parameters import (
 )
 from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId
-from qibolab.sweeper import Sweeper
+from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
 
 from .abstract import Controller
@@ -120,16 +120,18 @@ class DummyInstrument(Controller):
         couplers: Dict[QubitId, Coupler],
         sequence: PulseSequence,
         options: ExecutionParameters,
-        *sweepers: List[Sweeper],
+        sweepers: list[ParallelSweepers],
     ):
         results = {}
 
         if options.averaging_mode is not AveragingMode.CYCLIC:
             shape = (options.nshots,) + tuple(
-                len(sweeper.values) for sweeper in sweepers
+                min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
             )
         else:
-            shape = tuple(len(sweeper.values) for sweeper in sweepers)
+            shape = tuple(
+                min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
+            )
 
         for ro_pulse in sequence.ro_pulses:
             values = self.get_values(options, ro_pulse, shape)
