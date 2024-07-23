@@ -63,7 +63,7 @@ class DummyInstrument(Controller):
     BOUNDS = Bounds(1, 1, 1)
 
     @property
-    def sampling_rate(self):
+    def sampling_rate(self) -> int:
         return SAMPLING_RATE
 
     def connect(self):
