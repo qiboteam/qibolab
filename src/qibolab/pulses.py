@@ -395,13 +395,13 @@ class GaussianSquare(PulseShape):
 
             def gaussian(t, rel_sigma, gaussian_samples):
                 mu = (2 * gaussian_samples - 1) / 2
-                sigma = (2 * gaussian_samples) / rel_sigma
-                return np.exp(-0.5 * ((t - mu) / sigma) ** 2)
+                return np.exp(-0.5 * ((t - mu) / rel_sigma) ** 2)
 
             def fvec(t, gaussian_samples, rel_sigma, length=None):
                 if length is None:
                     length = t.shape[0]
 
+                gaussian_samples = int(gaussian_samples)
                 pulse = np.ones_like(t, dtype=float)
                 rise = t < gaussian_samples
                 fall = t > length - gaussian_samples - 1
@@ -410,7 +410,7 @@ class GaussianSquare(PulseShape):
                 return pulse
 
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            gaussian_samples = num_samples * (1 - self.width) // 2
+            gaussian_samples = num_samples * (1 - self.width) / 2
             t = np.arange(0, num_samples)
 
             pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
