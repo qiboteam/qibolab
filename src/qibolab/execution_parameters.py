@@ -98,14 +98,13 @@ class ExecutionParameters(Model):
     ) -> tuple[int, ...]:
         """Compute the expected shape for collected data."""
 
-        shots = self.nshots if self.averaging_mode is AveragingMode.SINGLESHOT else 1
-        assert isinstance(shots, int)
-        sweeps = (
+        shots = [self.nshots] if self.averaging_mode is AveragingMode.SINGLESHOT else []
+        sweeps = [
             min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
-        )
+        ]
         inner = {
-            AcquisitionType.DISCRIMINATION: 1,
-            AcquisitionType.INTEGRATION: 2,
-            AcquisitionType.RAW: samples,
+            AcquisitionType.DISCRIMINATION: [],
+            AcquisitionType.INTEGRATION: [2],
+            AcquisitionType.RAW: [samples, 2],
         }[self.acquisition_type]
-        return tuple([shots, *sweeps, inner])
+        return tuple(shots + sweeps + inner)
