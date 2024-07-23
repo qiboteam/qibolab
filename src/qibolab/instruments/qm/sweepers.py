@@ -6,8 +6,11 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
+from qibolab.components import Config
+from qibolab.sweeper import Sweeper
+
 from .config import operation
-from .program import play
+from .program import ExecutionArguments, play
 
 MAX_OFFSET = 0.5
 """Maximum voltage supported by Quantum Machines OPX+ instrument in volts."""
@@ -56,33 +59,33 @@ def check_max_offset(offset, max_offset=MAX_OFFSET):
 #            qmpulse.bake(config, values)
 
 
-def sweep(sweepers, sequence, parameters, configs, relaxation_time):
+def sweep(
+    sweepers: list[Sweeper], configs: dict[str, Config], args: ExecutionArguments
+):
     """Public sweep function that is called by the driver."""
     # for sweeper in sweepers:
     #    if sweeper.parameter is Parameter.duration:
     #        _update_baked_pulses(sweeper, instructions, config)
-    _sweep_recursion(sweepers, sequence, parameters, configs, relaxation_time)
+    _sweep_recursion(sweepers, configs, args)
 
 
-def _sweep_recursion(sweepers, sequence, parameters, configs, relaxation_time):
+def _sweep_recursion(sweepers, configs, args):
     """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
     using recursion."""
     if len(sweepers) > 0:
         parameter = sweepers[0].parameter.name
         func_name = f"_sweep_{parameter}"
         if func_name in globals():
-            globals()[func_name](
-                sweepers, sequence, parameters, configs, relaxation_time
-            )
+            globals()[func_name](sweepers, configs, args)
         else:
             raise_error(
                 NotImplementedError, f"Sweeper for {parameter} is not implemented."
             )
     else:
-        play(sequence, parameters, relaxation_time)
+        play(args)
 
 
-def _sweep_frequency(sweepers, sequence, parameters, configs, relaxation_time):
+def _sweep_frequency(sweepers, configs, args):
     sweeper = sweepers[0]
     freqs0 = []
     for channel in sweeper.channels:
@@ -104,10 +107,10 @@ def _sweep_frequency(sweepers, sequence, parameters, configs, relaxation_time):
         for channel, f0 in zip(sweeper.channels, freqs0):
             qua.update_frequency(channel.name, f + f0)
 
-        _sweep_recursion(sweepers[1:], sequence, parameters, configs, relaxation_time)
+        _sweep_recursion(sweepers[1:], configs, args)
 
 
-def _sweep_amplitude(sweepers, sequence, parameters, configs, relaxation_time):
+def _sweep_amplitude(sweepers, configs, args):
     sweeper = sweepers[0]
     # TODO: Consider sweeping amplitude without multiplication
     if min(sweeper.values) < -2:
@@ -123,22 +126,22 @@ def _sweep_amplitude(sweepers, sequence, parameters, configs, relaxation_time):
             # if isinstance(instruction, Bake):
             #    instructions.update_kwargs(instruction, amplitude=a)
             # else:
-            parameters[operation(pulse)].amplitude = qua.amp(a)
+            args.parameters[operation(pulse)].amplitude = qua.amp(a)
 
-        _sweep_recursion(sweepers[1:], sequence, parameters, configs, relaxation_time)
+        _sweep_recursion(sweepers[1:], configs, args)
 
 
-def _sweep_relative_phase(sweepers, sequence, parameters, configs, relaxation_time):
+def _sweep_relative_phase(sweepers, configs, args):
     sweeper = sweepers[0]
     relphase = declare(fixed)
     with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
         for pulse in sweeper.pulses:
-            parameters[operation(pulse)].phase = relphase
+            args.parameters[operation(pulse)].phase = relphase
 
-        _sweep_recursion(sweepers[1:], sequence, parameters, configs, relaxation_time)
+        _sweep_recursion(sweepers[1:], configs, args)
 
 
-def _sweep_bias(sweepers, sequence, parameters, configs, relaxation_time):
+def _sweep_bias(sweepers, configs, args):
     sweeper = sweepers[0]
     offset0 = []
     for channel in sweeper.channels:
@@ -156,15 +159,15 @@ def _sweep_bias(sweepers, sequence, parameters, configs, relaxation_time):
             with qua.else_():
                 qua.set_dc_offset(f"flux{channel.name}", "single", (b + b0))
 
-        _sweep_recursion(sweepers[1:], sequence, parameters, configs, relaxation_time)
+        _sweep_recursion(sweepers[1:], configs, args)
 
 
-def _sweep_duration(sweepers, sequence, parameters, configs, relaxation_time):
+def _sweep_duration(sweepers, configs, args):
     # TODO: Handle baked pulses
     sweeper = sweepers[0]
     dur = declare(int)
     with for_(*from_array(dur, (sweeper.values // 4).astype(int))):
         for pulse in sweeper.pulses:
-            parameters[operation(pulse)].duration = dur
+            args.parameters[operation(pulse)].duration = dur
 
-        _sweep_recursion(sweepers[1:], sequence, parameters, configs, relaxation_time)
+        _sweep_recursion(sweepers[1:], configs, args)
