@@ -340,8 +340,7 @@ class QmController(Controller):
         # sweetspot even when they are not used
         for channel in self.channels.values():
             if isinstance(channel.logical_channel, DcChannel):
-                name = channel.logical_channel.name
-                self.config.configure_dc_line(channel, configs[name])
+                self.configure_channel(channel, configs)
 
         acquisitions, parameters = self.register_pulses(
             configs, sequence, integration_setup, options

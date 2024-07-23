@@ -12,7 +12,7 @@ __all__ = [
 class OpxOutputConfig(DcConfig):
     """DC channel config using QM OPX+."""
 
-    offset: float
+    offset: float = 0.0
     """DC offset to be applied in V.
 
     Possible values are -0.5V to 0.5V.

@@ -12,6 +12,7 @@ __all__ = [
     "operation",
     "Waveform",
     "waveforms_from_pulse",
+    "integration_weights",
     "QmPulse",
     "QmAcquisition",
 ]
@@ -91,11 +92,7 @@ class QmPulse:
 
 
 def integration_weights(element: str, readout_len: int, kernel=None, angle: float = 0):
-    """Registers integration weights in QM config.
-
-    Args:
-        readout_len (int): Duration of the readout pulse in ns.
-    """
+    """Create integration weights section for QM config."""
     cos, sin = np.cos(angle), np.sin(angle)
     if kernel is None:
         convert = lambda x: [(x, readout_len)]
@@ -125,10 +122,16 @@ class QmAcquisition(QmPulse):
     operation: str = "measurement"
     integration_weights: dict[str, str] = field(default_factory=dict)
 
-    def register_integration_weights(self, element: str, kernel=None, angle: float = 0):
-        self.integration_weights = {
+    @classmethod
+    def from_pulse(cls, pulse: Pulse, element: str):
+        op = operation(pulse)
+        integration_weights = {
             "cos": f"cosine_weights_{element}",
             "sin": f"sine_weights_{element}",
             "minus_sin": f"minus_sine_weights_{element}",
         }
-        return integration_weights(element, self.length, kernel, angle)
+        return cls(
+            length=pulse.duration,
+            waveforms={"I": f"{op}_i", "Q": f"{op}_q"},
+            integration_weights=integration_weights,
+        )
