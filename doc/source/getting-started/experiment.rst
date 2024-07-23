@@ -21,7 +21,7 @@ file with additional calibration parameters.
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
-For simplicity, the qubit will be controlled by a RFSoC-based system, althought minimal changes are needed to use other devices.
+In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrument, although minimal changes are needed to use other devices.
 
 .. testcode:: python
 
@@ -29,41 +29,71 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
 
     import pathlib
 
-    from qibolab.channels import Channel, ChannelMap
-    from qibolab.instruments.rfsoc import RFSoC
-    from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
+    from laboneq.simple import DeviceSetup, SHFQC
+    from qibolab.components import AcquireChannel, IqChannel, IqConfig, AcquisitionConfig, OscillatorConfig
+    from qibolab.instruments.zhinst import ZiChannel, Zurich
     from qibolab.platform import Platform
-    from qibolab.serialize import load_qubits, load_runcard, load_settings
+    from qibolab.serialize import load_component_config, load_instrument_settings, load_qubits, load_runcard, load_settings
 
     NAME = "my_platform"  # name of the platform
-    ADDRESS = "192.168.0.1"  # ip address of the controller
-    PORT = 6000  # port of the controller
+    ADDRESS = "localhost"  # ip address of the ZI data server
+    PORT = 8004  # port of the ZI data server
 
     # folder containing runcard with calibration parameters
     FOLDER = pathlib.Path.cwd()
 
 
     def create():
-        # Instantiate controller instruments
-        controller = RFSoC(NAME, ADDRESS, PORT)
+        # Define available instruments
+        device_setup = DeviceSetup()
+        device_setup.add_dataserver(host=ADDRESS, port=PORT)
+        device_setup.add_instruments(SHFQC("device_shfqc", address="DEV12146"))
 
-        # Create channel objects and port assignment
-        channels = ChannelMap()
-        channels |= Channel("readout", port=controller[1])
-        channels |= Channel("feedback", port=controller[0])
-        channels |= Channel("drive", port=controller[0])
-
-        # create qubit objects
+        # Load and parse the runcard (i.e. parameters.json)
         runcard = load_runcard(FOLDER)
-        qubits, pairs = load_qubits(runcard)
-        # assign channels to qubits
-        qubits[0].readout = channels["L3-22_ro"]
-        qubits[0].feedback = channels["L1-2-RO"]
-        qubits[0].drive = channels["L3-22_qd"]
+        qubits, _, pairs = load_qubits(runcard)
+        qubit = qubits[0]
 
-        instruments = {controller.name: controller}
+        # define component names, and load their configurations
+        drive, measure, acquire = "q0/drive", "q0/measure", "q0/acquire"
+        drive_lo, measure_lo = "q0/drive/lo", "q0/measure/lo"
+
+        # assign channels to qubits
+        qubit.drive = IqChannel(name=drive, lo=drive_lo, mixer=None)
+        qubit.measure = IqChannel(name=measure, lo=measure_lo, mixer=None, acquisition=acquire)
+        qubit.acquisition = AcquireChannel(name=acquire, measure=measure, twpa_pump=None)
+
+        configs = {}
+        configs[drive] = load_component_config(runcard, drive, IqConfig)
+        configs[measure] = load_component_config(runcard, measure, IqConfig)
+        configs[acquire] = load_component_config(runcard, acquire, AcquisitionConfig)
+        configs[drive_lo] = load_component_config(runcard, drive_lo, OscillatorConfig)
+        configs[measure_lo] = load_component_config(runcard, measure_lo, OscillatorConfig)
+
+        zi_channels = [
+            ZiChannel(qubit.drive, device="device_shfqc", path="SGCHANNELS/0/OUTPUT"),
+            ZiChannel(qubit.measure, device="device_shfqc", path="QACHANNELS/0/OUTPUT"),
+            ZiChannel(qubit.acquisition, device="device_shfqc", path="QACHANNELS/0/INPUT"),
+        ]
+
+        controller = Zurich(
+            NAME,
+            device_setup=device_setup,
+            channels=zi_channels
+        )
+
+        instruments = load_instrument_settings(runcard, {controller.name: controller})
         settings = load_settings(runcard)
-        return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="3D")
+        return Platform(
+            NAME,
+            qubits,
+            pairs,
+            configs,
+            instruments,
+            settings,
+            resonator_type="3D",
+        )
+
 
 .. note::
 
@@ -93,22 +123,51 @@ And the we can define the runcard ``my_platform/parameters.json``:
         "relaxation_time": 70000,
         "sampling_rate": 9830400000
     },
+    "components": {
+        "qubit_0/drive": {
+            "frequency": 4833726197,
+            "power_range": 5
+        },
+        "qubit_0/drive/lo": {
+            "frequency": 5200000000,
+            "power": null
+        },
+        "qubit_0/measure": {
+            "frequency": 7320000000,
+            "power_range": 1
+        },
+        "qubit_0/measure/lo": {
+            "frequency": 7300000000,
+            "power": null
+        },
+        "qubit_0/acquire": {
+            "delay": 0,
+            "smearing": 0,
+            "power_range": 10
+        }
+    }
     "native_gates": {
         "single_qubit": {
             "0": {
                 "RX": {
-                    "duration": 40,
-                    "amplitude": 0.5,
-                    "frequency": 5500000000,
-                    "shape": "Gaussian(3)",
-                    "type": "qd",
+                    "qubit_0/drive": [
+                        {
+                            "duration": 40,
+                            "amplitude": 0.5,
+                            "envelope": { "kind": "gaussian", "rel_sigma": 3.0 },
+                            "type": "qd"
+                        }
+                    ]
                 },
                 "MZ": {
-                    "duration": 2000,
-                    "amplitude": 0.02,
-                    "frequency": 7370000000,
-                    "shape": "Rectangular()",
-                    "type": "ro",
+                    "qubit_0/measure": [
+                        {
+                            "duration": 2000,
+                            "amplitude": 0.02,
+                            "envelope": { "kind": "rectangular" },
+                            "type": "ro"
+                        }
+                    ]
                 }
             }
         },
@@ -117,8 +176,6 @@ And the we can define the runcard ``my_platform/parameters.json``:
     "characterization": {
         "single_qubit": {
             "0": {
-                "readout_frequency": 7370000000,
-                "drive_frequency": 5500000000,
                 "anharmonicity": 0,
                 "Ec": 0,
                 "Ej": 0,
@@ -187,16 +244,15 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     # load the platform from ``dummy.py`` and ``dummy.json``
     platform = create_platform("dummy")
 
+    qubit = platform.qubits[0]
     # define the pulse sequence
-    sequence = PulseSequence()
-    ro_pulse = platform.create_MZ_pulse(qubit=0)
-    sequence.append(ro_pulse)
+    sequence = qubit.native_gates.MZ.create_sequence()
 
     # define a sweeper for a frequency scan
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-2e8, +2e8, 1e6),
-        pulses=[ro_pulse],
+        channels=[qubit.measure.name],
         type=SweeperType.OFFSET,
     )
 
@@ -209,10 +265,11 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     )
 
     results = platform.execute([sequence], options, [[sweeper]])
+    ro_pulse = next(iter(sequence.ro_pulses))
 
     # plot the results
     amplitudes = results[ro_pulse.id][0].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + ro_pulse.frequency
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.measure.name).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")

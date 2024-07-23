@@ -14,29 +14,23 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
     sequence = PulseSequence()
 
     # Add some pulses to the pulse sequence
-    sequence.append(
+    sequence["channel_0"].append(
         Pulse(
-            frequency=200000000,
             amplitude=0.3,
             duration=60,
             relative_phase=0,
             envelope=Gaussian(rel_sigma=0.2),
-            qubit=0,
             type=PulseType.DRIVE,
-            channel="0",
         )
     )
-    sequence.append(Delay(duration=100, channel="1"))
-    sequence.append(
+    sequence["channel_1"].append(Delay(duration=100, channel="1"))
+    sequence["channel_1"].append(
         Pulse(
-            frequency=20000000.0,
             amplitude=0.5,
             duration=3000,
             relative_phase=0,
             envelope=Rectangular(),
-            qubit=0,
             type=PulseType.READOUT,
-            channel="1",
         )
     )
 

@@ -82,7 +82,7 @@ The following example shows how to modify the compiler in order to execute a cir
     # define a compiler rule that translates X to the pi-pulse
     def x_rule(gate, qubit):
         """X gate applied with a single pi-pulse."""
-        return PulseSequence([qubit.native_gates.RX])
+        return qubit.native_gates.RX.create_sequence()
 
 
     # the empty dictionary is needed because the X gate does not require any virtual Z-phases

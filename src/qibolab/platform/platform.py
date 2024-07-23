@@ -283,12 +283,11 @@ class Platform:
 
 
                 platform = create_dummy()
-                sequence = PulseSequence()
+                qubit = platform.qubits[0]
+                sequence = qubit.native_gates.MZ.create_sequence()
                 parameter = Parameter.frequency
-                pulse = platform.create_qubit_readout_pulse(qubit=0)
-                sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
-                sweeper = [Sweeper(parameter, parameter_range, [pulse])]
+                sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.measure.name])]
                 platform.execute([sequence], ExecutionParameters(), [sweeper])
         """
         if sweepers is None:
