@@ -35,7 +35,7 @@ def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
         sweeper1 = Sweeper(Parameter.bias, amp_values, qubits=[platform.qubits[qubit]])
         # sweeper1 = Sweeper(Parameter.amplitude, amp_values, pulses=[qd_pulse])
         sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[ro_pulse])
-        results = platform.execute([sequence], options, sweeper1, sweeper2)
+        results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
     else:
         results = platform.execute([sequence], options)
     return results[qubit][0]
