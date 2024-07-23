@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 
-from qibolab.components.configs import IqConfig
+from qibolab.components.configs import IqConfig, OscillatorConfig
+from qibolab.pulses import Pulse
 
-from ..components import OpxOutputConfig, QmChannel
+from ..components import OpxOutputConfig, QmAcquisitionConfig, QmChannel
 from .devices import *
 from .elements import *
 from .pulses import *
@@ -19,9 +20,7 @@ class QmConfig:
     octaves: dict[str, Octave] = field(default_factory=dict)
     elements: dict[str, Element] = field(default_factory=dict)
     pulses: dict[str, QmPulse | QmAcquisition] = field(default_factory=dict)
-    waveforms: dict[str, ConstantWaveform | ArbitraryWaveform] = field(
-        default_factory=dict
-    )
+    waveforms: dict[str, Waveform] = field(default_factory=dict)
     digital_waveforms: dict = field(
         default_factory=lambda: {"ON": {"samples": [(1, 0)]}}
     )
@@ -89,30 +88,30 @@ class QmConfig:
         op = operation(pulse)
         if op not in self.pulses:
             self.pulses[op] = qmpulse = QmPulse.from_pulse(pulse)
-            self.elements[element].operations[op] = op
             waveforms = waveforms_from_pulse(pulse)
             for mode in ["I", "Q"]:
                 self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+        self.elements[element].operations[op] = op
         return op
 
     def register_dc_pulse(self, element: str, pulse: Pulse):
         op = operation(pulse)
         if op not in self.pulses:
             self.pulses[op] = qmpulse = QmPulse.from_dc_pulse(pulse)
-            self.elements[element].operations[op] = op
             self.waveforms[qmpulse.waveforms["I"]] = waveforms_from_pulse(pulse)["I"]
+        self.elements[element].operations[op] = op
         return op
 
     def register_acquisition_pulse(self, element: str, pulse: Pulse, kernel=None):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = qmpulse = QmAcquisition.from_pulse(pulse)
-            self.elements[element]["operations"][op] = op
+            self.pulses[op] = qmpulse = QmAcquisition.from_pulse(pulse, element)
             waveforms = waveforms_from_pulse(pulse)
             for mode in ["I", "Q"]:
                 self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
-            self.integration_weights.update(
-                qmpulse.register_integration_weights(element, kernel)
-            )
+        self.integration_weights.update(
+            integration_weights(element, pulse.duration, kernel)
+        )
+        self.elements[element].operations[op] = op
         return op
