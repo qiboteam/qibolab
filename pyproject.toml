@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibolab"
-version = "0.1.10"
+version = "0.2.0"
 description = "Quantum hardware module and drivers for Qibo"
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -87,7 +87,6 @@ qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq"]
 los = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
-twpa = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 emulator = ["qutip"]
 
 
