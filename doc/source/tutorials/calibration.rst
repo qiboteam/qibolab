@@ -65,7 +65,7 @@ We then define the execution parameters and launch the experiment.
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results = platform.execute([sequence], options, sweeper)
+    results = platform.execute([sequence], options, [[sweeper]])
 
 In few seconds, the experiment will be finished and we can proceed to plot it.
 
@@ -153,7 +153,7 @@ We can now proceed to launch on hardware:
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results = platform.execute([sequence], options, sweeper)
+    results = platform.execute([sequence], options, [[sweeper]])
 
     amplitudes = results[readout_pulse.id][0].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + drive_pulse.frequency
