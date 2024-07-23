@@ -45,9 +45,9 @@ QubitParameter = {Parameter.bias, Parameter.attenuation, Parameter.gain}
 class Sweeper:
     """Data structure for Sweeper object.
 
-    This object is passed as an argument to the method :func:`qibolab.platforms.abstract.Platform.sweep`
+    This object is passed as an argument to the method :func:`qibolab.platforms.platform.Platform.execute`
     which enables the user to sweep a specific parameter for one or more pulses. For information on how to
-    perform sweeps see :func:`qibolab.platforms.abstract.Platform.sweep`.
+    perform sweeps see :func:`qibolab.platforms.platform.Platform.execute`.
 
     Example:
         .. testcode::
@@ -66,7 +66,7 @@ class Sweeper:
             sequence.append(pulse)
             parameter_range = np.random.randint(10, size=10)
             sweeper = Sweeper(parameter, parameter_range, [pulse])
-            platform.sweep(sequence, ExecutionParameters(), sweeper)
+            platform.execute([sequence], ExecutionParameters(), [[sweeper]])
 
     Args:
         parameter (`qibolab.sweeper.Parameter`): parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
