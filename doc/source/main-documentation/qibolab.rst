@@ -496,7 +496,7 @@ A tipical resonator spectroscopy experiment could be defined with:
         type=SweeperType.OFFSET,
     )
 
-    results = platform.execute([sequence], options, [sweeper])
+    results = platform.execute([sequence], options, [[sweeper]])
 
 .. note::
 
