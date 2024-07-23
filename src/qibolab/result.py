@@ -1,177 +1,38 @@
-from functools import cached_property, lru_cache
-from typing import Optional
-
 import numpy as np
 import numpy.typing as npt
 
 
-class IntegratedResults:
-    """Data structure to deal with the execution output.
+def _transpose(values: npt.NDArray):
+    """Transpose the innermost dimension to the outermost."""
+    return np.transpose(values, [-1, *range(values.ndim - 1)])
 
-    Associated with AcquisitionType.INTEGRATION and
-    AveragingMode.SINGLESHOT
+
+def _backspose(values: npt.NDArray):
+    """Innermost transposition inverse.
+
+    Cf. :func:`_transpose`.
     """
-
-    def __init__(self, data: np.ndarray):
-        self.voltage: npt.NDArray[np.complex128] = data
-
-    def __add__(self, data):
-        return self.__class__(np.append(self.voltage, data.voltage))
-
-    @property
-    def voltage_i(self):
-        """Signal component i in volts."""
-        return self.voltage.real
-
-    @property
-    def voltage_q(self):
-        """Signal component q in volts."""
-        return self.voltage.imag
-
-    @cached_property
-    def magnitude(self):
-        """Signal magnitude in volts."""
-        return np.sqrt(self.voltage_i**2 + self.voltage_q**2)
-
-    @cached_property
-    def phase(self):
-        """Signal phase in radians."""
-        return np.unwrap(np.arctan2(self.voltage_i, self.voltage_q))
-
-    @cached_property
-    def phase_std(self):
-        """Signal phase in radians."""
-        return np.std(self.phase, axis=0, ddof=1) / np.sqrt(self.phase.shape[0])
-
-    @property
-    def serialize(self):
-        """Serialize as a dictionary."""
-        serialized_dict = {
-            "MSR[V]": self.magnitude.flatten(),
-            "i[V]": self.voltage_i.flatten(),
-            "q[V]": self.voltage_q.flatten(),
-            "phase[rad]": self.phase.flatten(),
-        }
-        return serialized_dict
-
-    @property
-    def average(self):
-        """Perform average over i and q."""
-        average_data = np.mean(self.voltage, axis=0)
-        std_data = np.std(self.voltage, axis=0, ddof=1) / np.sqrt(self.voltage.shape[0])
-        return AveragedIntegratedResults(average_data, std_data)
+    return np.transpose(values, [*range(1, values.ndim), 0])
 
 
-class AveragedIntegratedResults(IntegratedResults):
-    """Data structure to deal with the execution output.
+def magnitude(iq: npt.NDArray):
+    """Signal magnitude.
 
-    Associated with AcquisitionType.INTEGRATION and AveragingMode.CYCLIC
-    or the averages of ``IntegratedResults``
+    It is supposed to be a tension, possibly in arbitrary units.
     """
-
-    def __init__(self, data: np.ndarray, std: Optional[np.ndarray] = None):
-        super().__init__(data)
-        self.std: Optional[npt.NDArray[np.float64]] = std
-
-    def __add__(self, data):
-        new_res = super().__add__(data)
-        new_res.std = np.append(self.std, data.std)
-        return new_res
-
-    @property
-    def average(self):
-        """Average on AveragedIntegratedResults is itself."""
-        return self
-
-    @cached_property
-    def phase_std(self):
-        """Standard deviation is None for AveragedIntegratedResults."""
-        return None
-
-    @cached_property
-    def phase(self):
-        """Phase not unwrapped because it is a single value."""
-        return np.arctan2(self.voltage_i, self.voltage_q)
+    iq_ = _transpose(iq)
+    return np.sqrt(iq_[0] ** 2 + iq_[1] ** 2)
 
 
-class RawWaveformResults(IntegratedResults):
-    """Data structure to deal with the execution output.
+def phase(iq: npt.NDArray):
+    """Signal phase in radians."""
+    iq_ = _transpose(iq)
+    return np.unwrap(np.arctan2(iq_[0], iq_[1]))
 
-    Associated with AcquisitionType.RAW and AveragingMode.SINGLESHOT may
-    also be used to store the integration weights ?
+
+def probability(values: npt.NDArray, state: int = 0):
+    """Returns the statistical frequency of the specified state.
+
+    The only accepted values `state` are `0` and `1`.
     """
-
-
-class AveragedRawWaveformResults(AveragedIntegratedResults):
-    """Data structure to deal with the execution output.
-
-    Associated with AcquisitionType.RAW and AveragingMode.CYCLIC
-    or the averages of ``RawWaveformResults``
-    """
-
-
-class SampleResults:
-    """Data structure to deal with the execution output.
-
-    Associated with AcquisitionType.DISCRIMINATION and
-    AveragingMode.SINGLESHOT
-    """
-
-    def __init__(self, data: np.ndarray):
-        self.samples: npt.NDArray[np.uint32] = np.array(data).astype(np.uint32)
-
-    def __add__(self, data):
-        return self.__class__(np.append(self.samples, data.samples))
-
-    @lru_cache
-    def probability(self, state=0):
-        """Returns the statistical frequency of the specified state (0 or
-        1)."""
-        return abs(1 - state - np.mean(self.samples, axis=0))
-
-    @property
-    def serialize(self):
-        """Serialize as a dictionary."""
-        serialized_dict = {
-            "0": self.probability(0).flatten(),
-        }
-        return serialized_dict
-
-    @property
-    def average(self):
-        """Perform samples average."""
-        average = self.probability(1)
-        std = np.std(self.samples, axis=0, ddof=1) / np.sqrt(self.samples.shape[0])
-        return AveragedSampleResults(average, self.samples, std=std)
-
-
-class AveragedSampleResults(SampleResults):
-    """Data structure to deal with the execution output.
-
-    Associated with AcquisitionType.DISCRIMINATION and AveragingMode.CYCLIC
-    or the averages of ``SampleResults``
-    """
-
-    def __init__(
-        self,
-        statistical_frequency: np.ndarray,
-        samples: np.ndarray = np.array([]),
-        std: np.ndarray = np.array([]),
-    ):
-        super().__init__(samples)
-        self.statistical_frequency: npt.NDArray[np.float64] = statistical_frequency
-        self.std: Optional[npt.NDArray[np.float64]] = std
-
-    def __add__(self, data):
-        new_res = super().__add__(data)
-        new_res.statistical_frequency = np.append(
-            self.statistical_frequency, data.statistical_frequency
-        )
-        new_res.std = np.append(self.std, data.std)
-        return new_res
-
-    @lru_cache
-    def probability(self, state=0):
-        """Returns the statistical frequency of the specified state (0 or
-        1)."""
-        return abs(1 - state - self.statistical_frequency)
+    return abs(1 - state - np.mean(values, axis=0))

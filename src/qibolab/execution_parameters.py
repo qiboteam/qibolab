@@ -1,14 +1,6 @@
 from enum import Enum, auto
 from typing import Any, Optional
 
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    RawWaveformResults,
-    SampleResults,
-)
 from qibolab.serialize_ import Model
 from qibolab.sweeper import ParallelSweepers
 
@@ -36,20 +28,6 @@ class AveragingMode(Enum):
     """SINGLESHOT: No averaging."""
     SEQUENTIAL = auto()
     """SEQUENTIAL: Worse averaging for noise[Avoid]"""
-
-
-RESULTS_TYPE = {
-    AveragingMode.CYCLIC: {
-        AcquisitionType.INTEGRATION: AveragedIntegratedResults,
-        AcquisitionType.RAW: AveragedRawWaveformResults,
-        AcquisitionType.DISCRIMINATION: AveragedSampleResults,
-    },
-    AveragingMode.SINGLESHOT: {
-        AcquisitionType.INTEGRATION: IntegratedResults,
-        AcquisitionType.RAW: RawWaveformResults,
-        AcquisitionType.DISCRIMINATION: SampleResults,
-    },
-}
 
 
 ConfigUpdate = dict[str, dict[str, Any]]
@@ -87,11 +65,6 @@ class ExecutionParameters(Model):
     happen to update the same thing). These updates will be applied on
     top of platform defaults.
     """
-
-    @property
-    def results_type(self):
-        """Returns corresponding results class."""
-        return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]
 
     def results_shape(
         self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
