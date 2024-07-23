@@ -19,13 +19,20 @@ def magnitude(iq: npt.NDArray):
     """Signal magnitude.
 
     It is supposed to be a tension, possibly in arbitrary units.
+
+    It is assumed that the I and Q component are discriminated by the
+    innermost dimension of the array.
     """
     iq_ = _transpose(iq)
     return np.sqrt(iq_[0] ** 2 + iq_[1] ** 2)
 
 
 def phase(iq: npt.NDArray):
-    """Signal phase in radians."""
+    """Signal phase in radians.
+
+    It is assumed that the I and Q component are discriminated by the
+    innermost dimension of the array.
+    """
     iq_ = _transpose(iq)
     return np.unwrap(np.arctan2(iq_[0], iq_[1]))
 
