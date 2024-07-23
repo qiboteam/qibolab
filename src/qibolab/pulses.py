@@ -376,16 +376,16 @@ class GaussianSquare(PulseShape):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
     """
 
-    def __init__(self, rel_sigma: float, width: float):
+    def __init__(self, sigma: float, width: float):
         self.name = "GaussianSquare"
         self.pulse: Pulse = None
-        self.rel_sigma: float = float(rel_sigma)
+        self.sigma: float = float(sigma)
         self.width: float = float(width)
 
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
         if super().__eq__(item):
-            return self.rel_sigma == item.rel_sigma and self.width == item.width
+            return self.sigma == item.sigma and self.width == item.width
         return False
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
@@ -393,9 +393,9 @@ class GaussianSquare(PulseShape):
 
         if self.pulse:
 
-            def gaussian(t, rel_sigma, gaussian_samples):
+            def gaussian(t, sigma, gaussian_samples):
                 mu = (2 * gaussian_samples - 1) / 2
-                return np.exp(-0.5 * ((t - mu) / rel_sigma) ** 2)
+                return np.exp(-0.5 * ((t - mu) / sigma) ** 2)
 
             def fvec(t, gaussian_samples, rel_sigma, length=None):
                 if length is None:
@@ -413,7 +413,7 @@ class GaussianSquare(PulseShape):
             gaussian_samples = num_samples * (1 - self.width) / 2
             t = np.arange(0, num_samples)
 
-            pulse = fvec(t, gaussian_samples, rel_sigma=self.rel_sigma)
+            pulse = fvec(t, gaussian_samples, rel_sigma=self.sigma)
 
             waveform = Waveform(self.pulse.amplitude * pulse)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
@@ -432,7 +432,7 @@ class GaussianSquare(PulseShape):
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.width, '.6f').rstrip('0').rstrip('.')})"
+        return f"{self.name}({format(self.sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.width, '.6f').rstrip('0').rstrip('.')})"
 
 
 class Drag(PulseShape):
