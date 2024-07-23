@@ -1,5 +1,4 @@
 import warnings
-from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
@@ -10,9 +9,9 @@ from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab import AveragingMode
-from qibolab.components import Config, DcChannel, IqChannel
+from qibolab.components import Channel, Config, DcChannel, IqChannel
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, VirtualZ
+from qibolab.pulses import Delay, Pulse, VirtualZ
 from qibolab.sweeper import Parameter
 from qibolab.unrolling import Bounds
 
@@ -20,7 +19,7 @@ from .acquisition import create_acquisition, fetch_results
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
 from .octave import Octave
-from .program import Parameters
+from .program import ExecutionArguments
 from .sweepers import sweep
 
 OCTAVE_ADDRESS_OFFSET = 11000
@@ -201,6 +200,21 @@ class QmController(Controller):
         else:
             raise TypeError(f"Unknown channel type: {type(channel)}.")
 
+    def register_pulse(self, channel: Channel, pulse: Pulse):
+        # if (
+        #    pulse.duration % 4 != 0
+        #    or pulse.duration < 16
+        #    or pulse.id in pulses_to_bake
+        # ):
+        #    qmpulse = BakedPulse(pulse, element)
+        #    qmpulse.bake(self.config, durations=[pulse.duration])
+        # else:
+        if isinstance(channel, DcChannel):
+            return self.config.register_dc_pulse(channel.name, pulse)
+        if channel.acquisition is None:
+            return self.config.register_iq_pulse(channel.name, pulse)
+        return self.config.register_acquisition_pulse(channel.name, pulse)
+
     def register_pulses(self, configs, sequence, integration_setup, options):
         """Translates a :class:`qibolab.pulses.PulseSequence` to
         :class:`qibolab.instruments.qm.instructions.Instructions`.
@@ -216,52 +230,40 @@ class QmController(Controller):
             parameters (dict):
         """
         acquisitions = {}
-        parameters = defaultdict(Parameters)
-        for channel_name, channel_sequence in sequence.items():
-            channel = self.channels[channel_name]
+        for name, channel_sequence in sequence.items():
+            channel = self.channels[name]
             self.configure_channel(channel, configs)
 
             for pulse in channel_sequence:
                 if isinstance(pulse, (Delay, VirtualZ)):
                     continue
 
-                # if (
-                #    pulse.duration % 4 != 0
-                #    or pulse.duration < 16
-                #    or pulse.id in pulses_to_bake
-                # ):
-                #    qmpulse = BakedPulse(pulse, element)
-                #    qmpulse.bake(self.config, durations=[pulse.duration])
-                # else:
                 logical_channel = channel.logical_channel
-                if isinstance(logical_channel, DcChannel):
-                    self.config.register_dc_pulse(channel_name, pulse)
-                else:
-                    if logical_channel.acquisition is None:
-                        self.config.register_iq_pulse(channel_name, pulse)
+                op = self.register_pulse(logical_channel, pulse)
+
+                if (
+                    isinstance(logical_channel, IqChannel)
+                    and logical_channel.acquisition is not None
+                ):
+                    kernel, threshold, iq_angle = integration_setup[
+                        logical_channel.acquisition
+                    ]
+                    self.config.register_integration_weights(
+                        name, pulse.duration, kernel
+                    )
+                    if (op, name) in acquisitions:
+                        acquisition = acquisitions[(op, name)]
                     else:
-                        acquisition = self.channels[
-                            logical_channel.acquisition
-                        ].logical_channel
-
-                        kernel, threshold, iq_angle = integration_setup[
-                            acquisition.name
-                        ]
-                        op = self.config.register_acquisition_pulse(
-                            channel_name, pulse, kernel
+                        acquisition = acquisitions[(op, name)] = create_acquisition(
+                            op,
+                            name,
+                            options,
+                            threshold,
+                            iq_angle,
                         )
-                        if op not in acquisitions:
-                            acquisitions[op] = create_acquisition(
-                                op,
-                                channel_name,
-                                options,
-                                threshold,
-                                iq_angle,
-                            )
-                        parameters[op].acquisition = acquisitions[op]
-                        acquisitions[op].keys.append(pulse.id)
+                    acquisition.keys.append(pulse.id)
 
-        return acquisitions, parameters
+        return acquisitions
 
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language.
@@ -309,7 +311,7 @@ class QmController(Controller):
             if isinstance(channel.logical_channel, DcChannel):
                 self.configure_channel(channel, configs)
 
-        acquisitions, parameters = self.register_pulses(
+        acquisitions = self.register_pulses(
             configs, sequence, integration_setup, options
         )
         with qua.program() as experiment:
@@ -318,14 +320,9 @@ class QmController(Controller):
             for acquisition in acquisitions.values():
                 acquisition.declare()
             # execute pulses
+            args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
             with for_(n, 0, n < options.nshots, n + 1):
-                sweep(
-                    list(sweepers),
-                    sequence,
-                    parameters,
-                    configs,
-                    options.relaxation_time,
-                )
+                sweep(list(sweepers), configs, args)
             # download acquisitions
             with qua.stream_processing():
                 for acquisition in acquisitions.values():

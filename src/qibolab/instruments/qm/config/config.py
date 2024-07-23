@@ -102,16 +102,19 @@ class QmConfig:
         self.elements[element].operations[op] = op
         return op
 
-    def register_acquisition_pulse(self, element: str, pulse: Pulse, kernel=None):
+    def register_acquisition_pulse(self, element: str, pulse: Pulse):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(pulse)
-        if op not in self.pulses:
-            self.pulses[op] = qmpulse = QmAcquisition.from_pulse(pulse, element)
+        acquisition = f"{op}_{element}"
+        if acquisition not in self.pulses:
+            self.pulses[acquisition] = qmpulse = QmAcquisition.from_pulse(
+                pulse, element
+            )
             waveforms = waveforms_from_pulse(pulse)
             for mode in ["I", "Q"]:
                 self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
-        self.integration_weights.update(
-            integration_weights(element, pulse.duration, kernel)
-        )
-        self.elements[element].operations[op] = op
+        self.elements[element].operations[op] = acquisition
         return op
+
+    def register_integration_weights(self, element: str, duration: int, kernel):
+        self.integration_weights.update(integration_weights(element, duration, kernel))

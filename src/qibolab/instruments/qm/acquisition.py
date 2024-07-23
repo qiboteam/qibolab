@@ -24,8 +24,6 @@ from qibolab.result import (
     SampleResults,
 )
 
-# TODO: Change name to operation?
-
 
 @dataclass
 class Acquisition(ABC):
@@ -36,9 +34,7 @@ class Acquisition(ABC):
     variables.
     """
 
-    name: str
-    """Name of the acquisition used as identifier to download results from the
-    instruments."""
+    operation: str
     element: str
     """Element from QM ``config`` that the pulse will be applied on."""
     average: bool
@@ -50,6 +46,11 @@ class Acquisition(ABC):
     AVERAGED_RESULT_CLS = AveragedIntegratedResults
     """Averaged result object type that corresponds to this acquisition
     type."""
+
+    @property
+    def name(self):
+        """Identifier to download results from the instruments."""
+        return f"{self.operation}_{self.element}"
 
     @property
     def npulses(self):
@@ -104,9 +105,9 @@ class RawAcquisition(Acquisition):
     def declare(self):
         self.adc_stream = declare_stream(adc_trace=True)
 
-    def measure(self, operation, element):
-        qua.reset_phase(element)
-        qua.measure(operation, element, self.adc_stream)
+    def measure(self, operation):
+        qua.reset_phase(self.element)
+        qua.measure(operation, self.element, self.adc_stream)
 
     def download(self, *dimensions):
         istream = self.adc_stream.input1()
