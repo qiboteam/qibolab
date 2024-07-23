@@ -10,6 +10,7 @@ from qibolab.result import (
     SampleResults,
 )
 from qibolab.serialize_ import Model
+from qibolab.sweeper import ParallelSweepers
 
 
 class AcquisitionType(Enum):
@@ -91,3 +92,20 @@ class ExecutionParameters(Model):
     def results_type(self):
         """Returns corresponding results class."""
         return RESULTS_TYPE[self.averaging_mode][self.acquisition_type]
+
+    def results_shape(
+        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
+    ) -> tuple[int, ...]:
+        """Compute the expected shape for collected data."""
+
+        shots = self.nshots if self.averaging_mode is AveragingMode.SINGLESHOT else 1
+        assert isinstance(shots, int)
+        sweeps = (
+            min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
+        )
+        inner = {
+            AcquisitionType.DISCRIMINATION: 1,
+            AcquisitionType.INTEGRATION: 2,
+            AcquisitionType.RAW: samples,
+        }[self.acquisition_type]
+        return tuple([shots, *sweeps, inner])
