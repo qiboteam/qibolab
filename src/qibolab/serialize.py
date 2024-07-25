@@ -21,7 +21,7 @@ from qibolab.platform.platform import (
     QubitPairMap,
     Settings,
 )
-from qibolab.qubits import Qubit, QubitPair
+from qibolab.qubits import Qubit, QubitId, QubitPair
 
 RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
@@ -37,6 +37,14 @@ def load_settings(runcard: dict) -> Settings:
     return Settings(**runcard["settings"])
 
 
+def load_qubit_name(name: str) -> QubitId:
+    """Convert qubit name from string to integer or string."""
+    try:
+        return int(name)
+    except ValueError:
+        return name
+
+
 def load_qubits(
     runcard: dict, kernels: Kernels = None
 ) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
@@ -50,11 +58,12 @@ def load_qubits(
     """
     qubits = {}
     for q, char in runcard["characterization"]["single_qubit"].items():
-        raw_qubit = Qubit(json.loads(q), **char)
+        raw_qubit = Qubit(load_qubit_name(q), **char)
         raw_qubit.crosstalk_matrix = {
-            json.loads(key): value for key, value in raw_qubit.crosstalk_matrix.items()
+            load_qubit_name(key): value
+            for key, value in raw_qubit.crosstalk_matrix.items()
         }
-        qubits[json.loads(q)] = raw_qubit
+        qubits[load_qubit_name(q)] = raw_qubit
 
     if kernels is not None:
         for q in kernels:
@@ -65,14 +74,14 @@ def load_qubits(
     two_qubit_characterization = runcard["characterization"].get("two_qubit", {})
     if "coupler" in runcard["characterization"]:
         couplers = {
-            json.loads(c): Coupler(json.loads(c), **char)
+            load_qubit_name(c): Coupler(load_qubit_name(c), **char)
             for c, char in runcard["characterization"]["coupler"].items()
         }
         for c, pair in runcard["topology"].items():
             q0, q1 = pair
             char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
             pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], **char, coupler=couplers[json.loads(c)]
+                qubits[q0], qubits[q1], **char, coupler=couplers[load_qubit_name(c)]
             )
     else:
         for pair in runcard["topology"]:
@@ -101,13 +110,13 @@ def register_gates(
 
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
-        qubits[json.loads(q)].native_gates = SingleQubitNatives.from_dict(
-            qubits[json.loads(q)], gates
+        qubits[load_qubit_name(q)].native_gates = SingleQubitNatives.from_dict(
+            qubits[load_qubit_name(q)], gates
         )
 
     for c, gates in native_gates.get("coupler", {}).items():
-        couplers[json.loads(c)].native_pulse = CouplerNatives.from_dict(
-            couplers[json.loads(c)], gates
+        couplers[load_qubit_name(c)].native_pulse = CouplerNatives.from_dict(
+            couplers[load_qubit_name(c)], gates
         )
 
     # register two-qubit native gates to ``QubitPair`` objects
@@ -130,6 +139,13 @@ def load_instrument_settings(
     return instruments
 
 
+def dump_qubit_name(name: QubitId) -> str:
+    """Convert qubit name from integer or string to string."""
+    if isinstance(name, int):
+        return str(name)
+    return name
+
+
 def dump_native_gates(
     qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
 ) -> dict:
@@ -138,12 +154,13 @@ def dump_native_gates(
     # single-qubit native gates
     native_gates = {
         "single_qubit": {
-            json.dumps(q): qubit.native_gates.raw for q, qubit in qubits.items()
+            dump_qubit_name(q): qubit.native_gates.raw for q, qubit in qubits.items()
         }
     }
     if couplers:
         native_gates["coupler"] = {
-            json.dumps(c): coupler.native_pulse.raw for c, coupler in couplers.items()
+            dump_qubit_name(c): coupler.native_pulse.raw
+            for c, coupler in couplers.items()
         }
 
     # two-qubit native gates
@@ -163,20 +180,24 @@ def dump_characterization(
 ) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
-    characterization = {
-        "single_qubit": {
-            json.dumps(q): qubit.characterization for q, qubit in qubits.items()
-        },
-    }
+    single_qubit = {}
+    for q, qubit in qubits.items():
+        char = qubit.characterization
+        char["crosstalk_matrix"] = {
+            dump_qubit_name(q): c for q, c in qubit.crosstalk_matrix.items()
+        }
+        single_qubit[dump_qubit_name(q)] = char
 
+    characterization = {"single_qubit": single_qubit}
     if len(pairs) > 0:
         characterization["two_qubit"] = {
-            json.dumps(p): pair.characterization for p, pair in pairs.items()
+            f"{q1}-{q2}": pair.characterization for (q1, q2), pair in pairs.items()
         }
 
     if couplers:
         characterization["coupler"] = {
-            json.dumps(c.name): {"sweetspot": c.sweetspot} for c in couplers.values()
+            dump_qubit_name(c.name): {"sweetspot": c.sweetspot}
+            for c in couplers.values()
         }
     return characterization
 
