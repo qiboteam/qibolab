@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 
 import numpy as np
 from qibo.config import raise_error
@@ -7,7 +8,7 @@ from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
 from qibolab.components import Config
-from qibolab.sweeper import Sweeper
+from qibolab.sweeper import Parameter, Sweeper
 
 from .config import operation
 from .program import ExecutionArguments, play
@@ -59,6 +60,134 @@ def check_max_offset(offset, max_offset=MAX_OFFSET):
 #            qmpulse.bake(config, values)
 
 
+@dataclass
+class QuaSweep:
+
+    sweeper: Sweeper
+
+    def declare(self):
+        return declare(fixed)
+
+    @property
+    def values(self):
+        return self.sweeper.values
+
+    def __call__(self, variable, configs, args):
+        raise NotImplementedError
+
+
+class Frequency(QuaSweep):
+
+    def declare(self):
+        return declare(int)
+
+    def __call__(self, variable, configs, args):
+        for channel in self.sweeper.channels:
+            lo_frequency = configs[channel.lo].frequency
+            # convert to IF frequency for readout and drive pulses
+            f0 = math.floor(configs[channel.name].frequency - lo_frequency)
+            # check if sweep is within the supported bandwidth [-400, 400] MHz
+            max_freq = maximum_sweep_value(self.values, f0)
+            if max_freq > 4e8:
+                raise_error(
+                    ValueError,
+                    f"Frequency {max_freq} for channel {channel.name} is beyond instrument bandwidth.",
+                )
+            qua.update_frequency(channel.name, variable + f0)
+
+
+class Amplitude(QuaSweep):
+
+    def __call__(self, variable, configs, args):
+        # TODO: Consider sweeping amplitude without multiplication
+        if min(self.values) < -2:
+            raise_error(
+                ValueError, "Amplitude sweep values are <-2 which is not supported."
+            )
+        if max(self.values) > 2:
+            raise_error(
+                ValueError, "Amplitude sweep values are >2 which is not supported."
+            )
+
+        for pulse in self.sweeper.pulses:
+            # if isinstance(instruction, Bake):
+            #    instructions.update_kwargs(instruction, amplitude=a)
+            # else:
+            args.parameters[operation(pulse)].amplitude = qua.amp(variable)
+
+
+class RelativePhase(QuaSweep):
+
+    @property
+    def values(self):
+        return self.sweeper.values / (2 * np.pi)
+
+    def __call__(self, variable, configs, args):
+        for pulse in self.sweeper.pulses:
+            args.parameters[operation(pulse)].phase = variable
+
+
+class Bias(QuaSweep):
+
+    def __call__(self, variable, configs, args):
+        for channel in self.sweeper.channels:
+            offset = configs[channel.name].offset
+            max_value = maximum_sweep_value(self.values, offset)
+            check_max_offset(max_value, MAX_OFFSET)
+            b0 = declare(fixed, value=offset)
+            with qua.if_((variable + b0) >= 0.49):
+                qua.set_dc_offset(f"flux{channel.name}", "single", 0.49)
+            with qua.elif_((variable + b0) <= -0.49):
+                qua.set_dc_offset(f"flux{channel.name}", "single", -0.49)
+            with qua.else_():
+                qua.set_dc_offset(f"flux{channel.name}", "single", (variable + b0))
+
+
+class Duration(QuaSweep):
+    def declare(self):
+        return declare(int)
+
+    @property
+    def values(self):
+        return (self.sweeper.values // 4).astype(int)
+
+    def __call__(self, variable, configs, args):
+        # TODO: Handle baked pulses
+        for pulse in self.sweeper.pulses:
+            args.parameters[operation(pulse)].duration = variable
+
+
+QUA_SWEEPERS = {
+    Parameter.frequency: Frequency,
+    Parameter.amplitude: Amplitude,
+    Parameter.duration: Duration,
+    Parameter.relative_phase: RelativePhase,
+    Parameter.bias: Bias,
+}
+
+
+def _sweep_recursion(sweepers, configs, args):
+    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
+    using recursion."""
+    if len(sweepers) > 0:
+        sweeper = sweepers[0]
+        parameter = sweeper.parameter
+        if parameter in QUA_SWEEPERS:
+            qua_sweeper = QUA_SWEEPERS[parameter](sweeper)
+        else:
+            raise_error(
+                NotImplementedError, f"Sweeper for {parameter} is not implemented."
+            )
+
+        variable = qua_sweeper.declare()
+        with for_(*from_array(variable, qua_sweeper.values)):
+            qua_sweeper(variable, configs, args)
+            _sweep_recursion(sweepers[1:], configs, args)
+
+    else:
+        play(args)
+
+
 def sweep(
     sweepers: list[Sweeper], configs: dict[str, Config], args: ExecutionArguments
 ):
@@ -67,107 +196,3 @@ def sweep(
     #    if sweeper.parameter is Parameter.duration:
     #        _update_baked_pulses(sweeper, instructions, config)
     _sweep_recursion(sweepers, configs, args)
-
-
-def _sweep_recursion(sweepers, configs, args):
-    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
-    using recursion."""
-    if len(sweepers) > 0:
-        parameter = sweepers[0].parameter.name
-        func_name = f"_sweep_{parameter}"
-        if func_name in globals():
-            globals()[func_name](sweepers, configs, args)
-        else:
-            raise_error(
-                NotImplementedError, f"Sweeper for {parameter} is not implemented."
-            )
-    else:
-        play(args)
-
-
-def _sweep_frequency(sweepers, configs, args):
-    sweeper = sweepers[0]
-    freqs0 = []
-    for channel in sweeper.channels:
-        lo_frequency = configs[channel.lo].frequency
-        # convert to IF frequency for readout and drive pulses
-        f0 = math.floor(configs[channel.name].frequency - lo_frequency)
-        freqs0.append(declare(int, value=f0))
-        # check if sweep is within the supported bandwidth [-400, 400] MHz
-        max_freq = maximum_sweep_value(sweeper.values, f0)
-        if max_freq > 4e8:
-            raise_error(
-                ValueError,
-                f"Frequency {max_freq} for channel {channel.name} is beyond instrument bandwidth.",
-            )
-
-    # is it fine to have this declaration inside the ``nshots`` QUA loop?
-    f = declare(int)
-    with for_(*from_array(f, sweeper.values.astype(int))):
-        for channel, f0 in zip(sweeper.channels, freqs0):
-            qua.update_frequency(channel.name, f + f0)
-
-        _sweep_recursion(sweepers[1:], configs, args)
-
-
-def _sweep_amplitude(sweepers, configs, args):
-    sweeper = sweepers[0]
-    # TODO: Consider sweeping amplitude without multiplication
-    if min(sweeper.values) < -2:
-        raise_error(
-            ValueError, "Amplitude sweep values are <-2 which is not supported."
-        )
-    if max(sweeper.values) > 2:
-        raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
-
-    a = declare(fixed)
-    with for_(*from_array(a, sweeper.values)):
-        for pulse in sweeper.pulses:
-            # if isinstance(instruction, Bake):
-            #    instructions.update_kwargs(instruction, amplitude=a)
-            # else:
-            args.parameters[operation(pulse)].amplitude = qua.amp(a)
-
-        _sweep_recursion(sweepers[1:], configs, args)
-
-
-def _sweep_relative_phase(sweepers, configs, args):
-    sweeper = sweepers[0]
-    relphase = declare(fixed)
-    with for_(*from_array(relphase, sweeper.values / (2 * np.pi))):
-        for pulse in sweeper.pulses:
-            args.parameters[operation(pulse)].phase = relphase
-
-        _sweep_recursion(sweepers[1:], configs, args)
-
-
-def _sweep_bias(sweepers, configs, args):
-    sweeper = sweepers[0]
-    offset0 = []
-    for channel in sweeper.channels:
-        b0 = configs[channel.name].offset
-        max_value = maximum_sweep_value(sweeper.values, b0)
-        check_max_offset(max_value, MAX_OFFSET)
-        offset0.append(declare(fixed, value=b0))
-    b = declare(fixed)
-    with for_(*from_array(b, sweeper.values)):
-        for channel, b0 in zip(sweeper.channels, offset0):
-            with qua.if_((b + b0) >= 0.49):
-                qua.set_dc_offset(f"flux{channel.name}", "single", 0.49)
-            with qua.elif_((b + b0) <= -0.49):
-                qua.set_dc_offset(f"flux{channel.name}", "single", -0.49)
-            with qua.else_():
-                qua.set_dc_offset(f"flux{channel.name}", "single", (b + b0))
-
-        _sweep_recursion(sweepers[1:], configs, args)
-
-
-def _sweep_duration(sweepers, configs, args):
-    # TODO: Handle baked pulses
-    sweeper = sweepers[0]
-    dur = declare(int)
-    with for_(*from_array(dur, (sweeper.values // 4).astype(int))):
-        for pulse in sweeper.pulses:
-            args.parameters[operation(pulse)].duration = dur
-
-        _sweep_recursion(sweepers[1:], configs, args)
