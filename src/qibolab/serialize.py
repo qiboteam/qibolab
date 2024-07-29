@@ -333,7 +333,7 @@ def dump_runcard(platform: Platform, path: Path):
         "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
-        "components": dump_component_configs(platform.component_configs),
+        "components": dump_component_configs(platform.configs),
     }
 
     if platform.couplers:
