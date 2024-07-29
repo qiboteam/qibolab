@@ -119,7 +119,7 @@ class Platform:
     pairs: QubitPairMap
     """Dictionary mapping tuples of qubit names to
     :class:`qibolab.qubits.QubitPair` objects."""
-    component_configs: dict[str, Config]
+    configs: dict[str, Config]
     """Maps name of component to its default config."""
     instruments: InstrumentMap
     """Dictionary mapping instrument names to
@@ -177,11 +177,11 @@ class Platform:
     @property
     def components(self) -> set[str]:
         """Names of all components available in the platform."""
-        return set(self.component_configs.keys())
+        return set(self.configs.keys())
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
-        return self.component_configs[name]
+        return self.configs[name]
 
     def connect(self):
         """Connect to all instruments."""
@@ -214,7 +214,7 @@ class Platform:
             updates: list of updates, where each entry is a dict mapping component name to new config. Later entries
                      in the list override earlier entries (if they happen to update the same thing).
         """
-        components = self.component_configs.copy()
+        components = self.configs.copy()
         for update in updates:
             for name, cfg in update.items():
                 if name not in components:
@@ -245,14 +245,14 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, configs, options, integration_setup, sweepers):
+    def _execute(self, sequences, options, integration_setup, sweepers):
         """Execute sequence on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    configs, sequence, options, integration_setup, sweepers
+                    options.configs, sequences, options, integration_setup, sweepers
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -298,7 +298,7 @@ class Platform:
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
-        configs = self._apply_config_updates(options.component_configs)
+        configs = self._apply_config_updates(options.configs)
 
         # for components that represent aux external instruments (e.g. lo) to the main control instrument
         # set the config directly
@@ -323,12 +323,9 @@ class Platform:
 
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
-            sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(
-                sequence, configs, options, integration_setup, sweepers
-            )
-            for serial, new_serials in readouts.items():
-                results[serial].extend(result[ser] for ser in new_serials)
+            result = self._execute(b, options, integration_setup, sweepers)
+            for serial, data in result.items():
+                results[serial].append(data)
 
         for serial, qubit in ro_pulses.items():
             results[qubit] = results[serial]

@@ -72,7 +72,7 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    component_configs: list[dict[str, Config]] = []
+    configs: list[dict[str, Config]] = []
     """Configuration for various components (maps component name to respective
     config).
 

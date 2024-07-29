@@ -149,7 +149,7 @@ def test_processed_sweeps_pulse_properties(dummy_qrc):
     processed_sweeps = ProcessedSweeps(
         [sweeper_duration, sweeper_amplitude],
         zi_instrument.channels.values(),
-        platform.component_configs,
+        platform.configs,
     )
 
     assert len(processed_sweeps.sweeps_for_pulse(pulse_1)) == 1
@@ -222,9 +222,7 @@ def test_zhinst_configure_acquire_line(dummy_qrc):
     zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
 
-    zi_instrument.configure_acquire_line(
-        qubit.acquisition.name, platform.component_configs
-    )
+    zi_instrument.configure_acquire_line(qubit.acquisition.name, platform.configs)
 
     assert qubit.acquisition.name in zi_instrument.signal_map
     assert (
@@ -237,8 +235,8 @@ def test_zhinst_configure_iq_line(dummy_qrc):
     platform = create_platform("zurich")
     zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
-    zi_instrument.configure_iq_line(qubit.drive.name, platform.component_configs)
-    zi_instrument.configure_iq_line(qubit.measure.name, platform.component_configs)
+    zi_instrument.configure_iq_line(qubit.drive.name, platform.configs)
+    zi_instrument.configure_iq_line(qubit.measure.name, platform.configs)
 
     assert qubit.drive.name in zi_instrument.signal_map
     assert (
@@ -257,7 +255,7 @@ def test_zhinst_configure_dc_line(dummy_qrc):
     platform = create_platform("zurich")
     zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
-    zi_instrument.configure_dc_line(qubit.flux.name, platform.component_configs)
+    zi_instrument.configure_dc_line(qubit.flux.name, platform.configs)
 
     assert qubit.flux.name in zi_instrument.signal_map
     assert (
