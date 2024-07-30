@@ -235,11 +235,6 @@ class Zurich(Controller):
         self.calibration_step(configs, options)
         self.create_exp(integration_setup, options)
 
-    # pylint: disable=W0221
-    def play(self, configs, sequence, options):
-        """Play pulse sequence."""
-        return self.sweep(configs, sequence, options)
-
     def create_exp(self, integration_setup, options):
         """Zurich experiment initialization using their Experiment class."""
         if self.acquisition_type:
@@ -509,7 +504,7 @@ class Zurich(Controller):
         else:
             raise ValueError(f"Cannot play pulse: {pulse}")
 
-    def sweep(
+    def play(
         self,
         configs: dict[str, Config],
         sequences: list[PulseSequence],
