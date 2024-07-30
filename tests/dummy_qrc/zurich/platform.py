@@ -15,7 +15,6 @@ from qibolab.instruments.zhinst import (
 )
 from qibolab.kernels import Kernels
 from qibolab.serialize import (
-    load_component_config,
     load_instrument_settings,
     load_qubits,
     load_runcard,
@@ -51,7 +50,8 @@ def create():
     qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
-    components = {}
+    configs = {}
+    component_params = runcard["components"]
     measure_lo = "measure/lo"
     drive_los = {
         0: "qubit_0_1/drive/lo",
@@ -60,16 +60,12 @@ def create():
         3: "qubit_2_3/drive/lo",
         4: "qubit_4/drive/lo",
     }
-    components[measure_lo] = load_component_config(
-        runcard, measure_lo, OscillatorConfig
-    )
+    configs[measure_lo] = OscillatorConfig(**component_params[measure_lo])
     zi_channels = []
     for q in QUBITS:
         measure_name = f"qubit_{q}/measure"
         acquisition_name = f"qubit_{q}/acquire"
-        components[measure_name] = load_component_config(
-            runcard, measure_name, ZiIqConfig
-        )
+        configs[measure_name] = ZiIqConfig(**component_params[measure_name])
         qubits[q].measure = IqChannel(
             name=measure_name, lo=measure_lo, mixer=None, acquisition=acquisition_name
         )
@@ -79,8 +75,8 @@ def create():
             )
         )
 
-        components[acquisition_name] = load_component_config(
-            runcard, acquisition_name, ZiAcquisitionConfig
+        configs[acquisition_name] = ZiAcquisitionConfig(
+            **component_params[acquisition_name]
         )
         qubits[q].acquisition = AcquireChannel(
             name=acquisition_name,
@@ -94,10 +90,8 @@ def create():
         )
 
         drive_name = f"qubit_{q}/drive"
-        components[drive_los[q]] = load_component_config(
-            runcard, drive_los[q], OscillatorConfig
-        )
-        components[drive_name] = load_component_config(runcard, drive_name, ZiIqConfig)
+        configs[drive_los[q]] = OscillatorConfig(**component_params[drive_los[q]])
+        configs[drive_name] = ZiIqConfig(**component_params[drive_name])
         qubits[q].drive = IqChannel(
             name=drive_name,
             mixer=None,
@@ -110,7 +104,7 @@ def create():
         )
 
         flux_name = f"qubit_{q}/flux"
-        components[flux_name] = load_component_config(runcard, flux_name, ZiDcConfig)
+        configs[flux_name] = ZiDcConfig(**component_params[flux_name])
         qubits[q].flux = DcChannel(
             name=flux_name,
         )
@@ -120,7 +114,7 @@ def create():
 
     for i, c in enumerate(COUPLERS):
         flux_name = f"coupler_{c}/flux"
-        components[flux_name] = load_component_config(runcard, flux_name, ZiDcConfig)
+        configs[flux_name] = ZiDcConfig(**component_params[flux_name])
         couplers[c].flux = DcChannel(name=flux_name)
         zi_channels.append(
             ZiChannel(couplers[c].flux, device="device_hdawg2", path=f"SIGOUTS/{i}")
@@ -140,7 +134,7 @@ def create():
         str(FOLDER),
         qubits,
         pairs,
-        components,
+        configs,
         instruments,
         settings,
         resonator_type="3D",

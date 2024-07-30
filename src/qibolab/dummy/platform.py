@@ -13,7 +13,6 @@ from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform
 from qibolab.serialize import (
-    load_component_config,
     load_instrument_settings,
     load_qubits,
     load_runcard,
@@ -58,10 +57,9 @@ def create_dummy(with_couplers: bool = True):
     qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
 
-    component_configs = {}
-    component_configs[twpa_pump_name] = load_component_config(
-        runcard, twpa_pump_name, OscillatorConfig
-    )
+    configs = {}
+    component_params = runcard["components"]
+    configs[twpa_pump_name] = OscillatorConfig(**component_params[twpa_pump_name])
     for q, qubit in qubits.items():
         acquisition_name = f"qubit_{q}/acquire"
         measure_name = f"qubit_{q}/measure"
@@ -71,38 +69,28 @@ def create_dummy(with_couplers: bool = True):
         qubit.acquisition = AcquireChannel(
             acquisition_name, twpa_pump=twpa_pump_name, measure=measure_name
         )
-        component_configs[measure_name] = load_component_config(
-            runcard, measure_name, IqConfig
-        )
-        component_configs[acquisition_name] = load_component_config(
-            runcard, acquisition_name, AcquisitionConfig
+        configs[measure_name] = IqConfig(**component_params[measure_name])
+        configs[acquisition_name] = AcquisitionConfig(
+            **component_params[acquisition_name]
         )
 
         drive_name = f"qubit_{q}/drive"
         qubit.drive = IqChannel(drive_name, mixer=None, lo=None, acquisition=None)
-        component_configs[drive_name] = load_component_config(
-            runcard, drive_name, IqConfig
-        )
+        configs[drive_name] = IqConfig(**component_params[drive_name])
 
         drive_12_name = f"qubit_{q}/drive12"
         qubit.drive12 = IqChannel(drive_12_name, mixer=None, lo=None, acquisition=None)
-        component_configs[drive_12_name] = load_component_config(
-            runcard, drive_12_name, IqConfig
-        )
+        configs[drive_12_name] = IqConfig(**component_params[drive_12_name])
 
         flux_name = f"qubit_{q}/flux"
         qubit.flux = DcChannel(flux_name)
-        component_configs[flux_name] = load_component_config(
-            runcard, flux_name, DcConfig
-        )
+        configs[flux_name] = DcConfig(**component_params[flux_name])
 
     if with_couplers:
         for c, coupler in couplers.items():
             flux_name = f"coupler_{c}/flux"
             coupler.flux = DcChannel(flux_name)
-            component_configs[flux_name] = load_component_config(
-                runcard, flux_name, DcConfig
-            )
+            configs[flux_name] = DcConfig(**component_params[flux_name])
 
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     instruments = load_instrument_settings(runcard, instruments)
@@ -111,7 +99,7 @@ def create_dummy(with_couplers: bool = True):
         name,
         qubits,
         pairs,
-        component_configs,
+        configs,
         instruments,
         settings,
         resonator_type="2D",
