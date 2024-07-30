@@ -372,12 +372,12 @@ def test_sweep_and_play_sim(dummy_qrc):
     # check play
     zi_instrument.session = lo.Session(zi_instrument.device_setup)
     zi_instrument.session.connect(do_emulation=True)
-    res = zi_instrument.play(qubits, couplers, sequence, options)
+    res = zi_instrument.play(platform.configs, [sequence], options, {})
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
     # check sweep with empty list of sweeps
-    res = zi_instrument.sweep(qubits, couplers, sequence, options)
+    res = zi_instrument.sweep(platform.configs, [sequence], options, {})
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
@@ -390,7 +390,9 @@ def test_sweep_and_play_sim(dummy_qrc):
     sweep_2 = Sweeper(
         Parameter.bias, np.array([1, 2, 3]), channels=[qubits[0].flux.name]
     )
-    res = zi_instrument.sweep(qubits, couplers, sequence, options, sweep_1, sweep_2)
+    res = zi_instrument.sweep(
+        platform.configs, [sequence], options, {}, sweep_1, sweep_2
+    )
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
