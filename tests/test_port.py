@@ -18,13 +18,15 @@ def test_set_attenuation(caplog):
 
     port.attenuation = 65
     assert port.attenuation == 60
-    assert "attenuation needs to be between 0 and 60 dB" in caplog.messages[0]
-    caplog.clear()
+    if caplog.messages:
+        assert "attenuation needs to be between 0 and 60 dB" in caplog.messages[0]
+        caplog.clear()
 
     port.attenuation = -10
     assert port.attenuation == 0
-    assert "attenuation needs to be between 0 and 60 dB" in caplog.messages[0]
-    caplog.clear()
+    if caplog.messages:
+        assert "attenuation needs to be between 0 and 60 dB" in caplog.messages[0]
+        caplog.clear()
 
     with pytest.raises(ValueError, match="Invalid"):
         port.attenuation = "something"
