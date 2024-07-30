@@ -12,7 +12,6 @@ from typing import Tuple, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
-from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.kernels import Kernels
 from qibolab.native import (
@@ -204,15 +203,6 @@ def dump_qubit_name(name: QubitId) -> str:
     if isinstance(name, int):
         return str(name)
     return name
-
-
-def load_component_config(
-    runcard: dict,
-    component: str,
-    config_class: type,
-) -> Config:
-    """Load configuration for given component."""
-    return config_class(**runcard["components"][component])
 
 
 def _dump_pulse(pulse: Pulse):
