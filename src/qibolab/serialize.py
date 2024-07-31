@@ -8,11 +8,12 @@ example for more details.
 import json
 from dataclasses import asdict, fields
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
 from qibolab.couplers import Coupler
+from qibolab.execution_parameters import ConfigUpdate
 from qibolab.kernels import Kernels
 from qibolab.native import (
     FixedSequenceFactory,
@@ -27,6 +28,7 @@ from qibolab.platform.platform import (
     QubitMap,
     QubitPairMap,
     Settings,
+    update_configs,
 )
 from qibolab.pulses import Pulse, PulseSequence
 from qibolab.pulses.pulse import PulseLike
@@ -307,7 +309,9 @@ def dump_component_configs(component_configs) -> dict:
     return {name: asdict(cfg) for name, cfg in component_configs.items()}
 
 
-def dump_runcard(platform: Platform, path: Path):
+def dump_runcard(
+    platform: Platform, path: Path, updates: Optional[list[ConfigUpdate]] = None
+):
     """Serializes the platform and saves it as a json runcard file.
 
     The file saved follows the format explained in :ref:`Using runcards <using_runcards>`.
@@ -315,7 +319,12 @@ def dump_runcard(platform: Platform, path: Path):
     Args:
         platform (qibolab.platform.Platform): The platform to be serialized.
         path (pathlib.Path): Path that the json file will be saved.
+        updates: List if updates for platform configs.
+                 Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
     """
+
+    configs = platform.configs.copy()
+    update_configs(configs, updates or [])
 
     settings = {
         "nqubits": platform.nqubits,
@@ -323,7 +332,7 @@ def dump_runcard(platform: Platform, path: Path):
         "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
-        "components": dump_component_configs(platform.configs),
+        "components": dump_component_configs(configs),
     }
 
     if platform.couplers:
@@ -363,13 +372,17 @@ def dump_kernels(platform: Platform, path: Path):
         kernels.dump(path)
 
 
-def dump_platform(platform: Platform, path: Path):
+def dump_platform(
+    platform: Platform, path: Path, updates: Optional[list[ConfigUpdate]] = None
+):
     """Platform serialization as runcard (json) and kernels (npz).
 
     Args:
         platform (qibolab.platform.Platform): The platform to be serialized.
         path (pathlib.Path): Path where json and npz will be dumped.
+        updates: List if updates for platform configs.
+                 Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
     """
 
     dump_kernels(platform=platform, path=path)
-    dump_runcard(platform=platform, path=path)
+    dump_runcard(platform=platform, path=path, updates=updates)

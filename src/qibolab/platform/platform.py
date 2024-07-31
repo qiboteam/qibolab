@@ -1,5 +1,6 @@
 """A platform for executing quantum algorithms."""
 
+import dataclasses
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import prod
@@ -11,7 +12,7 @@ from qibo.config import log, raise_error
 
 from qibolab.components import Config
 from qibolab.couplers import Coupler
-from qibolab.execution_parameters import ExecutionParameters
+from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
@@ -84,6 +85,23 @@ def estimate_duration(
         * NS_TO_SEC
         * prod(len(s[0].values) for s in sweepers)
     )
+
+
+def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
+    """Apply updates to configs in place.
+
+    Args:
+        configs: configs to update. Maps component name to respective config.
+        updates: list of config updates. Later entries in the list take precedence over earlier entries
+                 (if they happen to update the same thing).
+    """
+    for update in updates:
+        for name, changes in update.items():
+            if name not in configs:
+                raise ValueError(
+                    f"Cannot update configuration for unknown component {name}"
+                )
+            configs[name] = dataclasses.replace(configs[name], **changes)
 
 
 @dataclass
@@ -204,30 +222,6 @@ class Platform:
                 instrument.disconnect()
         self.is_connected = False
 
-    def _apply_config_updates(
-        self, updates: list[dict[str, Config]]
-    ) -> dict[str, Config]:
-        """Apply given list of config updates to the default configuration and
-        return the updated config dict.
-
-        Args:
-            updates: list of updates, where each entry is a dict mapping component name to new config. Later entries
-                     in the list override earlier entries (if they happen to update the same thing).
-        """
-        components = self.configs.copy()
-        for update in updates:
-            for name, cfg in update.items():
-                if name not in components:
-                    raise ValueError(
-                        f"Cannot update configuration for unknown component {name}"
-                    )
-                if type(cfg) is not type(components[name]):
-                    raise ValueError(
-                        f"Configuration of component {name} with type {type(components[name])} cannot be updated with configuration of type {type(cfg)}"
-                    )
-                components[name] = cfg
-        return components
-
     @property
     def _controller(self):
         """Identify controller instrument.
@@ -252,7 +246,7 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    options.configs, sequences, options, integration_setup, sweepers
+                    options.updates, sequences, options, integration_setup, sweepers
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -287,7 +281,7 @@ class Platform:
                 sequence = qubit.native_gates.MZ.create_sequence()
                 parameter = Parameter.frequency
                 parameter_range = np.random.randint(10, size=10)
-                sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.measure.name])]
+                sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.probe.name])]
                 platform.execute([sequence], ExecutionParameters(), [sweeper])
         """
         if sweepers is None:
@@ -298,7 +292,8 @@ class Platform:
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
-        configs = self._apply_config_updates(options.configs)
+        configs = self.configs.copy()
+        update_configs(configs, options.updates)
 
         # for components that represent aux external instruments (e.g. lo) to the main control instrument
         # set the config directly
