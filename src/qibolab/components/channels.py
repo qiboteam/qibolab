@@ -69,9 +69,9 @@ class AcquireChannel(Channel):
 
     None, if there is no TWPA, or it is not configurable.
     """
-    measure: Optional[str] = None
+    probe: Optional[str] = None
     """Name of the corresponding measure/probe channel.
 
-    FIXME: This is temporary solution to be able to relate acquisition channel to corresponding measure channel wherever needed in drivers,
+    FIXME: This is temporary solution to be able to relate acquisition channel to corresponding probe channel wherever needed in drivers,
     until we make acquire channels completely independent, and users start putting explicit acquisition commands in pulse sequence.
     """

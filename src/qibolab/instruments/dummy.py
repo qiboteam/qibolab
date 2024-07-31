@@ -111,7 +111,7 @@ class DummyInstrument(Controller):
             )
 
         for seq in sequences:
-            for ro_pulse in seq.ro_pulses:
+            for ro_pulse in seq.probe_pulses:
                 values = self.get_values(options, ro_pulse, shape)
                 results[ro_pulse.id] = options.results_type(values)
 

@@ -154,7 +154,7 @@ class PulseSimulator(Controller):
             Qibolab results object, as well as simulation-related time and states data.
         """
         nshots = execution_parameters.nshots
-        ro_pulse_list = sequence.ro_pulses
+        ro_pulse_list = sequence.probe_pulses
         times_dict, output_states, ro_reduced_dm, rdm_qubit_list = (
             self.run_pulse_simulation(sequence, self.instant_measurement)
         )
@@ -249,7 +249,7 @@ class PulseSimulator(Controller):
 
         # reshape and reformat samples to results format
         results = get_results_from_samples(
-            sequence.ro_pulses, sweep_samples, execution_parameters, sweeper_shape
+            sequence.probe_pulses, sweep_samples, execution_parameters, sweeper_shape
         )
 
         # Reset pulse values back to original values (following icarusqfpga)
@@ -358,7 +358,7 @@ class PulseSimulator(Controller):
             dict: A tuple with dictionary containing simulation-related time data, a list of states at each time step in the simulation, and a dictionary mapping the qubit indices to list of sampled values.
         """
         nshots = execution_parameters.nshots
-        ro_pulse_list = sequence.ro_pulses
+        ro_pulse_list = sequence.probe_pulses
 
         # run pulse simulation
         times_dict, state_history, ro_reduced_dm, rdm_qubit_list = (

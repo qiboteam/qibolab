@@ -38,16 +38,14 @@ using different Qibolab primitives.
         qubit = Qubit(0)
 
         # assign channels to the qubit
-        qubit.measure = IqChannel(
-            name="measure", mixer=None, lo=None, acquisition="acquire"
-        )
-        qubit.acquire = AcquireChannel(name="acquire", twpa_pump=None, measure="measure")
+        qubit.probe = IqChannel(name="probe", mixer=None, lo=None, acquisition="acquire")
+        qubit.acquire = AcquireChannel(name="acquire", twpa_pump=None, probe="probe")
         qubit.drive = Iqchannel(name="drive", mixer=None, lo=None)
 
         # define configuration for channels
         configs = {}
         configs[qubit.drive.name] = IqConfig(frequency=3e9)
-        configs[qubit.measure.name] = IqConfig(frequency=7e9)
+        configs[qubit.probe.name] = IqConfig(frequency=7e9)
 
         # create sequence that drives qubit from state 0 to 1
         drive_seq = PulseSequence()
@@ -61,8 +59,8 @@ using different Qibolab primitives.
         )
 
         # create sequence that can be used for measuring the qubit
-        measure_seq = PulseSequence()
-        measure_seq[qubit.measure.name].append(
+        probe_seq = PulseSequence()
+        probe_seq[qubit.probe.name].append(
             Pulse(
                 duration=1000,
                 amplitude=0.005,
@@ -74,7 +72,7 @@ using different Qibolab primitives.
         # assign native gates to the qubit
         qubit.native_gates = SingleQubitNatives(
             RX=RxyFactory(drive_seq),
-            MZ=FixedSequenceFactory(measure_seq),
+            MZ=FixedSequenceFactory(probe_seq),
         )
 
         # create dictionaries of the different objects
@@ -122,16 +120,12 @@ hold the parameters of the two-qubit gates.
     qubit1 = Qubit(1)
 
     # assign channels to the qubits
-    qubit0.measure = IqChannel(
-        name="measure_0", mixer=None, lo=None, acquisition="acquire_0"
-    )
-    qubit0.acquire = AcquireChannel(name="acquire_0", twpa_pump=None, measure="measure_0")
+    qubit0.probe = IqChannel(name="probe_0", mixer=None, lo=None, acquisition="acquire_0")
+    qubit0.acquire = AcquireChannel(name="acquire_0", twpa_pump=None, probe="probe_0")
     qubit0.drive = IqChannel(name="drive_0", mixer=None, lo=None)
     qubit0.flux = DcChannel(name="flux_0")
-    qubit1.measure = IqChannel(
-        name="measure_1", mixer=None, lo=None, acquisition="acquire_1"
-    )
-    qubit1.acquire = AcquireChannel(name="acquire_1", twpa_pump=None, measure="measure_1")
+    qubit1.probe = IqChannel(name="probe_1", mixer=None, lo=None, acquisition="acquire_1")
+    qubit1.acquire = AcquireChannel(name="acquire_1", twpa_pump=None, probe="probe_1")
     qubit1.drive = IqChannel(name="drive_1", mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
@@ -153,7 +147,7 @@ hold the parameters of the two-qubit gates.
         MZ=FixedSequenceFactory(
             PulseSequence(
                 {
-                    qubit0.measure.name: [
+                    qubit0.probe.name: [
                         Pulse(
                             duration=1000,
                             amplitude=0.005,
@@ -183,7 +177,7 @@ hold the parameters of the two-qubit gates.
         MZ=FixedSequenceFactory(
             PulseSequence(
                 {
-                    qubit1.measure.name: [
+                    qubit1.probe.name: [
                         Pulse(
                             duration=1000,
                             amplitude=0.005,
@@ -336,10 +330,10 @@ a two-qubit system:
 			"flux_0": {
 				"bias": 0.0
 			},
-			"measure_0": {
+			"probe_0": {
 				"frequency": 7453265000
 			},
-			"measure_1": {
+			"probe_1": {
 				"frequency": 7655107000
 			},
 			"acquire_0": {
@@ -369,7 +363,7 @@ a two-qubit system:
 						]
 					},
                     "MZ": {
-						"measure_0": [
+						"probe_0": [
 							{
 							"duration": 620,
 							"amplitude": 0.003575,
@@ -395,7 +389,7 @@ a two-qubit system:
 						]
 					},
                     "MZ": {
-						"measure_1": [
+						"probe_1": [
 							{
 							"duration": 960,
 							"amplitude": 0.00325,
@@ -579,15 +573,15 @@ the above runcard:
             configs[flux_name] = DcConfig(**component_params[flux_name])
             qubits[q].flux = DcChannel(flux_name)
 
-            measure_name, acquire_name = f"qubit_{q}/measure", f"qubit_{q}/acquire"
-            configs[measure_name] = IqConfig(**component_params[measure_name])
-            qubits[q].measure = IqChannel(
-                measure_name, mixer=None, lo=None, acquistion=acquire_name
+            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+            configs[probe_name] = IqConfig(**component_params[probe_name])
+            qubits[q].probe = IqChannel(
+                probe_name, mixer=None, lo=None, acquistion=acquire_name
             )
 
             configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
             quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, measure=measure_name
+                acquire_name, twpa_pump=None, probe=probe_name
             )
 
         # create dictionary of instruments
@@ -631,15 +625,15 @@ With the following additions for coupler architectures:
             configs[flux_name] = DcConfig(**component_params[flux_name])
             qubits[q].flux = DcChannel(flux_name)
 
-            measure_name, acquire_name = f"qubit_{q}/measure", f"qubit_{q}/acquire"
-            configs[measure_name] = IqConfig(**component_params[measure_name])
-            qubits[q].measure = IqChannel(
-                measure_name, mixer=None, lo=None, acquistion=acquire_name
+            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+            configs[probe_name] = IqConfig(**component_params[probe_name])
+            qubits[q].probe = IqChannel(
+                probe_name, mixer=None, lo=None, acquistion=acquire_name
             )
 
             configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
             quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, measure=measure_name
+                acquire_name, twpa_pump=None, probe=probe_name
             )
 
         coupler_flux_name = "coupler_0/flux"
@@ -772,15 +766,15 @@ in this case ``"twpa_pump"``.
             configs[flux_name] = DcConfig(**component_params[flux_name])
             qubits[q].flux = DcChannel(flux_name)
 
-            measure_name, acquire_name = f"qubit_{q}/measure", f"qubit_{q}/acquire"
-            configs[measure_name] = IqConfig(**component_params[measure_name])
-            qubits[q].measure = IqChannel(
-                measure_name, mixer=None, lo=None, acquistion=acquire_name
+            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+            configs[probe_name] = IqConfig(**component_params[probe_name])
+            qubits[q].probe = IqChannel(
+                probe_name, mixer=None, lo=None, acquistion=acquire_name
             )
 
             configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
             quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, measurement=measure_name
+                acquire_name, twpa_pump=None, probe=probe_name
             )
 
         # create dictionary of instruments

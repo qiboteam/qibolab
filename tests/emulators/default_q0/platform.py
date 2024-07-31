@@ -1,10 +1,9 @@
 import pathlib
 
-from qibolab.components import IqChannel, AcquireChannel
+from qibolab.components import AcquireChannel, IqChannel
 from qibolab.instruments.emulator.pulse_simulator import PulseSimulator
 from qibolab.platform import Platform
 from qibolab.serialize import (
-    load_component_config,
     load_instrument_settings,
     load_qubits,
     load_runcard,
@@ -32,8 +31,12 @@ def create():
 
     # define channels for qubits
     for q, qubit in qubits.items():
-        qubit.measure = IqChannel("measure-{q}", mixer=None, lo=None, acquisition="acquire-{q}")
-        qubit.acquisition = AcquireChannel("acquire-{q}", mixer=None, lo=None, measure="measure-{q}")
+        qubit.probe = IqChannel(
+            "probe-{q}", mixer=None, lo=None, acquisition="acquire-{q}"
+        )
+        qubit.acquisition = AcquireChannel(
+            "acquire-{q}", mixer=None, lo=None, twpa_pump=None, probe="probe-{q}"
+        )
 
     return Platform(
         device_name,

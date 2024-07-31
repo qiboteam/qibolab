@@ -101,7 +101,7 @@ class Zurich(Controller):
     def sampling_rate(self):
         return SAMPLING_RATE
 
-    def _measure_channels(self) -> set[str]:
+    def _probe_channels(self) -> set[str]:
         return {
             ch.logical_channel.name
             for ch in self.channels.values()
@@ -174,8 +174,8 @@ class Zurich(Controller):
         self, channel: AcquireChannel, configs: dict[str, Config]
     ):
         intermediate_frequency = (
-            configs[channel.measure].frequency
-            - configs[self.channels[channel.measure].logical_channel.lo].frequency
+            configs[channel.probe].frequency
+            - configs[self.channels[channel.probe].logical_channel.lo].frequency
         )
         acquire_signal = self.device_setup.logical_signal_by_uid(channel.name)
         self.signal_map[channel.name] = acquire_signal
@@ -376,11 +376,11 @@ class Zurich(Controller):
 
     def select_exp(self, exp, integration_setup, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
-        measurement_channels = self._measure_channels()
+        probe_channels = self._probe_channels()
         kernels = {}
         previous_section = None
         for i, seq in enumerate(self.sequences):
-            other_channels = set(seq.keys()) - measurement_channels
+            other_channels = set(seq.keys()) - probe_channels
             section_uid = f"sequence_{i}"
             with exp.section(uid=section_uid, play_after=previous_section):
                 with exp.section(uid=f"sequence_{i}_control"):
@@ -394,7 +394,7 @@ class Zurich(Controller):
                             )
                 for ch in set(seq.keys()) - other_channels:
                     for j, pulse in enumerate(seq[ch]):
-                        with exp.section(uid=f"sequence_{i}_measure_{j}"):
+                        with exp.section(uid=f"sequence_{i}_probe_{j}"):
                             acquisition_name = self.channels[
                                 ch
                             ].logical_channel.acquisition
@@ -519,11 +519,11 @@ class Zurich(Controller):
         self.nt_sweeps, self.rt_sweeps = classify_sweepers(sweepers)
 
         self.acquisition_type = None
-        measure_channels = self._measure_channels()
+        probe_channels = self._probe_channels()
         for sweeper in sweepers:
             if sweeper.parameter in {Parameter.frequency}:
                 for ch in sweeper.channels:
-                    if ch in measure_channels:
+                    if ch in probe_channels:
                         self.acquisition_type = laboneq.AcquisitionType.SPECTROSCOPY
 
         self.experiment_flow(configs, sequences, integration_setup, options)
@@ -531,7 +531,7 @@ class Zurich(Controller):
 
         #  Get the results back
         results = {}
-        for ch in measure_channels:
+        for ch in probe_channels:
             acquisition_name = self.channels[ch].logical_channel.acquisition
             for i, seq in enumerate(self.sequences):
                 for j, ropulse in enumerate(seq[ch]):

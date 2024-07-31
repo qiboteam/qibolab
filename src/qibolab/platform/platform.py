@@ -58,7 +58,7 @@ def unroll_sequences(
     for sequence in sequences:
         total_sequence.extend(sequence)
         # TODO: Fix unrolling results
-        for pulse in sequence.ro_pulses:
+        for pulse in sequence.probe_pulses:
             readout_map[pulse.id].append(pulse.id)
 
         length = sequence.duration + relaxation_time

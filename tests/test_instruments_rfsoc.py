@@ -688,7 +688,7 @@ def test_convert_av_sweep_results(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
     out_dict = instrument.convert_sweep_results(
-        sequence.ro_pulses, platform.qubits, avgi, avgq, execution_parameters
+        sequence.probe_pulses, platform.qubits, avgi, avgq, execution_parameters
     )
     targ_dict = {
         serial1: AveragedIntegratedResults(
@@ -741,7 +741,7 @@ def test_convert_nav_sweep_results(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
     out_dict = instrument.convert_sweep_results(
-        sequence.ro_pulses, platform.qubits, avgi, avgq, execution_parameters
+        sequence.probe_pulses, platform.qubits, avgi, avgq, execution_parameters
     )
     targ_dict = {
         serial1: AveragedIntegratedResults(

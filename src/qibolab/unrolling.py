@@ -28,7 +28,7 @@ def _waveform(sequence: PulseSequence):
 
 def _readout(sequence: PulseSequence):
     # TODO: Do we count 1 readout per pulse or 1 readout per multiplexed readout ?
-    return len(sequence.ro_pulses)
+    return len(sequence.probe_pulses)
 
 
 def _instructions(sequence: PulseSequence):

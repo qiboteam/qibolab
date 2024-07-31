@@ -30,17 +30,19 @@ def test_dummy_initialization(name):
 def test_dummy_execute_pulse_sequence(name, acquisition):
     nshots = 100
     platform = create_platform(name)
-    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    mz_pulse = next(iter(mz_seq.values()))[0]
+    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    probe_pulse = next(iter(probe_seq.values()))[0]
     sequence = PulseSequence()
-    sequence.extend(mz_seq)
+    sequence.extend(probe_seq)
     sequence.extend(platform.qubits[0].native_gates.RX12.create_sequence())
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
-    result = platform.execute_pulse_sequence(sequence, options)
+    result = platform.execute([sequence], options)
     if acquisition is AcquisitionType.INTEGRATION:
-        assert result[mz_pulse.id].magnitude.shape == (nshots,)
+        assert result[probe_pulse.id][0].magnitude.shape == (nshots,)
     elif acquisition is AcquisitionType.RAW:
-        assert result[mz_pulse.id].magnitude.shape == (nshots * mz_seq.duration,)
+        assert result[probe_pulse.id][0].magnitude.shape == (
+            nshots * probe_seq.duration,
+        )
 
 
 def test_dummy_execute_coupler_pulse():
@@ -57,7 +59,7 @@ def test_dummy_execute_coupler_pulse():
     sequence[channel.name].append(pulse)
 
     options = ExecutionParameters(nshots=None)
-    result = platform.execute_pulse_sequence(sequence, options)
+    _ = platform.execute([sequence], options)
 
 
 def test_dummy_execute_pulse_sequence_couplers():
@@ -67,12 +69,12 @@ def test_dummy_execute_pulse_sequence_couplers():
     cz = platform.pairs[(1, 2)].native_gates.CZ.create_sequence()
 
     sequence.extend(cz)
-    sequence[platform.qubits[0].measure.name].append(Delay(duration=40))
-    sequence[platform.qubits[2].measure.name].append(Delay(duration=40))
+    sequence[platform.qubits[0].probe.name].append(Delay(duration=40))
+    sequence[platform.qubits[2].probe.name].append(Delay(duration=40))
     sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
     sequence.extend(platform.qubits[2].native_gates.MZ.create_sequence())
     options = ExecutionParameters(nshots=None)
-    result = platform.execute_pulse_sequence(sequence, options)
+    _ = platform.execute([sequence], options)
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -81,7 +83,7 @@ def test_dummy_execute_pulse_sequence_fast_reset(name):
     sequence = PulseSequence()
     sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
     options = ExecutionParameters(nshots=None, fast_reset=True)
-    result = platform.execute_pulse_sequence(sequence, options)
+    _ = platform.execute([sequence], options)
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -100,7 +102,7 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
     for _ in range(nsequences):
         sequences.append(sequence)
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
-    result = platform.execute_pulse_sequences(sequences, options)
+    result = platform.execute(sequences, options)
     assert len(next(iter(result.values()))) == nsequences
     for r in result[0]:
         if acquisition is AcquisitionType.INTEGRATION:
@@ -113,24 +115,24 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
 def test_dummy_single_sweep_raw(name):
     platform = create_platform(name)
     sequence = PulseSequence()
-    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    pulse = next(iter(mz_seq.values()))[0]
+    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    pulse = next(iter(probe_seq.values()))[0]
 
     parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.extend(mz_seq)
+    sequence.extend(probe_seq)
     sweeper = Sweeper(
         Parameter.frequency,
         parameter_range,
-        channels=[platform.get_qubit(0).measure.name],
+        channels=[platform.get_qubit(0).probe.name],
     )
     options = ExecutionParameters(
         nshots=10,
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.RAW,
     )
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
     assert pulse.id in results
-    shape = results[pulse.id].magnitude.shape
+    shape = results[pulse.id][0].magnitude.shape
     assert shape == (pulse.duration * SWEPT_POINTS,)
 
 
@@ -148,15 +150,15 @@ def test_dummy_single_sweep_coupler(
 ):
     platform = create_platform("dummy_couplers")
     sequence = PulseSequence()
-    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    mz_pulse = next(iter(mz_seq.values()))[0]
+    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    probe_pulse = next(iter(probe_seq.values()))[0]
     coupler_pulse = Pulse.flux(
         duration=40,
         amplitude=0.5,
         envelope=GaussianSquare(rel_sigma=0.2, width=0.75),
         type=PulseType.COUPLERFLUX,
     )
-    sequence.extend(mz_seq)
+    sequence.extend(probe_seq)
     sequence[platform.get_coupler(0).flux.name].append(coupler_pulse)
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
@@ -175,20 +177,20 @@ def test_dummy_single_sweep_coupler(
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
-    assert mz_pulse.id in results
+    assert probe_pulse.id in results
     if average:
         results_shape = (
-            results[mz_pulse.id].magnitude.shape
+            results[probe_pulse.id][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[mz_pulse.id].statistical_frequency.shape
+            else results[probe_pulse.id][0].statistical_frequency.shape
         )
     else:
         results_shape = (
-            results[mz_pulse.id].magnitude.shape
+            results[probe_pulse.id][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[mz_pulse.id].samples.shape
+            else results[probe_pulse.id][0].samples.shape
         )
     assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 
@@ -204,13 +206,13 @@ def test_dummy_single_sweep_coupler(
 def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, nshots):
     platform = create_platform(name)
     sequence = PulseSequence()
-    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    pulse = next(iter(mz_seq.values()))[0]
+    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    pulse = next(iter(probe_seq.values()))[0]
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
         parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.extend(mz_seq)
+    sequence.extend(probe_seq)
     if parameter in ChannelParameter:
         channel = (
             platform.qubits[0].drive.name
@@ -227,20 +229,20 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper)
+    results = platform.execute([sequence], options, sweeper)
 
     assert pulse.id in results
     if average:
         results_shape = (
-            results[pulse.id].magnitude.shape
+            results[pulse.id][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.id].statistical_frequency.shape
+            else results[pulse.id][0].statistical_frequency.shape
         )
     else:
         results_shape = (
-            results[pulse.id].magnitude.shape
+            results[pulse.id][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.id].samples.shape
+            else results[pulse.id][0].samples.shape
         )
     assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 
@@ -259,11 +261,11 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
     pulse = Pulse(
         duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5), type=PulseType.DRIVE
     )
-    mz_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    mz_pulse = next(iter(mz_seq.values()))[0]
+    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    probe_pulse = next(iter(probe_seq.values()))[0]
     sequence[platform.get_qubit(0).drive.name].append(pulse)
-    sequence[platform.qubits[0].measure.name].append(Delay(duration=pulse.duration))
-    sequence.extend(mz_seq)
+    sequence[platform.qubits[0].probe.name].append(Delay(duration=pulse.duration))
+    sequence.extend(probe_seq)
     parameter_range_1 = (
         np.random.rand(SWEPT_POINTS)
         if parameter1 is Parameter.amplitude
@@ -277,13 +279,13 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
 
     if parameter1 in ChannelParameter:
         channel = (
-            platform.qubits[0].measure.name
+            platform.qubits[0].probe.name
             if parameter1 is Parameter.frequency
             else platform.qubits[0].flux.name
         )
         sweeper1 = Sweeper(parameter1, parameter_range_1, channels=[channel])
     else:
-        sweeper1 = Sweeper(parameter1, parameter_range_1, pulses=[mz_pulse])
+        sweeper1 = Sweeper(parameter1, parameter_range_1, pulses=[probe_pulse])
     if parameter2 in ChannelParameter:
         sweeper2 = Sweeper(
             parameter2, parameter_range_2, channels=[platform.qubits[0].flux.name]
@@ -297,21 +299,21 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper1, sweeper2)
+    results = platform.execute([sequence], options, sweeper1, sweeper2)
 
-    assert mz_pulse.id in results
+    assert probe_pulse.id in results
 
     if average:
         results_shape = (
-            results[mz_pulse.id].magnitude.shape
+            results[probe_pulse.id][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[mz_pulse.id].statistical_frequency.shape
+            else results[probe_pulse.id][0].statistical_frequency.shape
         )
     else:
         results_shape = (
-            results[mz_pulse.id].magnitude.shape
+            results[probe_pulse.id][0].magnitude.shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[mz_pulse.id].samples.shape
+            else results[probe_pulse.id][0].samples.shape
         )
 
     assert (
@@ -331,11 +333,11 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
 def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nshots):
     platform = create_platform(name)
     sequence = PulseSequence()
-    mz_pulses = {}
+    probe_pulses = {}
     for qubit in platform.qubits:
-        mz_seq = platform.qubits[qubit].native_gates.MZ.create_sequence()
-        mz_pulses[qubit] = next(iter(mz_seq.values()))[0]
-        sequence.extend(mz_seq)
+        probe_seq = platform.qubits[qubit].native_gates.MZ.create_sequence()
+        probe_pulses[qubit] = next(iter(probe_seq.values()))[0]
+        sequence.extend(probe_seq)
     parameter_range = (
         np.random.rand(SWEPT_POINTS)
         if parameter is Parameter.amplitude
@@ -346,13 +348,13 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         sweeper1 = Sweeper(
             parameter,
             parameter_range,
-            channels=[qubit.measure.name for qubit in platform.qubits.values()],
+            channels=[qubit.probe.name for qubit in platform.qubits.values()],
         )
     else:
         sweeper1 = Sweeper(
             parameter,
             parameter_range,
-            pulses=[mz_pulses[qubit] for qubit in platform.qubits],
+            pulses=[probe_pulses[qubit] for qubit in platform.qubits],
         )
 
     options = ExecutionParameters(
@@ -361,21 +363,21 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.sweep(sequence, options, sweeper1)
+    results = platform.execute([sequence], options, sweeper1)
 
-    for pulse in mz_pulses.values():
+    for pulse in probe_pulses.values():
         assert pulse.id in results
         if average:
             results_shape = (
-                results[pulse.id].magnitude.shape
+                results[pulse.id][0].magnitude.shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[pulse.id].statistical_frequency.shape
+                else results[pulse.id][0].statistical_frequency.shape
             )
         else:
             results_shape = (
-                results[pulse.id].magnitude.shape
+                results[pulse.id][0].magnitude.shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[pulse.id].samples.shape
+                else results[pulse.id][0].samples.shape
             )
         assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
 

@@ -18,7 +18,7 @@ class PulseSequence(defaultdict[str, list[PulseLike]]):
         super().__init__(list, **initial_content)
 
     @property
-    def ro_pulses(self):
+    def probe_pulses(self):
         """Return list of the readout pulses in this sequence."""
         pulses = []
         for seq in self.values():

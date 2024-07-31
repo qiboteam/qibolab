@@ -236,7 +236,7 @@ def test_zhinst_configure_iq_line(dummy_qrc):
     zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
     zi_instrument.configure_iq_line(qubit.drive.name, platform.configs)
-    zi_instrument.configure_iq_line(qubit.measure.name, platform.configs)
+    zi_instrument.configure_iq_line(qubit.probe.name, platform.configs)
 
     assert qubit.drive.name in zi_instrument.signal_map
     assert (
@@ -244,7 +244,7 @@ def test_zhinst_configure_iq_line(dummy_qrc):
         in zi_instrument.calibration.calibration_items
     )
 
-    assert qubit.measure.name in zi_instrument.signal_map
+    assert qubit.probe.name in zi_instrument.signal_map
     assert (
         "/logical_signal_groups/q0/measure_line"
         in zi_instrument.calibration.calibration_items
@@ -281,7 +281,7 @@ def test_experiment_flow(dummy_qrc):
                 envelope=Rectangular(),
             )
         )
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
@@ -293,7 +293,7 @@ def test_experiment_flow(dummy_qrc):
     zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
     assert qubits[0].flux.name in zi_instrument.experiment.signals
-    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
     assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
@@ -315,7 +315,7 @@ def test_experiment_flow_coupler(dummy_qrc):
                 envelope=Rectangular(),
             )
         )
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     for coupler in couplers.values():
@@ -337,7 +337,7 @@ def test_experiment_flow_coupler(dummy_qrc):
     zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
     assert qubits[0].flux.name in zi_instrument.experiment.signals
-    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
     assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
@@ -359,7 +359,7 @@ def test_sweep_and_play_sim(dummy_qrc):
                 envelope=Rectangular(),
             )
         )
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
@@ -408,7 +408,7 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
     swept_points = 5
     sequence = PulseSequence()
     sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
-    sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
     sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter_range_1 = (
@@ -431,7 +431,7 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
     zi_instrument.experiment_flow({qubit_id: qubit}, couplers, sequence, options)
 
     assert qubit.drive.name in zi_instrument.experiment.signals
-    assert qubit.measure.name in zi_instrument.experiment.signals
+    assert qubit.probe.name in zi_instrument.experiment.signals
     assert qubit.acquisition.name in zi_instrument.experiment.signals
 
 
@@ -447,7 +447,7 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     sequence = PulseSequence()
     for qubit in qubits.values():
         sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     for coupler in couplers.values():
@@ -485,7 +485,7 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
 
     assert couplers[0].flux.name in zi_instrument.experiment.signals
     assert qubits[0].drive.name in zi_instrument.experiment.signals
-    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
     assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
@@ -510,7 +510,7 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
     sequence = PulseSequence()
     for qubit in qubits.values():
         sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter_range_1 = (
@@ -532,9 +532,7 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
                 Sweeper(
                     parameter1,
                     parameter_range_1,
-                    pulses=[
-                        sequence[qubit.measure.name][0] for qubit in qubits.values()
-                    ],
+                    pulses=[sequence[qubit.probe.name][0] for qubit in qubits.values()],
                 )
             )
     if parameter2 in SweeperParameter:
@@ -559,7 +557,7 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
     zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
     assert qubits[0].drive.name in zi_instrument.experiment.signals
-    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
     assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
@@ -574,7 +572,7 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
     sequence = PulseSequence()
     for qubit in qubits.values():
         sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter1 = Parameter.relative_phase
@@ -606,7 +604,7 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
     zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
     assert qubits[0].drive.name in zi_instrument.experiment.signals
-    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
     assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
@@ -648,13 +646,13 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
     )
 
     sweepers = []
-    ro_pulses = [sequence[qubit.measure.name][0] for qubit in qubits.values()]
+    ro_pulses = [sequence[qubit.probe.name][0] for qubit in qubits.values()]
     if parameter1 is Parameter.bias:
         sweepers.append(
             Sweeper(
                 parameter1,
                 parameter_range_1,
-                channels=[qubit.measure.name for qubit in qubits.values()],
+                channels=[qubit.probe.name for qubit in qubits.values()],
             )
         )
     else:
@@ -669,7 +667,7 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].measure.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
     assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
@@ -685,8 +683,8 @@ def test_batching(dummy_qrc):
         platform.qubits[1].native_gates.RX.create_sequence(theta=np.pi, phi=0.0)
     )
     measurement_start = sequence.duration
-    sequence[platform.qubits[0].measure.name].append(Delay(duration=measurement_start))
-    sequence[platform.qubits[1].measure.name].append(Delay(duration=measurement_start))
+    sequence[platform.qubits[0].probe.name].append(Delay(duration=measurement_start))
+    sequence[platform.qubits[1].probe.name].append(Delay(duration=measurement_start))
     sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
     sequence.extend(platform.qubits[1].native_gates.MZ.create_sequence())
 
@@ -711,7 +709,7 @@ def test_connections(instrument):
 
 
 @pytest.mark.qpu
-def test_experiment_execute_pulse_sequence_qpu(connected_platform, instrument):
+def test_experiment_execute_qpu(connected_platform, instrument):
     platform = connected_platform
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], "c0": platform.qubits["c0"]}
@@ -728,7 +726,7 @@ def test_experiment_execute_pulse_sequence_qpu(connected_platform, instrument):
         if qubit.flux_coupler:
             continue
 
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
@@ -737,12 +735,8 @@ def test_experiment_execute_pulse_sequence_qpu(connected_platform, instrument):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    results = platform.execute_pulse_sequence(
-        sequence,
-        options,
-    )
-
-    assert all(len(results[sequence.ro_pulses[q].id]) for q in qubits) > 0
+    results = platform.execute([sequence], options)
+    assert all(len(results[sequence.probe_pulses[q].id]) > 1 for q in qubits)
 
 
 @pytest.mark.qpu
@@ -754,7 +748,7 @@ def test_experiment_sweep_2d_specific_qpu(connected_platform, instrument):
     sequence = PulseSequence()
     for qubit in qubits.values():
         sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
-        sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
         sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter1 = Parameter.relative_phase
@@ -790,4 +784,4 @@ def test_experiment_sweep_2d_specific_qpu(connected_platform, instrument):
         sweepers[1],
     )
 
-    assert all(len(results[sequence.ro_pulses[q].id]) for q in qubits) > 0
+    assert all(len(results[sequence.probe_pulses[q].id]) for q in qubits) > 0
