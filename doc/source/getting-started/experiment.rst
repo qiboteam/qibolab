@@ -273,7 +273,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     )
 
     results = platform.execute([sequence], options, sweeper)
-    probe_pulse = next(iter(sequence.ro_pulses))
+    probe_pulse = next(iter(sequence.probe_pulses))
 
     # plot the results
     amplitudes = results[probe_pulse.id][0].magnitude
