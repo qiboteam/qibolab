@@ -71,19 +71,19 @@
     "qubit_4/flux" : {
       "offset": 0.15
     },
-    "qubit_0/measure" : {
+    "qubit_0/probe" : {
       "frequency": 5200000000
     },
-    "qubit_1/measure" : {
+    "qubit_1/probe" : {
       "frequency": 4900000000
     },
-    "qubit_2/measure" : {
+    "qubit_2/probe" : {
       "frequency": 6100000000
     },
-    "qubit_3/measure" : {
+    "qubit_3/probe" : {
       "frequency": 5800000000
     },
-    "qubit_4/measure" : {
+    "qubit_4/probe" : {
       "frequency": 5500000000
     },
     "qubit_0/acquire": {
@@ -147,7 +147,7 @@
           ]
         },
         "MZ": {
-          "qubit_0/measure": [
+          "qubit_0/probe": [
             {
               "duration": 2000,
               "amplitude": 0.1,
@@ -183,7 +183,7 @@
           ]
         } ,
         "MZ": {
-          "qubit_1/measure": [
+          "qubit_1/probe": [
             {
               "duration": 2000,
               "amplitude": 0.1,
@@ -219,7 +219,7 @@
           ]
         },
         "MZ": {
-          "qubit_2/measure": [
+          "qubit_2/probe": [
             {
               "duration": 2000,
               "amplitude": 0.1,
@@ -255,7 +255,7 @@
           ]
         },
         "MZ": {
-          "qubit_3/measure": [
+          "qubit_3/probe": [
             {
               "duration": 2000,
               "amplitude": 0.1,
@@ -291,7 +291,7 @@
           ]
         },
         "MZ": {
-          "qubit_4/measure": [
+          "qubit_4/probe": [
             {
               "duration": 2000,
               "amplitude": 0.1,

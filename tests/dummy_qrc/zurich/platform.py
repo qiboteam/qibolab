@@ -52,7 +52,7 @@ def create():
 
     configs = {}
     component_params = runcard["components"]
-    measure_lo = "measure/lo"
+    readout_lo = "readout/lo"
     drive_los = {
         0: "qubit_0_1/drive/lo",
         1: "qubit_0_1/drive/lo",
@@ -60,18 +60,18 @@ def create():
         3: "qubit_2_3/drive/lo",
         4: "qubit_4/drive/lo",
     }
-    configs[measure_lo] = OscillatorConfig(**component_params[measure_lo])
+    configs[readout_lo] = OscillatorConfig(**component_params[readout_lo])
     zi_channels = []
     for q in QUBITS:
-        measure_name = f"qubit_{q}/measure"
+        probe_name = f"qubit_{q}/probe"
         acquisition_name = f"qubit_{q}/acquire"
-        configs[measure_name] = ZiIqConfig(**component_params[measure_name])
-        qubits[q].measure = IqChannel(
-            name=measure_name, lo=measure_lo, mixer=None, acquisition=acquisition_name
+        configs[probe_name] = ZiIqConfig(**component_params[probe_name])
+        qubits[q].probe = IqChannel(
+            name=probe_name, lo=readout_lo, mixer=None, acquisition=acquisition_name
         )
         zi_channels.append(
             ZiChannel(
-                qubits[q].measure, device="device_shfqc", path="QACHANNELS/0/OUTPUT"
+                qubits[q].probe, device="device_shfqc", path="QACHANNELS/0/OUTPUT"
             )
         )
 
@@ -81,7 +81,7 @@ def create():
         qubits[q].acquisition = AcquireChannel(
             name=acquisition_name,
             twpa_pump=None,
-            measure=measure_name,
+            probe=probe_name,
         )
         zi_channels.append(
             ZiChannel(

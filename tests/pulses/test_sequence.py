@@ -85,8 +85,8 @@ def test_ro_pulses():
     sequence["ch3"].append(ro_pulse)
     assert set(sequence.keys()) == {"ch1", "ch2", "ch3"}
     assert sum(len(pulses) for pulses in sequence.values()) == 5
-    assert len(sequence.ro_pulses) == 1
-    assert sequence.ro_pulses[0] == ro_pulse
+    assert len(sequence.probe_pulses) == 1
+    assert sequence.probe_pulses[0] == ro_pulse
 
 
 def test_durations():

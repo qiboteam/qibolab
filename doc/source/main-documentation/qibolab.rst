@@ -70,7 +70,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
    qubit = platform.qubits[0]
    ps.extend(qubit.native_gates.RX.create_sequence())
    ps.extend(qubit.native_gates.RX.create_sequence(phi=np.pi / 2))
-   ps[qubit.measure.name].append(Delay(duration=200))
+   ps[qubit.probe.name].append(Delay(duration=200))
    ps.extend(qubit.native_gates.MZ.create_sequence())
 
 Now we can execute the sequence on hardware:
@@ -426,7 +426,7 @@ A tipical resonator spectroscopy experiment could be defined with:
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-        channels=[qubit.measure.name for qubit in platform.qubits.values()],
+        channels=[qubit.probe.name for qubit in platform.qubits.values()],
         type=SweeperType.OFFSET,
     )
 
@@ -459,7 +459,7 @@ For example:
     qubit = platform.qubits[0]
     sequence = PulseSequence()
     sequence.extend(qubit.native_gates.RX.create_sequence())
-    sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
     sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     sweeper_freq = Sweeper(
@@ -556,7 +556,7 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 
     sequence = PulseSequence()
     sequence.extend(qubit.native_gates.RX.create_sequence())
-    sequence[qubit.measure.name].append(Delay(duration=sequence.duration))
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
     sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
@@ -589,7 +589,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
     sweeper2 = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-        channels=[qubit.measure.name],
+        channels=[qubit.probe.name],
         type=SweeperType.OFFSET,
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))

@@ -62,14 +62,14 @@ def create_dummy(with_couplers: bool = True):
     configs[twpa_pump_name] = OscillatorConfig(**component_params[twpa_pump_name])
     for q, qubit in qubits.items():
         acquisition_name = f"qubit_{q}/acquire"
-        measure_name = f"qubit_{q}/measure"
-        qubit.measure = IqChannel(
-            measure_name, mixer=None, lo=None, acquisition=acquisition_name
+        probe_name = f"qubit_{q}/probe"
+        qubit.probe = IqChannel(
+            probe_name, mixer=None, lo=None, acquisition=acquisition_name
         )
         qubit.acquisition = AcquireChannel(
-            acquisition_name, twpa_pump=twpa_pump_name, measure=measure_name
+            acquisition_name, twpa_pump=twpa_pump_name, probe=probe_name
         )
-        configs[measure_name] = IqConfig(**component_params[measure_name])
+        configs[probe_name] = IqConfig(**component_params[probe_name])
         configs[acquisition_name] = AcquisitionConfig(
             **component_params[acquisition_name]
         )

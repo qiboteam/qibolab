@@ -62,23 +62,23 @@
       "offset": 0.15,
       "power_range": 5
     },
-    "qubit_0/measure" : {
+    "qubit_0/probe" : {
       "frequency": 5200000000,
       "power_range": -10
     },
-    "qubit_1/measure" : {
+    "qubit_1/probe" : {
       "frequency": 4900000000,
       "power_range": -10
     },
-    "qubit_2/measure" : {
+    "qubit_2/probe" : {
       "frequency": 6100000000,
       "power_range": -10
     },
-    "qubit_3/measure" : {
+    "qubit_3/probe" : {
       "frequency": 5800000000,
       "power_range": -10
     },
-    "qubit_4/measure" : {
+    "qubit_4/probe" : {
       "frequency": 5500000000,
       "power_range": -10
     },
@@ -123,7 +123,7 @@
       "offset": 0.0,
       "power_range": 0.4
     },
-    "measure/lo": {
+    "readout/lo": {
       "power": 10,
       "frequency": 6000000000.0
     },
@@ -154,7 +154,7 @@
                     ]
                 },
                 "MZ": {
-                    "qubit_0/measure": [
+                    "qubit_0/probe": [
                         {
                             "duration": 2000,
                             "amplitude": 0.1,
@@ -176,7 +176,7 @@
                     ]
                 },
                 "MZ": {
-                    "qubit_1/measure": [
+                    "qubit_1/probe": [
                         {
                             "duration": 2000,
                             "amplitude": 0.2,
@@ -198,7 +198,7 @@
                     ]
                 },
                 "MZ": {
-                    "qubit_2/measure": [
+                    "qubit_2/probe": [
                         {
                             "duration": 2000,
                             "amplitude": 0.02,
@@ -220,7 +220,7 @@
                     ]
                 },
                 "MZ": {
-                    "qubit_3/measure": [
+                    "qubit_3/probe": [
                         {
                             "duration": 2000,
                             "amplitude": 0.25,
@@ -242,7 +242,7 @@
                     ]
                 },
                 "MZ": {
-                    "qubit_4/measure": [
+                    "qubit_4/probe": [
                         {
                             "duration": 2000,
                             "amplitude": 0.31,

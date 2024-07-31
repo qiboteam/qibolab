@@ -108,7 +108,7 @@ class RFSoC(Controller):
                 raise NotImplementedError(
                     "Raw data acquisition is not compatible with sweepers"
                 )
-            if len(sequence.ro_pulses) != 1:
+            if len(sequence.probe_pulses) != 1:
                 raise NotImplementedError(
                     "Raw data acquisition is compatible only with a single readout"
                 )
@@ -259,10 +259,10 @@ class RFSoC(Controller):
         toti, totq = self._execute_pulse_sequence(sequence, qubits, opcode)
 
         results = {}
-        probed_qubits = np.unique([p.qubit for p in sequence.ro_pulses])
+        probed_qubits = np.unique([p.qubit for p in sequence.probe_pulses])
 
         for j, qubit in enumerate(probed_qubits):
-            for i, ro_pulse in enumerate(sequence.ro_pulses.get_qubit_pulses(qubit)):
+            for i, ro_pulse in enumerate(sequence.probe_pulses.get_qubit_pulses(qubit)):
                 i_pulse = np.array(toti[j][i])
                 q_pulse = np.array(totq[j][i])
 
@@ -328,7 +328,7 @@ class RFSoC(Controller):
         """
         res = self.play(qubits, couplers, sequence, execution_parameters)
         newres = {}
-        serials = [pulse.id for pulse in or_sequence.ro_pulses]
+        serials = [pulse.id for pulse in or_sequence.probe_pulses]
         for idx, key in enumerate(res):
             if idx % 2 == 1:
                 newres[serials[idx // 2]] = res[key]
@@ -596,7 +596,7 @@ class RFSoC(Controller):
             qubits,
             couplers,
             sweepsequence,
-            sequence.ro_pulses,
+            sequence.probe_pulses,
             *rfsoc_sweepers,
             execution_parameters=execution_parameters,
         )

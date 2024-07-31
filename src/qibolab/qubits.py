@@ -10,7 +10,7 @@ from qibolab.native import SingleQubitNatives, TwoQubitNatives
 QubitId = Union[str, int]
 """Type for qubit names."""
 
-CHANNEL_NAMES = ("measure", "acquisition", "drive", "drive12", "drive_cross", "flux")
+CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")
 """Names of channels that belong to a qubit.
 
 Not all channels are required to operate a qubit.
@@ -88,7 +88,7 @@ class Qubit:
     mixer_readout_g: float = 0.0
     mixer_readout_phi: float = 0.0
 
-    measure: Optional[IqChannel] = None
+    probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
     drive: Optional[IqChannel] = None
     drive12: Optional[IqChannel] = None

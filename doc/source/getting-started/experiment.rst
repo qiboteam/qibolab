@@ -66,27 +66,25 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         qubit = qubits[0]
 
         # define component names, and load their configurations
-        drive, measure, acquire = "q0/drive", "q0/measure", "q0/acquire"
-        drive_lo, measure_lo = "q0/drive/lo", "q0/measure/lo"
+        drive, probe, acquire = "q0/drive", "q0/probe", "q0/acquire"
+        drive_lo, readout_lo = "q0/drive/lo", "q0/readout/lo"
 
         # assign channels to qubits
         qubit.drive = IqChannel(name=drive, lo=drive_lo, mixer=None)
-        qubit.measure = IqChannel(
-            name=measure, lo=measure_lo, mixer=None, acquisition=acquire
-        )
-        qubit.acquisition = AcquireChannel(name=acquire, measure=measure, twpa_pump=None)
+        qubit.probe = IqChannel(name=probe, lo=readout_lo, mixer=None, acquisition=acquire)
+        qubit.acquisition = AcquireChannel(name=acquire, probe=probe, twpa_pump=None)
 
         configs = {}
         component_params = runcard["components"]
         configs[drive] = IqConfig(**component_params[drive])
-        configs[measure] = IqConfig(**component_params[measure])
+        configs[probe] = IqConfig(**component_params[probe])
         configs[acquire] = AcquisitionConfig(**component_params[acquire])
         configs[drive_lo] = OscillatorConfig(**component_params[drive_lo])
-        configs[measure_lo] = OscillatorConfig(**component_params[measure_lo])
+        configs[readout_lo] = OscillatorConfig(**component_params[readout_lo])
 
         zi_channels = [
             ZiChannel(qubit.drive, device="device_shfqc", path="SGCHANNELS/0/OUTPUT"),
-            ZiChannel(qubit.measure, device="device_shfqc", path="QACHANNELS/0/OUTPUT"),
+            ZiChannel(qubit.probe, device="device_shfqc", path="QACHANNELS/0/OUTPUT"),
             ZiChannel(qubit.acquisition, device="device_shfqc", path="QACHANNELS/0/INPUT"),
         ]
 
@@ -142,11 +140,11 @@ And the we can define the runcard ``my_platform/parameters.json``:
             "frequency": 5200000000,
             "power": null
         },
-        "qubit_0/measure": {
+        "qubit_0/probe": {
             "frequency": 7320000000,
             "power_range": 1
         },
-        "qubit_0/measure/lo": {
+        "qubit_0/readout/lo": {
             "frequency": 7300000000,
             "power": null
         },
@@ -170,7 +168,7 @@ And the we can define the runcard ``my_platform/parameters.json``:
                     ]
                 },
                 "MZ": {
-                    "qubit_0/measure": [
+                    "qubit_0/probe": [
                         {
                             "duration": 2000,
                             "amplitude": 0.02,
@@ -262,7 +260,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-2e8, +2e8, 1e6),
-        channels=[qubit.measure.name],
+        channels=[qubit.probe.name],
         type=SweeperType.OFFSET,
     )
 
@@ -275,11 +273,11 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     )
 
     results = platform.execute([sequence], options, sweeper)
-    ro_pulse = next(iter(sequence.ro_pulses))
+    probe_pulse = next(iter(sequence.ro_pulses))
 
     # plot the results
-    amplitudes = results[ro_pulse.id][0].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.measure.name).frequency
+    amplitudes = results[probe_pulse.id][0].magnitude
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
