@@ -71,7 +71,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     import matplotlib.pyplot as plt
 
-    probe_pulse = next(iter(sequence.ro_pulses))
+    probe_pulse = next(iter(sequence.probe_pulses))
     amplitudes = results[probe_pulse.id][0].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
 
@@ -155,7 +155,7 @@ We can now proceed to launch on hardware:
 
     results = platform.execute([sequence], options, sweeper)
 
-    probe_pulse = next(iter(sequence.ro_pulses))
+    probe_pulse = next(iter(sequence.probe_pulses))
     amplitudes = results[probe_pulse.id][0].magnitude
     frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.drive.name).frequency
 
@@ -239,8 +239,8 @@ and its impact on qubit states in the IQ plane.
     results_one = platform.execute([one_sequence], options)
     results_zero = platform.execute([zero_sequence], options)
 
-    probe_pulse1 = next(iter(one_sequence.ro_pulses))
-    probe_pulse2 = next(iter(zero_sequence.ro_pulses))
+    probe_pulse1 = next(iter(one_sequence.probe_pulses))
+    probe_pulse2 = next(iter(zero_sequence.probe_pulses))
 
     plt.title("Single shot classification")
     plt.xlabel("I [a.u.]")
