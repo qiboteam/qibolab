@@ -16,11 +16,6 @@ from qibolab.instruments.rfsoc.convert import (
 )
 from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.qubits import Qubit
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedSampleResults,
-    IntegratedResults,
-)
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument
