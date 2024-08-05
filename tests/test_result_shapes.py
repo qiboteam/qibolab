@@ -1,15 +1,10 @@
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.platform.platform import Platform
 from qibolab.pulses import PulseSequence
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    SampleResults,
-)
 from qibolab.sweeper import Parameter, Sweeper
 
 NSHOTS = 50
@@ -17,7 +12,12 @@ NSWEEP1 = 5
 NSWEEP2 = 8
 
 
-def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
+def execute(
+    platform: Platform,
+    acquisition_type: AcquisitionType,
+    averaging_mode: AveragingMode,
+    sweep=False,
+) -> npt.NDArray:
     qubit = next(iter(platform.qubits.values()))
 
     qd_seq = qubit.native_gates.RX.create_sequence()
@@ -49,11 +49,10 @@ def test_discrimination_singleshot(connected_platform, sweep):
         AveragingMode.SINGLESHOT,
         sweep,
     )
-    assert isinstance(result, SampleResults)
     if sweep:
-        assert result.samples.shape == (NSHOTS, NSWEEP1, NSWEEP2)
+        assert result.shape == (NSHOTS, NSWEEP1, NSWEEP2)
     else:
-        assert result.samples.shape == (NSHOTS,)
+        assert result.shape == (NSHOTS,)
 
 
 @pytest.mark.parametrize("sweep", [False, True])
@@ -61,11 +60,10 @@ def test_discrimination_cyclic(connected_platform, sweep):
     result = execute(
         connected_platform, AcquisitionType.DISCRIMINATION, AveragingMode.CYCLIC, sweep
     )
-    assert isinstance(result, AveragedSampleResults)
     if sweep:
-        assert result.statistical_frequency.shape == (NSWEEP1, NSWEEP2)
+        assert result.shape == (NSWEEP1, NSWEEP2)
     else:
-        assert result.statistical_frequency.shape == tuple()
+        assert result.shape == tuple()
 
 
 @pytest.mark.parametrize("sweep", [False, True])
@@ -73,11 +71,10 @@ def test_integration_singleshot(connected_platform, sweep):
     result = execute(
         connected_platform, AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT, sweep
     )
-    assert isinstance(result, IntegratedResults)
     if sweep:
-        assert result.voltage.shape == (NSHOTS, NSWEEP1, NSWEEP2)
+        assert result.shape == (NSHOTS, NSWEEP1, NSWEEP2)
     else:
-        assert result.voltage.shape == (NSHOTS,)
+        assert result.shape == (NSHOTS,)
 
 
 @pytest.mark.parametrize("sweep", [False, True])
@@ -85,8 +82,7 @@ def test_integration_cyclic(connected_platform, sweep):
     result = execute(
         connected_platform, AcquisitionType.INTEGRATION, AveragingMode.CYCLIC, sweep
     )
-    assert isinstance(result, AveragedIntegratedResults)
     if sweep:
-        assert result.voltage.shape == (NSWEEP1, NSWEEP2)
+        assert result.shape == (NSWEEP1, NSWEEP2)
     else:
-        assert result.voltage.shape == tuple()
+        assert result.shape == tuple()
