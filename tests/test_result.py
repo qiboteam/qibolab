@@ -2,17 +2,18 @@
 
 import numpy as np
 import pytest
+from pytest import approx
 
 from qibolab import AcquisitionType as Acq
 from qibolab import AveragingMode as Av
-from qibolab.result import magnitude, phase, unpack
+from qibolab.result import magnitude, phase, probability, unpack
 
 
 @pytest.mark.parametrize("result", ["iq", "raw"])
 def test_polar(result, execute):
     """Testing I and Q polar representation."""
     if result == "iq":
-        res = execute(Acq.INTEGRATION, Av.CYCLIC, 5)
+        res = execute(Acq.INTEGRATION, Av.SINGLESHOT, 5)
     else:
         res = execute(Acq.RAW, Av.CYCLIC, 5)
 
@@ -21,18 +22,16 @@ def test_polar(result, execute):
     np.testing.assert_equal(np.unwrap(np.arctan2(i, q)), phase(res))
 
 
-@pytest.mark.parametrize("state", [0, 1])
-def test_state_probability(state):
+def test_probability(execute):
     """Testing raw_probability method."""
-    results = generate_random_state_result(5)
-    if state == 0:
-        target_dict = {"probability": results.probability(0)}
-    else:
-        target_dict = {"probability": results.probability(1)}
+    res = execute(Acq.DISCRIMINATION, Av.SINGLESHOT, 1000)
+    prob = probability(res)
 
-    assert np.allclose(
-        target_dict["probability"], results.probability(state=state), atol=1e-08
-    )
+    # unless the result is exactly 0, there is no need for the absolute value
+    # and when its close to 0, the absolute tolerance is preventing the possible error
+    # due to floating point operations
+    assert prob == approx(1 - np.mean(res, axis=0))
+    assert probability(res, 1) == approx(1 - prob)
 
 
 @pytest.mark.parametrize("average", [True, False])

@@ -83,4 +83,6 @@ def probability(values: npt.NDArray, state: int = 0):
 
     The only accepted values `state` are `0` and `1`.
     """
+    # The absolute value is only needed to make sure the result is always positive, even
+    # when extremely close to zero
     return abs(1 - state - np.mean(values, axis=0))
