@@ -72,9 +72,9 @@ def test_integration_singleshot(connected_platform, sweep):
         connected_platform, AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT, sweep
     )
     if sweep:
-        assert result.shape == (NSHOTS, NSWEEP1, NSWEEP2)
+        assert result.shape == (NSHOTS, NSWEEP1, NSWEEP2, 2)
     else:
-        assert result.shape == (NSHOTS,)
+        assert result.shape == (NSHOTS, 2)
 
 
 @pytest.mark.parametrize("sweep", [False, True])
@@ -83,6 +83,6 @@ def test_integration_cyclic(connected_platform, sweep):
         connected_platform, AcquisitionType.INTEGRATION, AveragingMode.CYCLIC, sweep
     )
     if sweep:
-        assert result.shape == (NSWEEP1, NSWEEP2)
+        assert result.shape == (NSWEEP1, NSWEEP2, 2)
     else:
-        assert result.shape == tuple()
+        assert result.shape == (2,)
