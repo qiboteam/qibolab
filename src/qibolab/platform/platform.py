@@ -70,23 +70,6 @@ def unroll_sequences(
     return total_sequence, readout_map
 
 
-def estimate_duration(
-    sequences: list[PulseSequence],
-    options: ExecutionParameters,
-    sweepers: list[ParallelSweepers],
-) -> float:
-    """Estimate experiment duration."""
-    duration = sum(seq.duration for seq in sequences)
-    relaxation = default(options.relaxation_time, 0)
-    nshots = default(options.nshots, 0)
-    return (
-        (duration + len(sequences) * relaxation)
-        * nshots
-        * NS_TO_SEC
-        * prod(len(s[0].values) for s in sweepers)
-    )
-
-
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
     """Apply updates to configs in place.
 
@@ -102,6 +85,23 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
                     f"Cannot update configuration for unknown component {name}"
                 )
             configs[name] = dataclasses.replace(configs[name], **changes)
+
+
+def estimate_duration(
+    sequences: list[PulseSequence],
+    options: ExecutionParameters,
+    sweepers: list[ParallelSweepers],
+) -> float:
+    """Estimate experiment duration."""
+    duration = sum(seq.duration for seq in sequences)
+    relaxation = default(options.relaxation_time, 0)
+    nshots = default(options.nshots, 0)
+    return (
+        (duration + len(sequences) * relaxation)
+        * nshots
+        * NS_TO_SEC
+        * prod(len(s[0].values) for s in sweepers)
+    )
 
 
 @dataclass
@@ -240,7 +240,7 @@ class Platform:
         return controllers[0]
 
     def _execute(self, sequences, options, integration_setup, sweepers):
-        """Execute sequence on the controllers."""
+        """Execute sequences on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():

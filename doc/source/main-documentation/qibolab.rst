@@ -419,9 +419,15 @@ A tipical resonator spectroscopy experiment could be defined with:
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
     sequence = PulseSequence()
-    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())  # readout pulse for qubit 0 at 4 GHz
-    sequence.extend(platform.qubits[1].native_gates.MZ.create_sequence())  # readout pulse for qubit 1 at 5 GHz
-    sequence.extend(platform.qubits[2].native_gates.MZ.create_sequence())  # readout pulse for qubit 2 at 6 GHz
+    sequence.extend(
+        platform.qubits[0].native_gates.MZ.create_sequence()
+    )  # readout pulse for qubit 0 at 4 GHz
+    sequence.extend(
+        platform.qubits[1].native_gates.MZ.create_sequence()
+    )  # readout pulse for qubit 1 at 5 GHz
+    sequence.extend(
+        platform.qubits[2].native_gates.MZ.create_sequence()
+    )  # readout pulse for qubit 2 at 6 GHz
 
     sweeper = Sweeper(
         parameter=Parameter.frequency,
@@ -552,7 +558,7 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 
 .. testcode:: python
 
-    qubit  = platform.qubits[0]
+    qubit = platform.qubits[0]
 
     sequence = PulseSequence()
     sequence.extend(qubit.native_gates.RX.create_sequence())

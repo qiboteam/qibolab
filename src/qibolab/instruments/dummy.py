@@ -96,11 +96,9 @@ class DummyInstrument(Controller):
         configs: dict[str, Config],
         sequences: list[PulseSequence],
         options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
         integration_setup: dict[str, tuple[np.ndarray, float]],
+        sweepers: list[ParallelSweepers],
     ):
-        results = {}
-
         if options.averaging_mode is not AveragingMode.CYCLIC:
             shape = (options.nshots,) + tuple(
                 min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
@@ -110,6 +108,7 @@ class DummyInstrument(Controller):
                 min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
             )
 
+        results = {}
         for seq in sequences:
             for ro_pulse in seq.probe_pulses:
                 values = self.get_values(options, ro_pulse, shape)

@@ -272,7 +272,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results = platform.execute([sequence], options, sweeper)
+    results = platform.execute([sequence], options, [[sweeper]])
     probe_pulse = next(iter(sequence.probe_pulses))
 
     # plot the results
