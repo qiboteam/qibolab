@@ -309,21 +309,11 @@ class Platform:
         for qubit in self.qubits.values():
             integration_setup[qubit.acquisition.name] = (qubit.kernel, qubit.iq_angle)
 
-        # find readout pulses
-        ro_pulses = {
-            pulse.id: pulse.qubit
-            for sequence in sequences
-            for pulse in sequence.ro_pulses
-        }
-
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
             result = self._execute(b, options, integration_setup, sweepers)
             for serial, data in result.items():
                 results[serial].append(data)
-
-        for serial, qubit in ro_pulses.items():
-            results[qubit] = results[serial]
 
         return results
 
