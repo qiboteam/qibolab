@@ -29,6 +29,15 @@ def collect(i: npt.NDArray, q: npt.NDArray) -> IQ:
     return _sink(np.stack([i, q]))
 
 
+def unpack(iq: IQ) -> tuple[npt.NDArray, npt.NDArray]:
+    """Unpack I and Q components from single array.
+
+    Inverse of :func:`collect`.
+    """
+    i, q = tuple(_lift(iq))
+    return i, q
+
+
 def magnitude(iq: IQ):
     """Signal magnitude.
 
