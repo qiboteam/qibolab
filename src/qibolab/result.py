@@ -19,7 +19,7 @@ def _lift(values: IQ) -> npt.NDArray:
 def _sink(values: npt.NDArray) -> IQ:
     """Transpose the outermost dimension to the innermost.
 
-    Inverse of :func:`_transpose`.
+    Inverse of :func:`_lift`.
     """
     return np.transpose(values, [*range(1, values.ndim), 0])
 
