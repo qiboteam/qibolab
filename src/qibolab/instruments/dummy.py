@@ -92,6 +92,8 @@ class DummyInstrument(Controller):
     ):
         def values(pulse: Pulse):
             samples = int(pulse.duration * self.sampling_rate)
-            return self.values(options, options.results_shape(sweepers, samples))
+            return np.array(
+                self.values(options, options.results_shape(sweepers, samples))
+            )
 
         return {ro.id: values(ro) for seq in sequences for ro in seq.probe_pulses}
