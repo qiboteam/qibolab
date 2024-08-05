@@ -35,7 +35,7 @@ def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
         freq_values = np.arange(-4e6, 4e6, 1e6)
         sweeper1 = Sweeper(Parameter.bias, amp_values, channels=[qubit.flux.name])
         sweeper2 = Sweeper(Parameter.amplitude, freq_values, pulses=[probe_pulse])
-        results = platform.execute([sequence], options, sweeper1, sweeper2)
+        results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
     else:
         results = platform.execute([sequence], options)
     return results[probe_pulse.id][0]

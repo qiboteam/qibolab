@@ -130,7 +130,7 @@ def test_dummy_single_sweep_raw(name):
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.RAW,
     )
-    results = platform.execute([sequence], options, sweeper)
+    results = platform.execute([sequence], options, [[sweeper]])
     assert pulse.id in results
     shape = results[pulse.id][0].magnitude.shape
     assert shape == (pulse.duration * SWEPT_POINTS,)
@@ -177,7 +177,7 @@ def test_dummy_single_sweep_coupler(
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.execute([sequence], options, sweeper)
+    results = platform.execute([sequence], options, [[sweeper]])
 
     assert probe_pulse.id in results
     if average:
@@ -229,7 +229,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
         fast_reset=fast_reset,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.execute([sequence], options, sweeper)
+    results = platform.execute([sequence], options, [[sweeper]])
 
     assert pulse.id in results
     if average:
@@ -299,7 +299,7 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.execute([sequence], options, sweeper1, sweeper2)
+    results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
 
     assert probe_pulse.id in results
 
@@ -363,7 +363,7 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         acquisition_type=acquisition,
     )
     average = not options.averaging_mode is AveragingMode.SINGLESHOT
-    results = platform.execute([sequence], options, sweeper1)
+    results = platform.execute([sequence], options, [[sweeper1]])
 
     for pulse in probe_pulses.values():
         assert pulse.id in results
