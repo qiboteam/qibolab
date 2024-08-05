@@ -3,61 +3,6 @@
 import numpy as np
 import pytest
 
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    RawWaveformResults,
-    SampleResults,
-)
-
-
-def generate_random_iq_result(length=5):
-    data = np.random.rand(length, length, length)
-    return IntegratedResults(data)
-
-
-def generate_random_raw_result(length=5):
-    data = np.random.rand(length, length, length)
-    return IntegratedResults(data)
-
-
-def generate_random_state_result(length=5):
-    data = np.random.randint(low=2, size=(length, length, length))
-    return SampleResults(data)
-
-
-def generate_random_avg_iq_result(length=5):
-    data = np.random.rand(length, length, length)
-    return AveragedIntegratedResults(data)
-
-
-def generate_random_avg_raw_result(length=5):
-    data = np.random.rand(length, length, length)
-    return AveragedIntegratedResults(data)
-
-
-def generate_random_avg_state_result(length=5):
-    data = np.random.randint(low=2, size=(length, length, length))
-    return AveragedSampleResults(data)
-
-
-def test_iq_constructor():
-    """Testing ExecutionResults constructor."""
-    test = np.array([(1, 2), (1, 2)])
-    IntegratedResults(test)
-
-
-def test_raw_constructor():
-    """Testing ExecutionResults constructor."""
-    test = np.array([(1, 2), (1, 2)])
-    RawWaveformResults(test)
-
-
-def test_state_constructor():
-    """Testing ExecutionResults constructor."""
-    test = np.array([1, 1, 0])
-    SampleResults(test)
 
 
 @pytest.mark.parametrize("result", ["iq", "raw"])
