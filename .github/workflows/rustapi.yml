@@ -20,10 +20,7 @@ jobs:
       - name: Prepare virtual environment
         run: |
           pip install .
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - uses: dtolnay/rust-toolchain@stable
       - name: Check and lint
         working-directory: crate
         run: |
