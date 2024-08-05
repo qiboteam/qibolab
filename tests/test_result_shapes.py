@@ -41,7 +41,6 @@ def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
     return results[probe_pulse.id][0]
 
 
-@pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_discrimination_singleshot(connected_platform, sweep):
     result = execute(
@@ -57,7 +56,6 @@ def test_discrimination_singleshot(connected_platform, sweep):
         assert result.samples.shape == (NSHOTS,)
 
 
-@pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_discrimination_cyclic(connected_platform, sweep):
     result = execute(
@@ -70,7 +68,6 @@ def test_discrimination_cyclic(connected_platform, sweep):
         assert result.statistical_frequency.shape == tuple()
 
 
-@pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_integration_singleshot(connected_platform, sweep):
     result = execute(
@@ -83,7 +80,6 @@ def test_integration_singleshot(connected_platform, sweep):
         assert result.voltage.shape == (NSHOTS,)
 
 
-@pytest.mark.qpu
 @pytest.mark.parametrize("sweep", [False, True])
 def test_integration_cyclic(connected_platform, sweep):
     result = execute(
