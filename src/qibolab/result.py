@@ -16,12 +16,17 @@ def _lift(values: IQ) -> npt.NDArray:
     return np.transpose(values, [-1, *range(values.ndim - 1)])
 
 
-def _lower(values: npt.NDArray) -> IQ:
+def _sink(values: npt.NDArray) -> IQ:
     """Transpose the outermost dimension to the innermost.
 
     Inverse of :func:`_transpose`.
     """
     return np.transpose(values, [*range(1, values.ndim), 0])
+
+
+def collect(i: npt.NDArray, q: npt.NDArray) -> IQ:
+    """Collect I and Q components in a single array."""
+    return _sink(np.stack([i, q]))
 
 
 def magnitude(iq: IQ):
@@ -33,23 +38,25 @@ def magnitude(iq: IQ):
     return np.sqrt(iq_[0] ** 2 + iq_[1] ** 2)
 
 
-def average(iq: IQ) -> tuple[npt.NDArray, npt.NDArray]:
-    """Perform the average over i and q.
+def average(values: npt.NDArray) -> tuple[npt.NDArray, npt.NDArray]:
+    """Perform the values average.
 
     It returns both the average estimator itself, and its standard
     deviation estimator.
+
+    Use this also for I and Q values in the *standard layout*, cf. :cls:`IQ`.
     """
-    mean = np.mean(iq, axis=0)
-    std = np.std(iq, axis=0, ddof=1) / np.sqrt(iq.shape[0])
+    mean = np.mean(values, axis=0)
+    std = np.std(values, axis=0, ddof=1) / np.sqrt(values.shape[0])
     return mean, std
 
 
 def average_iq(i: npt.NDArray, q: npt.NDArray) -> tuple[npt.NDArray, npt.NDArray]:
-    """Perform the average over i and q.
+    """Perform the average over I and Q.
 
-    Wraps :func:`average` for separate i and q samples arrays.
+    Convenience wrapper over :func:`average` for separate i and q samples arrays.
     """
-    return average(_lower(np.stack([i, q])))
+    return average(collect(i, q))
 
 
 def phase(iq: npt.NDArray):
