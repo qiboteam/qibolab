@@ -1,6 +1,7 @@
 import pytest
 
-from qibolab import AcquisitionType, AveragingMode
+from qibolab import AcquisitionType as Acq
+from qibolab import AveragingMode as Av
 
 NSHOTS = 50
 NSWEEP1 = 5
@@ -9,9 +10,7 @@ NSWEEP2 = 8
 
 @pytest.mark.parametrize("sweep", [False, True])
 def test_discrimination_singleshot(execute, sweep):
-    result = execute(
-        AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT, sweep, NSHOTS
-    )
+    result = execute(Acq.DISCRIMINATION, Av.SINGLESHOT, sweep, NSHOTS)
     if sweep:
         assert result.shape == (NSHOTS, NSWEEP1, NSWEEP2)
     else:
@@ -20,9 +19,7 @@ def test_discrimination_singleshot(execute, sweep):
 
 @pytest.mark.parametrize("sweep", [False, True])
 def test_discrimination_cyclic(execute, sweep):
-    result = execute(
-        AcquisitionType.DISCRIMINATION, AveragingMode.CYCLIC, sweep, NSHOTS
-    )
+    result = execute(Acq.DISCRIMINATION, Av.CYCLIC, sweep, NSHOTS)
     if sweep:
         assert result.shape == (NSWEEP1, NSWEEP2)
     else:
@@ -31,9 +28,7 @@ def test_discrimination_cyclic(execute, sweep):
 
 @pytest.mark.parametrize("sweep", [False, True])
 def test_integration_singleshot(execute, sweep):
-    result = execute(
-        AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT, sweep, NSHOTS
-    )
+    result = execute(Acq.INTEGRATION, Av.SINGLESHOT, sweep, NSHOTS)
     if sweep:
         assert result.shape == (NSHOTS, NSWEEP1, NSWEEP2, 2)
     else:
@@ -42,7 +37,7 @@ def test_integration_singleshot(execute, sweep):
 
 @pytest.mark.parametrize("sweep", [False, True])
 def test_integration_cyclic(execute, sweep):
-    result = execute(AcquisitionType.INTEGRATION, AveragingMode.CYCLIC, sweep, NSHOTS)
+    result = execute(Acq.INTEGRATION, Av.CYCLIC, sweep, NSHOTS)
     if sweep:
         assert result.shape == (NSWEEP1, NSWEEP2, 2)
     else:

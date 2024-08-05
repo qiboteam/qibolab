@@ -3,21 +3,22 @@
 import numpy as np
 import pytest
 
+from qibolab import AcquisitionType as Acq
+from qibolab import AveragingMode as Av
+from qibolab.result import magnitude, phase, unpack
 
 
 @pytest.mark.parametrize("result", ["iq", "raw"])
-def test_integrated_result_properties(result):
-    """Testing IntegratedResults and RawWaveformResults properties."""
+def test_polar(result, execute):
+    """Testing I and Q polar representation."""
     if result == "iq":
-        results = generate_random_iq_result(5)
+        res = execute(Acq.INTEGRATION, Av.CYCLIC, 5)
     else:
-        results = generate_random_raw_result(5)
-    np.testing.assert_equal(
-        np.sqrt(results.voltage_i**2 + results.voltage_q**2), results.magnitude
-    )
-    np.testing.assert_equal(
-        np.unwrap(np.arctan2(results.voltage_i, results.voltage_q)), results.phase
-    )
+        res = execute(Acq.RAW, Av.CYCLIC, 5)
+
+    i, q = unpack(res)
+    np.testing.assert_equal(np.sqrt(i**2 + q**2), magnitude(res))
+    np.testing.assert_equal(np.unwrap(np.arctan2(i, q)), phase(res))
 
 
 @pytest.mark.parametrize("state", [0, 1])
