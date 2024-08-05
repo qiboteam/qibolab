@@ -108,7 +108,7 @@ def connected_platform(request):
     the ``QIBOLAB_PLATFORMS`` environment variable.
     """
     os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
-    name = request.config.getoption("--platform")
+    name = request.config.getoption("--device", default="dummy")
     platform = create_platform(name)
     platform.connect()
     yield platform
