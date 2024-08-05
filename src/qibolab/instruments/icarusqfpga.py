@@ -15,7 +15,7 @@ from qibolab.execution_parameters import (
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
-from qibolab.result import IntegratedResults, SampleResults
+from qibolab.result import average, average_iq, collect
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 DAC_SAMPLNG_RATE_MHZ = 5898.24
@@ -260,12 +260,12 @@ class RFSOC_RO(RFSOC):
 
             if options.averaging_mode is not AveragingMode.SINGLESHOT:
                 res = {
-                    qunit_mapping[qunit]: IntegratedResults(i + 1j * q).average
+                    qunit_mapping[qunit]: average_iq(i, q)
                     for qunit, (i, q) in raw.items()
                 }
             else:
                 res = {
-                    qunit_mapping[qunit]: IntegratedResults(i + 1j * q)
+                    qunit_mapping[qunit]: average_iq(i, q)
                     for qunit, (i, q) in raw.items()
                 }
             # Temp fix for readout pulse sweepers, to be removed with IcarusQ v2
@@ -276,8 +276,7 @@ class RFSOC_RO(RFSOC):
         elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
             self.device.set_adc_trigger_mode(1)
             self.device.set_qunit_mode(1)
-            raw = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
-            res = {qubit: SampleResults(states) for qubit, states in raw.items()}
+            res = self.device.start_qunit_acquisition(options.nshots, readout_qubits)
             # Temp fix for readout pulse sweepers, to be removed with IcarusQ v2
             for ro_pulse in readout_pulses:
                 res[ro_pulse.qubit] = res[ro_pulse.serial]
@@ -306,9 +305,9 @@ class RFSOC_RO(RFSOC):
 
             i = np.dot(raw_signal, cos)
             q = np.dot(raw_signal, sin)
-            singleshot = IntegratedResults(i + 1j * q)
+            singleshot = collect(i, q)
             results[readout_pulse.serial] = (
-                singleshot.average
+                average(singleshot)
                 if options.averaging_mode is not AveragingMode.SINGLESHOT
                 else singleshot
             )
