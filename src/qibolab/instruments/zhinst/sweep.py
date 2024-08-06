@@ -22,7 +22,9 @@ def classify_sweepers(
     for sweeper in sweepers:
         if sweeper.parameter is Parameter.bias or (
             sweeper.parameter is Parameter.amplitude
-            and sweeper.pulses[0].type is PulseType.READOUT
+            # FIXME:
+            # and sweeper.pulses[0].type is PulseType.READOUT
+            and False
         ):
             nt_sweepers.append(sweeper)
         else:
