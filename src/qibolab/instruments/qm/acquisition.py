@@ -15,14 +15,17 @@ from qibolab.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    RawWaveformResults,
-    SampleResults,
-)
+from qibolab.result import collect
+
+
+def _split(data, npulses, iq=False):
+    """Split results of different readout pulses that were acquired in the same
+    acquisition."""
+    if npulses == 1:
+        return [data]
+    if iq:
+        return [data[..., i, :] for i in range(npulses)]
+    return [data[..., i] for i in range(npulses)]
 
 
 @dataclass
@@ -38,14 +41,7 @@ class Acquisition(ABC):
     element: str
     """Element from QM ``config`` that the pulse will be applied on."""
     average: bool
-
     keys: list[str] = field(default_factory=list)
-
-    RESULT_CLS = IntegratedResults
-    """Result object type that corresponds to this acquisition type."""
-    AVERAGED_RESULT_CLS = AveragedIntegratedResults
-    """Averaged result object type that corresponds to this acquisition
-    type."""
 
     @property
     def name(self):
@@ -84,13 +80,6 @@ class Acquisition(ABC):
     def fetch(self):
         """Fetch downloaded streams to host device."""
 
-    def result(self, data):
-        """Creates Qibolab result object that is returned to the platform."""
-        res_cls = self.AVERAGED_RESULT_CLS if self.average else self.RESULT_CLS
-        if self.npulses > 1:
-            return [res_cls(data[..., i]) for i in range(self.npulses)]
-        return [res_cls(data)]
-
 
 @dataclass
 class RawAcquisition(Acquisition):
@@ -98,9 +87,6 @@ class RawAcquisition(Acquisition):
 
     adc_stream: Optional[_ResultSource] = None
     """Stream to collect raw ADC data."""
-
-    RESULT_CLS = RawWaveformResults
-    AVERAGED_RESULT_CLS = AveragedRawWaveformResults
 
     def declare(self):
         self.adc_stream = declare_stream(adc_trace=True)
@@ -123,8 +109,8 @@ class RawAcquisition(Acquisition):
         qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
-        signal = u.raw2volts(ires) + 1j * u.raw2volts(qres)
-        return self.result(signal)
+        signal = collect(u.raw2volts(ires), 1j * u.raw2volts(qres))
+        return _split(signal, self.npulses, iq=True)
 
 
 @dataclass
@@ -137,9 +123,6 @@ class IntegratedAcquisition(Acquisition):
     istream: Optional[_ResultSource] = None
     qstream: Optional[_ResultSource] = None
     """Streams to collect the results of all shots."""
-
-    RESULT_CLS = IntegratedResults
-    AVERAGED_RESULT_CLS = AveragedIntegratedResults
 
     def declare(self):
         self.i = declare(fixed)
@@ -177,7 +160,8 @@ class IntegratedAcquisition(Acquisition):
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
-        return self.result(ires + 1j * qres)
+        signal = collect(ires, qres)
+        return _split(signal, self.npulses, iq=True)
 
 
 @dataclass
@@ -199,9 +183,6 @@ class ShotsAcquisition(Acquisition):
     """Variable for calculating an individual shots."""
     shots: Optional[_ResultSource] = None
     """Stream to collect multiple shots."""
-
-    RESULT_CLS = SampleResults
-    AVERAGED_RESULT_CLS = AveragedSampleResults
 
     def __post_init__(self):
         self.cos = np.cos(self.angle)
@@ -240,7 +221,7 @@ class ShotsAcquisition(Acquisition):
 
     def fetch(self, handles):
         shots = handles.get(f"{self.name}_shots").fetch_all()
-        return self.result(shots)
+        return _split(shots, self.npulses, iq=False)
 
 
 ACQUISITION_TYPES = {
