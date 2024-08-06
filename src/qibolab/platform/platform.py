@@ -10,7 +10,6 @@ import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
-from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, PulseSequence
@@ -21,7 +20,7 @@ from qibolab.unrolling import batch
 
 InstrumentMap = dict[InstrumentId, Instrument]
 QubitMap = dict[QubitId, Qubit]
-CouplerMap = dict[QubitId, Coupler]
+CouplerMap = dict[QubitId, Qubit]
 QubitPairMap = dict[QubitPairId, QubitPair]
 
 IntegrationSetup = dict[str, tuple[np.ndarray, float]]
@@ -149,7 +148,7 @@ class Platform:
     """
 
     couplers: CouplerMap = field(default_factory=dict)
-    """Mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
+    """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
