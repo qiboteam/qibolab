@@ -6,7 +6,7 @@ This module provides a engine for Quantum Toolbox in Python (QuTiP) to simulate 
 
 from collections import OrderedDict
 from timeit import default_timer as timer
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 from qutip import Options, Qobj, basis, expect, ket2dm, mesolve, ptrace
@@ -206,7 +206,7 @@ class QutipSimulator:
         return arbitrary_state
 
     def extend_op_dim(
-        self, op_qobj: Qobj, op_indices_q: List[int] = [0], op_indices_c: List[int] = []
+        self, op_qobj: Qobj, op_indices_q: list[int] = [0], op_indices_c: list[int] = []
     ) -> Qobj:
         """Extends the dimension of an operator from its local Hilbert space to
         the full system Hilbert space.
@@ -272,7 +272,7 @@ class QutipSimulator:
         self,
         channel_waveforms: dict,
         simulate_dissipation: bool = False,
-    ) -> tuple[np.ndarray, List[int]]:
+    ) -> tuple[np.ndarray, list[int]]:
         """Performs the quantum dynamics simulation.
 
         Args:
@@ -347,8 +347,8 @@ class QutipSimulator:
         )
 
     def qobj_to_reduced_dm(
-        self, emu_qstate: Qobj, qubit_list: List[int]
-    ) -> tuple[np.ndarray, List[int]]:
+        self, emu_qstate: Qobj, qubit_list: list[int]
+    ) -> tuple[np.ndarray, list[int]]:
         """Computes the reduced density matrix of the emulator quantum state
         specified by `qubit_list`.
 
@@ -370,14 +370,14 @@ class QutipSimulator:
         return reduced_dm, rdm_qubit_list
 
     def state_from_basis_vector(
-        self, basis_vector: List[int], cbasis_vector: List[int] = None
+        self, basis_vector: list[int], cbasis_vector: list[int] = None
     ) -> Qobj:
         """Constructs the corresponding computational basis state of the
         generalized Hilbert space specified by qubit_list.
 
         Args:
-            basis_vector (List[int]): Generalized bitstring that specifies the computational basis state corresponding to the qubits in big endian order.
-            cbasis_vector (List[int]): Generalized bitstring that specifies the computational basis state corresponding to the couplers in big endian order.
+            basis_vector (list[int]): Generalized bitstring that specifies the computational basis state corresponding to the qubits in big endian order.
+            cbasis_vector (list[int]): Generalized bitstring that specifies the computational basis state corresponding to the couplers in big endian order.
 
         Returns:
             `qutip.Qobj`: Computational basis state consistent with Hilbert space
@@ -411,7 +411,7 @@ class QutipSimulator:
 
     def compute_overlaps(
         self,
-        target_states: List[Qobj],
+        target_states: list[Qobj],
         reference_states: Optional[dict[str, Qobj]] = None,
     ) -> dict:
         """Calculates the overlaps between a list of target device states, with
@@ -466,10 +466,10 @@ def make_arbitrary_state(statedata: np.ndarray, dims: list[int]) -> Qobj:
 
 def extend_op_dim(
     op_qobj: Qobj,
-    op_indices_q: List[int] = [0],
-    op_indices_c: List[int] = [],
-    nlevels_q: List[int] = [2],
-    nlevels_c: List[int] = [],
+    op_indices_q: list[int] = [0],
+    op_indices_c: list[int] = [],
+    nlevels_q: list[int] = [2],
+    nlevels_c: list[int] = [],
 ) -> Qobj:
     """Extenda the dimension of the input operator from its local Hilbert space
     to a larger n-body Hilbert space.

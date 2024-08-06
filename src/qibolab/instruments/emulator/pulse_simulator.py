@@ -3,7 +3,7 @@ device."""
 
 import copy
 import operator
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
@@ -189,7 +189,7 @@ class PulseSimulator(Controller):
         couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
-        *sweeper: List[Sweeper],
+        *sweeper: list[Sweeper],
     ) -> dict[str, Union[npt.NDArray, dict]]:
         """Executes the sweep and generates readout results, as well as
         simulation-related time and states data.
@@ -618,7 +618,7 @@ def apply_readout_noise(
 
 
 def make_comp_basis(
-    qubit_list: List[Union[int, str]], qid_nlevels_map: dict[Union[int, str], int]
+    qubit_list: list[Union[int, str]], qid_nlevels_map: dict[Union[int, str], int]
 ) -> np.ndarray:
     """Generates the computational basis states of the Hilbert space.
 
