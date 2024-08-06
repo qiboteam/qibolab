@@ -1,10 +1,22 @@
 import os
 import pathlib
+from collections.abc import Callable
+from typing import Optional
 
+import numpy as np
+import numpy.typing as npt
 import pytest
 
-from qibolab.platform import create_platform
+from qibolab import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+    Platform,
+    create_platform,
+)
 from qibolab.platform.load import PLATFORMS
+from qibolab.pulses import PulseSequence
+from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to 0.2
@@ -108,11 +120,64 @@ def connected_platform(request):
     the ``QIBOLAB_PLATFORMS`` environment variable.
     """
     os.environ[PLATFORMS] = ORIGINAL_PLATFORMS
-    name = request.config.getoption("--platform")
+    name = request.config.getoption("--device", default="dummy")
     platform = create_platform(name)
     platform.connect()
     yield platform
     platform.disconnect()
+
+
+Execution = Callable[
+    [AcquisitionType, AveragingMode, int, Optional[list[ParallelSweepers]]], npt.NDArray
+]
+
+
+@pytest.fixture
+def execute(connected_platform: Platform) -> Execution:
+    def wrapped(
+        acquisition_type: AcquisitionType,
+        averaging_mode: AveragingMode,
+        nshots: int = 1000,
+        sweepers: Optional[list[ParallelSweepers]] = None,
+        sequence: Optional[PulseSequence] = None,
+        target: Optional[tuple[int, int]] = None,
+    ) -> npt.NDArray:
+        options = ExecutionParameters(
+            nshots=nshots,
+            acquisition_type=acquisition_type,
+            averaging_mode=averaging_mode,
+        )
+
+        qubit = next(iter(connected_platform.qubits.values()))
+
+        if sequence is None:
+            qd_seq = qubit.native_gates.RX.create_sequence()
+            probe_seq = qubit.native_gates.MZ.create_sequence()
+            probe_pulse = next(iter(probe_seq.values()))[0]
+            sequence = PulseSequence()
+            sequence.extend(qd_seq)
+            sequence.extend(probe_seq)
+            if sweepers is None:
+                amp_values = np.arange(0.01, 0.06, 0.01)
+                freq_values = np.arange(-4e6, 4e6, 1e6)
+                sweeper1 = Sweeper(
+                    Parameter.bias, amp_values, channels=[qubit.flux.name]
+                )
+                sweeper2 = Sweeper(
+                    Parameter.amplitude, freq_values, pulses=[probe_pulse]
+                )
+                sweepers = [[sweeper1], [sweeper2]]
+            if target is None:
+                target = (probe_pulse.id, 0)
+
+        # default target and sweepers only supported for default sequence
+        assert target is not None
+        assert sweepers is not None
+
+        results = connected_platform.execute([sequence], options, sweepers)
+        return results[target[0]][target[1]]
+
+    return wrapped
 
 
 def pytest_generate_tests(metafunc):

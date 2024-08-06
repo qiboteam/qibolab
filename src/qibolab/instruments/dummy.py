@@ -3,6 +3,7 @@ from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.pulses import PulseSequence
+from qibolab.pulses.pulse import Pulse
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
 
@@ -62,7 +63,7 @@ class DummyInstrument(Controller):
     BOUNDS = Bounds(1, 1, 1)
 
     @property
-    def sampling_rate(self):
+    def sampling_rate(self) -> int:
         return SAMPLING_RATE
 
     def connect(self):
@@ -74,22 +75,12 @@ class DummyInstrument(Controller):
     def setup(self, *args, **kwargs):
         log.info(f"Setting up {self.name} instrument.")
 
-    def get_values(self, options, ro_pulse, shape):
+    def values(self, options: ExecutionParameters, shape: tuple[int, ...]):
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
             if options.averaging_mode is AveragingMode.SINGLESHOT:
-                values = np.random.randint(2, size=shape)
-            elif options.averaging_mode is AveragingMode.CYCLIC:
-                values = np.random.rand(*shape)
-        elif options.acquisition_type is AcquisitionType.RAW:
-            samples = int(ro_pulse.duration * SAMPLING_RATE)
-            waveform_shape = tuple(samples * dim for dim in shape)
-            values = (
-                np.random.rand(*waveform_shape) * 100
-                + 1j * np.random.rand(*waveform_shape) * 100
-            )
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            values = np.random.rand(*shape) * 100 + 1j * np.random.rand(*shape) * 100
-        return values
+                return np.random.randint(2, size=shape)
+            return np.random.rand(*shape)
+        return np.random.rand(*shape) * 100
 
     def play(
         self,
@@ -99,19 +90,10 @@ class DummyInstrument(Controller):
         integration_setup: dict[str, tuple[np.ndarray, float]],
         sweepers: list[ParallelSweepers],
     ):
-        if options.averaging_mode is not AveragingMode.CYCLIC:
-            shape = (options.nshots,) + tuple(
-                min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
-            )
-        else:
-            shape = tuple(
-                min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
+        def values(pulse: Pulse):
+            samples = int(pulse.duration * self.sampling_rate)
+            return np.array(
+                self.values(options, options.results_shape(sweepers, samples))
             )
 
-        results = {}
-        for seq in sequences:
-            for ro_pulse in seq.probe_pulses:
-                values = self.get_values(options, ro_pulse, shape)
-                results[ro_pulse.id] = options.results_type(values)
-
-        return results
+        return {ro.id: values(ro) for seq in sequences for ro in seq.probe_pulses}

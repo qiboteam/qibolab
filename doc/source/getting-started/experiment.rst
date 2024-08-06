@@ -242,6 +242,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     from qibolab import create_platform
     from qibolab.pulses import PulseSequence
+    from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -276,7 +277,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     probe_pulse = next(iter(sequence.probe_pulses))
 
     # plot the results
-    amplitudes = results[probe_pulse.id][0].magnitude
+    amplitudes = magnitude(results[probe_pulse.id][0])
     frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
 
     plt.title("Resonator Spectroscopy")

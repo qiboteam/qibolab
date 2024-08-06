@@ -11,14 +11,6 @@ from qualang_tools.units import unit
 
 from qibolab.execution_parameters import AcquisitionType, AveragingMode
 from qibolab.qubits import QubitId
-from qibolab.result import (
-    AveragedIntegratedResults,
-    AveragedRawWaveformResults,
-    AveragedSampleResults,
-    IntegratedResults,
-    RawWaveformResults,
-    SampleResults,
-)
 
 
 @dataclass
@@ -37,12 +29,6 @@ class Acquisition(ABC):
     average: bool
 
     keys: list[str] = field(default_factory=list)
-
-    RESULT_CLS = IntegratedResults
-    """Result object type that corresponds to this acquisition type."""
-    AVERAGED_RESULT_CLS = AveragedIntegratedResults
-    """Averaged result object type that corresponds to this acquisition
-    type."""
 
     @property
     def npulses(self):
@@ -81,10 +67,9 @@ class Acquisition(ABC):
 
     def result(self, data):
         """Creates Qibolab result object that is returned to the platform."""
-        res_cls = self.AVERAGED_RESULT_CLS if self.average else self.RESULT_CLS
         if self.npulses > 1:
-            return [res_cls(data[..., i]) for i in range(self.npulses)]
-        return [res_cls(data)]
+            return [data[..., i] for i in range(self.npulses)]
+        return [data]
 
 
 @dataclass
@@ -95,9 +80,6 @@ class RawAcquisition(Acquisition):
         default_factory=lambda: declare_stream(adc_trace=True)
     )
     """Stream to collect raw ADC data."""
-
-    RESULT_CLS = RawWaveformResults
-    AVERAGED_RESULT_CLS = AveragedRawWaveformResults
 
     def assign_element(self, element):
         pass
@@ -134,9 +116,6 @@ class IntegratedAcquisition(Acquisition):
     istream: _ResultSource = field(default_factory=lambda: declare_stream())
     qstream: _ResultSource = field(default_factory=lambda: declare_stream())
     """Streams to collect the results of all shots."""
-
-    RESULT_CLS = IntegratedResults
-    AVERAGED_RESULT_CLS = AveragedIntegratedResults
 
     def assign_element(self, element):
         assign_variables_to_element(element, self.i, self.q)
@@ -192,9 +171,6 @@ class ShotsAcquisition(Acquisition):
     """Variable for calculating an individual shots."""
     shots: _ResultSource = field(default_factory=lambda: declare_stream())
     """Stream to collect multiple shots."""
-
-    RESULT_CLS = SampleResults
-    AVERAGED_RESULT_CLS = AveragedSampleResults
 
     def __post_init__(self):
         self.cos = np.cos(self.angle)

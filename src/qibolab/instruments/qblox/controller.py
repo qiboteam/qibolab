@@ -12,7 +12,6 @@ from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
 from qibolab.pulses import PulseSequence, PulseType
-from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
 
@@ -523,12 +522,9 @@ class QbloxController(Controller):
     def _combine_result_chunks(chunks):
         some_chunk = next(iter(chunks))
         some_result = next(iter(some_chunk.values()))
-        attribute = "samples" if isinstance(some_result, SampleResults) else "voltage"
         return {
             key: some_result.__class__(
-                np.concatenate(
-                    [getattr(chunk[key], attribute) for chunk in chunks], axis=0
-                )
+                np.concatenate([chunk[key] for chunk in chunks], axis=0)
             )
             for key in some_chunk.keys()
         }
