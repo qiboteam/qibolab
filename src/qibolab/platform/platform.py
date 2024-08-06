@@ -24,6 +24,8 @@ QubitMap = dict[QubitId, Qubit]
 CouplerMap = dict[QubitId, Coupler]
 QubitPairMap = dict[QubitPairId, QubitPair]
 
+IntegrationSetup = dict[str, tuple[np.ndarray, float]]
+
 NS_TO_SEC = 1e-9
 
 # TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
@@ -230,7 +232,13 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequences, options, integration_setup, sweepers):
+    def _execute(
+        self,
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        integration_setup: IntegrationSetup,
+        sweepers: list[ParallelSweepers],
+    ):
         """Execute sequences on the controllers."""
         result = {}
 
@@ -296,7 +304,7 @@ class Platform:
         # FIXME: this is temporary solution to deliver the information to drivers
         # until we make acquisition channels first class citizens in the sequences
         # so that each acquisition command carries the info with it.
-        integration_setup: dict[str, tuple[np.ndarray, float]] = {}
+        integration_setup: IntegrationSetup = {}
         for qubit in self.qubits.values():
             integration_setup[qubit.acquisition.name] = (qubit.kernel, qubit.iq_angle)
 
