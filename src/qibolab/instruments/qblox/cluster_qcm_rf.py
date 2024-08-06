@@ -610,7 +610,9 @@ class QcmRf(ClusterModule):
                         and pulses[n].sweeper.type == QbloxSweeperType.duration
                     ):
                         RI = pulses[n].sweeper.register
-                        if pulses[n].type == PulseType.FLUX:
+                        # FIXME:
+                        # if pulses[n].type == PulseType.FLUX:
+                        if True:
                             RQ = pulses[n].sweeper.register
                         else:
                             RQ = pulses[n].sweeper.aux_register
