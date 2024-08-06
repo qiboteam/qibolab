@@ -236,6 +236,7 @@ class Platform:
         self,
         sequences: list[PulseSequence],
         options: ExecutionParameters,
+        configs: dict[str, Config],
         integration_setup: IntegrationSetup,
         sweepers: list[ParallelSweepers],
     ):
@@ -245,7 +246,7 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    options.updates, sequences, options, integration_setup, sweepers
+                    configs, sequences, options, integration_setup, sweepers
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -314,7 +315,7 @@ class Platform:
 
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
-            result = self._execute(b, options, integration_setup, sweepers)
+            result = self._execute(b, options, configs, integration_setup, sweepers)
             for serial, data in result.items():
                 results[serial].append(data)
 
