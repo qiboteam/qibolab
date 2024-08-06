@@ -26,64 +26,64 @@
     }
   },
   "components": {
-    "qubit_0/drive" : {
+    "qubit_0/drive": {
       "frequency": 4000000000
     },
-    "qubit_1/drive" : {
+    "qubit_1/drive": {
       "frequency": 4200000000
     },
-    "qubit_2/drive" : {
+    "qubit_2/drive": {
       "frequency": 4500000000
     },
-    "qubit_3/drive" : {
+    "qubit_3/drive": {
       "frequency": 4150000000
     },
-    "qubit_4/drive" : {
+    "qubit_4/drive": {
       "frequency": 4155663000
     },
-    "qubit_0/drive12" : {
+    "qubit_0/drive12": {
       "frequency": 4700000000
     },
-    "qubit_1/drive12" : {
+    "qubit_1/drive12": {
       "frequency": 4855663000
     },
-    "qubit_2/drive12" : {
+    "qubit_2/drive12": {
       "frequency": 2700000000
     },
-    "qubit_3/drive12" : {
+    "qubit_3/drive12": {
       "frequency": 5855663000
     },
-    "qubit_4/drive12" : {
+    "qubit_4/drive12": {
       "frequency": 5855663000
     },
-    "qubit_0/flux" : {
+    "qubit_0/flux": {
       "offset": -0.1
     },
-    "qubit_1/flux" : {
+    "qubit_1/flux": {
       "offset": 0.0
     },
-    "qubit_2/flux" : {
+    "qubit_2/flux": {
       "offset": 0.1
     },
-    "qubit_3/flux" : {
+    "qubit_3/flux": {
       "offset": 0.2
     },
-    "qubit_4/flux" : {
+    "qubit_4/flux": {
       "offset": 0.15
     },
-    "qubit_0/probe" : {
+    "qubit_0/probe": {
       "frequency": 5200000000
     },
-    "qubit_1/probe" : {
+    "qubit_1/probe": {
       "frequency": 4900000000
     },
-    "qubit_2/probe" : {
+    "qubit_2/probe": {
       "frequency": 6100000000
     },
-    "qubit_3/probe" : {
+    "qubit_3/probe": {
       "frequency": 5800000000
     },
-    "qubit_4/probe" : {
+    "qubit_4/probe": {
       "frequency": 5500000000
     },
     "qubit_0/acquire": {
@@ -106,16 +106,16 @@
       "delay": 0,
       "smearing": 0
     },
-    "coupler_0/flux" : {
+    "coupler_0/flux": {
       "offset": 0.0
     },
-    "coupler_1/flux" : {
+    "coupler_1/flux": {
       "offset": 0.0
     },
-    "coupler_3/flux" : {
+    "coupler_3/flux": {
       "offset": 0.0
     },
-    "coupler_4/flux" : {
+    "coupler_4/flux": {
       "offset": 0.0
     },
     "twpa_pump": {
@@ -129,34 +129,31 @@
         "RX": {
           "qubit_0/drive": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.1,
-              "envelope": { "kind": "gaussian", "rel_sigma": 5 },
-              "type": "qd"
+              "envelope": { "kind": "gaussian", "rel_sigma": 5.0 }
             }
           ]
         },
         "RX12": {
           "qubit_0/drive12": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.005,
-              "envelope": { "kind": "gaussian", "rel_sigma": 5 },
-              "type": "qd"
+              "envelope": { "kind": "gaussian", "rel_sigma": 5.0 }
             }
           ]
         },
         "MZ": {
           "qubit_0/probe": [
             {
-              "duration": 2000,
+              "duration": 2000.0,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "ro"
+              }
             }
           ]
         }
@@ -165,34 +162,31 @@
         "RX": {
           "qubit_1/drive": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.3,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
         },
         "RX12": {
           "qubit_1/drive12": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.0484,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
-        } ,
+        },
         "MZ": {
           "qubit_1/probe": [
             {
-              "duration": 2000,
+              "duration": 2000.0,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "ro"
+              }
             }
           ]
         }
@@ -201,34 +195,31 @@
         "RX": {
           "qubit_2/drive": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.3,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
         },
         "RX12": {
           "qubit_2/drive12": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.005,
-              "envelope": { "kind": "gaussian", "rel_sigma": 5 },
-              "type": "qd"
+              "envelope": { "kind": "gaussian", "rel_sigma": 5.0 }
             }
           ]
         },
         "MZ": {
           "qubit_2/probe": [
             {
-              "duration": 2000,
+              "duration": 2000.0,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "ro"
+              }
             }
           ]
         }
@@ -237,34 +228,31 @@
         "RX": {
           "qubit_3/drive": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.3,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
         },
         "RX12": {
           "qubit_3/drive12": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.0484,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
-           }
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
+            }
           ]
         },
         "MZ": {
           "qubit_3/probe": [
             {
-              "duration": 2000,
+              "duration": 2000.0,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "ro"
+              }
             }
           ]
         }
@@ -273,34 +261,31 @@
         "RX": {
           "qubit_4/drive": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.3,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
         },
         "RX12": {
           "qubit_4/drive12": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.0484,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
         },
         "MZ": {
           "qubit_4/probe": [
             {
-              "duration": 2000,
+              "duration": 2000.0,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "ro"
+              }
             }
           ]
         }
@@ -311,76 +296,68 @@
         "CZ": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_0/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_0/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         },
         "iSWAP": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_0/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_0/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         }
@@ -389,76 +366,68 @@
         "CZ": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_1/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_1/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         },
         "iSWAP": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_1/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_1/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         }
@@ -467,86 +436,77 @@
         "CZ": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_3/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_3/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         },
         "iSWAP": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_3/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_3/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         },
         "CNOT": {
           "qubit_2/drive": [
             {
-              "duration": 40,
+              "duration": 40.0,
               "amplitude": 0.3,
-              "envelope": { "kind": "drag", "rel_sigma": 5, "beta": 0.02 },
-              "type": "qd"
+              "envelope": { "kind": "drag", "rel_sigma": 5.0, "beta": 0.02 }
             }
           ]
         }
@@ -555,76 +515,63 @@
         "CZ": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
-            }
-          ],
-          "qubit_2/drive": [
-            {
-              "type": "vz",
-              "phase": 0.0
+              }
             }
           ],
           "qubit_4/drive": [
             {
-            "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_4/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         },
         "iSWAP": {
           "qubit_2/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "qf"
+              }
             }
           ],
           "qubit_2/drive": [
             {
-              "type": "vz",
               "phase": 0.0
             }
           ],
           "qubit_4/drive": [
             {
-            "type": "vz",
               "phase": 0.0
             }
           ],
           "coupler_4/flux": [
             {
-              "duration": 30,
+              "duration": 30.0,
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5,
+                "rel_sigma": 5.0,
                 "width": 0.75
-              },
-              "type": "cf"
+              }
             }
           ]
         }
