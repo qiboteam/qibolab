@@ -39,19 +39,16 @@ def default(value: Optional[T], default: T) -> T:
 def unroll_sequences(
     sequences: list[PulseSequence], relaxation_time: int
 ) -> tuple[PulseSequence, dict[str, list[str]]]:
-    """Unrolls a list of pulse sequences to a single pulse sequence with
-    multiple measurements.
+    """Unrolls a list of pulse sequences to a single sequence.
 
-    Args:
-        sequences (list): List of pulse sequences to unroll.
-        relaxation_time (int): Time in ns to wait for the qubit to relax between
-            playing different sequences.
+    The resulting sequence may contain multiple measurements.
 
-    Returns:
-        total_sequence (:class:`qibolab.pulses.PulseSequence`): Unrolled pulse sequence containing
-            multiple measurements.
-        readout_map (dict): Map from original readout pulse serials to the unrolled readout pulse
-            serials. Required to construct the results dictionary that is returned after execution.
+    `relaxation_time` is the time in ns to wait for the qubit to relax between playing
+    different sequences.
+
+    It returns both the unrolled pulse sequence, and the map from original readout pulse
+    serials to the unrolled readout pulse serials. Required to construct the results
+    dictionary that is returned after execution.
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
