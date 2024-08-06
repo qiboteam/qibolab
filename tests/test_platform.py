@@ -23,7 +23,7 @@ from qibolab.kernels import Kernels
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORMS
 from qibolab.platform.platform import update_configs
-from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 from qibolab.qubits import Qubit, QubitPair
 from qibolab.serialize import (
     PLATFORM,
@@ -255,7 +255,6 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
             duration=200,
             amplitude=0.07,
             envelope=Gaussian(5),
-            type=PulseType.DRIVE,
         )
     )
     result = platform.execute_pulse_sequence(
@@ -277,7 +276,6 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
             duration=200,
             amplitude=0.31,
             envelope=Rectangular(),
-            type=PulseType.COUPLERFLUX,
         )
     )
     result = platform.execute_pulse_sequence(
@@ -297,7 +295,6 @@ def test_platform_execute_one_flux_pulse(qpu_platform):
             duration=200,
             amplitude=0.28,
             envelope=Rectangular(),
-            type=PulseType.FLUX,
         )
     )
     result = platform.execute_pulse_sequence(
@@ -311,9 +308,7 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     # Long duration
     platform = qpu_platform
     qubit = next(iter(platform.qubits.values()))
-    pulse = Pulse(
-        duration=8192 + 200, amplitude=0.12, envelope=Gaussian(5), type=PulseType.DRIVE
-    )
+    pulse = Pulse(duration=8192 + 200, amplitude=0.12, envelope=Gaussian(5))
     sequence = PulseSequence()
     sequence[qubit.drive.name].append(pulse)
     options = ExecutionParameters(nshots=nshots)
@@ -333,7 +328,6 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
         duration=2 * 8192 + 200,
         amplitude=0.12,
         envelope=Gaussian(5),
-        type=PulseType.DRIVE,
     )
     sequence = PulseSequence()
     sequence[qubit.drive.name].append(pulse)
@@ -398,9 +392,7 @@ def test_platform_execute_multiple_overlaping_drive_pulses_one_readout(
     platform = qpu_platform
     qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
-    pulse = Pulse(
-        duration=200, amplitude=0.08, envelope=Gaussian(7), type=PulseType.DRIVE
-    )
+    pulse = Pulse(duration=200, amplitude=0.08, envelope=Gaussian(7))
     sequence[qubit.drive.name].append(pulse)
     sequence[qubit.drive12.name].append(pulse.copy())
     sequence[qubit.probe.name].append(Delay(duration=800))

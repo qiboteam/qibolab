@@ -2,7 +2,7 @@
 
 import pytest
 
-from qibolab.pulses import Drag, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.pulses import Drag, Pulse, PulseSequence, Rectangular
 from qibolab.unrolling import Bounds, batch
 
 
@@ -13,7 +13,6 @@ def test_bounds_update():
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
     ps["ch2"].append(
@@ -21,7 +20,6 @@ def test_bounds_update():
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
     ps["ch1"].append(
@@ -29,7 +27,6 @@ def test_bounds_update():
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
 
@@ -38,7 +35,6 @@ def test_bounds_update():
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
     ps["ch2"].append(
@@ -46,7 +42,6 @@ def test_bounds_update():
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
     ps["ch1"].append(
@@ -54,7 +49,6 @@ def test_bounds_update():
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
 
@@ -99,7 +93,6 @@ def test_batch(bounds):
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
     ps["ch2"].append(
@@ -107,7 +100,6 @@ def test_batch(bounds):
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
     ps["ch1"].append(
@@ -115,7 +107,6 @@ def test_batch(bounds):
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
 
@@ -124,7 +115,6 @@ def test_batch(bounds):
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
     ps["ch2"].append(
@@ -132,7 +122,6 @@ def test_batch(bounds):
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
     ps["ch1"].append(
@@ -140,7 +129,6 @@ def test_batch(bounds):
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
 

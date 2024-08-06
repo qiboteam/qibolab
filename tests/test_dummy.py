@@ -2,14 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.pulses import (
-    Delay,
-    Gaussian,
-    GaussianSquare,
-    Pulse,
-    PulseSequence,
-    PulseType,
-)
+from qibolab.pulses import Delay, Gaussian, GaussianSquare, Pulse, PulseSequence
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 SWEPT_POINTS = 5
@@ -52,7 +45,6 @@ def test_dummy_execute_coupler_pulse():
         duration=30,
         amplitude=0.05,
         envelope=GaussianSquare(rel_sigma=5, width=0.75),
-        type=PulseType.COUPLERFLUX,
     )
     sequence[channel.name].append(pulse)
 
@@ -154,7 +146,6 @@ def test_dummy_single_sweep_coupler(
         duration=40,
         amplitude=0.5,
         envelope=GaussianSquare(rel_sigma=0.2, width=0.75),
-        type=PulseType.COUPLERFLUX,
     )
     sequence.extend(probe_seq)
     sequence[platform.get_coupler(0).flux.name].append(coupler_pulse)
@@ -266,9 +257,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
 def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, nshots):
     platform = create_platform(name)
     sequence = PulseSequence()
-    pulse = Pulse(
-        duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5), type=PulseType.DRIVE
-    )
+    pulse = Pulse(duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     probe_pulse = next(iter(probe_seq.values()))[0]
     sequence[platform.get_qubit(0).drive.name].append(pulse)
