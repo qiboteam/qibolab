@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Union
 
 from qibolab.components.configs import IqConfig, OscillatorConfig
 from qibolab.pulses import Pulse
@@ -19,7 +20,7 @@ class QmConfig:
     controllers: dict[str, Controller] = field(default_factory=dict)
     octaves: dict[str, Octave] = field(default_factory=dict)
     elements: dict[str, Element] = field(default_factory=dict)
-    pulses: dict[str, QmPulse | QmAcquisition] = field(default_factory=dict)
+    pulses: dict[str, Union[QmPulse, QmAcquisition]] = field(default_factory=dict)
     waveforms: dict[str, Waveform] = field(default_factory=dict)
     digital_waveforms: dict = field(
         default_factory=lambda: {"ON": {"samples": [(1, 0)]}}

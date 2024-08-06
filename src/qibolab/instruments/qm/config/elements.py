@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Union
 
 import numpy as np
 
@@ -74,4 +75,4 @@ class AcquireOctaveElement:
     operations: dict[str, str] = field(default_factory=dict)
 
 
-Element = DcElement | RfOctaveElement | AcquireOctaveElement
+Element = Union[DcElement, RfOctaveElement, AcquireOctaveElement]
