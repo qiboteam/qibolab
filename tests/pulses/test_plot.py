@@ -11,7 +11,6 @@ from qibolab.pulses import (
     Iir,
     Pulse,
     PulseSequence,
-    PulseType,
     Rectangular,
     Snz,
     plot,
@@ -29,7 +28,6 @@ def test_plot_functions():
         frequency=0,
         envelope=Rectangular(),
         relative_phase=0,
-        type=PulseType.FLUX,
     )
     p1 = Pulse(
         duration=40,
@@ -37,7 +35,6 @@ def test_plot_functions():
         frequency=50e6,
         envelope=Gaussian(rel_sigma=0.2),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     p2 = Pulse(
         duration=40,
@@ -45,7 +42,6 @@ def test_plot_functions():
         frequency=50e6,
         envelope=Drag(rel_sigma=0.2, beta=2),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     p3 = Pulse.flux(
         duration=40,
@@ -59,7 +55,6 @@ def test_plot_functions():
         frequency=400e6,
         envelope=ECap(alpha=2),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     p6 = Pulse(
         duration=40,
@@ -67,7 +62,6 @@ def test_plot_functions():
         frequency=50e6,
         envelope=GaussianSquare(rel_sigma=0.2, width=0.9),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     ps = PulseSequence()
     ps.update(
