@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -237,7 +236,7 @@ def create_acquisition(
     options: ExecutionParameters,
     threshold: float,
     angle: float,
-):
+) -> Acquisition:
     """Create container for the variables used for saving acquisition in the
     QUA program.
 
@@ -260,25 +259,4 @@ def create_acquisition(
     return acquisition
 
 
-def fetch_results(result, acquisitions):
-    """Fetches results from an executed experiment.
-
-    Args:
-        result: Result of the executed experiment.
-        acquisition: Dictionary containing :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
-
-    Returns:
-        Dictionary with the results in the format required by the platform.
-    """
-    handles = result.result_handles
-    handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
-    results = defaultdict(list)
-    for acquisition in acquisitions:
-        data = acquisition.fetch(handles)
-        for serial, result in zip(acquisition.keys, data):
-            results[serial].append(result)
-
-    # collapse single element lists for back-compatibility
-    return {
-        key: value[0] if len(value) == 1 else value for key, value in results.items()
-    }
+Acquisitions = dict[tuple[str, str], Acquisition]

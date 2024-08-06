@@ -1,23 +1,25 @@
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 from qibo.config import raise_error
 from qm import qua
-from qm.qua import declare, fixed, for_
-from qualang_tools.loops import from_array
+from qm.qua import declare, fixed
+from qm.qua._dsl import _Variable  # for type declaration only
 
 from qibolab.components import Config
 from qibolab.sweeper import Parameter, Sweeper
 
-from .config import operation
-from .program import ExecutionArguments, play
+from ..config import operation
+from .arguments import ExecutionArguments
 
 MAX_OFFSET = 0.5
 """Maximum voltage supported by Quantum Machines OPX+ instrument in volts."""
 
 
-def maximum_sweep_value(values, value0):
+def maximum_sweep_value(values: npt.NDArray, value0: npt.NDArray) -> float:
     """Calculates maximum value that is reached during a sweep.
 
     Useful to check whether a sweep exceeds the range of allowed values.
@@ -32,7 +34,7 @@ def maximum_sweep_value(values, value0):
     return max(abs(min(values) + value0), abs(max(values) + value0))
 
 
-def check_max_offset(offset, max_offset=MAX_OFFSET):
+def check_max_offset(offset: Optional[float], max_offset: float = MAX_OFFSET):
     """Checks if a given offset value exceeds the maximum supported offset.
 
     This is to avoid sending high currents that could damage lab
@@ -65,23 +67,27 @@ class QuaSweep:
 
     sweeper: Sweeper
 
-    def declare(self):
+    def declare(self) -> _Variable:
         return declare(fixed)
 
     @property
-    def values(self):
+    def values(self) -> npt.NDArray:
         return self.sweeper.values
 
-    def __call__(self, variable, configs, args):
+    def __call__(
+        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
+    ):
         raise NotImplementedError
 
 
 class Frequency(QuaSweep):
 
-    def declare(self):
+    def declare(self) -> _Variable:
         return declare(int)
 
-    def __call__(self, variable, configs, args):
+    def __call__(
+        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
+    ):
         for channel in self.sweeper.channels:
             lo_frequency = configs[channel.lo].frequency
             # convert to IF frequency for readout and drive pulses
@@ -98,7 +104,9 @@ class Frequency(QuaSweep):
 
 class Amplitude(QuaSweep):
 
-    def __call__(self, variable, configs, args):
+    def __call__(
+        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
+    ):
         # TODO: Consider sweeping amplitude without multiplication
         if min(self.values) < -2:
             raise_error(
@@ -119,17 +127,21 @@ class Amplitude(QuaSweep):
 class RelativePhase(QuaSweep):
 
     @property
-    def values(self):
+    def values(self) -> npt.NDArray:
         return self.sweeper.values / (2 * np.pi)
 
-    def __call__(self, variable, configs, args):
+    def __call__(
+        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
+    ):
         for pulse in self.sweeper.pulses:
             args.parameters[operation(pulse)].phase = variable
 
 
 class Bias(QuaSweep):
 
-    def __call__(self, variable, configs, args):
+    def __call__(
+        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
+    ):
         for channel in self.sweeper.channels:
             offset = configs[channel.name].offset
             max_value = maximum_sweep_value(self.values, offset)
@@ -144,14 +156,16 @@ class Bias(QuaSweep):
 
 
 class Duration(QuaSweep):
-    def declare(self):
+    def declare(self) -> _Variable:
         return declare(int)
 
     @property
-    def values(self):
+    def values(self) -> npt.NDArray:
         return (self.sweeper.values // 4).astype(int)
 
-    def __call__(self, variable, configs, args):
+    def __call__(
+        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
+    ):
         # TODO: Handle baked pulses
         for pulse in self.sweeper.pulses:
             args.parameters[operation(pulse)].duration = variable
@@ -164,35 +178,3 @@ QUA_SWEEPERS = {
     Parameter.relative_phase: RelativePhase,
     Parameter.bias: Bias,
 }
-
-
-def _sweep_recursion(sweepers, configs, args):
-    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
-    using recursion."""
-    if len(sweepers) > 0:
-        sweeper = sweepers[0]
-        parameter = sweeper.parameter
-        if parameter in QUA_SWEEPERS:
-            qua_sweeper = QUA_SWEEPERS[parameter](sweeper)
-        else:
-            raise_error(
-                NotImplementedError, f"Sweeper for {parameter} is not implemented."
-            )
-
-        variable = qua_sweeper.declare()
-        with for_(*from_array(variable, qua_sweeper.values)):
-            qua_sweeper(variable, configs, args)
-            _sweep_recursion(sweepers[1:], configs, args)
-
-    else:
-        play(args)
-
-
-def sweep(
-    sweepers: list[Sweeper], configs: dict[str, Config], args: ExecutionArguments
-):
-    """Public sweep function that is called by the driver."""
-    # for sweeper in sweepers:
-    #    if sweeper.parameter is Parameter.duration:
-    #        _update_baked_pulses(sweeper, instructions, config)
-    _sweep_recursion(sweepers, configs, args)
