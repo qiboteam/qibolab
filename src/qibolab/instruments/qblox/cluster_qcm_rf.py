@@ -18,7 +18,7 @@ from qibolab.instruments.qblox.q1asm import (
 )
 from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 

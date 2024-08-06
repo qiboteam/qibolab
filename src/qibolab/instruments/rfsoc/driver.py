@@ -12,7 +12,7 @@ from qibosoq import client
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit
 from qibolab.sweeper import BIAS, Sweeper
 

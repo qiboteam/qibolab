@@ -10,7 +10,7 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster
 from qblox_instruments.qcodes_drivers.module import Module
 from qibo.config import log
 
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .acquisition import AveragedAcquisition, DemodulatedAcquisition
