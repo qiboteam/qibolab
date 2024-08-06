@@ -65,15 +65,15 @@ def test_ro_pulses():
             envelope=Drag(rel_sigma=0.2, beta=2),
         )
     )
-    sequence["ch3/readout"].append(Delay(duration=4))
+    sequence["ch3/probe"].append(Delay(duration=4))
     ro_pulse = Pulse(
         amplitude=0.9,
         duration=2000,
         relative_phase=0,
         envelope=Rectangular(),
     )
-    sequence["ch3/readout"].append(ro_pulse)
-    assert set(sequence.keys()) == {"ch1", "ch2/flux", "ch3/readout"}
+    sequence["ch3/probe"].append(ro_pulse)
+    assert set(sequence.keys()) == {"ch1", "ch2/flux", "ch3/probe"}
     assert sum(len(pulses) for pulses in sequence.values()) == 5
     assert len(sequence.probe_pulses) == 1
     assert sequence.probe_pulses[0] == ro_pulse
@@ -81,8 +81,8 @@ def test_ro_pulses():
 
 def test_durations():
     sequence = PulseSequence()
-    sequence["ch1/readout"].append(Delay(duration=20))
-    sequence["ch1/readout"].append(
+    sequence["ch1/probe"].append(Delay(duration=20))
+    sequence["ch1/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
@@ -96,11 +96,11 @@ def test_durations():
             envelope=Drag(rel_sigma=0.2, beta=1),
         )
     )
-    assert sequence.channel_duration("ch1/drive") == 20 + 1000
-    assert sequence.channel_duration("ch2/readout") == 40
+    assert sequence.channel_duration("ch1/probe") == 20 + 1000
+    assert sequence.channel_duration("ch2/drive") == 40
     assert sequence.duration == 20 + 1000
 
-    sequence["ch2/readout"].append(
+    sequence["ch2/drive"].append(
         Pulse(
             duration=1200,
             amplitude=0.9,
