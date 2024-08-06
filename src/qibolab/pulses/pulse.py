@@ -26,7 +26,13 @@ class PulseType(Enum):
     VIRTUALZ = "vz"
 
 
-class Pulse(Model):
+class _PulseLike(Model):
+    @property
+    def id(self) -> int:
+        return id(self)
+
+
+class Pulse(_PulseLike):
     """A pulse to be sent to the QPU."""
 
     duration: float
@@ -60,10 +66,6 @@ class Pulse(Model):
             kwargs["type"] = PulseType.FLUX
         return cls(**kwargs)
 
-    @property
-    def id(self) -> int:
-        return id(self)
-
     def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
         samples = int(self.duration * sampling_rate)
@@ -79,7 +81,7 @@ class Pulse(Model):
         return np.array([self.i(sampling_rate), self.q(sampling_rate)])
 
 
-class Delay(Model):
+class Delay(_PulseLike):
     """A wait instruction during which we are not sending any pulses to the
     QPU."""
 
@@ -89,7 +91,7 @@ class Delay(Model):
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
 
-class VirtualZ(Model):
+class VirtualZ(_PulseLike):
     """Implementation of Z-rotations using virtual phase."""
 
     phase: float
