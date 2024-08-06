@@ -79,9 +79,7 @@ class Controller(Instrument):
         If :cls:`qibolab.sweeper.Sweeper` objects are passed as arguments, they are
         executed in real-time. If not possible, an error is raised.
 
-        Returns:
-            (dict[ResultType]) mapping the serial of the readout pulses used to
-            the acquired :class:`qibolab.result.ExecutionResults` object.
+        Returns a mapping with the id of the probe pulses used to acquired data.
         """
 
 
