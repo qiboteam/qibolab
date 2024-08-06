@@ -64,19 +64,26 @@ def check_max_offset(offset: Optional[float], max_offset: float = MAX_OFFSET):
 
 @dataclass
 class QuaSweep:
+    """Base class for different sweep parameters."""
 
     sweeper: Sweeper
 
     def declare(self) -> _Variable:
+        """Declares the QUA variable that is swept."""
         return declare(fixed)
 
     @property
     def values(self) -> npt.NDArray:
+        """Returns array of values that we are sweeping over.
+
+        Implements potential normalizations.
+        """
         return self.sweeper.values
 
     def __call__(
         self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
     ):
+        """Part of the QUA program that updates the swept variable."""
         raise NotImplementedError
 
 

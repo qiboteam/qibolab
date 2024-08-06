@@ -33,7 +33,7 @@ __all__ = ["QmController", "Octave"]
 
 @dataclass(frozen=True)
 class Octave:
-    """Device handling Octaves."""
+    """User-facing object for defining Octave configuration."""
 
     name: str
     """Name of the device."""
@@ -109,16 +109,13 @@ class QmController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
     a Quantum Machines cluster.
 
-    A cluster consists of multiple :class:`qibolab.instruments.qm.devices.QMDevice` devices.
-
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
     written in QUA language.
-    The ``config`` file is generated in parts in :class:`qibolab.instruments.qm.config.QmConfig`.
-    Controllers, elements and pulses are all registered after a pulse sequence is given, so that
-    the config contains only elements related to the participating channels.
-    The QUA program for executing an arbitrary :class:`qibolab.pulses.PulseSequence` is written in
-    :meth:`qibolab.instruments.qm.controller.QMController.play` and executed in
-    :meth:`qibolab.instruments.qm.controller.QMController.execute_program`.
+    The ``config`` file is generated using the ``dataclass`` objects defined in
+    :py_mod:`qibolab.instruments.qm.config`.
+    The QUA program is generated using the methods in :py_mod:`qibolab.instruments.qm.program`.
+    Controllers, elements and pulses are added in the ``config`` after a pulse sequence is given,
+    so that only elements related to the participating channels are registered.
     """
 
     name: str
@@ -130,8 +127,9 @@ class QmController(Controller):
     """
 
     octaves: dict[str, Octave]
-    """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
-    instruments being used."""
+    """Dictionary containing the
+    :class:`qibolab.instruments.qm.controller.Octave` instruments being
+    used."""
     channels: dict[str, QmChannel]
 
     bounds: Bounds = Bounds(0, 0, 0)
@@ -181,6 +179,7 @@ class QmController(Controller):
     def __post_init__(self):
         super().__init__(self.name, self.address)
         # redefine bounds because abstract instrument overwrites them
+        # FIXME: This overwrites the ``bounds`` given in the runcard!
         self.bounds = Bounds(
             waveforms=int(4e4),
             readout=30,
@@ -235,12 +234,14 @@ class QmController(Controller):
             self.is_connected = False
 
     def configure_device(self, device: str):
+        """Add device in the ``config``."""
         if "octave" in device:
             self.config.add_octave(device, self.octaves[device].connectivity)
         else:
             self.config.add_controller(device)
 
     def configure_channel(self, channel: QmChannel, configs: dict[str, Config]):
+        """Add element (QM version of channel) in the config."""
         logical_channel = channel.logical_channel
         channel_config = configs[logical_channel.name]
         self.configure_device(channel.device)
@@ -269,6 +270,7 @@ class QmController(Controller):
             raise TypeError(f"Unknown channel type: {type(channel)}.")
 
     def register_pulse(self, channel: Channel, pulse: Pulse):
+        """Add pulse in the ``config``."""
         # if (
         #    pulse.duration % 4 != 0
         #    or pulse.duration < 16
@@ -284,18 +286,11 @@ class QmController(Controller):
         return self.config.register_acquisition_pulse(channel.name, pulse)
 
     def register_pulses(self, configs, sequence, integration_setup, options):
-        """Translates a :class:`qibolab.pulses.PulseSequence` to
-        :class:`qibolab.instruments.qm.instructions.Instructions`.
-
-        Args:
-            sequence (:class:`qibolab.pulses.PulseSequence`). Pulse sequence to translate.
-            configs (dict):
-            options:
-            sweepers (list): List of sweeper objects so that pulses that require baking are identified.
+        """Adds all pulses of a given :class:`qibolab.pulses.PulseSequence` in
+        the ``config``.
 
         Returns:
             acquisitions (dict): Map from measurement instructions to acquisition objects.
-            parameters (dict):
         """
         acquisitions = {}
         for name, channel_sequence in sequence.items():
@@ -334,20 +329,12 @@ class QmController(Controller):
         return acquisitions
 
     def execute_program(self, program):
-        """Executes an arbitrary program written in QUA language.
-
-        Args:
-            program: QUA program.
-        """
+        """Executes an arbitrary program written in QUA language."""
         machine = self.manager.open_qm(asdict(self.config))
         return machine.execute(program)
 
     def simulate_program(self, program):
-        """Simulates an arbitrary program written in QUA language.
-
-        Args:
-            program: QUA program.
-        """
+        """Simulates an arbitrary program written in QUA language."""
         ncontrollers = len(self.config.controllers)
         controller_connections = create_simulator_controller_connections(ncontrollers)
         simulation_config = SimulationConfig(

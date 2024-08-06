@@ -14,7 +14,11 @@ __all__ = ["QmConfig"]
 
 @dataclass
 class QmConfig:
-    """Configuration for communicating with the ``QuantumMachinesManager``."""
+    """Configuration for communicating with the ``QuantumMachinesManager``.
+
+    Contains nested ``dataclass`` objects and is serialized using ``asdict``
+    to be sent to the instrument.
+    """
 
     version: int = 1
     controllers: dict[str, Controller] = field(default_factory=dict)

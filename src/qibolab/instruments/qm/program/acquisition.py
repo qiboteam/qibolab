@@ -18,8 +18,11 @@ from qibolab.result import collect
 
 
 def _split(data, npulses, iq=False):
-    """Split results of different readout pulses that were acquired in the same
-    acquisition."""
+    """Split results of different readout pulses to list.
+
+    These results were acquired in the same acquisition stream in the
+    instrument.
+    """
     if npulses == 1:
         return [data]
     if iq:
