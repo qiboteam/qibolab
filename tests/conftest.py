@@ -1,6 +1,7 @@
 import os
 import pathlib
 from collections.abc import Callable
+from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -15,7 +16,7 @@ from qibolab import (
 )
 from qibolab.platform.load import PLATFORMS
 from qibolab.pulses import PulseSequence
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to 0.2
@@ -126,7 +127,9 @@ def connected_platform(request):
     platform.disconnect()
 
 
-Execution = Callable[[AcquisitionType, AveragingMode, bool], npt.NDArray]
+Execution = Callable[
+    [AcquisitionType, AveragingMode, int, Optional[list[ParallelSweepers]]], npt.NDArray
+]
 
 
 @pytest.fixture
@@ -134,9 +137,15 @@ def execute(connected_platform: Platform) -> Execution:
     def wrapped(
         acquisition_type: AcquisitionType,
         averaging_mode: AveragingMode,
-        sweep: bool = False,
         nshots: int = 1000,
+        sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> npt.NDArray:
+        options = ExecutionParameters(
+            nshots=nshots,
+            acquisition_type=acquisition_type,
+            averaging_mode=averaging_mode,
+        )
+
         qubit = next(iter(connected_platform.qubits.values()))
 
         qd_seq = qubit.native_gates.RX.create_sequence()
@@ -145,22 +154,14 @@ def execute(connected_platform: Platform) -> Execution:
         sequence = PulseSequence()
         sequence.extend(qd_seq)
         sequence.extend(probe_seq)
-
-        options = ExecutionParameters(
-            nshots=nshots,
-            acquisition_type=acquisition_type,
-            averaging_mode=averaging_mode,
-        )
-        if sweep:
+        if sweepers is None:
             amp_values = np.arange(0.01, 0.06, 0.01)
             freq_values = np.arange(-4e6, 4e6, 1e6)
             sweeper1 = Sweeper(Parameter.bias, amp_values, channels=[qubit.flux.name])
             sweeper2 = Sweeper(Parameter.amplitude, freq_values, pulses=[probe_pulse])
-            results = connected_platform.execute(
-                [sequence], options, [[sweeper1], [sweeper2]]
-            )
-        else:
-            results = connected_platform.execute([sequence], options)
+            sweepers = [[sweeper1], [sweeper2]]
+
+        results = connected_platform.execute([sequence], options, sweepers)
         return results[probe_pulse.id][0]
 
     return wrapped
