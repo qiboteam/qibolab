@@ -2,7 +2,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script, qua
 from qm.octave import QmOctaveConfig
@@ -117,10 +117,10 @@ class QMController(Controller):
     Has the form XXX.XXX.XXX.XXX:XXX.
     """
 
-    opxs: Dict[int, OPXplus] = field(default_factory=dict)
+    opxs: dict[int, OPXplus] = field(default_factory=dict)
     """Dictionary containing the
     :class:`qibolab.instruments.qm.devices.OPXplus` instruments being used."""
-    octaves: Dict[int, Octave] = field(default_factory=dict)
+    octaves: dict[int, Octave] = field(default_factory=dict)
     """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
     instruments being used."""
 

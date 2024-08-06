@@ -1,6 +1,6 @@
 import collections
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Union
+from typing import List, Optional, Set, Union
 
 import numpy as np
 from numpy import typing as npt
@@ -189,12 +189,12 @@ class Sequence:
     qmpulses: List[QMPulse] = field(default_factory=list)
     """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to
     the original pulses."""
-    pulse_to_qmpulse: Dict[Pulse, QMPulse] = field(default_factory=dict)
+    pulse_to_qmpulse: dict[Pulse, QMPulse] = field(default_factory=dict)
     """Map from qibolab pulses to QMPulses (useful when sweeping)."""
-    clock: Dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
+    clock: dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
     """Dictionary used to keep track of times of each element, in order to
     calculate wait times."""
-    pulse_finish: Dict[int, List[QMPulse]] = field(
+    pulse_finish: dict[int, List[QMPulse]] = field(
         default_factory=lambda: collections.defaultdict(list)
     )
     """Map to find all pulses that finish at a given time (useful for

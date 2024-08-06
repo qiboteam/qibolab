@@ -6,7 +6,7 @@ This module provides a engine for Quantum Toolbox in Python (QuTiP) to simulate 
 
 from collections import OrderedDict
 from timeit import default_timer as timer
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import numpy as np
 from qutip import Options, Qobj, basis, expect, ket2dm, mesolve, ptrace
@@ -412,7 +412,7 @@ class QutipSimulator:
     def compute_overlaps(
         self,
         target_states: List[Qobj],
-        reference_states: Optional[Dict[str, Qobj]] = None,
+        reference_states: Optional[dict[str, Qobj]] = None,
     ) -> dict:
         """Calculates the overlaps between a list of target device states, with
         respect to a list of reference device states.

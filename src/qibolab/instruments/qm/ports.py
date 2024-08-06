@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import ClassVar, Dict, Optional, Union
+from typing import ClassVar, Optional, Union
 
 DIGITAL_DELAY = 57
 DIGITAL_BUFFER = 18
@@ -94,7 +94,7 @@ class OPXOutput(QMOutput):
 
     offset: float = field(default=0.0, metadata={"config": "offset"})
     """Constant voltage to be applied on the output."""
-    filter: Dict[str, float] = field(
+    filter: dict[str, float] = field(
         default_factory=dict, metadata={"config": "filter", "settings": True}
     )
     """FIR and IIR filters to be applied to correct signal distortions."""
