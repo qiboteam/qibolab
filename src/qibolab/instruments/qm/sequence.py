@@ -1,6 +1,6 @@
 import collections
 from dataclasses import dataclass, field
-from typing import Optional, Set, Union
+from typing import Optional, Union
 
 import numpy as np
 from numpy import typing as npt
@@ -57,13 +57,13 @@ class QMPulse:
     """Data class containing the variables required for data acquisition for
     the instrument."""
 
-    next_: Set["QMPulse"] = field(default_factory=set)
+    next_: set["QMPulse"] = field(default_factory=set)
     """Pulses that will be played after the current pulse.
 
     These pulses need to be re-aligned if we are sweeping the start or
     duration.
     """
-    elements_to_align: Set[str] = field(default_factory=set)
+    elements_to_align: set[str] = field(default_factory=set)
 
     def __post_init__(self):
         pulse_type = self.pulse.type.name.lower()
