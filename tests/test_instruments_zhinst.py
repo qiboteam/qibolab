@@ -13,7 +13,6 @@ from qibolab.pulses import (
     Iir,
     Pulse,
     PulseSequence,
-    PulseType,
     Rectangular,
     Snz,
 )
