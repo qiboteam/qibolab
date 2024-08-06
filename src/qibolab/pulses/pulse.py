@@ -1,6 +1,5 @@
 """Pulse class."""
 
-from enum import Enum
 from typing import Union
 
 import numpy as np
@@ -8,22 +7,6 @@ import numpy as np
 from qibolab.serialize_ import Model
 
 from .envelope import Envelope, IqWaveform, Waveform
-
-
-class PulseType(Enum):
-    """An enumeration to distinguish different types of pulses.
-
-    READOUT pulses triger acquisitions. DRIVE pulses are used to control
-    qubit states. FLUX pulses are used to shift the frequency of flux
-    tunable qubits and with it implement two-qubit gates.
-    """
-
-    READOUT = "ro"
-    DRIVE = "qd"
-    FLUX = "qf"
-    COUPLERFLUX = "cf"
-    DELAY = "dl"
-    VIRTUALZ = "vz"
 
 
 class _PulseLike(Model):
@@ -51,8 +34,6 @@ class Pulse(_PulseLike):
     """
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
-    type: PulseType = PulseType.DRIVE
-    """Pulse type, as an element of PulseType enumeration."""
 
     @classmethod
     def flux(cls, **kwargs):
@@ -62,8 +43,6 @@ class Pulse(_PulseLike):
         suitable defaults.
         """
         kwargs["relative_phase"] = 0
-        if "type" not in kwargs:
-            kwargs["type"] = PulseType.FLUX
         return cls(**kwargs)
 
     def i(self, sampling_rate: float) -> Waveform:
@@ -87,8 +66,6 @@ class Delay(_PulseLike):
 
     duration: int
     """Delay duration in ns."""
-    type: PulseType = PulseType.DELAY
-    """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
 
 class VirtualZ(_PulseLike):
@@ -96,7 +73,6 @@ class VirtualZ(_PulseLike):
 
     phase: float
     """Phase that implements the rotation."""
-    type: PulseType = PulseType.VIRTUALZ
 
     @property
     def duration(self):
