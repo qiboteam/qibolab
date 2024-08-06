@@ -4,7 +4,6 @@ from typing import Optional, Union
 import numpy as np
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
-from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
