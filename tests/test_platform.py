@@ -24,6 +24,7 @@ from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORMS
 from qibolab.platform.platform import update_configs
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.qubits import Qubit, QubitPair
 from qibolab.serialize import (
     PLATFORM,
     dump_kernels,
@@ -57,6 +58,23 @@ def test_create_platform(platform):
 def test_create_platform_error():
     with pytest.raises(ValueError):
         platform = create_platform("nonexistent")
+
+
+def test_platform_basics():
+    platform = Platform("ciao", {}, {}, {}, {})
+    assert str(platform) == "ciao"
+    assert platform.topology == []
+
+    qs = {q: Qubit(q) for q in range(10)}
+    platform2 = Platform(
+        "come va?",
+        qs,
+        {(q1, q2): QubitPair(qs[q1], qs[q2]) for q1 in range(3) for q2 in range(4, 8)},
+        {},
+        {},
+    )
+    assert str(platform2) == "come va?"
+    assert (1, 6) in platform2.topology
 
 
 def test_create_platform_multipath(tmp_path: Path):
