@@ -111,7 +111,7 @@ class RawAcquisition(Acquisition):
         qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
-        signal = collect(u.raw2volts(ires), 1j * u.raw2volts(qres))
+        signal = collect(u.raw2volts(ires), u.raw2volts(qres))
         return _split(signal, self.npulses, iq=True)
 
 
