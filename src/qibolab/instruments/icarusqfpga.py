@@ -1,6 +1,6 @@
 import operator
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import List, Union
 
 import numpy as np
 from icarusq_rfsoc_driver import IcarusQRFSoC  # pylint: disable=E0401
@@ -68,7 +68,7 @@ class RFSOC(Controller):
 
     def play(
         self,
-        qubits: Dict[QubitId, Qubit],
+        qubits: dict[QubitId, Qubit],
         couplers,
         sequence: PulseSequence,
         options: ExecutionParameters,
@@ -222,7 +222,7 @@ class RFSOC_RO(RFSOC):
 
     def play(
         self,
-        qubits: Dict[QubitId, Qubit],
+        qubits: dict[QubitId, Qubit],
         couplers,
         sequence: PulseSequence,
         options: ExecutionParameters,
@@ -284,9 +284,9 @@ class RFSOC_RO(RFSOC):
 
     def process_readout_signal(
         self,
-        adc_raw_data: Dict[int, np.ndarray],
+        adc_raw_data: dict[int, np.ndarray],
         sequence: List[Pulse],
-        qubits: Dict[QubitId, Qubit],
+        qubits: dict[QubitId, Qubit],
         options: ExecutionParameters,
     ):
         """Processes the raw signal from the ADC into IQ values."""
@@ -318,7 +318,7 @@ class RFSOC_RO(RFSOC):
 
     def sweep(
         self,
-        qubits: Dict[QubitId, Qubit],
+        qubits: dict[QubitId, Qubit],
         couplers,
         sequence: PulseSequence,
         options: ExecutionParameters,
@@ -353,7 +353,7 @@ class RFSOC_RO(RFSOC):
 
     def _sweep_recursion(
         self,
-        qubits: Dict[QubitId, Qubit],
+        qubits: dict[QubitId, Qubit],
         couplers,
         sequence: PulseSequence,
         options: ExecutionParameters,

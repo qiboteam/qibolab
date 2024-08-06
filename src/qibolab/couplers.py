@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from qibolab.components import DcChannel
 from qibolab.native import SingleQubitNatives
@@ -29,8 +29,8 @@ class Coupler:
     "flux (:class:`qibolab.platforms.utils.Channel`): Channel used to send flux pulses to the qubit."
 
     # TODO: With topology or conectivity
-    # qubits: Optional[Dict[QubitId, Qubit]] = field(default_factory=dict)
-    qubits: Dict = field(default_factory=dict)
+    # qubits: Optional[dict[QubitId, Qubit]] = field(default_factory=dict)
+    qubits: dict = field(default_factory=dict)
     "Qubits the coupler acts on"
 
     @property

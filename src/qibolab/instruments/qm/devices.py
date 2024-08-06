@@ -1,7 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import Dict
 
 from qibolab.instruments.abstract import Instrument
 
@@ -38,9 +37,9 @@ class QMDevice(Instrument):
     name: str
     """Name of the device."""
 
-    outputs: Dict[int, QMOutput] = field(init=False)
+    outputs: dict[int, QMOutput] = field(init=False)
     """Dictionary containing the instrument's output ports."""
-    inputs: Dict[int, QMInput] = field(init=False)
+    inputs: dict[int, QMInput] = field(init=False)
     """Dictionary containing the instrument's input ports."""
 
     def ports(self, number, output=True):

@@ -80,7 +80,7 @@ class Controller(Instrument):
         executed in real-time. If not possible, an error is raised.
 
         Returns:
-            (Dict[ResultType]) mapping the serial of the readout pulses used to
+            (dict[ResultType]) mapping the serial of the readout pulses used to
             the acquired :class:`qibolab.result.ExecutionResults` object.
         """
 

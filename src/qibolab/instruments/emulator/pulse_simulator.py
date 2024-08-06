@@ -3,7 +3,7 @@ device."""
 
 import copy
 import operator
-from typing import Dict, List, Union
+from typing import List, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -132,8 +132,8 @@ class PulseSimulator(Controller):
 
     def play(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, npt.NDArray]:
@@ -185,8 +185,8 @@ class PulseSimulator(Controller):
     ### sweeper adapted from icarusqfpga ###
     def sweep(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweeper: List[Sweeper],
@@ -278,8 +278,8 @@ class PulseSimulator(Controller):
 
     def _sweep_recursion(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweeper: Sweeper,
@@ -337,8 +337,8 @@ class PulseSimulator(Controller):
 
     def _sweep_play(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[Union[str, int], list]:
