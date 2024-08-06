@@ -17,12 +17,25 @@ from qibolab.unrolling import Bounds
 
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
-from .octave import Octave
 from .program import create_acquisition, program
 
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
+
+__all__ = ["QmController", "Octave"]
+
+
+@dataclass(frozen=True)
+class Octave:
+    """Device handling Octaves."""
+
+    name: str
+    """Name of the device."""
+    port: int
+    """Network port of the Octave in the cluster configuration."""
+    connectivity: str
+    """OPXplus that acts as the waveform generator for the Octave."""
 
 
 def declare_octaves(octaves, host, calibration_path=None):
