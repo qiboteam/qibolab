@@ -9,7 +9,7 @@ __all__ = [
 
 @dataclass(frozen=True)
 class QmChannel:
-    """Channel for Zurich Instruments (ZI) devices."""
+    """Channel for Quantum Machines devices."""
 
     logical_channel: Channel
     """Corresponding logical channel."""
