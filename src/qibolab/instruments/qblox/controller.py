@@ -359,7 +359,9 @@ class QbloxController(Controller):
                 elif sweeper.parameter is Parameter.lo_frequency:
                     initial = {}
                     for pulse in sweeper.pulses:
-                        if pulse.type == PulseType.READOUT:
+                        # FIXME:
+                        # if pulse.type == PulseType.READOUT:
+                        if True:
                             initial[pulse.id] = qubits[pulse.qubit].readout.lo_frequency
                             if sweeper.type == SweeperType.ABSOLUTE:
                                 qubits[pulse.qubit].readout.lo_frequency = value
@@ -371,8 +373,9 @@ class QbloxController(Controller):
                                 qubits[pulse.qubit].readout.lo_frequency = (
                                     initial[pulse.id] * value
                                 )
-
-                        elif pulse.type == PulseType.DRIVE:
+                        # FIXME:
+                        # elif pulse.type == PulseType.DRIVE:
+                        elif True:
                             initial[pulse.id] = qubits[pulse.qubit].drive.lo_frequency
                             if sweeper.type == SweeperType.ABSOLUTE:
                                 qubits[pulse.qubit].drive.lo_frequency = value
