@@ -7,7 +7,7 @@ from qualang_tools.loops import from_array
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab.pulses import Delay, PulseSequence
-from qibolab.sweeper import ParallelSweepers, Sweeper
+from qibolab.sweeper import ParallelSweepers
 
 from ..config import operation
 from .acquisition import Acquisition, Acquisitions
@@ -68,7 +68,11 @@ def _sweep_recursion(sweepers, configs, args):
     """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
     using recursion."""
     if len(sweepers) > 0:
-        sweeper = sweepers[0]
+        parallel_sweepers = sweepers[0]
+        if len(parallel_sweepers) > 1:
+            raise NotImplementedError
+
+        sweeper = parallel_sweepers[0]
         parameter = sweeper.parameter
         if parameter in QUA_SWEEPERS:
             qua_sweeper = QUA_SWEEPERS[parameter](sweeper)
@@ -85,7 +89,9 @@ def _sweep_recursion(sweepers, configs, args):
 
 
 def sweep(
-    sweepers: list[Sweeper], configs: dict[str, Config], args: ExecutionArguments
+    sweepers: list[ParallelSweepers],
+    configs: dict[str, Config],
+    args: ExecutionArguments,
 ):
     """Public sweep function that is called by the driver."""
     # for sweeper in sweepers:
