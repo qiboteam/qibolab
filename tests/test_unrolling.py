@@ -8,21 +8,21 @@ from qibolab.unrolling import Bounds, batch
 
 def test_bounds_update():
     ps = PulseSequence()
-    ps["ch3"].append(
+    ps["ch3/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
         )
     )
-    ps["ch2"].append(
+    ps["ch2/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
         )
     )
-    ps["ch1"].append(
+    ps["ch1/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
@@ -30,21 +30,21 @@ def test_bounds_update():
         )
     )
 
-    ps["ch3"].append(
+    ps["ch3/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
         )
     )
-    ps["ch2"].append(
+    ps["ch2/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
         )
     )
-    ps["ch1"].append(
+    ps["ch1/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
@@ -88,21 +88,21 @@ def test_bounds_comparison():
 )
 def test_batch(bounds):
     ps = PulseSequence()
-    ps["ch3"].append(
+    ps["ch3/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
         )
     )
-    ps["ch2"].append(
+    ps["ch2/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
         )
     )
-    ps["ch1"].append(
+    ps["ch1/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
@@ -110,21 +110,21 @@ def test_batch(bounds):
         )
     )
 
-    ps["ch3"].append(
+    ps["ch3/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
         )
     )
-    ps["ch2"].append(
+    ps["ch2/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
         )
     )
-    ps["ch1"].append(
+    ps["ch1/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
