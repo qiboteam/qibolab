@@ -95,7 +95,6 @@ def sweep(
 
 
 def program(
-    self,
     configs: dict[str, Config],
     sequence: PulseSequence,
     options: ExecutionParameters,
