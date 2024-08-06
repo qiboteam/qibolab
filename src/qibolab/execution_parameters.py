@@ -29,6 +29,11 @@ class AveragingMode(Enum):
     SEQUENTIAL = auto()
     """SEQUENTIAL: Worse averaging for noise[Avoid]"""
 
+    @property
+    def average(self) -> bool:
+        """Whether an average is performed or not."""
+        return self is not AveragingMode.SINGLESHOT
+
 
 ConfigUpdate = dict[str, dict[str, Any]]
 """Update for component configs.

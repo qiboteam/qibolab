@@ -174,11 +174,10 @@ def test_dummy_single_sweep_coupler(
         acquisition_type=acquisition,
         fast_reset=fast_reset,
     )
-    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.execute([sequence], options, [[sweeper]])
 
     assert probe_pulse.id in results
-    if average:
+    if not options.averaging_mode.average:
         results_shape = (
             results[probe_pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
@@ -190,8 +189,9 @@ def test_dummy_single_sweep_coupler(
             if acquisition is AcquisitionType.INTEGRATION
             else results[probe_pulse.id][0].shape
         )
+
     expected_shape = (SWEPT_POINTS,)
-    if not average:
+    if not options.averaging_mode.average:
         expected_shape = (nshots,) + expected_shape
     if acquisition is not AcquisitionType.DISCRIMINATION:
         expected_shape += (2,)
@@ -231,11 +231,10 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
         acquisition_type=acquisition,
         fast_reset=fast_reset,
     )
-    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.execute([sequence], options, [[sweeper]])
 
     assert pulse.id in results
-    if average:
+    if options.averaging_mode.average:
         results_shape = (
             results[pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
@@ -249,7 +248,7 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
         )
 
     expected_shape = (SWEPT_POINTS,)
-    if not average:
+    if not options.averaging_mode.average:
         expected_shape = (nshots,) + expected_shape
     if acquisition is not AcquisitionType.DISCRIMINATION:
         expected_shape += (2,)
@@ -307,12 +306,11 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
         averaging_mode=average,
         acquisition_type=acquisition,
     )
-    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
 
     assert probe_pulse.id in results
 
-    if average:
+    if options.averaging_mode.average:
         results_shape = (
             results[probe_pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
@@ -326,7 +324,7 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
         )
 
     expected_shape = (SWEPT_POINTS, SWEPT_POINTS)
-    if not average:
+    if not options.averaging_mode.average:
         expected_shape = (nshots,) + expected_shape
     if acquisition is not AcquisitionType.DISCRIMINATION:
         expected_shape += (2,)
@@ -372,12 +370,11 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         averaging_mode=average,
         acquisition_type=acquisition,
     )
-    average = not options.averaging_mode is AveragingMode.SINGLESHOT
     results = platform.execute([sequence], options, [[sweeper1]])
 
     for pulse in probe_pulses.values():
         assert pulse.id in results
-        if average:
+        if not options.averaging_mode.average:
             results_shape = (
                 results[pulse.id][0].shape
                 if acquisition is AcquisitionType.INTEGRATION
@@ -391,11 +388,8 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
             )
 
         expected_shape = (SWEPT_POINTS,)
-        if not average:
+        if not options.averaging_mode.average:
             expected_shape = (nshots,) + expected_shape
         if acquisition is not AcquisitionType.DISCRIMINATION:
             expected_shape += (2,)
         assert results_shape == expected_shape
-
-
-# TODO: add test_dummy_double_sweep_multiplex
