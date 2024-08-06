@@ -38,11 +38,9 @@ def test_dummy_execute_pulse_sequence(name, acquisition):
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute([sequence], options)
     if acquisition is AcquisitionType.INTEGRATION:
-        assert result[probe_pulse.id][0].magnitude.shape == (nshots,)
+        assert result[probe_pulse.id][0].shape == (nshots, 2)
     elif acquisition is AcquisitionType.RAW:
-        assert result[probe_pulse.id][0].magnitude.shape == (
-            nshots * probe_seq.duration,
-        )
+        assert result[probe_pulse.id][0].shape == (nshots, int(probe_seq.duration), 2)
 
 
 def test_dummy_execute_coupler_pulse():
@@ -132,8 +130,8 @@ def test_dummy_single_sweep_raw(name):
     )
     results = platform.execute([sequence], options, [[sweeper]])
     assert pulse.id in results
-    shape = results[pulse.id][0].magnitude.shape
-    assert shape == (pulse.duration * SWEPT_POINTS,)
+    shape = results[pulse.id][0].shape
+    assert shape == (SWEPT_POINTS, int(pulse.duration), 2)
 
 
 @pytest.mark.parametrize("fast_reset", [True, False])
@@ -182,17 +180,22 @@ def test_dummy_single_sweep_coupler(
     assert probe_pulse.id in results
     if average:
         results_shape = (
-            results[probe_pulse.id][0].magnitude.shape
+            results[probe_pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].statistical_frequency.shape
+            else results[probe_pulse.id][0].shape
         )
     else:
         results_shape = (
-            results[probe_pulse.id][0].magnitude.shape
+            results[probe_pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].samples.shape
+            else results[probe_pulse.id][0].shape
         )
-    assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
+    expected_shape = (SWEPT_POINTS,)
+    if not average:
+        expected_shape = (nshots,) + expected_shape
+    if acquisition is not AcquisitionType.DISCRIMINATION:
+        expected_shape += (2,)
+    assert results_shape == expected_shape
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -234,17 +237,23 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
     assert pulse.id in results
     if average:
         results_shape = (
-            results[pulse.id][0].magnitude.shape
+            results[pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.id][0].statistical_frequency.shape
+            else results[pulse.id][0].shape
         )
     else:
         results_shape = (
-            results[pulse.id][0].magnitude.shape
+            results[pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.id][0].samples.shape
+            else results[pulse.id][0].shape
         )
-    assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
+
+    expected_shape = (SWEPT_POINTS,)
+    if not average:
+        expected_shape = (nshots,) + expected_shape
+    if acquisition is not AcquisitionType.DISCRIMINATION:
+        expected_shape += (2,)
+    assert results_shape == expected_shape
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -305,22 +314,23 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
 
     if average:
         results_shape = (
-            results[probe_pulse.id][0].magnitude.shape
+            results[probe_pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].statistical_frequency.shape
+            else results[probe_pulse.id][0].shape
         )
     else:
         results_shape = (
-            results[probe_pulse.id][0].magnitude.shape
+            results[probe_pulse.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].samples.shape
+            else results[probe_pulse.id][0].shape
         )
 
-    assert (
-        results_shape == (SWEPT_POINTS, SWEPT_POINTS)
-        if average
-        else (nshots, SWEPT_POINTS, SWEPT_POINTS)
-    )
+    expected_shape = (SWEPT_POINTS, SWEPT_POINTS)
+    if not average:
+        expected_shape = (nshots,) + expected_shape
+    if acquisition is not AcquisitionType.DISCRIMINATION:
+        expected_shape += (2,)
+    assert results_shape == expected_shape
 
 
 @pytest.mark.parametrize("name", PLATFORM_NAMES)
@@ -369,17 +379,23 @@ def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nsh
         assert pulse.id in results
         if average:
             results_shape = (
-                results[pulse.id][0].magnitude.shape
+                results[pulse.id][0].shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[pulse.id][0].statistical_frequency.shape
+                else results[pulse.id][0].shape
             )
         else:
             results_shape = (
-                results[pulse.id][0].magnitude.shape
+                results[pulse.id][0].shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[pulse.id][0].samples.shape
+                else results[pulse.id][0].shape
             )
-        assert results_shape == (SWEPT_POINTS,) if average else (nshots, SWEPT_POINTS)
+
+        expected_shape = (SWEPT_POINTS,)
+        if not average:
+            expected_shape = (nshots,) + expected_shape
+        if acquisition is not AcquisitionType.DISCRIMINATION:
+            expected_shape += (2,)
+        assert results_shape == expected_shape
 
 
 # TODO: add test_dummy_double_sweep_multiplex
