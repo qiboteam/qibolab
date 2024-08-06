@@ -4,7 +4,7 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import prod
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Optional, TypeVar
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -19,10 +19,10 @@ from qibolab.serialize_ import replace
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import batch
 
-InstrumentMap = Dict[InstrumentId, Instrument]
-QubitMap = Dict[QubitId, Qubit]
-CouplerMap = Dict[QubitId, Coupler]
-QubitPairMap = Dict[QubitPairId, QubitPair]
+InstrumentMap = dict[InstrumentId, Instrument]
+QubitMap = dict[QubitId, Qubit]
+CouplerMap = dict[QubitId, Coupler]
+QubitPairMap = dict[QubitPairId, QubitPair]
 
 NS_TO_SEC = 1e-9
 
@@ -37,8 +37,8 @@ def default(value: Optional[T], default: T) -> T:
 
 
 def unroll_sequences(
-    sequences: List[PulseSequence], relaxation_time: int
-) -> Tuple[PulseSequence, dict[str, list[str]]]:
+    sequences: list[PulseSequence], relaxation_time: int
+) -> tuple[PulseSequence, dict[str, list[str]]]:
     """Unrolls a list of pulse sequences to a single pulse sequence with
     multiple measurements.
 
@@ -131,15 +131,14 @@ class Platform:
     name: str
     """Name of the platform."""
     qubits: QubitMap
-    """Dictionary mapping qubit names to :class:`qibolab.qubits.Qubit`
-    objects."""
+    """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
     pairs: QubitPairMap
-    """Dictionary mapping tuples of qubit names to
-    :class:`qibolab.qubits.QubitPair` objects."""
+    """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
+    objects."""
     configs: dict[str, Config]
-    """Maps name of component to its default config."""
+    """Mapping name of component to its default config."""
     instruments: InstrumentMap
-    """Dictionary mapping instrument names to
+    """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
 
     settings: Settings = field(default_factory=Settings)
@@ -151,8 +150,7 @@ class Platform:
     """
 
     couplers: CouplerMap = field(default_factory=dict)
-    """Dictionary mapping coupler names to :class:`qibolab.couplers.Coupler`
-    objects."""
+    """Mapping coupler names to :class:`qibolab.couplers.Coupler` objects."""
 
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
@@ -251,7 +249,7 @@ class Platform:
 
     def execute(
         self,
-        sequences: List[PulseSequence],
+        sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[Any, list]:
