@@ -6,7 +6,6 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
-from qibolab.channels import check_max_offset
 from qibolab.instruments.qm.sequence import BakedPulse
 from qibolab.pulses import PulseType
 from qibolab.sweeper import Parameter
@@ -25,6 +24,18 @@ def maximum_sweep_value(values, value0):
         value0 (float, int): Center value of the sweep.
     """
     return max(abs(min(values) + value0), abs(max(values) + value0))
+
+
+def check_max_offset(offset, max_offset):
+    """Checks if a given offset value exceeds the maximum supported offset.
+
+    This is to avoid sending high currents that could damage lab
+    equipment such as amplifiers.
+    """
+    if max_offset is not None and abs(offset) > max_offset:
+        raise_error(
+            ValueError, f"{offset} exceeds the maximum allowed offset {max_offset}."
+        )
 
 
 def _update_baked_pulses(sweeper, qmsequence, config):

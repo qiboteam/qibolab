@@ -16,7 +16,6 @@ In the platform, the main methods can be divided in different sections:
 - functions save and change qubit parameters (``dump``, ``update``)
 - functions to coordinate the instruments (``connect``, ``setup``, ``disconnect``)
 - a unique interface to execute experiments (``execute``)
-- functions to initialize gates (``create_RX90_pulse``, ``create_RX_pulse``, ``create_CZ_pulse``, ``create_MZ_pulse``, ``create_qubit_drive_pulse``, ``create_qubit_readout_pulse``, ``create_RX90_drag_pulse``, ``create_RX_drag_pulse``)
 - setters and getters of channel/qubit parameters (local oscillator parameters, attenuations, gain and biases)
 
 The idea of the ``Platform`` is to serve as the only object exposed to the user,  so that we can deploy experiments, without any need of going into the low-level instrument-specific code.
@@ -35,39 +34,44 @@ Now we connect to the instruments (note that we, the user, do not need to know w
 
     platform.connect()
 
-We can easily print some of the parameters of the channels (similarly we can set those, if needed):
+We can easily access the names of channels and other components, and based on the name retrieve the corresponding configuration. As an example let's print some things:
 
 .. note::
-   If the get_method does not apply to the platform (for example there is no local oscillator, to TWPA or no flux tunability...) a ``NotImplementedError`` will be raised.
+   If requested component does not exist in a particular platform, its name will be `None`, so watch out for such names, and make sure what you need exists before requesting its configuration.
 
 .. testcode::  python
 
-    print(f"Drive LO frequency: {platform.qubits[0].drive.lo_frequency}")
-    print(f"Readout LO frequency: {platform.qubits[0].readout.lo_frequency}")
-    print(f"TWPA LO frequency: {platform.qubits[0].twpa.lo_frequency}")
-    print(f"Qubit bias: {platform.qubits[0].flux.offset}")
-    print(f"Qubit attenuation: {platform.qubits[0].readout.attenuation}")
+    drive_channel = platform.qubits[0].drive
+    print(f"Drive channel name: {drive_channel.name}")
+    print(f"Drive frequency: {platform.config(drive_channel.name).frequency}")
+
+    drive_lo = drive_channel.lo
+    if drive_lo is None:
+        print(f"Drive channel {drive_channel.name} does not use an LO.")
+    else:
+        print(f"Name of LO for channel {drive_channel.name} is {drive_lo}")
+        print(f"LO frequency: {platform.config(drive_lo).frequency}")
 
 .. testoutput:: python
     :hide:
 
-    Drive LO frequency: 0
-    Readout LO frequency: 0
-    TWPA LO frequency: 1000000000.0
-    Qubit bias: 0.0
-    Qubit attenuation: 0
+    Drive channel name: qubit_0/drive
+    Drive frequency: 4000000000
+    Drive channel qubit_0/drive does not use an LO.
 
 Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
 
 .. testcode::  python
 
    from qibolab.pulses import PulseSequence, Delay
+   import numpy as np
 
    ps = PulseSequence()
-   ps.append(platform.create_RX_pulse(qubit=0))
-   ps.append(platform.create_RX_pulse(qubit=0))
-   ps.append(Delay(duration=200, channel=platform.qubits[0].readout.name))
-   ps.append(platform.create_MZ_pulse(qubit=0))
+   qubit = platform.qubits[0]
+   ps.extend(qubit.native_gates.RX.create_sequence())
+   ps.extend(qubit.native_gates.RX.create_sequence(phi=np.pi / 2))
+   ps[qubit.probe.name].append(Delay(duration=200))
+   ps.extend(qubit.native_gates.MZ.create_sequence())
 
 Now we can execute the sequence on hardware:
 
@@ -163,9 +167,8 @@ It encapsulates three fundamental elements crucial to qubit control and operatio
 Channels play a pivotal role in connecting the quantum system to the control infrastructure.
 They are optional and encompass distinct types, each serving a specific purpose:
 
-- readout (from controller device to the qubits)
-- feedback (from qubits to controller)
-- twpa (pump to the TWPA)
+- measure (from controller device to the qubits)
+- acquisition (from qubits to controller)
 - drive
 - flux
 
@@ -197,9 +200,6 @@ and usually extracted from the runcard during platform initialization.
 Channels
 --------
 
-In Qibolab, channels serve as abstractions for physical wires within a laboratory setup.
-Each :class:`qibolab.channels.Channel` object corresponds to a specific type of connection, simplifying the process of controlling quantum pulses across the experimental setup.
-
 Various types of channels are typically present in a quantum laboratory setup, including:
 
 - the drive line
@@ -218,55 +218,6 @@ In setups involving frequency-specific pulses, a local oscillator (LO) might be 
 Although logically distinct from the qubit, the LO's frequency must align with the pulse requirements.
 Qibolab accommodates this by enabling the assignment of a :class:`qibolab.instruments.oscillator.LocalOscillator` object to the relevant channel.
 The controller's driver ensures the correct pulse frequency is set based on the LO's configuration.
-
-Let's explore an example using an RFSoC controller.
-Note that while channels are defined in a device-independent manner, the port parameter varies based on the specific instrument.
-
-.. testcode:: python
-
-    from qibolab.channels import Channel, ChannelMap
-    from qibolab.instruments.rfsoc import RFSoC
-
-    controller = RFSoC(name="dummy", address="192.168.0.10", port="6000")
-    channel1 = Channel("my_channel_name_1", port=controller.ports(1))
-    channel2 = Channel("my_channel_name_2", port=controller.ports(2))
-    channel3 = Channel("my_channel_name_3", port=controller.ports(3))
-
-Channels are then organized in :class:`qibolab.channels.ChannelMap` to be passed as a single argument to the platform.
-Following the tutorial in :doc:`/tutorials/lab`, we can continue the initialization:
-
-.. testcode:: python
-
-    from pathlib import Path
-    from qibolab.serialize import load_qubits, load_runcard
-
-    path = Path.cwd().parent / "src" / "qibolab" / "dummy"
-
-    ch_map = ChannelMap()
-    ch_map |= channel1
-    ch_map |= channel2
-    ch_map |= channel3
-
-    runcard = load_runcard(path)
-    qubits, couplers, pairs = load_qubits(runcard)
-
-    qubits[0].drive = channel1
-    qubits[0].readout = channel2
-    qubits[0].feedback = channel3
-
-Where, in the last lines, we assign the channels to the qubits.
-
-To assign local oscillators, the procedure is simple:
-
-.. testcode:: python
-
-    from qibolab.instruments.erasynth import ERA as LocalOscillator
-
-    LO_ADDRESS = "192.168.0.10"
-    local_oscillator = LocalOscillator("NameLO", LO_ADDRESS)
-    local_oscillator.frequency = 6e9  # Hz
-    local_oscillator.power = 5  # dB
-    channel2.local_oscillator = local_oscillator
 
 .. _main_doc_pulses:
 
@@ -336,54 +287,39 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
     pulse1 = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
     pulse2 = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
     pulse3 = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
     pulse4 = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
-    sequence.append(pulse1)
-    sequence.append(pulse2)
-    sequence.append(pulse3)
-    sequence.append(pulse4)
+    sequence["channel"].append(pulse1)
+    sequence["channel"].append(pulse2)
+    sequence["channel"].append(pulse3)
+    sequence["channel"].append(pulse4)
 
     print(f"Total duration: {sequence.duration}")
 
-    sequence_ch1 = sequence.get_channel_pulses("channel1")  # Selecting pulses on channel 1
-    print(f"We have {len(sequence_ch1)} pulses on channel 1.")
 
 .. testoutput:: python
     :hide:
 
     Total duration: 160.0
-    We have 0 pulses on channel 1.
 
 
 When conducting experiments on quantum hardware, pulse sequences are vital. Assuming you have already initialized a platform, executing an experiment is as simple as:
@@ -402,18 +338,16 @@ Typical experiments may include both pre-defined pulses and new ones:
     from qibolab.pulses import Rectangular
 
     sequence = PulseSequence()
-    sequence.append(platform.create_RX_pulse(0))
-    sequence.append(
+    sequence.extend(platform.qubits[0].native_gates.RX.create_sequence())
+    sequence["some_channel"].append(
         Pulse(
             duration=10,
             amplitude=0.5,
-            frequency=2500000000,
             relative_phase=0,
             envelope=Rectangular(),
-            channel="0",
         )
     )
-    sequence.append(platform.create_MZ_pulse(0))
+    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
 
     results = platform.execute([sequence], options=options)
 
@@ -444,7 +378,6 @@ To address the inefficiency, Qibolab introduces the concept of Sweeper objects.
 
 Sweeper objects in Qibolab are characterized by a :class:`qibolab.sweeper.Parameter`. This parameter, crucial to the sweeping process, can be one of several types:
 
-- Frequency
 - Amplitude
 - Duration
 - Relative_phase
@@ -452,17 +385,18 @@ Sweeper objects in Qibolab are characterized by a :class:`qibolab.sweeper.Parame
 
 --
 
+- Frequency
 - Attenuation
 - Gain
 - Bias
 
-The first group includes parameters of the pulses, while the second group include parameters of a different type that, in qibolab, are linked to a qubit object.
+The first group includes parameters of the pulses, while the second group includes parameters of channels.
 
-To designate the qubit or pulse to which a sweeper is applied, you can utilize the ``pulses`` or ``qubits`` parameter within the Sweeper object.
+To designate the pulse(s) or channel(s) to which a sweeper is applied, you can utilize the ``pulses`` or ``channels`` parameter within the Sweeper object.
 
 .. note::
 
-   It is possible to simultaneously execute the same sweeper on different pulses or qubits. The ``pulses`` or ``qubits`` attribute is designed as a list, allowing for this flexibility.
+   It is possible to simultaneously execute the same sweeper on different pulses or channels. The ``pulses`` or ``channels`` attribute is designed as a list, allowing for this flexibility.
 
 To effectively specify the sweeping behavior, Qibolab provides the ``values`` attribute along with the ``type`` attribute.
 
@@ -485,14 +419,20 @@ A tipical resonator spectroscopy experiment could be defined with:
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
     sequence = PulseSequence()
-    sequence.append(platform.create_MZ_pulse(0))  # readout pulse for qubit 0 at 4 GHz
-    sequence.append(platform.create_MZ_pulse(1))  # readout pulse for qubit 1 at 5 GHz
-    sequence.append(platform.create_MZ_pulse(2))  # readout pulse for qubit 2 at 6 GHz
+    sequence.extend(
+        platform.qubits[0].native_gates.MZ.create_sequence()
+    )  # readout pulse for qubit 0 at 4 GHz
+    sequence.extend(
+        platform.qubits[1].native_gates.MZ.create_sequence()
+    )  # readout pulse for qubit 1 at 5 GHz
+    sequence.extend(
+        platform.qubits[2].native_gates.MZ.create_sequence()
+    )  # readout pulse for qubit 2 at 6 GHz
 
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-        pulses=[sequence[0], sequence[1], sequence[2]],
+        channels=[qubit.probe.name for qubit in platform.qubits.values()],
         type=SweeperType.OFFSET,
     )
 
@@ -522,24 +462,22 @@ For example:
 
     from qibolab.pulses import PulseSequence, Delay
 
+    qubit = platform.qubits[0]
     sequence = PulseSequence()
-
-    sequence.append(platform.create_RX_pulse(0))
-    sequence.append(
-        Delay(duration=sequence.duration, channel=platform.qubits[0].readout.name)
-    )
-    sequence.append(platform.create_MZ_pulse(0))
+    sequence.extend(qubit.native_gates.RX.create_sequence())
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+    sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-100_000, +100_000, 10_000),
-        pulses=[sequence[0]],
+        channels=[qubit.drive.name],
         type=SweeperType.OFFSET,
     )
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
         values=np.arange(0, 1.5, 0.1),
-        pulses=[sequence[0]],
+        pulses=[sequence[qubit.drive.name][0]],
         type=SweeperType.FACTOR,
     )
 
@@ -620,12 +558,12 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 
 .. testcode:: python
 
-    drive_pulse_1 = platform.create_RX_pulse(0)
-    measurement_pulse = platform.create_MZ_pulse(0)
+    qubit = platform.qubits[0]
 
     sequence = PulseSequence()
-    sequence.append(drive_pulse_1)
-    sequence.append(measurement_pulse)
+    sequence.extend(qubit.native_gates.RX.create_sequence())
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+    sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
         nshots=1000,
@@ -651,13 +589,13 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-100_000, +100_000, 1),  # define an interval of swept values
-        pulses=[sequence[0]],
+        channels=[qubit.drive.name],
         type=SweeperType.OFFSET,
     )
     sweeper2 = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-        pulses=[sequence[0]],
+        channels=[qubit.probe.name],
         type=SweeperType.OFFSET,
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))

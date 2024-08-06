@@ -8,13 +8,19 @@ example for more details.
 import json
 from dataclasses import asdict, fields
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
 from qibolab.couplers import Coupler
+from qibolab.execution_parameters import ConfigUpdate
 from qibolab.kernels import Kernels
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.native import (
+    FixedSequenceFactory,
+    RxyFactory,
+    SingleQubitNatives,
+    TwoQubitNatives,
+)
 from qibolab.platform.platform import (
     CouplerMap,
     InstrumentMap,
@@ -22,8 +28,9 @@ from qibolab.platform.platform import (
     QubitMap,
     QubitPairMap,
     Settings,
+    update_configs,
 )
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -111,45 +118,43 @@ _PulseLike = TypeAdapter(PulseLike, config=ConfigDict(extra="ignore"))
 """
 
 
-def _load_pulse(pulse_kwargs: dict, qubit: Qubit):
-    coupler = "coupler" in pulse_kwargs
-    pulse_kwargs["qubit"] = pulse_kwargs.pop(
-        "coupler" if coupler else "qubit", qubit.name
-    )
-
+def _load_pulse(pulse_kwargs: dict):
     return _PulseLike.validate_python(pulse_kwargs)
 
 
-def _load_single_qubit_natives(qubit, gates) -> SingleQubitNatives:
-    """Parse native gates of the qubit from the runcard.
+def _load_sequence(raw_sequence):
+    seq = PulseSequence()
+    for ch, pulses in raw_sequence.items():
+        seq[ch] = [_load_pulse(raw_pulse) for raw_pulse in pulses]
+    return seq
+
+
+def _load_single_qubit_natives(gates) -> SingleQubitNatives:
+    """Parse native gates from the runcard.
 
     Args:
-        qubit (:class:`qibolab.qubits.Qubit`): Qubit object that the
-            native gates are acting on.
         gates (dict): Dictionary with native gate pulse parameters as loaded
             from the runcard.
     """
     return SingleQubitNatives(
-        **{name: _load_pulse(kwargs, qubit) for name, kwargs in gates.items()}
+        **{
+            gate_name: (
+                RxyFactory(_load_sequence(raw_sequence))
+                if gate_name == "RX"
+                else FixedSequenceFactory(_load_sequence(raw_sequence))
+            )
+            for gate_name, raw_sequence in gates.items()
+        }
     )
 
 
-def _load_two_qubit_natives(qubits, couplers, gates) -> TwoQubitNatives:
-    sequences = {}
-    for name, seq_kwargs in gates.items():
-        if isinstance(seq_kwargs, dict):
-            seq_kwargs = [seq_kwargs]
-
-        sequence = PulseSequence()
-        for kwargs in seq_kwargs:
-            if "coupler" in kwargs:
-                qubit = couplers[kwargs["coupler"]]
-            else:
-                qubit = qubits[kwargs["qubit"]]
-            sequence.append(_load_pulse(kwargs, qubit))
-        sequences[name] = sequence
-
-    return TwoQubitNatives(**sequences)
+def _load_two_qubit_natives(gates) -> TwoQubitNatives:
+    return TwoQubitNatives(
+        **{
+            gate_name: FixedSequenceFactory(_load_sequence(raw_sequence))
+            for gate_name, raw_sequence in gates.items()
+        }
+    )
 
 
 def register_gates(
@@ -166,16 +171,16 @@ def register_gates(
     native_gates = runcard.get("native_gates", {})
     for q, gates in native_gates.get("single_qubit", {}).items():
         qubit = qubits[load_qubit_name(q)]
-        qubit.native_gates = _load_single_qubit_natives(qubit, gates)
+        qubit.native_gates = _load_single_qubit_natives(gates)
 
     for c, gates in native_gates.get("coupler", {}).items():
         coupler = couplers[load_qubit_name(c)]
-        coupler.native_gates = _load_single_qubit_natives(coupler, gates)
+        coupler.native_gates = _load_single_qubit_natives(gates)
 
     # register two-qubit native gates to ``QubitPair`` objects
     for pair, gatedict in native_gates.get("two_qubit", {}).items():
         q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
-        native_gates = _load_two_qubit_natives(qubits, couplers, gatedict)
+        native_gates = _load_two_qubit_natives(gatedict)
         coupler = pairs[(q0, q1)].coupler
         pairs[(q0, q1)] = QubitPair(
             qubits[q0], qubits[q1], coupler=coupler, native_gates=native_gates
@@ -212,27 +217,16 @@ def _dump_pulse(pulse: Pulse):
     return data
 
 
-def _dump_single_qubit_natives(natives: SingleQubitNatives):
-    data = {}
-    for fld in fields(natives):
-        pulse = getattr(natives, fld.name)
-        if pulse is not None:
-            data[fld.name] = _dump_pulse(pulse)
-            del data[fld.name]["qubit"]
-    return data
+def _dump_sequence(sequence: PulseSequence):
+    return {ch: [_dump_pulse(p) for p in pulses] for ch, pulses in sequence.items()}
 
 
-def _dump_two_qubit_natives(natives: TwoQubitNatives):
+def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
     data = {}
     for fld in fields(natives):
-        sequence = getattr(natives, fld.name)
-        if len(sequence) > 0:
-            data[fld.name] = []
-            for pulse in sequence:
-                pulse_serial = _dump_pulse(pulse)
-                if pulse.type == PulseType.COUPLERFLUX:
-                    pulse_serial["coupler"] = pulse_serial.pop("qubit")
-                data[fld.name].append(pulse_serial)
+        factory = getattr(natives, fld.name)
+        if factory is not None:
+            data[fld.name] = _dump_sequence(factory._seq)
     return data
 
 
@@ -244,21 +238,15 @@ def dump_native_gates(
     # single-qubit native gates
     native_gates = {
         "single_qubit": {
-            dump_qubit_name(q): _dump_single_qubit_natives(qubit.native_gates)
+            dump_qubit_name(q): _dump_natives(qubit.native_gates)
             for q, qubit in qubits.items()
         }
     }
 
-    if couplers:
-        native_gates["coupler"] = {
-            dump_qubit_name(c): _dump_single_qubit_natives(coupler.native_gates)
-            for c, coupler in couplers.items()
-        }
-
     # two-qubit native gates
     native_gates["two_qubit"] = {}
     for pair in pairs.values():
-        natives = _dump_two_qubit_natives(pair.native_gates)
+        natives = _dump_natives(pair.native_gates)
         if len(natives) > 0:
             pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
             native_gates["two_qubit"][pair_name] = natives
@@ -316,7 +304,14 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
     return data
 
 
-def dump_runcard(platform: Platform, path: Path):
+def dump_component_configs(component_configs) -> dict:
+    """Dump channel configs."""
+    return {name: asdict(cfg) for name, cfg in component_configs.items()}
+
+
+def dump_runcard(
+    platform: Platform, path: Path, updates: Optional[list[ConfigUpdate]] = None
+):
     """Serializes the platform and saves it as a json runcard file.
 
     The file saved follows the format explained in :ref:`Using runcards <using_runcards>`.
@@ -324,7 +319,12 @@ def dump_runcard(platform: Platform, path: Path):
     Args:
         platform (qibolab.platform.Platform): The platform to be serialized.
         path (pathlib.Path): Path that the json file will be saved.
+        updates: List if updates for platform configs.
+                 Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
     """
+
+    configs = platform.configs.copy()
+    update_configs(configs, updates or [])
 
     settings = {
         "nqubits": platform.nqubits,
@@ -332,6 +332,7 @@ def dump_runcard(platform: Platform, path: Path):
         "qubits": list(platform.qubits),
         "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
+        "components": dump_component_configs(configs),
     }
 
     if platform.couplers:
@@ -371,13 +372,17 @@ def dump_kernels(platform: Platform, path: Path):
         kernels.dump(path)
 
 
-def dump_platform(platform: Platform, path: Path):
+def dump_platform(
+    platform: Platform, path: Path, updates: Optional[list[ConfigUpdate]] = None
+):
     """Platform serialization as runcard (json) and kernels (npz).
 
     Args:
         platform (qibolab.platform.Platform): The platform to be serialized.
         path (pathlib.Path): Path where json and npz will be dumped.
+        updates: List if updates for platform configs.
+                 Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
     """
 
     dump_kernels(platform=platform, path=path)
-    dump_runcard(platform=platform, path=path)
+    dump_runcard(platform=platform, path=path, updates=updates)

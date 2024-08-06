@@ -19,258 +19,519 @@
         "readout": 250,
         "waveforms": 40000
       }
+    }
+  },
+  "components": {
+    "qubit_0/drive" : {
+      "frequency": 4000000000,
+      "power_range": 5
     },
-    "lo_readout": {
-      "frequency": 5500000000
+    "qubit_1/drive" : {
+      "frequency": 4200000000,
+      "power_range": 0
     },
-    "lo_drive_0": {
-      "frequency": 4200000000
+    "qubit_2/drive" : {
+      "frequency": 4500000000,
+      "power_range": -5
     },
-    "lo_drive_1": {
-      "frequency": 4600000000
+    "qubit_3/drive" : {
+      "frequency": 4150000000,
+      "power_range": -10
     },
-    "lo_drive_2": {
-      "frequency": 4800000000
+    "qubit_4/drive" : {
+      "frequency": 4155663000,
+      "power_range": 5
+    },
+    "qubit_0/flux" : {
+      "offset": -0.1,
+      "power_range": 0.2
+    },
+    "qubit_1/flux" : {
+      "offset": 0.0,
+      "power_range": 0.6
+    },
+    "qubit_2/flux" : {
+      "offset": 0.1,
+      "power_range": 0.4
+    },
+    "qubit_3/flux" : {
+      "offset": 0.2,
+      "power_range": 1
+    },
+    "qubit_4/flux" : {
+      "offset": 0.15,
+      "power_range": 5
+    },
+    "qubit_0/probe" : {
+      "frequency": 5200000000,
+      "power_range": -10
+    },
+    "qubit_1/probe" : {
+      "frequency": 4900000000,
+      "power_range": -10
+    },
+    "qubit_2/probe" : {
+      "frequency": 6100000000,
+      "power_range": -10
+    },
+    "qubit_3/probe" : {
+      "frequency": 5800000000,
+      "power_range": -10
+    },
+    "qubit_4/probe" : {
+      "frequency": 5500000000,
+      "power_range": -10
+    },
+    "qubit_0/acquire": {
+      "delay": 0,
+      "smearing": 0,
+      "power_range": 10
+    },
+    "qubit_1/acquire": {
+      "delay": 0,
+      "smearing": 0,
+      "power_range": 10
+    },
+    "qubit_2/acquire": {
+      "delay": 0,
+      "smearing": 0,
+      "power_range": 10
+    },
+    "qubit_3/acquire": {
+      "delay": 0,
+      "smearing": 0,
+      "power_range": 10
+    },
+    "qubit_4/acquire": {
+      "delay": 0,
+      "smearing": 0,
+      "power_range": 10
+    },
+    "coupler_0/flux" : {
+      "offset": 0.0,
+      "power_range": 3
+    },
+    "coupler_1/flux" : {
+      "offset": 0.0,
+      "power_range": 1
+    },
+    "coupler_3/flux" : {
+      "offset": 0.0,
+      "power_range": 0.4
+    },
+    "coupler_4/flux" : {
+      "offset": 0.0,
+      "power_range": 0.4
+    },
+    "readout/lo": {
+      "power": 10,
+      "frequency": 6000000000.0
+    },
+    "qubit_0_1/drive/lo": {
+      "power": 10,
+      "frequency": 3000000000.0
+    },
+    "qubit_2_3/drive/lo": {
+      "power": 10,
+      "frequency": 3500000000.0
+    },
+    "qubit_4/drive/lo": {
+      "power": 10,
+      "frequency": 4000000000.0
     }
   },
   "native_gates": {
     "single_qubit": {
-      "0": {
-        "RX": {
-          "duration": 40,
-          "amplitude": 0.625,
-          "frequency": 4095830788,
-          "envelope": { "kind": "drag", "rel_sigma": 0.2, "beta": 0.04 },
-          "type": "qd"
-        },
-        "RX12": {
-          "duration": 40,
-          "amplitude": 0.625,
-          "frequency": 4095830788,
-          "envelope": { "kind": "drag", "rel_sigma": 0.2, "beta": 0.04 },
-          "type": "qd"
-        },
-        "MZ": {
-          "duration": 2000,
-          "amplitude": 0.5,
-          "frequency": 5229200000,
-          "envelope": { "kind": "rectangular" },
-          "type": "ro"
-        }
-      },
-      "1": {
-        "RX": {
-          "duration": 90,
-          "amplitude": 0.2,
-          "frequency": 4170000000,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "RX12": {
-          "duration": 90,
-          "amplitude": 0.2,
-          "frequency": 4170000000,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "MZ": {
-          "duration": 1000,
-          "amplitude": 0.1,
-          "frequency": 4931000000,
-          "envelope": { "kind": "rectangular" },
-          "type": "ro"
-        }
-      },
-      "2": {
-        "RX": {
-          "duration": 40,
-          "amplitude": 0.59,
-          "frequency": 4300587281,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "RX12": {
-          "duration": 40,
-          "amplitude": 0.59,
-          "frequency": 4300587281,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "MZ": {
-          "duration": 2000,
-          "amplitude": 0.54,
-          "frequency": 6109000000.0,
-          "envelope": { "kind": "rectangular" },
-          "type": "ro"
-        }
-      },
-      "3": {
-        "RX": {
-          "duration": 90,
-          "amplitude": 0.75,
-          "frequency": 4100000000,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "RX12": {
-          "duration": 90,
-          "amplitude": 0.75,
-          "frequency": 4100000000,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "MZ": {
-          "duration": 2000,
-          "amplitude": 0.01,
-          "frequency": 5783000000,
-          "envelope": { "kind": "rectangular" },
-          "type": "ro"
-        }
-      },
-      "4": {
-        "RX": {
-          "duration": 53,
-          "amplitude": 1,
-          "frequency": 4196800000,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "RX12": {
-          "duration": 53,
-          "amplitude": 1,
-          "frequency": 4196800000,
-          "envelope": { "kind": "gaussian", "rel_sigma": 0.2 },
-          "type": "qd"
-        },
-        "MZ": {
-          "duration": 1000,
-          "amplitude": 0.5,
-          "frequency": 5515000000,
-          "envelope": { "kind": "rectangular" },
-          "type": "ro"
-        }
-      }
-    },
-    "coupler": {
-      "0": {
-        "CP": {
-          "type": "cf",
-          "duration": 1000,
-          "amplitude": 0.5,
-          "frequency": 0,
-          "envelope": { "kind": "rectangular" }
-        }
-      },
-      "1": {
-        "CP": {
-          "type": "cf",
-          "duration": 1000,
-          "amplitude": 0.5,
-          "frequency": 0,
-          "envelope": { "kind": "rectangular" }
-        }
-      },
-      "3": {
-        "CP": {
-          "type": "cf",
-          "duration": 1000,
-          "amplitude": 0.5,
-          "frequency": 0,
-          "envelope": { "kind": "rectangular" }
-        }
-      },
-      "4": {
-        "CP": {
-          "type": "cf",
-          "duration": 1000,
-          "amplitude": 0.5,
-          "frequency": 0,
-          "envelope": { "kind": "rectangular" }
-        }
-      }
+            "0": {
+                "RX": {
+                    "qubit_0/drive": [
+                        {
+                            "duration": 40,
+                            "amplitude": 0.5,
+                            "envelope": { "kind": "gaussian", "rel_sigma": 2.0 },
+                            "type": "qd"
+                        }
+                    ]
+                },
+                "MZ": {
+                    "qubit_0/probe": [
+                        {
+                            "duration": 2000,
+                            "amplitude": 0.1,
+                            "envelope": { "kind": "rectangular" },
+                            "type": "ro"
+                        }
+                    ]
+                }
+            },
+            "1": {
+                "RX": {
+                    "qubit_1/drive": [
+                        {
+                            "duration": 40,
+                            "amplitude": 0.5,
+                            "envelope": { "kind": "gaussian", "rel_sigma": 2.0 },
+                            "type": "qd"
+                        }
+                    ]
+                },
+                "MZ": {
+                    "qubit_1/probe": [
+                        {
+                            "duration": 2000,
+                            "amplitude": 0.2,
+                            "envelope": { "kind": "rectangular" },
+                            "type": "ro"
+                        }
+                    ]
+                }
+            },
+            "2": {
+                "RX": {
+                    "qubit_2/drive": [
+                        {
+                            "duration": 40,
+                            "amplitude": 0.54,
+                            "envelope": { "kind": "gaussian", "rel_sigma": 2.0 },
+                            "type": "qd"
+                        }
+                    ]
+                },
+                "MZ": {
+                    "qubit_2/probe": [
+                        {
+                            "duration": 2000,
+                            "amplitude": 0.02,
+                            "envelope": { "kind": "rectangular" },
+                            "type": "ro"
+                        }
+                    ]
+                }
+            },
+            "3": {
+                "RX": {
+                    "qubit_3/drive": [
+                        {
+                            "duration": 40,
+                            "amplitude": 0.454,
+                            "envelope": { "kind": "gaussian", "rel_sigma": 2.0 },
+                            "type": "qd"
+                        }
+                    ]
+                },
+                "MZ": {
+                    "qubit_3/probe": [
+                        {
+                            "duration": 2000,
+                            "amplitude": 0.25,
+                            "envelope": { "kind": "rectangular" },
+                            "type": "ro"
+                        }
+                    ]
+                }
+            },
+            "4": {
+                "RX": {
+                    "qubit_4/drive": [
+                        {
+                            "duration": 40,
+                            "amplitude": 0.6,
+                            "envelope": { "kind": "gaussian", "rel_sigma": 2.0 },
+                            "type": "qd"
+                        }
+                    ]
+                },
+                "MZ": {
+                    "qubit_4/probe": [
+                        {
+                            "duration": 2000,
+                            "amplitude": 0.31,
+                            "envelope": { "kind": "rectangular" },
+                            "type": "ro"
+                        }
+                    ]
+                }
+            }
     },
     "two_qubit": {
+      "0-2": {
+        "CZ": {
+          "qubit_2/flux": [
+            {
+              "duration": 80,
+              "amplitude": 0.057,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "qf"
+            }
+          ],
+          "qubit_0/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "qubit_2/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "coupler_0/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "cf"
+            }
+          ]
+        }
+      },
       "1-2": {
-        "CZ": [
-          {
-            "duration": 32,
-            "amplitude": -0.6025,
-            "envelope": {
-              "kind": "exponential",
-              "tau": 12,
-              "upsilon": 5000,
-              "g": 0.1
-            },
-            "qubit": 3,
-            "frequency": 0,
-            "type": "qf"
-          },
-          {
+        "CZ": {
+          "qubit_2/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "qf"
+            }
+          ],
+          "qubit_1/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "qubit_2/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "coupler_1/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "cf"
+            }
+          ]
+        }
+      },
+      "2-3": {
+        "CZ": {
+          "qubit_2/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "qf"
+            }
+          ],
+          "qubit_2/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "qubit_3/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "coupler_3/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "cf"
+            }
+          ]
+        }
+      },
+      "2-4": {
+        "CZ": {
+          "qubit_2/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "qf"
+            }
+          ],
+          "qubit_2/drive": [
+            {
+              "type": "vz",
+              "phase": 0.0
+            }
+          ],
+          "qubit_4/drive": [
+            {
             "type": "vz",
-            "phase": -3.63,
-            "qubit": 1
-          },
-          {
-            "type": "vz",
-            "phase": -0.041,
-            "qubit": 2
-          }
-        ]
+              "phase": 0.0
+            }
+          ],
+          "coupler_4/flux": [
+            {
+              "duration": 30,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5,
+                "width": 0.75
+              },
+              "type": "cf"
+            }
+          ]
+        }
       }
     }
   },
-  "characterization": {
+    "characterization": {
     "single_qubit": {
       "0": {
-        "readout_frequency": 5229200000,
-        "drive_frequency": 4095830788,
+        "bare_resonator_frequency": 0,
+        "anharmonicity": 0,
+        "asymmetry": 0.0,
+        "crosstalk_matrix": {
+          "0": 1
+        },
+        "Ec": 0.0,
+        "Ej": 0.0,
+        "g": 0.0,
+        "assignment_fidelity": 0.0,
+        "peak_voltage": 0,
+        "pi_pulse_amplitude": 0,
         "T1": 0.0,
         "T2": 0.0,
-        "sweetspot": 0.05,
-        "mean_gnd_states": [1.542, 0.1813],
-        "mean_exc_states": [2.4499, -0.5629],
-        "threshold": 0.8836,
-        "iq_angle": -1.551
+        "T2_spin_echo": 0,
+        "state0_voltage": 0,
+        "state1_voltage": 0,
+        "mean_gnd_states": [0, 1],
+        "mean_exc_states": [1, 0],
+        "threshold": 0.0,
+        "iq_angle": 0.0
       },
       "1": {
-        "readout_frequency": 4931000000,
-        "drive_frequency": 4170000000,
+        "bare_resonator_frequency": 0,
+        "anharmonicity": 0,
+        "asymmetry": 0.0,
+        "crosstalk_matrix": {
+          "1": 1
+        },
+        "Ec": 0.0,
+        "Ej": 0.0,
+        "g": 0.0,
+        "assignment_fidelity": 0.0,
+        "peak_voltage": 0,
+        "pi_pulse_amplitude": 0,
         "T1": 0.0,
         "T2": 0.0,
-        "sweetspot": 0.0,
-        "mean_gnd_states": [0, 0],
-        "mean_exc_states": [0, 0]
+        "T2_spin_echo": 0,
+        "state0_voltage": 0,
+        "state1_voltage": 0,
+        "mean_gnd_states": [0.25, 0],
+        "mean_exc_states": [0, 0.25],
+        "threshold": 0.0,
+        "iq_angle": 0.0
       },
       "2": {
-        "readout_frequency": 6109000000.0,
-        "drive_frequency": 4300587281,
+        "bare_resonator_frequency": 0,
+        "anharmonicity": 0,
+        "asymmetry": 0.0,
+        "crosstalk_matrix": {
+          "2": 1
+        },
+        "Ec": 0.0,
+        "Ej": 0.0,
+        "g": 0.0,
+        "assignment_fidelity": 0.0,
+        "peak_voltage": 0,
+        "pi_pulse_amplitude": 0,
         "T1": 0.0,
         "T2": 0.0,
-        "sweetspot": 0.0,
-        "mean_gnd_states": [-1.8243, 1.5926],
-        "mean_exc_states": [-0.8083, 2.3929],
-        "threshold": -0.0593,
-        "iq_angle": -0.667
+        "T2_spin_echo": 0,
+        "state0_voltage": 0,
+        "state1_voltage": 0,
+        "mean_gnd_states": [0.5, 0],
+        "mean_exc_states": [0, 0.5],
+        "threshold": 0.0,
+        "iq_angle": 0.0
       },
       "3": {
-        "readout_frequency": 5783000000,
-        "drive_frequency": 4100000000,
+        "bare_resonator_frequency": 0,
+        "anharmonicity": 0,
+        "asymmetry": 0.0,
+        "crosstalk_matrix": {
+          "3": 1
+        },
+        "Ec": 0.0,
+        "Ej": 0.0,
+        "g": 0.0,
+        "assignment_fidelity": 0.0,
+        "peak_voltage": 0,
+        "pi_pulse_amplitude": 0,
         "T1": 0.0,
         "T2": 0.0,
-        "sweetspot": 0.0,
-        "mean_gnd_states": [0, 0],
-        "mean_exc_states": [0, 0]
+        "T2_spin_echo": 0,
+        "state0_voltage": 0,
+        "state1_voltage": 0,
+        "mean_gnd_states": [0.75, 0],
+        "mean_exc_states": [0, 0.75],
+        "threshold": 0.0,
+        "iq_angle": 0.0
       },
       "4": {
-        "readout_frequency": 5515000000,
-        "drive_frequency": 4196800000,
+        "bare_resonator_frequency": 0,
+        "anharmonicity": 0,
+        "asymmetry": 0.0,
+        "crosstalk_matrix": {
+          "4": 1
+        },
+        "Ec": 0.0,
+        "Ej": 0.0,
+        "g": 0.0,
+        "assignment_fidelity": 0.0,
+        "peak_voltage": 0,
+        "pi_pulse_amplitude": 0,
         "T1": 0.0,
         "T2": 0.0,
-        "sweetspot": 0.0,
-        "mean_gnd_states": [0, 0],
-        "mean_exc_states": [0, 0],
-        "threshold": 0.233806,
-        "iq_angle": 0.481
+        "T2_spin_echo": 0,
+        "state0_voltage": 0,
+        "state1_voltage": 0,
+        "mean_gnd_states": [1, 0],
+        "mean_exc_states": [0, 1],
+        "threshold": 0.0,
+        "iq_angle": 0.0
       }
     },
     "coupler": {

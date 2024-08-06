@@ -5,6 +5,7 @@ May be reused by different instruments.
 
 from dataclasses import asdict, dataclass, field, fields
 from functools import total_ordering
+from itertools import chain
 
 from .pulses import Pulse, PulseSequence
 from .pulses.envelope import Rectangular
@@ -21,13 +22,13 @@ def _waveform(sequence: PulseSequence):
             if isinstance(pulse, Pulse)
             else 1
         )
-        for pulse in sequence
+        for pulse in chain(*sequence.values())
     )
 
 
 def _readout(sequence: PulseSequence):
     # TODO: Do we count 1 readout per pulse or 1 readout per multiplexed readout ?
-    return len(sequence.ro_pulses)
+    return len(sequence.probe_pulses)
 
 
 def _instructions(sequence: PulseSequence):

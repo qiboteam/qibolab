@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Optional
+from typing import Any, Optional
 
 from qibolab.result import (
     AveragedIntegratedResults,
@@ -51,6 +51,14 @@ RESULTS_TYPE = {
 }
 
 
+ConfigUpdate = dict[str, dict[str, Any]]
+"""Update for component configs.
+
+Maps component name to corresponding update, which in turn is a map from
+config property name that needs an update to its new value.
+"""
+
+
 class ExecutionParameters(Model):
     """Data structure to deal with execution parameters."""
 
@@ -71,6 +79,13 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
+    updates: list[ConfigUpdate] = []
+    """List of updates for component configs.
+
+    Later entries in the list take precedence over earlier ones (if they
+    happen to update the same thing). These updates will be applied on
+    top of platform defaults.
+    """
 
     @property
     def results_type(self):

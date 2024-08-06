@@ -19,7 +19,7 @@ from qibolab.instruments.emulator.models import (
 from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS
 from qibolab.platform.load import PLATFORMS
 from qibolab.pulses import PulseSequence
-from qibolab.sweeper import Parameter, QubitParameter, Sweeper
+from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators/")
 
@@ -95,7 +95,7 @@ def test_emulator_single_sweep(
     else:
         parameter_range = np.random.randint(1, 4, size=SWEPT_POINTS)
     sequence.add(pulse)
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         sweeper = Sweeper(parameter, parameter_range, qubits=[platform.qubits[0]])
     else:
         sweeper = Sweeper(parameter, parameter_range, pulses=[pulse])
@@ -149,11 +149,11 @@ def test_emulator_double_sweep_false_history(
         if parameter2 is Parameter.amplitude
         else np.random.randint(1, 4, size=SWEPT_POINTS)
     )
-    if parameter1 in QubitParameter:
+    if parameter1 in ChannelParameter:
         sweeper1 = Sweeper(parameter1, parameter_range_1, qubits=[platform.qubits[0]])
     else:
         sweeper1 = Sweeper(parameter1, parameter_range_1, pulses=[ro_pulse])
-    if parameter2 in QubitParameter:
+    if parameter2 in ChannelParameter:
         sweeper2 = Sweeper(parameter2, parameter_range_2, qubits=[platform.qubits[0]])
     else:
         sweeper2 = Sweeper(parameter2, parameter_range_2, pulses=[pulse])
@@ -205,7 +205,7 @@ def test_emulator_single_sweep_multiplex(
         else np.random.randint(1, 4, size=SWEPT_POINTS)
     )
 
-    if parameter in QubitParameter:
+    if parameter in ChannelParameter:
         sweeper1 = Sweeper(
             parameter,
             parameter_range,

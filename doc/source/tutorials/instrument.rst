@@ -178,30 +178,3 @@ Let's see a minimal example:
         ) -> dict[str, Union[IntegratedResults, SampleResults]]:
             """This method is used for sequence unrolling sweeps. Here not implemented."""
             raise NotImplementedError
-
-As we saw in :doc:`lab`, to instantiate a platform at some point you have to
-write something like this:
-
-.. testcode:: python
-
-    from qibolab.channels import Channel, ChannelMap
-    from qibolab.instruments.dummy import DummyInstrument
-
-    instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
-    channels = ChannelMap()
-    channels |= Channel("ch1out", port=instrument.ports("o1"))
-
-
-The interesting part of this section is the ``port`` parameter that works as an
-attribute of the controller. A :class:`qibolab.instruments.port.Port` object
-describes the physical connections that a device may have. A Controller has, by
-default, ports characterized just by ``port_name`` (see also
-:class:`qibolab.instruments.abstract.Controller`), but different devices may
-need to add attributes and methods to the ports. This can be done by defining in
-the new controller a new port type. See, for example, the already implemented
-ports:
-
-* :class:`qibolab.instruments.rfsoc.driver.RFSoCPort`
-* :class:`qibolab.instruments.qm.ports.QMPort`
-* :class:`qibolab.instruments.zhinst.ZhPort`
-* :class:`qibolab.instruments.qblox.port`

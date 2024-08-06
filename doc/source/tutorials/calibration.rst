@@ -41,16 +41,14 @@ around the pre-defined frequency.
     # allocate platform
     platform = create_platform("dummy")
 
-    # create pulse sequence and add pulse
-    sequence = PulseSequence()
-    readout_pulse = platform.create_MZ_pulse(qubit=0)
-    sequence.append(readout_pulse)
+    qubit = platform.qubits[0]
+    sequence = qubit.native_gates.MZ.create_sequence()
 
     # allocate frequency sweeper
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-2e8, +2e8, 1e6),
-        pulses=[readout_pulse],
+        channels=[qubit.probe.name],
         type=SweeperType.OFFSET,
     )
 
@@ -73,8 +71,9 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     import matplotlib.pyplot as plt
 
-    amplitudes = results[readout_pulse.id][0].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + readout_pulse.frequency
+    probe_pulse = next(iter(sequence.probe_pulses))
+    amplitudes = results[probe_pulse.id][0].magnitude
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -110,7 +109,7 @@ complex pulse sequence. Therefore with start with that:
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import PulseSequence, Delay
+    from qibolab.pulses import Pulse, PulseSequence, Delay, Gaussian
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -122,20 +121,21 @@ complex pulse sequence. Therefore with start with that:
     # allocate platform
     platform = create_platform("dummy")
 
+    qubit = platform.qubits[0]
+
     # create pulse sequence and add pulses
     sequence = PulseSequence()
-    drive_pulse = platform.create_RX_pulse(qubit=0)
-    drive_pulse = replace(drive_pulse, duration=2000, amplitude=0.01)
-    readout_pulse = platform.create_MZ_pulse(qubit=0)
-    sequence.append(drive_pulse)
-    sequence.append(Delay(duration=drive_pulse.duration, channel=readout_pulse.channel))
-    sequence.append(readout_pulse)
+    sequence[qubit.drive.name].append(
+        Pulse(duration=2000, amplitude=0.01, envelope=Gaussian(rel_sigma=5))
+    )
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+    sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     # allocate frequency sweeper
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         values=np.arange(-2e8, +2e8, 1e6),
-        pulses=[drive_pulse],
+        channels=[qubit.drive.name],
         type=SweeperType.OFFSET,
     )
 
@@ -155,8 +155,9 @@ We can now proceed to launch on hardware:
 
     results = platform.execute([sequence], options, [[sweeper]])
 
-    amplitudes = results[readout_pulse.id][0].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + drive_pulse.frequency
+    probe_pulse = next(iter(sequence.probe_pulses))
+    amplitudes = results[probe_pulse.id][0].magnitude
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.drive.name).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -217,20 +218,16 @@ and its impact on qubit states in the IQ plane.
     # allocate platform
     platform = create_platform("dummy")
 
+    qubit = platform.qubits[0]
+
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()
-    drive_pulse = platform.create_RX_pulse(qubit=0)
-    readout_pulse1 = platform.create_MZ_pulse(qubit=0)
-    one_sequence.append(drive_pulse)
-    one_sequence.append(
-        Delay(duration=drive_pulse.duration, channel=readout_pulse1.channel)
-    )
-    one_sequence.append(readout_pulse1)
+    one_sequence.extend(qubit.native_gates.RX.create_sequence())
+    one_sequence[qubit.probe.name].append(Delay(duration=one_sequence.duration))
+    one_sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     # create pulse sequence 2 and add pulses
-    zero_sequence = PulseSequence()
-    readout_pulse2 = platform.create_MZ_pulse(qubit=0)
-    zero_sequence.append(readout_pulse2)
+    zero_sequence = qubit.native_gates.MZ.create_sequence()
 
     options = ExecutionParameters(
         nshots=1000,
@@ -242,17 +239,20 @@ and its impact on qubit states in the IQ plane.
     results_one = platform.execute([one_sequence], options)
     results_zero = platform.execute([zero_sequence], options)
 
+    probe_pulse1 = next(iter(one_sequence.probe_pulses))
+    probe_pulse2 = next(iter(zero_sequence.probe_pulses))
+
     plt.title("Single shot classification")
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[readout_pulse1.id][0].voltage_i,
-        results_one[readout_pulse1.id][0].voltage_q,
+        results_one[probe_pulse1.id][0].voltage_i,
+        results_one[probe_pulse1.id][0].voltage_q,
         label="One state",
     )
     plt.scatter(
-        results_zero[readout_pulse2.id][0].voltage_i,
-        results_zero[readout_pulse2.id][0].voltage_q,
+        results_zero[probe_pulse2.id][0].voltage_i,
+        results_zero[probe_pulse2.id][0].voltage_q,
         label="Zero state",
     )
     plt.show()

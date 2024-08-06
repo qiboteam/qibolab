@@ -1,17 +1,20 @@
 """A platform for executing quantum algorithms."""
 
+import dataclasses
 from collections import defaultdict
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field
 from math import prod
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import networkx as nx
+import numpy as np
 from qibo.config import log, raise_error
 
+from qibolab.components import Config
 from qibolab.couplers import Coupler
-from qibolab.execution_parameters import ExecutionParameters
+from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Delay, Drag, PulseSequence, PulseType
+from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import replace
 from qibolab.sweeper import ParallelSweepers
@@ -53,21 +56,35 @@ def unroll_sequences(
     """
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
-    channels = {pulse.channel for sequence in sequences for pulse in sequence}
     for sequence in sequences:
         total_sequence.extend(sequence)
         # TODO: Fix unrolling results
-        for pulse in sequence:
-            if pulse.type is PulseType.READOUT:
-                readout_map[pulse.id].append(pulse.id)
+        for pulse in sequence.probe_pulses:
+            readout_map[pulse.id].append(pulse.id)
 
         length = sequence.duration + relaxation_time
-        pulses_per_channel = sequence.pulses_per_channel
-        for channel in channels:
-            delay = length - pulses_per_channel[channel].duration
-            total_sequence.append(Delay(duration=delay, channel=channel))
+        for channel in sequence.keys():
+            delay = length - sequence.channel_duration(channel)
+            total_sequence[channel].append(Delay(duration=delay))
 
     return total_sequence, readout_map
+
+
+def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
+    """Apply updates to configs in place.
+
+    Args:
+        configs: configs to update. Maps component name to respective config.
+        updates: list of config updates. Later entries in the list take precedence over earlier entries
+                 (if they happen to update the same thing).
+    """
+    for update in updates:
+        for name, changes in update.items():
+            if name not in configs:
+                raise ValueError(
+                    f"Cannot update configuration for unknown component {name}"
+                )
+            configs[name] = dataclasses.replace(configs[name], **changes)
 
 
 def estimate_duration(
@@ -120,6 +137,8 @@ class Platform:
     pairs: QubitPairMap
     """Dictionary mapping tuples of qubit names to
     :class:`qibolab.qubits.QubitPair` objects."""
+    configs: dict[str, Config]
+    """Maps name of component to its default config."""
     instruments: InstrumentMap
     """Dictionary mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
@@ -151,53 +170,6 @@ class Platform:
         self.topology.add_edges_from(
             [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
         )
-        self._set_channels_to_single_qubit_gates()
-        self._set_channels_to_two_qubit_gates()
-
-    def _set_channels_to_single_qubit_gates(self):
-        """Set channels to pulses that implement single-qubit gates.
-
-        This function should be removed when the duplication caused by
-        (``pulse.qubit``, ``pulse.type``) -> ``pulse.channel``
-        is resolved. For now it just makes sure that the channels of
-        native pulses are consistent in order to test the rest of the code.
-        """
-        for qubit in self.qubits.values():
-            gates = qubit.native_gates
-            for fld in fields(gates):
-                pulse = getattr(gates, fld.name)
-                if pulse is not None:
-                    channel = getattr(qubit, pulse.type.name.lower()).name
-                    setattr(gates, fld.name, replace(pulse, channel=channel))
-        for coupler in self.couplers.values():
-            if gates.CP is not None:
-                gates.CP = replace(gates.CP, channel=coupler.flux.name)
-
-    def _set_channels_to_two_qubit_gates(self):
-        """Set channels to pulses that implement single-qubit gates.
-
-        This function should be removed when the duplication caused by
-        (``pulse.qubit``, ``pulse.type``) -> ``pulse.channel``
-        is resolved. For now it just makes sure that the channels of
-        native pulses are consistent in order to test the rest of the code.
-        """
-        for pair in self.pairs.values():
-            gates = pair.native_gates
-            for fld in fields(gates):
-                sequence = getattr(gates, fld.name)
-                if len(sequence) > 0:
-                    new_sequence = PulseSequence()
-                    for pulse in sequence:
-                        if pulse.type is PulseType.VIRTUALZ:
-                            channel = self.qubits[pulse.qubit].drive.name
-                        elif pulse.type is PulseType.COUPLERFLUX:
-                            channel = self.couplers[pulse.qubit].flux.name
-                        else:
-                            channel = getattr(
-                                self.qubits[pulse.qubit], pulse.type.name.lower()
-                            ).name
-                        new_sequence.append(replace(pulse, channel=channel))
-                    setattr(gates, fld.name, new_sequence)
 
     def __str__(self):
         return self.name
@@ -219,6 +191,15 @@ class Platform:
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 return instrument.sampling_rate
+
+    @property
+    def components(self) -> set[str]:
+        """Names of all components available in the platform."""
+        return set(self.configs.keys())
+
+    def config(self, name: str) -> Config:
+        """Returns configuration of given component."""
+        return self.configs[name]
 
     def connect(self):
         """Connect to all instruments."""
@@ -258,14 +239,14 @@ class Platform:
         assert len(controllers) == 1
         return controllers[0]
 
-    def _execute(self, sequence, options, sweepers):
-        """Executes sequence on the controllers."""
+    def _execute(self, sequences, options, integration_setup, sweepers):
+        """Execute sequences on the controllers."""
         result = {}
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
                 new_result = instrument.play(
-                    self.qubits, self.couplers, sequence, options, sweepers
+                    options.updates, sequences, options, integration_setup, sweepers
                 )
                 if isinstance(new_result, dict):
                     result.update(new_result)
@@ -278,7 +259,7 @@ class Platform:
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[Any, list]:
-        """Execute a pulse sequences.
+        """Execute pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values
         of sweeped parameters.
@@ -296,12 +277,11 @@ class Platform:
 
 
                 platform = create_dummy()
-                sequence = PulseSequence()
+                qubit = platform.qubits[0]
+                sequence = qubit.native_gates.MZ.create_sequence()
                 parameter = Parameter.frequency
-                pulse = platform.create_qubit_readout_pulse(qubit=0)
-                sequence.append(pulse)
                 parameter_range = np.random.randint(10, size=10)
-                sweeper = [Sweeper(parameter, parameter_range, [pulse])]
+                sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.probe.name])]
                 platform.execute([sequence], ExecutionParameters(), [sweeper])
         """
         if sweepers is None:
@@ -312,22 +292,28 @@ class Platform:
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
-        # find readout pulses
-        ro_pulses = {
-            pulse.id: pulse.qubit
-            for sequence in sequences
-            for pulse in sequence.ro_pulses
-        }
+        configs = self.configs.copy()
+        update_configs(configs, options.updates)
+
+        # for components that represent aux external instruments (e.g. lo) to the main control instrument
+        # set the config directly
+        for name, cfg in configs.items():
+            if name in self.instruments:
+                self.instruments[name].setup(**asdict(cfg))
+
+        # maps acquisition channel name to corresponding kernel and iq_angle
+        # FIXME: this is temporary solution to deliver the information to drivers
+        # until we make acquisition channels first class citizens in the sequences
+        # so that each acquisition command carries the info with it.
+        integration_setup: dict[str, tuple[np.ndarray, float]] = {}
+        for qubit in self.qubits.values():
+            integration_setup[qubit.acquisition.name] = (qubit.kernel, qubit.iq_angle)
 
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
-            sequence, readouts = unroll_sequences(b, options.relaxation_time)
-            result = self._execute(sequence, options, sweepers)
-            for serial, new_serials in readouts.items():
-                results[serial].extend(result[ser] for ser in new_serials)
-
-        for serial, qubit in ro_pulses.items():
-            results[qubit] = results[serial]
+            result = self._execute(b, options, integration_setup, sweepers)
+            for serial, data in result.items():
+                results[serial].append(data)
 
         return results
 
@@ -354,104 +340,3 @@ class Platform:
             return self.couplers[coupler]
         except KeyError:
             return list(self.couplers.values())[coupler]
-
-    def create_RX90_pulse(self, qubit, relative_phase=0):
-        qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX90,
-            relative_phase=relative_phase,
-            channel=qubit.drive.name,
-        )
-
-    def create_RX_pulse(self, qubit, relative_phase=0):
-        qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX,
-            relative_phase=relative_phase,
-            channel=qubit.drive.name,
-        )
-
-    def create_RX12_pulse(self, qubit, relative_phase=0):
-        qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX12,
-            relative_phase=relative_phase,
-            channel=qubit.drive.name,
-        )
-
-    def create_CZ_pulse_sequence(self, qubits):
-        pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or len(self.pairs[pair].native_gates.CZ) == 0:
-            raise_error(
-                ValueError,
-                f"Calibration for CZ gate between qubits {qubits[0]} and {qubits[1]} not found.",
-            )
-        return self.pairs[pair].native_gates.CZ
-
-    def create_iSWAP_pulse_sequence(self, qubits):
-        pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or len(self.pairs[pair].native_gates.iSWAP) == 0:
-            raise_error(
-                ValueError,
-                f"Calibration for iSWAP gate between qubits {qubits[0]} and {qubits[1]} not found.",
-            )
-        return self.pairs[pair].native_gates.iSWAP
-
-    def create_CNOT_pulse_sequence(self, qubits):
-        pair = tuple(self.get_qubit(q).name for q in qubits)
-        if pair not in self.pairs or len(self.pairs[pair].native_gates.CNOT) == 0:
-            raise_error(
-                ValueError,
-                f"Calibration for CNOT gate between qubits {qubits[0]} and {qubits[1]} not found.",
-            )
-        return self.pairs[pair].native_gates.CNOT
-
-    def create_MZ_pulse(self, qubit):
-        qubit = self.get_qubit(qubit)
-        return replace(qubit.native_gates.MZ, channel=qubit.readout.name)
-
-    def create_qubit_drive_pulse(self, qubit, duration, relative_phase=0):
-        qubit = self.get_qubit(qubit)
-        return replace(
-            qubit.native_gates.RX,
-            duration=duration,
-            relative_phase=relative_phase,
-            channel=qubit.drive.name,
-        )
-
-    def create_qubit_readout_pulse(self, qubit):
-        return self.create_MZ_pulse(qubit)
-
-    def create_coupler_pulse(self, coupler, duration=None, amplitude=None):
-        coupler = self.get_coupler(coupler)
-        pulse = coupler.native_gates.CP
-        if duration is not None:
-            pulse = replace(pulse, duration=duration)
-        if amplitude is not None:
-            pulse = replace(pulse, amplitude=amplitude)
-        return replace(pulse, channel=coupler.flux.name)
-
-    # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
-    # TODO Add RY90 and RY pulses
-
-    def create_RX90_drag_pulse(self, qubit, beta, relative_phase=0):
-        """Create native RX90 pulse with Drag shape."""
-        qubit = self.get_qubit(qubit)
-        pulse = qubit.native_gates.RX90
-        return replace(
-            pulse,
-            relative_phase=relative_phase,
-            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
-            channel=qubit.drive.name,
-        )
-
-    def create_RX_drag_pulse(self, qubit, beta, relative_phase=0):
-        """Create native RX pulse with Drag shape."""
-        qubit = self.get_qubit(qubit)
-        pulse = qubit.native_gates.RX
-        return replace(
-            pulse,
-            relative_phase=relative_phase,
-            envelope=Drag(rel_sigma=pulse.envelope.rel_sigma, beta=beta),
-            channel=qubit.drive.name,
-        )

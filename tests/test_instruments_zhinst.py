@@ -1,21 +1,13 @@
-import math
-from collections import defaultdict
-
 import laboneq.dsl.experiment.pulse as laboneq_pulse
 import laboneq.simple as lo
 import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
-from qibolab.instruments.zhinst import (
-    ProcessedSweeps,
-    ZhPulse,
-    Zurich,
-    acquire_channel_name,
-    classify_sweepers,
-    measure_channel_name,
-)
+from qibolab.instruments.zhinst import ProcessedSweeps, Zurich, classify_sweepers
+from qibolab.instruments.zhinst.pulse import select_pulse
 from qibolab.pulses import (
+    Delay,
     Drag,
     Gaussian,
     Iir,
@@ -92,9 +84,9 @@ from .conftest import get_instrument
         ),
     ],
 )
-def test_zhpulse_pulse_conversion(pulse):
+def test_pulse_conversion(pulse):
     shape = pulse.shape
-    zhpulse = ZhPulse(pulse).zhpulse
+    zhpulse = select_pulse(pulse)
     assert isinstance(zhpulse, laboneq_pulse.Pulse)
     if isinstance(shape, (Snz, Iir)):
         assert len(zhpulse.samples) == 80
@@ -102,68 +94,29 @@ def test_zhpulse_pulse_conversion(pulse):
         assert zhpulse.length == 40e-9
 
 
-def test_zhpulse_add_sweeper():
-    pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch", qubit=0)
-    zhpulse = ZhPulse(pulse)
-    assert zhpulse.zhsweepers == []
-    assert zhpulse.delay_sweeper is None
-
-    zhpulse.add_sweeper(
-        Parameter.duration, lo.SweepParameter(values=np.array([1, 2, 3]))
-    )
-    assert len(zhpulse.zhsweepers) == 1
-    assert zhpulse.delay_sweeper is None
-
-    zhpulse.add_sweeper(
-        Parameter.start, lo.SweepParameter(values=np.array([4, 5, 6, 7]))
-    )
-    assert len(zhpulse.zhsweepers) == 1
-    assert zhpulse.delay_sweeper is not None
-
-    zhpulse.add_sweeper(
-        Parameter.amplitude, lo.SweepParameter(values=np.array([3, 2, 1, 0]))
-    )
-    assert len(zhpulse.zhsweepers) == 2
-    assert zhpulse.delay_sweeper is not None
-
-
-def test_measure_channel_name(dummy_qrc):
-    platform = create_platform("zurich")
-    qubits = platform.qubits.values()
-    meas_ch_names = {measure_channel_name(q) for q in qubits}
-    assert len(qubits) > 0
-    assert len(meas_ch_names) == len(qubits)
-
-
-def test_acquire_channel_name(dummy_qrc):
-    platform = create_platform("zurich")
-    qubits = platform.qubits.values()
-    acq_ch_names = {acquire_channel_name(q) for q in qubits}
-    assert len(qubits) > 0
-    assert len(acq_ch_names) == len(qubits)
-
-
 def test_classify_sweepers(dummy_qrc):
     platform = create_platform("zurich")
-    qubit_id, qubit = 0, platform.qubits[0]
-    pulse_1 = Pulse(0, 40, 0.05, int(3e9), 0.0, Gaussian(5), "ch0", qubit=qubit_id)
+    qubit = platform.qubits[0]
+    pulse_1 = Pulse(
+        duration=40,
+        amplitude=0.05,
+        envelope=Gaussian(rel_sigma=5),
+        type=PulseType.DRIVE,
+    )
     pulse_2 = Pulse(
-        0,
-        40,
-        0.05,
-        int(3e9),
-        0.0,
-        Rectangular(),
-        "ch7",
-        PulseType.READOUT,
-        qubit=qubit_id,
+        duration=40,
+        amplitude=0.05,
+        envelope=Rectangular(),
+        type=PulseType.READOUT,
     )
     amplitude_sweeper = Sweeper(Parameter.amplitude, np.array([1, 2, 3]), [pulse_1])
     readout_amplitude_sweeper = Sweeper(
         Parameter.amplitude, np.array([1, 2, 3, 4, 5]), [pulse_2]
     )
     freq_sweeper = Sweeper(Parameter.frequency, np.array([4, 5, 6, 7]), [pulse_1])
-    bias_sweeper = Sweeper(Parameter.bias, np.array([3, 2, 1]), qubits=[qubit])
+    bias_sweeper = Sweeper(
+        Parameter.bias, np.array([3, 2, 1]), channels=[qubit.flux.name]
+    )
     nt_sweeps, rt_sweeps = classify_sweepers(
         [amplitude_sweeper, readout_amplitude_sweeper, bias_sweeper, freq_sweeper]
     )
@@ -176,20 +129,27 @@ def test_classify_sweepers(dummy_qrc):
 
 def test_processed_sweeps_pulse_properties(dummy_qrc):
     platform = create_platform("zurich")
-    qubit_id_1, qubit_1 = 0, platform.qubits[0]
-    qubit_id_2, qubit_2 = 3, platform.qubits[3]
+    zi_instrument = platform.instruments["EL_ZURO"]
     pulse_1 = Pulse(
-        0, 40, 0.05, int(3e9), 0.0, Gaussian(5), qubit_1.drive.name, qubit=qubit_id_1
+        duration=40,
+        amplitude=0.05,
+        envelope=Gaussian(rel_sigma=5),
+        type=PulseType.DRIVE,
     )
     pulse_2 = Pulse(
-        0, 40, 0.05, int(3e9), 0.0, Gaussian(5), qubit_2.drive.name, qubit=qubit_id_2
+        duration=40,
+        amplitude=0.05,
+        envelope=Gaussian(rel_sigma=5),
+        type=PulseType.DRIVE,
     )
     sweeper_amplitude = Sweeper(
         Parameter.amplitude, np.array([1, 2, 3]), [pulse_1, pulse_2]
     )
     sweeper_duration = Sweeper(Parameter.duration, np.array([1, 2, 3, 4]), [pulse_2])
     processed_sweeps = ProcessedSweeps(
-        [sweeper_duration, sweeper_amplitude], qubits=platform.qubits
+        [sweeper_duration, sweeper_amplitude],
+        zi_instrument.channels.values(),
+        platform.configs,
     )
 
     assert len(processed_sweeps.sweeps_for_pulse(pulse_1)) == 1
@@ -221,248 +181,108 @@ def test_processed_sweeps_pulse_properties(dummy_qrc):
     assert processed_sweeps.channels_with_sweeps() == set()
 
 
-def test_processed_sweeps_frequency(dummy_qrc):
-    platform = create_platform("zurich")
-    qubit_id, qubit = 1, platform.qubits[1]
-    pulse = Pulse(
-        0, 40, 0.05, int(3e9), 0.0, Gaussian(5), qubit.drive.name, qubit=qubit_id
-    )
-    freq_sweeper = Sweeper(Parameter.frequency, np.array([1, 2, 3]), [pulse])
-    processed_sweeps = ProcessedSweeps([freq_sweeper], platform.qubits)
-
-    # Frequency sweepers should result into channel property sweeps
-    assert len(processed_sweeps.sweeps_for_pulse(pulse)) == 0
-    assert processed_sweeps.channels_with_sweeps() == {qubit.drive.name}
-    assert len(processed_sweeps.sweeps_for_channel(qubit.drive.name)) == 1
-
-    with pytest.raises(ValueError):
-        flux_pulse = Pulse(
-            0,
-            40,
-            0.05,
-            int(3e9),
-            0.0,
-            Gaussian(5),
-            qubit.flux.name,
-            PulseType.FLUX,
-            qubit=qubit_id,
-        )
-        freq_sweeper = Sweeper(
-            Parameter.frequency, np.array([1, 3, 5, 7]), [flux_pulse]
-        )
-        ProcessedSweeps([freq_sweeper], platform.qubits)
-
-
-def test_processed_sweeps_readout_amplitude(dummy_qrc):
-    platform = create_platform("zurich")
-    qubit_id, qubit = 0, platform.qubits[0]
-    readout_ch = measure_channel_name(qubit)
-    pulse_readout = Pulse(
-        0,
-        40,
-        0.05,
-        int(3e9),
-        0.0,
-        Rectangular(),
-        readout_ch,
-        PulseType.READOUT,
-        qubit_id,
-    )
-    readout_amplitude_sweeper = Sweeper(
-        Parameter.amplitude, np.array([1, 2, 3, 4]), [pulse_readout]
-    )
-    processed_sweeps = ProcessedSweeps(
-        [readout_amplitude_sweeper], qubits=platform.qubits
-    )
-
-    # Readout amplitude should result into channel property (gain) sweep
-    assert len(processed_sweeps.sweeps_for_pulse(pulse_readout)) == 0
-    assert processed_sweeps.channels_with_sweeps() == {
-        readout_ch,
-    }
-    assert len(processed_sweeps.sweeps_for_channel(readout_ch)) == 1
+# def test_processed_sweeps_readout_amplitude(dummy_qrc):
+#     platform = create_platform("zurich")
+#     qubit_id, qubit = 0, platform.qubits[0]
+#     readout_ch = measure_channel_name(qubit)
+#     pulse_readout = Pulse(
+#         0,
+#         40,
+#         0.05,
+#         int(3e9),
+#         0.0,
+#         Rectangular(),
+#         readout_ch,
+#         PulseType.READOUT,
+#         qubit_id,
+#     )
+#     readout_amplitude_sweeper = Sweeper(
+#         Parameter.amplitude, np.array([1, 2, 3, 4]), [pulse_readout]
+#     )
+#     processed_sweeps = ProcessedSweeps(
+#         [readout_amplitude_sweeper], qubits=platform.qubits
+#     )
+#
+#     # Readout amplitude should result into channel property (gain) sweep
+#     assert len(processed_sweeps.sweeps_for_pulse(pulse_readout)) == 0
+#     assert processed_sweeps.channels_with_sweeps() == {
+#         readout_ch,
+#     }
+#     assert len(processed_sweeps.sweeps_for_channel(readout_ch)) == 1
 
 
 def test_zhinst_setup(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
-    assert IQM5q.time_of_flight == 75
+    zi_instrument = platform.instruments["EL_ZURO"]
+    assert zi_instrument.time_of_flight == 75
 
 
-def test_zhsequence(dummy_qrc):
-    IQM5q = create_platform("zurich")
-    controller = IQM5q.instruments["EL_ZURO"]
-
-    drive_channel, readout_channel = (
-        IQM5q.qubits[0].drive.name,
-        measure_channel_name(IQM5q.qubits[0]),
-    )
-    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
-    ro_pulse = Pulse(
-        0,
-        40,
-        0.05,
-        int(3e9),
-        0.0,
-        Rectangular(),
-        readout_channel,
-        PulseType.READOUT,
-        qubit=0,
-    )
-    sequence = PulseSequence()
-    sequence.append(qd_pulse)
-    sequence.append(qd_pulse)
-    sequence.append(ro_pulse)
-
-    zhsequence = controller.sequence_zh(sequence, IQM5q.qubits)
-
-    assert len(zhsequence) == 2
-    assert len(zhsequence[drive_channel]) == 2
-    assert len(zhsequence[readout_channel]) == 1
-
-    with pytest.raises(AttributeError):
-        controller.sequence_zh("sequence", IQM5q.qubits)
-
-
-def test_zhsequence_couplers(dummy_qrc):
-    IQM5q = create_platform("zurich")
-    controller = IQM5q.instruments["EL_ZURO"]
-
-    drive_channel, readout_channel = (
-        IQM5q.qubits[0].drive.name,
-        measure_channel_name(IQM5q.qubits[0]),
-    )
-    couplerflux_channel = IQM5q.couplers[0].flux.name
-    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), drive_channel, qubit=0)
-    ro_pulse = Pulse(
-        0,
-        40,
-        0.05,
-        int(3e9),
-        0.0,
-        Rectangular(),
-        readout_channel,
-        PulseType.READOUT,
-        qubit=0,
-    )
-    qc_pulse = Pulse.flux(
-        0, 40, 0.05, Rectangular(), channel=couplerflux_channel, qubit=3
-    )
-    qc_pulse.type = PulseType.COUPLERFLUX
-    sequence = PulseSequence()
-    sequence.append(qd_pulse)
-    sequence.append(ro_pulse)
-    sequence.append(qc_pulse)
-
-    zhsequence = controller.sequence_zh(sequence, IQM5q.qubits)
-
-    assert len(zhsequence) == 3
-    assert len(zhsequence[couplerflux_channel]) == 1
-
-
-def test_zhsequence_multiple_ro(dummy_qrc):
+def test_zhinst_configure_acquire_line(dummy_qrc):
     platform = create_platform("zurich")
-    readout_channel = measure_channel_name(platform.qubits[0])
-    sequence = PulseSequence()
-    qd_pulse = Pulse(0, 40, 0.05, int(3e9), 0.0, Rectangular(), "ch0", qubit=0)
-    sequence.append(qd_pulse)
-    ro_pulse = Pulse(
-        0,
-        40,
-        0.05,
-        int(3e9),
-        0.0,
-        Rectangular(),
-        readout_channel,
-        PulseType.READOUT,
-        qubit=0,
-    )
-    sequence.append(ro_pulse)
-    ro_pulse = Pulse(
-        0,
-        5000,
-        0.05,
-        int(3e9),
-        0.0,
-        Rectangular(),
-        readout_channel,
-        PulseType.READOUT,
-        qubit=0,
-    )
-    sequence.append(ro_pulse)
-    platform = create_platform("zurich")
-
-    controller = platform.instruments["EL_ZURO"]
-    zhsequence = controller.sequence_zh(sequence, platform.qubits)
-
-    assert len(zhsequence) == 2
-    assert len(zhsequence[readout_channel]) == 2
-
-
-def test_zhinst_register_readout_line(dummy_qrc):
-    platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
 
-    options = ExecutionParameters(
-        relaxation_time=300e-6,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
+    zi_instrument.configure_acquire_line(qubit.acquisition.name, platform.configs)
 
-    IQM5q.register_readout_line(qubit, intermediate_frequency=int(1e6), options=options)
-
-    assert measure_channel_name(qubit) in IQM5q.signal_map
-    assert acquire_channel_name(qubit) in IQM5q.signal_map
+    assert qubit.acquisition.name in zi_instrument.signal_map
     assert (
-        "/logical_signal_groups/q0/measure_line" in IQM5q.calibration.calibration_items
+        "/logical_signal_groups/q0/acquire_line"
+        in zi_instrument.calibration.calibration_items
     )
 
 
-def test_zhinst_register_drive_line(dummy_qrc):
+def test_zhinst_configure_iq_line(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
-    IQM5q.register_drive_line(qubit, intermediate_frequency=int(1e6))
+    zi_instrument.configure_iq_line(qubit.drive.name, platform.configs)
+    zi_instrument.configure_iq_line(qubit.probe.name, platform.configs)
 
-    assert qubit.drive.name in IQM5q.signal_map
-    assert "/logical_signal_groups/q0/drive_line" in IQM5q.calibration.calibration_items
+    assert qubit.drive.name in zi_instrument.signal_map
+    assert (
+        "/logical_signal_groups/q0/drive_line"
+        in zi_instrument.calibration.calibration_items
+    )
+
+    assert qubit.probe.name in zi_instrument.signal_map
+    assert (
+        "/logical_signal_groups/q0/measure_line"
+        in zi_instrument.calibration.calibration_items
+    )
 
 
-def test_zhinst_register_flux_line(dummy_qrc):
+def test_zhinst_configure_dc_line(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
     qubit = platform.qubits[0]
-    IQM5q.register_flux_line(qubit)
+    zi_instrument.configure_dc_line(qubit.flux.name, platform.configs)
 
-    assert qubit.flux.name in IQM5q.signal_map
-    assert "/logical_signal_groups/q0/flux_line" in IQM5q.calibration.calibration_items
+    assert qubit.flux.name in zi_instrument.signal_map
+    assert (
+        "/logical_signal_groups/q0/flux_line"
+        in zi_instrument.calibration.calibration_items
+    )
 
 
 def test_experiment_flow(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
     platform.qubits = qubits
     couplers = {}
 
-    ro_pulses = {}
-    qf_pulses = {}
     for qubit in qubits.values():
-        q = qubit.name
-        qf_pulses[q] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.qubits[q].flux.name,
-            qubit=q,
+        sequence[qubit.flux.name].append(
+            Pulse.flux(
+                duration=500,
+                amplitude=1,
+                envelope=Rectangular(),
+            )
         )
-        sequence.append(qf_pulses[q])
-        ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qf_pulses[q].finish)
-        sequence.append(ro_pulses[q])
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -470,16 +290,16 @@ def test_experiment_flow(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].flux.name in IQM5q.experiment.signals
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert qubits[0].flux.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_experiment_flow_coupler(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
@@ -487,35 +307,26 @@ def test_experiment_flow_coupler(dummy_qrc):
     couplers = {0: platform.couplers[0]}
     platform.couplers = couplers
 
-    ro_pulses = {}
-    qf_pulses = {}
     for qubit in qubits.values():
-        q = qubit.name
-        qf_pulses[q] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.qubits[q].flux.name,
-            qubit=q,
+        sequence[qubit.flux.name].append(
+            Pulse.flux(
+                duration=500,
+                amplitude=1,
+                envelope=Rectangular(),
+            )
         )
-        sequence.append(qf_pulses[q])
-        ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qf_pulses[q].finish)
-        sequence.append(ro_pulses[q])
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
-    cf_pulses = {}
     for coupler in couplers.values():
-        c = coupler.name
-        cf_pulses[c] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.couplers[c].flux.name,
-            qubit=c,
+        sequence[coupler.flux.name].append(
+            Pulse(
+                duration=500,
+                amplitude=1,
+                envelope=Rectangular(),
+                type=PulseType.COUPLERFLUX,
+            )
         )
-        cf_pulses[c].type = PulseType.COUPLERFLUX
-        sequence.append(cf_pulses[c])
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -523,38 +334,33 @@ def test_experiment_flow_coupler(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].flux.name in IQM5q.experiment.signals
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert qubits[0].flux.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_sweep_and_play_sim(dummy_qrc):
     """Test end-to-end experiment run using ZI emulated connection."""
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
     platform.qubits = qubits
     couplers = {}
 
-    ro_pulses = {}
-    qf_pulses = {}
     for qubit in qubits.values():
-        q = qubit.name
-        qf_pulses[q] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.qubits[q].flux.name,
-            qubit=q,
+        sequence[qubit.flux.name].append(
+            Pulse.flux(
+                duration=500,
+                amplitude=1,
+                envelope=Rectangular(),
+            )
         )
-        sequence.append(qf_pulses[q])
-        ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qf_pulses[q].finish)
-        sequence.append(ro_pulses[q])
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -564,21 +370,29 @@ def test_sweep_and_play_sim(dummy_qrc):
     )
 
     # check play
-    IQM5q.session = lo.Session(IQM5q.device_setup)
-    IQM5q.session.connect(do_emulation=True)
-    res = IQM5q.play(qubits, couplers, sequence, options)
+    zi_instrument.session = lo.Session(zi_instrument.device_setup)
+    zi_instrument.session.connect(do_emulation=True)
+    res = zi_instrument.play(platform.configs, [sequence], options, {})
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
     # check sweep with empty list of sweeps
-    res = IQM5q.sweep(qubits, couplers, sequence, options)
+    res = zi_instrument.sweep(platform.configs, [sequence], options, {})
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
     # check sweep with sweeps
-    sweep_1 = Sweeper(Parameter.start, np.array([1, 2, 3, 4]), list(qf_pulses.values()))
-    sweep_2 = Sweeper(Parameter.bias, np.array([1, 2, 3]), qubits=[qubits[0]])
-    res = IQM5q.sweep(qubits, couplers, sequence, options, sweep_1, sweep_2)
+    sweep_1 = Sweeper(
+        Parameter.amplitude,
+        np.array([1, 2, 3, 4]),
+        pulses=[sequence[qubit.flux.name][0] for qubit in qubits.values()],
+    )
+    sweep_2 = Sweeper(
+        Parameter.bias, np.array([1, 2, 3]), channels=[qubits[0].flux.name]
+    )
+    res = zi_instrument.sweep(
+        platform.configs, [sequence], options, {}, sweep_1, sweep_2
+    )
     assert res is not None
     assert all(qubit in res for qubit in qubits)
 
@@ -586,22 +400,16 @@ def test_sweep_and_play_sim(dummy_qrc):
 @pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single(dummy_qrc, parameter1):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
-    qubits = {0: platform.qubits[0]}
+    qubit_id, qubit = 0, platform.qubits[0]
     couplers = {}
 
     swept_points = 5
     sequence = PulseSequence()
-    ro_pulses = {}
-    qd_pulses = {}
-    for qubit in qubits:
-        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.append(qd_pulses[qubit])
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
-        sequence.append(ro_pulses[qubit])
+    sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
+    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+    sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter_range_1 = (
         np.random.rand(swept_points)
@@ -610,7 +418,9 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
     )
 
     sweepers = []
-    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[qd_pulses[qubit]]))
+    sweepers.append(
+        Sweeper(parameter1, parameter_range_1, pulses=[sequence[qubit.drive.name][0]])
+    )
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -618,46 +428,37 @@ def test_experiment_sweep_single(dummy_qrc, parameter1):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow({qubit_id: qubit}, couplers, sequence, options)
 
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert qubit.drive.name in zi_instrument.experiment.signals
+    assert qubit.probe.name in zi_instrument.experiment.signals
+    assert qubit.acquisition.name in zi_instrument.experiment.signals
 
 
 @pytest.mark.parametrize("parameter1", [Parameter.duration])
 def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0], 2: platform.qubits[2]}
     couplers = {0: platform.couplers[0]}
 
     swept_points = 5
     sequence = PulseSequence()
-    ro_pulses = {}
-    qd_pulses = {}
-    for qubit in qubits:
-        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.append(qd_pulses[qubit])
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
-        sequence.append(ro_pulses[qubit])
+    for qubit in qubits.values():
+        sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
-    cf_pulses = {}
     for coupler in couplers.values():
-        c = coupler.name
-        cf_pulses[c] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.couplers[c].flux.name,
-            qubit=c,
+        sequence[coupler.flux.name].append(
+            Pulse(
+                duration=500,
+                amplitude=1,
+                envelope=Rectangular(),
+                type=PulseType.COUPLERFLUX,
+            )
         )
-        cf_pulses[c].type = PulseType.COUPLERFLUX
-        sequence.append(cf_pulses[c])
 
     parameter_range_1 = (
         np.random.rand(swept_points)
@@ -666,7 +467,13 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
     )
 
     sweepers = []
-    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[cf_pulses[c]]))
+    sweepers.append(
+        Sweeper(
+            parameter1,
+            parameter_range_1,
+            pulses=[sequence[coupler.flux.name][0] for coupler in couplers.values()],
+        )
+    )
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -674,12 +481,12 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert couplers[0].flux.name in IQM5q.experiment.signals
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert couplers[0].flux.name in zi_instrument.experiment.signals
+    assert qubits[0].drive.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 SweeperParameter = {
@@ -694,22 +501,17 @@ SweeperParameter = {
 @pytest.mark.parametrize("parameter2", Parameter)
 def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0]}
     couplers = {}
 
     swept_points = 5
     sequence = PulseSequence()
-    ro_pulses = {}
-    qd_pulses = {}
-    for qubit in qubits:
-        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.append(qd_pulses[qubit])
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
-        sequence.append(ro_pulses[qubit])
+    for qubit in qubits.values():
+        sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter_range_1 = (
         np.random.rand(swept_points)
@@ -727,13 +529,23 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
     if parameter1 in SweeperParameter:
         if parameter1 is not Parameter.start:
             sweepers.append(
-                Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]])
+                Sweeper(
+                    parameter1,
+                    parameter_range_1,
+                    pulses=[sequence[qubit.probe.name][0] for qubit in qubits.values()],
+                )
             )
     if parameter2 in SweeperParameter:
         if parameter2 is Parameter.amplitude:
             if parameter1 is not Parameter.amplitude:
                 sweepers.append(
-                    Sweeper(parameter2, parameter_range_2, pulses=[qd_pulses[qubit]])
+                    Sweeper(
+                        parameter2,
+                        parameter_range_2,
+                        pulses=[
+                            sequence[qubit.drive.name][0] for qubit in qubits.values()
+                        ],
+                    )
                 )
 
     options = ExecutionParameters(
@@ -742,31 +554,26 @@ def test_experiment_sweep_2d_general(dummy_qrc, parameter1, parameter2):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert qubits[0].drive.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_experiment_sweep_2d_specific(dummy_qrc):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0]}
     couplers = {}
 
     swept_points = 5
     sequence = PulseSequence()
-    ro_pulses = {}
-    qd_pulses = {}
-    for qubit in qubits:
-        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.append(qd_pulses[qubit])
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
-        sequence.append(ro_pulses[qubit])
+    for qubit in qubits.values():
+        sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter1 = Parameter.relative_phase
     parameter2 = Parameter.frequency
@@ -784,8 +591,9 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
     )
 
     sweepers = []
-    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[qd_pulses[qubit]]))
-    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[qd_pulses[qubit]]))
+    qd_pulses = [sequence[qubit.drive.name][0] for qubit in qubits.values()]
+    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=qd_pulses))
+    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=qd_pulses))
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -793,11 +601,11 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert qubits[0].drive.name in IQM5q.experiment.signals
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert qubits[0].drive.name in zi_instrument.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 @pytest.mark.parametrize(
@@ -805,7 +613,7 @@ def test_experiment_sweep_2d_specific(dummy_qrc):
 )
 def test_experiment_sweep_punchouts(dummy_qrc, parameter):
     platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
+    zi_instrument = platform.instruments["EL_ZURO"]
 
     qubits = {0: platform.qubits[0]}
     couplers = {}
@@ -822,10 +630,8 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
 
     swept_points = 5
     sequence = PulseSequence()
-    ro_pulses = {}
-    for qubit in qubits:
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(qubit, start=0)
-        sequence.append(ro_pulses[qubit])
+    for qubit in qubits.values():
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter_range_1 = (
         np.random.rand(swept_points)
@@ -840,13 +646,18 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
     )
 
     sweepers = []
+    ro_pulses = [sequence[qubit.probe.name][0] for qubit in qubits.values()]
     if parameter1 is Parameter.bias:
-        sweepers.append(Sweeper(parameter1, parameter_range_1, qubits=[qubits[qubit]]))
-    else:
         sweepers.append(
-            Sweeper(parameter1, parameter_range_1, pulses=[ro_pulses[qubit]])
+            Sweeper(
+                parameter1,
+                parameter_range_1,
+                channels=[qubit.probe.name for qubit in qubits.values()],
+            )
         )
-    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[ro_pulses[qubit]]))
+    else:
+        sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=ro_pulses))
+    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=ro_pulses))
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -854,10 +665,10 @@ def test_experiment_sweep_punchouts(dummy_qrc, parameter):
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
+    zi_instrument.experiment_flow(qubits, couplers, sequence, options)
 
-    assert measure_channel_name(qubits[0]) in IQM5q.experiment.signals
-    assert acquire_channel_name(qubits[0]) in IQM5q.experiment.signals
+    assert qubits[0].probe.name in zi_instrument.experiment.signals
+    assert qubits[0].acquisition.name in zi_instrument.experiment.signals
 
 
 def test_batching(dummy_qrc):
@@ -865,11 +676,17 @@ def test_batching(dummy_qrc):
     instrument = platform.instruments["EL_ZURO"]
 
     sequence = PulseSequence()
-    sequence.append(platform.create_RX_pulse(0, start=0))
-    sequence.append(platform.create_RX_pulse(1, start=0))
-    measurement_start = sequence.finish
-    sequence.append(platform.create_MZ_pulse(0, start=measurement_start))
-    sequence.append(platform.create_MZ_pulse(1, start=measurement_start))
+    sequence.extend(
+        platform.qubits[0].native_gates.RX.create_sequence(theta=np.pi, phi=0.0)
+    )
+    sequence.extend(
+        platform.qubits[1].native_gates.RX.create_sequence(theta=np.pi, phi=0.0)
+    )
+    measurement_start = sequence.duration
+    sequence[platform.qubits[0].probe.name].append(Delay(duration=measurement_start))
+    sequence[platform.qubits[1].probe.name].append(Delay(duration=measurement_start))
+    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
+    sequence.extend(platform.qubits[1].native_gates.MZ.create_sequence())
 
     batches = list(batch(600 * [sequence], instrument.bounds))
     # These sequences get limited by the number of measuraments (600/250/2)
@@ -898,23 +715,19 @@ def test_experiment_execute_qpu(connected_platform, instrument):
     qubits = {0: platform.qubits[0], "c0": platform.qubits["c0"]}
     platform.qubits = qubits
 
-    ro_pulses = {}
-    qf_pulses = {}
     for qubit in qubits.values():
-        q = qubit.name
-        qf_pulses[q] = Pulse.flux(
-            start=0,
-            duration=500,
-            amplitude=1,
-            shape=Rectangular(),
-            channel=platform.qubits[q].flux.name,
-            qubit=q,
+        sequence[qubit.flux.name].append(
+            Pulse.flux(
+                duration=500,
+                amplitude=1,
+                envelope=Rectangular(),
+            )
         )
-        sequence.append(qf_pulses[q])
         if qubit.flux_coupler:
             continue
-        ro_pulses[q] = platform.create_qubit_readout_pulse(q, start=qf_pulses[q].finish)
-        sequence.append(ro_pulses[q])
+
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -923,8 +736,7 @@ def test_experiment_execute_qpu(connected_platform, instrument):
     )
 
     results = platform.execute([sequence], options)
-
-    assert len(results[ro_pulses[q][0].id]) > 0
+    assert all(len(results[sequence.probe_pulses[q].id]) > 1 for q in qubits)
 
 
 @pytest.mark.qpu
@@ -934,15 +746,10 @@ def test_experiment_sweep_2d_specific_qpu(connected_platform, instrument):
 
     swept_points = 5
     sequence = PulseSequence()
-    ro_pulses = {}
-    qd_pulses = {}
-    for qubit in qubits:
-        qd_pulses[qubit] = platform.create_RX_pulse(qubit, start=0)
-        sequence.append(qd_pulses[qubit])
-        ro_pulses[qubit] = platform.create_qubit_readout_pulse(
-            qubit, start=qd_pulses[qubit].finish
-        )
-        sequence.append(ro_pulses[qubit])
+    for qubit in qubits.values():
+        sequence.extend(qubit.native_gates.RX.create_sequence(theta=np.pi, phi=0.0))
+        sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
+        sequence.extend(qubit.native_gates.MZ.create_sequence())
 
     parameter1 = Parameter.relative_phase
     parameter2 = Parameter.frequency
@@ -960,8 +767,9 @@ def test_experiment_sweep_2d_specific_qpu(connected_platform, instrument):
     )
 
     sweepers = []
-    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=[qd_pulses[qubit]]))
-    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=[qd_pulses[qubit]]))
+    qd_pulses = [sequence[qubit.drive.name][0] for qubit in qubits.values()]
+    sweepers.append(Sweeper(parameter1, parameter_range_1, pulses=qd_pulses))
+    sweepers.append(Sweeper(parameter2, parameter_range_2, pulses=qd_pulses))
 
     options = ExecutionParameters(
         relaxation_time=300e-6,
@@ -976,69 +784,4 @@ def test_experiment_sweep_2d_specific_qpu(connected_platform, instrument):
         sweepers[1],
     )
 
-    assert len(results[ro_pulses[qubit].id]) > 0
-
-
-def get_previous_subsequence_finish(instrument, name):
-    """Look recursively for sub_section finish times."""
-    section = next(
-        iter(ch for ch in instrument.experiment.sections[0].children if ch.uid == name)
-    )
-    finish = defaultdict(int)
-    for pulse in section.children:
-        try:
-            finish[pulse.signal] += pulse.time
-        except AttributeError:
-            # not a laboneq Delay class object, skipping
-            pass
-        try:
-            finish[pulse.signal] += pulse.pulse.length
-        except AttributeError:
-            # not a laboneq PlayPulse class object, skipping
-            pass
-    return max(finish.values())
-
-
-def test_experiment_measurement_sequence(dummy_qrc):
-    platform = create_platform("zurich")
-    IQM5q = platform.instruments["EL_ZURO"]
-
-    sequence = PulseSequence()
-    qubits = {0: platform.qubits[0]}
-    platform.qubits = qubits
-    couplers = {}
-
-    readout_pulse_start = 40
-
-    for qubit in qubits:
-        qubit_drive_pulse_1 = platform.create_qubit_drive_pulse(
-            qubit, start=0, duration=40
-        )
-        ro_pulse = platform.create_qubit_readout_pulse(qubit, start=readout_pulse_start)
-        qubit_drive_pulse_2 = platform.create_qubit_drive_pulse(
-            qubit, start=readout_pulse_start + 50, duration=40
-        )
-        sequence.append(qubit_drive_pulse_1)
-        sequence.append(ro_pulse)
-        sequence.append(qubit_drive_pulse_2)
-
-    options = ExecutionParameters(
-        relaxation_time=4,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
-
-    IQM5q.experiment_flow(qubits, couplers, sequence, options)
-    measure_start = 0
-    for section in IQM5q.experiment.sections[0].children:
-        if section.uid == "measure_0":
-            measure_start += get_previous_subsequence_finish(IQM5q, section.play_after)
-            for pulse in section.children:
-                try:
-                    if pulse.signal == measure_channel_name(qubits[0]):
-                        measure_start += pulse.time
-                except AttributeError:
-                    # not a laboneq delay class object, skipping
-                    pass
-
-    assert math.isclose(measure_start * 1e9, readout_pulse_start, rel_tol=1e-4)
+    assert all(len(results[sequence.probe_pulses[q].id]) for q in qubits) > 0

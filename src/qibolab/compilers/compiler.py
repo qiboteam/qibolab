@@ -121,6 +121,7 @@ class Compiler:
             raise NotImplementedError(f"{type(gate)} is not a native gate.")
         return gate_sequence
 
+    # FIXME: pulse.qubit and pulse.channel do not exist anymore
     def compile(self, circuit, platform):
         """Transforms a circuit to pulse sequence.
 
@@ -134,6 +135,12 @@ class Compiler:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
             measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
+        ch_to_qb = {
+            ch.name: qubit_id
+            for qubit_id, qubit in platform.qubits.items()
+            for ch in qubit.channels
+        }
+
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
@@ -149,17 +156,18 @@ class Compiler:
                         qubit_clock[qubit] += gate.delay
                     continue
 
+                delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
-                for pulse in gate_sequence:
-                    if qubit_clock[pulse.qubit] > channel_clock[pulse.qubit]:
-                        delay = qubit_clock[pulse.qubit] - channel_clock[pulse.channel]
-                        sequence.append(Delay(duration=delay, channel=pulse.channel))
-                        channel_clock[pulse.channel] += delay
-
-                    sequence.append(pulse)
-                    # update clocks
-                    qubit_clock[pulse.qubit] += pulse.duration
-                    channel_clock[pulse.channel] += pulse.duration
+                for ch in gate_sequence.keys():
+                    qubit = ch_to_qb[ch]
+                    if (delay := qubit_clock[qubit] - channel_clock[ch]) > 0:
+                        delay_sequence[ch].append(Delay(duration=delay))
+                        channel_clock[ch] += delay
+                    channel_duration = gate_sequence.channel_duration(ch)
+                    qubit_clock[qubit] += channel_duration
+                    channel_clock[ch] += channel_duration
+                sequence.extend(delay_sequence)
+                sequence.extend(gate_sequence)
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates

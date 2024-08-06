@@ -195,11 +195,10 @@ def test_superposition_for_all_qubits(connected_backend):
 # TODO: test_circuit_result_representation
 
 
-def test_metabackend_load(dummy_qrc):
-    for platform in Path("tests/dummy_qrc/").iterdir():
-        backend = MetaBackend.load(platform.name)
-        assert isinstance(backend, QibolabBackend)
-        assert Path(backend.platform.name).name == platform.name
+def test_metabackend_load(platform):
+    backend = MetaBackend.load(platform.name)
+    assert isinstance(backend, QibolabBackend)
+    assert backend.platform.name == platform.name
 
 
 def test_metabackend_list_available(tmpdir):

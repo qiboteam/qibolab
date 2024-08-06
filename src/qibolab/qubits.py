@@ -3,14 +3,14 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from qibolab.channels import Channel
+from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
 """Type for qubit names."""
 
-CHANNEL_NAMES = ("readout", "feedback", "drive", "flux", "twpa")
+CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")
 """Names of channels that belong to a qubit.
 
 Not all channels are required to operate a qubit.
@@ -19,7 +19,6 @@ EXCLUDED_FIELDS = CHANNEL_NAMES + (
     "name",
     "native_gates",
     "kernel",
-    "_flux",
     "qubit1",
     "qubit2",
     "coupler",
@@ -39,8 +38,6 @@ class Qubit:
         name (int, str): Qubit number or name.
         readout (:class:`qibolab.platforms.utils.Channel`): Channel used to
             readout pulses to the qubit.
-        feedback (:class:`qibolab.platforms.utils.Channel`): Channel used to
-            get readout feedback from the qubit.
         drive (:class:`qibolab.platforms.utils.Channel`): Channel used to
             send drive pulses to the qubit.
         flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
@@ -51,11 +48,7 @@ class Qubit:
     name: QubitId
 
     bare_resonator_frequency: int = 0
-    readout_frequency: int = 0
-    """Readout dressed frequency."""
-    drive_frequency: int = 0
     anharmonicity: int = 0
-    sweetspot: float = 0.0
     asymmetry: float = 0.0
     crosstalk_matrix: dict[QubitId, float] = field(default_factory=dict)
     """Crosstalk matrix for voltages."""
@@ -89,33 +82,15 @@ class Qubit:
     threshold: Optional[float] = None
     iq_angle: float = 0.0
     kernel: Optional[np.ndarray] = field(default=None, repr=False)
-    # required for mixers (not sure if it should be here)
-    mixer_drive_g: float = 0.0
-    mixer_drive_phi: float = 0.0
-    mixer_readout_g: float = 0.0
-    mixer_readout_phi: float = 0.0
 
-    readout: Optional[Channel] = None
-    feedback: Optional[Channel] = None
-    twpa: Optional[Channel] = None
-    drive: Optional[Channel] = None
-    _flux: Optional[Channel] = None
+    probe: Optional[IqChannel] = None
+    acquisition: Optional[AcquireChannel] = None
+    drive: Optional[IqChannel] = None
+    drive12: Optional[IqChannel] = None
+    drive_cross: Optional[dict[QubitId, IqChannel]] = None
+    flux: Optional[DcChannel] = None
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    def __post_init__(self):
-        if self.flux is not None and self.sweetspot != 0:
-            self.flux.offset = self.sweetspot
-
-    @property
-    def flux(self):
-        return self._flux
-
-    @flux.setter
-    def flux(self, channel):
-        if self.sweetspot != 0:
-            channel.offset = self.sweetspot
-        self._flux = channel
 
     @property
     def channels(self):

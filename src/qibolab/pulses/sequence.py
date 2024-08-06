@@ -1,159 +1,54 @@
 """PulseSequence class."""
 
 from collections import defaultdict
+from typing import Optional
 
-from .pulse import PulseType
+from .pulse import Delay, PulseLike, PulseType
 
 
-class PulseSequence(list):
-    """A collection of scheduled pulses.
+class PulseSequence(defaultdict[str, list[PulseLike]]):
+    """Synchronized sequence of control instructions across multiple channels.
 
-    A quantum circuit can be translated into a set of scheduled pulses
-    that implement the circuit gates. This class contains many
-    supporting fuctions to facilitate the creation and manipulation of
-    these collections of pulses. None of the methods of PulseSequence
-    modify any of the properties of its pulses.
+    The keys are names of channels, and the values are lists of pulses
+    and delays
     """
 
-    def __add__(self, other):
-        """Return self+value."""
-        return type(self)(super().__add__(other))
-
-    def __mul__(self, other):
-        """Return self*value."""
-        return type(self)(super().__mul__(other))
-
-    def __repr__(self):
-        """Return repr(self)."""
-        return f"{type(self).__name__}({super().__repr__()})"
-
-    def copy(self):
-        """Return a shallow copy of the sequence."""
-        return type(self)(super().copy())
+    def __init__(self, seq_dict: Optional[dict[str, list[PulseLike]]] = None):
+        initial_content = seq_dict if seq_dict is not None else {}
+        super().__init__(list, **initial_content)
 
     @property
-    def ro_pulses(self):
-        """A new sequence containing only its readout pulses."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.type == PulseType.READOUT:
-                new_pc.append(pulse)
-        return new_pc
-
-    @property
-    def qd_pulses(self):
-        """A new sequence containing only its qubit drive pulses."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.type == PulseType.DRIVE:
-                new_pc.append(pulse)
-        return new_pc
-
-    @property
-    def qf_pulses(self):
-        """A new sequence containing only its qubit flux pulses."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.type == PulseType.FLUX:
-                new_pc.append(pulse)
-        return new_pc
-
-    @property
-    def cf_pulses(self):
-        """A new sequence containing only its coupler flux pulses."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.type is PulseType.COUPLERFLUX:
-                new_pc.append(pulse)
-        return new_pc
-
-    def get_channel_pulses(self, *channels):
-        """Return a new sequence containing the pulses on some channels."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.channel in channels:
-                new_pc.append(pulse)
-        return new_pc
-
-    def get_qubit_pulses(self, *qubits):
-        """Return a new sequence containing the pulses on some qubits."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.type is not PulseType.COUPLERFLUX:
-                if pulse.qubit in qubits:
-                    new_pc.append(pulse)
-        return new_pc
-
-    def coupler_pulses(self, *couplers):
-        """Return a new sequence containing the pulses on some couplers."""
-        new_pc = PulseSequence()
-        for pulse in self:
-            if pulse.type is not PulseType.COUPLERFLUX:
-                if pulse.qubit in couplers:
-                    new_pc.append(pulse)
-        return new_pc
-
-    @property
-    def pulses_per_channel(self):
-        """Return a dictionary with the sequence per channel."""
-        sequences = defaultdict(type(self))
-        for pulse in self:
-            sequences[pulse.channel].append(pulse)
-        return sequences
+    def probe_pulses(self):
+        """Return list of the readout pulses in this sequence."""
+        pulses = []
+        for seq in self.values():
+            for pulse in seq:
+                if pulse.type == PulseType.READOUT:
+                    pulses.append(pulse)
+        return pulses
 
     @property
     def duration(self) -> int:
-        """The time when the last pulse of the sequence finishes."""
-        channel_pulses = self.pulses_per_channel
-        if len(channel_pulses) == 1:
-            pulses = next(iter(channel_pulses.values()))
-            return sum(pulse.duration for pulse in pulses)
-        return max(
-            (sequence.duration for sequence in channel_pulses.values()), default=0
-        )
+        """Duration of the entire sequence."""
+        return max((self.channel_duration(ch) for ch in self), default=0)
 
-    @property
-    def channels(self) -> list:
-        """List containing the channels used by the pulses in the sequence."""
-        channels = []
-        for pulse in self:
-            if pulse.channel not in channels:
-                channels.append(pulse.channel)
+    def channel_duration(self, channel: str) -> float:
+        """Duration of the given channel."""
+        return sum(item.duration for item in self[channel])
 
-        return channels
+    def extend(self, other: "PulseSequence") -> None:
+        """Appends other in-place such that the result is self + necessary
+        delays to synchronize channels + other."""
+        tol = 1e-12
+        durations = {ch: self.channel_duration(ch) for ch in other}
+        max_duration = max(durations.values(), default=0.0)
+        for ch, duration in durations.items():
+            if (delay := round(max_duration - duration, int(1 / tol))) > 0:
+                self[ch].append(Delay(duration=delay))
+            self[ch].extend(other[ch])
 
-    @property
-    def qubits(self) -> list:
-        """The qubits associated with the pulses in the sequence."""
-        qubits = []
-        for pulse in self:
-            if not pulse.qubit in qubits:
-                qubits.append(pulse.qubit)
-        qubits.sort()
-        return qubits
-
-    def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
-        """Separate a sequence of overlapping pulses into a list of non-
-        overlapping sequences."""
-        # This routine separates the pulses of a sequence into non-overlapping sets
-        # but it does not check if the frequencies of the pulses within a set have the same frequency
-
-        separated_pulses = []
-        for new_pulse in self:
-            stored = False
-            for ps in separated_pulses:
-                overlaps = False
-                for existing_pulse in ps:
-                    if (
-                        new_pulse.start < existing_pulse.finish
-                        and new_pulse.finish > existing_pulse.start
-                    ):
-                        overlaps = True
-                        break
-                if not overlaps:
-                    ps.append(new_pulse)
-                    stored = True
-                    break
-            if not stored:
-                separated_pulses.append(PulseSequence([new_pulse]))
-        return separated_pulses
+    def copy(self) -> "PulseSequence":
+        """Return shallow copy of self."""
+        ps = PulseSequence()
+        ps.extend(self)
+        return ps

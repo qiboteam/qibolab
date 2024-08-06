@@ -2,7 +2,7 @@
 
 from dataclasses import fields
 from enum import Enum
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -38,11 +38,6 @@ class Pulse(Model):
 
     Pulse amplitudes are normalised between -1 and 1.
     """
-    frequency: float
-    """Pulse Intermediate Frequency in Hz.
-
-    The value has to be in the range [10e6 to 300e6].
-    """
     envelope: Envelope
     """The pulse envelope shape.
 
@@ -51,18 +46,8 @@ class Pulse(Model):
     """
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
-    channel: Optional[str] = None
-    """Channel on which the pulse should be played.
-
-    When a sequence of pulses is sent to the platform for execution,
-    each pulse is sent to the instrument responsible for playing pulses
-    the pulse channel. The connection of instruments with channels is
-    defined in the platform runcard.
-    """
     type: PulseType = PulseType.DRIVE
     """Pulse type, as an element of PulseType enumeration."""
-    qubit: int = 0
-    """Qubit or coupler addressed by the pulse."""
 
     @classmethod
     def flux(cls, **kwargs):
@@ -71,7 +56,6 @@ class Pulse(Model):
         It provides a simplified syntax for the :cls:`Pulse` constructor, by applying
         suitable defaults.
         """
-        kwargs["frequency"] = 0
         kwargs["relative_phase"] = 0
         if "type" not in kwargs:
             kwargs["type"] = PulseType.FLUX
@@ -125,8 +109,6 @@ class Delay(Model):
 
     duration: int
     """Delay duration in ns."""
-    channel: str
-    """Channel on which the delay should be implemented."""
     type: PulseType = PulseType.DELAY
     """Type fixed to ``DELAY`` to comply with ``Pulse`` interface."""
 
@@ -136,10 +118,6 @@ class VirtualZ(Model):
 
     phase: float
     """Phase that implements the rotation."""
-    channel: Optional[str] = None
-    """Channel on which the virtual phase should be added."""
-    qubit: int = 0
-    """Qubit on the drive of which the virtual phase should be added."""
     type: PulseType = PulseType.VIRTUALZ
 
     @property

@@ -18,13 +18,14 @@ NSWEEP2 = 8
 
 
 def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
-    qubit = next(iter(platform.qubits))
+    qubit = next(iter(platform.qubits.values()))
 
-    qd_pulse = platform.create_RX_pulse(qubit, start=0)
-    ro_pulse = platform.create_MZ_pulse(qubit, start=qd_pulse.finish)
+    qd_seq = qubit.native_gates.RX.create_sequence()
+    probe_seq = qubit.native_gates.MZ.create_sequence()
+    probe_pulse = next(iter(probe_seq.values()))[0]
     sequence = PulseSequence()
-    sequence.append(qd_pulse)
-    sequence.append(ro_pulse)
+    sequence.extend(qd_seq)
+    sequence.extend(probe_seq)
 
     options = ExecutionParameters(
         nshots=NSHOTS, acquisition_type=acquisition_type, averaging_mode=averaging_mode
@@ -32,13 +33,12 @@ def execute(platform: Platform, acquisition_type, averaging_mode, sweep=False):
     if sweep:
         amp_values = np.arange(0.01, 0.06, 0.01)
         freq_values = np.arange(-4e6, 4e6, 1e6)
-        sweeper1 = Sweeper(Parameter.bias, amp_values, qubits=[platform.qubits[qubit]])
-        # sweeper1 = Sweeper(Parameter.amplitude, amp_values, pulses=[qd_pulse])
-        sweeper2 = Sweeper(Parameter.frequency, freq_values, pulses=[ro_pulse])
+        sweeper1 = Sweeper(Parameter.bias, amp_values, channels=[qubit.flux.name])
+        sweeper2 = Sweeper(Parameter.amplitude, freq_values, pulses=[probe_pulse])
         results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
     else:
         results = platform.execute([sequence], options)
-    return results[qubit][0]
+    return results[probe_pulse.id][0]
 
 
 @pytest.mark.qpu

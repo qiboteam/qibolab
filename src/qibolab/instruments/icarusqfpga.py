@@ -13,7 +13,6 @@ from qibolab.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
@@ -25,7 +24,7 @@ ICARUSQ_PORT = 8080
 
 
 @dataclass
-class RFSOCPort(Port):
+class RFSOCPort:
     name: str
     dac: int = None
     adc: int = None
@@ -90,6 +89,8 @@ class RFSOC(Controller):
 
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
         for pulse in sequence.pulses:
+            # pylint: disable=no-member
+            # FIXME: ignore complaint about non-existent ports and _ports properties, until we upgrade this driver to qibolab 0.2
             if pulse.channel not in self._ports:
                 continue
 
