@@ -6,7 +6,7 @@ from copy import copy
 import laboneq.simple as laboneq
 
 from qibolab.components import Config
-from qibolab.pulses import Pulse, PulseType
+from qibolab.pulses import Pulse
 from qibolab.sweeper import Parameter, Sweeper
 
 from . import ZiChannel

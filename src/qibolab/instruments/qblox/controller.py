@@ -11,7 +11,7 @@ from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
 

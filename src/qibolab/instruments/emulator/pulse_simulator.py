@@ -13,7 +13,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import average, collect
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
