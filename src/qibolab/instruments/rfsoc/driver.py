@@ -434,7 +434,7 @@ class RFSoC(Controller):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
-        if any(pulse.type is PulseType.FLUX for pulse in sequence):
+        if any("flux" in ch for ch in sequence):
             return True
         for sweeper in sweepers:
             if all(
@@ -453,7 +453,9 @@ class RFSoC(Controller):
 
             for sweep_idx, parameter in enumerate(sweeper.parameters):
                 is_freq = parameter is rfsoc.Parameter.FREQUENCY
-                is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
+                # FIXME: the sequence can not even be indexed like this any longer
+                # is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
+                is_ro = False
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True

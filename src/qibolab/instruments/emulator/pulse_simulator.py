@@ -258,10 +258,11 @@ class PulseSimulator(Controller):
             param_name = sweep.parameter.name.lower()
             for pulse, value in zip(sweep.pulses, base_sweeper_values):
                 setattr(pulse, param_name, value)
+                # FIXME: this is copy-pasted from IcarusQ, check the comment in there
                 # Since the sweeper will modify the readout pulse serial, we collate the results with the qubit number.
                 # This is only for qibocal compatiability and will be removed with IcarusQ v2.
-                if pulse.type is PulseType.READOUT:
-                    results[pulse.serial] = results[pulse.qubit]
+                # if pulse.type is PulseType.READOUT:
+                #     results[pulse.serial] = results[pulse.qubit]
 
         results.update(
             {
@@ -753,8 +754,7 @@ def truncate_ro_pulses(
         `qibolab.pulses.PulseSequence`: Modified pulse sequence with one time step readout pulses.
     """
     sequence = copy.deepcopy(sequence)
-    for i in range(len(sequence)):
-        if sequence[i].type is PulseType.READOUT:
-            sequence[i].duration = 1
+    for pulse in sequence.probe_pulses:
+        pulse.duration = 1
 
     return sequence
