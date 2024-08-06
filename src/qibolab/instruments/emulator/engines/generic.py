@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -121,7 +121,7 @@ def op_from_instruction(
         )
         op_connectors_dict = op_connectors_dict_check
 
-    def process_op(op_list: list, connector_list: List[str], connector: str) -> list:
+    def process_op(op_list: list, connector_list: list[str], connector: str) -> list:
         """Implements connectors between operators."""
         index_list = []
         for i in range(connector_list.count(connector)):

@@ -1,6 +1,6 @@
 import collections
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, Union
+from typing import Optional, Set, Union
 
 import numpy as np
 from numpy import typing as npt
@@ -14,7 +14,7 @@ from qibolab.pulses import Pulse, PulseType
 from .acquisition import Acquisition
 from .config import SAMPLING_RATE, QMConfig
 
-DurationsType = Union[List[int], npt.NDArray[int]]
+DurationsType = Union[list[int], npt.NDArray[int]]
 """Type of values that can be accepted in a duration sweeper."""
 
 
@@ -115,7 +115,7 @@ class QMPulse:
 class BakedPulse(QMPulse):
     """Baking allows 1ns resolution in the pulse waveforms."""
 
-    segments: List[Baking] = field(default_factory=list)
+    segments: list[Baking] = field(default_factory=list)
     """Baked segments implementing the pulse."""
     amplitude: Optional[float] = None
     """Amplitude of the baked pulse.
@@ -186,7 +186,7 @@ class Sequence:
     corresponds to each pulse, as defined in the QM config.
     """
 
-    qmpulses: List[QMPulse] = field(default_factory=list)
+    qmpulses: list[QMPulse] = field(default_factory=list)
     """List of :class:`qibolab.instruments.qm.QMPulse` objects corresponding to
     the original pulses."""
     pulse_to_qmpulse: dict[Pulse, QMPulse] = field(default_factory=dict)
@@ -194,7 +194,7 @@ class Sequence:
     clock: dict[str, int] = field(default_factory=lambda: collections.defaultdict(int))
     """Dictionary used to keep track of times of each element, in order to
     calculate wait times."""
-    pulse_finish: dict[int, List[QMPulse]] = field(
+    pulse_finish: dict[int, list[QMPulse]] = field(
         default_factory=lambda: collections.defaultdict(list)
     )
     """Map to find all pulses that finish at a given time (useful for

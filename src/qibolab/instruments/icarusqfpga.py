@@ -1,6 +1,6 @@
 import operator
 from dataclasses import dataclass
-from typing import List, Union
+from typing import Union
 
 import numpy as np
 from icarusq_rfsoc_driver import IcarusQRFSoC  # pylint: disable=E0401
@@ -208,7 +208,7 @@ class RFSOC_RO(RFSOC):
         address,
         delay_samples_offset_dac: int = 0,
         delay_samples_offset_adc: int = 0,
-        adcs_to_read: List[int] = [],
+        adcs_to_read: list[int] = [],
     ):
         super().__init__(
             name, address, delay_samples_offset_dac, delay_samples_offset_adc
@@ -285,7 +285,7 @@ class RFSOC_RO(RFSOC):
     def process_readout_signal(
         self,
         adc_raw_data: dict[int, np.ndarray],
-        sequence: List[Pulse],
+        sequence: list[Pulse],
         qubits: dict[QubitId, Qubit],
         options: ExecutionParameters,
     ):
