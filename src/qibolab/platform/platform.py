@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass, field
 from math import prod
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-import networkx as nx
 import numpy as np
 from qibo.config import log, raise_error
 
@@ -158,18 +157,10 @@ class Platform:
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
 
-    topology: nx.Graph = field(default_factory=nx.Graph)
-    """Graph representing the qubit connectivity in the quantum chip."""
-
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
-
-        self.topology.add_nodes_from(self.qubits.keys())
-        self.topology.add_edges_from(
-            [(pair.qubit1.name, pair.qubit2.name) for pair in self.pairs.values()]
-        )
 
     def __str__(self):
         return self.name
@@ -183,6 +174,11 @@ class Platform:
     def ordered_pairs(self):
         """List of qubit pairs that are connected in the QPU."""
         return sorted({tuple(sorted(pair)) for pair in self.pairs})
+
+    @property
+    def topology(self) -> list[QubitPairId]:
+        """Graph representing the qubit connectivity in the quantum chip."""
+        return list(self.pairs)
 
     @property
     def sampling_rate(self):
