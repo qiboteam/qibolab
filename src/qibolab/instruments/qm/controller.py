@@ -1,26 +1,24 @@
 import warnings
+from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
-from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script, qua
+from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 from qm.octave import QmOctaveConfig
-from qm.qua import declare, for_
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab import AveragingMode
 from qibolab.components import Channel, Config, DcChannel, IqChannel
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, Pulse, VirtualZ
-from qibolab.sweeper import Parameter
+from qibolab.pulses import Delay, Pulse, PulseSequence, VirtualZ
+from qibolab.sweeper import ParallelSweepers, Parameter
 from qibolab.unrolling import Bounds
 
-from .acquisition import create_acquisition, fetch_results
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
 from .octave import Octave
-from .program import ExecutionArguments
-from .sweepers import sweep
+from .program import create_acquisition, program
 
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
@@ -62,6 +60,30 @@ def find_baking_pulses(sweepers):
                 to_bake.add(pulse.id)
 
     return to_bake
+
+
+def fetch_results(result, acquisitions):
+    """Fetches results from an executed experiment.
+
+    Args:
+        result: Result of the executed experiment.
+        acquisition: Dictionary containing :class:`qibolab.instruments.qm.acquisition.Acquisition` objects.
+
+    Returns:
+        Dictionary with the results in the format required by the platform.
+    """
+    handles = result.result_handles
+    handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
+    results = defaultdict(list)
+    for acquisition in acquisitions:
+        data = acquisition.fetch(handles)
+        for serial, result in zip(acquisition.keys, data):
+            results[serial].append(result)
+
+    # collapse single element lists for back-compatibility
+    return {
+        key: value[0] if len(value) == 1 else value for key, value in results.items()
+    }
 
 
 @dataclass
@@ -288,22 +310,18 @@ class QmController(Controller):
         )
         return self.manager.simulate(asdict(self.config), program, simulation_config)
 
-    def play(self, configs, sequences, options, integration_setup):
-        return self.sweep(configs, sequences, options, integration_setup)
-
-    def sweep(self, configs, sequences, options, integration_setup, *sweepers):
+    def play(
+        self,
+        configs: dict[str, Config],
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        integration_setup,
+        sweepers: list[ParallelSweepers],
+    ):
         if len(sequences) > 1:
             raise NotImplementedError
-        elif len(sequences) == 0:
+        elif len(sequences) == 0 or len(sequences[0]) == 0:
             return {}
-
-        sequence = sequences[0]
-        if len(sequence) == 0:
-            return {}
-
-        buffer_dims = [len(sweeper.values) for sweeper in reversed(sweepers)]
-        if options.averaging_mode is AveragingMode.SINGLESHOT:
-            buffer_dims.append(options.nshots)
 
         # register DC elements so that all qubits are
         # sweetspot even when they are not used
@@ -311,22 +329,11 @@ class QmController(Controller):
             if isinstance(channel.logical_channel, DcChannel):
                 self.configure_channel(channel, configs)
 
+        sequence = sequences[0]
         acquisitions = self.register_pulses(
             configs, sequence, integration_setup, options
         )
-        with qua.program() as experiment:
-            n = declare(int)
-            # declare acquisition variables
-            for acquisition in acquisitions.values():
-                acquisition.declare()
-            # execute pulses
-            args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
-            with for_(n, 0, n < options.nshots, n + 1):
-                sweep(list(sweepers), configs, args)
-            # download acquisitions
-            with qua.stream_processing():
-                for acquisition in acquisitions.values():
-                    acquisition.download(*buffer_dims)
+        experiment = program(configs, sequence, options, acquisitions, sweepers)
 
         if self.manager is None:
             warnings.warn(
