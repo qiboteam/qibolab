@@ -31,6 +31,7 @@ around the pre-defined frequency.
     import numpy as np
     from qibolab import create_platform
     from qibolab.pulses import PulseSequence
+    from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -72,7 +73,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
     import matplotlib.pyplot as plt
 
     probe_pulse = next(iter(sequence.probe_pulses))
-    amplitudes = results[probe_pulse.id][0].magnitude
+    amplitudes = magnitude(results[probe_pulse.id][0])
     frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
 
     plt.title("Resonator Spectroscopy")
@@ -110,6 +111,7 @@ complex pulse sequence. Therefore with start with that:
     import matplotlib.pyplot as plt
     from qibolab import create_platform
     from qibolab.pulses import Pulse, PulseSequence, Delay, Gaussian
+    from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -156,7 +158,7 @@ We can now proceed to launch on hardware:
     results = platform.execute([sequence], options, [[sweeper]])
 
     probe_pulse = next(iter(sequence.probe_pulses))
-    amplitudes = results[probe_pulse.id][0].magnitude
+    amplitudes = magnitude(results[probe_pulse.id][0])
     frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.drive.name).frequency
 
     plt.title("Resonator Spectroscopy")
@@ -208,6 +210,7 @@ and its impact on qubit states in the IQ plane.
     import matplotlib.pyplot as plt
     from qibolab import create_platform
     from qibolab.pulses import PulseSequence, Delay
+    from qibolab.result import unpack
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -246,13 +249,12 @@ and its impact on qubit states in the IQ plane.
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[probe_pulse1.id][0].voltage_i,
-        results_one[probe_pulse1.id][0].voltage_q,
+        results_one[probe_pulse1.id][0],
+        results_one[probe_pulse1.id][0],
         label="One state",
     )
     plt.scatter(
-        results_zero[probe_pulse2.id][0].voltage_i,
-        results_zero[probe_pulse2.id][0].voltage_q,
+        *unpack(results_zero[probe_pulse2.id][0]),
         label="Zero state",
     )
     plt.show()
