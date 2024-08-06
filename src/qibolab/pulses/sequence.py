@@ -3,7 +3,7 @@
 from collections import defaultdict
 from typing import Optional
 
-from .pulse import Delay, PulseLike, PulseType
+from .pulse import Delay, Pulse, PulseLike
 
 
 class PulseSequence(defaultdict[str, list[PulseLike]]):
@@ -21,16 +21,20 @@ class PulseSequence(defaultdict[str, list[PulseLike]]):
     def probe_pulses(self):
         """Return list of the readout pulses in this sequence."""
         pulses = []
-        for seq in self.values():
+        for name, seq in self.items():
+            if "probe" not in name:
+                continue
+
             for pulse in seq:
-                if pulse.type == PulseType.READOUT:
+                # exclude delays
+                if isinstance(pulse, Pulse):
                     pulses.append(pulse)
         return pulses
 
     @property
-    def duration(self) -> int:
+    def duration(self) -> float:
         """Duration of the entire sequence."""
-        return max((self.channel_duration(ch) for ch in self), default=0)
+        return max((self.channel_duration(ch) for ch in self), default=0.0)
 
     def channel_duration(self, channel: str) -> float:
         """Duration of the given channel."""
