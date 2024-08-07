@@ -3,7 +3,7 @@ device."""
 
 import copy
 import operator
-from typing import Dict, List, Union
+from typing import Union
 
 import numpy as np
 import numpy.typing as npt
@@ -132,8 +132,8 @@ class PulseSimulator(Controller):
 
     def play(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, npt.NDArray]:
@@ -185,11 +185,11 @@ class PulseSimulator(Controller):
     ### sweeper adapted from icarusqfpga ###
     def sweep(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
-        *sweeper: List[Sweeper],
+        *sweeper: list[Sweeper],
     ) -> dict[str, Union[npt.NDArray, dict]]:
         """Executes the sweep and generates readout results, as well as
         simulation-related time and states data.
@@ -278,8 +278,8 @@ class PulseSimulator(Controller):
 
     def _sweep_recursion(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweeper: Sweeper,
@@ -337,8 +337,8 @@ class PulseSimulator(Controller):
 
     def _sweep_play(
         self,
-        qubits: Dict[QubitId, Qubit],
-        couplers: Dict[QubitId, Coupler],
+        qubits: dict[QubitId, Qubit],
+        couplers: dict[QubitId, Coupler],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[Union[str, int], list]:
@@ -618,7 +618,7 @@ def apply_readout_noise(
 
 
 def make_comp_basis(
-    qubit_list: List[Union[int, str]], qid_nlevels_map: dict[Union[int, str], int]
+    qubit_list: list[Union[int, str]], qid_nlevels_map: dict[Union[int, str], int]
 ) -> np.ndarray:
     """Generates the computational basis states of the Hilbert space.
 

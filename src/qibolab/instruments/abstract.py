@@ -2,6 +2,11 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Optional
 
+import numpy.typing as npt
+
+from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
+from qibolab.pulses.sequence import PulseSequence
+from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
 
 InstrumentId = str
@@ -73,15 +78,20 @@ class Controller(Instrument):
         (GSps)."""
 
     @abstractmethod
-    def play(self, *args, **kwargs):
+    def play(
+        self,
+        updates: list[ConfigUpdate],
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        integration_setup,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[int, npt.NDArray]:
         """Play a pulse sequence and retrieve feedback.
 
         If :cls:`qibolab.sweeper.Sweeper` objects are passed as arguments, they are
         executed in real-time. If not possible, an error is raised.
 
-        Returns:
-            (Dict[ResultType]) mapping the serial of the readout pulses used to
-            the acquired :class:`qibolab.result.ExecutionResults` object.
+        Returns a mapping with the id of the probe pulses used to acquired data.
         """
 
 

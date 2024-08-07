@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -75,8 +75,8 @@ class Qubit:
     T2_spin_echo: int = 0
     state0_voltage: int = 0
     state1_voltage: int = 0
-    mean_gnd_states: List[float] = field(default_factory=lambda: [0, 0])
-    mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
+    mean_gnd_states: list[float] = field(default_factory=lambda: [0, 0])
+    mean_exc_states: list[float] = field(default_factory=lambda: [0, 0])
 
     # parameters for single shot classification
     threshold: Optional[float] = None
@@ -125,7 +125,7 @@ class Qubit:
         return freqs
 
 
-QubitPairId = Tuple[QubitId, QubitId]
+QubitPairId = tuple[QubitId, QubitId]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 

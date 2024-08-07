@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -32,8 +32,8 @@ class AveragedAcquisition:
     frequency: int
     """Frequency of the readout pulse used for demodulation."""
 
-    i: Optional[List[float]] = None
-    q: Optional[List[float]] = None
+    i: Optional[list[float]] = None
+    q: Optional[list[float]] = None
 
     @property
     def scope(self):

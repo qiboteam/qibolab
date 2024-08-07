@@ -8,7 +8,7 @@ example for more details.
 import json
 from dataclasses import asdict, fields
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
@@ -58,7 +58,7 @@ def load_qubit_name(name: str) -> QubitId:
 
 def load_qubits(
     runcard: dict, kernels: Kernels = None
-) -> Tuple[QubitMap, CouplerMap, QubitPairMap]:
+) -> tuple[QubitMap, CouplerMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard to
@@ -159,7 +159,7 @@ def _load_two_qubit_natives(gates) -> TwoQubitNatives:
 
 def register_gates(
     runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
-) -> Tuple[QubitMap, QubitPairMap]:
+) -> tuple[QubitMap, QubitPairMap]:
     """Register single qubit native gates to ``Qubit`` objects from the
     runcard.
 
