@@ -30,8 +30,7 @@ from qibolab.platform.platform import (
     Settings,
     update_configs,
 )
-from qibolab.pulses import Pulse, PulseSequence
-from qibolab.pulses.pulse import PulseLike
+from qibolab.pulses import Pulse, PulseLike, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
 RUNCARD = "parameters.json"

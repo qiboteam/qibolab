@@ -1,3 +1,3 @@
 from .envelope import *
-from .pulse import Delay, Pulse, VirtualZ
+from .pulse import *
 from .sequence import PulseSequence
