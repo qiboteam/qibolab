@@ -13,7 +13,7 @@ innermost dimension of the array.
 
 def _lift(values: IQ) -> npt.NDArray:
     """Transpose the innermost dimension to the outermost."""
-    return np.transpose(values, [-1, *range(values.ndim - 1)])
+    return np.moveaxis(values, -1, 0)
 
 
 def _sink(values: npt.NDArray) -> IQ:
@@ -21,7 +21,7 @@ def _sink(values: npt.NDArray) -> IQ:
 
     Inverse of :func:`_lift`.
     """
-    return np.transpose(values, [*range(1, values.ndim), 0])
+    return np.moveaxis(values, 0, -1)
 
 
 def collect(i: npt.NDArray, q: npt.NDArray) -> IQ:
