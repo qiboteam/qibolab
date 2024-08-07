@@ -5857,9 +5857,10 @@ los = ["pyvisa-py", "qcodes", "qcodes_contrib_drivers"]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
 qm = ["qm-qua", "qualang-tools"]
 rfsoc = ["qibosoq"]
+twpa = ["pyvisa-py", "qcodes", "qcodes_contrib_drivers"]
 zh = ["laboneq"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "30a7e1b0b8caa372b4076bce71583a537c7ad92555c5249a883c96b799f9cc5f"
+content-hash = "a5bf84cc1a4fa49d87dd8a53e5bc48949e4f1bef7c09fd73aca1f26aed3906cd"
