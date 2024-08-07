@@ -8,7 +8,7 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
 
 .. testcode::  python
 
-    from qibolab.pulses import Pulse, PulseSequence, PulseType, Rectangular, Gaussian, Delay
+    from qibolab.pulses import Pulse, PulseSequence, Rectangular, Gaussian, Delay
 
     # Define PulseSequence
     sequence = PulseSequence()
@@ -20,7 +20,6 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
             duration=60,
             relative_phase=0,
             envelope=Gaussian(rel_sigma=0.2),
-            type=PulseType.DRIVE,
         )
     )
     sequence["channel_1"].append(Delay(duration=100, channel="1"))
@@ -30,7 +29,6 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
             duration=3000,
             relative_phase=0,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
 
