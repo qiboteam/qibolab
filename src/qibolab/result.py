@@ -10,6 +10,9 @@ It is assumed that the I and Q component are discriminated by the
 innermost dimension of the array.
 """
 
+Result = npt.NDArray[np.float64]
+"""An array of results."""
+
 
 def _lift(values: IQ) -> npt.NDArray:
     """Transpose the innermost dimension to the outermost."""
