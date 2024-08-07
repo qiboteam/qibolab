@@ -64,7 +64,7 @@ class Delay(_PulseLike):
     """A wait instruction during which we are not sending any pulses to the
     QPU."""
 
-    duration: int
+    duration: float
     """Delay duration in ns."""
 
 
