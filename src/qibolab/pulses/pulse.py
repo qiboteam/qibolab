@@ -54,17 +54,17 @@ class Pulse(_PulseLike):
     """Relative phase of the pulse, in radians."""
 
     def i(self, sampling_rate: float) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
+        """Compute the envelope of the waveform i component."""
         samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.i(samples)
 
     def q(self, sampling_rate: float) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
+        """Compute the envelope of the waveform q component."""
         samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.q(samples)
 
     def envelopes(self, sampling_rate: float) -> IqWaveform:
-        """A tuple with the i and q envelope waveforms of the pulse."""
+        """Compute a tuple with the i and q envelopes."""
         return np.array([self.i(sampling_rate), self.q(sampling_rate)])
 
 
