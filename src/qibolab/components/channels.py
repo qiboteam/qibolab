@@ -19,15 +19,18 @@ from typing import Optional
 
 __all__ = [
     "Channel",
+    "ChannelId",
     "DcChannel",
     "IqChannel",
     "AcquireChannel",
 ]
 
+ChannelId = str
+"""Unique identifier for a channel."""
+
 
 @dataclass(frozen=True)
 class Channel:
-
     name: str
     """Name of the channel."""
 
@@ -63,7 +66,6 @@ class IqChannel(Channel):
 
 @dataclass(frozen=True)
 class AcquireChannel(Channel):
-
     twpa_pump: Optional[str]
     """Name of the TWPA pump component.
 
