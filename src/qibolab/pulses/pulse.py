@@ -9,10 +9,21 @@ from qibolab.serialize import Model
 
 from .envelope import Envelope, IqWaveform, Waveform
 
+__all__ = [
+    "Delay",
+    "Pulse",
+    "PulseId",
+    "PulseLike",
+    "VirtualZ",
+]
+
+PulseId = int
+"""Unique identifier for a pulse."""
+
 
 class _PulseLike(Model):
     @property
-    def id(self) -> int:
+    def id(self) -> PulseId:
         """Instruction identifier."""
         return id(self)
 
