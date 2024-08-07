@@ -1,58 +1,57 @@
 """PulseSequence class."""
 
-from collections import defaultdict
-from typing import Optional
+from collections.abc import Iterable
+
+from qibolab.components import ChannelId
 
 from .pulse import Delay, Pulse, PulseLike
 
+__all__ = ["PulseSequence"]
 
-class PulseSequence(defaultdict[str, list[PulseLike]]):
+_Element = tuple[ChannelId, PulseLike]
+
+
+class PulseSequence(list[_Element]):
     """Synchronized sequence of control instructions across multiple channels.
 
     The keys are names of channels, and the values are lists of pulses
     and delays
     """
 
-    def __init__(self, seq_dict: Optional[dict[str, list[PulseLike]]] = None):
-        initial_content = seq_dict if seq_dict is not None else {}
-        super().__init__(list, **initial_content)
-
-    @property
-    def probe_pulses(self):
-        """Return list of the readout pulses in this sequence."""
-        pulses = []
-        for name, seq in self.items():
-            if "probe" not in name:
-                continue
-
-            for pulse in seq:
-                # exclude delays
-                if isinstance(pulse, Pulse):
-                    pulses.append(pulse)
-        return pulses
-
     @property
     def duration(self) -> float:
         """Duration of the entire sequence."""
-        return max((self.channel_duration(ch) for ch in self), default=0.0)
+        return max((self.channel_duration(ch) for ch in self.channels), default=0.0)
 
-    def channel_duration(self, channel: str) -> float:
+    @property
+    def channels(self) -> set[ChannelId]:
+        """Channels involved in the sequence."""
+        return {ch for (ch, _) in self}
+
+    def channel(self, channel: ChannelId) -> Iterable[PulseLike]:
+        """Isolate pulses on a given channel."""
+        return (pulse for (ch, pulse) in self if ch == channel)
+
+    def channel_duration(self, channel: ChannelId) -> float:
         """Duration of the given channel."""
-        return sum(item.duration for item in self[channel])
+        return sum(pulse.duration for pulse in self.channel(channel))
 
-    def extend(self, other: "PulseSequence") -> None:
+    def concatenate(self, other: "PulseSequence") -> None:
         """Appends other in-place such that the result is self + necessary
         delays to synchronize channels + other."""
         tol = 1e-12
-        durations = {ch: self.channel_duration(ch) for ch in other}
+        durations = {ch: self.channel_duration(ch) for ch in other.channels}
         max_duration = max(durations.values(), default=0.0)
         for ch, duration in durations.items():
-            if (delay := round(max_duration - duration, int(1 / tol))) > 0:
-                self[ch].append(Delay(duration=delay))
-            self[ch].extend(other[ch])
+            delay = round(max_duration - duration, int(1 / tol))
+            if delay > 0:
+                self.append((ch, Delay(duration=delay)))
+            self.extend((ch, pulse) for pulse in other.channel(ch))
 
-    def copy(self) -> "PulseSequence":
-        """Return shallow copy of self."""
-        ps = PulseSequence()
-        ps.extend(self)
-        return ps
+    @property
+    def probe_pulses(self) -> list[Pulse]:
+        """Return list of the readout pulses in this sequence."""
+        # pulse filter needed to exclude delays
+        return [
+            pulse for (ch, pulse) in self if isinstance(pulse, Pulse) if "probe" in ch
+        ]
