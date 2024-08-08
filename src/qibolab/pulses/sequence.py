@@ -1,5 +1,6 @@
 """PulseSequence class."""
 
+from collections import UserList
 from collections.abc import Iterable
 
 from qibolab.components import ChannelId
@@ -11,7 +12,7 @@ __all__ = ["PulseSequence"]
 _Element = tuple[ChannelId, PulseLike]
 
 
-class PulseSequence(list[_Element]):
+class PulseSequence(UserList[_Element]):
     """Synchronized sequence of control instructions across multiple channels.
 
     The sequence is a linear stream of instructions, which may be
