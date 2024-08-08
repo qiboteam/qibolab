@@ -20,6 +20,17 @@ calibration when using Octaves.
 """
 
 
+class PortDict(dict):
+    """Dictionary that automatically converts keys to strings.
+
+    Used to register input and output ports to controllers and Octaves
+    in the QUA config.
+    """
+
+    def __setitem__(self, key, value):
+        super().__setitem__(str(key), value)
+
+
 @dataclass(frozen=True)
 class AnalogInput:
     offset: float = 0.0
@@ -58,21 +69,23 @@ class OctaveInput:
 
 @dataclass
 class Controller:
-    analog_outputs: dict[str, dict[str, OpxOutputConfig]] = field(default_factory=dict)
-    digital_outputs: dict[str, dict[str, dict]] = field(default_factory=dict)
-    analog_inputs: dict[str, dict[str, AnalogInput]] = field(
-        default_factory=lambda: dict(DEFAULT_INPUTS)
+    analog_outputs: PortDict[str, dict[str, OpxOutputConfig]] = field(
+        default_factory=PortDict
+    )
+    digital_outputs: PortDict[str, dict[str, dict]] = field(default_factory=PortDict)
+    analog_inputs: PortDict[str, dict[str, AnalogInput]] = field(
+        default_factory=lambda: PortDict(DEFAULT_INPUTS)
     )
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
-        self.analog_outputs[str(2 * port - 1)] = OpxOutputConfig()
-        self.analog_outputs[str(2 * port)] = OpxOutputConfig()
+        self.analog_outputs[2 * port - 1] = OpxOutputConfig()
+        self.analog_outputs[2 * port] = OpxOutputConfig()
 
-        self.digital_outputs[str(2 * port - 1)] = {}
+        self.digital_outputs[2 * port - 1] = {}
 
     def add_octave_input(self, port: int, config: QmAcquisitionConfig):
-        self.analog_inputs[str(2 * port - 1)] = self.analog_inputs[str(2 * port)] = (
+        self.analog_inputs[2 * port - 1] = self.analog_inputs[2 * port] = (
             AnalogInput.from_config(config)
         )
 
@@ -80,5 +93,5 @@ class Controller:
 @dataclass
 class Octave:
     connectivity: str
-    RF_outputs: dict[str, dict[str, OctaveOutput]] = field(default_factory=dict)
-    RF_inputs: dict[str, dict[str, OctaveInput]] = field(default_factory=dict)
+    RF_outputs: PortDict[str, dict[str, OctaveOutput]] = field(default_factory=PortDict)
+    RF_inputs: PortDict[str, dict[str, OctaveInput]] = field(default_factory=PortDict)
