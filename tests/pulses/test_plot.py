@@ -64,14 +64,16 @@ def test_plot_functions():
         relative_phase=0,
     )
     ps = PulseSequence()
-    ps.update(
-        {
-            "q0/flux": [p0],
-            "q2/drive": [p1, p6],
-            "q200/drive": [p2],
-            "q200/flux": [p3, p4],
-            "q0/drive": [p5],
-        }
+    ps.extend(
+        [
+            ("q0/flux", p0),
+            ("q2/drive", p1),
+            ("q200/drive", p2),
+            ("q200/flux", p3),
+            ("q200/flux", p4),
+            ("q0/drive", p5),
+            ("q2/drive", p6),
+        ]
     )
     envelope = p0.envelopes(SAMPLING_RATE)
     wf = modulate(np.array(envelope), 0.0, rate=SAMPLING_RATE)
