@@ -63,15 +63,28 @@ Waveform = Union[ConstantWaveform, ArbitraryWaveform]
 
 def waveforms_from_pulse(pulse: Pulse) -> Waveform:
     """Register QM waveforms for a given pulse."""
-    if isinstance(pulse.envelope, Rectangular):
-        return ConstantWaveform.from_pulse(pulse)
-    return ArbitraryWaveform.from_pulse(pulse)
+    wvtype = (
+        ConstantWaveform
+        if isinstance(pulse.envelope, Rectangular)
+        else ArbitraryWaveform
+    )
+    return wvtype.from_pulse(pulse)
+
+
+@dataclass(frozen=True)
+class Waveforms:
+    i: str
+    q: str
+
+    @classmethod
+    def from_op(cls, op: str):
+        return cls(f"{op}_i", f"{op}_q")
 
 
 @dataclass(frozen=True)
 class QmPulse:
     length: int
-    waveforms: dict[str, str]
+    waveforms: Waveforms
     digital_marker: str = "ON"
     operation: str = "control"
 
@@ -80,7 +93,7 @@ class QmPulse:
         op = operation(pulse)
         return cls(
             length=pulse.duration,
-            waveforms={"I": f"{op}_i", "Q": f"{op}_q"},
+            waveforms=Waveforms.from_op(op),
         )
 
     @classmethod
@@ -133,6 +146,6 @@ class QmAcquisition(QmPulse):
         }
         return cls(
             length=pulse.duration,
-            waveforms={"I": f"{op}_i", "Q": f"{op}_q"},
+            waveforms=Waveforms.from_op(op),
             integration_weights=integration_weights,
         )
