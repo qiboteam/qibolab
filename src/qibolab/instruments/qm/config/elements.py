@@ -79,7 +79,7 @@ class RfOctaveElement:
     ):
         return cls(
             _to_port(channel),
-            output_switch(octave.connectivity, channel.port),
+            output_switch(connectivity, channel.port),
             intermediate_frequency,
         )
 
