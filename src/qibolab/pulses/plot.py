@@ -8,7 +8,7 @@ import numpy as np
 
 from .envelope import Waveform
 from .modulation import modulate
-from .pulse import Delay, Pulse
+from .pulse import Delay, Pulse, VirtualZ
 from .sequence import PulseSequence
 
 SAMPLING_RATE = 1
@@ -142,26 +142,25 @@ def sequence(ps: PulseSequence, freq: dict[str, float], filename=None):
         import matplotlib.pyplot as plt
         from matplotlib import gridspec
 
-        num_pulses = sum(len(pulses) for pulses in ps.values())
+        num_pulses = len(ps)
         _ = plt.figure(figsize=(14, 2 * num_pulses), dpi=200)
         gs = gridspec.GridSpec(ncols=1, nrows=num_pulses)
         vertical_lines = []
-        starts = defaultdict(int)
-        for ch, pulses in ps.items():
-            for pulse in pulses:
-                if not isinstance(pulse, Delay):
-                    vertical_lines.append(starts[ch])
-                    vertical_lines.append(starts[ch] + pulse.duration)
-                starts[ch] += pulse.duration
+        starts = defaultdict(float)
+        for ch, pulse in ps:
+            if not isinstance(pulse, Delay):
+                vertical_lines.append(starts[ch])
+                vertical_lines.append(starts[ch] + pulse.duration)
+            starts[ch] += pulse.duration
 
         n = -1
-        for ch, pulses in ps.items():
+        for ch in ps.channels:
             n += 1
             ax = plt.subplot(gs[n])
-            ax.axis([0, ps.duration, -1, 1])
+            ax.axis((0.0, ps.duration, -1.0, 1.0))
             start = 0
-            for pulse in pulses:
-                if isinstance(pulse, Delay):
+            for pulse in ps.channel(ch):
+                if isinstance(pulse, (Delay, VirtualZ)):
                     start += pulse.duration
                     continue
 
