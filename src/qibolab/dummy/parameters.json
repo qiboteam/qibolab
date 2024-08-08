@@ -5,7 +5,6 @@
     "relaxation_time": 0
   },
   "qubits": [0, 1, 2, 3, 4],
-  "couplers": ["c0", "c1", "c4"],
   "instruments": {
     "dummy": {
       "bounds": {
