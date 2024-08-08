@@ -113,10 +113,7 @@ def _load_pulse(pulse_kwargs: dict):
 
 
 def _load_sequence(raw_sequence):
-    seq = PulseSequence()
-    for ch, pulses in raw_sequence.items():
-        seq[ch] = [_load_pulse(raw_pulse) for raw_pulse in pulses]
-    return seq
+    return PulseSequence([(ch, _load_pulse(pulse)) for ch, pulse in raw_sequence])
 
 
 def _load_single_qubit_natives(gates) -> SingleQubitNatives:
