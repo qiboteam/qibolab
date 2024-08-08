@@ -9,7 +9,7 @@ from pydantic_core import core_schema
 
 from qibolab.components import ChannelId
 
-from .pulse import Delay, Pulse, PulseLike
+from .pulse import Delay, PulseLike
 
 __all__ = ["PulseSequence"]
 
@@ -96,11 +96,3 @@ class PulseSequence(UserList[_Element]):
                 terminated.add(ch)
             new.append((ch, pulse))
         return type(self)(reversed(new))
-
-    @property
-    def probe_pulses(self) -> list[Pulse]:
-        """Return list of the readout pulses in this sequence."""
-        # pulse filter needed to exclude delays
-        return [
-            pulse for (ch, pulse) in self if isinstance(pulse, Pulse) if "probe" in ch
-        ]
