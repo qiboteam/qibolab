@@ -48,7 +48,7 @@ class QmConfig:
 
     def configure_dc_line(self, channel: QmChannel, config: OpxOutputConfig):
         controller = self.controllers[channel.device]
-        controller.analog_outputs[str(channel.port)] = config
+        controller.analog_outputs[channel.port] = config
         self.elements[channel.logical_channel.name] = DcElement(_to_port(channel))
 
     def configure_iq_line(
@@ -56,13 +56,13 @@ class QmConfig:
     ):
         port = channel.port
         octave = self.octaves[channel.device]
-        octave.RF_outputs[str(port)] = OctaveOutput.from_config(lo_config)
+        octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = config.frequency - lo_config.frequency
         self.elements[channel.logical_channel.name] = RfOctaveElement(
             _to_port(channel),
-            output_switch(octave.connectivity, channel.port),
+            output_switch(octave.connectivity, port),
             intermediate_frequency,
         )
 
@@ -76,12 +76,12 @@ class QmConfig:
     ):
         port = acquire_channel.port
         octave = self.octaves[acquire_channel.device]
-        octave.RF_inputs[str(port)] = OctaveInput(lo_config.frequency)
+        octave.RF_inputs[port] = OctaveInput(lo_config.frequency)
         self.controllers[octave.connectivity].add_octave_input(port, acquire_config)
 
         port = probe_channel.port
         octave = self.octaves[probe_channel.device]
-        octave.RF_outputs[str(port)] = OctaveOutput.from_config(lo_config)
+        octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
