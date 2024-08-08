@@ -4,6 +4,7 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.platform import probe_pulses
 from qibolab.pulses import Pulse
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
@@ -101,4 +102,6 @@ class DummyInstrument(Controller):
                 self.values(options, options.results_shape(sweepers, samples))
             )
 
-        return {ro.id: values(ro) for seq in sequences for ro in seq.probe_pulses}
+        return {
+            ro.id: values(ro) for seq in sequences for ro in probe_pulses(seq, configs)
+        }

@@ -9,7 +9,7 @@ from qibo.result import MeasurementOutcomes
 
 from qibolab.compilers import Compiler
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.platform import Platform, create_platform
+from qibolab.platform import Platform, create_platform, probe_pulses
 from qibolab.platform.load import available_platforms
 from qibolab.version import __version__ as qibolab_version
 
@@ -69,7 +69,10 @@ class QibolabBackend(NumpyBackend):
                 containing the readout measurement shots. This is created in ``execute_circuit``.
         """
         for gate, sequence in measurement_map.items():
-            _samples = (readout[pulse.id] for pulse in sequence.probe_pulses)
+            _samples = (
+                readout[pulse.id]
+                for pulse in probe_pulses(sequence, self.platform.configs)
+            )
             samples = list(filter(lambda x: x is not None, _samples))
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
