@@ -12,6 +12,11 @@ from .pulses import *
 __all__ = ["QmConfig"]
 
 
+def _to_port(channel: QmChannel) -> dict[str, tuple[str, int]]:
+    """Convert a channel to the port dictionary required for the QUA config."""
+    return {"port": (channel.device, channel.port)}
+
+
 @dataclass
 class QmConfig:
     """Configuration for communicating with the ``QuantumMachinesManager``.
@@ -44,7 +49,7 @@ class QmConfig:
     def configure_dc_line(self, channel: QmChannel, config: OpxOutputConfig):
         controller = self.controllers[channel.device]
         controller.analog_outputs[str(channel.port)] = config
-        self.elements[channel.logical_channel.name] = DcElement(channel.serial)
+        self.elements[channel.logical_channel.name] = DcElement(_to_port(channel))
 
     def configure_iq_line(
         self, channel: QmChannel, config: IqConfig, lo_config: OscillatorConfig
@@ -56,7 +61,7 @@ class QmConfig:
 
         intermediate_frequency = config.frequency - lo_config.frequency
         self.elements[channel.logical_channel.name] = RfOctaveElement(
-            channel.serial,
+            _to_port(channel),
             output_switch(octave.connectivity, channel.port),
             intermediate_frequency,
         )
@@ -81,8 +86,8 @@ class QmConfig:
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
         self.elements[probe_channel.logical_channel.name] = AcquireOctaveElement(
-            probe_channel.serial,
-            acquire_channel.serial,
+            _to_port(probe_channel),
+            _to_port(acquire_channel),
             output_switch(octave.connectivity, probe_channel.port),
             intermediate_frequency,
             time_of_flight=acquire_config.delay,
