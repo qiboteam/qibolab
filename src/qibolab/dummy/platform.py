@@ -22,27 +22,8 @@ from qibolab.serialize import (
 FOLDER = pathlib.Path(__file__).parent
 
 
-def remove_couplers(runcard):
-    """Remove coupler sections from runcard to create a dummy platform without
-    couplers."""
-    runcard["topology"] = list(runcard["topology"].values())
-    del runcard["couplers"]
-    del runcard["characterization"]["coupler"]
-    two_qubit = runcard["native_gates"]["two_qubit"]
-    for i, gates in two_qubit.items():
-        for j, gate in gates.items():
-            two_qubit[i][j] = {
-                ch: pulses for ch, pulses in gate.items() if "coupler" not in ch
-            }
-    return runcard
-
-
-def create_dummy(with_couplers: bool = True):
-    """Create a dummy platform using the dummy instrument.
-
-    Args:
-        with_couplers (bool): Selects whether the dummy platform will have coupler qubits.
-    """
+def create_dummy():
+    """Create a dummy platform using the dummy instrument."""
     instrument = DummyInstrument("dummy", "0.0.0.0")
 
     twpa_pump_name = "twpa_pump"
@@ -50,9 +31,6 @@ def create_dummy(with_couplers: bool = True):
 
     runcard = load_runcard(FOLDER)
     kernels = Kernels.load(FOLDER)
-
-    if not with_couplers:
-        runcard = remove_couplers(runcard)
 
     qubits, couplers, pairs = load_qubits(runcard, kernels)
     settings = load_settings(runcard)
@@ -86,17 +64,15 @@ def create_dummy(with_couplers: bool = True):
         qubit.flux = DcChannel(flux_name)
         configs[flux_name] = DcConfig(**component_params[flux_name])
 
-    if with_couplers:
-        for c, coupler in couplers.items():
-            flux_name = f"coupler_{c}/flux"
-            coupler.flux = DcChannel(flux_name)
-            configs[flux_name] = DcConfig(**component_params[flux_name])
+    for c, coupler in couplers.items():
+        flux_name = f"coupler_{c}/flux"
+        coupler.flux = DcChannel(flux_name)
+        configs[flux_name] = DcConfig(**component_params[flux_name])
 
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     instruments = load_instrument_settings(runcard, instruments)
-    name = "dummy_couplers" if with_couplers else "dummy"
     return Platform(
-        name,
+        "dummy",
         qubits,
         pairs,
         configs,
