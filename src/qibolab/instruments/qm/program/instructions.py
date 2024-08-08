@@ -1,7 +1,7 @@
 from typing import Optional
 
 from qm import qua
-from qm.qua import declare, for_
+from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
 from qibolab.components import Config
@@ -12,7 +12,7 @@ from qibolab.sweeper import ParallelSweepers
 from ..config import operation
 from .acquisition import Acquisition, Acquisitions
 from .arguments import ExecutionArguments, Parameters
-from .sweepers import QUA_SWEEPERS
+from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS
 
 
 def _delay(pulse: Delay, element: str, parameters: Parameters):
@@ -74,14 +74,21 @@ def _sweep_recursion(sweepers, configs, args):
 
         sweeper = parallel_sweepers[0]
         parameter = sweeper.parameter
-        if parameter in QUA_SWEEPERS:
-            qua_sweeper = QUA_SWEEPERS[parameter](sweeper)
-        else:
+        if parameter not in SWEEPER_METHODS:
             raise NotImplementedError(f"Sweeper for {parameter} is not implemented.")
 
-        variable = qua_sweeper.declare()
-        with for_(*from_array(variable, qua_sweeper.values)):
-            qua_sweeper(variable, configs, args)
+        variable = declare(int) if parameter in INT_TYPE else declare(fixed)
+        values = sweeper.values
+        if parameter in NORMALIZERS:
+            values = NORMALIZERS[parameter](sweeper.values)
+
+        method = SWEEPER_METHODS[parameter]
+        with for_(*from_array(variable, values)):
+            if sweeper.pulses is not None:
+                method(sweeper.pulses, values, variable, configs, args)
+            else:
+                method(sweeper.channels, values, variable, configs, args)
+
             _sweep_recursion(sweepers[1:], configs, args)
 
     else:
