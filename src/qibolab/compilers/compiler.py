@@ -155,16 +155,17 @@ class Compiler:
 
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
-                for ch in gate_sequence.keys():
+                for ch in gate_sequence.channels:
                     qubit = ch_to_qb[ch]
-                    if (delay := qubit_clock[qubit] - channel_clock[ch]) > 0:
-                        delay_sequence[ch].append(Delay(duration=delay))
+                    delay = qubit_clock[qubit] - channel_clock[ch]
+                    if delay > 0:
+                        delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
                     channel_duration = gate_sequence.channel_duration(ch)
                     qubit_clock[qubit] += channel_duration
                     channel_clock[ch] += channel_duration
-                sequence.extend(delay_sequence)
-                sequence.extend(gate_sequence)
+                sequence.concatenate(delay_sequence)
+                sequence.concatenate(gate_sequence)
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates
