@@ -40,7 +40,7 @@ def test_dummy_execute_pulse_sequence(platform: Platform, acquisition):
 def test_dummy_execute_coupler_pulse(platform: Platform):
     sequence = PulseSequence()
 
-    channel = platform.get_coupler(0).flux
+    channel = platform.get_coupler("c0").flux
     pulse = Pulse(
         duration=30,
         amplitude=0.05,
@@ -144,14 +144,14 @@ def test_dummy_single_sweep_coupler(
         envelope=GaussianSquare(rel_sigma=0.2, width=0.75),
     )
     sequence.extend(probe_seq)
-    sequence[platform.get_coupler(0).flux.name].append(coupler_pulse)
+    sequence[platform.get_coupler("c0").flux.name].append(coupler_pulse)
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
         parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     if parameter in ChannelParameter:
         sweeper = Sweeper(
-            parameter, parameter_range, channels=[platform.couplers[0].flux.name]
+            parameter, parameter_range, channels=[platform.couplers["c0"].flux.name]
         )
     else:
         sweeper = Sweeper(parameter, parameter_range, pulses=[coupler_pulse])
