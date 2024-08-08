@@ -30,7 +30,8 @@ def _waveform(sequence: PulseSequence):
 
 def _readout(sequence: PulseSequence):
     # TODO: Do we count 1 readout per pulse or 1 readout per multiplexed readout ?
-    return len(sequence.probe_pulses)
+    # FIXME: exploitation of non-standard convention for channel names
+    return sum(1 for ch, p in sequence if "probe" in ch)
 
 
 def _instructions(sequence: PulseSequence):
