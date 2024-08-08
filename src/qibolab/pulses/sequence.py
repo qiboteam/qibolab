@@ -14,8 +14,11 @@ _Element = tuple[ChannelId, PulseLike]
 class PulseSequence(list[_Element]):
     """Synchronized sequence of control instructions across multiple channels.
 
-    The keys are names of channels, and the values are lists of pulses
-    and delays
+    The sequence is a linear stream of instructions, which may be
+    executed in parallel over multiple channels.
+
+    Each instruction is composed by the pulse-like object representing
+    the action, and the channel on which it should be performed.
     """
 
     @property
@@ -37,8 +40,13 @@ class PulseSequence(list[_Element]):
         return sum(pulse.duration for pulse in self.channel(channel))
 
     def concatenate(self, other: "PulseSequence") -> None:
-        """Appends other in-place such that the result is self + necessary
-        delays to synchronize channels + other."""
+        """Juxtapose two sequences.
+
+        Appends ``other`` in-place such that the result is:
+            - ``self``
+            - necessary delays to synchronize channels
+            - ``other``
+        """
         tol = 1e-12
         durations = {ch: self.channel_duration(ch) for ch in other.channels}
         max_duration = max(durations.values(), default=0.0)
