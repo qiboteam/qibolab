@@ -78,27 +78,17 @@ def load_qubits(
         for q in kernels:
             qubits[q].kernel = kernels[q]
 
-    couplers = {}
+    characterization = runcard["characterization"]
+
     pairs = {}
-    two_qubit_characterization = runcard["characterization"].get("two_qubit", {})
-    if "coupler" in runcard["characterization"]:
-        couplers = {
-            load_qubit_name(c): Qubit(load_qubit_name(c), **char)
-            for c, char in runcard["characterization"]["coupler"].items()
-        }
-        for c, pair in runcard["topology"].items():
-            q0, q1 = pair
-            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
-            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], **char, coupler=couplers[load_qubit_name(c)]
-            )
-    else:
-        for pair in runcard["topology"]:
-            q0, q1 = pair
-            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
-            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], **char, coupler=None
-            )
+    for pair, char in characterization.get("two_qubit", {}).items():
+        q0, q1 = (load_qubit_name(q) for q in pair.split("-"))
+        pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], **char)
+
+    couplers = {
+        load_qubit_name(c): Qubit(load_qubit_name(c), **char)
+        for c, char in runcard["characterization"].get("coupler", {}).items()
+    }
 
     qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
 
@@ -331,17 +321,9 @@ def dump_runcard(
         "nqubits": platform.nqubits,
         "settings": asdict(platform.settings),
         "qubits": list(platform.qubits),
-        "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
         "components": dump_component_configs(configs),
     }
-
-    if platform.couplers:
-        settings["couplers"] = list(platform.couplers)
-        settings["topology"] = {
-            platform.pairs[pair].coupler.name: list(pair)
-            for pair in platform.ordered_pairs
-        }
 
     settings["native_gates"] = dump_native_gates(
         platform.qubits, platform.pairs, platform.couplers
