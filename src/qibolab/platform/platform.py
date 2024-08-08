@@ -189,6 +189,21 @@ class Platform:
         """Names of all components available in the platform."""
         return set(self.configs.keys())
 
+    @property
+    def elements(self) -> dict:
+        """Qubits and couplers."""
+        return self.qubits | self.couplers
+
+    @property
+    def channels(self) -> list[str]:
+        """Channels in the platform."""
+        return list(self.channels_map)
+
+    @property
+    def channels_map(self) -> dict[str, QubitId]:
+        """Channel to element map."""
+        return {ch.name: id for id, el in self.elements.items() for ch in el.channels}
+
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
         return self.configs[name]
