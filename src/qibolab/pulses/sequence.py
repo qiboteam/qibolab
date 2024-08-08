@@ -47,11 +47,10 @@ class PulseSequence(list[_Element]):
             - necessary delays to synchronize channels
             - ``other``
         """
-        tol = 1e-12
         durations = {ch: self.channel_duration(ch) for ch in other.channels}
         max_duration = max(durations.values(), default=0.0)
         for ch, duration in durations.items():
-            delay = round(max_duration - duration, int(1 / tol))
+            delay = max_duration - duration
             if delay > 0:
                 self.append((ch, Delay(duration=delay)))
             self.extend((ch, pulse) for pulse in other.channel(ch))
