@@ -3,8 +3,9 @@ from typing import Union
 
 import numpy as np
 
+from ..components import QmChannel
+
 __all__ = [
-    "output_switch",
     "DcElement",
     "RfOctaveElement",
     "AcquireOctaveElement",
@@ -44,6 +45,11 @@ class OutputSwitch:
     """
 
 
+def _to_port(channel: QmChannel) -> dict[str, tuple[str, int]]:
+    """Convert a channel to the port dictionary required for the QUA config."""
+    return {"port": (channel.device, channel.port)}
+
+
 def output_switch(opx: str, port: int):
     """Create output switch section."""
     return {"output_switch": OutputSwitch((opx, 2 * port - 1))}
@@ -55,6 +61,10 @@ class DcElement:
     intermediate_frequency: int = 0
     operations: dict[str, str] = field(default_factory=dict)
 
+    @classmethod
+    def from_channel(cls, channel: QmChannel):
+        return cls(_to_port(channel))
+
 
 @dataclass
 class RfOctaveElement:
@@ -62,6 +72,16 @@ class RfOctaveElement:
     digitalInputs: dict[str, OutputSwitch]
     intermediate_frequency: int
     operations: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_channel(
+        cls, channel: QmChannel, connectivity: str, intermediate_frequency: int
+    ):
+        return cls(
+            _to_port(channel),
+            output_switch(octave.connectivity, channel.port),
+            intermediate_frequency,
+        )
 
 
 @dataclass
@@ -73,6 +93,25 @@ class AcquireOctaveElement:
     time_of_flight: int = 24
     smearing: int = 0
     operations: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_channel(
+        cls,
+        probe_channel: QmChannel,
+        acquire_channel: QmChannel,
+        connectivity: str,
+        intermediate_frequency: int,
+        time_of_flight: int,
+        smearing: int,
+    ):
+        return cls(
+            _to_port(probe_channel),
+            _to_port(acquire_channel),
+            output_switch(connectivity, probe_channel.port),
+            intermediate_frequency,
+            time_of_flight=time_of_flight,
+            smearing=smearing,
+        )
 
 
 Element = Union[DcElement, RfOctaveElement, AcquireOctaveElement]

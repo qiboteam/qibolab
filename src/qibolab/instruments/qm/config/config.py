@@ -12,11 +12,6 @@ from .pulses import *
 __all__ = ["QmConfig"]
 
 
-def _to_port(channel: QmChannel) -> dict[str, tuple[str, int]]:
-    """Convert a channel to the port dictionary required for the QUA config."""
-    return {"port": (channel.device, channel.port)}
-
-
 @dataclass
 class QmConfig:
     """Configuration for communicating with the ``QuantumMachinesManager``.
@@ -49,7 +44,7 @@ class QmConfig:
     def configure_dc_line(self, channel: QmChannel, config: OpxOutputConfig):
         controller = self.controllers[channel.device]
         controller.analog_outputs[channel.port] = config
-        self.elements[channel.logical_channel.name] = DcElement(_to_port(channel))
+        self.elements[channel.logical_channel.name] = DcElement.from_channel(channel)
 
     def configure_iq_line(
         self, channel: QmChannel, config: IqConfig, lo_config: OscillatorConfig
@@ -60,10 +55,8 @@ class QmConfig:
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = config.frequency - lo_config.frequency
-        self.elements[channel.logical_channel.name] = RfOctaveElement(
-            _to_port(channel),
-            output_switch(octave.connectivity, port),
-            intermediate_frequency,
+        self.elements[channel.logical_channel.name] = RfOctaveElement.from_channel(
+            channel, octave.connectivity, intermediate_frequency
         )
 
     def configure_acquire_line(
@@ -85,13 +78,15 @@ class QmConfig:
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
-        self.elements[probe_channel.logical_channel.name] = AcquireOctaveElement(
-            _to_port(probe_channel),
-            _to_port(acquire_channel),
-            output_switch(octave.connectivity, probe_channel.port),
-            intermediate_frequency,
-            time_of_flight=acquire_config.delay,
-            smearing=acquire_config.smearing,
+        self.elements[probe_channel.logical_channel.name] = (
+            AcquireOctaveElement.from_channel(
+                probe_channel,
+                acquire_channel,
+                octave.connectivity,
+                intermediate_frequency,
+                time_of_flight=acquire_config.delay,
+                smearing=acquire_config.smearing,
+            )
         )
 
     def register_iq_pulse(self, element: str, pulse: Pulse):
