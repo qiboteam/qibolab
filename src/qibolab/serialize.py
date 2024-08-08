@@ -277,8 +277,7 @@ def dump_characterization(
 
     if couplers:
         characterization["coupler"] = {
-            dump_qubit_name(c.name): {"sweetspot": c.sweetspot}
-            for c in couplers.values()
+            dump_qubit_name(c.name): {} for c in couplers.values()
         }
     return characterization
 
