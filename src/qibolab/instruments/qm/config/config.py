@@ -89,21 +89,33 @@ class QmConfig:
             )
         )
 
+    def register_waveforms(
+        self, pulse: Pulse, element: Optional[str] = None, dc: bool = False
+    ):
+        if dc:
+            qmpulse = QmPulse.from_dc_pulse(pulse)
+        else:
+            if element is None:
+                qmpulse = QmPulse.from_pulse(pulse)
+            else:
+                qmpulse = QmAcquisition.from_pulse(pulse, element)
+        waveforms = waveforms_from_pulse(pulse)
+        modes = ["I"] if dc else ["I", "Q"]
+        for mode in modes:
+            self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+        return qmpulse
+
     def register_iq_pulse(self, element: str, pulse: Pulse):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = qmpulse = QmPulse.from_pulse(pulse)
-            waveforms = waveforms_from_pulse(pulse)
-            for mode in ["I", "Q"]:
-                self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+            self.pulses[op] = self.register_waveforms(pulse)
         self.elements[element].operations[op] = op
         return op
 
     def register_dc_pulse(self, element: str, pulse: Pulse):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = qmpulse = QmPulse.from_dc_pulse(pulse)
-            self.waveforms[qmpulse.waveforms["I"]] = waveforms_from_pulse(pulse)["I"]
+            self.pulses[op] = self.register_waveforms(pulse, dc=True)
         self.elements[element].operations[op] = op
         return op
 
@@ -112,12 +124,7 @@ class QmConfig:
         op = operation(pulse)
         acquisition = f"{op}_{element}"
         if acquisition not in self.pulses:
-            self.pulses[acquisition] = qmpulse = QmAcquisition.from_pulse(
-                pulse, element
-            )
-            waveforms = waveforms_from_pulse(pulse)
-            for mode in ["I", "Q"]:
-                self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+            self.pulses[acquisition] = self.register_waveforms(pulse, element)
         self.elements[element].operations[op] = acquisition
         return op
 
