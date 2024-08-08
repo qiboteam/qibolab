@@ -152,7 +152,7 @@ def test_update_configs(platform):
 def test_dump_runcard(platform, tmp_path):
     dump_runcard(platform, tmp_path)
     final_runcard = load_runcard(tmp_path)
-    if platform.name == "dummy" or platform.name == "dummy_couplers":
+    if platform.name == "dummy":
         target_runcard = load_runcard(FOLDER)
     else:
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
