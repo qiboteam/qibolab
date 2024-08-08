@@ -102,7 +102,7 @@ class QmConfig:
         waveforms = waveforms_from_pulse(pulse)
         modes = ["I"] if dc else ["I", "Q"]
         for mode in modes:
-            self.waveforms[qmpulse.waveforms[mode]] = waveforms[mode]
+            self.waveforms[getattr(qmpulse.waveforms, mode)] = waveforms[mode]
         return qmpulse
 
     def register_iq_pulse(self, element: str, pulse: Pulse):
