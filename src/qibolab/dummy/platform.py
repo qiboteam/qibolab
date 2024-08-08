@@ -31,9 +31,7 @@ def remove_couplers(runcard):
     two_qubit = runcard["native_gates"]["two_qubit"]
     for i, gates in two_qubit.items():
         for j, gate in gates.items():
-            two_qubit[i][j] = {
-                ch: pulses for ch, pulses in gate.items() if "coupler" not in ch
-            }
+            two_qubit[i][j] = [el for el in gate if "coupler" not in el[0]]
     return runcard
 
 
