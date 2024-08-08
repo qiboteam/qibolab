@@ -100,6 +100,13 @@ class RFSOC(Controller):
                 i_env = pulse.envelope_waveform_i(dac_sr_ghz).data
                 q_env = pulse.envelope_waveform_q(dac_sr_ghz).data
 
+                # FIXME: since pulse types have been deprecated, now channel types
+                # should be used instead. In the following, the code is relying on a
+                # non-standard channels naming convention, and thus fragile (or just
+                # broken)
+                # instead, the channel object should be retrieved from the platform
+                # configuration, and its type should be inspected
+
                 # Flux pulses
                 # TODO: Add envelope support for flux pulses
                 if "flux" in ch:
@@ -352,6 +359,8 @@ class RFSOC_RO(RFSOC):
                 # FIXME: if this was required, now it's completely broken, since it
                 # isn't possible to identify the pulse channel from the pulse itself
                 # (nor it should be needed)
+                # it should be possible to retrieve the information looking for the
+                # channel type
                 # if pulse.type is PulseType.READOUT:
                 #     res[pulse.serial] = res[pulse.qubit]
 

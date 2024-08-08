@@ -434,6 +434,11 @@ class RFSoC(Controller):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
+        # FIXME: since pulse types have been deprecated, now channel types should be
+        # used instead. In the following, the code is relying on a non-standard channels
+        # naming convention, and thus fragile (or just broken)
+        # instead, the channel object should be retrieved from the platform
+        # configuration, and its type should be inspected
         if any("flux" in ch for ch in sequence):
             return True
         for sweeper in sweepers:
