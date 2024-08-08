@@ -73,8 +73,8 @@ def waveforms_from_pulse(pulse: Pulse) -> Waveform:
 
 @dataclass(frozen=True)
 class Waveforms:
-    i: str
-    q: str
+    I: str
+    Q: str
 
     @classmethod
     def from_op(cls, op: str):
