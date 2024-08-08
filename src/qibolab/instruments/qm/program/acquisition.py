@@ -26,8 +26,8 @@ def _split(data, npulses, iq=False):
     if npulses == 1:
         return [data]
     if iq:
-        return [data[..., i, :] for i in range(npulses)]
-    return [data[..., i] for i in range(npulses)]
+        return list(np.moveaxis(data, -2, 0))
+    return list(np.moveaxis(data, -1, 0))
 
 
 @dataclass
