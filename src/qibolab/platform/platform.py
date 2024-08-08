@@ -10,7 +10,7 @@ from typing import Any, Literal, Optional, TypeVar, Union
 
 from qibo.config import log, raise_error
 
-from qibolab.components import Config, AcquireChannel
+from qibolab.components import AcquireChannel, Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
