@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Optional, Union
 
 from qibolab.components.configs import IqConfig, OscillatorConfig
 from qibolab.pulses import Pulse
