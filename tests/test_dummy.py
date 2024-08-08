@@ -2,27 +2,28 @@ import numpy as np
 import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab.platform.platform import Platform
 from qibolab.pulses import Delay, Gaussian, GaussianSquare, Pulse, PulseSequence
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 SWEPT_POINTS = 5
-PLATFORM_NAMES = ["dummy", "dummy_couplers"]
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
-def test_dummy_initialization(name):
-    platform = create_platform(name)
+@pytest.fixture
+def platform() -> Platform:
+    return create_platform("dummy")
+
+
+def test_dummy_initialization(platform: Platform):
     platform.connect()
     platform.disconnect()
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize(
     "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.RAW]
 )
-def test_dummy_execute_pulse_sequence(name, acquisition):
+def test_dummy_execute_pulse_sequence(platform: Platform, acquisition):
     nshots = 100
-    platform = create_platform(name)
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     probe_pulse = next(iter(probe_seq.values()))[0]
     sequence = PulseSequence()
@@ -36,8 +37,7 @@ def test_dummy_execute_pulse_sequence(name, acquisition):
         assert result[probe_pulse.id][0].shape == (nshots, int(probe_seq.duration), 2)
 
 
-def test_dummy_execute_coupler_pulse():
-    platform = create_platform("dummy_couplers")
+def test_dummy_execute_coupler_pulse(platform: Platform):
     sequence = PulseSequence()
 
     channel = platform.get_coupler(0).flux
@@ -67,24 +67,22 @@ def test_dummy_execute_pulse_sequence_couplers():
     _ = platform.execute([sequence], options)
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
-def test_dummy_execute_pulse_sequence_fast_reset(name):
-    platform = create_platform(name)
+def test_dummy_execute_pulse_sequence_fast_reset(platform: Platform):
     sequence = PulseSequence()
     sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
     options = ExecutionParameters(nshots=None, fast_reset=True)
     _ = platform.execute([sequence], options)
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize(
     "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
 )
 @pytest.mark.parametrize("batch_size", [None, 3, 5])
-def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
+def test_dummy_execute_pulse_sequence_unrolling(
+    platform: Platform, acquisition, batch_size
+):
     nshots = 100
     nsequences = 10
-    platform = create_platform(name)
     platform.instruments["dummy"].UNROLLING_BATCH_SIZE = batch_size
     sequences = []
     sequence = PulseSequence()
@@ -101,9 +99,7 @@ def test_dummy_execute_pulse_sequence_unrolling(name, acquisition, batch_size):
             assert r.samples.shape == (nshots,)
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
-def test_dummy_single_sweep_raw(name):
-    platform = create_platform(name)
+def test_dummy_single_sweep_raw(platform: Platform):
     sequence = PulseSequence()
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     pulse = next(iter(probe_seq.values()))[0]
@@ -189,7 +185,6 @@ def test_dummy_single_sweep_coupler(
     assert results_shape == expected_shape
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize("fast_reset", [True, False])
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
@@ -197,8 +192,9 @@ def test_dummy_single_sweep_coupler(
     "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
 )
 @pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, nshots):
-    platform = create_platform(name)
+def test_dummy_single_sweep(
+    platform: Platform, fast_reset, parameter, average, acquisition, nshots
+):
     sequence = PulseSequence()
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     pulse = next(iter(probe_seq.values()))[0]
@@ -246,7 +242,6 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
     assert results_shape == expected_shape
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize("parameter1", Parameter)
 @pytest.mark.parametrize("parameter2", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
@@ -254,8 +249,9 @@ def test_dummy_single_sweep(name, fast_reset, parameter, average, acquisition, n
     "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
 )
 @pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, nshots):
-    platform = create_platform(name)
+def test_dummy_double_sweep(
+    platform: Platform, parameter1, parameter2, average, acquisition, nshots
+):
     sequence = PulseSequence()
     pulse = Pulse(duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
@@ -320,15 +316,15 @@ def test_dummy_double_sweep(name, parameter1, parameter2, average, acquisition, 
     assert results_shape == expected_shape
 
 
-@pytest.mark.parametrize("name", PLATFORM_NAMES)
 @pytest.mark.parametrize("parameter", Parameter)
 @pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
 @pytest.mark.parametrize(
     "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
 )
 @pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_single_sweep_multiplex(name, parameter, average, acquisition, nshots):
-    platform = create_platform(name)
+def test_dummy_single_sweep_multiplex(
+    platform: Platform, parameter, average, acquisition, nshots
+):
     sequence = PulseSequence()
     probe_pulses = {}
     for qubit in platform.qubits:
