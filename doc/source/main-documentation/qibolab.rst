@@ -121,7 +121,7 @@ It is useful for testing parts of the code that do not necessarily require acces
 
     from qibolab import create_platform
 
-    platform = create_platform("dummy_couplers")
+    platform = create_platform("dummy")
 
 will create a dummy platform that also has coupler qubits.
 

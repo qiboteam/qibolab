@@ -53,7 +53,7 @@ def test_dummy_execute_coupler_pulse(platform: Platform):
 
 
 def test_dummy_execute_pulse_sequence_couplers():
-    platform = create_platform("dummy_couplers")
+    platform = create_platform("dummy")
     sequence = PulseSequence()
 
     cz = platform.pairs[(1, 2)].native_gates.CZ.create_sequence()
@@ -134,7 +134,7 @@ def test_dummy_single_sweep_raw(platform: Platform):
 def test_dummy_single_sweep_coupler(
     fast_reset, parameter, average, acquisition, nshots
 ):
-    platform = create_platform("dummy_couplers")
+    platform = create_platform("dummy")
     sequence = PulseSequence()
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
     probe_pulse = next(iter(probe_seq.values()))[0]
