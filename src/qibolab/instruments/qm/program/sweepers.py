@@ -1,5 +1,4 @@
 import math
-from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
@@ -9,8 +8,9 @@ from qm import qua
 from qm.qua import declare, fixed
 from qm.qua._dsl import _Variable  # for type declaration only
 
-from qibolab.components import Config
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab.components import Channel, Config
+from qibolab.pulses import Pulse
+from qibolab.sweeper import Parameter
 
 from ..config import operation
 from .arguments import ExecutionArguments
@@ -62,126 +62,112 @@ def check_max_offset(offset: Optional[float], max_offset: float = MAX_OFFSET):
 #            qmpulse.bake(config, values)
 
 
-@dataclass
-class QuaSweep:
-    """Base class for different sweep parameters."""
-
-    sweeper: Sweeper
-
-    def declare(self) -> _Variable:
-        """Declares the QUA variable that is swept."""
-        return declare(fixed)
-
-    @property
-    def values(self) -> npt.NDArray:
-        """Returns array of values that we are sweeping over.
-
-        Implements potential normalizations.
-        """
-        return self.sweeper.values
-
-    def __call__(
-        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
-    ):
-        """Part of the QUA program that updates the swept variable."""
-        raise NotImplementedError
-
-
-class Frequency(QuaSweep):
-
-    def declare(self) -> _Variable:
-        return declare(int)
-
-    def __call__(
-        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
-    ):
-        for channel in self.sweeper.channels:
-            lo_frequency = configs[channel.lo].frequency
-            # convert to IF frequency for readout and drive pulses
-            f0 = math.floor(configs[channel.name].frequency - lo_frequency)
-            # check if sweep is within the supported bandwidth [-400, 400] MHz
-            max_freq = maximum_sweep_value(self.values, f0)
-            if max_freq > 4e8:
-                raise_error(
-                    ValueError,
-                    f"Frequency {max_freq} for channel {channel.name} is beyond instrument bandwidth.",
-                )
-            qua.update_frequency(channel.name, variable + f0)
-
-
-class Amplitude(QuaSweep):
-
-    def __call__(
-        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
-    ):
-        # TODO: Consider sweeping amplitude without multiplication
-        if min(self.values) < -2:
+def _frequency(
+    channels: list[Channel],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    for channel in channels:
+        lo_frequency = configs[channel.lo].frequency
+        # convert to IF frequency for readout and drive pulses
+        f0 = math.floor(configs[channel.name].frequency - lo_frequency)
+        # check if sweep is within the supported bandwidth [-400, 400] MHz
+        max_freq = maximum_sweep_value(values, f0)
+        if max_freq > 4e8:
             raise_error(
-                ValueError, "Amplitude sweep values are <-2 which is not supported."
+                ValueError,
+                f"Frequency {max_freq} for channel {channel.name} is beyond instrument bandwidth.",
             )
-        if max(self.values) > 2:
-            raise_error(
-                ValueError, "Amplitude sweep values are >2 which is not supported."
-            )
-
-        for pulse in self.sweeper.pulses:
-            # if isinstance(instruction, Bake):
-            #    instructions.update_kwargs(instruction, amplitude=a)
-            # else:
-            args.parameters[operation(pulse)].amplitude = qua.amp(variable)
+        qua.update_frequency(channel.name, variable + f0)
 
 
-class RelativePhase(QuaSweep):
+def _amplitude(
+    pulses: list[Pulse],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    # TODO: Consider sweeping amplitude without multiplication
+    if min(values) < -2:
+        raise_error(
+            ValueError, "Amplitude sweep values are <-2 which is not supported."
+        )
+    if max(values) > 2:
+        raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
 
-    @property
-    def values(self) -> npt.NDArray:
-        return self.sweeper.values / (2 * np.pi)
-
-    def __call__(
-        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
-    ):
-        for pulse in self.sweeper.pulses:
-            args.parameters[operation(pulse)].phase = variable
-
-
-class Bias(QuaSweep):
-
-    def __call__(
-        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
-    ):
-        for channel in self.sweeper.channels:
-            offset = configs[channel.name].offset
-            max_value = maximum_sweep_value(self.values, offset)
-            check_max_offset(max_value, MAX_OFFSET)
-            b0 = declare(fixed, value=offset)
-            with qua.if_((variable + b0) >= 0.49):
-                qua.set_dc_offset(f"flux{channel.name}", "single", 0.49)
-            with qua.elif_((variable + b0) <= -0.49):
-                qua.set_dc_offset(f"flux{channel.name}", "single", -0.49)
-            with qua.else_():
-                qua.set_dc_offset(f"flux{channel.name}", "single", (variable + b0))
+    for pulse in pulses:
+        # if isinstance(instruction, Bake):
+        #    instructions.update_kwargs(instruction, amplitude=a)
+        # else:
+        args.parameters[operation(pulse)].amplitude = qua.amp(variable)
 
 
-class Duration(QuaSweep):
-    def declare(self) -> _Variable:
-        return declare(int)
-
-    @property
-    def values(self) -> npt.NDArray:
-        return (self.sweeper.values // 4).astype(int)
-
-    def __call__(
-        self, variable: _Variable, configs: dict[str, Config], args: ExecutionArguments
-    ):
-        # TODO: Handle baked pulses
-        for pulse in self.sweeper.pulses:
-            args.parameters[operation(pulse)].duration = variable
+def _relative_phase(
+    pulses: list[Pulse],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    for pulse in pulses:
+        args.parameters[operation(pulse)].phase = variable
 
 
-QUA_SWEEPERS = {
-    Parameter.frequency: Frequency,
-    Parameter.amplitude: Amplitude,
-    Parameter.duration: Duration,
-    Parameter.relative_phase: RelativePhase,
-    Parameter.bias: Bias,
+def _bias(
+    channels: list[Channel],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    for channel in channels:
+        offset = configs[channel.name].offset
+        max_value = maximum_sweep_value(values, offset)
+        check_max_offset(max_value, MAX_OFFSET)
+        b0 = declare(fixed, value=offset)
+        with qua.if_((variable + b0) >= 0.49):
+            qua.set_dc_offset(f"flux{channel.name}", "single", 0.49)
+        with qua.elif_((variable + b0) <= -0.49):
+            qua.set_dc_offset(f"flux{channel.name}", "single", -0.49)
+        with qua.else_():
+            qua.set_dc_offset(f"flux{channel.name}", "single", (variable + b0))
+
+
+def _duration(
+    pulses: list[Pulse],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    # TODO: Handle baked pulses
+    for pulse in pulses:
+        args.parameters[operation(pulse)].duration = variable
+
+
+INT_TYPE = {Parameter.frequency, Parameter.duration}
+"""Sweeper parameters for which we need ``int`` variable type.
+
+The rest parameters need ``fixed`` type.
+"""
+
+NORMALIZERS = {
+    Parameter.relative_phase: lambda values: values / (2 * np.pi),
+    Parameter.duration: lambda values: (values // 4).astype(int),
 }
+"""Functions to normalize sweeper values.
+
+The rest parameters do not need normalization (identity function).
+"""
+
+SWEEPER_METHODS = {
+    Parameter.frequency: _frequency,
+    Parameter.amplitude: _amplitude,
+    Parameter.duration: _duration,
+    Parameter.relative_phase: _relative_phase,
+    Parameter.bias: _bias,
+}
+"""Methods that return part of QUA program to be used inside the loop."""
