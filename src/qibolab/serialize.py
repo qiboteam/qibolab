@@ -81,8 +81,10 @@ def load_qubits(
     characterization = runcard["characterization"]
 
     pairs = {}
-    for pair, char in characterization.get("two_qubit", {}).items():
+    two_qubit = characterization.get("two_qubit", {})
+    for pair in runcard.get("native_gates", {}).get("two_qubit", {}):
         q0, q1 = (load_qubit_name(q) for q in pair.split("-"))
+        char = two_qubit.get(pair, {})
         pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], **char)
 
     couplers = {
