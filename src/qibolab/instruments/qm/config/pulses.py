@@ -23,7 +23,8 @@ def operation(pulse):
     return str(hash(pulse))
 
 
-def _normalize_phase(phase: float):
+def _wrap(phase: float):
+    """Convert phase to multiples of 2pi."""
     return (phase % (2 * np.pi)) / (2 * np.pi)
 
 
@@ -34,7 +35,7 @@ class ConstantWaveform:
 
     @classmethod
     def from_pulse(cls, pulse: Pulse):
-        phase = _normalize_phase(pulse.relative_phase)
+        phase = _wrap(pulse.relative_phase)
         return {
             "I": cls(pulse.amplitude * np.cos(phase)),
             "Q": cls(pulse.amplitude * np.sin(phase)),
@@ -48,7 +49,7 @@ class ArbitraryWaveform:
 
     @classmethod
     def from_pulse(cls, pulse: Pulse):
-        phase = _normalize_phase(pulse.relative_phase)
+        phase = _wrap(pulse.relative_phase)
         samples_i = pulse.i(SAMPLING_RATE)
         samples_q = pulse.q(SAMPLING_RATE)
         return {
