@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 
-from .pulses import Drag, Gaussian, PulseSequence
+from .pulses import Drag, Gaussian, Pulse, PulseSequence
 from .serialize_ import replace
 
 
@@ -28,20 +28,20 @@ class RxyFactory:
     """
 
     def __init__(self, sequence: PulseSequence):
-        if len(sequence) != 1:
+        if len(sequence.channels) != 1:
             raise ValueError(
-                f"Incompatible number of channels: {len(sequence)}. "
+                f"Incompatible number of channels: {len(sequence.channels)}. "
                 f"{self.__class__} expects a sequence on exactly one channel."
             )
 
-        pulses = next(iter(sequence.values()))
-        if len(pulses) != 1:
+        if len(sequence) != 1:
             raise ValueError(
-                f"Incompatible number of pulses: {len(pulses)}. "
+                f"Incompatible number of pulses: {len(sequence)}. "
                 f"{self.__class__} expects a sequence with exactly one pulse."
             )
 
-        pulse = pulses[0]
+        pulse = sequence[0][1]
+        assert isinstance(pulse, Pulse)
         expected_envelopes = (Gaussian, Drag)
         if not isinstance(pulse.envelope, expected_envelopes):
             raise ValueError(
@@ -59,12 +59,12 @@ class RxyFactory:
             phi: the angle that rotation axis forms with x axis.
         """
         theta, phi = _normalize_angles(theta, phi)
-        seq = self._seq.copy()
-        channel = next(iter(seq.keys()))
-        pulse = seq[channel][0]
+        ch, pulse = self._seq[0]
+        assert isinstance(pulse, Pulse)
         new_amplitude = pulse.amplitude * theta / np.pi
-        seq[channel][0] = replace(pulse, amplitude=new_amplitude, relative_phase=phi)
-        return seq
+        return PulseSequence(
+            [(ch, replace(pulse, amplitude=new_amplitude, relative_phase=phi))]
+        )
 
 
 class FixedSequenceFactory:
