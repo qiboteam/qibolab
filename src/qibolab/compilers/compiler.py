@@ -156,14 +156,16 @@ class Compiler:
             for gate in set(filter(lambda x: x is not None, moment)):
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
+                increment = defaultdict(int)
                 for ch in gate_sequence.channels:
                     qubit = ch_to_qb[ch]
                     delay = qubit_clock(qubit) - channel_clock[ch]
                     if delay > 0:
                         delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
-                    channel_duration = gate_sequence.channel_duration(ch)
-                    channel_clock[ch] += channel_duration
+                    increment[ch] = gate_sequence.channel_duration(ch)
+                for ch, inc in increment.items():
+                    channel_clock[ch] += inc
                 sequence.concatenate(delay_sequence)
                 sequence.concatenate(gate_sequence)
 
