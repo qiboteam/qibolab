@@ -1,4 +1,4 @@
 from .load import create_platform
-from .platform import Platform, unroll_sequences
+from .platform import Platform, probe_pulses, unroll_sequences
 
-__all__ = ["Platform", "create_platform", "unroll_sequences"]
+__all__ = ["Platform", "create_platform", "probe_pulses", "unroll_sequences"]

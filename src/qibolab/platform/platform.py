@@ -2,6 +2,7 @@
 
 import dataclasses
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from math import prod
 from typing import Any, Optional, TypeVar
@@ -9,11 +10,11 @@ from typing import Any, Optional, TypeVar
 import numpy as np
 from qibo.config import log, raise_error
 
-from qibolab.components import Config
+from qibolab.components import AcquireChannel, Config
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Delay, PulseSequence
+from qibolab.pulses import Delay, Pulse, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import replace
 from qibolab.sweeper import ParallelSweepers
@@ -100,6 +101,16 @@ def estimate_duration(
         * NS_TO_SEC
         * prod(len(s[0].values) for s in sweepers)
     )
+
+
+def probe_pulses(
+    sequence: PulseSequence, configs: dict[str, Config]
+) -> Iterable[Pulse]:
+    """Filter probe pulses."""
+    for ch, pulse in sequence:
+        if isinstance(configs[ch], AcquireChannel):
+            assert isinstance(pulse, Pulse)
+            yield pulse
 
 
 @dataclass
