@@ -16,6 +16,7 @@ from qibolab.compilers.default import (
 )
 from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
+from qibolab.qubits import QubitId
 
 
 @dataclass
@@ -143,26 +144,30 @@ class Compiler:
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
 
         measurement_map = {}
-        qubit_clock = defaultdict(int)
         channel_clock = defaultdict(int)
+
+        def qubit_clock(qubit: QubitId):
+            return max(channel_clock[ch] for ch in platform.qubits[qubit].channels)
+
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in set(filter(lambda x: x is not None, moment)):
                 if isinstance(gate, gates.Align):
                     for qubit in gate.qubits:
-                        qubit_clock[qubit] += gate.delay
+                        clock = qubit_clock(qubit)
+                        for ch in platform.qubits[qubit].channels:
+                            channel_clock[qubit] = clock + gate.delay
                     continue
 
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
                 for ch in gate_sequence.channels:
                     qubit = ch_to_qb[ch]
-                    delay = qubit_clock[qubit] - channel_clock[ch]
+                    delay = qubit_clock(qubit) - channel_clock[ch]
                     if delay > 0:
                         delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
                     channel_duration = gate_sequence.channel_duration(ch)
-                    qubit_clock[qubit] += channel_duration
                     channel_clock[ch] += channel_duration
                 sequence.concatenate(delay_sequence)
                 sequence.concatenate(gate_sequence)
