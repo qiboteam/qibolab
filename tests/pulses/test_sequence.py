@@ -1,4 +1,5 @@
 from qibolab.pulses import Delay, Drag, Gaussian, Pulse, PulseSequence, Rectangular
+from qibolab.pulses.pulse import VirtualZ
 
 
 def test_init():
@@ -145,10 +146,25 @@ def test_copy():
 def test_trim():
     p = Pulse(duration=40, amplitude=0.9, envelope=Rectangular())
     d = Delay(duration=10)
+    vz = VirtualZ(phase=0.1)
     sequence = PulseSequence(
-        [("a", p), ("a", d), ("b", d), ("b", d), ("c", d), ("c", p)]
+        [
+            ("a", p),
+            ("a", d),
+            ("b", d),
+            ("b", d),
+            ("c", d),
+            ("c", p),
+            ("d", p),
+            ("d", vz),
+        ]
     )
     trimmed = sequence.trim()
+    # the final delay is dropped
     assert len(list(trimmed.channel("a"))) == 1
+    # only delays, all dropped
     assert len(list(trimmed.channel("b"))) == 0
+    # initial delay is kept
     assert len(list(trimmed.channel("c"))) == 2
+    # the order is preserved
+    assert isinstance(next(iter(trimmed.channel("d"))), Pulse)
