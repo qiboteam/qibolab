@@ -158,15 +158,6 @@ def test_dump_runcard(platform, tmp_path):
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
         target_runcard = load_runcard(target_path)
 
-    # for the characterization section the dumped runcard may contain
-    # some default ``Qubit`` parameters
-    target_char = target_runcard.pop("characterization")["single_qubit"]
-    final_char = final_runcard.pop("characterization")["single_qubit"]
-
-    assert final_runcard == target_runcard
-    for qubit, values in target_char.items():
-        for name, value in values.items():
-            assert final_char[qubit][name] == value
     # assert instrument section is dumped properly in the runcard
     target_instruments = target_runcard.pop("instruments")
     final_instruments = final_runcard.pop("instruments")

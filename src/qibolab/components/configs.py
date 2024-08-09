@@ -8,7 +8,7 @@ configuration defined by these classes.
 """
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Optional, Union
 
 __all__ = [
     "DcConfig",
@@ -77,8 +77,8 @@ class AcquisitionConfig:
     """Delay between readout pulse start and acquisition start."""
     smearing: float
     """FIXME:"""
-    threshold: float
-    iq_angle: float
+    threshold: Optional[float] = None
+    iq_angle: Optional[float] = None
 
 
 Config = Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig]

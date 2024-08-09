@@ -35,7 +35,7 @@ class ZiIqConfig(IqConfig):
 class ZiAcquisitionConfig(AcquisitionConfig):
     """Acquisition config for ZI SHF* line instrument."""
 
-    power_range: float
+    power_range: float = 0
     """Power range in dBm.
 
     Possible values are [-30. -25. -20. -15. -10. -5. 0. 5. 10.].
