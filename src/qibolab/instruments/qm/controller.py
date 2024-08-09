@@ -164,6 +164,10 @@ class QmController(Controller):
 
     def __post_init__(self):
         super().__init__(self.name, self.address)
+        # convert ``channels`` from list to dict
+        self.channels = {
+            channel.logical_channel.name: channel for channel in self.channels
+        }
         # redefine bounds because abstract instrument overwrites them
         # FIXME: This overwrites the ``bounds`` given in the runcard!
         self.bounds = Bounds(
