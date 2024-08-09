@@ -4,7 +4,7 @@ import numpy as np
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
 from qibolab.instruments.qblox.q1asm import Program
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.pulses.modulation import modulate
 from qibolab.sweeper import Parameter, Sweeper
 
@@ -136,7 +136,9 @@ class WaveformsBuffer:
         # there may be other waveforms stored already, set first index as the next available
         first_idx = len(self.unique_waveforms)
 
-        if pulse.type == PulseType.FLUX:
+        # FIXME:
+        # if pulses.type == PulseType.FLUX:
+        if True:
             # for flux pulses, store i waveforms
             idx_range = np.arange(first_idx, first_idx + len(values), 1)
 

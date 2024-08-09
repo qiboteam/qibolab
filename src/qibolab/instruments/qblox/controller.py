@@ -11,7 +11,7 @@ from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
 
@@ -359,7 +359,9 @@ class QbloxController(Controller):
                 elif sweeper.parameter is Parameter.lo_frequency:
                     initial = {}
                     for pulse in sweeper.pulses:
-                        if pulse.type == PulseType.READOUT:
+                        # FIXME:
+                        # if pulse.type == PulseType.READOUT:
+                        if True:
                             initial[pulse.id] = qubits[pulse.qubit].readout.lo_frequency
                             if sweeper.type == SweeperType.ABSOLUTE:
                                 qubits[pulse.qubit].readout.lo_frequency = value
@@ -371,8 +373,9 @@ class QbloxController(Controller):
                                 qubits[pulse.qubit].readout.lo_frequency = (
                                     initial[pulse.id] * value
                                 )
-
-                        elif pulse.type == PulseType.DRIVE:
+                        # FIXME:
+                        # elif pulse.type == PulseType.DRIVE:
+                        elif True:
                             initial[pulse.id] = qubits[pulse.qubit].drive.lo_frequency
                             if sweeper.type == SweeperType.ABSOLUTE:
                                 qubits[pulse.qubit].drive.lo_frequency = value

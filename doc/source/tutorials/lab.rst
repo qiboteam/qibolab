@@ -25,7 +25,7 @@ using different Qibolab primitives.
     from qibolab import Platform
     from qibolab.components import IqChannel, AcquireChannel, IqConfig
     from qibolab.qubits import Qubit
-    from qibolab.pulses import Gaussian, Pulse, PulseType, Rectangular
+    from qibolab.pulses import Gaussian, Pulse, Rectangular
     from qibolab.native import RxyFactory, FixedSequenceFactory, SingleQubitNatives
     from qibolab.instruments.dummy import DummyInstrument
 
@@ -54,7 +54,6 @@ using different Qibolab primitives.
                 duration=40,
                 amplitude=0.05,
                 envelope=Gaussian(rel_sigma=0.2),
-                type=PulseType.DRIVE,
             )
         )
 
@@ -65,7 +64,6 @@ using different Qibolab primitives.
                 duration=1000,
                 amplitude=0.005,
                 envelope=Rectangular(),
-                type=PulseType.READOUT,
             )
         )
 
@@ -107,7 +105,7 @@ hold the parameters of the two-qubit gates.
 
     from qibolab.components import IqChannel, AcquireChannel, DcChannel, IqConfig
     from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import Gaussian, PulseType, Pulse, PulseSequence, Rectangular
+    from qibolab.pulses import Gaussian, Pulse, PulseSequence, Rectangular
     from qibolab.native import (
         RxyFactory,
         FixedSequenceFactory,
@@ -138,7 +136,6 @@ hold the parameters of the two-qubit gates.
                             duration=40,
                             amplitude=0.05,
                             envelope=Gaussian(rel_sigma=0.2),
-                            type=PulseType.DRIVE,
                         )
                     ]
                 }
@@ -152,7 +149,6 @@ hold the parameters of the two-qubit gates.
                             duration=1000,
                             amplitude=0.005,
                             envelope=Rectangular(),
-                            type=PulseType.READOUT,
                         )
                     ]
                 }
@@ -168,7 +164,6 @@ hold the parameters of the two-qubit gates.
                             duration=40,
                             amplitude=0.05,
                             envelope=Gaussian(rel_sigma=0.2),
-                            type=PulseType.DRIVE,
                         )
                     ]
                 }
@@ -182,7 +177,6 @@ hold the parameters of the two-qubit gates.
                             duration=1000,
                             amplitude=0.005,
                             envelope=Rectangular(),
-                            type=PulseType.READOUT,
                         )
                     ]
                 }
@@ -201,7 +195,6 @@ hold the parameters of the two-qubit gates.
                             duration=30,
                             amplitude=0.005,
                             envelope=Rectangular(),
-                            type=PulseType.FLUX,
                         )
                     ],
                 }
@@ -221,7 +214,7 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     from qibolab.components import DcChannel
     from qibolab.couplers import Coupler
     from qibolab.qubits import Qubit, QubitPair
-    from qibolab.pulses import PulseType, Pulse, PulseSequence
+    from qibolab.pulses import Pulse, PulseSequence
     from qibolab.native import (
         FixedSequenceFactory,
         SingleQubitNatives,
@@ -251,7 +244,6 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
                             amplitude=0.005,
                             frequency=1e9,
                             envelope=Rectangular(),
-                            type=PulseType.FLUX,
                             qubit=qubit1.name,
                         )
                     ]

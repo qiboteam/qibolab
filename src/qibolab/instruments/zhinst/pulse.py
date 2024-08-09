@@ -7,7 +7,7 @@ from laboneq.dsl.experiment.pulse_library import (
     sampled_pulse_real,
 )
 
-from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, PulseType, Rectangular
+from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, Rectangular
 
 from .constants import NANO_TO_SECONDS, SAMPLING_RATE
 
@@ -15,7 +15,9 @@ from .constants import NANO_TO_SECONDS, SAMPLING_RATE
 def select_pulse(pulse: Pulse):
     """Return laboneq pulse object corresponding to the given qibolab pulse."""
     if isinstance(pulse.envelope, Rectangular):
-        can_compress = pulse.type is not PulseType.READOUT
+        # FIXME:
+        # can_compress = pulse.type is not PulseType.READOUT
+        can_compress = False
         return laboneq.pulse_library.const(
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             amplitude=pulse.amplitude,
@@ -33,7 +35,9 @@ def select_pulse(pulse: Pulse):
     if isinstance(pulse.envelope, GaussianSquare):
         sigma = pulse.envelope.rel_sigma
         width = pulse.envelope.width
-        can_compress = pulse.type is not PulseType.READOUT
+        # FIXME:
+        # can_compress = pulse.type is not PulseType.READOUT
+        can_compress = False
         return laboneq.pulse_library.gaussian_square(
             length=round(pulse.duration * NANO_TO_SECONDS, 9),
             width=round(pulse.duration * NANO_TO_SECONDS, 9) * width,

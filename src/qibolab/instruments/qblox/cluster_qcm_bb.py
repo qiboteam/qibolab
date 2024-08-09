@@ -18,7 +18,7 @@ from qibolab.instruments.qblox.q1asm import (
 )
 from qibolab.instruments.qblox.sequencer import Sequencer, WaveformsBuffer
 from qibolab.instruments.qblox.sweeper import QbloxSweeper, QbloxSweeperType
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 
@@ -616,7 +616,9 @@ class QcmBb(ClusterModule):
                         and pulses[n].sweeper.type == QbloxSweeperType.duration
                     ):
                         RI = pulses[n].sweeper.register
-                        if pulses[n].type == PulseType.FLUX:
+                        # FIXME:
+                        # if pulses[n].type == PulseType.FLUX:
+                        if True:
                             RQ = pulses[n].sweeper.register
                         else:
                             RQ = pulses[n].sweeper.aux_register

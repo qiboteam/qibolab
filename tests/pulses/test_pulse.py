@@ -12,7 +12,6 @@ from qibolab.pulses import (
     GaussianSquare,
     Iir,
     Pulse,
-    PulseType,
     Rectangular,
     Snz,
 )
@@ -25,7 +24,6 @@ def test_init():
         amplitude=0.9,
         relative_phase=0.0,
         envelope=Rectangular(),
-        type=PulseType.READOUT,
     )
     assert p0.relative_phase == 0.0
 
@@ -34,9 +32,8 @@ def test_init():
         amplitude=0.9,
         relative_phase=0.0,
         envelope=Rectangular(),
-        type=PulseType.READOUT,
     )
-    assert p1.type is PulseType.READOUT
+    assert p1.amplitude == 0.9
 
     # initialisation with non float (int) relative_phase
     p2 = Pulse(
@@ -44,7 +41,6 @@ def test_init():
         amplitude=0.9,
         relative_phase=1.0,
         envelope=Rectangular(),
-        type=PulseType.READOUT,
     )
     assert isinstance(p2.relative_phase, float) and p2.relative_phase == 1.0
 
@@ -54,28 +50,24 @@ def test_init():
         amplitude=0.9,
         envelope=Rectangular(),
         relative_phase=0,
-        type=PulseType.READOUT,
     )
     p7 = Pulse(
         duration=40,
         amplitude=0.9,
         envelope=Rectangular(),
         relative_phase=0,
-        type=PulseType.FLUX,
     )
     p8 = Pulse(
         duration=40,
         amplitude=0.9,
         envelope=Gaussian(rel_sigma=0.2),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     p9 = Pulse(
         duration=40,
         amplitude=0.9,
         envelope=Drag(rel_sigma=0.2, beta=2),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     p10 = Pulse.flux(
         duration=40,
@@ -94,14 +86,12 @@ def test_init():
         amplitude=0.9,
         envelope=ECap(alpha=2),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     p14 = Pulse(
         duration=40,
         amplitude=0.9,
         envelope=GaussianSquare(rel_sigma=0.2, width=0.9),
         relative_phase=0,
-        type=PulseType.READOUT,
     )
 
     # initialisation with float duration
@@ -110,7 +100,6 @@ def test_init():
         amplitude=0.9,
         relative_phase=1,
         envelope=Rectangular(),
-        type=PulseType.READOUT,
     )
     assert isinstance(p12.duration, float)
     assert p12.duration == 34.33
@@ -128,7 +117,6 @@ def test_attributes():
     assert isinstance(p.amplitude, float) and p.amplitude == 0.9
     assert isinstance(p.relative_phase, float) and p.relative_phase == 0.0
     assert isinstance(p.envelope, BaseEnvelope)
-    assert isinstance(p.type, PulseType)
 
 
 def test_pulse():
@@ -152,7 +140,6 @@ def test_readout_pulse():
         duration=duration,
         relative_phase=0,
         envelope=Rectangular(),
-        type=PulseType.READOUT,
     )
 
     assert pulse.duration == duration

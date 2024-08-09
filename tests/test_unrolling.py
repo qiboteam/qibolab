@@ -2,59 +2,53 @@
 
 import pytest
 
-from qibolab.pulses import Drag, Pulse, PulseSequence, PulseType, Rectangular
+from qibolab.pulses import Drag, Pulse, PulseSequence, Rectangular
 from qibolab.unrolling import Bounds, batch
 
 
 def test_bounds_update():
     ps = PulseSequence()
-    ps["ch3"].append(
+    ps["ch3/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
-    ps["ch2"].append(
+    ps["ch2/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
-    ps["ch1"].append(
+    ps["ch1/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
 
-    ps["ch3"].append(
+    ps["ch3/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
-    ps["ch2"].append(
+    ps["ch2/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
-    ps["ch1"].append(
+    ps["ch1/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
 
@@ -94,53 +88,47 @@ def test_bounds_comparison():
 )
 def test_batch(bounds):
     ps = PulseSequence()
-    ps["ch3"].append(
+    ps["ch3/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
-    ps["ch2"].append(
+    ps["ch2/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
-    ps["ch1"].append(
+    ps["ch1/drive"].append(
         Pulse(
             duration=40,
             amplitude=0.9,
             envelope=Drag(rel_sigma=0.2, beta=1),
-            type=PulseType.DRIVE,
         )
     )
 
-    ps["ch3"].append(
+    ps["ch3/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
-    ps["ch2"].append(
+    ps["ch2/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
-    ps["ch1"].append(
+    ps["ch1/probe"].append(
         Pulse(
             duration=1000,
             amplitude=0.9,
             envelope=Rectangular(),
-            type=PulseType.READOUT,
         )
     )
 

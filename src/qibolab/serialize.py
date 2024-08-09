@@ -209,7 +209,6 @@ def dump_qubit_name(name: QubitId) -> str:
 
 def _dump_pulse(pulse: Pulse):
     data = pulse.model_dump()
-    data["type"] = data["type"].value
     if "channel" in data:
         del data["channel"]
     if "relative_phase" in data:

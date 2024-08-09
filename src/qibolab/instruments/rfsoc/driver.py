@@ -12,7 +12,7 @@ from qibosoq import client
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit
 from qibolab.sweeper import BIAS, Sweeper
 
@@ -434,7 +434,12 @@ class RFSoC(Controller):
             A boolean value true if the sweeper must be executed by python
             loop, false otherwise
         """
-        if any(pulse.type is PulseType.FLUX for pulse in sequence):
+        # FIXME: since pulse types have been deprecated, now channel types should be
+        # used instead. In the following, the code is relying on a non-standard channels
+        # naming convention, and thus fragile (or just broken)
+        # instead, the channel object should be retrieved from the platform
+        # configuration, and its type should be inspected
+        if any("flux" in ch for ch in sequence):
             return True
         for sweeper in sweepers:
             if all(
@@ -453,7 +458,9 @@ class RFSoC(Controller):
 
             for sweep_idx, parameter in enumerate(sweeper.parameters):
                 is_freq = parameter is rfsoc.Parameter.FREQUENCY
-                is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
+                # FIXME: the sequence can not even be indexed like this any longer
+                # is_ro = sequence[sweeper.indexes[sweep_idx]].type == PulseType.READOUT
+                is_ro = False
                 # if it's a sweep on the readout freq do a python sweep
                 if is_freq and is_ro:
                     return True

@@ -253,7 +253,6 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
         relative_phase=0,  # Phase in radians
         envelope=Rectangular(),
         channel="channel",
-        type="qd",  # Enum type: :class:`qibolab.pulses.PulseType`
         qubit=0,
     )
 
@@ -402,9 +401,9 @@ To effectively specify the sweeping behavior, Qibolab provides the ``values`` at
 
 The ``values`` attribute comprises an array of numerical values that define the sweeper's progression. To facilitate multi-qubit execution, these numbers can be interpreted in three ways:
 
-- Absolute Values: Represented by `qibolab.sweeper.PulseType.ABSOLUTE`, these values are used directly.
-- Relative Values with Offset: Utilizing `qibolab.sweeper.PulseType.OFFSET`, these values are relative to a designated base value, corresponding to the pulse or qubit value.
-- Relative Values with Factor: Employing `qibolab.sweeper.PulseType.FACTOR`, these values are scaled by a factor from the base value, akin to a multiplier.
+- Absolute Values: Represented by `qibolab.sweeper.SweeperType.ABSOLUTE`, these values are used directly.
+- Relative Values with Offset: Utilizing `qibolab.sweeper.SweeperType.OFFSET`, these values are relative to a designated base value, corresponding to the pulse or qubit value.
+- Relative Values with Factor: Employing `qibolab.sweeper.SweeperType.FACTOR`, these values are scaled by a factor from the base value, akin to a multiplier.
 
 For offset and factor sweepers, the base value is determined by the respective pulse or qubit value.
 

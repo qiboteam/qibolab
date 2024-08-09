@@ -13,7 +13,7 @@ from qibolab.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import average, average_iq, collect
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -88,94 +88,106 @@ class RFSOC(Controller):
         dac_sr_ghz = dac_sampling_rate / 1e9
 
         # We iterate over the seuence of pulses and generate the waveforms for each type of pulses
-        for pulse in sequence.pulses:
-            # pylint: disable=no-member
-            # FIXME: ignore complaint about non-existent ports and _ports properties, until we upgrade this driver to qibolab 0.2
-            if pulse.channel not in self._ports:
-                continue
+        for ch, seq in sequence.items():
+            for pulse in seq:
+                # pylint: disable=no-member
+                # FIXME: ignore complaint about non-existent ports and _ports properties, until we upgrade this driver to qibolab 0.2
+                if pulse.channel not in self._ports:
+                    continue
 
-            dac = self.ports(pulse.channel).dac
-            start = int(pulse.start * 1e-9 * dac_sampling_rate)
-            i_env = pulse.envelope_waveform_i(dac_sr_ghz).data
-            q_env = pulse.envelope_waveform_q(dac_sr_ghz).data
+                dac = self.ports(pulse.channel).dac
+                start = int(pulse.start * 1e-9 * dac_sampling_rate)
+                i_env = pulse.envelope_waveform_i(dac_sr_ghz).data
+                q_env = pulse.envelope_waveform_q(dac_sr_ghz).data
 
-            # Flux pulses
-            # TODO: Add envelope support for flux pulses
-            if pulse.type == PulseType.FLUX:
-                wfm = i_env
-                end = start + len(wfm)
+                # FIXME: since pulse types have been deprecated, now channel types
+                # should be used instead. In the following, the code is relying on a
+                # non-standard channels naming convention, and thus fragile (or just
+                # broken)
+                # instead, the channel object should be retrieved from the platform
+                # configuration, and its type should be inspected
 
-            # Qubit drive microwave signals
-            elif pulse.type == PulseType.DRIVE:
-                end = start + len(i_env)
-                t = np.arange(start, end) / dac_sampling_rate
-                cosalpha = np.cos(
-                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
-                )
-                sinalpha = np.sin(
-                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
-                )
-                wfm = i_env * sinalpha + q_env * cosalpha
+                # Flux pulses
+                # TODO: Add envelope support for flux pulses
+                if "flux" in ch:
+                    wfm = i_env
+                    end = start + len(wfm)
 
-            elif pulse.type == PulseType.READOUT:
-                # For readout pulses, we move the corresponding DAC/ADC pair to the start of the pulse to save memory
-                # This locks the phase of the readout in the demodulation
-                adc = self.ports(pulse.channel).adc
-                start = 0
+                # Qubit drive microwave signals
+                elif "drive" in ch:
+                    end = start + len(i_env)
+                    t = np.arange(start, end) / dac_sampling_rate
+                    cosalpha = np.cos(
+                        2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                    )
+                    sinalpha = np.sin(
+                        2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                    )
+                    wfm = i_env * sinalpha + q_env * cosalpha
 
-                end = start + len(i_env)
-                t = np.arange(start, end) / dac_sampling_rate
-                cosalpha = np.cos(
-                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
-                )
-                sinalpha = np.sin(
-                    2 * np.pi * pulse.frequency * t + pulse.relative_phase
-                )
-                wfm = i_env * sinalpha + q_env * cosalpha
+                elif "probe" in ch:
+                    # For readout pulses, we move the corresponding DAC/ADC pair to the start of the pulse to save memory
+                    # This locks the phase of the readout in the demodulation
+                    adc = self.ports(pulse.channel).adc
+                    start = 0
 
-                # First we convert the pulse starting time to number of ADC samples
-                # Then, we convert this number to the number of ADC clock cycles (8 samples per clock cycle)
-                # Next, we raise it to the next nearest integer to prevent an overlap between drive and readout pulses
-                # Finally, we ensure that the number is even for the DAC delay conversion
-                delay_start_adc = int(
-                    int(
-                        np.ceil(
-                            self.device.adc_sampling_rate * 1e6 * pulse.start * 1e-9 / 8
+                    end = start + len(i_env)
+                    t = np.arange(start, end) / dac_sampling_rate
+                    cosalpha = np.cos(
+                        2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                    )
+                    sinalpha = np.sin(
+                        2 * np.pi * pulse.frequency * t + pulse.relative_phase
+                    )
+                    wfm = i_env * sinalpha + q_env * cosalpha
+
+                    # First we convert the pulse starting time to number of ADC samples
+                    # Then, we convert this number to the number of ADC clock cycles (8 samples per clock cycle)
+                    # Next, we raise it to the next nearest integer to prevent an overlap between drive and readout pulses
+                    # Finally, we ensure that the number is even for the DAC delay conversion
+                    delay_start_adc = int(
+                        int(
+                            np.ceil(
+                                self.device.adc_sampling_rate
+                                * 1e6
+                                * pulse.start
+                                * 1e-9
+                                / 8
+                            )
+                            / 2
                         )
-                        / 2
-                    )
-                    * 2
-                )
-
-                # For the DAC, currently the sampling rate is 3x higher than the ADC
-                # The number of clock cycles is 16 samples per clock cycle
-                # Hence, we multiply the adc delay clock cycles by 1.5x to align the DAC/ADC pair
-                delay_start_dac = int(delay_start_adc * 1.5)
-
-                self.device.dac[dac].delay = (
-                    delay_start_dac + self.channel_delay_offset_dac
-                )
-                self.device.adc[adc].delay = (
-                    delay_start_adc + self.channel_delay_offset_adc
-                )
-                # ADC0 complete marks the end of acquisition, so we also need to move ADC0
-                self.device.adc[0].delay = (
-                    delay_start_adc + self.channel_delay_offset_adc
-                )
-
-                if (
-                    options.acquisition_type is AcquisitionType.DISCRIMINATION
-                    or AcquisitionType.INTEGRATION
-                ):
-                    self.device.program_qunit(
-                        readout_frequency=pulse.frequency,
-                        readout_time=pulse.duration * 1e-9,
-                        qunit=pulse.qubit,
+                        * 2
                     )
 
-            end = start + len(wfm)
-            waveform_array[dac][start:end] += self.device.dac_max_amplitude * wfm
-            dac_end_addr[dac] = max(end >> 4, dac_end_addr[dac])
+                    # For the DAC, currently the sampling rate is 3x higher than the ADC
+                    # The number of clock cycles is 16 samples per clock cycle
+                    # Hence, we multiply the adc delay clock cycles by 1.5x to align the DAC/ADC pair
+                    delay_start_dac = int(delay_start_adc * 1.5)
+
+                    self.device.dac[dac].delay = (
+                        delay_start_dac + self.channel_delay_offset_dac
+                    )
+                    self.device.adc[adc].delay = (
+                        delay_start_adc + self.channel_delay_offset_adc
+                    )
+                    # ADC0 complete marks the end of acquisition, so we also need to move ADC0
+                    self.device.adc[0].delay = (
+                        delay_start_adc + self.channel_delay_offset_adc
+                    )
+
+                    if (
+                        options.acquisition_type is AcquisitionType.DISCRIMINATION
+                        or AcquisitionType.INTEGRATION
+                    ):
+                        self.device.program_qunit(
+                            readout_frequency=pulse.frequency,
+                            readout_time=pulse.duration * 1e-9,
+                            qunit=pulse.qubit,
+                        )
+
+                end = start + len(wfm)
+                waveform_array[dac][start:end] += self.device.dac_max_amplitude * wfm
+                dac_end_addr[dac] = max(end >> 4, dac_end_addr[dac])
 
         payload = [
             (dac, wfm, dac_end_addr[dac])
@@ -237,9 +249,7 @@ class RFSOC_RO(RFSOC):
         """
         super().play(qubits, couplers, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))
-        readout_pulses = [
-            pulse for pulse in sequence.pulses if pulse.type is PulseType.READOUT
-        ]
+        readout_pulses = sequence.probe_pulses
         readout_qubits = [pulse.qubit for pulse in readout_pulses]
 
         if options.acquisition_type is AcquisitionType.RAW:
@@ -346,8 +356,13 @@ class RFSOC_RO(RFSOC):
 
                 # Since the sweeper will modify the readout pulse serial, we collate the results with the qubit number.
                 # This is only for qibocal compatiability and will be removed with IcarusQ v2.
-                if pulse.type is PulseType.READOUT:
-                    res[pulse.serial] = res[pulse.qubit]
+                # FIXME: if this was required, now it's completely broken, since it
+                # isn't possible to identify the pulse channel from the pulse itself
+                # (nor it should be needed)
+                # it should be possible to retrieve the information looking for the
+                # channel type
+                # if pulse.type is PulseType.READOUT:
+                #     res[pulse.serial] = res[pulse.qubit]
 
         return res
 

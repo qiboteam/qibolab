@@ -10,7 +10,7 @@ from qblox_instruments.qcodes_drivers.cluster import Cluster
 from qblox_instruments.qcodes_drivers.module import Module
 from qibo.config import log
 
-from qibolab.pulses import Pulse, PulseSequence, PulseType
+from qibolab.pulses import Pulse, PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .acquisition import AveragedAcquisition, DemodulatedAcquisition
@@ -711,7 +711,9 @@ class QrmRf(ClusterModule):
                                 comment=f"set relative phase {pulses[n].relative_phase} rads",
                             )
 
-                    if pulses[n].type == PulseType.READOUT:
+                    # FIXME:
+                    # if pulses[n].type == PulseType.READOUT:
+                    if True:
                         delay_after_play = self._ports["i1"].acquisition_hold_off
 
                         if len(pulses) > n + 1:
@@ -742,7 +744,9 @@ class QrmRf(ClusterModule):
                             and pulses[n].sweeper.type == QbloxSweeperType.duration
                         ):
                             RI = pulses[n].sweeper.register
-                            if pulses[n].type == PulseType.FLUX:
+                            # FIXME:
+                            # if pulses[n].type == PulseType.FLUX:
+                            if True:
                                 RQ = pulses[n].sweeper.register
                             else:
                                 RQ = pulses[n].sweeper.aux_register
@@ -789,7 +793,9 @@ class QrmRf(ClusterModule):
                             and pulses[n].sweeper.type == QbloxSweeperType.duration
                         ):
                             RI = pulses[n].sweeper.register
-                            if pulses[n].type == PulseType.FLUX:
+                            # FIXME:
+                            # if pulses[n].type == PulseType.FLUX:
+                            if True:
                                 RQ = pulses[n].sweeper.register
                             else:
                                 RQ = pulses[n].sweeper.aux_register

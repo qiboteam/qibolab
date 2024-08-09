@@ -8,7 +8,6 @@ from qibolab.pulses import (
     GaussianSquare,
     Iir,
     Pulse,
-    PulseType,
     Rectangular,
     Snz,
 )
@@ -30,7 +29,6 @@ def test_sampling_rate(shape):
         frequency=int(100e6),
         envelope=shape,
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     assert len(pulse.i(sampling_rate=1)) == 40
     assert len(pulse.i(sampling_rate=100)) == 4000
@@ -43,7 +41,6 @@ def test_drag_shape():
         frequency=int(4e9),
         envelope=Drag(rel_sigma=0.5, beta=1),
         relative_phase=0,
-        type=PulseType.DRIVE,
     )
     # envelope i & envelope q should cross nearly at 0 and at 2
     waveform = pulse.i(sampling_rate=10)
