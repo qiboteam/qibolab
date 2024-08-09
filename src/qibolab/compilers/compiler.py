@@ -174,4 +174,4 @@ class Compiler:
                 if isinstance(gate, gates.M):
                     measurement_map[gate] = gate_sequence
 
-        return sequence, measurement_map
+        return sequence.trim(), measurement_map
