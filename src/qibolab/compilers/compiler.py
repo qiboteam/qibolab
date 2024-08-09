@@ -164,6 +164,8 @@ class Compiler:
                         delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
                     increment[ch] = gate_sequence.channel_duration(ch)
+                # add the increment only after computing them, since multiple channels
+                # are related to each other because belonging to the same qubit
                 for ch, inc in increment.items():
                     channel_clock[ch] += inc
                 sequence.concatenate(delay_sequence)
