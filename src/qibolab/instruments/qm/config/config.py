@@ -11,6 +11,13 @@ from .pulses import *
 
 __all__ = ["QmConfig"]
 
+DEFAULT_DIGITAL_WAVEFORMS = {"ON": {"samples": [(1, 0)]}}
+"""Required to be registered in the config for QM to work.
+
+Also used as triggering that allows the Octave LO signal to pass only
+when we are executing something.
+"""
+
 
 @dataclass
 class QmConfig:
@@ -27,7 +34,7 @@ class QmConfig:
     pulses: dict[str, Union[QmPulse, QmAcquisition]] = field(default_factory=dict)
     waveforms: dict[str, Waveform] = field(default_factory=dict)
     digital_waveforms: dict = field(
-        default_factory=lambda: {"ON": {"samples": [(1, 0)]}}
+        default_factory=lambda: DEFAULT_DIGITAL_WAVEFORMS.copy()
     )
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
