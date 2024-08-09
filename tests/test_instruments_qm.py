@@ -5,10 +5,7 @@ import pytest
 from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-from qibolab.instruments.qm import OPXplus, QMController
-from qibolab.instruments.qm.acquisition import Acquisition, declare_acquisitions
-from qibolab.instruments.qm.controller import controllers_config
-from qibolab.instruments.qm.sequence import BakedPulse, QMPulse, Sequence
+from qibolab.instruments.qm import QmController
 from qibolab.pulses import Pulse, PulseSequence, PulseType, Rectangular
 from qibolab.qubits import Qubit
 from qibolab.sweeper import Parameter, Sweeper
@@ -168,7 +165,7 @@ def test_qmpulse_previous_and_next_flux():
 def qmcontroller():
     name = "test"
     address = "0.0.0.0:0"
-    return QMController(name, address, opxs=[OPXplus("con1")])
+    return QmController(name, address)
 
 
 @pytest.mark.parametrize("offset", [0.0, 0.005])
@@ -210,12 +207,6 @@ def test_qm_register_port_filter(qmcontroller):
 def qmplatform(request):
     set_platform_profile()
     return create_platform(request.param)
-
-
-def test_controllers_config(qmplatform):
-    config = controllers_config(list(qmplatform.qubits.values()), time_of_flight=30)
-    assert len(config.controllers) == 3
-    assert len(config.elements) == 10
 
 
 # TODO: Test connect/disconnect
@@ -466,7 +457,7 @@ def test_qm_register_baked_pulse(qmplatform, duration):
         }
 
 
-@patch("qibolab.instruments.qm.QMController.execute_program")
+@patch("qibolab.instruments.qm.QmController.execute_program")
 def test_qm_qubit_spectroscopy(mocker, qmplatform):
     platform = qmplatform
     controller = platform.instruments["qm"]
@@ -488,7 +479,7 @@ def test_qm_qubit_spectroscopy(mocker, qmplatform):
     result = controller.play(platform.qubits, platform.couplers, sequence, options)
 
 
-@patch("qibolab.instruments.qm.QMController.execute_program")
+@patch("qibolab.instruments.qm.QmController.execute_program")
 def test_qm_duration_sweeper(mocker, qmplatform):
     platform = qmplatform
     controller = platform.instruments["qm"]
