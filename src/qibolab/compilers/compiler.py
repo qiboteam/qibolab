@@ -151,7 +151,11 @@ class Compiler:
         channel_clock = defaultdict(float)
 
         def qubit_clock(el: QubitId):
-            return max(channel_clock[ch.name] for ch in platform.elements[el].channels)
+            if el in platform.qubits:
+                return max(
+                    channel_clock[ch.name] for ch in platform.qubits[el].channels
+                )
+            return max(channel_clock[ch.name] for ch in platform.couplers[el].channels)
 
         # process circuit gates
         for moment in circuit.queue.moments:
