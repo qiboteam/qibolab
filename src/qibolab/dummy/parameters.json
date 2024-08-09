@@ -4,7 +4,6 @@
     "nshots": 1024,
     "relaxation_time": 0
   },
-  "qubits": [0, 1, 2, 3, 4],
   "instruments": {
     "dummy": {
       "bounds": {
