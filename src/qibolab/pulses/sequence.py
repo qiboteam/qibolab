@@ -54,7 +54,7 @@ class PulseSequence(UserList[_Element]):
             delay = max_duration - duration
             if delay > 0:
                 self.append((ch, Delay(duration=delay)))
-            self.extend((ch, pulse) for pulse in other.channel(ch))
+        self.extend(other)
 
     def trim(self) -> "PulseSequence":
         """Drop final delays.
