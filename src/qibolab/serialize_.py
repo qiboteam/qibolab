@@ -58,7 +58,7 @@ def eq(obj1: BaseModel, obj2: BaseModel) -> bool:
 class Model(BaseModel):
     """Global qibolab model, holding common configurations."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid", frozen=True)
 
 
 M = TypeVar("M", bound=BaseModel)
