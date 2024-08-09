@@ -25,7 +25,7 @@ def test_dummy_initialization(platform: Platform):
 def test_dummy_execute_pulse_sequence(platform: Platform, acquisition):
     nshots = 100
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    probe_pulse = next(iter(probe_seq.values()))[0]
+    probe_pulse = probe_seq[0]
     sequence = PulseSequence()
     sequence.extend(probe_seq)
     sequence.extend(platform.qubits[0].native_gates.RX12.create_sequence())
@@ -102,7 +102,7 @@ def test_dummy_execute_pulse_sequence_unrolling(
 def test_dummy_single_sweep_raw(platform: Platform):
     sequence = PulseSequence()
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    pulse = next(iter(probe_seq.values()))[0]
+    pulse = probe_seq[0]
 
     parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     sequence.extend(probe_seq)
@@ -137,7 +137,7 @@ def test_dummy_single_sweep_coupler(
     platform = create_platform("dummy")
     sequence = PulseSequence()
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    probe_pulse = next(iter(probe_seq.values()))[0]
+    probe_pulse = probe_seq[0]
     coupler_pulse = Pulse.flux(
         duration=40,
         amplitude=0.5,
@@ -197,7 +197,7 @@ def test_dummy_single_sweep(
 ):
     sequence = PulseSequence()
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    pulse = next(iter(probe_seq.values()))[0]
+    pulse = probe_seq[0]
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
@@ -255,7 +255,7 @@ def test_dummy_double_sweep(
     sequence = PulseSequence()
     pulse = Pulse(duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
     probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
-    probe_pulse = next(iter(probe_seq.values()))[0]
+    probe_pulse = probe_seq[0]
     sequence[platform.get_qubit(0).drive.name].append(pulse)
     sequence[platform.qubits[0].probe.name].append(Delay(duration=pulse.duration))
     sequence.extend(probe_seq)
@@ -329,7 +329,7 @@ def test_dummy_single_sweep_multiplex(
     probe_pulses = {}
     for qubit in platform.qubits:
         probe_seq = platform.qubits[qubit].native_gates.MZ.create_sequence()
-        probe_pulses[qubit] = next(iter(probe_seq.values()))[0]
+        probe_pulses[qubit] = probe_seq[0]
         sequence.extend(probe_seq)
     parameter_range = (
         np.random.rand(SWEPT_POINTS)
@@ -357,7 +357,7 @@ def test_dummy_single_sweep_multiplex(
     )
     results = platform.execute([sequence], options, [[sweeper1]])
 
-    for pulse in probe_pulses.values():
+    for _, pulse in probe_pulses:
         assert pulse.id in results
         if not options.averaging_mode.average:
             results_shape = (
