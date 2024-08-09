@@ -14,16 +14,6 @@ CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flu
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + (
-    "name",
-    "native_gates",
-    "kernel",
-    "qubit1",
-    "qubit2",
-    "coupler",
-)
-"""Qubit dataclass fields that are excluded by the ``characterization``
-property."""
 
 
 @dataclass
@@ -46,40 +36,8 @@ class Qubit:
 
     name: QubitId
 
-    bare_resonator_frequency: int = 0
-    anharmonicity: int = 0
-    asymmetry: float = 0.0
-    crosstalk_matrix: dict[QubitId, float] = field(default_factory=dict)
-    """Crosstalk matrix for voltages."""
-    Ec: float = 0.0
-    """Readout Charge Energy."""
-    Ej: float = 0.0
-    """Readout Josephson Energy."""
-    g: float = 0.0
-    """Readout coupling."""
-    assignment_fidelity: float = 0.0
-    """Assignment fidelity."""
-    readout_fidelity: float = 0.0
-    """Readout fidelity."""
-    gate_fidelity: float = 0.0
-    """Gate fidelity from standard RB."""
+    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
-    effective_temperature: float = 0.0
-    """Effective temperature."""
-    peak_voltage: float = 0
-    pi_pulse_amplitude: float = 0
-    resonator_depletion_time: int = 0
-    T1: int = 0
-    T2: int = 0
-    T2_spin_echo: int = 0
-    state0_voltage: int = 0
-    state1_voltage: int = 0
-    mean_gnd_states: list[float] = field(default_factory=lambda: [0, 0])
-    mean_exc_states: list[float] = field(default_factory=lambda: [0, 0])
-
-    # parameters for single shot classification
-    threshold: float = 0.0
-    iq_angle: float = 0.0
     kernel: Optional[np.ndarray] = field(default=None, repr=False)
 
     probe: Optional[IqChannel] = None
@@ -89,23 +47,12 @@ class Qubit:
     drive_cross: Optional[dict[QubitId, IqChannel]] = None
     flux: Optional[DcChannel] = None
 
-    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
     @property
     def channels(self):
         for name in CHANNEL_NAMES:
             channel = getattr(self, name)
             if channel is not None:
                 yield channel
-
-    @property
-    def characterization(self):
-        """Dictionary containing characterization parameters."""
-        return {
-            fld.name: getattr(self, fld.name)
-            for fld in fields(self)
-            if fld.name not in EXCLUDED_FIELDS
-        }
 
     @property
     def mixer_frequencies(self):
@@ -148,21 +95,9 @@ class QubitPair:
     Acts as target on two-qubit gates.
     """
 
-    gate_fidelity: float = 0.0
-    """Gate fidelity from standard 2q RB."""
-
-    cz_fidelity: float = 0.0
-    """Gate fidelity from CZ interleaved RB."""
-
-    coupler: Optional[Qubit] = None
+    # coupler: Optional[Qubit] = None
+    # FIXME: I think this is not needed but not sure yet
+    # This information is not provided in the runcard so it is not
+    # parsed by serialize.py
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
-
-    @property
-    def characterization(self):
-        """Dictionary containing characterization parameters."""
-        return {
-            fld.name: getattr(self, fld.name)
-            for fld in fields(self)
-            if fld.name not in EXCLUDED_FIELDS
-        }

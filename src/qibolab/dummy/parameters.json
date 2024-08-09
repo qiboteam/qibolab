@@ -81,23 +81,33 @@
     },
     "qubit_0/acquire": {
       "delay": 0,
-      "smearing": 0
+      "smearing": 0,
+      "threshold": 0.0,
+      "iq_angle": 0.0
     },
     "qubit_1/acquire": {
       "delay": 0,
-      "smearing": 0
+      "smearing": 0,
+      "threshold": 0.0,
+      "iq_angle": 0.0
     },
     "qubit_2/acquire": {
       "delay": 0,
-      "smearing": 0
+      "smearing": 0,
+      "threshold": 0.0,
+      "iq_angle": 0.0
     },
     "qubit_3/acquire": {
       "delay": 0,
-      "smearing": 0
+      "smearing": 0,
+      "threshold": 0.0,
+      "iq_angle": 0.0
     },
     "qubit_4/acquire": {
       "delay": 0,
-      "smearing": 0
+      "smearing": 0,
+      "threshold": 0.0,
+      "iq_angle": 0.0
     },
     "coupler_0/flux": {
       "offset": 0.0
@@ -589,130 +599,6 @@
           ]
         ]
       }
-    }
-  },
-  "characterization": {
-    "single_qubit": {
-      "0": {
-        "bare_resonator_frequency": 0,
-        "anharmonicity": 0,
-        "asymmetry": 0.0,
-        "crosstalk_matrix": {
-          "0": 1
-        },
-        "Ec": 0.0,
-        "Ej": 0.0,
-        "g": 0.0,
-        "assignment_fidelity": 0.0,
-        "peak_voltage": 0,
-        "pi_pulse_amplitude": 0,
-        "T1": 0.0,
-        "T2": 0.0,
-        "T2_spin_echo": 0,
-        "state0_voltage": 0,
-        "state1_voltage": 0,
-        "mean_gnd_states": [0, 1],
-        "mean_exc_states": [1, 0],
-        "threshold": 0.0,
-        "iq_angle": 0.0
-      },
-      "1": {
-        "bare_resonator_frequency": 0,
-        "anharmonicity": 0,
-        "asymmetry": 0.0,
-        "crosstalk_matrix": {
-          "1": 1
-        },
-        "Ec": 0.0,
-        "Ej": 0.0,
-        "g": 0.0,
-        "assignment_fidelity": 0.0,
-        "peak_voltage": 0,
-        "pi_pulse_amplitude": 0,
-        "T1": 0.0,
-        "T2": 0.0,
-        "T2_spin_echo": 0,
-        "state0_voltage": 0,
-        "state1_voltage": 0,
-        "mean_gnd_states": [0.25, 0],
-        "mean_exc_states": [0, 0.25],
-        "threshold": 0.0,
-        "iq_angle": 0.0
-      },
-      "2": {
-        "bare_resonator_frequency": 0,
-        "anharmonicity": 0,
-        "asymmetry": 0.0,
-        "crosstalk_matrix": {
-          "2": 1
-        },
-        "Ec": 0.0,
-        "Ej": 0.0,
-        "g": 0.0,
-        "assignment_fidelity": 0.0,
-        "peak_voltage": 0,
-        "pi_pulse_amplitude": 0,
-        "T1": 0.0,
-        "T2": 0.0,
-        "T2_spin_echo": 0,
-        "state0_voltage": 0,
-        "state1_voltage": 0,
-        "mean_gnd_states": [0.5, 0],
-        "mean_exc_states": [0, 0.5],
-        "threshold": 0.0,
-        "iq_angle": 0.0
-      },
-      "3": {
-        "bare_resonator_frequency": 0,
-        "anharmonicity": 0,
-        "asymmetry": 0.0,
-        "crosstalk_matrix": {
-          "3": 1
-        },
-        "Ec": 0.0,
-        "Ej": 0.0,
-        "g": 0.0,
-        "assignment_fidelity": 0.0,
-        "peak_voltage": 0,
-        "pi_pulse_amplitude": 0,
-        "T1": 0.0,
-        "T2": 0.0,
-        "T2_spin_echo": 0,
-        "state0_voltage": 0,
-        "state1_voltage": 0,
-        "mean_gnd_states": [0.75, 0],
-        "mean_exc_states": [0, 0.75],
-        "threshold": 0.0,
-        "iq_angle": 0.0
-      },
-      "4": {
-        "bare_resonator_frequency": 0,
-        "anharmonicity": 0,
-        "asymmetry": 0.0,
-        "crosstalk_matrix": {
-          "4": 1
-        },
-        "Ec": 0.0,
-        "Ej": 0.0,
-        "g": 0.0,
-        "assignment_fidelity": 0.0,
-        "peak_voltage": 0,
-        "pi_pulse_amplitude": 0,
-        "T1": 0.0,
-        "T2": 0.0,
-        "T2_spin_echo": 0,
-        "state0_voltage": 0,
-        "state1_voltage": 0,
-        "mean_gnd_states": [1, 0],
-        "mean_exc_states": [0, 1],
-        "threshold": 0.0,
-        "iq_angle": 0.0
-      }
-    },
-    "coupler": {
-      "c0": {},
-      "c1": {},
-      "c4": {}
     }
   }
 }
