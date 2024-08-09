@@ -140,3 +140,15 @@ def test_copy():
         )
     )
     assert "ch3" not in sequence
+
+
+def test_trim():
+    p = Pulse(duration=40, amplitude=0.9, envelope=Rectangular())
+    d = Delay(duration=10)
+    sequence = PulseSequence(
+        [("a", p), ("a", d), ("b", d), ("b", d), ("c", d), ("c", p)]
+    )
+    trimmed = sequence.trim()
+    assert len(list(trimmed.channel("a"))) == 1
+    assert len(list(trimmed.channel("b"))) == 0
+    assert len(list(trimmed.channel("c"))) == 2

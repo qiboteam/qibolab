@@ -56,6 +56,22 @@ class PulseSequence(UserList[_Element]):
                 self.append((ch, Delay(duration=delay)))
             self.extend((ch, pulse) for pulse in other.channel(ch))
 
+    def trim(self) -> "PulseSequence":
+        """Drop final delays.
+
+        The operation is not in place, and does not modify the original
+        sequence.
+        """
+        terminated = set()
+        new = []
+        for ch, pulse in reversed(self):
+            if ch not in terminated:
+                if isinstance(pulse, Delay):
+                    continue
+                terminated.add(ch)
+            new.append((ch, pulse))
+        return type(self)(reversed(new))
+
     @property
     def probe_pulses(self) -> list[Pulse]:
         """Return list of the readout pulses in this sequence."""
