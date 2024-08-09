@@ -148,8 +148,8 @@ class Compiler:
         measurement_map = {}
         channel_clock = defaultdict(int)
 
-        def qubit_clock(qubit: QubitId):
-            return max(channel_clock[ch.name] for ch in platform.qubits[qubit].channels)
+        def qubit_clock(el: QubitId):
+            return max(channel_clock[ch.name] for ch in platform.elements[el].channels)
 
         # process circuit gates
         for moment in circuit.queue.moments:
