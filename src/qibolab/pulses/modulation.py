@@ -2,7 +2,21 @@ import numpy as np
 
 from .envelope import IqWaveform
 
-__all__ = ["modulate", "demodulate"]
+__all__ = ["wrap_phase", "rotate", "modulate", "demodulate"]
+
+
+def wrap_phase(phase: float):
+    """Limit phase to [0, 2pi)."""
+    return phase % (2 * np.pi)
+
+
+def rotate(envelope: IqWaveform, phase: float) -> IqWaveform:
+    """Rotate envelopes in the IQ-plane according to a phase."""
+    wrapped_phase = wrap_phase(phase)
+    cos = np.cos(wrapped_phase)
+    sin = np.sin(wrapped_phase)
+    mod = np.array([[cos, -sin], [sin, cos]])
+    return np.einsum("ij,jt->it", mod, envelope)
 
 
 def modulate(

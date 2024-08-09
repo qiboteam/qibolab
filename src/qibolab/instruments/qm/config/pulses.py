@@ -4,6 +4,7 @@ from typing import Union
 import numpy as np
 
 from qibolab.pulses import Pulse, Rectangular
+from qibolab.pulses.modulation import rotate, wrap_phase
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
@@ -23,11 +24,6 @@ def operation(pulse):
     return str(hash(pulse))
 
 
-def _wrap(phase: float):
-    """Convert phase to multiples of 2pi."""
-    return (phase % (2 * np.pi)) / (2 * np.pi)
-
-
 @dataclass(frozen=True)
 class ConstantWaveform:
     sample: float
@@ -35,7 +31,7 @@ class ConstantWaveform:
 
     @classmethod
     def from_pulse(cls, pulse: Pulse):
-        phase = _wrap(pulse.relative_phase)
+        phase = wrap_phase(pulse.relative_phase)
         return {
             "I": cls(pulse.amplitude * np.cos(phase)),
             "Q": cls(pulse.amplitude * np.sin(phase)),
@@ -49,12 +45,11 @@ class ArbitraryWaveform:
 
     @classmethod
     def from_pulse(cls, pulse: Pulse):
-        phase = _wrap(pulse.relative_phase)
-        samples_i = pulse.i(SAMPLING_RATE)
-        samples_q = pulse.q(SAMPLING_RATE)
+        original_waveforms = pulse.envelopes(SAMPLING_RATE)
+        rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
         return {
-            "I": cls(samples_i * np.cos(phase) - samples_q * np.sin(phase)),
-            "Q": cls(samples_i * np.sin(phase) + samples_q * np.cos(phase)),
+            "I": cls(rotated_waveforms[0]),
+            "Q": cls(rotated_waveforms[1]),
         }
 
 
