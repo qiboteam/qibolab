@@ -153,7 +153,7 @@ def execute(connected_platform: Platform) -> Execution:
         if sequence is None:
             qd_seq = qubit.native_gates.RX.create_sequence()
             probe_seq = qubit.native_gates.MZ.create_sequence()
-            probe_pulse = next(iter(probe_seq.values()))[0]
+            probe_pulse = probe_seq[0][1]
             sequence = PulseSequence()
             sequence.extend(qd_seq)
             sequence.extend(probe_seq)
