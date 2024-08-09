@@ -77,6 +77,8 @@ class AcquisitionConfig:
     """Delay between readout pulse start and acquisition start."""
     smearing: float
     """FIXME:"""
+    threshold: float
+    iq_angle: float
 
 
 Config = Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig]

@@ -30,7 +30,7 @@ from qibolab.platform.platform import (
 )
 from qibolab.pulses import PulseSequence
 from qibolab.pulses.pulse import PulseLike
-from qibolab.qubits import Qubit, QubitId, QubitPair
+from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 
 RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
@@ -54,49 +54,6 @@ def load_qubit_name(name: str) -> QubitId:
         return name
 
 
-def load_qubits(
-    runcard: dict, kernels: Optional[Kernels] = None
-) -> tuple[QubitMap, QubitMap, QubitPairMap]:
-    """Load qubits and pairs from the runcard.
-
-    Uses the native gate and characterization sections of the runcard to
-    parse the
-    :class: `qibolab.qubits.Qubit` and
-    :class: `qibolab.qubits.QubitPair`
-    objects.
-    """
-    qubits = {}
-    for q, char in runcard["characterization"]["single_qubit"].items():
-        raw_qubit = Qubit(load_qubit_name(q), **char)
-        raw_qubit.crosstalk_matrix = {
-            load_qubit_name(key): value
-            for key, value in raw_qubit.crosstalk_matrix.items()
-        }
-        qubits[load_qubit_name(q)] = raw_qubit
-
-    if kernels is not None:
-        for q in kernels:
-            qubits[q].kernel = kernels[q]
-
-    characterization = runcard["characterization"]
-
-    pairs = {}
-    two_qubit = characterization.get("two_qubit", {})
-    for pair in runcard.get("native_gates", {}).get("two_qubit", {}):
-        q0, q1 = (load_qubit_name(q) for q in pair.split("-"))
-        char = two_qubit.get(pair, {})
-        pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], **char)
-
-    couplers = {
-        load_qubit_name(c): Qubit(load_qubit_name(c), **char)
-        for c, char in runcard["characterization"].get("coupler", {}).items()
-    }
-
-    qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
-
-    return qubits, couplers, pairs
-
-
 _PulseLike = TypeAdapter(PulseLike, config=ConfigDict(extra="ignore"))
 """Parse a pulse-like object.
 
@@ -116,69 +73,70 @@ def _load_sequence(raw_sequence):
     return PulseSequence([(ch, _load_pulse(pulse)) for ch, pulse in raw_sequence])
 
 
-def _load_single_qubit_natives(gates) -> SingleQubitNatives:
+def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
     """Parse native gates from the runcard.
 
     Args:
         gates (dict): Dictionary with native gate pulse parameters as loaded
             from the runcard.
     """
-    return SingleQubitNatives(
-        **{
-            gate_name: (
-                RxyFactory(_load_sequence(raw_sequence))
-                if gate_name == "RX"
-                else FixedSequenceFactory(_load_sequence(raw_sequence))
-            )
-            for gate_name, raw_sequence in gates.items()
-        }
-    )
-
-
-def _load_two_qubit_natives(gates) -> TwoQubitNatives:
-    return TwoQubitNatives(
-        **{
-            gate_name: FixedSequenceFactory(_load_sequence(raw_sequence))
-            for gate_name, raw_sequence in gates.items()
-        }
-    )
-
-
-def register_gates(
-    runcard: dict,
-    qubits: QubitMap,
-    pairs: QubitPairMap,
-    couplers: Optional[QubitMap] = None,
-) -> tuple[QubitMap, QubitPairMap, QubitMap]:
-    """Register single qubit native gates to ``Qubit`` objects from the
-    runcard.
-
-    Uses the native gate and characterization sections of the runcard
-    to parse the :class:`qibolab.qubits.Qubit` and :class:`qibolab.qubits.QubitPair`
-    objects.
-    """
-
-    native_gates = runcard.get("native_gates", {})
-    for q, gates in native_gates.get("single_qubit", {}).items():
-        qubit = qubits[load_qubit_name(q)]
-        qubit.native_gates = _load_single_qubit_natives(gates)
-
-    for c, gates in native_gates.get("coupler", {}).items():
-        coupler = couplers[load_qubit_name(c)]
-        coupler.native_gates = _load_single_qubit_natives(gates)
-
-    # register two-qubit native gates to ``QubitPair`` objects
-    for pair, gatedict in native_gates.get("two_qubit", {}).items():
-        q0, q1 = tuple(int(q) if q.isdigit() else q for q in pair.split("-"))
-        native_gates = _load_two_qubit_natives(gatedict)
-        coupler = pairs[(q0, q1)].coupler
-        pairs[(q0, q1)] = QubitPair(
-            qubits[q0], qubits[q1], coupler=coupler, native_gates=native_gates
+    qubits = {}
+    for q, gatedict in gates.items():
+        name = load_qubit_name(q)
+        native_gates = SingleQubitNatives(
+            **{
+                gate_name: (
+                    RxyFactory(_load_sequence(raw_sequence))
+                    if gate_name == "RX"
+                    else FixedSequenceFactory(_load_sequence(raw_sequence))
+                )
+                for gate_name, raw_sequence in gatedict.items()
+            }
         )
+        qubits[name] = Qubit(load_qubit_name(q), native_gates=native_gates)
+    return qubits
+
+
+def _load_two_qubit_natives(
+    gates: dict, qubits: dict[QubitId, Qubit]
+) -> dict[QubitPairId, QubitPair]:
+    pairs = {}
+    for pair, gatedict in gates.items():
+        q0, q1 = (load_qubit_name(q) for q in pair.split("-"))
+        native_gates = TwoQubitNatives(
+            **{
+                gate_name: FixedSequenceFactory(_load_sequence(raw_sequence))
+                for gate_name, raw_sequence in gatedict.items()
+            }
+        )
+        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], native_gates=native_gates)
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
+    return pairs
 
-    return qubits, pairs, couplers
+
+def load_qubits(
+    runcard: dict, kernels: Optional[Kernels] = None
+) -> tuple[QubitMap, QubitMap, QubitPairMap]:
+    """Load qubits, couplers and pairs from the runcard.
+
+    Uses the native gate section of the runcard to parse the
+    corresponding :class: `qibolab.qubits.Qubit` and
+    :class: `qibolab.qubits.QubitPair` objects.
+    """
+    native_gates = runcard.get("native_gates", {})
+
+    qubits = _load_single_qubit_natives(native_gates.get("single_qubit", {}))
+
+    if kernels is not None:
+        for q in kernels:
+            qubits[q].kernel = kernels[q]
+
+    couplers = _load_single_qubit_natives(native_gates.get("coupler", {}))
+
+    pairs = _load_two_qubit_natives(native_gates.get("two_qubit", {}), qubits)
+
+    return qubits, couplers, pairs
 
 
 def load_instrument_settings(
@@ -243,34 +201,6 @@ def dump_native_gates(
     return native_gates
 
 
-def dump_characterization(
-    qubits: QubitMap,
-    pairs: Optional[QubitPairMap] = None,
-    couplers: Optional[QubitMap] = None,
-) -> dict:
-    """Dump qubit characterization section to dictionary following the runcard
-    format, using qubit and pair objects."""
-    single_qubit = {}
-    for q, qubit in qubits.items():
-        char = qubit.characterization
-        char["crosstalk_matrix"] = {
-            dump_qubit_name(q): c for q, c in qubit.crosstalk_matrix.items()
-        }
-        single_qubit[dump_qubit_name(q)] = char
-
-    characterization = {"single_qubit": single_qubit}
-    if len(pairs) > 0:
-        characterization["two_qubit"] = {
-            f"{q1}-{q2}": pair.characterization for (q1, q2), pair in pairs.items()
-        }
-
-    if couplers:
-        characterization["coupler"] = {
-            dump_qubit_name(c.name): {} for c in couplers.values()
-        }
-    return characterization
-
-
 def dump_instruments(instruments: InstrumentMap) -> dict:
     """Dump instrument settings to a dictionary following the runcard
     format."""
@@ -325,10 +255,6 @@ def dump_runcard(
     }
 
     settings["native_gates"] = dump_native_gates(
-        platform.qubits, platform.pairs, platform.couplers
-    )
-
-    settings["characterization"] = dump_characterization(
         platform.qubits, platform.pairs, platform.couplers
     )
 
