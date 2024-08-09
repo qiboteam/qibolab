@@ -5,6 +5,7 @@ from qibo import Circuit, gates
 from qibo.config import raise_error
 
 from qibolab.compilers.default import (
+    align_rule,
     cnot_rule,
     cz_rule,
     gpi2_rule,
@@ -55,6 +56,7 @@ class Compiler:
                 gates.GPI2: gpi2_rule,
                 gates.GPI: gpi_rule,
                 gates.M: measurement_rule,
+                gates.Align: align_rule,
             }
         )
 
@@ -108,7 +110,7 @@ class Compiler:
         """
         # get local sequence for the current gate
         rule = self[type(gate)]
-        if isinstance(gate, gates.M):
+        if isinstance(gate, (gates.M, gates.Align)):
             qubits = [platform.get_qubit(q) for q in gate.qubits]
             gate_sequence = rule(gate, qubits)
         elif len(gate.qubits) == 1:
@@ -147,18 +149,11 @@ class Compiler:
         channel_clock = defaultdict(int)
 
         def qubit_clock(qubit: QubitId):
-            return max(channel_clock[ch] for ch in platform.qubits[qubit].channels)
+            return max(channel_clock[ch.name] for ch in platform.qubits[qubit].channels)
 
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in set(filter(lambda x: x is not None, moment)):
-                if isinstance(gate, gates.Align):
-                    for qubit in gate.qubits:
-                        clock = qubit_clock(qubit)
-                        for ch in platform.qubits[qubit].channels:
-                            channel_clock[qubit] = clock + gate.delay
-                    continue
-
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
                 for ch in gate_sequence.channels:
