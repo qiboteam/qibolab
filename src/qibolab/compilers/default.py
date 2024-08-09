@@ -67,6 +67,8 @@ def measurement_rule(gate: Gate, qubits: list[Qubit]) -> PulseSequence:
 
 def align_rule(gate: Align, qubits: list[Qubit]) -> PulseSequence:
     """Measurement gate applied using the platform readout pulse."""
+    if gate.delay == 0.0:
+        return PulseSequence()
     return PulseSequence(
         [
             (ch.name, Delay(duration=gate.delay))
