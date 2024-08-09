@@ -28,58 +28,40 @@ from .conftest import get_instrument
         Pulse(
             duration=40,
             amplitude=0.05,
-            frequency=int(3e9),
             relative_phase=0.0,
             envelope=Rectangular(),
-            channel="ch0",
-            qubit=0,
         ),
         Pulse(
             duration=40,
             amplitude=0.05,
-            frequency=int(3e9),
             relative_phase=0.0,
             envelope=Gaussian(rel_sigma=5),
-            channel="ch0",
-            qubit=0,
         ),
         Pulse(
             duration=40,
             amplitude=0.05,
-            frequency=int(3e9),
             relative_phase=0.0,
             envelope=Gaussian(rel_sigma=5),
-            channel="ch0",
-            qubit=0,
         ),
         Pulse(
             duration=40,
             amplitude=0.05,
-            frequency=int(3e9),
             relative_phase=0.0,
             envelope=Drag(rel_sigma=5, beta=0.4),
-            channel="ch0",
-            qubit=0,
         ),
         Pulse(
             duration=40,
             amplitude=0.05,
-            frequency=int(3e9),
             relative_phase=0.0,
             envelope=Snz(t_idling=10, b_amplitude=0.01),
-            channel="ch0",
-            qubit=0,
         ),
         Pulse(
             duration=40,
             amplitude=0.05,
-            frequency=int(3e9),
             relative_phase=0.0,
             envelope=Iir(
                 a=np.array([10, 1]), b=np.array([0.4, 1]), target=Gaussian(rel_sigma=5)
             ),
-            channel="ch0",
-            qubit=0,
         ),
     ],
 )
@@ -100,13 +82,11 @@ def test_classify_sweepers(dummy_qrc):
         duration=40,
         amplitude=0.05,
         envelope=Gaussian(rel_sigma=5),
-        type=PulseType.DRIVE,
     )
     pulse_2 = Pulse(
         duration=40,
         amplitude=0.05,
         envelope=Rectangular(),
-        type=PulseType.READOUT,
     )
     amplitude_sweeper = Sweeper(Parameter.amplitude, np.array([1, 2, 3]), [pulse_1])
     readout_amplitude_sweeper = Sweeper(
@@ -133,13 +113,11 @@ def test_processed_sweeps_pulse_properties(dummy_qrc):
         duration=40,
         amplitude=0.05,
         envelope=Gaussian(rel_sigma=5),
-        type=PulseType.DRIVE,
     )
     pulse_2 = Pulse(
         duration=40,
         amplitude=0.05,
         envelope=Gaussian(rel_sigma=5),
-        type=PulseType.DRIVE,
     )
     sweeper_amplitude = Sweeper(
         Parameter.amplitude, np.array([1, 2, 3]), [pulse_1, pulse_2]
@@ -323,7 +301,6 @@ def test_experiment_flow_coupler(dummy_qrc):
                 duration=500,
                 amplitude=1,
                 envelope=Rectangular(),
-                type=PulseType.COUPLERFLUX,
             )
         )
 
@@ -455,7 +432,6 @@ def test_experiment_sweep_single_coupler(dummy_qrc, parameter1):
                 duration=500,
                 amplitude=1,
                 envelope=Rectangular(),
-                type=PulseType.COUPLERFLUX,
             )
         )
 
