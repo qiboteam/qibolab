@@ -6,37 +6,35 @@ Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 import math
 
 import numpy as np
+from qibo.gates import Align, Gate
 
-from qibolab.pulses import PulseSequence, VirtualZ
+from qibolab.pulses import Delay, PulseSequence, VirtualZ
+from qibolab.qubits import Qubit, QubitPair
 
 
-def identity_rule(gate, qubit):
+def identity_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """Identity gate skipped."""
     return PulseSequence()
 
 
-def z_rule(gate, qubit):
+def z_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """Z gate applied virtually."""
-    seq = PulseSequence()
-    seq[qubit.drive.name].append(VirtualZ(phase=math.pi))
-    return seq
+    return PulseSequence([(qubit.drive.name, VirtualZ(phase=math.pi))])
 
 
-def rz_rule(gate, qubit):
+def rz_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """RZ gate applied virtually."""
-    seq = PulseSequence()
-    seq[qubit.drive.name].append(VirtualZ(phase=gate.parameters[0]))
-    return seq
+    return PulseSequence([(qubit.drive.name, VirtualZ(phase=gate.parameters[0]))])
 
 
-def gpi2_rule(gate, qubit):
+def gpi2_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """Rule for GPI2."""
     return qubit.native_gates.RX.create_sequence(
         theta=np.pi / 2, phi=gate.parameters[0]
     )
 
 
-def gpi_rule(gate, qubit):
+def gpi_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """Rule for GPI."""
     # the following definition has a global phase difference compare to
     # to the matrix representation. See
@@ -45,7 +43,7 @@ def gpi_rule(gate, qubit):
     return qubit.native_gates.RX.create_sequence(theta=np.pi, phi=gate.parameters[0])
 
 
-def cz_rule(gate, pair):
+def cz_rule(gate: Gate, pair: QubitPair) -> PulseSequence:
     """CZ applied as defined in the platform runcard.
 
     Applying the CZ gate may involve sending pulses on qubits that the
@@ -54,14 +52,27 @@ def cz_rule(gate, pair):
     return pair.native_gates.CZ.create_sequence()
 
 
-def cnot_rule(gate, pair):
+def cnot_rule(gate: Gate, pair: QubitPair) -> PulseSequence:
     """CNOT applied as defined in the platform runcard."""
     return pair.native_gates.CNOT.create_sequence()
 
 
-def measurement_rule(gate, qubits):
+def measurement_rule(gate: Gate, qubits: list[Qubit]) -> PulseSequence:
     """Measurement gate applied using the platform readout pulse."""
     seq = PulseSequence()
     for qubit in qubits:
-        seq.extend(qubit.native_gates.MZ.create_sequence())
+        seq.concatenate(qubit.native_gates.MZ.create_sequence())
     return seq
+
+
+def align_rule(gate: Align, qubits: list[Qubit]) -> PulseSequence:
+    """Measurement gate applied using the platform readout pulse."""
+    if gate.delay == 0.0:
+        return PulseSequence()
+    return PulseSequence(
+        [
+            (ch.name, Delay(duration=gate.delay))
+            for qubit in qubits
+            for ch in qubit.channels
+        ]
+    )

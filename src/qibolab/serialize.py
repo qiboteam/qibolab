@@ -12,7 +12,6 @@ from typing import Optional, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
-from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ConfigUpdate
 from qibolab.kernels import Kernels
 from qibolab.native import (
@@ -22,7 +21,6 @@ from qibolab.native import (
     TwoQubitNatives,
 )
 from qibolab.platform.platform import (
-    CouplerMap,
     InstrumentMap,
     Platform,
     QubitMap,
@@ -30,7 +28,7 @@ from qibolab.platform.platform import (
     Settings,
     update_configs,
 )
-from qibolab.pulses import Pulse, PulseSequence
+from qibolab.pulses import PulseSequence
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -57,8 +55,8 @@ def load_qubit_name(name: str) -> QubitId:
 
 
 def load_qubits(
-    runcard: dict, kernels: Kernels = None
-) -> tuple[QubitMap, CouplerMap, QubitPairMap]:
+    runcard: dict, kernels: Optional[Kernels] = None
+) -> tuple[QubitMap, QubitMap, QubitPairMap]:
     """Load qubits and pairs from the runcard.
 
     Uses the native gate and characterization sections of the runcard to
@@ -80,27 +78,19 @@ def load_qubits(
         for q in kernels:
             qubits[q].kernel = kernels[q]
 
-    couplers = {}
+    characterization = runcard["characterization"]
+
     pairs = {}
-    two_qubit_characterization = runcard["characterization"].get("two_qubit", {})
-    if "coupler" in runcard["characterization"]:
-        couplers = {
-            load_qubit_name(c): Coupler(load_qubit_name(c), **char)
-            for c, char in runcard["characterization"]["coupler"].items()
-        }
-        for c, pair in runcard["topology"].items():
-            q0, q1 = pair
-            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
-            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], **char, coupler=couplers[load_qubit_name(c)]
-            )
-    else:
-        for pair in runcard["topology"]:
-            q0, q1 = pair
-            char = two_qubit_characterization.get(str(q0) + "-" + str(q1), {})
-            pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(
-                qubits[q0], qubits[q1], **char, coupler=None
-            )
+    two_qubit = characterization.get("two_qubit", {})
+    for pair in runcard.get("native_gates", {}).get("two_qubit", {}):
+        q0, q1 = (load_qubit_name(q) for q in pair.split("-"))
+        char = two_qubit.get(pair, {})
+        pairs[(q0, q1)] = pairs[(q1, q0)] = QubitPair(qubits[q0], qubits[q1], **char)
+
+    couplers = {
+        load_qubit_name(c): Qubit(load_qubit_name(c), **char)
+        for c, char in runcard["characterization"].get("coupler", {}).items()
+    }
 
     qubits, pairs, couplers = register_gates(runcard, qubits, pairs, couplers)
 
@@ -123,10 +113,7 @@ def _load_pulse(pulse_kwargs: dict):
 
 
 def _load_sequence(raw_sequence):
-    seq = PulseSequence()
-    for ch, pulses in raw_sequence.items():
-        seq[ch] = [_load_pulse(raw_pulse) for raw_pulse in pulses]
-    return seq
+    return PulseSequence([(ch, _load_pulse(pulse)) for ch, pulse in raw_sequence])
 
 
 def _load_single_qubit_natives(gates) -> SingleQubitNatives:
@@ -158,8 +145,11 @@ def _load_two_qubit_natives(gates) -> TwoQubitNatives:
 
 
 def register_gates(
-    runcard: dict, qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
-) -> tuple[QubitMap, QubitPairMap]:
+    runcard: dict,
+    qubits: QubitMap,
+    pairs: QubitPairMap,
+    couplers: Optional[QubitMap] = None,
+) -> tuple[QubitMap, QubitPairMap, QubitMap]:
     """Register single qubit native gates to ``Qubit`` objects from the
     runcard.
 
@@ -207,7 +197,7 @@ def dump_qubit_name(name: QubitId) -> str:
     return name
 
 
-def _dump_pulse(pulse: Pulse):
+def _dump_pulse(pulse: PulseLike):
     data = pulse.model_dump()
     if "channel" in data:
         del data["channel"]
@@ -217,7 +207,7 @@ def _dump_pulse(pulse: Pulse):
 
 
 def _dump_sequence(sequence: PulseSequence):
-    return {ch: [_dump_pulse(p) for p in pulses] for ch, pulses in sequence.items()}
+    return [(ch, _dump_pulse(p)) for ch, p in sequence]
 
 
 def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
@@ -230,7 +220,7 @@ def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
 
 
 def dump_native_gates(
-    qubits: QubitMap, pairs: QubitPairMap, couplers: CouplerMap = None
+    qubits: QubitMap, pairs: QubitPairMap, couplers: Optional[QubitMap] = None
 ) -> dict:
     """Dump native gates section to dictionary following the runcard format,
     using qubit and pair objects."""
@@ -254,7 +244,9 @@ def dump_native_gates(
 
 
 def dump_characterization(
-    qubits: QubitMap, pairs: QubitPairMap = None, couplers: CouplerMap = None
+    qubits: QubitMap,
+    pairs: Optional[QubitPairMap] = None,
+    couplers: Optional[QubitMap] = None,
 ) -> dict:
     """Dump qubit characterization section to dictionary following the runcard
     format, using qubit and pair objects."""
@@ -274,8 +266,7 @@ def dump_characterization(
 
     if couplers:
         characterization["coupler"] = {
-            dump_qubit_name(c.name): {"sweetspot": c.sweetspot}
-            for c in couplers.values()
+            dump_qubit_name(c.name): {} for c in couplers.values()
         }
     return characterization
 
@@ -329,17 +320,9 @@ def dump_runcard(
         "nqubits": platform.nqubits,
         "settings": asdict(platform.settings),
         "qubits": list(platform.qubits),
-        "topology": [list(pair) for pair in platform.ordered_pairs],
         "instruments": dump_instruments(platform.instruments),
         "components": dump_component_configs(configs),
     }
-
-    if platform.couplers:
-        settings["couplers"] = list(platform.couplers)
-        settings["topology"] = {
-            platform.pairs[pair].coupler.name: list(pair)
-            for pair in platform.ordered_pairs
-        }
 
     settings["native_gates"] = dump_native_gates(
         platform.qubits, platform.pairs, platform.couplers

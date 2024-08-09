@@ -23,7 +23,7 @@ from qibolab.serialize import (
 
 FOLDER = pathlib.Path(__file__).parent
 QUBITS = [0, 1, 2, 3, 4]
-COUPLERS = [0, 1, 3, 4]
+COUPLERS = ["c0", "c1", "c3", "c4"]
 
 
 def create():
@@ -112,12 +112,13 @@ def create():
             ZiChannel(qubits[q].flux, device="device_hdawg", path=f"SIGOUTS/{q}")
         )
 
-    for i, c in enumerate(COUPLERS):
+    for i, c_ in enumerate(COUPLERS):
+        c = c_[1:]
         flux_name = f"coupler_{c}/flux"
         configs[flux_name] = ZiDcConfig(**component_params[flux_name])
-        couplers[c].flux = DcChannel(name=flux_name)
+        couplers[c_].flux = DcChannel(name=flux_name)
         zi_channels.append(
-            ZiChannel(couplers[c].flux, device="device_hdawg2", path=f"SIGOUTS/{i}")
+            ZiChannel(couplers[c_].flux, device="device_hdawg2", path=f"SIGOUTS/{i}")
         )
 
     controller = Zurich(
