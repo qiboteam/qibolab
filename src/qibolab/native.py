@@ -88,6 +88,8 @@ class SingleQubitNatives:
     """Pulse to drive to qubit from state 1 to state 2."""
     MZ: Optional[FixedSequenceFactory] = None
     """Measurement pulse."""
+    CP: Optional[FixedSequenceFactory] = None
+    """Pulse to activate coupler."""
 
 
 @dataclass

@@ -115,6 +115,9 @@
     "coupler_1/flux": {
       "offset": 0.0
     },
+    "coupler_3/flux": {
+      "offset": 0.0
+    },
     "coupler_4/flux": {
       "offset": 0.0
     },
@@ -306,6 +309,68 @@
         ]
       }
     },
+    "coupler": {
+      "0": {
+        "CP": {
+          "coupler_0/flux": [
+            {
+              "duration": 30.0,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5.0,
+                "width": 0.75
+              }
+            }
+          ]
+        }
+      },
+      "1": {
+        "CP": {
+          "coupler_1/flux": [
+            {
+              "duration": 30.0,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5.0,
+                "width": 0.75
+              }
+            }
+          ]
+        }
+      },
+      "3": {
+        "CP": {
+          "coupler_3/flux": [
+            {
+              "duration": 30.0,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5.0,
+                "width": 0.75
+              }
+            }
+          ]
+        }
+      },
+      "4": {
+        "CP": {
+          "coupler_4/flux": [
+            {
+              "duration": 30.0,
+              "amplitude": 0.05,
+              "envelope": {
+                "kind": "gaussian_square",
+                "rel_sigma": 5.0,
+                "width": 0.75
+              }
+            }
+          ]
+        }
+      }
+  },
     "two_qubit": {
       "0-2": {
         "CZ": [
