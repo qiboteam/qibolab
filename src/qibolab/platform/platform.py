@@ -4,7 +4,7 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import prod
-from typing import Any, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -13,8 +13,9 @@ from qibolab.components import Config
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Delay, PulseSequence
+from qibolab.pulses import Delay, PulseId, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.result import Result
 from qibolab.serialize_ import replace
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import batch
@@ -239,7 +240,7 @@ class Platform:
         configs: dict[str, Config],
         integration_setup: IntegrationSetup,
         sweepers: list[ParallelSweepers],
-    ):
+    ) -> dict[PulseId, Result]:
         """Execute sequences on the controllers."""
         result = {}
 
@@ -258,7 +259,7 @@ class Platform:
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
-    ) -> dict[Any, list]:
+    ) -> dict[PulseId, list[Result]]:
         """Execute pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values

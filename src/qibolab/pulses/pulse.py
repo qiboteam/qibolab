@@ -8,10 +8,21 @@ from qibolab.serialize_ import Model
 
 from .envelope import Envelope, IqWaveform, Waveform
 
+__all__ = [
+    "Delay",
+    "Pulse",
+    "PulseId",
+    "PulseLike",
+    "VirtualZ",
+]
+
+PulseId = int
+"""Unique identifier for a pulse."""
+
 
 class _PulseLike(Model):
     @property
-    def id(self) -> int:
+    def id(self) -> PulseId:
         return id(self)
 
 
@@ -46,23 +57,25 @@ class Pulse(_PulseLike):
         return cls(**kwargs)
 
     def i(self, sampling_rate: float) -> Waveform:
-        """The envelope waveform of the i component of the pulse."""
+        """Compute the envelope of the waveform i component."""
         samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.i(samples)
 
     def q(self, sampling_rate: float) -> Waveform:
-        """The envelope waveform of the q component of the pulse."""
+        """Compute the envelope of the waveform q component."""
         samples = int(self.duration * sampling_rate)
         return self.amplitude * self.envelope.q(samples)
 
     def envelopes(self, sampling_rate: float) -> IqWaveform:
-        """A tuple with the i and q envelope waveforms of the pulse."""
+        """Compute a tuple with the i and q envelopes."""
         return np.array([self.i(sampling_rate), self.q(sampling_rate)])
 
 
 class Delay(_PulseLike):
-    """A wait instruction during which we are not sending any pulses to the
-    QPU."""
+    """Wait instruction.
+
+    For its duration no pulse is sent to the QPU on this channel.
+    """
 
     duration: int
     """Delay duration in ns."""
