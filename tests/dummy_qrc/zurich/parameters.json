@@ -1,6 +1,5 @@
 {
   "nqubits": 5,
-  "qubits": [0, 1, 2, 3, 4],
   "settings": {
     "nshots": 4096,
     "relaxation_time": 300000
