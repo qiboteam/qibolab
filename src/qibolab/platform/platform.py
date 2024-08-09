@@ -54,7 +54,7 @@ def unroll_sequences(
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
     for sequence in sequences:
-        total_sequence.extend(sequence)
+        total_sequence.concatenate(sequence)
         # TODO: Fix unrolling results
         for pulse in sequence.probe_pulses:
             readout_map[pulse.id].append(pulse.id)
