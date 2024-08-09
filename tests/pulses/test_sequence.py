@@ -60,7 +60,7 @@ def test_durations():
     assert sequence.duration == 40 + 1200
 
 
-def test_extend():
+def test_concatenate():
     sequence1 = PulseSequence(
         [
             (
