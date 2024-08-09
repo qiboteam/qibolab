@@ -119,7 +119,7 @@ def test_cz_to_sequence():
 
     sequence = compile_circuit(circuit, platform)
     test_sequence = platform.pairs[(2, 1)].native_gates.CZ.create_sequence()
-    assert sequence[0] == test_sequence[0]
+    assert sequence == test_sequence
 
 
 def test_cnot_to_sequence():
