@@ -251,11 +251,8 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
     pulse = Pulse(
         duration=40,  # Pulse duration in ns
         amplitude=0.5,  # Amplitude relative to instrument range
-        frequency=1e8,  # Frequency in Hz
         relative_phase=0,  # Phase in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
 
 In this way, we defined a rectangular drive pulse using the generic Pulse object.
@@ -268,11 +265,8 @@ Alternatively, you can achieve the same result using the dedicated :class:`qibol
     pulse = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
 
 Both the Pulses objects and the PulseShape object have useful plot functions and several different various helper methods.

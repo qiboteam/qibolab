@@ -227,13 +227,7 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
                 [
                     (
                         coupler_01.flux.name,
-                        Pulse(
-                            duration=30,
-                            amplitude=0.005,
-                            frequency=1e9,
-                            envelope=Rectangular(),
-                            qubit=qubit1.name,
-                        ),
+                        Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
                     )
                 ],
             )
