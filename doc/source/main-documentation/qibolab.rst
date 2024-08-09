@@ -68,10 +68,10 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
    ps = PulseSequence()
    qubit = platform.qubits[0]
-   ps.extend(qubit.native_gates.RX.create_sequence())
-   ps.extend(qubit.native_gates.RX.create_sequence(phi=np.pi / 2))
-   ps[qubit.probe.name].append(Delay(duration=200))
-   ps.extend(qubit.native_gates.MZ.create_sequence())
+   ps.concatenate(qubit.native_gates.RX.create_sequence())
+   ps.concatenate(qubit.native_gates.RX.create_sequence(phi=np.pi / 2))
+   ps.append((qubit.probe.name, Delay(duration=200)))
+   ps.concatenate(qubit.native_gates.MZ.create_sequence())
 
 Now we can execute the sequence on hardware:
 
@@ -283,7 +283,6 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
 
     from qibolab.pulses import PulseSequence
 
-    sequence = PulseSequence()
 
     pulse1 = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
@@ -309,10 +308,14 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
     )
-    sequence["channel"].append(pulse1)
-    sequence["channel"].append(pulse2)
-    sequence["channel"].append(pulse3)
-    sequence["channel"].append(pulse4)
+    sequence = PulseSequence(
+        [
+            ("channel", pulse1),
+            ("channel", pulse2),
+            ("channel", pulse3),
+            ("channel", pulse4),
+        ],
+    )
 
     print(f"Total duration: {sequence.duration}")
 
@@ -339,16 +342,14 @@ Typical experiments may include both pre-defined pulses and new ones:
     from qibolab.pulses import Rectangular
 
     sequence = PulseSequence()
-    sequence.extend(platform.qubits[0].native_gates.RX.create_sequence())
-    sequence["some_channel"].append(
-        Pulse(
-            duration=10,
-            amplitude=0.5,
-            relative_phase=0,
-            envelope=Rectangular(),
+    sequence.concatenate(platform.qubits[0].native_gates.RX.create_sequence())
+    sequence.append(
+        (
+            "some_channel",
+            Pulse(duration=10, amplitude=0.5, relative_phase=0, envelope=Rectangular()),
         )
     )
-    sequence.extend(platform.qubits[0].native_gates.MZ.create_sequence())
+    sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
 
     results = platform.execute([sequence], options=options)
 
@@ -420,13 +421,13 @@ A tipical resonator spectroscopy experiment could be defined with:
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
     sequence = PulseSequence()
-    sequence.extend(
+    sequence.concatenate(
         platform.qubits[0].native_gates.MZ.create_sequence()
     )  # readout pulse for qubit 0 at 4 GHz
-    sequence.extend(
+    sequence.concatenate(
         platform.qubits[1].native_gates.MZ.create_sequence()
     )  # readout pulse for qubit 1 at 5 GHz
-    sequence.extend(
+    sequence.concatenate(
         platform.qubits[2].native_gates.MZ.create_sequence()
     )  # readout pulse for qubit 2 at 6 GHz
 
@@ -465,9 +466,9 @@ For example:
 
     qubit = platform.qubits[0]
     sequence = PulseSequence()
-    sequence.extend(qubit.native_gates.RX.create_sequence())
-    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
-    sequence.extend(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
+    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
@@ -478,7 +479,7 @@ For example:
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
         values=np.arange(0, 1.5, 0.1),
-        pulses=[sequence[qubit.drive.name][0]],
+        pulses=[next(iter(sequence.channel(qubit.drive.name)))],
         type=SweeperType.FACTOR,
     )
 
@@ -562,9 +563,9 @@ Let's now delve into a typical use case for result objects within the qibolab fr
     qubit = platform.qubits[0]
 
     sequence = PulseSequence()
-    sequence.extend(qubit.native_gates.RX.create_sequence())
-    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
-    sequence.extend(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
+    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
 
     options = ExecutionParameters(
         nshots=1000,

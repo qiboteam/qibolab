@@ -48,23 +48,23 @@ using different Qibolab primitives.
         configs[qubit.probe.name] = IqConfig(frequency=7e9)
 
         # create sequence that drives qubit from state 0 to 1
-        drive_seq = PulseSequence()
-        drive_seq[qubit.drive.name].append(
-            Pulse(
-                duration=40,
-                amplitude=0.05,
-                envelope=Gaussian(rel_sigma=0.2),
-            )
+        drive_seq = PulseSequence(
+            [
+                (
+                    qubit.drive.name,
+                    Pulse(duration=40, amplitude=0.05, envelope=Gaussian(rel_sigma=0.2)),
+                )
+            ]
         )
 
         # create sequence that can be used for measuring the qubit
-        probe_seq = PulseSequence()
-        probe_seq[qubit.probe.name].append(
-            Pulse(
-                duration=1000,
-                amplitude=0.005,
-                envelope=Rectangular(),
-            )
+        probe_seq = PulseSequence(
+            [
+                (
+                    qubit.probe.name,
+                    Pulse(duration=1000, amplitude=0.005, envelope=Rectangular()),
+                )
+            ]
         )
 
         # assign native gates to the qubit
@@ -130,56 +130,50 @@ hold the parameters of the two-qubit gates.
     qubit0.native_gates = SingleQubitNatives(
         RX=RxyFactory(
             PulseSequence(
-                {
-                    qubit0.drive.name: [
+                [
+                    (
+                        qubit0.drive.name,
                         Pulse(
                             duration=40,
                             amplitude=0.05,
                             envelope=Gaussian(rel_sigma=0.2),
-                        )
-                    ]
-                }
+                        ),
+                    )
+                ]
             )
         ),
         MZ=FixedSequenceFactory(
             PulseSequence(
-                {
-                    qubit0.probe.name: [
-                        Pulse(
-                            duration=1000,
-                            amplitude=0.005,
-                            envelope=Rectangular(),
-                        )
-                    ]
-                }
+                [
+                    (
+                        qubit0.probe.name,
+                        Pulse(duration=1000, amplitude=0.005, envelope=Rectangular()),
+                    )
+                ]
             )
         ),
     )
     qubit1.native_gates = SingleQubitNatives(
         RX=RxyFactory(
             PulseSequence(
-                {
-                    qubit1.drive.name: [
+                [
+                    (
+                        qubit1.drive.name,
                         Pulse(
-                            duration=40,
-                            amplitude=0.05,
-                            envelope=Gaussian(rel_sigma=0.2),
-                        )
-                    ]
-                }
+                            duration=40, amplitude=0.05, envelope=Gaussian(rel_sigma=0.2)
+                        ),
+                    )
+                ]
             )
         ),
         MZ=FixedSequenceFactory(
             PulseSequence(
-                {
-                    qubit1.probe.name: [
-                        Pulse(
-                            duration=1000,
-                            amplitude=0.005,
-                            envelope=Rectangular(),
-                        )
-                    ]
-                }
+                [
+                    (
+                        qubit1.probe.name,
+                        Pulse(duration=1000, amplitude=0.005, envelope=Rectangular()),
+                    )
+                ]
             )
         ),
     )
@@ -189,15 +183,12 @@ hold the parameters of the two-qubit gates.
     pair.native_gates = TwoQubitNatives(
         CZ=FixedSequenceFactory(
             PulseSequence(
-                {
-                    qubit0.flux.name: [
-                        Pulse(
-                            duration=30,
-                            amplitude=0.005,
-                            envelope=Rectangular(),
-                        )
-                    ],
-                }
+                [
+                    (
+                        qubit0.flux.name,
+                        Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
+                    ),
+                ]
             )
         )
     )
@@ -235,17 +226,18 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     pair.native_gates = TwoQubitNatives(
         CZ=FixedSequenceFactory(
             PulseSequence(
-                {
-                    coupler_01.flux.name: [
+                [
+                    (
+                        coupler_01.flux.name,
                         Pulse(
                             duration=30,
                             amplitude=0.005,
                             frequency=1e9,
                             envelope=Rectangular(),
                             qubit=qubit1.name,
-                        )
-                    ]
-                },
+                        ),
+                    )
+                ],
             )
         )
     )
@@ -294,142 +286,145 @@ a two-qubit system:
 .. code-block::  json
 
     {
-        "nqubits": 2,
-        "qubits": [
-            0,
-            1
-        ],
-        "settings": {
-            "nshots": 1024,
-            "sampling_rate": 1000000000,
-            "relaxation_time": 50000
+      "nqubits": 2,
+      "qubits": [0, 1],
+      "settings": {
+        "nshots": 1024,
+        "sampling_rate": 1000000000,
+        "relaxation_time": 50000
+      },
+      "topology": [[0, 1]],
+      "components": {
+        "drive_0": {
+          "frequency": 4855663000
         },
-        "topology": [
-            [
-                0,
-                1
-            ]
-        ],
-		"components": {
-			"drive_0": {
-				"frequency": 4855663000
-			},
-			"drive_1": {
-				"frequency": 5800563000
-			},
-			"flux_0": {
-				"bias": 0.0
-			},
-			"probe_0": {
-				"frequency": 7453265000
-			},
-			"probe_1": {
-				"frequency": 7655107000
-			},
-			"acquire_0": {
-			  "delay": 0,
-			  "smearing": 0
-			},
-			"acquire_1": {
-			  "delay": 0,
-			  "smearing": 0
-			}
-		}
-        "native_gates": {
-            "single_qubit": {
-                "0": {
-                    "RX": {
-						"drive_0": [
-							{
-								"duration": 40,
-								"amplitude": 0.0484,
-								"envelope": {
-									"kind": "drag",
-									"rel_sigma": 0.2,
-									"beta": -0.02,
-								},
-								"type": "qd",
-							}
-						]
-					},
-                    "MZ": {
-						"probe_0": [
-							{
-							"duration": 620,
-							"amplitude": 0.003575,
-							"envelope": {"kind": "rectangular"},
-							"type": "ro",
-							}
-						]
-					}
-                },
-                "1": {
-                    "RX": {
-						"drive_1" : [
-							{
-							"duration": 40,
-							"amplitude": 0.05682,
-							"envelope": {
-								"kind": "drag",
-								"rel_sigma": 0.2,
-								"beta": -0.04,
-							},
-							"type": "qd",
-							}
-						]
-					},
-                    "MZ": {
-						"probe_1": [
-							{
-							"duration": 960,
-							"amplitude": 0.00325,
-							"envelope": {"kind": "rectangular"},
-							"type": "ro",
-							}
-						]
-					}
-                }
-            },
-            "two_qubit": {
-                "0-1": {
-                    "CZ": [
-                        {
-                            "duration": 30,
-                            "amplitude": 0.055,
-                            "envelope": {"kind": "rectangular"},
-                            "qubit": 1,
-                            "type": "qf"
-                        },
-                        {
-                            "type": "virtual_z",
-                            "phase": -1.5707963267948966,
-                            "qubit": 0
-                        },
-                        {
-                            "type": "virtual_z",
-                            "phase": -1.5707963267948966,
-                            "qubit": 1
-                        }
-                    ]
-                }
-            }
+        "drive_1": {
+          "frequency": 5800563000
         },
-        "characterization": {
-            "single_qubit": {
-                "0": {
-                    "T1": 0.0,
-                    "T2": 0.0,
-                    "threshold": 0.00028502261712637096,
-                    "iq_angle": 1.283105298787488
-                },
-                "1": {
-                    "T1": 0.0,
-                    "T2": 0.0,
-                    "threshold": 0.0002694329123116206,
-                    "iq_angle": 4.912447775569025
-                }
-            }
+        "flux_0": {
+          "bias": 0.0
+        },
+        "probe_0": {
+          "frequency": 7453265000
+        },
+        "probe_1": {
+          "frequency": 7655107000
+        },
+        "acquire_0": {
+          "delay": 0,
+          "smearing": 0
+        },
+        "acquire_1": {
+          "delay": 0,
+          "smearing": 0
         }
+      },
+      "native_gates": {
+        "single_qubit": {
+          "0": {
+            "RX": [
+              [
+                "drive_0",
+                {
+                  "duration": 40,
+                  "amplitude": 0.0484,
+                  "envelope": {
+                    "kind": "drag",
+                    "rel_sigma": 0.2,
+                    "beta": -0.02
+                  }
+                }
+              ]
+            ],
+            "MZ": [
+              [
+                "probe_0",
+                {
+                  "duration": 620,
+                  "amplitude": 0.003575,
+                  "envelope": {
+                    "kind": "rectangular"
+                  }
+                }
+              ]
+            ]
+          },
+          "1": {
+            "RX": [
+              [
+                "drive_1",
+                {
+                  "duration": 40,
+                  "amplitude": 0.05682,
+                  "envelope": {
+                    "kind": "drag",
+                    "rel_sigma": 0.2,
+                    "beta": -0.04
+                  }
+                }
+              ]
+            ],
+            "MZ": [
+              [
+                "probe_1",
+                {
+                  "duration": 960,
+                  "amplitude": 0.00325,
+                  "envelope": {
+                    "kind": "rectangular"
+                  }
+                }
+              ]
+            ]
+          }
+        },
+        "two_qubit": {
+          "0-1": {
+            "CZ": [
+              [
+                "flux_1",
+                {
+                  "duration": 30,
+                  "amplitude": 0.055,
+                  "envelope": {
+                    "kind": "rectangular"
+                  }
+                }
+              ],
+              [
+                "drive_0",
+                {
+                  "type": "virtual_z",
+                  "phase": -1.5707963267948966
+                }
+              ],
+              [
+                "drive_1",
+                {
+                  "type": "virtual_z",
+                  "phase": -1.5707963267948966
+                }
+              ]
+            ]
+          }
+        }
+      },
+      "characterization": {
+        "single_qubit": {
+          "0": {
+            "T1": 0.0,
+            "T2": 0.0,
+            "threshold": 0.00028502261712637096,
+            "iq_angle": 1.283105298787488
+          },
+          "1": {
+            "T1": 0.0,
+            "T2": 0.0,
+            "threshold": 0.0002694329123116206,
+            "iq_angle": 4.912447775569025
+          }
+        }
+      }
     }
 
 And in the case of having a chip with coupler qubits
@@ -438,66 +433,68 @@ we need the following changes to the previous runcard:
 .. code-block::  json
 
     {
-        "qubits": [
-            0,
-            1
-        ],
-        "couplers": [
-            0
-        ],
-        "topology": {
-            "0": [
-                0,
-                1
-            ]
-        },
-		"components": {
-			"flux_coupler_01": {
-				"bias": 0.12
-			}
-		}
-        "native_gates": {
-            "two_qubit": {
-                "0-1": {
-					"CZZ": {
-						"flux_coupler_01": [
-							{
-								"type": "cf",
-								"duration": 40,
-								"amplitude": 0.1,
-								"envelope": {"kind": "rectangular"},
-								"coupler": 0,
-							}
-						]
-						"flux_0": [
-							{
-								"duration": 30,
-								"amplitude": 0.6025,
-								"envelope": {"kind": "rectangular"},
-								"type": "qf"
-							}
-						],
-						"drive_0": [
-							{
-								"type": "virtual_z",
-								"phase": -1,
-								"qubit": 0
-							}
-						],
-						"drive_1": [
-							{
-								"type": "virtual_z",
-								"phase": -3,
-								"qubit": 1
-							}
-						]
-					}
-                    "CZ": [
-
-                    ]
-                }
-            }
+      "qubits": [
+        0,
+        1
+      ],
+      "couplers": [
+        0
+      ],
+      "topology": {
+        "0": [
+          0,
+          1
+        ]
+      },
+      "components": {
+        "flux_coupler_01": {
+          "bias": 0.12
         }
+      },
+      "native_gates": {
+        "two_qubit": {
+          "0-1": {
+            "CZZ": [
+              [
+                "flux_coupler_01",
+                {
+                  "duration": 40,
+                  "amplitude": 0.1,
+                  "envelope": {
+                    "kind": "rectangular"
+                  },
+                  "coupler": 0
+                }
+              ],
+              [
+                "flux_0",
+                {
+                  "duration": 30,
+                  "amplitude": 0.6025,
+                  "envelope": {
+                    "kind": "rectangular"
+                  },
+                }
+              ],
+              [
+                "drive_0",
+                {
+                  "phase": -1,
+                  "qubit": 0
+                }
+              ],
+              [
+                "drive_1",
+                {
+                  "phase": -3,
+                  "qubit": 1
+                }
+              ]
+            ],
+            "CZ": []
+          }
+        }
+      }
     }
 
 This file contains different sections: ``qubits`` is a list with the qubit
