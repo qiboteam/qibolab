@@ -4,7 +4,6 @@ from typing import Optional, Union
 import numpy as np
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
-from qibolab.couplers import Coupler
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
 QubitId = Union[str, int]
@@ -155,7 +154,7 @@ class QubitPair:
     cz_fidelity: float = 0.0
     """Gate fidelity from CZ interleaved RB."""
 
-    coupler: Optional[Coupler] = None
+    coupler: Optional[Qubit] = None
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
 

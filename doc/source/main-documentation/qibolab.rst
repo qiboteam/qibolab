@@ -121,7 +121,7 @@ It is useful for testing parts of the code that do not necessarily require acces
 
     from qibolab import create_platform
 
-    platform = create_platform("dummy_couplers")
+    platform = create_platform("dummy")
 
 will create a dummy platform that also has coupler qubits.
 
@@ -180,18 +180,20 @@ These parameters are typically extracted from the runcard during platform initia
 Couplers
 --------
 
-The :class:`qibolab.couplers.Coupler` class serves as a comprehensive representation of a physical coupler qubit within the Qibolab framework.
-It's a simplified :class:`qibolab.qubits.Qubit` to control couplers during 2q gate operation:
+Instead of using a dedicated class, a :class:`qibolab.qubits.Qubit` object can also
+serve as a comprehensive representation of a physical coupler qubit within the Qibolab
+framework.
+Used like this, it would control couplers during 2q gate operation:
 
 - :ref:`Channels <main_doc_channels>`: Physical Connection
-- :class:`Parameters <qibolab.couplers.Coupler>`: Configurable Properties
+- :class:`Parameters <qibolab.qubit.Qubit>`: Configurable Properties
 - :ref:`Qubits <main_doc_qubits>`: Qubits the coupler acts on
 
 We have a single required Channel for flux coupler control:
 
 - flux
 
-The Coupler class allows us to handle 2q interactions in coupler based architectures
+These instances allow us to handle 2q interactions in coupler based architectures
 in a simple way. They are usually associated with :class:`qibolab.qubits.QubitPair`
 and usually extracted from the runcard during platform initialization.
 

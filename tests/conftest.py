@@ -20,7 +20,7 @@ from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to 0.2
-    "dummy_couplers",
+    "dummy",
     # "qm",
     # "qm_octave",
     # "qblox",
