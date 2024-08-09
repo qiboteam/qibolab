@@ -65,7 +65,6 @@ def create_dummy():
         configs[flux_name] = DcConfig(**component_params[flux_name])
 
     for c, coupler in couplers.items():
-        c = c[1:]
         flux_name = f"coupler_{c}/flux"
         coupler.flux = DcChannel(flux_name)
         configs[flux_name] = DcConfig(**component_params[flux_name])

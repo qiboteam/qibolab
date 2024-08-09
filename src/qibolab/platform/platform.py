@@ -321,11 +321,7 @@ class Platform:
         # so that each acquisition command carries the info with it.
         integration_setup: IntegrationSetup = {}
         for qubit in self.qubits.values():
-            integration_setup[qubit.acquisition.name] = (
-                qubit.kernel,
-                qubit.threshold,
-                qubit.iq_angle,
-            )
+            integration_setup[qubit.acquisition.name] = qubit.kernel
 
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
