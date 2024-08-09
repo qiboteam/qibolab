@@ -62,22 +62,10 @@ def test_durations():
 
 
 def test_concatenate():
-    sequence1 = PulseSequence(
-        [
-            (
-                "ch1",
-                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
-            )
-        ]
-    )
-    sequence2 = PulseSequence(
-        [
-            (
-                "ch2",
-                Pulse(duration=60, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
-            )
-        ]
-    )
+    p1 = Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    sequence1 = PulseSequence([("ch1", p1)])
+    p2 = Pulse(duration=60, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    sequence2 = PulseSequence([("ch2", p2)])
 
     sequence1.concatenate(sequence2)
     assert set(sequence1.channels) == {"ch1", "ch2"}
@@ -110,6 +98,20 @@ def test_concatenate():
     assert sequence1.channel_duration("ch1") == 40
     assert sequence1.channel_duration("ch2") == 60 + 80
     assert sequence1.channel_duration("ch3") == 60 + 100
+
+    # Check order preservation, even with various channels
+    vz = VirtualZ(phase=0.1)
+    s1 = PulseSequence([("a", p1), ("b", vz)])
+    s2 = PulseSequence([("a", vz), ("a", p2)])
+    s1.concatenate(s2)
+    assert isinstance(s1[0][1], Pulse)
+    assert s1[0][0] == "a"
+    assert isinstance(s1[1][1], VirtualZ)
+    assert s1[1][0] == "b"
+    assert isinstance(s1[2][1], VirtualZ)
+    assert s1[2][0] == "a"
+    assert isinstance(s1[3][1], Pulse)
+    assert s1[3][0] == "a"
 
 
 def test_copy():
