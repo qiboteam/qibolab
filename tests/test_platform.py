@@ -42,9 +42,9 @@ nshots = 1024
 def test_unroll_sequences(platform):
     qubit = next(iter(platform.qubits.values()))
     sequence = PulseSequence()
-    sequence.extend(qubit.native_gates.RX.create_sequence())
-    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
-    sequence.extend(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
+    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
     total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence.probe_pulses) == 10
     assert len(readouts) == 1
