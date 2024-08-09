@@ -72,7 +72,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     import matplotlib.pyplot as plt
 
-    probe_pulse = next(iter(sequence.probe_pulses))
+    probe_pulse = sequence.probe_pulses[0]
     amplitudes = magnitude(results[probe_pulse.id][0])
     frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
 
@@ -126,12 +126,16 @@ complex pulse sequence. Therefore with start with that:
     qubit = platform.qubits[0]
 
     # create pulse sequence and add pulses
-    sequence = PulseSequence()
-    sequence[qubit.drive.name].append(
-        Pulse(duration=2000, amplitude=0.01, envelope=Gaussian(rel_sigma=5))
+    sequence = PulseSequence(
+        [
+            (
+                qubit.drive.name,
+                Pulse(duration=2000, amplitude=0.01, envelope=Gaussian(rel_sigma=5)),
+            ),
+            (qubit.probe.name, Delay(duration=sequence.duration)),
+        ]
     )
-    sequence[qubit.probe.name].append(Delay(duration=sequence.duration))
-    sequence.extend(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
 
     # allocate frequency sweeper
     sweeper = Sweeper(
@@ -225,9 +229,9 @@ and its impact on qubit states in the IQ plane.
 
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()
-    one_sequence.extend(qubit.native_gates.RX.create_sequence())
-    one_sequence[qubit.probe.name].append(Delay(duration=one_sequence.duration))
-    one_sequence.extend(qubit.native_gates.MZ.create_sequence())
+    one_sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    one_sequence.append((qubit.probe.name, Delay(duration=one_sequence.duration)))
+    one_sequence.concatenate(qubit.native_gates.MZ.create_sequence())
 
     # create pulse sequence 2 and add pulses
     zero_sequence = qubit.native_gates.MZ.create_sequence()
