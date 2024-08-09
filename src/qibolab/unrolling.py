@@ -5,7 +5,6 @@ May be reused by different instruments.
 
 from dataclasses import asdict, dataclass, field, fields
 from functools import total_ordering
-from itertools import chain
 
 from .pulses import Pulse, PulseSequence
 from .pulses.envelope import Rectangular
@@ -22,7 +21,7 @@ def _waveform(sequence: PulseSequence):
             if isinstance(pulse, Pulse)
             else 1
         )
-        for pulse in chain(*sequence.values())
+        for _, pulse in sequence
     )
 
 
