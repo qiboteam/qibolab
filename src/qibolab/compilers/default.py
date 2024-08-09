@@ -6,9 +6,9 @@ Uses I, Z, RZ, U3, CZ, and M as the set of native gates.
 import math
 
 import numpy as np
-from qibo.gates import Gate
+from qibo.gates import Align, Gate
 
-from qibolab.pulses import PulseSequence, VirtualZ
+from qibolab.pulses import Delay, PulseSequence, VirtualZ
 from qibolab.qubits import Qubit, QubitPair
 
 
@@ -63,3 +63,14 @@ def measurement_rule(gate: Gate, qubits: list[Qubit]) -> PulseSequence:
     for qubit in qubits:
         seq.concatenate(qubit.native_gates.MZ.create_sequence())
     return seq
+
+
+def align_rule(gate: Align, qubits: list[Qubit]) -> PulseSequence:
+    """Measurement gate applied using the platform readout pulse."""
+    return PulseSequence(
+        [
+            (ch.name, Delay(duration=gate.delay))
+            for qubit in qubits
+            for ch in qubit.channels
+        ]
+    )
