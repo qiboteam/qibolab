@@ -109,7 +109,7 @@ def _load_two_qubit_natives(
                 for gate_name, raw_sequence in gatedict.items()
             }
         )
-        pairs[(q0, q1)] = QubitPair(qubits[q0], qubits[q1], native_gates=native_gates)
+        pairs[(q0, q1)] = QubitPair(q0, q1, native_gates=native_gates)
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
     return pairs
@@ -195,7 +195,7 @@ def dump_native_gates(
     for pair in pairs.values():
         natives = _dump_natives(pair.native_gates)
         if len(natives) > 0:
-            pair_name = f"{pair.qubit1.name}-{pair.qubit2.name}"
+            pair_name = f"{pair.qubit1}-{pair.qubit2}"
             native_gates["two_qubit"][pair_name] = natives
 
     return native_gates
