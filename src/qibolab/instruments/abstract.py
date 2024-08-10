@@ -4,7 +4,8 @@ from typing import Optional
 
 import numpy.typing as npt
 
-from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
+from qibolab.components import Config
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.pulses.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
@@ -80,10 +81,9 @@ class Controller(Instrument):
     @abstractmethod
     def play(
         self,
-        updates: list[ConfigUpdate],
+        configs: dict[str, Config],
         sequences: list[PulseSequence],
         options: ExecutionParameters,
-        integration_setup,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, npt.NDArray]:
         """Play a pulse sequence and retrieve feedback.

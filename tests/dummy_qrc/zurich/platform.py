@@ -45,7 +45,7 @@ def create():
 
     runcard = load_runcard(FOLDER)
     kernels = Kernels.load(FOLDER)
-    qubits, couplers, pairs = load_qubits(runcard, kernels)
+    qubits, couplers, pairs = load_qubits(runcard)
     settings = load_settings(runcard)
 
     configs = {}
@@ -74,7 +74,7 @@ def create():
         )
 
         configs[acquisition_name] = ZiAcquisitionConfig(
-            **component_params[acquisition_name]
+            **component_params[acquisition_name], kernel=kernels.get(q)
         )
         qubits[q].acquisition = AcquireChannel(
             name=acquisition_name,
