@@ -31,7 +31,6 @@ class Qubit:
             send drive pulses to the qubit.
         flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
             send flux pulses to the qubit.
-        Other characterization parameters for the qubit, loaded from the runcard.
     """
 
     name: QubitId
