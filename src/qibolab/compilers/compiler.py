@@ -154,6 +154,9 @@ class Compiler:
         def find_max(channels: list[Channel]):
             return max(channel_clock[ch.name] for ch in channels)
 
+        def find_max(channels: list[Channel]):
+            return max(channel_clock[ch.name] for ch in channels)
+
         def qubit_clock(el: QubitId):
             elements = platform.qubits if el in platform.qubits else platform.couplers
             return max(channel_clock[ch.name] for ch in elements[el].channels)
