@@ -69,7 +69,7 @@ def test_platform_basics():
     platform2 = Platform(
         "come va?",
         qs,
-        {(q1, q2): QubitPair(qs[q1], qs[q2]) for q1 in range(3) for q2 in range(4, 8)},
+        {(q1, q2): QubitPair(q1, q2) for q1 in range(3) for q2 in range(4, 8)},
         {},
         {},
     )

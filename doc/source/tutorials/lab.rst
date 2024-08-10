@@ -177,7 +177,7 @@ hold the parameters of the two-qubit gates.
     )
 
     # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1)
+    pair = QubitPair(qubit0.name, qubit1.name)
     pair.native_gates = TwoQubitNatives(
         CZ=FixedSequenceFactory(
             PulseSequence(
@@ -220,7 +220,7 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # Look above example
 
     # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1, coupler_01)
+    pair = QubitPair(qubit0.name, qubit1.name)
     pair.native_gates = TwoQubitNatives(
         CZ=FixedSequenceFactory(
             PulseSequence(

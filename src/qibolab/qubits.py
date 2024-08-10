@@ -83,20 +83,15 @@ class QubitPair:
     :class:`qibolab.platforms.abstract.Qubit`.
     """
 
-    qubit1: Qubit
+    qubit1: QubitId
     """First qubit of the pair.
 
     Acts as control on two-qubit gates.
     """
-    qubit2: Qubit
+    qubit2: QubitId
     """Second qubit of the pair.
 
     Acts as target on two-qubit gates.
     """
-
-    # coupler: Optional[Qubit] = None
-    # FIXME: I think this is not needed but not sure yet
-    # This information is not provided in the runcard so it is not
-    # parsed by serialize.py
 
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
