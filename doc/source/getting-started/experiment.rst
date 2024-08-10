@@ -180,28 +180,6 @@ And the we can define the runcard ``my_platform/parameters.json``:
             }
         },
         "two_qubits": {}
-    },
-    "characterization": {
-        "single_qubit": {
-            "0": {
-                "anharmonicity": 0,
-                "Ec": 0,
-                "Ej": 0,
-                "g": 0,
-                "T1": 0.0,
-                "T2": 0.0,
-                "threshold": 0.0,
-                "iq_angle": 0.0,
-                "mean_gnd_states": [
-                    0.0,
-                    0.0
-                ],
-                "mean_exc_states": [
-                    0.0,
-                    0.0
-                ]
-            }
-        }
     }
     }
 
