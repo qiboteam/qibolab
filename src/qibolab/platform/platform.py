@@ -4,7 +4,7 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import prod
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, Union
 
 import numpy as np
 from qibo.config import log, raise_error
@@ -122,6 +122,11 @@ class Settings:
         return options
 
 
+def _channels_map(elements: Union[QubitMap, CouplerMap]):
+    """Map channel names to element (qubit or coupler)."""
+    return {ch.name: id for id, el in elements.items() for ch in el.channels}
+
+
 @dataclass
 class Platform:
     """Platform for controlling quantum devices."""
@@ -197,9 +202,7 @@ class Platform:
     @property
     def channels_map(self) -> dict[str, QubitId]:
         """Channel to element map."""
-        return {ch.name: id for id, el in self.qubits.items() for ch in el.channels} | {
-            ch.name: id for id, el in self.couplers.items() for ch in el.channels
-        }
+        return _channels_map(self.qubits) | _channels_map(self.couplers)
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
