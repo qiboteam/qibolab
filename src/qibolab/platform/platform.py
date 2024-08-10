@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass, field
 from math import prod
 from typing import Any, Optional, TypeVar, Union
 
-import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
@@ -22,8 +21,6 @@ InstrumentMap = dict[InstrumentId, Instrument]
 QubitMap = dict[QubitId, Qubit]
 CouplerMap = dict[QubitId, Qubit]
 QubitPairMap = dict[QubitPairId, QubitPair]
-
-IntegrationSetup = dict[str, tuple[np.ndarray, float]]
 
 NS_TO_SEC = 1e-9
 
@@ -251,7 +248,6 @@ class Platform:
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         configs: dict[str, Config],
-        integration_setup: IntegrationSetup,
         sweepers: list[ParallelSweepers],
     ):
         """Execute sequences on the controllers."""
@@ -259,9 +255,7 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.play(
-                    configs, sequences, options, integration_setup, sweepers
-                )
+                new_result = instrument.play(configs, sequences, options, sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
 
@@ -315,17 +309,9 @@ class Platform:
             if name in self.instruments:
                 self.instruments[name].setup(**asdict(cfg))
 
-        # maps acquisition channel name to corresponding kernel and iq_angle
-        # FIXME: this is temporary solution to deliver the information to drivers
-        # until we make acquisition channels first class citizens in the sequences
-        # so that each acquisition command carries the info with it.
-        integration_setup: IntegrationSetup = {}
-        for qubit in self.qubits.values():
-            integration_setup[qubit.acquisition.name] = qubit.kernel
-
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
-            result = self._execute(b, options, configs, integration_setup, sweepers)
+            result = self._execute(b, options, configs, sweepers)
             for serial, data in result.items():
                 results[serial].append(data)
 

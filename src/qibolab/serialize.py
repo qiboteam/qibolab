@@ -12,6 +12,7 @@ from typing import Optional, Union
 
 from pydantic import ConfigDict, TypeAdapter
 
+from qibolab.components import AcquisitionConfig
 from qibolab.execution_parameters import ConfigUpdate
 from qibolab.kernels import Kernels
 from qibolab.native import (
@@ -115,9 +116,7 @@ def _load_two_qubit_natives(
     return pairs
 
 
-def load_qubits(
-    runcard: dict, kernels: Optional[Kernels] = None
-) -> tuple[QubitMap, QubitMap, QubitPairMap]:
+def load_qubits(runcard: dict) -> tuple[QubitMap, QubitMap, QubitPairMap]:
     """Load qubits, couplers and pairs from the runcard.
 
     Uses the native gate section of the runcard to parse the
@@ -125,17 +124,9 @@ def load_qubits(
     :class: `qibolab.qubits.QubitPair` objects.
     """
     native_gates = runcard.get("native_gates", {})
-
     qubits = _load_single_qubit_natives(native_gates.get("single_qubit", {}))
-
-    if kernels is not None:
-        for q in kernels:
-            qubits[q].kernel = kernels[q]
-
     couplers = _load_single_qubit_natives(native_gates.get("coupler", {}))
-
     pairs = _load_two_qubit_natives(native_gates.get("two_qubit", {}), qubits)
-
     return qubits, couplers, pairs
 
 
@@ -226,7 +217,12 @@ def dump_instruments(instruments: InstrumentMap) -> dict:
 
 def dump_component_configs(component_configs) -> dict:
     """Dump channel configs."""
-    return {name: asdict(cfg) for name, cfg in component_configs.items()}
+    components = {}
+    for name, cfg in component_configs.items():
+        components[name] = asdict(cfg)
+        if isinstance(cfg, AcquisitionConfig):
+            del components[name]["kernel"]
+    return components
 
 
 def dump_runcard(
@@ -272,11 +268,12 @@ def dump_kernels(platform: Platform, path: Path):
     # create kernels
     kernels = Kernels()
     for qubit in platform.qubits.values():
-        if qubit.kernel is not None:
-            kernels[qubit.name] = qubit.kernel
+        kernel = platform.configs[qubit.acquisition.name].kernel
+        if kernel is not None:
+            kernels[qubit.name] = kernel
 
     # dump only if not None
-    if kernels:
+    if len(kernels) > 0:
         kernels.dump(path)
 
 

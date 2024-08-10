@@ -87,7 +87,6 @@ class DummyInstrument(Controller):
         configs: dict[str, Config],
         sequences: list[PulseSequence],
         options: ExecutionParameters,
-        integration_setup: dict[str, tuple[np.ndarray, float]],
         sweepers: list[ParallelSweepers],
     ):
         def values(pulse: Pulse):

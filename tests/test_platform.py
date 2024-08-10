@@ -5,6 +5,7 @@ import inspect
 import os
 import pathlib
 import warnings
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,7 @@ from qibo.result import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.components import IqConfig, OscillatorConfig
+from qibolab.components import AcquisitionConfig, IqConfig, OscillatorConfig
 from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
@@ -184,15 +185,17 @@ def test_kernels(tmp_path, has_kernels):
 
     platform = create_dummy()
     if has_kernels:
-        for qubit in platform.qubits:
-            platform.qubits[qubit].kernel = np.random.rand(10)
+        for name, config in platform.configs.items():
+            if isinstance(config, AcquisitionConfig):
+                platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
     dump_kernels(platform, tmp_path)
 
     if has_kernels:
         kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits:
-            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+        for qubit in platform.qubits.values():
+            kernel = platform.configs[qubit.acquisition.name].kernel
+            np.testing.assert_array_equal(kernel, kernels[qubit.name])
     else:
         with pytest.raises(FileNotFoundError):
             Kernels.load(tmp_path)
@@ -204,16 +207,18 @@ def test_dump_platform(tmp_path, has_kernels):
 
     platform = create_dummy()
     if has_kernels:
-        for qubit in platform.qubits:
-            platform.qubits[qubit].kernel = np.random.rand(10)
+        for name, config in platform.configs.items():
+            if isinstance(config, AcquisitionConfig):
+                platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
     dump_platform(platform, tmp_path)
 
     settings = load_settings(load_runcard(tmp_path))
     if has_kernels:
         kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits:
-            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+        for qubit in platform.qubits.values():
+            kernel = platform.configs[qubit.acquisition.name].kernel
+            np.testing.assert_array_equal(kernel, kernels[qubit.name])
 
     assert settings == platform.settings
 

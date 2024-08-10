@@ -7,8 +7,10 @@ users, but in general any user tool should try to depend only on the
 configuration defined by these classes.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Union
+
+import numpy.typing as npt
 
 __all__ = [
     "DcConfig",
@@ -77,8 +79,18 @@ class AcquisitionConfig:
     """Delay between readout pulse start and acquisition start."""
     smearing: float
     """FIXME:"""
+
+    # FIXME: this is temporary solution to deliver the information to drivers
+    # until we make acquisition channels first class citizens in the sequences
+    # so that each acquisition command carries the info with it.
     threshold: Optional[float] = None
+    """Signal threshold for discriminating ground and excited states."""
     iq_angle: Optional[float] = None
+    """Signal angle in the IQ-plane for disciminating ground and excited
+    states."""
+    kernel: Optional[npt.NDArray] = field(default=None, repr=False)
+    """Integration weights to be used when post-processing the acquired
+    signal."""
 
 
 Config = Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig]

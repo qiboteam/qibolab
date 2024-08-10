@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field, fields
 from typing import Optional, Union
 
-import numpy as np
-
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
@@ -36,8 +34,6 @@ class Qubit:
     name: QubitId
 
     native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
-    kernel: Optional[np.ndarray] = field(default=None, repr=False)
 
     probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
