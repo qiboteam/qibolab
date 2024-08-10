@@ -72,24 +72,5 @@
                 }
             }
         }
-    },
-    "characterization": {
-        "single_qubit": {
-            "0": {
-                "readout_frequency": 7301661824.000001,
-                "drive_frequency": 5090167234.445013,
-                "anharmonicity": -336123005.1821652,
-                "Ec": 0,
-                "Ej": 0,
-                "g": 0,
-                "T1": 88578.48970762537,
-                "T2": 106797.94866226273,
-                "sweetspot": 0,
-                "mean_gnd_states": "1.5417+0.1817j",
-                "mean_exc_states": "2.5332-0.5914j",
-                "threshold": 1.5435,
-                "iq_angle": 2.602
-            }
-        }
     }
 }
