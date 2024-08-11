@@ -11,7 +11,7 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import Channel, Config, DcChannel, IqChannel
+from qibolab.components import Channel, ChannelId, Config, DcChannel, IqChannel
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Delay, Pulse, PulseSequence, VirtualZ
@@ -273,8 +273,19 @@ class QmController(Controller):
         else:
             raise TypeError(f"Unknown channel type: {type(channel)}.")
 
+    def configure_channels(
+        self,
+        configs: dict[str, Config],
+        channels: set[ChannelId],
+    ):
+        """Register channels participating in the sequence in the QM
+        ``config``."""
+        for channel_name in channels:
+            channel = self.channels[channel_name]
+            self.configure_channel(channel, configs)
+
     def register_pulse(self, channel: Channel, pulse: Pulse):
-        """Add pulse in the ``config``."""
+        """Add pulse in the QM ``config``."""
         # if (
         #    pulse.duration % 4 != 0
         #    or pulse.duration < 16
@@ -289,46 +300,45 @@ class QmController(Controller):
             return self.config.register_iq_pulse(channel.name, pulse)
         return self.config.register_acquisition_pulse(channel.name, pulse)
 
-    def register_pulses(self, configs, sequence, integration_setup, options):
-        """Adds all pulses of a given :class:`qibolab.pulses.PulseSequence` in
-        the ``config``.
+    def register_pulses(
+        self,
+        configs: dict[str, Config],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+    ):
+        """Adds all pulses of a given sequence in the QM ``config``.
 
         Returns:
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         acquisitions = {}
-        for name, channel_sequence in sequence.items():
-            channel = self.channels[name]
-            self.configure_channel(channel, configs)
+        for channel_name, pulse in sequence:
+            if isinstance(pulse, (Delay, VirtualZ)):
+                continue
 
-            for pulse in channel_sequence:
-                if isinstance(pulse, (Delay, VirtualZ)):
-                    continue
+            channel = self.channels[channel_name]
+            logical_channel = channel.logical_channel
+            op = self.register_pulse(logical_channel, pulse)
 
-                logical_channel = channel.logical_channel
-                op = self.register_pulse(logical_channel, pulse)
-
-                if (
-                    isinstance(logical_channel, IqChannel)
-                    and logical_channel.acquisition is not None
-                ):
-                    kernel, threshold, iq_angle = integration_setup[
-                        logical_channel.acquisition
-                    ]
-                    self.config.register_integration_weights(
-                        name, pulse.duration, kernel
+            if (
+                isinstance(logical_channel, IqChannel)
+                and logical_channel.acquisition is not None
+            ):
+                acq_config = configs[logical_channel.acquisition]
+                self.config.register_integration_weights(
+                    channel_name, pulse.duration, acq_config.kernel
+                )
+                if (op, channel_name) in acquisitions:
+                    acquisition = acquisitions[(op, channel_name)]
+                else:
+                    acquisition = acquisitions[(op, channel_name)] = create_acquisition(
+                        op,
+                        channel_name,
+                        options,
+                        acq_config.threshold,
+                        acq_config.iq_angle,
                     )
-                    if (op, name) in acquisitions:
-                        acquisition = acquisitions[(op, name)]
-                    else:
-                        acquisition = acquisitions[(op, name)] = create_acquisition(
-                            op,
-                            name,
-                            options,
-                            threshold,
-                            iq_angle,
-                        )
-                    acquisition.keys.append(pulse.id)
+                acquisition.keys.append(pulse.id)
 
         return acquisitions
 
@@ -352,7 +362,6 @@ class QmController(Controller):
         configs: dict[str, Config],
         sequences: list[PulseSequence],
         options: ExecutionParameters,
-        integration_setup,
         sweepers: list[ParallelSweepers],
     ):
         if len(sequences) > 1:
@@ -367,9 +376,8 @@ class QmController(Controller):
                 self.configure_channel(channel, configs)
 
         sequence = sequences[0]
-        acquisitions = self.register_pulses(
-            configs, sequence, integration_setup, options
-        )
+        self.configure_channels(configs, sequence.channels)
+        acquisitions = self.register_pulses(configs, sequence, options)
         experiment = program(configs, sequence, options, acquisitions, sweepers)
 
         if self.manager is None:
@@ -380,19 +388,17 @@ class QmController(Controller):
 
         if self.script_file_name is not None:
             script = generate_qua_script(experiment, asdict(self.config))
-            for pulses in sequence.values():
-                for pulse in pulses:
-                    script = script.replace(operation(pulse), str(pulse))
+            for _, pulse in sequence:
+                script = script.replace(operation(pulse), str(pulse))
             with open(self.script_file_name, "w") as file:
                 file.write(script)
 
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for channel_name, pulses in sequence.items():
+            for channel_name, pulse in sequence:
                 if self.channels[channel_name].logical_channel.acquisition is not None:
-                    for pulse in pulses:
-                        results[pulse.id] = result
+                    results[pulse.id] = result
             return results
 
         result = self.execute_program(experiment)

@@ -18,7 +18,7 @@ from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS
 def _delay(pulse: Delay, element: str, parameters: Parameters):
     # TODO: How to play delays on multiple elements?
     if parameters.duration is None:
-        duration = pulse.duration // 4 + 1
+        duration = int(pulse.duration) // 4 + 1
     else:
         duration = parameters.duration
     qua.wait(duration, element)
@@ -50,15 +50,14 @@ def play(args: ExecutionArguments):
     Should be used inside a ``program()`` context.
     """
     qua.align()
-    for element, pulses in args.sequence.items():
-        for pulse in pulses:
-            op = operation(pulse)
-            params = args.parameters[op]
-            if isinstance(pulse, Delay):
-                _delay(pulse, element, params)
-            else:
-                acquisition = args.acquisitions.get((op, element))
-                _play(op, element, params, acquisition)
+    for element, pulse in args.sequence:
+        op = operation(pulse)
+        params = args.parameters[op]
+        if isinstance(pulse, Delay):
+            _delay(pulse, element, params)
+        else:
+            acquisition = args.acquisitions.get((op, element))
+            _play(op, element, params, acquisition)
 
     if args.relaxation_time > 0:
         qua.wait(args.relaxation_time // 4)
