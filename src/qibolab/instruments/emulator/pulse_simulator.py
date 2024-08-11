@@ -9,7 +9,6 @@ import numpy as np
 import numpy.typing as npt
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
@@ -133,7 +132,7 @@ class PulseSimulator(Controller):
     def play(
         self,
         qubits: dict[QubitId, Qubit],
-        couplers: dict[QubitId, Coupler],
+        couplers: dict[QubitId, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[str, npt.NDArray]:
@@ -186,7 +185,7 @@ class PulseSimulator(Controller):
     def sweep(
         self,
         qubits: dict[QubitId, Qubit],
-        couplers: dict[QubitId, Coupler],
+        couplers: dict[QubitId, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweeper: list[Sweeper],
@@ -280,7 +279,7 @@ class PulseSimulator(Controller):
     def _sweep_recursion(
         self,
         qubits: dict[QubitId, Qubit],
-        couplers: dict[QubitId, Coupler],
+        couplers: dict[QubitId, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
         *sweeper: Sweeper,
@@ -339,7 +338,7 @@ class PulseSimulator(Controller):
     def _sweep_play(
         self,
         qubits: dict[QubitId, Qubit],
-        couplers: dict[QubitId, Coupler],
+        couplers: dict[QubitId, Qubit],
         sequence: PulseSequence,
         execution_parameters: ExecutionParameters,
     ) -> dict[Union[str, int], list]:

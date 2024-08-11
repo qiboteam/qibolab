@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from qibo import gates
+from qibo import Circuit, gates
 from qibo.config import raise_error
 
 from qibolab.compilers.default import (
@@ -14,6 +14,7 @@ from qibolab.compilers.default import (
     rz_rule,
     z_rule,
 )
+from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
 
 
@@ -122,7 +123,7 @@ class Compiler:
         return gate_sequence
 
     # FIXME: pulse.qubit and pulse.channel do not exist anymore
-    def compile(self, circuit, platform):
+    def compile(self, circuit: Circuit, platform: Platform):
         """Transforms a circuit to pulse sequence.
 
         Args:
@@ -135,11 +136,7 @@ class Compiler:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
             measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
-        ch_to_qb = {
-            ch.name: qubit_id
-            for qubit_id, qubit in platform.qubits.items()
-            for ch in qubit.channels
-        }
+        ch_to_qb = platform.channels_map
 
         sequence = PulseSequence()
         # FIXME: This will not work with qubits that have string names
