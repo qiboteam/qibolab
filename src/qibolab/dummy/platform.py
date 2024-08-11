@@ -73,7 +73,7 @@ def create_dummy():
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     instruments = load_instrument_settings(runcard, instruments)
     return Platform(
-        "dummy",
+        FOLDER.name,
         qubits,
         pairs,
         configs,
