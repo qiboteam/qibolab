@@ -29,11 +29,10 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-def compile_circuit(circuit, platform):
+def compile_circuit(circuit, platform) -> PulseSequence:
     """Compile a circuit to a pulse sequence."""
     compiler = Compiler.default()
-    sequence, _ = compiler.compile(circuit, platform)
-    return sequence
+    return compiler.compile(circuit, platform)[0]
 
 
 @pytest.mark.parametrize(
@@ -166,3 +165,18 @@ def test_align_delay_measurement(platform, delay):
     target_sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
     assert sequence == target_sequence
     assert len(sequence.probe_pulses) == 1
+
+
+def test_align_multiqubit(platform):
+    main, coupled = 0, 2
+    circuit = Circuit(3)
+    circuit.add(gates.GPI2(main, phi=0.2))
+    circuit.add(gates.CZ(main, coupled))
+    circuit.add(gates.M(main, coupled))
+
+    sequence = compile_circuit(circuit, platform)
+    flux_duration = sequence.channel_duration(f"qubit_{coupled}/flux")
+    for q in (main, coupled):
+        probe_delay = next(iter(sequence.channel(f"qubit_{q}/probe")))
+        assert isinstance(probe_delay, Delay)
+        assert flux_duration == probe_delay.duration
