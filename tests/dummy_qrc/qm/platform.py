@@ -4,12 +4,6 @@ from qibolab.channel import Channel, ChannelMap
 from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
 from qibolab.instruments.qm import OPXplus, QMController
 from qibolab.platform import Platform
-from qibolab.serialize import (
-    load_instrument_settings,
-    load_qubits,
-    load_runcard,
-    load_settings,
-)
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -91,5 +85,4 @@ def create():
     instruments.update(controller.opxs)
     instruments.update({lo.name: lo for lo in local_oscillators})
     settings = load_settings(runcard)
-    instruments = load_instrument_settings(runcard, instruments)
     return Platform("qm", qubits, pairs, instruments, settings, resonator_type="2D")

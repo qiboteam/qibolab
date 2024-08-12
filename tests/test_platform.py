@@ -28,11 +28,10 @@ from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 from qibolab.qubits import Qubit, QubitPair
 from qibolab.serialize import (
     PLATFORM,
+    Runcard,
     dump_kernels,
     dump_platform,
     dump_runcard,
-    load_runcard,
-    load_settings,
 )
 
 from .conftest import find_instrument
@@ -152,17 +151,15 @@ def test_update_configs(platform):
 
 def test_dump_runcard(platform, tmp_path):
     dump_runcard(platform, tmp_path)
-    final_runcard = load_runcard(tmp_path)
+    final = Runcard.load(tmp_path)
     if platform.name == "dummy":
-        target_runcard = load_runcard(FOLDER)
+        target = Runcard.load(FOLDER)
     else:
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
-        target_runcard = load_runcard(target_path)
+        target = Runcard.load(target_path)
 
-    # assert instrument section is dumped properly in the runcard
-    target_instruments = target_runcard.pop("instruments")
-    final_instruments = final_runcard.pop("instruments")
-    assert final_instruments == target_instruments
+    # assert components section is dumped properly in the runcard
+    assert final.components == target.components
 
 
 def test_dump_runcard_with_updates(platform, tmp_path):
@@ -174,9 +171,9 @@ def test_dump_runcard_with_updates(platform, tmp_path):
         qubit.acquisition.name: {"smearing": smearing},
     }
     dump_runcard(platform, tmp_path, [update])
-    final_runcard = load_runcard(tmp_path)
-    assert final_runcard["components"][qubit.drive.name]["frequency"] == frequency
-    assert final_runcard["components"][qubit.acquisition.name]["smearing"] == smearing
+    final = Runcard.load(tmp_path)
+    assert final.components[qubit.drive.name]["frequency"] == frequency
+    assert final.components[qubit.acquisition.name]["smearing"] == smearing
 
 
 @pytest.mark.parametrize("has_kernels", [False, True])
@@ -213,7 +210,7 @@ def test_dump_platform(tmp_path, has_kernels):
 
     dump_platform(platform, tmp_path)
 
-    settings = load_settings(load_runcard(tmp_path))
+    settings = Runcard.load(tmp_path).settings
     if has_kernels:
         kernels = Kernels.load(tmp_path)
         for qubit in platform.qubits.values():

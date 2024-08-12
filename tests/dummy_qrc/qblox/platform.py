@@ -7,12 +7,6 @@ from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
-from qibolab.serialize import (
-    load_instrument_settings,
-    load_qubits,
-    load_runcard,
-    load_settings,
-)
 
 ADDRESS = "192.168.0.6"
 TIME_OF_FLIGHT = 500
@@ -45,7 +39,6 @@ def create():
         twpa_pump.name: twpa_pump,
     }
     instruments.update(modules)
-    instruments = load_instrument_settings(runcard, instruments)
 
     # Create channel objects
     channels = ChannelMap()

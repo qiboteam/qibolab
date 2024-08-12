@@ -76,28 +76,38 @@
     },
     "qubit_0/acquire": {
       "delay": 0,
+      "iq_angle": null,
       "smearing": 0,
-      "power_range": 10
+      "power_range": 10,
+      "threshold": null
     },
     "qubit_1/acquire": {
       "delay": 0,
+      "iq_angle": null,
       "smearing": 0,
-      "power_range": 10
+      "power_range": 10,
+      "threshold": null
     },
     "qubit_2/acquire": {
       "delay": 0,
+      "iq_angle": null,
       "smearing": 0,
-      "power_range": 10
+      "power_range": 10,
+      "threshold": null
     },
     "qubit_3/acquire": {
       "delay": 0,
+      "iq_angle": null,
       "smearing": 0,
-      "power_range": 10
+      "power_range": 10,
+      "threshold": null
     },
     "qubit_4/acquire": {
       "delay": 0,
+      "iq_angle": null,
       "smearing": 0,
-      "power_range": 10
+      "power_range": 10,
+      "threshold": null
     },
     "coupler_0/flux": {
       "offset": 0.0,
@@ -273,7 +283,8 @@
     "coupler": {
       "0": {
         "CP": [
-          ["coupler_0/flux",
+          [
+            "coupler_0/flux",
             {
               "duration": 30.0,
               "amplitude": 0.05,
@@ -288,7 +299,8 @@
       },
       "1": {
         "CP": [
-          ["coupler_1/flux",
+          [
+            "coupler_1/flux",
             {
               "duration": 30.0,
               "amplitude": 0.05,
@@ -303,7 +315,8 @@
       },
       "3": {
         "CP": [
-            ["coupler_3/flux",
+          [
+            "coupler_3/flux",
             {
               "duration": 30.0,
               "amplitude": 0.05,
@@ -313,12 +326,13 @@
                 "width": 0.75
               }
             }
-            ]
           ]
+        ]
       },
       "4": {
         "CP": [
-          ["coupler_4/flux",
+          [
+            "coupler_4/flux",
             {
               "duration": 30.0,
               "amplitude": 0.05,
