@@ -38,9 +38,9 @@ PLATFORM = "platform.py"
 
 
 class NativeGates:
-    single_qubit: SingleQubitNatives
-    coupler: SingleQubitNatives
-    two_qubit: TwoQubitNatives
+    single_qubit: dict[QubitId, Qubit]
+    coupler: dict[QubitId, Qubit]
+    two_qubit: dict[QubitPairId, QubitPair]
 
     @classmethod
     def load(cls, raw: dict):
@@ -59,7 +59,7 @@ class NativeGates:
 class Runcard:
     settings: Settings
     components: dict
-    native_gates: dict
+    native_gates: NativeGates
 
     @classmethod
     def load(cls, path: Path):
