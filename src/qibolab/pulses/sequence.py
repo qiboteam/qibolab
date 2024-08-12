@@ -1,7 +1,10 @@
 """PulseSequence class."""
 
 from collections import UserList
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from typing import Any
+
+from pydantic_core import core_schema
 
 from qibolab.components import ChannelId
 
@@ -21,6 +24,17 @@ class PulseSequence(UserList[_Element]):
     Each instruction is composed by the pulse-like object representing
     the action, and the channel on which it should be performed.
     """
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: Callable[[Any], core_schema.CoreSchema]
+    ) -> core_schema.CoreSchema:
+        schema = handler(list[_Element])
+        return core_schema.no_info_after_validator_function(cls.validate, schema)
+
+    @classmethod
+    def validate(cls, value):
+        return cls(value)
 
     @property
     def duration(self) -> float:

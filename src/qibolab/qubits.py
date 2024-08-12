@@ -1,10 +1,13 @@
-from dataclasses import dataclass, field, fields
-from typing import Optional, Union
+from dataclasses import field, fields
+from typing import Annotated, Optional, Union
+
+from pydantic import ConfigDict, Field
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.serialize_ import Model
 
-QubitId = Union[str, int]
+QubitId = Annotated[Union[str, int], Field(union_mode="left_to_right")]
 """Type for qubit names."""
 
 CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")
@@ -14,8 +17,7 @@ Not all channels are required to operate a qubit.
 """
 
 
-@dataclass
-class Qubit:
+class Qubit(Model):
     """Representation of a physical qubit.
 
     Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
@@ -30,6 +32,8 @@ class Qubit:
         flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
             send flux pulses to the qubit.
     """
+
+    model_config = ConfigDict(frozen=False)
 
     name: QubitId
 
@@ -70,8 +74,7 @@ QubitPairId = tuple[QubitId, QubitId]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
-@dataclass
-class QubitPair:
+class QubitPair(Model):
     """Data structure for holding the native two-qubit gates acting on a pair
     of qubits.
 
