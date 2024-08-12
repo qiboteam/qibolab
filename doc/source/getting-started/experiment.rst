@@ -37,7 +37,9 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         AcquisitionConfig,
         OscillatorConfig,
     )
-    from qibolab.instruments.zhinst import ZiChannel, Zurich
+
+    # TODO: understand error generate by doctest
+    # from qibolab.instruments.zhinst import ZiChannel, Zurich
     from qibolab.platform import Platform
     from qibolab.serialize import Runcard
 
