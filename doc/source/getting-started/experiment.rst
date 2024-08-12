@@ -70,14 +70,6 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         qubit.probe = IqChannel(name=probe, lo=readout_lo, mixer=None, acquisition=acquire)
         qubit.acquisition = AcquireChannel(name=acquire, probe=probe, twpa_pump=None)
 
-        configs = {}
-        component_params = runcard["components"]
-        configs[drive] = IqConfig(**component_params[drive])
-        configs[probe] = IqConfig(**component_params[probe])
-        configs[acquire] = AcquisitionConfig(**component_params[acquire])
-        configs[drive_lo] = OscillatorConfig(**component_params[drive_lo])
-        configs[readout_lo] = OscillatorConfig(**component_params[readout_lo])
-
         zi_channels = [
             ZiChannel(qubit.drive, device="device_shfqc", path="SGCHANNELS/0/OUTPUT"),
             ZiChannel(qubit.probe, device="device_shfqc", path="QACHANNELS/0/OUTPUT"),
@@ -87,12 +79,9 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         controller = Zurich(NAME, device_setup=device_setup, channels=zi_channels)
 
         return Platform(
-            NAME,
-            qubits,
-            pairs,
-            configs,
-            instruments,
-            settings=runcard.settings,
+            name=NAME,
+            runcard=runcard,
+            instruments={controller.name: controller},
             resonator_type="3D",
         )
 

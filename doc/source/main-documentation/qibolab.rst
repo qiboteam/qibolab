@@ -56,7 +56,7 @@ We can easily access the names of channels and other components, and based on th
     :hide:
 
     Drive channel name: qubit_0/drive
-    Drive frequency: 4000000000
+    Drive frequency: 4000000000.0
     Drive channel qubit_0/drive does not use an LO.
 
 Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
