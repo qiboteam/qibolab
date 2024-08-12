@@ -1,26 +1,22 @@
 """A platform for executing quantum algorithms."""
 
-import dataclasses
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from math import prod
-from typing import Any, Literal, Optional, TypeVar, Union
+from typing import Any, Literal, Optional, TypeVar
 
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
-from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, PulseSequence
-from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
-from qibolab.serialize_ import replace
+from qibolab.qubits import QubitId, QubitPairId
+from qibolab.serialize import QubitMap, QubitPairMap, Runcard, Settings, update_configs
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import batch
 
 InstrumentMap = dict[InstrumentId, Instrument]
-QubitMap = dict[QubitId, Qubit]
-CouplerMap = dict[QubitId, Qubit]
-QubitPairMap = dict[QubitPairId, QubitPair]
 
 NS_TO_SEC = 1e-9
 
@@ -64,23 +60,6 @@ def unroll_sequences(
     return total_sequence, readout_map
 
 
-def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
-    """Apply updates to configs in place.
-
-    Args:
-        configs: configs to update. Maps component name to respective config.
-        updates: list of config updates. Later entries in the list take precedence over earlier entries
-                 (if they happen to update the same thing).
-    """
-    for update in updates:
-        for name, changes in update.items():
-            if name not in configs:
-                raise ValueError(
-                    f"Cannot update configuration for unknown component {name}"
-                )
-            configs[name] = dataclasses.replace(configs[name], **changes)
-
-
 def estimate_duration(
     sequences: list[PulseSequence],
     options: ExecutionParameters,
@@ -98,28 +77,7 @@ def estimate_duration(
     )
 
 
-@dataclass
-class Settings:
-    """Default execution settings read from the runcard."""
-
-    nshots: int = 1024
-    """Default number of repetitions when executing a pulse sequence."""
-    relaxation_time: int = int(1e5)
-    """Time in ns to wait for the qubit to relax to its ground state between
-    shots."""
-
-    def fill(self, options: ExecutionParameters):
-        """Use default values for missing execution options."""
-        if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
-
-        if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
-
-        return options
-
-
-def _channels_map(elements: Union[QubitMap, CouplerMap]):
+def _channels_map(elements: QubitMap):
     """Map channel names to element (qubit or coupler)."""
     return {ch.name: id for id, el in elements.items() for ch in el.channels}
 
@@ -130,25 +88,15 @@ class Platform:
 
     name: str
     """Name of the platform."""
-    qubits: QubitMap
-    """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-    pairs: QubitPairMap
-    """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
-    objects."""
+    runcard: Runcard
+    """..."""
     configs: dict[str, Config]
     """Mapping name of component to its default config."""
     instruments: InstrumentMap
     """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
-
-    settings: Settings = field(default_factory=Settings)
-    """Container with default execution settings."""
     resonator_type: Literal["2D", "3D"] = "2D"
     """Type of resonator (2D or 3D) in the used QPU."""
-
-    couplers: CouplerMap = field(default_factory=dict)
-    """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
-
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
 
@@ -159,6 +107,27 @@ class Platform:
 
     def __str__(self):
         return self.name
+
+    @property
+    def qubits(self) -> QubitMap:
+        """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
+        return self.runcard.native_gates.single_qubit
+
+    @property
+    def couplers(self) -> QubitMap:
+        """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
+        return self.runcard.native_gates.coupler
+
+    @property
+    def pairs(self) -> QubitPairMap:
+        """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
+        objects."""
+        return self.runcard.native_gates.two_qubit
+
+    @property
+    def settings(self) -> Settings:
+        """Container with default execution settings."""
+        return self.runcard.settings
 
     @property
     def nqubits(self) -> int:

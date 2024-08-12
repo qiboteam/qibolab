@@ -126,11 +126,8 @@ def create():
 
     return Platform(
         name=str(FOLDER),
-        qubits=qubits,
-        pairs=pairs,
         configs=configs,
+        runcard=runcard,
         instruments={controller.name: controller},
-        settings=runcard.settings,
         resonator_type="3D",
-        couplers=couplers,
     )

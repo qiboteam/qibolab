@@ -61,13 +61,9 @@ def create_dummy():
         coupler.flux = DcChannel(flux_name)
         configs[flux_name] = DcConfig(**component_params[flux_name])
 
-    instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
     return Platform(
         FOLDER.name,
-        runcard.native_gates.single_qubit,
-        runcard.native_gates.two_qubit,
-        configs,
-        instruments,
-        runcard.settings,
-        couplers=runcard.native_gates.coupler,
+        runcard=runcard,
+        configs=configs,
+        instruments={instrument.name: instrument, twpa_pump.name: twpa_pump},
     )

@@ -5,15 +5,16 @@ repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
 
+import dataclasses
 import json
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Annotated, Optional, Union
 
 from pydantic import Field, TypeAdapter
 
-from qibolab.components import AcquisitionConfig
-from qibolab.execution_parameters import ConfigUpdate
+from qibolab.components import AcquisitionConfig, Config
+from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.kernels import Kernels
 from qibolab.native import (
     FixedSequenceFactory,
@@ -21,13 +22,54 @@ from qibolab.native import (
     SingleQubitNatives,
     TwoQubitNatives,
 )
-from qibolab.platform.platform import Platform, Settings, update_configs
 from qibolab.pulses import PulseSequence
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.serialize_ import replace
 
 RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
+
+QubitMap = dict[QubitId, Qubit]
+QubitPairMap = dict[QubitPairId, QubitPair]
+
+
+def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
+    """Apply updates to configs in place.
+
+    Args:
+        configs: configs to update. Maps component name to respective config.
+        updates: list of config updates. Later entries in the list take precedence over earlier entries
+                 (if they happen to update the same thing).
+    """
+    for update in updates:
+        for name, changes in update.items():
+            if name not in configs:
+                raise ValueError(
+                    f"Cannot update configuration for unknown component {name}"
+                )
+            configs[name] = dataclasses.replace(configs[name], **changes)
+
+
+@dataclass
+class Settings:
+    """Default execution settings read from the runcard."""
+
+    nshots: int = 1000
+    """Default number of repetitions when executing a pulse sequence."""
+    relaxation_time: int = int(1e5)
+    """Time in ns to wait for the qubit to relax to its ground state between
+    shots."""
+
+    def fill(self, options: ExecutionParameters):
+        """Use default values for missing execution options."""
+        if options.nshots is None:
+            options = replace(options, nshots=self.nshots)
+
+        if options.relaxation_time is None:
+            options = replace(options, relaxation_time=self.relaxation_time)
+
+        return options
 
 
 @dataclass
@@ -56,13 +98,13 @@ class NativeGates:
         """
         native_gates = {
             "single_qubit": {
-                dump_qubit_name(q): _dump_natives(qubit.native_gates)
+                _dump_qubit_name(q): _dump_natives(qubit.native_gates)
                 for q, qubit in self.single_qubit.items()
             }
         }
 
         native_gates["coupler"] = {
-            dump_qubit_name(q): _dump_natives(qubit.native_gates)
+            _dump_qubit_name(q): _dump_natives(qubit.native_gates)
             for q, qubit in self.coupler.items()
         }
 
@@ -78,9 +120,10 @@ class NativeGates:
 
 @dataclass
 class Runcard:
-    settings: Settings
-    components: dict
-    native_gates: NativeGates
+    settings: Settings = field(default_factory=Settings)
+    components: dict = field(default_factory=dict)
+    # TODO: add gates template
+    native_gates: NativeGates = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path):
@@ -91,18 +134,6 @@ class Runcard:
         natives = NativeGates.load(d["native_gates"])
         return cls(settings=settings, components=components, native_gates=natives)
 
-    @classmethod
-    def from_platform(cls, platform: Platform):
-        return cls(
-            settings=platform.settings,
-            components=platform.configs,
-            native_gates=NativeGates(
-                single_qubit=platform.qubits,
-                coupler=platform.couplers,
-                two_qubit=platform.pairs,
-            ),
-        )
-
     def dump(self, path: Path, updates: Optional[list[ConfigUpdate]] = None):
         """Platform serialization as runcard (json) and kernels (npz).
 
@@ -112,8 +143,6 @@ class Runcard:
 
         ``updates`` is an optional list if updates for platform configs. Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
         """
-        _dump_kernels(self, path=path)
-
         configs = self.components.copy()
         update_configs(configs, updates or [])
 
@@ -183,7 +212,7 @@ def _load_two_qubit_natives(
     return pairs
 
 
-def dump_qubit_name(name: QubitId) -> str:
+def _dump_qubit_name(name: QubitId) -> str:
     """Convert qubit name from integer or string to string."""
     if isinstance(name, int):
         return str(name)
@@ -222,7 +251,8 @@ def _dump_component_configs(component_configs) -> dict:
     return components
 
 
-def _dump_kernels(runcard: Runcard, path: Path):
+# TODO: kernels are part of the parameters, they should not be dumped separately
+def dump_kernels(platform: "Platform", path: Path):
     """Creates Kernels instance from platform and dumps as npz.
 
     Args:
@@ -232,8 +262,8 @@ def _dump_kernels(runcard: Runcard, path: Path):
 
     # create kernels
     kernels = Kernels()
-    for qubit in runcard.native_gates.single_qubit.values():
-        kernel = runcard.components[qubit.acquisition.name].kernel
+    for qubit in platform.qubits.values():
+        kernel = platform.configs[qubit.acquisition.name].kernel
         if kernel is not None:
             kernels[qubit.name] = kernel
 

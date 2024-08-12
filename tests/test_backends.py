@@ -108,8 +108,10 @@ def dummy_string_qubit_names():
     platform = create_platform("dummy")
     for q, qubit in platform.qubits.items():
         qubit.name = f"A{q}"
-    platform.qubits = {qubit.name: qubit for qubit in platform.qubits.values()}
-    platform.pairs = {
+    platform.runcard.native_gates.single_qubit = {
+        qubit.name: qubit for qubit in platform.qubits.values()
+    }
+    platform.runcard.native_gates.two_qubit = {
         (f"A{q0}", f"A{q1}"): pair for (q0, q1), pair in platform.pairs.items()
     }
     return platform
