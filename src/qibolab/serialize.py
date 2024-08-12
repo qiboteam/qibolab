@@ -8,9 +8,9 @@ example for more details.
 import json
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Optional, Union
+from typing import Annotated, Optional, Union
 
-from pydantic import TypeAdapter
+from pydantic import Field, TypeAdapter
 
 from qibolab.components import AcquisitionConfig
 from qibolab.execution_parameters import ConfigUpdate
@@ -75,10 +75,9 @@ class Runcard:
 
 def _load_qubit_name(name: str) -> QubitId:
     """Convert qubit name from string to integer or string."""
-    try:
-        return int(name)
-    except ValueError:
-        return name
+    return TypeAdapter(
+        Annotated[Union[int, str], Field(union_mode="left_to_right")]
+    ).validate_python(name)
 
 
 def _load_pulse(pulse_kwargs: dict):
