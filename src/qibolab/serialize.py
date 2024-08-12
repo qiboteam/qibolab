@@ -148,7 +148,7 @@ class Runcard:
 
         settings = {
             "settings": self.settings.model_dump(),
-            "components": _dump_component_configs(configs),
+            "components": TypeAdapter(dict[str, Config]).dump_python(configs),
             "native_gates": self.native_gates.dump(),
         }
 
@@ -239,14 +239,6 @@ def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
         if factory is not None:
             data[fld.name] = _dump_sequence(factory._seq)
     return data
-
-
-def _dump_component_configs(component_configs) -> dict:
-    """Dump channel configs."""
-    components = {}
-    for name, cfg in component_configs.items():
-        components[name] = cfg.model_dump()
-    return components
 
 
 # TODO: kernels are part of the parameters, they should not be dumped separately
