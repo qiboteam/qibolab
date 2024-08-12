@@ -148,7 +148,7 @@ class Compiler:
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
 
         measurement_map = {}
-        channel_clock = defaultdict(int)
+        channel_clock = defaultdict(float)
 
         def qubit_clock(el: QubitId):
             return max(channel_clock[ch.name] for ch in platform.elements[el].channels)
@@ -159,9 +159,15 @@ class Compiler:
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
                 increment = defaultdict(int)
+                start = max(
+                    (
+                        qubit_clock(el)
+                        for el in {ch_to_qb[ch] for ch in gate_sequence.channels}
+                    ),
+                    default=0.0,
+                )
                 for ch in gate_sequence.channels:
-                    qubit = ch_to_qb[ch]
-                    delay = qubit_clock(qubit) - channel_clock[ch]
+                    delay = start - channel_clock[ch]
                     if delay > 0:
                         delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
