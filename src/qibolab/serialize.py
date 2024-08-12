@@ -10,7 +10,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Optional, Union
 
-from pydantic import ConfigDict, TypeAdapter
+from pydantic import TypeAdapter
 
 from qibolab.components import AcquisitionConfig
 from qibolab.execution_parameters import ConfigUpdate
@@ -37,17 +37,41 @@ RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
 
 
-def load_runcard(path: Path) -> dict:
-    """Load runcard JSON to a dictionary."""
-    return json.loads((path / RUNCARD).read_text())
+class NativeGates:
+    single_qubit: SingleQubitNatives
+    coupler: SingleQubitNatives
+    two_qubit: TwoQubitNatives
+
+    @classmethod
+    def load(cls, raw: dict):
+        """Load qubits, couplers and pairs from the runcard.
+
+        Uses the native gate section of the runcard to parse the
+        corresponding :class: `qibolab.qubits.Qubit` and
+        :class: `qibolab.qubits.QubitPair` objects.
+        """
+        qubits = _load_single_qubit_natives(raw["single_qubit"])
+        couplers = _load_single_qubit_natives(raw["coupler"])
+        pairs = _load_two_qubit_natives(raw["two_qubit"], qubits)
+        return cls(qubits, couplers, pairs)
 
 
-def load_settings(runcard: dict) -> Settings:
-    """Load platform settings section from the runcard."""
-    return Settings(**runcard["settings"])
+class Runcard:
+    settings: Settings
+    components: dict
+    native_gates: dict
+
+    @classmethod
+    def load(cls, path: Path):
+        """Load runcard from JSON."""
+        d = json.loads((path / RUNCARD).read_text())
+        settings = Settings(**d["settings"])
+        components = d["components"]
+        natives = NativeGates.load(d["native_gates"])
+        return cls(settings=settings, components=components, native_gates=natives)
 
 
-def load_qubit_name(name: str) -> QubitId:
+def _load_qubit_name(name: str) -> QubitId:
     """Convert qubit name from string to integer or string."""
     try:
         return int(name)
@@ -55,19 +79,8 @@ def load_qubit_name(name: str) -> QubitId:
         return name
 
 
-_PulseLike = TypeAdapter(PulseLike, config=ConfigDict(extra="ignore"))
-"""Parse a pulse-like object.
-
-.. note::
-
-    Extra arguments are ignored, in order to standardize the qubit handling, since the
-    :cls:`Delay` object has no `qubit` field.
-    This will be removed once there won't be any need for dedicated couplers handling.
-"""
-
-
 def _load_pulse(pulse_kwargs: dict):
-    return _PulseLike.validate_python(pulse_kwargs)
+    return TypeAdapter(PulseLike).validate_python(pulse_kwargs)
 
 
 def _load_sequence(raw_sequence):
@@ -83,7 +96,7 @@ def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
     """
     qubits = {}
     for q, gatedict in gates.items():
-        name = load_qubit_name(q)
+        name = _load_qubit_name(q)
         native_gates = SingleQubitNatives(
             **{
                 gate_name: (
@@ -94,7 +107,7 @@ def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
                 for gate_name, raw_sequence in gatedict.items()
             }
         )
-        qubits[name] = Qubit(load_qubit_name(q), native_gates=native_gates)
+        qubits[name] = Qubit(_load_qubit_name(q), native_gates=native_gates)
     return qubits
 
 
@@ -103,7 +116,7 @@ def _load_two_qubit_natives(
 ) -> dict[QubitPairId, QubitPair]:
     pairs = {}
     for pair, gatedict in gates.items():
-        q0, q1 = (load_qubit_name(q) for q in pair.split("-"))
+        q0, q1 = (_load_qubit_name(q) for q in pair.split("-"))
         native_gates = TwoQubitNatives(
             **{
                 gate_name: FixedSequenceFactory(_load_sequence(raw_sequence))
@@ -114,29 +127,6 @@ def _load_two_qubit_natives(
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
     return pairs
-
-
-def load_qubits(runcard: dict) -> tuple[QubitMap, QubitMap, QubitPairMap]:
-    """Load qubits, couplers and pairs from the runcard.
-
-    Uses the native gate section of the runcard to parse the
-    corresponding :class: `qibolab.qubits.Qubit` and
-    :class: `qibolab.qubits.QubitPair` objects.
-    """
-    native_gates = runcard.get("native_gates", {})
-    qubits = _load_single_qubit_natives(native_gates.get("single_qubit", {}))
-    couplers = _load_single_qubit_natives(native_gates.get("coupler", {}))
-    pairs = _load_two_qubit_natives(native_gates.get("two_qubit", {}), qubits)
-    return qubits, couplers, pairs
-
-
-def load_instrument_settings(
-    runcard: dict, instruments: InstrumentMap
-) -> InstrumentMap:
-    """Setup instruments according to the settings given in the runcard."""
-    for name, settings in runcard.get("instruments", {}).items():
-        instruments[name].setup(**settings)
-    return instruments
 
 
 def dump_qubit_name(name: QubitId) -> str:
