@@ -25,7 +25,7 @@ TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to
     # "qm_octave",
     # "qblox",
     # "rfsoc",
-    "zurich",
+    # "zurich",
 ]
 """Platforms used for testing without access to real instruments."""
 

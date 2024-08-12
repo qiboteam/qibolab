@@ -5,9 +5,8 @@ repository is assumed here. See :ref:`Using runcards <using_runcards>`
 example for more details.
 """
 
-import dataclasses
 import json
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Annotated, Optional, Union
 
@@ -25,7 +24,7 @@ from qibolab.native import (
 from qibolab.pulses import PulseSequence
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
-from qibolab.serialize_ import replace
+from qibolab.serialize_ import Model, replace
 
 RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
@@ -48,11 +47,10 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
                 raise ValueError(
                     f"Cannot update configuration for unknown component {name}"
                 )
-            configs[name] = dataclasses.replace(configs[name], **changes)
+            configs[name] = replace(configs[name], **changes)
 
 
-@dataclass
-class Settings:
+class Settings(Model):
     """Default execution settings read from the runcard."""
 
     nshots: int = 1000
@@ -120,8 +118,10 @@ class NativeGates:
 
 @dataclass
 class Runcard:
+    """Serializable parameters."""
+
     settings: Settings = field(default_factory=Settings)
-    components: dict = field(default_factory=dict)
+    configs: dict[str, Config] = field(default_factory=dict)
     # TODO: add gates template
     native_gates: NativeGates = field(default_factory=dict)
 
@@ -130,9 +130,9 @@ class Runcard:
         """Load runcard from JSON."""
         d = json.loads((path / RUNCARD).read_text())
         settings = Settings(**d["settings"])
-        components = d["components"]
+        configs = TypeAdapter(dict[str, Config]).validate_python(d["components"])
         natives = NativeGates.load(d["native_gates"])
-        return cls(settings=settings, components=components, native_gates=natives)
+        return cls(settings=settings, configs=configs, native_gates=natives)
 
     def dump(self, path: Path, updates: Optional[list[ConfigUpdate]] = None):
         """Platform serialization as runcard (json) and kernels (npz).
@@ -143,11 +143,11 @@ class Runcard:
 
         ``updates`` is an optional list if updates for platform configs. Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
         """
-        configs = self.components.copy()
+        configs = self.configs.copy()
         update_configs(configs, updates or [])
 
         settings = {
-            "settings": asdict(self.settings),
+            "settings": self.settings.model_dump(),
             "components": _dump_component_configs(configs),
             "native_gates": self.native_gates.dump(),
         }
@@ -245,7 +245,7 @@ def _dump_component_configs(component_configs) -> dict:
     """Dump channel configs."""
     components = {}
     for name, cfg in component_configs.items():
-        components[name] = asdict(cfg)
+        components[name] = cfg.model_dump()
         if isinstance(cfg, AcquisitionConfig):
             del components[name]["kernel"]
     return components
@@ -270,3 +270,10 @@ def dump_kernels(platform: "Platform", path: Path):
     # dump only if not None
     if len(kernels) > 0:
         kernels.dump(path)
+
+
+# TODO: drop as soon as dump_kernels is reabsorbed in the runcard
+def dump_platform(platform: "Platform", path: Path):
+    """Dump paltform."""
+    platform.runcard.dump(path)
+    dump_kernels(platform, path)

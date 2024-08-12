@@ -7,10 +7,12 @@ users, but in general any user tool should try to depend only on the
 configuration defined by these classes.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Annotated, Literal, Optional, Union
 
 import numpy.typing as npt
+from pydantic import Field
+
+from qibolab.serialize_ import Model
 
 __all__ = [
     "DcConfig",
@@ -22,31 +24,34 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True)
-class DcConfig:
+class DcConfig(Model):
     """Configuration for a channel that can be used to send DC pulses (i.e.
     just envelopes without modulation)."""
+
+    kind: Literal["dc"] = "dc"
 
     offset: float
     """DC offset/bias of the channel."""
 
 
-@dataclass(frozen=True)
-class OscillatorConfig:
+class OscillatorConfig(Model):
     """Configuration for an oscillator."""
+
+    kind: Literal["oscillator"] = "oscillator"
 
     frequency: float
     power: float
 
 
-@dataclass(frozen=True)
-class IqMixerConfig:
+class IqMixerConfig(Model):
     """Configuration for IQ mixer.
 
     Mixers usually have various imperfections, and one needs to
     compensate for them. This class holds the compensation
     configuration.
     """
+
+    kind: Literal["iq-mixer"] = "iq-mixer"
 
     offset_i: float = 0.0
     """DC offset for the I component."""
@@ -60,20 +65,22 @@ class IqMixerConfig:
     imbalance."""
 
 
-@dataclass(frozen=True)
-class IqConfig:
+class IqConfig(Model):
     """Configuration for an IQ channel."""
+
+    kind: Literal["iq"] = "iq"
 
     frequency: float
     """The carrier frequency of the channel."""
 
 
-@dataclass(frozen=True)
-class AcquisitionConfig:
+class AcquisitionConfig(Model):
     """Configuration for acquisition channel.
 
     Currently, in qibolab, acquisition channels are FIXME:
     """
+
+    kind: Literal["acquisition"] = "acquisition"
 
     delay: float
     """Delay between readout pulse start and acquisition start."""
@@ -88,9 +95,12 @@ class AcquisitionConfig:
     iq_angle: Optional[float] = None
     """Signal angle in the IQ-plane for disciminating ground and excited
     states."""
-    kernel: Optional[npt.NDArray] = field(default=None, repr=False)
+    kernel: Annotated[Optional[npt.NDArray], Field(default=None, repr=False)]
     """Integration weights to be used when post-processing the acquired
     signal."""
 
 
-Config = Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig]
+Config = Annotated[
+    Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig],
+    Field(discriminator="kind"),
+]

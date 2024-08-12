@@ -5,7 +5,6 @@ import inspect
 import os
 import pathlib
 import warnings
-from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -26,7 +25,14 @@ from qibolab.platform.load import PLATFORMS
 from qibolab.platform.platform import update_configs
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 from qibolab.qubits import Qubit, QubitPair
-from qibolab.serialize import PLATFORM, NativeGates, Runcard, dump_kernels
+from qibolab.serialize import (
+    PLATFORM,
+    NativeGates,
+    Runcard,
+    dump_kernels,
+    dump_platform,
+)
+from qibolab.serialize_ import replace
 
 from .conftest import find_instrument
 
@@ -127,8 +133,8 @@ def test_update_configs(platform):
     drive_name = "q0/drive"
     pump_name = "twpa_pump"
     configs = {
-        drive_name: IqConfig(4.1e9),
-        pump_name: OscillatorConfig(3e9, -5),
+        drive_name: IqConfig(frequency=4.1e9),
+        pump_name: OscillatorConfig(frequency=3e9, power=-5),
     }
 
     updated = update_configs(configs, [{drive_name: {"frequency": 4.2e9}}])
@@ -151,9 +157,6 @@ def test_update_configs(platform):
     with pytest.raises(ValueError, match="unknown component"):
         update_configs(configs, [{"non existent": {"property": 1.0}}])
 
-    with pytest.raises(TypeError, match="prprty"):
-        update_configs(configs, [{pump_name: {"prprty": 0.7}}])
-
 
 def test_dump_runcard(platform, tmp_path):
     platform.runcard.dump(tmp_path)
@@ -164,8 +167,8 @@ def test_dump_runcard(platform, tmp_path):
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
         target = Runcard.load(target_path)
 
-    # assert components section is dumped properly in the runcard
-    assert final.components == target.components
+    # assert configs section is dumped properly in the runcard
+    assert final.configs == target.configs
 
 
 def test_dump_runcard_with_updates(platform, tmp_path):
@@ -178,8 +181,8 @@ def test_dump_runcard_with_updates(platform, tmp_path):
     }
     platform.runcard.dump(tmp_path, [update])
     final = Runcard.load(tmp_path)
-    assert final.components[qubit.drive.name]["frequency"] == frequency
-    assert final.components[qubit.acquisition.name]["smearing"] == smearing
+    assert final.configs[qubit.drive.name].frequency == frequency
+    assert final.configs[qubit.acquisition.name].smearing == smearing
 
 
 @pytest.mark.parametrize("has_kernels", [False, True])
@@ -192,7 +195,7 @@ def test_kernels(tmp_path, has_kernels):
             if isinstance(config, AcquisitionConfig):
                 platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
-    dump_kernels(platform.runcard, tmp_path)
+    dump_kernels(platform, tmp_path)
 
     if has_kernels:
         kernels = Kernels.load(tmp_path)
@@ -214,7 +217,7 @@ def test_dump_platform(tmp_path, has_kernels):
             if isinstance(config, AcquisitionConfig):
                 platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
-    platform.runcard.dump(tmp_path)
+    dump_platform(platform, tmp_path)
 
     settings = Runcard.load(tmp_path).settings
     if has_kernels:

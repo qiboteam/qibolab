@@ -1,7 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from math import prod
 from typing import Any, Literal, Optional, TypeVar
 
@@ -273,7 +273,7 @@ class Platform:
         # set the config directly
         for name, cfg in configs.items():
             if name in self.instruments:
-                self.instruments[name].setup(**asdict(cfg))
+                self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
 
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):

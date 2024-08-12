@@ -46,8 +46,7 @@ def create():
         runcard.native_gates.two_qubit,
     )
 
-    configs = {}
-    component_params = runcard.components
+    configs = runcard.configs
     readout_lo = "readout/lo"
     drive_los = {
         0: "qubit_0_1/drive/lo",

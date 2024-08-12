@@ -1,18 +1,11 @@
 import pathlib
 
-from qibolab.components import (
-    AcquireChannel,
-    AcquisitionConfig,
-    DcChannel,
-    DcConfig,
-    IqChannel,
-    IqConfig,
-    OscillatorConfig,
-)
+from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform
 from qibolab.serialize import Runcard
+from qibolab.serialize_ import replace
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -27,9 +20,7 @@ def create_dummy():
     runcard = Runcard.load(FOLDER)
     kernels = Kernels.load(FOLDER)
 
-    configs = {}
-    component_params = runcard.components
-    configs[twpa_pump_name] = OscillatorConfig(**component_params[twpa_pump_name])
+    configs = runcard.configs
     for q, qubit in runcard.native_gates.single_qubit.items():
         acquisition_name = f"qubit_{q}/acquire"
         probe_name = f"qubit_{q}/probe"
@@ -39,27 +30,22 @@ def create_dummy():
         qubit.acquisition = AcquireChannel(
             acquisition_name, twpa_pump=twpa_pump_name, probe=probe_name
         )
-        configs[probe_name] = IqConfig(**component_params[probe_name])
-        configs[acquisition_name] = AcquisitionConfig(
-            **component_params[acquisition_name], kernel=kernels.get(q)
+        configs[acquisition_name] = replace(
+            configs[acquisition_name], kernel=kernels.get(q)
         )
 
         drive_name = f"qubit_{q}/drive"
         qubit.drive = IqChannel(drive_name, mixer=None, lo=None, acquisition=None)
-        configs[drive_name] = IqConfig(**component_params[drive_name])
 
         drive_12_name = f"qubit_{q}/drive12"
         qubit.drive12 = IqChannel(drive_12_name, mixer=None, lo=None, acquisition=None)
-        configs[drive_12_name] = IqConfig(**component_params[drive_12_name])
 
         flux_name = f"qubit_{q}/flux"
         qubit.flux = DcChannel(flux_name)
-        configs[flux_name] = DcConfig(**component_params[flux_name])
 
     for c, coupler in runcard.native_gates.coupler.items():
         flux_name = f"coupler_{c}/flux"
         coupler.flux = DcChannel(flux_name)
-        configs[flux_name] = DcConfig(**component_params[flux_name])
 
     return Platform(
         FOLDER.name,
