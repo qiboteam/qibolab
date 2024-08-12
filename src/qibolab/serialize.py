@@ -6,7 +6,7 @@ example for more details.
 """
 
 import json
-from dataclasses import asdict, fields
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Optional, Union
 
@@ -37,6 +37,7 @@ RUNCARD = "parameters.json"
 PLATFORM = "platform.py"
 
 
+@dataclass
 class NativeGates:
     single_qubit: dict[QubitId, Qubit]
     coupler: dict[QubitId, Qubit]
@@ -56,6 +57,7 @@ class NativeGates:
         return cls(qubits, couplers, pairs)
 
 
+@dataclass
 class Runcard:
     settings: Settings
     components: dict
@@ -171,6 +173,12 @@ def dump_native_gates(
         }
     }
 
+    # couplers native gates
+    native_gates["coupler"] = {
+        dump_qubit_name(q): _dump_natives(qubit.native_gates)
+        for q, qubit in qubits.items()
+    }
+
     # two-qubit native gates
     native_gates["two_qubit"] = {}
     for pair in pairs.values():
@@ -233,10 +241,8 @@ def dump_runcard(
     update_configs(configs, updates or [])
 
     settings = {
-        "nqubits": platform.nqubits,
         "settings": asdict(platform.settings),
         "qubits": list(platform.qubits),
-        "instruments": dump_instruments(platform.instruments),
         "components": dump_component_configs(configs),
     }
 

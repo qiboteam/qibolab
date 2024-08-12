@@ -12,12 +12,7 @@ from qibolab.components import (
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform
-from qibolab.serialize import (
-    load_instrument_settings,
-    load_qubits,
-    load_runcard,
-    load_settings,
-)
+from qibolab.serialize import Runcard
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -29,16 +24,13 @@ def create_dummy():
     twpa_pump_name = "twpa_pump"
     twpa_pump = DummyLocalOscillator(twpa_pump_name, "0.0.0.0")
 
-    runcard = load_runcard(FOLDER)
+    runcard = Runcard.load(FOLDER)
     kernels = Kernels.load(FOLDER)
 
-    qubits, couplers, pairs = load_qubits(runcard)
-    settings = load_settings(runcard)
-
     configs = {}
-    component_params = runcard["components"]
+    component_params = runcard.components
     configs[twpa_pump_name] = OscillatorConfig(**component_params[twpa_pump_name])
-    for q, qubit in qubits.items():
+    for q, qubit in runcard.native_gates.single_qubit.items():
         acquisition_name = f"qubit_{q}/acquire"
         probe_name = f"qubit_{q}/probe"
         qubit.probe = IqChannel(
@@ -64,20 +56,18 @@ def create_dummy():
         qubit.flux = DcChannel(flux_name)
         configs[flux_name] = DcConfig(**component_params[flux_name])
 
-    for c, coupler in couplers.items():
+    for c, coupler in runcard.native_gates.coupler.items():
         flux_name = f"coupler_{c}/flux"
         coupler.flux = DcChannel(flux_name)
         configs[flux_name] = DcConfig(**component_params[flux_name])
 
     instruments = {instrument.name: instrument, twpa_pump.name: twpa_pump}
-    instruments = load_instrument_settings(runcard, instruments)
     return Platform(
         FOLDER.name,
-        qubits,
-        pairs,
+        runcard.native_gates.single_qubit,
+        runcard.native_gates.two_qubit,
         configs,
         instruments,
-        settings,
-        resonator_type="2D",
-        couplers=couplers,
+        runcard.settings,
+        couplers=runcard.native_gates.coupler,
     )

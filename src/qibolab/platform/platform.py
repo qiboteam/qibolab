@@ -4,7 +4,7 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import prod
-from typing import Any, Optional, TypeVar, Union
+from typing import Any, Literal, Optional, TypeVar, Union
 
 from qibo.config import log, raise_error
 
@@ -143,11 +143,8 @@ class Platform:
 
     settings: Settings = field(default_factory=Settings)
     """Container with default execution settings."""
-    resonator_type: Optional[str] = None
-    """Type of resonator (2D or 3D) in the used QPU.
-
-    Default is 3D for single-qubit chips and 2D for multi-qubit.
-    """
+    resonator_type: Literal["2D", "3D"] = "2D"
+    """Type of resonator (2D or 3D) in the used QPU."""
 
     couplers: CouplerMap = field(default_factory=dict)
     """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
