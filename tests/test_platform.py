@@ -26,13 +26,7 @@ from qibolab.platform.load import PLATFORMS
 from qibolab.platform.platform import update_configs
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 from qibolab.qubits import Qubit, QubitPair
-from qibolab.serialize import (
-    PLATFORM,
-    Runcard,
-    dump_kernels,
-    dump_platform,
-    dump_runcard,
-)
+from qibolab.serialize import PLATFORM, Runcard, _dump_kernels
 
 from .conftest import find_instrument
 
@@ -150,7 +144,7 @@ def test_update_configs(platform):
 
 
 def test_dump_runcard(platform, tmp_path):
-    dump_runcard(platform, tmp_path)
+    Runcard.from_platform(platform).dump(tmp_path)
     final = Runcard.load(tmp_path)
     if platform.name == "dummy":
         target = Runcard.load(FOLDER)
@@ -170,7 +164,7 @@ def test_dump_runcard_with_updates(platform, tmp_path):
         qubit.drive.name: {"frequency": frequency},
         qubit.acquisition.name: {"smearing": smearing},
     }
-    dump_runcard(platform, tmp_path, [update])
+    Runcard.from_platform(platform).dump(tmp_path, [update])
     final = Runcard.load(tmp_path)
     assert final.components[qubit.drive.name]["frequency"] == frequency
     assert final.components[qubit.acquisition.name]["smearing"] == smearing
@@ -186,7 +180,7 @@ def test_kernels(tmp_path, has_kernels):
             if isinstance(config, AcquisitionConfig):
                 platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
-    dump_kernels(platform, tmp_path)
+    _dump_kernels(Runcard.from_platform(platform), tmp_path)
 
     if has_kernels:
         kernels = Kernels.load(tmp_path)
@@ -208,7 +202,7 @@ def test_dump_platform(tmp_path, has_kernels):
             if isinstance(config, AcquisitionConfig):
                 platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
-    dump_platform(platform, tmp_path)
+    Runcard.from_platform(platform).dump(tmp_path)
 
     settings = Runcard.load(tmp_path).settings
     if has_kernels:
