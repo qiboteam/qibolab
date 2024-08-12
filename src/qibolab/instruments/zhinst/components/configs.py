@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from qibolab.components import AcquisitionConfig, DcConfig, IqConfig
 
 __all__ = [
@@ -9,7 +7,6 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True)
 class ZiDcConfig(DcConfig):
     """DC channel config using ZI HDAWG."""
 
@@ -20,7 +17,6 @@ class ZiDcConfig(DcConfig):
     """
 
 
-@dataclass(frozen=True)
 class ZiIqConfig(IqConfig):
     """IQ channel config for ZI SHF* line instrument."""
 
@@ -31,7 +27,6 @@ class ZiIqConfig(IqConfig):
     """
 
 
-@dataclass(frozen=True)
 class ZiAcquisitionConfig(AcquisitionConfig):
     """Acquisition config for ZI SHF* line instrument."""
 
