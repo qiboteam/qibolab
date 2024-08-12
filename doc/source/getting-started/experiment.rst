@@ -39,12 +39,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
     )
     from qibolab.instruments.zhinst import ZiChannel, Zurich
     from qibolab.platform import Platform
-    from qibolab.serialize import (
-        load_instrument_settings,
-        load_qubits,
-        load_runcard,
-        load_settings,
-    )
+    from qibolab.serialize import Runcard
 
     NAME = "my_platform"  # name of the platform
     ADDRESS = "localhost"  # ip address of the ZI data server
@@ -61,8 +56,9 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         device_setup.add_instruments(SHFQC("device_shfqc", address="DEV12146"))
 
         # Load and parse the runcard (i.e. parameters.json)
-        runcard = load_runcard(FOLDER)
-        qubits, _, pairs = load_qubits(runcard)
+        runcard = Runcard.load(FOLDER)
+        qubits = runcard.native_gates.single_qubit
+        pairs = runcard.native_gates.pairs
         qubit = qubits[0]
 
         # define component names, and load their configurations
@@ -90,15 +86,13 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
 
         controller = Zurich(NAME, device_setup=device_setup, channels=zi_channels)
 
-        instruments = load_instrument_settings(runcard, {controller.name: controller})
-        settings = load_settings(runcard)
         return Platform(
             NAME,
             qubits,
             pairs,
             configs,
             instruments,
-            settings,
+            settings=runcard.settings,
             resonator_type="3D",
         )
 

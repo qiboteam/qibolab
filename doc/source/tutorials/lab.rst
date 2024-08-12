@@ -489,11 +489,7 @@ the above runcard:
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import (
-        load_runcard,
-        load_qubits,
-        load_settings,
-    )
+    from qibolab.serialize import Runcard
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -505,8 +501,9 @@ the above runcard:
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
-        qubits, _, pairs = load_qubits(runcard)
+        runcard = Runcard.load(folder)
+        qubits = runcard.native_gates.single_qubit
+        pairs = runcard.native_gates.pairs
 
         # define channels and load component configs
         configs = {}
@@ -534,14 +531,13 @@ the above runcard:
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
         # load ``settings`` from the runcard
-        settings = load_settings(runcard)
         return Platform(
             "my_platform",
             qubits,
             pairs,
             configs,
             instruments,
-            settings,
+            settings=runcard.settings,
             resonator_type="2D",
         )
 
@@ -557,8 +553,10 @@ With the following additions for coupler architectures:
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
-        qubits, couplers, pairs = load_qubits(runcard)
+        runcard = Runcard.load(folder)
+        qubits = runcard.native_gates.single_qubit
+        couplers = runcard.native_gates.coupler
+        pairs = runcard.native_gates.pairs
 
         # define channels and load component configs
         configs = {}
@@ -656,11 +654,7 @@ in this case ``"twpa_pump"``.
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import (
-        load_runcard,
-        load_qubits,
-        load_settings,
-    )
+    from qibolab.serialize import Runcard
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -672,8 +666,9 @@ in this case ``"twpa_pump"``.
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
-        qubits, _, pairs = load_qubits(runcard)
+        runcard = Runcard.load(folder)
+        qubits = runcard.native_gates.single_qubit
+        pairs = runcard.native_gates.pairs
 
         # define channels and load component configs
         configs = {}
@@ -700,16 +695,12 @@ in this case ``"twpa_pump"``.
 
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
-        # load instrument settings from the runcard
-        instruments = load_instrument_settings(runcard, instruments)
-        # load ``settings`` from the runcard
-        settings = load_settings(runcard)
         return Platform(
             "my_platform",
             qubits,
             pairs,
             configs,
             instruments,
-            settings,
+            settings=runcard.settings,
             resonator_type="2D",
         )
