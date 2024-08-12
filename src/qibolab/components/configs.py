@@ -9,10 +9,9 @@ configuration defined by these classes.
 
 from typing import Annotated, Literal, Optional, Union
 
-import numpy.typing as npt
 from pydantic import Field
 
-from qibolab.serialize_ import Model
+from qibolab.serialize_ import Model, NdArray
 
 __all__ = [
     "DcConfig",
@@ -95,7 +94,7 @@ class AcquisitionConfig(Model):
     iq_angle: Optional[float] = None
     """Signal angle in the IQ-plane for disciminating ground and excited
     states."""
-    kernel: Annotated[Optional[npt.NDArray], Field(default=None, repr=False)]
+    kernel: Annotated[Optional[NdArray], Field(repr=False)] = None
     """Integration weights to be used when post-processing the acquired
     signal."""
 

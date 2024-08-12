@@ -12,7 +12,7 @@ from typing import Annotated, Optional, Union
 
 from pydantic import Field, TypeAdapter
 
-from qibolab.components import AcquisitionConfig, Config
+from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.kernels import Kernels
 from qibolab.native import (
@@ -246,8 +246,6 @@ def _dump_component_configs(component_configs) -> dict:
     components = {}
     for name, cfg in component_configs.items():
         components[name] = cfg.model_dump()
-        if isinstance(cfg, AcquisitionConfig):
-            del components[name]["kernel"]
     return components
 
 
