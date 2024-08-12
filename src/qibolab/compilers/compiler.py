@@ -126,7 +126,9 @@ class Compiler:
         return gate_sequence
 
     # FIXME: pulse.qubit and pulse.channel do not exist anymore
-    def compile(self, circuit: Circuit, platform: Platform):
+    def compile(
+        self, circuit: Circuit, platform: Platform
+    ) -> tuple[PulseSequence, dict]:
         """Transforms a circuit to pulse sequence.
 
         Args:
