@@ -3,8 +3,11 @@
 May be reused by different instruments.
 """
 
-from dataclasses import asdict, dataclass, field, fields
 from functools import total_ordering
+from typing import Annotated
+
+from qibolab.components.configs import BoundsConfig
+from qibolab.serialize import Model
 
 from .pulses import Pulse, PulseSequence
 from .pulses.envelope import Rectangular
@@ -35,36 +38,43 @@ def _instructions(sequence: PulseSequence):
 
 
 @total_ordering
-@dataclass(frozen=True, eq=True)
-class Bounds:
+class Bounds(Model):
     """Instument memory limitations proxies."""
 
-    waveforms: int = field(metadata={"count": _waveform})
+    waveforms: Annotated[int, {"count": _waveform}]
     """Waveforms estimated size."""
-    readout: int = field(metadata={"count": _readout})
+    readout: Annotated[int, {"count": _readout}]
     """Number of readouts."""
-    instructions: int = field(metadata={"count": _instructions})
+    instructions: Annotated[int, {"count": _instructions}]
     """Instructions estimated size."""
+
+    @classmethod
+    def from_config(cls, config: BoundsConfig):
+        d = config.model_dump()
+        del d["kind"]
+        return cls(**d)
 
     @classmethod
     def update(cls, sequence: PulseSequence):
         up = {}
-        for f in fields(cls):
-            up[f.name] = f.metadata["count"](sequence)
+        for name, info in cls.model_fields.items():
+            up[name] = info.metadata[0]["count"](sequence)
 
         return cls(**up)
 
     def __add__(self, other: "Bounds") -> "Bounds":
         """Sum bounds element by element."""
         new = {}
-        for (k, x), (_, y) in zip(asdict(self).items(), asdict(other).items()):
+        for (k, x), (_, y) in zip(
+            self.model_dump().items(), other.model_dump().items()
+        ):
             new[k] = x + y
 
         return type(self)(**new)
 
     def __gt__(self, other: "Bounds") -> bool:
         """Define ordering as exceeding any bound."""
-        return any(getattr(self, f.name) > getattr(other, f.name) for f in fields(self))
+        return any(getattr(self, f) > getattr(other, f) for f in self.model_fields)
 
 
 def batch(sequences: list[PulseSequence], bounds: Bounds):
@@ -73,7 +83,7 @@ def batch(sequences: list[PulseSequence], bounds: Bounds):
     Takes into account the various limitations throught the mechanics defined in
     :cls:`Bounds`, and the numerical limitations specified by the `bounds` argument.
     """
-    counters = Bounds(0, 0, 0)
+    counters = Bounds(waveforms=0, readout=0, instructions=0)
     batch = []
     for sequence in sequences:
         update = Bounds.update(sequence)

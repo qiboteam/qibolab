@@ -115,7 +115,27 @@ class AcquisitionConfig(Model):
         )
 
 
+class BoundsConfig(Model):
+    """Instument memory limitations proxies."""
+
+    kind: Literal["bounds"] = "bounds"
+
+    waveforms: int
+    """Waveforms estimated size."""
+    readout: int
+    """Number of readouts."""
+    instructions: int
+    """Instructions estimated size."""
+
+
 Config = Annotated[
-    Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig],
+    Union[
+        DcConfig,
+        IqMixerConfig,
+        OscillatorConfig,
+        IqConfig,
+        AcquisitionConfig,
+        BoundsConfig,
+    ],
     Field(discriminator="kind"),
 ]

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import numpy as np
 from qibo.config import log
 
@@ -12,6 +14,7 @@ from .abstract import Controller
 from .oscillator import LocalOscillator
 
 SAMPLING_RATE = 1
+BOUNDS = Bounds(waveforms=1, readout=1, instructions=1)
 
 
 class DummyDevice:
@@ -47,6 +50,7 @@ class DummyLocalOscillator(LocalOscillator):
         return DummyDevice()
 
 
+@dataclass
 class DummyInstrument(Controller):
     """Dummy instrument that returns random voltage values.
 
@@ -60,7 +64,9 @@ class DummyInstrument(Controller):
             instruments.
     """
 
-    BOUNDS = Bounds(1, 1, 1)
+    name: str
+    address: str
+    bounds: str = "dummy/bounds"
 
     @property
     def sampling_rate(self) -> int:

@@ -93,7 +93,7 @@ class PulseSimulator(Controller):
         pass
 
     def dump(self):
-        return self.settings | super().dump()
+        return self.settings
 
     def run_pulse_simulation(
         self,

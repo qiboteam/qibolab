@@ -30,6 +30,12 @@ CALIBRATION_DB = "calibration_db.json"
 
 __all__ = ["QmController", "Octave"]
 
+BOUNDS = Bounds(
+    waveforms=int(4e4),
+    readout=30,
+    instructions=int(1e6),
+)
+
 
 @dataclass(frozen=True)
 class Octave:
@@ -132,7 +138,7 @@ class QmController(Controller):
     used."""
     channels: dict[str, QmChannel]
 
-    bounds: Bounds = Bounds(0, 0, 0)
+    bounds: str = "qm/bounds"
     """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[str] = None
     """Path to the JSON file that contains the mixer calibration."""
@@ -182,13 +188,6 @@ class QmController(Controller):
         self.channels = {
             channel.logical_channel.name: channel for channel in self.channels
         }
-        # redefine bounds because abstract instrument overwrites them
-        # FIXME: This overwrites the ``bounds`` given in the runcard!
-        self.bounds = Bounds(
-            waveforms=int(4e4),
-            readout=30,
-            instructions=int(1e6),
-        )
 
         if self.simulation_duration is not None:
             # convert simulation duration from ns to clock cycles

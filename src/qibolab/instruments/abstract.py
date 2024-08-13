@@ -8,7 +8,6 @@ from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.pulses.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
-from qibolab.unrolling import Bounds
 
 InstrumentId = str
 
@@ -61,16 +60,8 @@ class Controller(Instrument):
 
     def __init__(self, name, address):
         super().__init__(name, address)
-        self.bounds: Bounds = Bounds(0, 0, 0)
+        self.bounds: str
         """Estimated limitations of the device memory."""
-
-    def setup(self, bounds):
-        """Set unrolling batch bounds."""
-        self.bounds = Bounds(**bounds)
-
-    def dump(self):
-        """Dump unrolling batch bounds."""
-        return {"bounds": asdict(self.bounds)}
 
     @property
     @abstractmethod

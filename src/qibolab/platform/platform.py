@@ -16,7 +16,7 @@ from qibolab.parameters import Parameters, Settings, update_configs
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import ParallelSweepers
-from qibolab.unrolling import batch
+from qibolab.unrolling import Bounds, batch
 
 QubitMap = dict[QubitId, Qubit]
 QubitPairMap = dict[QubitPairId, QubitPair]
@@ -312,7 +312,9 @@ class Platform:
                 self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
 
         results = defaultdict(list)
-        for b in batch(sequences, self._controller.bounds):
+        # pylint: disable=unsubscriptable-object
+        bounds = Bounds.from_config(self.parameters.configs[self._controller.bounds])
+        for b in batch(sequences, bounds):
             result = self._execute(b, options, configs, sweepers)
             for serial, data in result.items():
                 results[serial].append(data)
