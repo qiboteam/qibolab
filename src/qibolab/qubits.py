@@ -7,7 +7,7 @@ from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.serialize_ import Model
 
-QubitId = Annotated[Union[str, int], Field(union_mode="left_to_right")]
+QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Type for qubit names."""
 
 CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")

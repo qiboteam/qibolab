@@ -7,9 +7,9 @@ example.
 import json
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Annotated, Optional, Union
+from typing import Optional, Union
 
-from pydantic import Field, TypeAdapter
+from pydantic import TypeAdapter
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
@@ -142,9 +142,7 @@ class Parameters:
 
 def _load_qubit_name(name: str) -> QubitId:
     """Convert qubit name from string to integer or string."""
-    return TypeAdapter(
-        Annotated[Union[int, str], Field(union_mode="left_to_right")]
-    ).validate_python(name)
+    return TypeAdapter(QubitId).validate_python(name)
 
 
 def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
@@ -172,9 +170,7 @@ def _load_two_qubit_natives(gates: dict) -> dict[QubitPairId, QubitPair]:
 
 def _dump_qubit_name(name: QubitId) -> str:
     """Convert qubit name from integer or string to string."""
-    if isinstance(name, int):
-        return str(name)
-    return name
+    return TypeAdapter(QubitId).dump_python(name)
 
 
 def _dump_sequence(sequence: PulseSequence):
