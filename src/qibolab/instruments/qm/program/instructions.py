@@ -18,17 +18,17 @@ from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS
 def _delay(pulse: Delay, element: str, parameters: Parameters):
     # TODO: How to play delays on multiple elements?
     if parameters.duration is None:
-        duration = int(pulse.duration) // 4 + 1
+        duration = int(pulse.duration) // 4
     else:
         duration = parameters.duration
-    qua.wait(duration, element)
+    qua.wait(duration + 1, element)
 
 
 def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
-    with qua.switch_(parameters.duration):
+    with qua.switch_(parameters.duration, unsafe=True):
         for value, sweep_op in parameters.pulses:
-            with qua.case_(value):
+            with qua.case_(value // 4):
                 qua.play(sweep_op, element)
 
 
