@@ -204,6 +204,7 @@ class Platform:
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
+        # pylint: disable=unsubscriptable-object
         return self.parameters.configs[name]
 
     def connect(self):
