@@ -101,6 +101,7 @@ test-docs = "make -C doc doctest"
 [tool.pylint.master]
 output-format = "colorized"
 disable = ["E1123", "E1120", "C0301"]
+generated-members = ["qibolab.native.RxyFactory"]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
