@@ -26,17 +26,11 @@ def create_dummy():
             acquisition_name, twpa_pump=twpa_pump.name, probe=probe_name
         )
 
-        drive_name = f"qubit_{q}/drive"
-        qubit.drive = IqChannel(drive_name, mixer=None, lo=None, acquisition=None)
-
-        drive_12_name = f"qubit_{q}/drive12"
-        qubit.drive12 = IqChannel(drive_12_name, mixer=None, lo=None, acquisition=None)
-
-        flux_name = f"qubit_{q}/flux"
-        qubit.flux = DcChannel(flux_name)
+        qubit.drive = IqChannel(f"qubit_{q}/drive", mixer=None, lo=None)
+        qubit.drive12 = IqChannel(f"qubit_{q}/drive12", mixer=None, lo=None)
+        qubit.flux = DcChannel(f"qubit_{q}/flux")
 
     for c, coupler in platform.couplers.items():
-        flux_name = f"coupler_{c}/flux"
-        coupler.flux = DcChannel(flux_name)
+        coupler.flux = DcChannel(f"coupler_{c}/flux")
 
     return platform
