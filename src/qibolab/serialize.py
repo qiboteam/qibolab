@@ -5,7 +5,7 @@ example.
 """
 
 import json
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
 
@@ -178,12 +178,7 @@ def _dump_sequence(sequence: PulseSequence):
 
 
 def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
-    data = {}
-    for fld in fields(natives):
-        factory = getattr(natives, fld.name)
-        if factory is not None:
-            data[fld.name] = _dump_sequence(factory._seq)
-    return data
+    return natives.model_dump()
 
 
 # TODO: kernels are part of the parameters, they should not be dumped separately
