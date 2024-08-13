@@ -705,28 +705,14 @@ class Custom(PulseShape):
     """Arbitrary shape."""
 
     def __init__(self, envelope_i, envelope_q=None):
-        from ast import literal_eval
 
         self.name = "Custom"
         self.pulse: Pulse = None
-        if isinstance(envelope_i, str):
-            self.envelope_i: np.ndarray = np.array(literal_eval(envelope_i))
-            if envelope_q is not None:
-                self.envelope_q: np.ndarray = np.array(literal_eval(envelope_q))
-            else:
-                self.envelope_q = self.envelope_i
-        elif isinstance(envelope_i, list):
-            self.envelope_i: np.ndarray = np.array(envelope_i)
-            if envelope_q is not None:
-                self.envelope_q: np.ndarray = np.array(envelope_q)
-            else:
-                self.envelope_q = self.envelope_i
-        elif isinstance(envelope_i, np.ndarray):
-            self.envelope_i: np.ndarray = envelope_i
-            if envelope_q is not None:
-                self.envelope_q: np.ndarray = envelope_q
-            else:
-                self.envelope_q = self.envelope_i
+        self.envelope_i: np.ndarray = np.array(envelope_i)
+        if envelope_q is not None:
+            self.envelope_q: np.ndarray = np.array(envelope_q)
+        else:
+            self.envelope_q = self.envelope_i
 
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
