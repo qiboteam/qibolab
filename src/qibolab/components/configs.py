@@ -98,6 +98,16 @@ class AcquisitionConfig(Model):
     """Integration weights to be used when post-processing the acquired
     signal."""
 
+    def __eq__(self, other) -> bool:
+        """Explicit configuration equality."""
+        return (
+            (self.delay == other.delay)
+            and (self.smearing == other.smearing)
+            and (self.threshold == other.threshold)
+            and (self.iq_angle == other.iq_angle)
+            and (self.kernel == other.kernel).all()
+        )
+
 
 Config = Annotated[
     Union[DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig],

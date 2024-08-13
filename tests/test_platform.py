@@ -19,12 +19,11 @@ from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
-from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.parameters import NativeGates, Parameters, update_configs
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORM, PLATFORMS
-from qibolab.platform.platform import dump_kernels, dump_platform
+from qibolab.platform.platform import PARAMETERS
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 from qibolab.serialize import replace
 
@@ -58,7 +57,6 @@ def test_platform_basics():
     platform = Platform(
         name="ciao",
         parameters=Parameters(native_gates=NativeGates()),
-        configs={},
         instruments={},
     )
     assert str(platform) == "ciao"
@@ -76,7 +74,6 @@ def test_platform_basics():
             )
         ),
         instruments={},
-        configs={},
     )
     assert str(platform2) == "come va?"
     assert (1, 6) in platform2.topology
@@ -151,20 +148,20 @@ def test_update_configs(platform):
         update_configs(configs, [{"non existent": {"property": 1.0}}])
 
 
-def test_dump_parameters(platform, tmp_path):
-    platform.parameters.dump(tmp_path)
-    final = Parameters.load(tmp_path)
+def test_dump_parameters(platform: Platform, tmp_path: Path):
+    (tmp_path / PARAMETERS).write_text(platform.parameters.model_dump_json())
+    final = Parameters.model_validate_json((tmp_path / PARAMETERS).read_text())
     if platform.name == "dummy":
-        target = Parameters.load(FOLDER)
+        target = Parameters.model_validate_json((FOLDER / PARAMETERS).read_text())
     else:
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
-        target = Parameters.load(target_path)
+        target = Parameters.model_validate_json((target_path / PARAMETERS).read_text())
 
     # assert configs section is dumped properly in the parameters
     assert final.configs == target.configs
 
 
-def test_dump_parameters_with_updates(platform: Platform, tmp_path):
+def test_dump_parameters_with_updates(platform: Platform, tmp_path: Path):
     qubit = next(iter(platform.qubits.values()))
     frequency = platform.config(qubit.drive.name).frequency + 1.5e9
     smearing = platform.config(qubit.acquisition.name).smearing + 10
@@ -173,52 +170,41 @@ def test_dump_parameters_with_updates(platform: Platform, tmp_path):
         qubit.acquisition.name: {"smearing": smearing},
     }
     update_configs(platform.parameters.configs, [update])
-    platform.parameters.dump(tmp_path)
-    final = Parameters.load(tmp_path)
+    (tmp_path / PARAMETERS).write_text(platform.parameters.model_dump_json())
+    final = Parameters.model_validate_json((tmp_path / PARAMETERS).read_text())
     assert final.configs[qubit.drive.name].frequency == frequency
     assert final.configs[qubit.acquisition.name].smearing == smearing
 
 
-@pytest.mark.parametrize("has_kernels", [False, True])
-def test_kernels(tmp_path, has_kernels):
+def test_kernels(tmp_path: Path):
     """Test dumping and loading of `Kernels`."""
 
     platform = create_dummy()
-    if has_kernels:
-        for name, config in platform.configs.items():
-            if isinstance(config, AcquisitionConfig):
-                platform.configs[name] = replace(config, kernel=np.random.rand(10))
+    for name, config in platform.parameters.configs.items():
+        if isinstance(config, AcquisitionConfig):
+            platform.parameters.configs[name] = replace(
+                config, kernel=np.random.rand(10)
+            )
 
-    dump_kernels(platform, tmp_path)
+    platform.dump(tmp_path)
+    reloaded = Platform.load(tmp_path, instruments=platform.instruments)
 
-    if has_kernels:
-        kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits.values():
-            kernel = platform.configs[qubit.acquisition.name].kernel
-            np.testing.assert_array_equal(kernel, kernels[qubit.name])
-    else:
-        with pytest.raises(FileNotFoundError):
-            Kernels.load(tmp_path)
+    for qubit in platform.qubits.values():
+        orig = platform.parameters.configs[qubit.acquisition.name].kernel
+        load = reloaded.parameters.configs[qubit.acquisition.name].kernel
+        np.testing.assert_array_equal(orig, load)
 
 
-@pytest.mark.parametrize("has_kernels", [False, True])
-def test_dump_platform(tmp_path, has_kernels):
+def test_dump_platform(tmp_path):
     """Test platform dump and loading parameters and kernels."""
 
     platform = create_dummy()
-    if has_kernels:
-        for name, config in platform.configs.items():
-            if isinstance(config, AcquisitionConfig):
-                platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
-    dump_platform(platform, tmp_path)
+    platform.dump(tmp_path)
 
-    settings = Parameters.load(tmp_path).settings
-    if has_kernels:
-        kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits.values():
-            kernel = platform.configs[qubit.acquisition.name].kernel
-            np.testing.assert_array_equal(kernel, kernels[qubit.name])
+    settings = Parameters.model_validate_json(
+        (tmp_path / PARAMETERS).read_text()
+    ).settings
 
     assert settings == platform.settings
 

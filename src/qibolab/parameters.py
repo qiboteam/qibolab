@@ -4,9 +4,6 @@ The format is explained in the :ref:`Using parameters <using_runcards>`
 example.
 """
 
-import json
-from pathlib import Path
-
 from pydantic import Field
 
 from qibolab.components import Config
@@ -14,8 +11,6 @@ from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import QubitId, QubitPairId
 from qibolab.serialize import Model, replace
-
-PARAMETERS = "parameters.json"
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -67,19 +62,3 @@ class Parameters(Model):
     settings: Settings = Field(default_factory=Settings)
     configs: dict[str, Config] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
-
-    @classmethod
-    def load(cls, path: Path):
-        """Load parameters from JSON."""
-        return cls.model_validate(json.loads((path / PARAMETERS).read_text()))
-
-    def dump(self, path: Path):
-        """Platform serialization as parameters (json) and kernels (npz).
-
-        The file saved follows the format explained in :ref:`Using parameters <using_runcards>`.
-
-        The requested ``path`` is the folder where the json and npz will be dumped.
-        """
-        (path / PARAMETERS).write_text(
-            json.dumps(self.model_dump(), sort_keys=False, indent=4)
-        )

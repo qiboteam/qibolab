@@ -1,5 +1,6 @@
 """A platform for executing quantum algorithms."""
 
+import json
 from collections import defaultdict
 from dataclasses import dataclass, field
 from math import prod
@@ -11,7 +12,6 @@ from qibo.config import log, raise_error
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.kernels import Kernels
 from qibolab.parameters import Parameters, Settings, update_configs
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
@@ -23,6 +23,7 @@ QubitPairMap = dict[QubitPairId, QubitPair]
 InstrumentMap = dict[InstrumentId, Instrument]
 
 NS_TO_SEC = 1e-9
+PARAMETERS = "parameters.json"
 
 # TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
 T = TypeVar("T")
@@ -94,8 +95,6 @@ class Platform:
     """Name of the platform."""
     parameters: Parameters
     """..."""
-    configs: dict[str, Config]
-    """Mapping name of component to its default config."""
     instruments: InstrumentMap
     """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
@@ -191,7 +190,7 @@ class Platform:
     @property
     def components(self) -> set[str]:
         """Names of all components available in the platform."""
-        return set(self.configs.keys())
+        return set(self.parameters.configs.keys())
 
     @property
     def channels(self) -> list[str]:
@@ -205,7 +204,7 @@ class Platform:
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
-        return self.configs[name]
+        return self.parameters.configs[name]
 
     def connect(self):
         """Connect to all instruments."""
@@ -302,7 +301,7 @@ class Platform:
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
-        configs = self.configs.copy()
+        configs = self.parameters.configs.copy()
         update_configs(configs, options.updates)
 
         # for components that represent aux external instruments (e.g. lo) to the main control instrument
@@ -318,6 +317,26 @@ class Platform:
                 results[serial].append(data)
 
         return results
+
+    @classmethod
+    def load(cls, path: Path, instruments: InstrumentMap, name: Optional[str] = None):
+        """Dump platform."""
+        if name is None:
+            name = path.name
+
+        return cls(
+            name=name,
+            parameters=Parameters.model_validate(
+                json.loads((path / PARAMETERS).read_text())
+            ),
+            instruments=instruments,
+        )
+
+    def dump(self, path: Path):
+        """Dump platform."""
+        (path / PARAMETERS).write_text(
+            json.dumps(self.parameters.model_dump(), sort_keys=False, indent=4)
+        )
 
     def get_qubit(self, qubit):
         """Return the name of the physical qubit corresponding to a logical
@@ -342,31 +361,3 @@ class Platform:
             return self.couplers[coupler]
         except KeyError:
             return list(self.couplers.values())[coupler]
-
-
-# TODO: kernels are part of the parameters, they should not be dumped separately
-def dump_kernels(platform: Platform, path: Path):
-    """Creates Kernels instance from platform and dumps as npz.
-
-    Args:
-        platform (qibolab.platform.Platform): The platform to be serialized.
-        path (pathlib.Path): Path that the kernels file will be saved.
-    """
-
-    # create kernels
-    kernels = Kernels()
-    for qubit in platform.qubits.values():
-        kernel = platform.configs[qubit.acquisition.name].kernel
-        if kernel is not None:
-            kernels[qubit.name] = kernel
-
-    # dump only if not None
-    if len(kernels) > 0:
-        kernels.dump(path)
-
-
-# TODO: drop as soon as dump_kernels is reabsorbed in the parameters
-def dump_platform(platform: Platform, path: Path):
-    """Dump paltform."""
-    platform.parameters.dump(path)
-    dump_kernels(platform, path)
