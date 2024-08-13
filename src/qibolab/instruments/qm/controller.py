@@ -426,8 +426,6 @@ class QmController(Controller):
 
         if self.script_file_name is not None:
             script = generate_qua_script(experiment, asdict(self.config))
-            for _, pulse in sequence:
-                script = script.replace(operation(pulse), str(pulse))
             with open(self.script_file_name, "w") as file:
                 file.write(script)
 
