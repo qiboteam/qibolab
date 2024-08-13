@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from pydantic import TypeAdapter
+from pydantic import Field, TypeAdapter
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
@@ -63,9 +63,9 @@ class Settings(Model):
 
 
 class NativeGates(Model):
-    single_qubit: dict[QubitId, SingleQubitNatives]
-    coupler: dict[QubitId, SingleQubitNatives]
-    two_qubit: dict[QubitPairId, TwoQubitNatives]
+    single_qubit: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
+    coupler: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
+    two_qubit: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
 
 
 @dataclass
@@ -74,8 +74,7 @@ class Parameters:
 
     settings: Settings = field(default_factory=Settings)
     configs: dict[str, Config] = field(default_factory=dict)
-    # TODO: add gates template
-    native_gates: NativeGates = field(default_factory=dict)
+    native_gates: NativeGates = field(default_factory=NativeGates)
 
     @classmethod
     def load(cls, path: Path):
@@ -101,7 +100,7 @@ class Parameters:
         settings = {
             "settings": self.settings.model_dump(),
             "components": TypeAdapter(dict[str, Config]).dump_python(configs),
-            "native_gates": self.native_gates.dump(),
+            "native_gates": self.native_gates.model_dump(),
         }
 
         (path / PARAMETERS).write_text(json.dumps(settings, sort_keys=False, indent=4))

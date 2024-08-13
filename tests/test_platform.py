@@ -20,11 +20,11 @@ from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.kernels import Kernels
+from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORMS
 from qibolab.platform.platform import update_configs
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
-from qibolab.qubits import Qubit, QubitPair
 from qibolab.serialize import (
     PLATFORM,
     NativeGates,
@@ -63,24 +63,21 @@ def test_create_platform_error():
 def test_platform_basics():
     platform = Platform(
         name="ciao",
-        parameters=Parameters(native_gates=NativeGates({}, {}, {})),
+        parameters=Parameters(native_gates=NativeGates()),
         configs={},
         instruments={},
     )
     assert str(platform) == "ciao"
     assert platform.topology == []
 
-    qs = {q: Qubit(name=q) for q in range(10)}
+    qs = {q: SingleQubitNatives() for q in range(10)}
+    ts = {(q1, q2): TwoQubitNatives() for q1 in range(3) for q2 in range(4, 8)}
     platform2 = Platform(
         name="come va?",
         parameters=Parameters(
             native_gates=NativeGates(
                 single_qubit=qs,
-                two_qubit={
-                    (q1, q2): QubitPair(qubit1=q1, qubit2=q2)
-                    for q1 in range(3)
-                    for q2 in range(4, 8)
-                },
+                two_qubit=ts,
                 coupler={},
             )
         ),

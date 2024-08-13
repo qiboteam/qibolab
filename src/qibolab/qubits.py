@@ -36,9 +36,7 @@ class Qubit(Model):
 
     name: QubitId
 
-    native_gates: Annotated[
-        SingleQubitNatives, Field(default_factory=SingleQubitNatives)
-    ]
+    native_gates: SingleQubitNatives = Field(default_factory=SingleQubitNatives)
 
     probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
@@ -73,8 +71,8 @@ class Qubit(Model):
 
 QubitPairId = Annotated[
     tuple[QubitId, QubitId],
-    BeforeValidator(lambda p: tuple(p.split("-"))),
-    PlainSerializer(lambda p: f"{p.qubit1}-{p.qubit2}"),
+    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
+    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
 ]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
@@ -100,4 +98,4 @@ class QubitPair(Model):
     Acts as target on two-qubit gates.
     """
 
-    native_gates: Annotated[TwoQubitNatives, Field(default_factory=SingleQubitNatives)]
+    native_gates: TwoQubitNatives = Field(default_factory=TwoQubitNatives)
