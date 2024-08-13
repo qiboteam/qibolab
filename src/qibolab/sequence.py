@@ -71,6 +71,13 @@ class PulseSequence(UserList[_Element]):
         """Duration of the given channel."""
         return sum(pulse.duration for pulse in self.channel(channel))
 
+    def pulse_channel(self, pulse_id: int) -> ChannelId:
+        """Find channel on which a pulse with a given id plays."""
+        for channel, pulse in self:
+            if pulse.id == pulse_id:
+                return channel
+        raise ValueError(f"Pulse with id {pulse_id} does not exist in the sequence.")
+
     def concatenate(self, other: "PulseSequence") -> None:
         """Juxtapose two sequences.
 
