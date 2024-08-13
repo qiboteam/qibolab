@@ -121,10 +121,14 @@ def dummy_string_qubit_names():
         pair.qubit2 = name[1]
         platform._pairs[name] = pair
         del platform._pairs[(q0, q1)]
-        platform.parameters.native_gates.two_qubit[name] = (
-            platform.parameters.native_gates.two_qubit[(q0, q1)]
-        )
-        del platform.parameters.native_gates.two_qubit[(q0, q1)]
+        try:
+            platform.parameters.native_gates.two_qubit[name] = (
+                platform.parameters.native_gates.two_qubit[(q0, q1)]
+            )
+            del platform.parameters.native_gates.two_qubit[(q0, q1)]
+        except KeyError:
+            # the symmetrized pair is only present in pairs, not in the natives
+            pass
 
     return platform
 

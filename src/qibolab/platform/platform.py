@@ -150,9 +150,15 @@ class Platform:
                 self._pairs[p] = QubitPair(
                     qubit1=p[0], qubit2=p[1], native_gates=natives
                 )
+                if natives.symmetric:
+                    self._pairs[(p[1], p[0])] = QubitPair(
+                        qubit1=p[0], qubit2=p[1], native_gates=natives
+                    )
 
         for p, natives in self.parameters.native_gates.two_qubit.items():
             self._pairs[p].native_gates = natives
+            if natives.symmetric:
+                self._pairs[(p[1], p[0])].native_gates = natives
 
         return self._pairs
 
