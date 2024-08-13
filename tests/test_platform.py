@@ -170,7 +170,7 @@ def test_dump_parameters(platform, tmp_path):
     assert final.configs == target.configs
 
 
-def test_dump_parameterswith_updates(platform, tmp_path):
+def test_dump_parameters_with_updates(platform: Platform, tmp_path):
     qubit = next(iter(platform.qubits.values()))
     frequency = platform.config(qubit.drive.name).frequency + 1.5e9
     smearing = platform.config(qubit.acquisition.name).smearing + 10
@@ -178,7 +178,8 @@ def test_dump_parameterswith_updates(platform, tmp_path):
         qubit.drive.name: {"frequency": frequency},
         qubit.acquisition.name: {"smearing": smearing},
     }
-    platform.parameters.dump(tmp_path, [update])
+    update_configs(platform.parameters.configs, [update])
+    platform.parameters.dump(tmp_path)
     final = Parameters.load(tmp_path)
     assert final.configs[qubit.drive.name].frequency == frequency
     assert final.configs[qubit.acquisition.name].smearing == smearing

@@ -54,3 +54,15 @@ def create_dummy():
         coupler.flux = DcChannel(flux_name)
 
     return platform
+
+
+# TODO:
+# "instruments": {
+#   "dummy": {
+#     "bounds": {
+#       "waveforms": 0,
+#       "readout": 0,
+#       "instructions": 0
+#     }
+#   },
+# },

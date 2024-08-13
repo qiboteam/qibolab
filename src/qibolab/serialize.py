@@ -5,11 +5,9 @@ example.
 """
 
 import json
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
-from pydantic import Field, TypeAdapter
+from pydantic import Field
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
@@ -68,42 +66,28 @@ class NativeGates(Model):
     two_qubit: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
 
 
-@dataclass
-class Parameters:
+class Parameters(Model):
     """Serializable parameters."""
 
-    settings: Settings = field(default_factory=Settings)
-    configs: dict[str, Config] = field(default_factory=dict)
-    native_gates: NativeGates = field(default_factory=NativeGates)
+    settings: Settings = Field(default_factory=Settings)
+    configs: dict[str, Config] = Field(default_factory=dict)
+    native_gates: NativeGates = Field(default_factory=NativeGates)
 
     @classmethod
     def load(cls, path: Path):
         """Load parameters from JSON."""
-        d = json.loads((path / PARAMETERS).read_text())
-        settings = Settings.model_validate(d["settings"])
-        configs = TypeAdapter(dict[str, Config]).validate_python(d["components"])
-        natives = NativeGates.model_validate(d["native_gates"])
-        return cls(settings=settings, configs=configs, native_gates=natives)
+        return cls.model_validate(json.loads((path / PARAMETERS).read_text()))
 
-    def dump(self, path: Path, updates: Optional[list[ConfigUpdate]] = None):
+    def dump(self, path: Path):
         """Platform serialization as parameters (json) and kernels (npz).
 
         The file saved follows the format explained in :ref:`Using parameters <using_runcards>`.
 
         The requested ``path`` is the folder where the json and npz will be dumped.
-
-        ``updates`` is an optional list if updates for platform configs. Later entries in the list take precedence over earlier ones (if they happen to update the same thing).
         """
-        configs = self.configs.copy()
-        update_configs(configs, updates or [])
-
-        settings = {
-            "settings": self.settings.model_dump(),
-            "components": TypeAdapter(dict[str, Config]).dump_python(configs),
-            "native_gates": self.native_gates.model_dump(),
-        }
-
-        (path / PARAMETERS).write_text(json.dumps(settings, sort_keys=False, indent=4))
+        (path / PARAMETERS).write_text(
+            json.dumps(self.model_dump(), sort_keys=False, indent=4)
+        )
 
 
 # TODO: kernels are part of the parameters, they should not be dumped separately
