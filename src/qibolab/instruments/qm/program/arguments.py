@@ -6,7 +6,7 @@ from qm.qua._dsl import _Variable  # for type declaration only
 
 from qibolab.sequence import PulseSequence
 
-from .acquisition import Acquisition
+from .acquisition import Acquisitions
 
 
 @dataclass
@@ -16,6 +16,7 @@ class Parameters:
     duration: Optional[_Variable] = None
     amplitude: Optional[_Variable] = None
     phase: Optional[_Variable] = None
+    pulses: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -27,7 +28,7 @@ class ExecutionArguments:
     """
 
     sequence: PulseSequence
-    acquisitions: dict[tuple[str, str], Acquisition]
+    acquisitions: Acquisitions
     relaxation_time: int = 0
     parameters: dict[str, Parameters] = field(
         default_factory=lambda: defaultdict(Parameters)

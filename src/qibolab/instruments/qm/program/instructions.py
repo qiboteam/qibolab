@@ -6,12 +6,11 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.pulses import Delay, Pulse
-from qibolab.sequence import PulseSequence
+from qibolab.pulses import Delay
 from qibolab.sweeper import ParallelSweepers
 
 from ..config import operation
-from .acquisition import Acquisition, Acquisitions
+from .acquisition import Acquisition
 from .arguments import ExecutionArguments, Parameters
 from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS
 
@@ -25,6 +24,14 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
     qua.wait(duration, element)
 
 
+def _play_multiple_waveforms(element: str, parameters: Parameters):
+    """Sweeping pulse duration using distinctly uploaded waveforms."""
+    with qua.switch_(parameters.duration):
+        for value, sweep_op in parameters.pulses:
+            with qua.case_(value):
+                qua.play(sweep_op, element)
+
+
 def _play(
     op: str,
     element: str,
@@ -36,10 +43,13 @@ def _play(
     if parameters.amplitude is not None:
         op = op * parameters.amplitude
 
-    if acquisition is not None:
-        acquisition.measure(op)
+    if len(parameters.pulses) > 0:
+        _play_multiple_waveforms(element, parameters)
     else:
-        qua.play(op, element, duration=parameters.duration)
+        if acquisition is not None:
+            acquisition.measure(op)
+        else:
+            qua.play(op, element, duration=parameters.duration)
 
     if parameters.phase is not None:
         qua.reset_frame(element)
@@ -110,25 +120,23 @@ def sweep(
 
 def program(
     configs: dict[str, Config],
-    sequence: PulseSequence,
+    args: ExecutionArguments,
     options: ExecutionParameters,
-    acquisitions: Acquisitions,
     sweepers: list[ParallelSweepers],
 ):
     """QUA program implementing the required experiment."""
     with qua.program() as experiment:
         n = declare(int)
         # declare acquisition variables
-        for acquisition in acquisitions.values():
+        for acquisition in args.acquisitions.values():
             acquisition.declare()
         # execute pulses
-        args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
         with for_(n, 0, n < options.nshots, n + 1):
             sweep(list(sweepers), configs, args)
         # download acquisitions
         has_iq = options.acquisition_type is AcquisitionType.INTEGRATION
         buffer_dims = options.results_shape(sweepers)[::-1][int(has_iq) :]
         with qua.stream_processing():
-            for acquisition in acquisitions.values():
+            for acquisition in args.acquisitions.values():
                 acquisition.download(*buffer_dims)
     return experiment
