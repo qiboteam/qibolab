@@ -34,11 +34,11 @@ using different Qibolab primitives.
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create the qubit object
-        qubit = Qubit(0)
+        qubit = Qubit(name=0)
 
         # assign channels to the qubit
         qubit.probe = IqChannel(name="probe", mixer=None, lo=None, acquisition="acquire")
-        qubit.acquire = AcquireChannel(name="acquire", twpa_pump=None, probe="probe")
+        qubit.acquisition = AcquireChannel(name="acquire", twpa_pump=None, probe="probe")
         qubit.drive = Iqchannel(name="drive", mixer=None, lo=None)
 
         # define configuration for channels
@@ -112,16 +112,16 @@ hold the parameters of the two-qubit gates.
     )
 
     # create the qubit objects
-    qubit0 = Qubit(0)
-    qubit1 = Qubit(1)
+    qubit0 = Qubit(name=0)
+    qubit1 = Qubit(name=1)
 
     # assign channels to the qubits
     qubit0.probe = IqChannel(name="probe_0", mixer=None, lo=None, acquisition="acquire_0")
-    qubit0.acquire = AcquireChannel(name="acquire_0", twpa_pump=None, probe="probe_0")
+    qubit0.acquisition = AcquireChannel(name="acquire_0", twpa_pump=None, probe="probe_0")
     qubit0.drive = IqChannel(name="drive_0", mixer=None, lo=None)
     qubit0.flux = DcChannel(name="flux_0")
     qubit1.probe = IqChannel(name="probe_1", mixer=None, lo=None, acquisition="acquire_1")
-    qubit1.acquire = AcquireChannel(name="acquire_1", twpa_pump=None, probe="probe_1")
+    qubit1.acquisition = AcquireChannel(name="acquire_1", twpa_pump=None, probe="probe_1")
     qubit1.drive = IqChannel(name="drive_1", mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
@@ -177,18 +177,21 @@ hold the parameters of the two-qubit gates.
     )
 
     # define the pair of qubits
-    pair = QubitPair(qubit0.name, qubit1.name)
-    pair.native_gates = TwoQubitNatives(
-        CZ=FixedSequenceFactory(
-            PulseSequence(
-                [
-                    (
-                        qubit0.flux.name,
-                        Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
-                    ),
-                ]
+    pair = QubitPair(
+        qubit1=qubit0.name,
+        qubit2=qubit1.name,
+        native_gates=TwoQubitNatives(
+            CZ=FixedSequenceFactory(
+                PulseSequence(
+                    [
+                        (
+                            qubit0.flux.name,
+                            Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
+                        ),
+                    ]
+                )
             )
-        )
+        ),
     )
 
 Some architectures may also have coupler qubits that mediate the interactions.
@@ -209,9 +212,9 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     )
 
     # create the qubit and coupler objects
-    qubit0 = Qubit(0)
-    qubit1 = Qubit(1)
-    coupler_01 = Qubit(100)
+    qubit0 = Qubit(name=0)
+    qubit1 = Qubit(name=1)
+    coupler_01 = Qubit(name=100)
 
     # assign channel(s) to the coupler
     coupler_01.flux = DcChannel(name="flux_coupler_01")
@@ -220,18 +223,21 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # Look above example
 
     # define the pair of qubits
-    pair = QubitPair(qubit0.name, qubit1.name)
-    pair.native_gates = TwoQubitNatives(
-        CZ=FixedSequenceFactory(
-            PulseSequence(
-                [
-                    (
-                        coupler_01.flux.name,
-                        Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
-                    )
-                ],
+    pair = QubitPair(
+        qubit1=qubit0.name,
+        qubit2=qubit1.name,
+        native_gates=TwoQubitNatives(
+            CZ=FixedSequenceFactory(
+                PulseSequence(
+                    [
+                        (
+                            coupler_01.flux.name,
+                            Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
+                        )
+                    ],
+                )
             )
-        )
+        ),
     )
 
 The platform automatically creates the connectivity graph of the given chip
@@ -489,7 +495,7 @@ the above runcard:
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import Runcard
+    from qibolab.serialize import Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -501,7 +507,7 @@ the above runcard:
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = Runcard.load(folder)
+        runcard = Parameters.load(folder)
         qubits = runcard.native_gates.single_qubit
         pairs = runcard.native_gates.pairs
 
@@ -553,7 +559,7 @@ With the following additions for coupler architectures:
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = Runcard.load(folder)
+        runcard = Parameters.load(folder)
         qubits = runcard.native_gates.single_qubit
         couplers = runcard.native_gates.coupler
         pairs = runcard.native_gates.pairs
@@ -654,7 +660,7 @@ in this case ``"twpa_pump"``.
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import Runcard
+    from qibolab.serialize import Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -666,7 +672,7 @@ in this case ``"twpa_pump"``.
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = Runcard.load(folder)
+        runcard = Parameters.load(folder)
         qubits = runcard.native_gates.single_qubit
         pairs = runcard.native_gates.pairs
 

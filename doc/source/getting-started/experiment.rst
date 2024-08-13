@@ -41,7 +41,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
     # TODO: understand error generate by doctest
     # from qibolab.instruments.zhinst import ZiChannel, Zurich
     from qibolab.platform import Platform
-    from qibolab.serialize import Runcard
+    from qibolab.serialize import Parameters
 
     NAME = "my_platform"  # name of the platform
     ADDRESS = "localhost"  # ip address of the ZI data server
@@ -58,7 +58,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         device_setup.add_instruments(SHFQC("device_shfqc", address="DEV12146"))
 
         # Load and parse the runcard (i.e. parameters.json)
-        runcard = Runcard.load(FOLDER)
+        runcard = Parameters.load(FOLDER)
         qubits = runcard.native_gates.single_qubit
         pairs = runcard.native_gates.pairs
         qubit = qubits[0]
