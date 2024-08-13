@@ -11,7 +11,7 @@ from typing import Annotated, Literal, Optional, Union
 
 from pydantic import Field
 
-from qibolab.serialize_ import Model, NdArray
+from qibolab.serialize import Model, NdArray
 
 __all__ = [
     "DcConfig",

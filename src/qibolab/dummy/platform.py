@@ -5,7 +5,7 @@ from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.parameters import Parameters
 from qibolab.platform import Platform
-from qibolab.serialize_ import replace
+from qibolab.serialize import replace
 
 FOLDER = pathlib.Path(__file__).parent
 

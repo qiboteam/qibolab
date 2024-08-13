@@ -4,7 +4,7 @@ from typing import Union
 
 import numpy as np
 
-from qibolab.serialize_ import Model
+from qibolab.serialize import Model
 
 from .envelope import Envelope, IqWaveform, Waveform
 

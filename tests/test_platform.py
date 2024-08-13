@@ -26,7 +26,7 @@ from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORM, PLATFORMS
 from qibolab.platform.platform import dump_kernels, dump_platform
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
-from qibolab.serialize_ import replace
+from qibolab.serialize import replace
 
 from .conftest import find_instrument
 

@@ -118,7 +118,7 @@ complex pulse sequence. Therefore with start with that:
         AveragingMode,
         AcquisitionType,
     )
-    from qibolab.serialize_ import replace
+    from qibolab.serialize import replace
 
     # allocate platform
     platform = create_platform("dummy")

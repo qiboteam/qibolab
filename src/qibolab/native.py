@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 import numpy as np
 
 from .pulses import Drag, Gaussian, Pulse, PulseSequence
-from .serialize_ import Model, replace
+from .serialize import Model, replace
 
 
 def _normalize_angles(theta, phi):

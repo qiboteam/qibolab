@@ -13,7 +13,7 @@ from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import QubitId, QubitPairId
-from qibolab.serialize_ import Model, replace
+from qibolab.serialize import Model, replace
 
 PARAMETERS = "parameters.json"
 

@@ -4,7 +4,7 @@ from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.serialize_ import Model
+from qibolab.serialize import Model
 
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Type for qubit names."""
