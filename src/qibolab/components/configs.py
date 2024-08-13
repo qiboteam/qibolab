@@ -99,7 +99,13 @@ class AcquisitionConfig(Model):
     signal."""
 
     def __eq__(self, other) -> bool:
-        """Explicit configuration equality."""
+        """Explicit configuration equality.
+
+        .. note::
+
+            the expliciti definition is required in order to solve the ambiguity about
+            the arrays equality
+        """
         return (
             (self.delay == other.delay)
             and (self.smearing == other.smearing)
