@@ -21,7 +21,13 @@ def create_dummy():
     kernels = Kernels.load(FOLDER)
 
     configs = parameters.configs
-    for q, qubit in parameters.native_gates.single_qubit.items():
+    platform = Platform(
+        FOLDER.name,
+        parameters=parameters,
+        configs=configs,
+        instruments={instrument.name: instrument, twpa_pump.name: twpa_pump},
+    )
+    for q, qubit in platform.qubits.items():
         acquisition_name = f"qubit_{q}/acquire"
         probe_name = f"qubit_{q}/probe"
         qubit.probe = IqChannel(
@@ -43,13 +49,8 @@ def create_dummy():
         flux_name = f"qubit_{q}/flux"
         qubit.flux = DcChannel(flux_name)
 
-    for c, coupler in parameters.native_gates.coupler.items():
+    for c, coupler in platform.couplers.items():
         flux_name = f"coupler_{c}/flux"
         coupler.flux = DcChannel(flux_name)
 
-    return Platform(
-        FOLDER.name,
-        parameters=parameters,
-        configs=configs,
-        instruments={instrument.name: instrument, twpa_pump.name: twpa_pump},
-    )
+    return platform

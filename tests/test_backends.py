@@ -106,14 +106,26 @@ def test_multiple_measurements():
 def dummy_string_qubit_names():
     """Create dummy platform with string-named qubits."""
     platform = create_platform("dummy")
-    for q, qubit in platform.qubits.items():
-        qubit.name = f"A{q}"
-    platform.parameters.native_gates.single_qubit = {
-        qubit.name: qubit for qubit in platform.qubits.values()
-    }
-    platform.parameters.native_gates.two_qubit = {
-        (f"A{q0}", f"A{q1}"): pair for (q0, q1), pair in platform.pairs.items()
-    }
+    for q, qubit in platform.qubits.copy().items():
+        name = f"A{q}"
+        qubit.name = name
+        platform._qubits[name] = qubit
+        del platform._qubits[q]
+        platform.parameters.native_gates.single_qubit[name] = (
+            platform.parameters.native_gates.single_qubit[q]
+        )
+        del platform.parameters.native_gates.single_qubit[q]
+    for (q0, q1), pair in platform.pairs.copy().items():
+        name = (f"A{q0}", f"A{q1}")
+        pair.qubit1 = name[0]
+        pair.qubit2 = name[1]
+        platform._pairs[name] = pair
+        del platform._pairs[(q0, q1)]
+        platform.parameters.native_gates.two_qubit[name] = (
+            platform.parameters.native_gates.two_qubit[(q0, q1)]
+        )
+        del platform.parameters.native_gates.two_qubit[(q0, q1)]
+
     return platform
 
 

@@ -7,7 +7,7 @@ example.
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from pydantic import TypeAdapter
 
@@ -15,7 +15,6 @@ from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import Model, replace
 
@@ -63,42 +62,10 @@ class Settings(Model):
         return options
 
 
-@dataclass
-class NativeGates:
-    single_qubit: dict[QubitId, Qubit]
-    coupler: dict[QubitId, Qubit]
-    two_qubit: dict[QubitPairId, QubitPair]
-
-    @classmethod
-    def load(cls, raw: dict):
-        """Load qubits, couplers and pairs."""
-        qubits = _load_single_qubit_natives(raw["single_qubit"])
-        couplers = _load_single_qubit_natives(raw["coupler"])
-        pairs = _load_two_qubit_natives(raw["two_qubit"])
-        return cls(qubits, couplers, pairs)
-
-    def dump(self) -> dict:
-        """Serialize native gates section to dictionary."""
-        native_gates = {
-            "single_qubit": {
-                _dump_qubit_name(q): _dump_natives(qubit.native_gates)
-                for q, qubit in self.single_qubit.items()
-            }
-        }
-
-        native_gates["coupler"] = {
-            _dump_qubit_name(q): _dump_natives(qubit.native_gates)
-            for q, qubit in self.coupler.items()
-        }
-
-        native_gates["two_qubit"] = {}
-        for pair in self.two_qubit.values():
-            natives = _dump_natives(pair.native_gates)
-            if len(natives) > 0:
-                pair_name = f"{pair.qubit1}-{pair.qubit2}"
-                native_gates["two_qubit"][pair_name] = natives
-
-        return native_gates
+class NativeGates(Model):
+    single_qubit: dict[QubitId, SingleQubitNatives]
+    coupler: dict[QubitId, SingleQubitNatives]
+    two_qubit: dict[QubitPairId, TwoQubitNatives]
 
 
 @dataclass
@@ -114,9 +81,9 @@ class Parameters:
     def load(cls, path: Path):
         """Load parameters from JSON."""
         d = json.loads((path / PARAMETERS).read_text())
-        settings = Settings(**d["settings"])
+        settings = Settings.model_validate(d["settings"])
         configs = TypeAdapter(dict[str, Config]).validate_python(d["components"])
-        natives = NativeGates.load(d["native_gates"])
+        natives = NativeGates.model_validate(d["native_gates"])
         return cls(settings=settings, configs=configs, native_gates=natives)
 
     def dump(self, path: Path, updates: Optional[list[ConfigUpdate]] = None):
@@ -138,47 +105,6 @@ class Parameters:
         }
 
         (path / PARAMETERS).write_text(json.dumps(settings, sort_keys=False, indent=4))
-
-
-def _load_qubit_name(name: str) -> QubitId:
-    """Convert qubit name from string to integer or string."""
-    return TypeAdapter(QubitId).validate_python(name)
-
-
-def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
-    """Parse native gates."""
-    qubits = {}
-    for q, gatedict in gates.items():
-        name = _load_qubit_name(q)
-        native_gates = SingleQubitNatives(**gatedict)
-        qubits[name] = Qubit(name=name, native_gates=native_gates)
-    return qubits
-
-
-def _load_two_qubit_natives(gates: dict) -> dict[QubitPairId, QubitPair]:
-    pairs = {}
-    for pair, gatedict in gates.items():
-        q0, q1 = (_load_qubit_name(q) for q in pair.split("-"))
-        native_gates = TwoQubitNatives(**gatedict)
-        pairs[(q0, q1)] = QubitPair(
-            **dict(qubit1=q0, qubit2=q1, native_gates=native_gates)
-        )
-        if native_gates.symmetric:
-            pairs[(q1, q0)] = pairs[(q0, q1)]
-    return pairs
-
-
-def _dump_qubit_name(name: QubitId) -> str:
-    """Convert qubit name from integer or string to string."""
-    return TypeAdapter(QubitId).dump_python(name)
-
-
-def _dump_sequence(sequence: PulseSequence):
-    return [(ch, p.model_dump()) for ch, p in sequence]
-
-
-def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
-    return natives.model_dump()
 
 
 # TODO: kernels are part of the parameters, they should not be dumped separately

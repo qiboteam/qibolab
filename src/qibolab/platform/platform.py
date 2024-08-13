@@ -1,7 +1,7 @@
 """A platform for executing quantum algorithms."""
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import prod
 from typing import Any, Literal, Optional, TypeVar
 
@@ -11,7 +11,7 @@ from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, PulseSequence
-from qibolab.qubits import QubitId, QubitPairId
+from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize import (
     Parameters,
     QubitMap,
@@ -105,6 +105,9 @@ class Platform:
     """Type of resonator (2D or 3D) in the used QPU."""
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
+    _qubits: QubitMap = field(default_factory=dict)
+    _couplers: QubitMap = field(default_factory=dict)
+    _pairs: QubitPairMap = field(default_factory=dict)
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
@@ -117,18 +120,41 @@ class Platform:
     @property
     def qubits(self) -> QubitMap:
         """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-        return self.parameters.native_gates.single_qubit
+        if len(self._qubits) == 0:
+            for q, natives in self.parameters.native_gates.single_qubit.items():
+                self._qubits[q] = Qubit(name=q, native_gates=natives)
+
+        for q, natives in self.parameters.native_gates.single_qubit.items():
+            self._qubits[q].native_gates = natives
+
+        return self._qubits
 
     @property
     def couplers(self) -> QubitMap:
         """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
-        return self.parameters.native_gates.coupler
+        if len(self._couplers) == 0:
+            for c, natives in self.parameters.native_gates.coupler.items():
+                self._couplers[c] = Qubit(name=c, native_gates=natives)
+
+        for c, natives in self.parameters.native_gates.coupler.items():
+            self._couplers[c].native_gates = natives
+
+        return self._couplers
 
     @property
     def pairs(self) -> QubitPairMap:
         """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
         objects."""
-        return self.parameters.native_gates.two_qubit
+        if len(self._pairs) == 0:
+            for p, natives in self.parameters.native_gates.two_qubit.items():
+                self._pairs[p] = QubitPair(
+                    qubit1=p[0], qubit2=p[1], native_gates=natives
+                )
+
+        for p, natives in self.parameters.native_gates.two_qubit.items():
+            self._pairs[p].native_gates = natives
+
+        return self._pairs
 
     @property
     def settings(self) -> Settings:

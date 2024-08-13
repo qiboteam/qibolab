@@ -1,6 +1,6 @@
 from typing import Annotated, Optional, Union
 
-from pydantic import ConfigDict, Field
+from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
@@ -71,7 +71,11 @@ class Qubit(Model):
         return freqs
 
 
-QubitPairId = tuple[QubitId, QubitId]
+QubitPairId = Annotated[
+    tuple[QubitId, QubitId],
+    BeforeValidator(lambda p: tuple(p.split("-"))),
+    PlainSerializer(lambda p: f"{p.qubit1}-{p.qubit2}"),
+]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
@@ -82,6 +86,8 @@ class QubitPair(Model):
     This is needed for symmetry to the single-qubit gates which are storred in the
     :class:`qibolab.platforms.abstract.Qubit`.
     """
+
+    model_config = ConfigDict(frozen=False)
 
     qubit1: QubitId
     """First qubit of the pair.
