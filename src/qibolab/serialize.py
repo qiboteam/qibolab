@@ -16,7 +16,6 @@ from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
-from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import Model, replace
 
@@ -75,7 +74,7 @@ class NativeGates:
         """Load qubits, couplers and pairs."""
         qubits = _load_single_qubit_natives(raw["single_qubit"])
         couplers = _load_single_qubit_natives(raw["coupler"])
-        pairs = _load_two_qubit_natives(raw["two_qubit"], qubits)
+        pairs = _load_two_qubit_natives(raw["two_qubit"])
         return cls(qubits, couplers, pairs)
 
     def dump(self) -> dict:
@@ -148,14 +147,6 @@ def _load_qubit_name(name: str) -> QubitId:
     ).validate_python(name)
 
 
-def _load_pulse(pulse_kwargs: dict):
-    return TypeAdapter(PulseLike).validate_python(pulse_kwargs)
-
-
-def _load_sequence(raw_sequence):
-    return PulseSequence([(ch, _load_pulse(pulse)) for ch, pulse in raw_sequence])
-
-
 def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
     """Parse native gates."""
     qubits = {}
@@ -166,9 +157,7 @@ def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
     return qubits
 
 
-def _load_two_qubit_natives(
-    gates: dict, qubits: dict[QubitId, Qubit]
-) -> dict[QubitPairId, QubitPair]:
+def _load_two_qubit_natives(gates: dict) -> dict[QubitPairId, QubitPair]:
     pairs = {}
     for pair, gatedict in gates.items():
         q0, q1 = (_load_qubit_name(q) for q in pair.split("-"))
@@ -188,17 +177,8 @@ def _dump_qubit_name(name: QubitId) -> str:
     return name
 
 
-def _dump_pulse(pulse: PulseLike):
-    data = pulse.model_dump()
-    if "channel" in data:
-        del data["channel"]
-    if "relative_phase" in data:
-        del data["relative_phase"]
-    return data
-
-
 def _dump_sequence(sequence: PulseSequence):
-    return [(ch, _dump_pulse(p)) for ch, p in sequence]
+    return [(ch, p.model_dump()) for ch, p in sequence]
 
 
 def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
