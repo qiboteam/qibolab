@@ -5,6 +5,7 @@ import inspect
 import os
 import pathlib
 import warnings
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,7 @@ from qibo.result import CircuitResult
 
 from qibolab import create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.components import IqConfig, OscillatorConfig
+from qibolab.components import AcquisitionConfig, IqConfig, OscillatorConfig
 from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
@@ -69,7 +70,7 @@ def test_platform_basics():
     platform2 = Platform(
         "come va?",
         qs,
-        {(q1, q2): QubitPair(qs[q1], qs[q2]) for q1 in range(3) for q2 in range(4, 8)},
+        {(q1, q2): QubitPair(q1, q2) for q1 in range(3) for q2 in range(4, 8)},
         {},
         {},
     )
@@ -158,15 +159,6 @@ def test_dump_runcard(platform, tmp_path):
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
         target_runcard = load_runcard(target_path)
 
-    # for the characterization section the dumped runcard may contain
-    # some default ``Qubit`` parameters
-    target_char = target_runcard.pop("characterization")["single_qubit"]
-    final_char = final_runcard.pop("characterization")["single_qubit"]
-
-    assert final_runcard == target_runcard
-    for qubit, values in target_char.items():
-        for name, value in values.items():
-            assert final_char[qubit][name] == value
     # assert instrument section is dumped properly in the runcard
     target_instruments = target_runcard.pop("instruments")
     final_instruments = final_runcard.pop("instruments")
@@ -193,15 +185,17 @@ def test_kernels(tmp_path, has_kernels):
 
     platform = create_dummy()
     if has_kernels:
-        for qubit in platform.qubits:
-            platform.qubits[qubit].kernel = np.random.rand(10)
+        for name, config in platform.configs.items():
+            if isinstance(config, AcquisitionConfig):
+                platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
     dump_kernels(platform, tmp_path)
 
     if has_kernels:
         kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits:
-            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+        for qubit in platform.qubits.values():
+            kernel = platform.configs[qubit.acquisition.name].kernel
+            np.testing.assert_array_equal(kernel, kernels[qubit.name])
     else:
         with pytest.raises(FileNotFoundError):
             Kernels.load(tmp_path)
@@ -213,16 +207,18 @@ def test_dump_platform(tmp_path, has_kernels):
 
     platform = create_dummy()
     if has_kernels:
-        for qubit in platform.qubits:
-            platform.qubits[qubit].kernel = np.random.rand(10)
+        for name, config in platform.configs.items():
+            if isinstance(config, AcquisitionConfig):
+                platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
     dump_platform(platform, tmp_path)
 
     settings = load_settings(load_runcard(tmp_path))
     if has_kernels:
         kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits:
-            np.testing.assert_array_equal(platform.qubits[qubit].kernel, kernels[qubit])
+        for qubit in platform.qubits.values():
+            kernel = platform.configs[qubit.acquisition.name].kernel
+            np.testing.assert_array_equal(kernel, kernels[qubit.name])
 
     assert settings == platform.settings
 

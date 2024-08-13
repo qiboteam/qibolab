@@ -15,6 +15,7 @@ from qibolab.compilers.default import (
     rz_rule,
     z_rule,
 )
+from qibolab.components import Channel
 from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import QubitId
@@ -150,8 +151,12 @@ class Compiler:
         measurement_map = {}
         channel_clock = defaultdict(float)
 
+        def find_max(channels: list[Channel]):
+            return max(channel_clock[ch.name] for ch in channels)
+
         def qubit_clock(el: QubitId):
-            return max(channel_clock[ch.name] for ch in platform.elements[el].channels)
+            elements = platform.qubits if el in platform.qubits else platform.couplers
+            return max(channel_clock[ch.name] for ch in elements[el].channels)
 
         # process circuit gates
         for moment in circuit.queue.moments:

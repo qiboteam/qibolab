@@ -32,7 +32,7 @@ def create_dummy():
     runcard = load_runcard(FOLDER)
     kernels = Kernels.load(FOLDER)
 
-    qubits, couplers, pairs = load_qubits(runcard, kernels)
+    qubits, couplers, pairs = load_qubits(runcard)
     settings = load_settings(runcard)
 
     configs = {}
@@ -49,7 +49,7 @@ def create_dummy():
         )
         configs[probe_name] = IqConfig(**component_params[probe_name])
         configs[acquisition_name] = AcquisitionConfig(
-            **component_params[acquisition_name]
+            **component_params[acquisition_name], kernel=kernels.get(q)
         )
 
         drive_name = f"qubit_{q}/drive"
@@ -65,7 +65,6 @@ def create_dummy():
         configs[flux_name] = DcConfig(**component_params[flux_name])
 
     for c, coupler in couplers.items():
-        c = c[1:]
         flux_name = f"coupler_{c}/flux"
         coupler.flux = DcChannel(flux_name)
         configs[flux_name] = DcConfig(**component_params[flux_name])

@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field, fields
 from typing import Optional, Union
 
-import numpy as np
-
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 
@@ -14,16 +12,6 @@ CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flu
 
 Not all channels are required to operate a qubit.
 """
-EXCLUDED_FIELDS = CHANNEL_NAMES + (
-    "name",
-    "native_gates",
-    "kernel",
-    "qubit1",
-    "qubit2",
-    "coupler",
-)
-"""Qubit dataclass fields that are excluded by the ``characterization``
-property."""
 
 
 @dataclass
@@ -41,46 +29,11 @@ class Qubit:
             send drive pulses to the qubit.
         flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
             send flux pulses to the qubit.
-        Other characterization parameters for the qubit, loaded from the runcard.
     """
 
     name: QubitId
 
-    bare_resonator_frequency: int = 0
-    anharmonicity: int = 0
-    asymmetry: float = 0.0
-    crosstalk_matrix: dict[QubitId, float] = field(default_factory=dict)
-    """Crosstalk matrix for voltages."""
-    Ec: float = 0.0
-    """Readout Charge Energy."""
-    Ej: float = 0.0
-    """Readout Josephson Energy."""
-    g: float = 0.0
-    """Readout coupling."""
-    assignment_fidelity: float = 0.0
-    """Assignment fidelity."""
-    readout_fidelity: float = 0.0
-    """Readout fidelity."""
-    gate_fidelity: float = 0.0
-    """Gate fidelity from standard RB."""
-
-    effective_temperature: float = 0.0
-    """Effective temperature."""
-    peak_voltage: float = 0
-    pi_pulse_amplitude: float = 0
-    resonator_depletion_time: int = 0
-    T1: int = 0
-    T2: int = 0
-    T2_spin_echo: int = 0
-    state0_voltage: int = 0
-    state1_voltage: int = 0
-    mean_gnd_states: list[float] = field(default_factory=lambda: [0, 0])
-    mean_exc_states: list[float] = field(default_factory=lambda: [0, 0])
-
-    # parameters for single shot classification
-    threshold: Optional[float] = None
-    iq_angle: float = 0.0
-    kernel: Optional[np.ndarray] = field(default=None, repr=False)
+    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
 
     probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
@@ -89,23 +42,12 @@ class Qubit:
     drive_cross: Optional[dict[QubitId, IqChannel]] = None
     flux: Optional[DcChannel] = None
 
-    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
-
     @property
     def channels(self):
         for name in CHANNEL_NAMES:
             channel = getattr(self, name)
             if channel is not None:
                 yield channel
-
-    @property
-    def characterization(self):
-        """Dictionary containing characterization parameters."""
-        return {
-            fld.name: getattr(self, fld.name)
-            for fld in fields(self)
-            if fld.name not in EXCLUDED_FIELDS
-        }
 
     @property
     def mixer_frequencies(self):
@@ -137,32 +79,15 @@ class QubitPair:
     :class:`qibolab.platforms.abstract.Qubit`.
     """
 
-    qubit1: Qubit
+    qubit1: QubitId
     """First qubit of the pair.
 
     Acts as control on two-qubit gates.
     """
-    qubit2: Qubit
+    qubit2: QubitId
     """Second qubit of the pair.
 
     Acts as target on two-qubit gates.
     """
 
-    gate_fidelity: float = 0.0
-    """Gate fidelity from standard 2q RB."""
-
-    cz_fidelity: float = 0.0
-    """Gate fidelity from CZ interleaved RB."""
-
-    coupler: Optional[Qubit] = None
-
     native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
-
-    @property
-    def characterization(self):
-        """Dictionary containing characterization parameters."""
-        return {
-            fld.name: getattr(self, fld.name)
-            for fld in fields(self)
-            if fld.name not in EXCLUDED_FIELDS
-        }

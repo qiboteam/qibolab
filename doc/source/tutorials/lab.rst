@@ -14,8 +14,7 @@ How to define a platform for a self-hosted QPU?
 The :class:`qibolab.platform.Platform` object holds all the information required
 to execute programs, and in particular :class:`qibolab.pulses.PulseSequence` in
 a real QPU. It is comprised by different objects that contain information about
-the qubit characterization and connectivity, the native gates and the lab's
-instrumentation.
+the native gates and the lab's instrumentation.
 
 The following cell shows how to define a single qubit platform from scratch,
 using different Qibolab primitives.
@@ -92,8 +91,7 @@ coded following the abstract :class:`qibolab.instruments.abstract.Instrument`
 interface.
 
 Furthermore, above we defined three channels that connect the qubit to the
-control instrument and we assigned two native gates to the qubit. In this
-example we neglected or characterization parameters associated to the qubit.
+control instrument and we assigned two native gates to the qubit.
 These can be passed when defining the :class:`qibolab.qubits.Qubit` objects.
 
 When the QPU contains more than one qubit, some of the qubits are connected so
@@ -179,7 +177,7 @@ hold the parameters of the two-qubit gates.
     )
 
     # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1)
+    pair = QubitPair(qubit0.name, qubit1.name)
     pair.native_gates = TwoQubitNatives(
         CZ=FixedSequenceFactory(
             PulseSequence(
@@ -222,7 +220,7 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # Look above example
 
     # define the pair of qubits
-    pair = QubitPair(qubit0, qubit1, coupler_01)
+    pair = QubitPair(qubit0.name, qubit1.name)
     pair.native_gates = TwoQubitNatives(
         CZ=FixedSequenceFactory(
             PulseSequence(
@@ -408,22 +406,6 @@ a two-qubit system:
             ]
           }
         }
-      },
-      "characterization": {
-        "single_qubit": {
-          "0": {
-            "T1": 0.0,
-            "T2": 0.0,
-            "threshold": 0.00028502261712637096,
-            "iq_angle": 1.283105298787488
-          },
-          "1": {
-            "T1": 0.0,
-            "T2": 0.0,
-            "threshold": 0.0002694329123116206,
-            "iq_angle": 4.912447775569025
-          }
-        }
       }
     }
 
@@ -433,19 +415,6 @@ we need the following changes to the previous runcard:
 .. code-block::  json
 
     {
-      "qubits": [
-        0,
-        1
-      ],
-      "couplers": [
-        0
-      ],
-      "topology": {
-        "0": [
-          0,
-          1
-        ]
-      },
       "components": {
         "flux_coupler_01": {
           "bias": 0.12
@@ -497,15 +466,12 @@ we need the following changes to the previous runcard:
       }
     }
 
-This file contains different sections: ``qubits`` is a list with the qubit
-names, ``couplers`` one with the coupler names , ``settings`` defines default execution parameters, ``topology`` defines
-the qubit connectivity (qubit pairs), ``native_gates`` specifies the calibrated
-pulse parameters for implementing single and two-qubit gates and
-``characterization`` provides the physical parameters associated to each qubit and coupler.
+This file contains different sections: ``components`` defines the configuration of channel
+parameters, while ``native_gates`` specifies the calibrated pulse parameters for implementing
+single and two-qubit gates.
 Note that such parameters may slightly differ depending on the QPU architecture,
 however the pulses under ``native_gates`` should comply with the
-:class:`qibolab.pulses.Pulse` API and the parameters under ``characterization``
-should be a subset of :class:`qibolab.qubits.Qubit` attributes.
+:class:`qibolab.pulses.Pulse` API.
 
 Providing the above runcard is not sufficient to instantiate a
 :class:`qibolab.platform.Platform`. This should still be done using a
@@ -642,7 +608,7 @@ With the following additions for coupler architectures:
             couplers=couplers,
         )
 
-Note that this assumes that the runcard is saved as ``<folder>/parameters.yml`` where ``<folder>``
+Note that this assumes that the runcard is saved as ``<folder>/parameters.json`` where ``<folder>``
 is the directory containing ``platform.py``.
 
 
@@ -660,21 +626,11 @@ The runcard can contain an ``instruments`` section that provides these parameter
 
     {
         "nqubits": 2,
-        "qubits": [
-            0,
-            1
-        ],
         "settings": {
             "nshots": 1024,
             "sampling_rate": 1000000000,
             "relaxation_time": 50000
         },
-        "topology": [
-            [
-                0,
-                1
-            ]
-        ],
         "instruments": {
             "twpa_pump": {
                 "frequency": 4600000000,
@@ -684,22 +640,6 @@ The runcard can contain an ``instruments`` section that provides these parameter
         "native_gates": {
             "single_qubit": {},
             "two_qubit": {}
-        },
-        "characterization": {
-            "single_qubit": {
-                "0": {
-                    "T1": 0.0,
-                    "T2": 0.0,
-                    "threshold": 0.00028502261712637096,
-                    "iq_angle": 1.283105298787488
-                },
-                "1": {
-                    "T1": 0.0,
-                    "T2": 0.0,
-                    "threshold": 0.0002694329123116206,
-                    "iq_angle": 4.912447775569025
-                }
-            }
         }
     }
 

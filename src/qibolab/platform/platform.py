@@ -4,9 +4,8 @@ import dataclasses
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import prod
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, Union
 
-import numpy as np
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
@@ -22,8 +21,6 @@ InstrumentMap = dict[InstrumentId, Instrument]
 QubitMap = dict[QubitId, Qubit]
 CouplerMap = dict[QubitId, Qubit]
 QubitPairMap = dict[QubitPairId, QubitPair]
-
-IntegrationSetup = dict[str, tuple[np.ndarray, float]]
 
 NS_TO_SEC = 1e-9
 
@@ -122,6 +119,11 @@ class Settings:
         return options
 
 
+def _channels_map(elements: Union[QubitMap, CouplerMap]):
+    """Map channel names to element (qubit or coupler)."""
+    return {ch.name: id for id, el in elements.items() for ch in el.channels}
+
+
 @dataclass
 class Platform:
     """Platform for controlling quantum devices."""
@@ -190,11 +192,6 @@ class Platform:
         return set(self.configs.keys())
 
     @property
-    def elements(self) -> dict:
-        """Qubits and couplers."""
-        return self.qubits | self.couplers
-
-    @property
     def channels(self) -> list[str]:
         """Channels in the platform."""
         return list(self.channels_map)
@@ -202,7 +199,7 @@ class Platform:
     @property
     def channels_map(self) -> dict[str, QubitId]:
         """Channel to element map."""
-        return {ch.name: id for id, el in self.elements.items() for ch in el.channels}
+        return _channels_map(self.qubits) | _channels_map(self.couplers)
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
@@ -251,7 +248,6 @@ class Platform:
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         configs: dict[str, Config],
-        integration_setup: IntegrationSetup,
         sweepers: list[ParallelSweepers],
     ):
         """Execute sequences on the controllers."""
@@ -259,9 +255,7 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.play(
-                    configs, sequences, options, integration_setup, sweepers
-                )
+                new_result = instrument.play(configs, sequences, options, sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
 
@@ -315,21 +309,9 @@ class Platform:
             if name in self.instruments:
                 self.instruments[name].setup(**asdict(cfg))
 
-        # maps acquisition channel name to corresponding kernel and iq_angle
-        # FIXME: this is temporary solution to deliver the information to drivers
-        # until we make acquisition channels first class citizens in the sequences
-        # so that each acquisition command carries the info with it.
-        integration_setup: IntegrationSetup = {}
-        for qubit in self.qubits.values():
-            integration_setup[qubit.acquisition.name] = (
-                qubit.kernel,
-                qubit.threshold,
-                qubit.iq_angle,
-            )
-
         results = defaultdict(list)
         for b in batch(sequences, self._controller.bounds):
-            result = self._execute(b, options, configs, integration_setup, sweepers)
+            result = self._execute(b, options, configs, sweepers)
             for serial, data in result.items():
                 results[serial].append(data)
 
