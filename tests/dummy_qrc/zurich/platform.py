@@ -14,7 +14,7 @@ from qibolab.instruments.zhinst import (
     Zurich,
 )
 from qibolab.kernels import Kernels
-from qibolab.serialize import Runcard
+from qibolab.serialize import Parameters
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -38,15 +38,15 @@ def create():
         create_connection(to_instrument="device_shfqc", ports="ZSYNCS/2"),
     )
 
-    runcard = Runcard.load(FOLDER)
+    parameters = Parameters.load(FOLDER)
     kernels = Kernels.load(FOLDER)
     qubits, couplers, pairs = (
-        runcard.native_gates.single_qubit,
-        runcard.native_gates.coupler,
-        runcard.native_gates.two_qubit,
+        parameters.native_gates.single_qubit,
+        parameters.native_gates.coupler,
+        parameters.native_gates.two_qubit,
     )
 
-    configs = runcard.configs
+    configs = parameters.configs
     readout_lo = "readout/lo"
     drive_los = {
         0: "qubit_0_1/drive/lo",
@@ -126,7 +126,7 @@ def create():
     return Platform(
         name=str(FOLDER),
         configs=configs,
-        runcard=runcard,
+        parameters=parameters,
         instruments={controller.name: controller},
         resonator_type="3D",
     )

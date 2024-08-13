@@ -4,7 +4,7 @@ from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
 from qibolab.platform import Platform
-from qibolab.serialize import Runcard
+from qibolab.serialize import Parameters
 from qibolab.serialize_ import replace
 
 FOLDER = pathlib.Path(__file__).parent
@@ -17,11 +17,11 @@ def create_dummy():
     twpa_pump_name = "twpa_pump"
     twpa_pump = DummyLocalOscillator(twpa_pump_name, "0.0.0.0")
 
-    runcard = Runcard.load(FOLDER)
+    parameters = Parameters.load(FOLDER)
     kernels = Kernels.load(FOLDER)
 
-    configs = runcard.configs
-    for q, qubit in runcard.native_gates.single_qubit.items():
+    configs = parameters.configs
+    for q, qubit in parameters.native_gates.single_qubit.items():
         acquisition_name = f"qubit_{q}/acquire"
         probe_name = f"qubit_{q}/probe"
         qubit.probe = IqChannel(
@@ -43,13 +43,13 @@ def create_dummy():
         flux_name = f"qubit_{q}/flux"
         qubit.flux = DcChannel(flux_name)
 
-    for c, coupler in runcard.native_gates.coupler.items():
+    for c, coupler in parameters.native_gates.coupler.items():
         flux_name = f"coupler_{c}/flux"
         coupler.flux = DcChannel(flux_name)
 
     return Platform(
         FOLDER.name,
-        runcard=runcard,
+        parameters=parameters,
         configs=configs,
         instruments={instrument.name: instrument, twpa_pump.name: twpa_pump},
     )

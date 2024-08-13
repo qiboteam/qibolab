@@ -1,8 +1,7 @@
-"""Helper methods for loading and saving to runcards.
+"""Helper methods for (de)serializing parameters.
 
-The format of runcards in the ``qiboteam/qibolab_platforms_qrc``
-repository is assumed here. See :ref:`Using runcards <using_runcards>`
-example for more details.
+The format is explained in the :ref:`Using parameters <using_runcards>`
+example.
 """
 
 import json
@@ -21,7 +20,7 @@ from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.serialize_ import Model, replace
 
-RUNCARD = "parameters.json"
+PARAMETERS = "parameters.json"
 PLATFORM = "platform.py"
 
 QubitMap = dict[QubitId, Qubit]
@@ -46,7 +45,7 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
 
 
 class Settings(Model):
-    """Default execution settings read from the runcard."""
+    """Default platform execution settings."""
 
     nshots: int = 1000
     """Default number of repetitions when executing a pulse sequence."""
@@ -73,22 +72,14 @@ class NativeGates:
 
     @classmethod
     def load(cls, raw: dict):
-        """Load qubits, couplers and pairs from the runcard.
-
-        Uses the native gate section of the runcard to parse the
-        corresponding :class: `qibolab.qubits.Qubit` and
-        :class: `qibolab.qubits.QubitPair` objects.
-        """
+        """Load qubits, couplers and pairs."""
         qubits = _load_single_qubit_natives(raw["single_qubit"])
         couplers = _load_single_qubit_natives(raw["coupler"])
         pairs = _load_two_qubit_natives(raw["two_qubit"], qubits)
         return cls(qubits, couplers, pairs)
 
     def dump(self) -> dict:
-        """Serialize native gates section to dictionary.
-
-        It follows the runcard format, using qubit and pair objects.
-        """
+        """Serialize native gates section to dictionary."""
         native_gates = {
             "single_qubit": {
                 _dump_qubit_name(q): _dump_natives(qubit.native_gates)
@@ -112,7 +103,7 @@ class NativeGates:
 
 
 @dataclass
-class Runcard:
+class Parameters:
     """Serializable parameters."""
 
     settings: Settings = field(default_factory=Settings)
@@ -122,17 +113,17 @@ class Runcard:
 
     @classmethod
     def load(cls, path: Path):
-        """Load runcard from JSON."""
-        d = json.loads((path / RUNCARD).read_text())
+        """Load parameters from JSON."""
+        d = json.loads((path / PARAMETERS).read_text())
         settings = Settings(**d["settings"])
         configs = TypeAdapter(dict[str, Config]).validate_python(d["components"])
         natives = NativeGates.load(d["native_gates"])
         return cls(settings=settings, configs=configs, native_gates=natives)
 
     def dump(self, path: Path, updates: Optional[list[ConfigUpdate]] = None):
-        """Platform serialization as runcard (json) and kernels (npz).
+        """Platform serialization as parameters (json) and kernels (npz).
 
-        The file saved follows the format explained in :ref:`Using runcards <using_runcards>`.
+        The file saved follows the format explained in :ref:`Using parameters <using_runcards>`.
 
         The requested ``path`` is the folder where the json and npz will be dumped.
 
@@ -147,7 +138,7 @@ class Runcard:
             "native_gates": self.native_gates.dump(),
         }
 
-        (path / RUNCARD).write_text(json.dumps(settings, sort_keys=False, indent=4))
+        (path / PARAMETERS).write_text(json.dumps(settings, sort_keys=False, indent=4))
 
 
 def _load_qubit_name(name: str) -> QubitId:
@@ -166,12 +157,7 @@ def _load_sequence(raw_sequence):
 
 
 def _load_single_qubit_natives(gates: dict) -> dict[QubitId, Qubit]:
-    """Parse native gates from the runcard.
-
-    Args:
-        gates (dict): Dictionary with native gate pulse parameters as loaded
-            from the runcard.
-    """
+    """Parse native gates."""
     qubits = {}
     for q, gatedict in gates.items():
         name = _load_qubit_name(q)
@@ -248,8 +234,8 @@ def dump_kernels(platform: "Platform", path: Path):
         kernels.dump(path)
 
 
-# TODO: drop as soon as dump_kernels is reabsorbed in the runcard
+# TODO: drop as soon as dump_kernels is reabsorbed in the parameters
 def dump_platform(platform: "Platform", path: Path):
     """Dump paltform."""
-    platform.runcard.dump(path)
+    platform.parameters.dump(path)
     dump_kernels(platform, path)

@@ -28,7 +28,7 @@ from qibolab.qubits import Qubit, QubitPair
 from qibolab.serialize import (
     PLATFORM,
     NativeGates,
-    Runcard,
+    Parameters,
     dump_kernels,
     dump_platform,
 )
@@ -63,7 +63,7 @@ def test_create_platform_error():
 def test_platform_basics():
     platform = Platform(
         name="ciao",
-        runcard=Runcard(native_gates=NativeGates({}, {}, {})),
+        parameters=Parameters(native_gates=NativeGates({}, {}, {})),
         configs={},
         instruments={},
     )
@@ -73,7 +73,7 @@ def test_platform_basics():
     qs = {q: Qubit(q) for q in range(10)}
     platform2 = Platform(
         name="come va?",
-        runcard=Runcard(
+        parameters=Parameters(
             native_gates=NativeGates(
                 single_qubit=qs,
                 two_qubit={
@@ -158,20 +158,20 @@ def test_update_configs(platform):
         update_configs(configs, [{"non existent": {"property": 1.0}}])
 
 
-def test_dump_runcard(platform, tmp_path):
-    platform.runcard.dump(tmp_path)
-    final = Runcard.load(tmp_path)
+def test_dump_parameters(platform, tmp_path):
+    platform.parameters.dump(tmp_path)
+    final = Parameters.load(tmp_path)
     if platform.name == "dummy":
-        target = Runcard.load(FOLDER)
+        target = Parameters.load(FOLDER)
     else:
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
-        target = Runcard.load(target_path)
+        target = Parameters.load(target_path)
 
-    # assert configs section is dumped properly in the runcard
+    # assert configs section is dumped properly in the parameters
     assert final.configs == target.configs
 
 
-def test_dump_runcard_with_updates(platform, tmp_path):
+def test_dump_parameterswith_updates(platform, tmp_path):
     qubit = next(iter(platform.qubits.values()))
     frequency = platform.config(qubit.drive.name).frequency + 1.5e9
     smearing = platform.config(qubit.acquisition.name).smearing + 10
@@ -179,8 +179,8 @@ def test_dump_runcard_with_updates(platform, tmp_path):
         qubit.drive.name: {"frequency": frequency},
         qubit.acquisition.name: {"smearing": smearing},
     }
-    platform.runcard.dump(tmp_path, [update])
-    final = Runcard.load(tmp_path)
+    platform.parameters.dump(tmp_path, [update])
+    final = Parameters.load(tmp_path)
     assert final.configs[qubit.drive.name].frequency == frequency
     assert final.configs[qubit.acquisition.name].smearing == smearing
 
@@ -209,7 +209,7 @@ def test_kernels(tmp_path, has_kernels):
 
 @pytest.mark.parametrize("has_kernels", [False, True])
 def test_dump_platform(tmp_path, has_kernels):
-    """Test platform dump and loading runcard and kernels."""
+    """Test platform dump and loading parameters and kernels."""
 
     platform = create_dummy()
     if has_kernels:
@@ -219,7 +219,7 @@ def test_dump_platform(tmp_path, has_kernels):
 
     dump_platform(platform, tmp_path)
 
-    settings = Runcard.load(tmp_path).settings
+    settings = Parameters.load(tmp_path).settings
     if has_kernels:
         kernels = Kernels.load(tmp_path)
         for qubit in platform.qubits.values():

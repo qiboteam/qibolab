@@ -12,7 +12,13 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import QubitId, QubitPairId
-from qibolab.serialize import QubitMap, QubitPairMap, Runcard, Settings, update_configs
+from qibolab.serialize import (
+    Parameters,
+    QubitMap,
+    QubitPairMap,
+    Settings,
+    update_configs,
+)
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import batch
 
@@ -88,7 +94,7 @@ class Platform:
 
     name: str
     """Name of the platform."""
-    runcard: Runcard
+    parameters: Parameters
     """..."""
     configs: dict[str, Config]
     """Mapping name of component to its default config."""
@@ -111,23 +117,23 @@ class Platform:
     @property
     def qubits(self) -> QubitMap:
         """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-        return self.runcard.native_gates.single_qubit
+        return self.parameters.native_gates.single_qubit
 
     @property
     def couplers(self) -> QubitMap:
         """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
-        return self.runcard.native_gates.coupler
+        return self.parameters.native_gates.coupler
 
     @property
     def pairs(self) -> QubitPairMap:
         """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
         objects."""
-        return self.runcard.native_gates.two_qubit
+        return self.parameters.native_gates.two_qubit
 
     @property
     def settings(self) -> Settings:
         """Container with default execution settings."""
-        return self.runcard.settings
+        return self.parameters.settings
 
     @property
     def nqubits(self) -> int:
