@@ -248,19 +248,12 @@ class QbloxOutputPort(Port):
         self._settings.i_offset, self._settings.q_offset = value
 
         if self.module.device:
-            self.module._set_device_parameter(
-                self.module.device,
-                f"out{self.port_number}_offset_path0",
-                value=self._settings.i_offset,
-            )
-            self.module._set_device_parameter(
-                self.module.device,
-                f"out{self.port_number}_offset_path1",
-                value=self._settings.q_offset,
-            )
-        else:
-            pass
-            # TODO: This case regards a connection error of the module
+            self.module.device.set(
+                f"out{self.port_number}_offset_path0", self._settings.i_offset
+            ),
+            self.module.device.set(
+                f"out{self.port_number}_offset_path1", self._settings.q_offset
+            ),
 
 
 class QbloxInputPort:

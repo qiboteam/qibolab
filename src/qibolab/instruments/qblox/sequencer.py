@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 import numpy as np
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
@@ -120,15 +122,15 @@ class WaveformsBuffer:
         Raises:
             NotEnoughMemory: If the memory needed to store the waveforms in more than the memory avalible.
         """
-        # In order to generate waveforms for each duration value, the pulse will need to be modified.
         values = np.round(values).astype(int)
+        # In order to generate waveforms for each duration value, the pulse will need to be modified.
         # To avoid any conflicts, make a copy of the pulse first.
         pulse_copy = pulse.copy()
 
         # there may be other waveforms stored already, set first index as the next available
         first_idx = len(self.unique_waveforms)
 
-        if pulse.type == PulseType.FLUX or pulse.type == PulseType.COUPLERFLUX:
+        if pulse.type in (PulseType.FLUX, PulseType.COUPLERFLUX):
             # for flux pulses, store i waveforms
             idx_range = np.arange(first_idx, first_idx + len(values), 1)
 
@@ -232,5 +234,5 @@ class Sequencer:
         self.acquisitions: dict = {}
         self.weights: dict = {}
         self.program: Program = Program()
-        self.qubit = None  # self.qubit: int | str = None
-        self.coupler = None  # self.coupler: int | str = None
+        self.qubit: Optional[Union[int, str]] = None
+        self.coupler: Optional[Union[int, str]] = None

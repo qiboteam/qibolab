@@ -745,9 +745,9 @@ class QrmRf(ClusterModule):
                             and pulses[n].sweeper.type == QbloxSweeperType.duration
                         ):
                             RI = pulses[n].sweeper.register
-                            if (
-                                pulses[n].type == PulseType.FLUX
-                                or pulses[n].type == PulseType.COUPLERFLUX
+                            if pulses[n].type in (
+                                PulseType.FLUX,
+                                PulseType.COUPLERFLUX,
                             ):
                                 RQ = pulses[n].sweeper.register
                             else:
@@ -795,9 +795,9 @@ class QrmRf(ClusterModule):
                             and pulses[n].sweeper.type == QbloxSweeperType.duration
                         ):
                             RI = pulses[n].sweeper.register
-                            if (
-                                pulses[n].type == PulseType.FLUX
-                                or pulses[n].type == PulseType.COUPLERFLUX
+                            if pulses[n].type in (
+                                PulseType.FLUX,
+                                PulseType.COUPLERFLUX,
                             ):
                                 RQ = pulses[n].sweeper.register
                             else:

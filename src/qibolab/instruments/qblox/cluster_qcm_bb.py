@@ -201,16 +201,18 @@ class QcmBb(ClusterModule):
         """
         pass
 
-    def _get_next_sequencer(self, port, frequency, qubits: dict, couplers: dict = {}):
-        """Retrieves and configures the next avaliable sequencer.
+    def _get_next_sequencer(
+        self, port: str, frequency: float, qubits: dict, couplers: dict
+    ):
+        """Retrieves and configures the next available sequencer.
 
         The parameters of the new sequencer are copied from those of the default sequencer, except for the
         intermediate frequency and classification parameters.
         Args:
-            port (str):
-            frequency ():
-            qubits ():
-            couplers ():
+            port: name of the output port
+            frequency: NCO frequency
+            qubits: qubits associated with this sequencer
+            couplers: couplers associated with this sequencer
         Raises:
             Exception = If attempting to set a parameter without a connection to the instrument.
         """
@@ -237,6 +239,17 @@ class QcmBb(ClusterModule):
             else:
                 log.warning(f"Coupler {_coupler.name} has no flux line connected")
 
+        if qubit and coupler:
+            raise ValueError(
+                f"Port {port} of device {self.name} is configured for more than one line (flux lines of qubit {qubit.name} and coupler {coupler.name}"
+            )
+        if qubit:
+            self._ports[port].offset = qubit.sweetspot
+        elif coupler:
+            self._ports[port].offset = coupler.sweetspot
+        else:
+            self._ports[port].offset = 0
+
         # select a new sequencer and configure it as required
         next_sequencer_number = self._free_sequencers_numbers.pop(0)
         if next_sequencer_number != self.DEFAULT_SEQUENCERS[port]:
@@ -260,13 +273,6 @@ class QcmBb(ClusterModule):
             # qubit channel with hardware_demod_en would lead to wrong results.
             # TODO: Throw error in that event or implement for non_overlapping_same_frequency_pulses
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
-
-            if qubit:
-                self._ports[port].offset = qubit.sweetspot
-            elif coupler:
-                self._ports[port].offset = coupler.sweetspot
-            else:
-                self._ports[port].offset = 0
 
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
@@ -522,10 +528,10 @@ class QcmBb(ClusterModule):
                     else:  # qubit_sweeper_parameters
                         if (
                             sweeper.qubits
-                            and sequencer.qubit in [_.name for _ in sweeper.qubits]
+                            and sequencer.qubit in [q.name for q in sweeper.qubits]
                         ) or (
                             sweeper.couplers
-                            and sequencer.coupler in [_.name for _ in sweeper.couplers]
+                            and sequencer.coupler in [c.name for c in sweeper.couplers]
                         ):
                             # plays an active role
                             if sweeper.parameter == Parameter.bias:
@@ -649,10 +655,7 @@ class QcmBb(ClusterModule):
                         and pulses[n].sweeper.type == QbloxSweeperType.duration
                     ):
                         RI = pulses[n].sweeper.register
-                        if (
-                            pulses[n].type == PulseType.FLUX
-                            or pulses[n].type == PulseType.COUPLERFLUX
-                        ):
+                        if pulses[n].type in (PulseType.FLUX, PulseType.COUPLERFLUX):
                             RQ = pulses[n].sweeper.register
                         else:
                             RQ = pulses[n].sweeper.aux_register
