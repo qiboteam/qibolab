@@ -35,7 +35,7 @@ class PulseSequence(UserList[_Element]):
             cls._validate,
             schema,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                cls._serialize, info_arg=False, return_schema=schema
+                cls._serialize, info_arg=False
             ),
         )
 
