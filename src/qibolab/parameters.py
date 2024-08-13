@@ -51,14 +51,22 @@ class Settings(Model):
 
 
 class NativeGates(Model):
+    """Native gates parameters.
+
+    This is a container for the parameters of the whole platform.
+    """
+
     single_qubit: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
     coupler: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
     two_qubit: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
+
+
+ComponentId = str
 
 
 class Parameters(Model):
     """Serializable parameters."""
 
     settings: Settings = Field(default_factory=Settings)
-    configs: dict[str, Config] = Field(default_factory=dict)
+    configs: dict[ComponentId, Config] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
