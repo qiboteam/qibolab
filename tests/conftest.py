@@ -153,10 +153,10 @@ def execute(connected_platform: Platform) -> Execution:
         if sequence is None:
             qd_seq = qubit.native_gates.RX.create_sequence()
             probe_seq = qubit.native_gates.MZ.create_sequence()
-            probe_pulse = next(iter(probe_seq.values()))[0]
+            probe_pulse = probe_seq[0][1]
             sequence = PulseSequence()
-            sequence.extend(qd_seq)
-            sequence.extend(probe_seq)
+            sequence.concatenate(qd_seq)
+            sequence.concatenate(probe_seq)
             if sweepers is None:
                 amp_values = np.arange(0.01, 0.06, 0.01)
                 freq_values = np.arange(-4e6, 4e6, 1e6)

@@ -7,49 +7,33 @@ from qibolab.unrolling import Bounds, batch
 
 
 def test_bounds_update():
-    ps = PulseSequence()
-    ps["ch3/drive"].append(
-        Pulse(
-            duration=40,
-            amplitude=0.9,
-            envelope=Drag(rel_sigma=0.2, beta=1),
-        )
-    )
-    ps["ch2/drive"].append(
-        Pulse(
-            duration=40,
-            amplitude=0.9,
-            envelope=Drag(rel_sigma=0.2, beta=1),
-        )
-    )
-    ps["ch1/drive"].append(
-        Pulse(
-            duration=40,
-            amplitude=0.9,
-            envelope=Drag(rel_sigma=0.2, beta=1),
-        )
-    )
-
-    ps["ch3/probe"].append(
-        Pulse(
-            duration=1000,
-            amplitude=0.9,
-            envelope=Rectangular(),
-        )
-    )
-    ps["ch2/probe"].append(
-        Pulse(
-            duration=1000,
-            amplitude=0.9,
-            envelope=Rectangular(),
-        )
-    )
-    ps["ch1/probe"].append(
-        Pulse(
-            duration=1000,
-            amplitude=0.9,
-            envelope=Rectangular(),
-        )
+    ps = PulseSequence(
+        [
+            (
+                "ch3/drive",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch2/drive",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch1/drive",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch3/probe",
+                Pulse(duration=1000, amplitude=0.9, envelope=Rectangular()),
+            ),
+            (
+                "ch2/probe",
+                Pulse(duration=1000, amplitude=0.9, envelope=Rectangular()),
+            ),
+            (
+                "ch1/probe",
+                Pulse(duration=1000, amplitude=0.9, envelope=Rectangular()),
+            ),
+        ]
     )
 
     bounds = Bounds.update(ps)
@@ -87,49 +71,24 @@ def test_bounds_comparison():
     ],
 )
 def test_batch(bounds):
-    ps = PulseSequence()
-    ps["ch3/drive"].append(
-        Pulse(
-            duration=40,
-            amplitude=0.9,
-            envelope=Drag(rel_sigma=0.2, beta=1),
-        )
-    )
-    ps["ch2/drive"].append(
-        Pulse(
-            duration=40,
-            amplitude=0.9,
-            envelope=Drag(rel_sigma=0.2, beta=1),
-        )
-    )
-    ps["ch1/drive"].append(
-        Pulse(
-            duration=40,
-            amplitude=0.9,
-            envelope=Drag(rel_sigma=0.2, beta=1),
-        )
-    )
-
-    ps["ch3/probe"].append(
-        Pulse(
-            duration=1000,
-            amplitude=0.9,
-            envelope=Rectangular(),
-        )
-    )
-    ps["ch2/probe"].append(
-        Pulse(
-            duration=1000,
-            amplitude=0.9,
-            envelope=Rectangular(),
-        )
-    )
-    ps["ch1/probe"].append(
-        Pulse(
-            duration=1000,
-            amplitude=0.9,
-            envelope=Rectangular(),
-        )
+    ps = PulseSequence(
+        [
+            (
+                "ch3/drive",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch2/drive",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch1/drive",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            ("ch3/probe", Pulse(duration=1000, amplitude=0.9, envelope=Rectangular())),
+            ("ch2/probe", Pulse(duration=1000, amplitude=0.9, envelope=Rectangular())),
+            ("ch1/probe", Pulse(duration=1000, amplitude=0.9, envelope=Rectangular())),
+        ]
     )
 
     sequences = 10 * [ps]

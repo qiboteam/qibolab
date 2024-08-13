@@ -54,15 +54,15 @@ def unroll_sequences(
     total_sequence = PulseSequence()
     readout_map = defaultdict(list)
     for sequence in sequences:
-        total_sequence.extend(sequence)
+        total_sequence.concatenate(sequence)
         # TODO: Fix unrolling results
         for pulse in sequence.probe_pulses:
             readout_map[pulse.id].append(pulse.id)
 
         length = sequence.duration + relaxation_time
-        for channel in sequence.keys():
+        for channel in sequence.channels:
             delay = length - sequence.channel_duration(channel)
-            total_sequence[channel].append(Delay(duration=delay))
+            total_sequence.append((channel, Delay(duration=delay)))
 
     return total_sequence, readout_map
 

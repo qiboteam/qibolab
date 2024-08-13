@@ -5,6 +5,7 @@ from qibo import Circuit, gates
 from qibo.config import raise_error
 
 from qibolab.compilers.default import (
+    align_rule,
     cnot_rule,
     cz_rule,
     gpi2_rule,
@@ -16,6 +17,7 @@ from qibolab.compilers.default import (
 )
 from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
+from qibolab.qubits import QubitId
 
 
 @dataclass
@@ -54,6 +56,7 @@ class Compiler:
                 gates.GPI2: gpi2_rule,
                 gates.GPI: gpi_rule,
                 gates.M: measurement_rule,
+                gates.Align: align_rule,
             }
         )
 
@@ -107,7 +110,7 @@ class Compiler:
         """
         # get local sequence for the current gate
         rule = self[type(gate)]
-        if isinstance(gate, gates.M):
+        if isinstance(gate, (gates.M, gates.Align)):
             qubits = [platform.get_qubit(q) for q in gate.qubits]
             gate_sequence = rule(gate, qubits)
         elif len(gate.qubits) == 1:
@@ -123,7 +126,9 @@ class Compiler:
         return gate_sequence
 
     # FIXME: pulse.qubit and pulse.channel do not exist anymore
-    def compile(self, circuit: Circuit, platform: Platform):
+    def compile(
+        self, circuit: Circuit, platform: Platform
+    ) -> tuple[PulseSequence, dict]:
         """Transforms a circuit to pulse sequence.
 
         Args:
@@ -143,32 +148,40 @@ class Compiler:
         # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
 
         measurement_map = {}
-        qubit_clock = defaultdict(int)
-        channel_clock = defaultdict(int)
+        channel_clock = defaultdict(float)
+
+        def qubit_clock(el: QubitId):
+            return max(channel_clock[ch.name] for ch in platform.elements[el].channels)
+
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in set(filter(lambda x: x is not None, moment)):
-                if isinstance(gate, gates.Align):
-                    for qubit in gate.qubits:
-                        qubit_clock[qubit] += gate.delay
-                    continue
-
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
-                for ch in gate_sequence.keys():
-                    qubit = ch_to_qb[ch]
-                    if (delay := qubit_clock[qubit] - channel_clock[ch]) > 0:
-                        delay_sequence[ch].append(Delay(duration=delay))
+                increment = defaultdict(int)
+                start = max(
+                    (
+                        qubit_clock(el)
+                        for el in {ch_to_qb[ch] for ch in gate_sequence.channels}
+                    ),
+                    default=0.0,
+                )
+                for ch in gate_sequence.channels:
+                    delay = start - channel_clock[ch]
+                    if delay > 0:
+                        delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
-                    channel_duration = gate_sequence.channel_duration(ch)
-                    qubit_clock[qubit] += channel_duration
-                    channel_clock[ch] += channel_duration
-                sequence.extend(delay_sequence)
-                sequence.extend(gate_sequence)
+                    increment[ch] = gate_sequence.channel_duration(ch)
+                # add the increment only after computing them, since multiple channels
+                # are related to each other because belonging to the same qubit
+                for ch, inc in increment.items():
+                    channel_clock[ch] += inc
+                sequence.concatenate(delay_sequence)
+                sequence.concatenate(gate_sequence)
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates
                 if isinstance(gate, gates.M):
                     measurement_map[gate] = gate_sequence
 
-        return sequence, measurement_map
+        return sequence.trim(), measurement_map

@@ -11,26 +11,27 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
     from qibolab.pulses import Pulse, PulseSequence, Rectangular, Gaussian, Delay
 
     # Define PulseSequence
-    sequence = PulseSequence()
+    sequence = PulseSequence(
+        [
+            (
+                "channel_0",
+                Pulse(
+                    amplitude=0.3,
+                    duration=60,
+                    relative_phase=0,
+                    envelope=Gaussian(rel_sigma=0.2),
+                ),
+            ),
+            ("channel_1", Delay(duration=100, channel="1")),
+            (
+                "channel_1",
+                Pulse(
+                    amplitude=0.5, duration=3000, relative_phase=0, envelope=Rectangular()
+                ),
+            ),
+        ]
+    )
 
-    # Add some pulses to the pulse sequence
-    sequence["channel_0"].append(
-        Pulse(
-            amplitude=0.3,
-            duration=60,
-            relative_phase=0,
-            envelope=Gaussian(rel_sigma=0.2),
-        )
-    )
-    sequence["channel_1"].append(Delay(duration=100, channel="1"))
-    sequence["channel_1"].append(
-        Pulse(
-            amplitude=0.5,
-            duration=3000,
-            relative_phase=0,
-            envelope=Rectangular(),
-        )
-    )
 
 The next step consists in connecting to a specific lab in which the pulse
 sequence will be executed. In order to do this we allocate a platform  object

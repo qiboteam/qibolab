@@ -2,7 +2,7 @@
 
 import base64
 import io
-from typing import Annotated, Union
+from typing import Annotated, TypeVar, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -61,7 +61,10 @@ class Model(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 
 
-def replace(model: BaseModel, **update):
+M = TypeVar("M", bound=BaseModel)
+
+
+def replace(model: M, **update) -> M:
     """Replace interface for pydantic models.
 
     To have the same familiar syntax of :func:`dataclasses.replace`.

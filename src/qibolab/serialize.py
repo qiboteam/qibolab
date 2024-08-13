@@ -28,7 +28,7 @@ from qibolab.platform.platform import (
     Settings,
     update_configs,
 )
-from qibolab.pulses import Pulse, PulseSequence
+from qibolab.pulses import PulseSequence
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair
 
@@ -113,10 +113,7 @@ def _load_pulse(pulse_kwargs: dict):
 
 
 def _load_sequence(raw_sequence):
-    seq = PulseSequence()
-    for ch, pulses in raw_sequence.items():
-        seq[ch] = [_load_pulse(raw_pulse) for raw_pulse in pulses]
-    return seq
+    return PulseSequence([(ch, _load_pulse(pulse)) for ch, pulse in raw_sequence])
 
 
 def _load_single_qubit_natives(gates) -> SingleQubitNatives:
@@ -200,7 +197,7 @@ def dump_qubit_name(name: QubitId) -> str:
     return name
 
 
-def _dump_pulse(pulse: Pulse):
+def _dump_pulse(pulse: PulseLike):
     data = pulse.model_dump()
     if "channel" in data:
         del data["channel"]
@@ -210,7 +207,7 @@ def _dump_pulse(pulse: Pulse):
 
 
 def _dump_sequence(sequence: PulseSequence):
-    return {ch: [_dump_pulse(p) for p in pulses] for ch, pulses in sequence.items()}
+    return [(ch, _dump_pulse(p)) for ch, p in sequence]
 
 
 def _dump_natives(natives: Union[SingleQubitNatives, TwoQubitNatives]):
