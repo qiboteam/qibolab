@@ -30,10 +30,10 @@ class PulseSequence(UserList[_Element]):
         cls, source_type: Any, handler: Callable[[Any], core_schema.CoreSchema]
     ) -> core_schema.CoreSchema:
         schema = handler(list[_Element])
-        return core_schema.no_info_after_validator_function(cls.validate, schema)
+        return core_schema.no_info_after_validator_function(cls._validate, schema)
 
     @classmethod
-    def validate(cls, value):
+    def _validate(cls, value):
         return cls(value)
 
     @property

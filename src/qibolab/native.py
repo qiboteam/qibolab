@@ -26,22 +26,22 @@ class RxyFactory(PulseSequence):
         sequence: The base sequence for the factory.
     """
 
-    @classmethod
-    def validate(cls, value):
-        sequence = PulseSequence(value)
-        if len(sequence.channels) != 1:
+    def __init__(self, iterable):
+        super().__init__(iterable)
+        cls = type(self)
+        if len(self.channels) != 1:
             raise ValueError(
-                f"Incompatible number of channels: {len(sequence.channels)}. "
+                f"Incompatible number of channels: {len(self.channels)}. "
                 f"{cls} expects a sequence on exactly one channel."
             )
 
-        if len(sequence) != 1:
+        if len(self) != 1:
             raise ValueError(
-                f"Incompatible number of pulses: {len(sequence)}. "
+                f"Incompatible number of pulses: {len(self)}. "
                 f"{cls} expects a sequence with exactly one pulse."
             )
 
-        pulse = sequence[0][1]
+        pulse = self[0][1]
         assert isinstance(pulse, Pulse)
         expected_envelopes = (Gaussian, Drag)
         if not isinstance(pulse.envelope, expected_envelopes):
@@ -49,8 +49,6 @@ class RxyFactory(PulseSequence):
                 f"Incompatible pulse envelope: {pulse.envelope.__class__}. "
                 f"{cls} expects {expected_envelopes} envelope."
             )
-
-        return cls(value)
 
     def create_sequence(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
         """Create a sequence for single-qubit rotation.
@@ -94,7 +92,7 @@ class TwoQubitNatives(Model):
     qubits."""
 
     CZ: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
-    CNOT: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
+    CNOT: Annotated[Optional[FixedSequenceFactory], {"symmetric": False}] = None
     iSWAP: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
 
     @property

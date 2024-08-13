@@ -70,14 +70,16 @@ def test_platform_basics():
     assert str(platform) == "ciao"
     assert platform.topology == []
 
-    qs = {q: Qubit(q) for q in range(10)}
+    qs = {q: Qubit(name=q) for q in range(10)}
     platform2 = Platform(
         name="come va?",
         parameters=Parameters(
             native_gates=NativeGates(
                 single_qubit=qs,
                 two_qubit={
-                    (q1, q2): QubitPair(q1, q2) for q1 in range(3) for q2 in range(4, 8)
+                    (q1, q2): QubitPair(qubit1=q1, qubit2=q2)
+                    for q1 in range(3)
+                    for q2 in range(4, 8)
                 },
                 coupler={},
             )
