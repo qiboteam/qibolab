@@ -277,7 +277,7 @@ since ``create()`` is part of a Python module, is is possible to load parameters
 from an external file or database.
 
 Qibolab provides some utility functions, accessible through
-:py:mod:`qibolab.serialize`, for loading calibration parameters stored in a JSON
+:py:mod:`qibolab.parameters`, for loading calibration parameters stored in a JSON
 file with a specific format. We call such file a runcard. Here is a runcard for
 a two-qubit system:
 
@@ -476,7 +476,7 @@ however the pulses under ``native_gates`` should comply with the
 Providing the above runcard is not sufficient to instantiate a
 :class:`qibolab.platform.Platform`. This should still be done using a
 ``create()`` method, however this is significantly simplified by
-``qibolab.serialize``. The ``create()`` method should be put in a
+``qibolab.parameters``. The ``create()`` method should be put in a
 file named ``platform.py`` inside the ``my_platform`` directory.
 Here is the ``create()`` method that loads the parameters of
 the above runcard:
@@ -495,7 +495,7 @@ the above runcard:
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import Parameters
+    from qibolab.parameters import Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -642,7 +642,7 @@ The runcard can contain an ``instruments`` section that provides these parameter
     }
 
 
-These settings are loaded when creating the platform using :meth:`qibolab.serialize.load_instrument_settings`.
+These settings are loaded when creating the platform using :meth:`qibolab.parameters.load_instrument_settings`.
 Note that the key used in the runcard should be the same with the name used when instantiating the instrument,
 in this case ``"twpa_pump"``.
 
@@ -660,7 +660,7 @@ in this case ``"twpa_pump"``.
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import Parameters
+    from qibolab.parameters import Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()

@@ -4,10 +4,9 @@ from pathlib import Path
 
 from qibo.config import raise_error
 
-from qibolab.serialize import PLATFORM
-
 from .platform import Platform
 
+PLATFORM = "platform.py"
 PLATFORMS = "QIBOLAB_PLATFORMS"
 
 

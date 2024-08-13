@@ -14,7 +14,7 @@ from qibolab.instruments.zhinst import (
     Zurich,
 )
 from qibolab.kernels import Kernels
-from qibolab.serialize import Parameters
+from qibolab.parameters import Parameters
 
 FOLDER = pathlib.Path(__file__).parent
 

@@ -3,8 +3,8 @@ import pathlib
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.kernels import Kernels
+from qibolab.parameters import Parameters
 from qibolab.platform import Platform
-from qibolab.serialize import Parameters
 from qibolab.serialize_ import replace
 
 FOLDER = pathlib.Path(__file__).parent

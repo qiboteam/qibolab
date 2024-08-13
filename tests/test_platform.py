@@ -21,17 +21,11 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.parameters import NativeGates, Parameters, update_configs
 from qibolab.platform import Platform, unroll_sequences
-from qibolab.platform.load import PLATFORMS
-from qibolab.platform.platform import update_configs
+from qibolab.platform.load import PLATFORM, PLATFORMS
+from qibolab.platform.platform import dump_kernels, dump_platform
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
-from qibolab.serialize import (
-    PLATFORM,
-    NativeGates,
-    Parameters,
-    dump_kernels,
-    dump_platform,
-)
 from qibolab.serialize_ import replace
 
 from .conftest import find_instrument

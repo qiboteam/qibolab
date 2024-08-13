@@ -3,6 +3,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from math import prod
+from pathlib import Path
 from typing import Any, Literal, Optional, TypeVar
 
 from qibo.config import log, raise_error
@@ -10,18 +11,15 @@ from qibo.config import log, raise_error
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
+from qibolab.kernels import Kernels
+from qibolab.parameters import Parameters, Settings, update_configs
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
-from qibolab.serialize import (
-    Parameters,
-    QubitMap,
-    QubitPairMap,
-    Settings,
-    update_configs,
-)
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import batch
 
+QubitMap = dict[QubitId, Qubit]
+QubitPairMap = dict[QubitPairId, QubitPair]
 InstrumentMap = dict[InstrumentId, Instrument]
 
 NS_TO_SEC = 1e-9
@@ -344,3 +342,31 @@ class Platform:
             return self.couplers[coupler]
         except KeyError:
             return list(self.couplers.values())[coupler]
+
+
+# TODO: kernels are part of the parameters, they should not be dumped separately
+def dump_kernels(platform: Platform, path: Path):
+    """Creates Kernels instance from platform and dumps as npz.
+
+    Args:
+        platform (qibolab.platform.Platform): The platform to be serialized.
+        path (pathlib.Path): Path that the kernels file will be saved.
+    """
+
+    # create kernels
+    kernels = Kernels()
+    for qubit in platform.qubits.values():
+        kernel = platform.configs[qubit.acquisition.name].kernel
+        if kernel is not None:
+            kernels[qubit.name] = kernel
+
+    # dump only if not None
+    if len(kernels) > 0:
+        kernels.dump(path)
+
+
+# TODO: drop as soon as dump_kernels is reabsorbed in the parameters
+def dump_platform(platform: Platform, path: Path):
+    """Dump paltform."""
+    platform.parameters.dump(path)
+    dump_kernels(platform, path)

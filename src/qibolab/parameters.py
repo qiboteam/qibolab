@@ -11,16 +11,11 @@ from pydantic import Field
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
-from qibolab.kernels import Kernels
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.qubits import QubitId, QubitPairId
 from qibolab.serialize_ import Model, replace
 
 PARAMETERS = "parameters.json"
-PLATFORM = "platform.py"
-
-QubitMap = dict[QubitId, Qubit]
-QubitPairMap = dict[QubitPairId, QubitPair]
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -88,31 +83,3 @@ class Parameters(Model):
         (path / PARAMETERS).write_text(
             json.dumps(self.model_dump(), sort_keys=False, indent=4)
         )
-
-
-# TODO: kernels are part of the parameters, they should not be dumped separately
-def dump_kernels(platform: "Platform", path: Path):
-    """Creates Kernels instance from platform and dumps as npz.
-
-    Args:
-        platform (qibolab.platform.Platform): The platform to be serialized.
-        path (pathlib.Path): Path that the kernels file will be saved.
-    """
-
-    # create kernels
-    kernels = Kernels()
-    for qubit in platform.qubits.values():
-        kernel = platform.configs[qubit.acquisition.name].kernel
-        if kernel is not None:
-            kernels[qubit.name] = kernel
-
-    # dump only if not None
-    if len(kernels) > 0:
-        kernels.dump(path)
-
-
-# TODO: drop as soon as dump_kernels is reabsorbed in the parameters
-def dump_platform(platform: "Platform", path: Path):
-    """Dump paltform."""
-    platform.parameters.dump(path)
-    dump_kernels(platform, path)

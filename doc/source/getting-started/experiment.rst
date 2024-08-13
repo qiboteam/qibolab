@@ -40,8 +40,8 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
 
     # TODO: understand error generate by doctest
     # from qibolab.instruments.zhinst import ZiChannel, Zurich
+    from qibolab.parameters import Parameters
     from qibolab.platform import Platform
-    from qibolab.serialize import Parameters
 
     NAME = "my_platform"  # name of the platform
     ADDRESS = "localhost"  # ip address of the ZI data server
