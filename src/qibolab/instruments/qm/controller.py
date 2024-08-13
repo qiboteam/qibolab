@@ -326,7 +326,7 @@ class QmController(Controller):
             channel_name = args.sequence.pulse_channel(pulse.id)
             channel = self.channels[channel_name].logical_channel
             for value in sweeper.values:
-                sweep_pulse = pulse.model_copy(updates={"duration": value})
+                sweep_pulse = pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(channel, sweep_pulse)
                 args.parameters[op].pulses.append((value, sweep_op))
 
