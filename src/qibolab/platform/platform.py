@@ -2,10 +2,11 @@
 
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from math import prod
 from pathlib import Path
-from typing import Any, Literal, Optional, TypeVar
+from typing import Any, Literal, Optional, TypeVar, Union
 
 from qibo.config import log, raise_error
 
@@ -322,10 +323,17 @@ class Platform:
         return results
 
     @classmethod
-    def load(cls, path: Path, instruments: InstrumentMap, name: Optional[str] = None):
+    def load(
+        cls,
+        path: Path,
+        instruments: Union[InstrumentMap, Iterable[Instrument]],
+        name: Optional[str] = None,
+    ):
         """Dump platform."""
         if name is None:
             name = path.name
+        if not isinstance(instruments, dict):
+            instruments = {i.name: i for i in instruments}
 
         return cls(
             name=name,
