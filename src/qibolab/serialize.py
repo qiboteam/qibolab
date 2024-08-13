@@ -14,7 +14,7 @@ from pydantic import Field, TypeAdapter
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.kernels import Kernels
-from qibolab.native import FixedSequenceFactory, SingleQubitNatives, TwoQubitNatives
+from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import PulseSequence
 from qibolab.pulses.pulse import PulseLike
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
@@ -172,13 +172,10 @@ def _load_two_qubit_natives(
     pairs = {}
     for pair, gatedict in gates.items():
         q0, q1 = (_load_qubit_name(q) for q in pair.split("-"))
-        native_gates = TwoQubitNatives(
-            **{
-                gate_name: FixedSequenceFactory(_load_sequence(raw_sequence))
-                for gate_name, raw_sequence in gatedict.items()
-            }
+        native_gates = TwoQubitNatives(**gatedict)
+        pairs[(q0, q1)] = QubitPair(
+            **dict(qubit1=q0, qubit2=q1, native_gates=native_gates)
         )
-        pairs[(q0, q1)] = QubitPair(q0, q1, native_gates=native_gates)
         if native_gates.symmetric:
             pairs[(q1, q0)] = pairs[(q0, q1)]
     return pairs
