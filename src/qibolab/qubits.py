@@ -1,4 +1,3 @@
-from dataclasses import field, fields
 from typing import Annotated, Optional, Union
 
 from pydantic import ConfigDict, Field
@@ -37,7 +36,9 @@ class Qubit(Model):
 
     name: QubitId
 
-    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
+    native_gates: Annotated[
+        SingleQubitNatives, Field(default_factory=SingleQubitNatives)
+    ]
 
     probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
@@ -60,13 +61,13 @@ class Qubit(Model):
         Assumes RF = LO + IF.
         """
         freqs = {}
-        for gate in fields(self.native_gates):
-            native = getattr(self.native_gates, gate.name)
+        for name in self.native_gates.model_fields:
+            native = getattr(self.native_gates, name)
             if native is not None:
                 channel_type = native.pulse_type.name.lower()
                 _lo = getattr(self, channel_type).lo_frequency
                 _if = native.frequency - _lo
-                freqs[gate.name] = _lo, _if
+                freqs[name] = _lo, _if
         return freqs
 
 
@@ -93,4 +94,4 @@ class QubitPair(Model):
     Acts as target on two-qubit gates.
     """
 
-    native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)
+    native_gates: Annotated[TwoQubitNatives, Field(default_factory=SingleQubitNatives)]
