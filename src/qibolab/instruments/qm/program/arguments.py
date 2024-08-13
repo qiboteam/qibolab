@@ -16,7 +16,7 @@ class Parameters:
     duration: Optional[_Variable] = None
     amplitude: Optional[_Variable] = None
     phase: Optional[_Variable] = None
-    pulses: list[str] = field(default_factory=list)
+    pulses: list[tuple[float, str]] = field(default_factory=list)
 
 
 @dataclass
