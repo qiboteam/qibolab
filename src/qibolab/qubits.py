@@ -3,7 +3,6 @@ from typing import Annotated, Optional, Union
 from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.serialize import Model
 
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
@@ -35,8 +34,6 @@ class Qubit(Model):
     model_config = ConfigDict(frozen=False)
 
     name: QubitId
-
-    native_gates: SingleQubitNatives = Field(default_factory=SingleQubitNatives)
 
     probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
@@ -75,27 +72,3 @@ QubitPairId = Annotated[
     PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
 ]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
-
-
-class QubitPair(Model):
-    """Data structure for holding the native two-qubit gates acting on a pair
-    of qubits.
-
-    This is needed for symmetry to the single-qubit gates which are storred in the
-    :class:`qibolab.platforms.abstract.Qubit`.
-    """
-
-    model_config = ConfigDict(frozen=False)
-
-    qubit1: QubitId
-    """First qubit of the pair.
-
-    Acts as control on two-qubit gates.
-    """
-    qubit2: QubitId
-    """Second qubit of the pair.
-
-    Acts as target on two-qubit gates.
-    """
-
-    native_gates: TwoQubitNatives = Field(default_factory=TwoQubitNatives)
