@@ -111,7 +111,9 @@ class Compiler:
         natives = platform.parameters.native_gates
 
         if isinstance(gate, (gates.M)):
-            qubits = [natives.single_qubit[q] for q in gate.qubits]
+            qubits = [
+                natives.single_qubit[platform.get_qubit(q).name] for q in gate.qubits
+            ]
             return rule(gate, qubits)
 
         if isinstance(gate, (gates.Align)):
@@ -123,8 +125,8 @@ class Compiler:
             return rule(gate, qubit)
 
         if len(gate.qubits) == 1:
-            qubit = gate.target_qubits[0]
-            return rule(gate, natives.single_qubit[qubit])
+            qubit = platform.get_qubit(gate.target_qubits[0])
+            return rule(gate, natives.single_qubit[qubit.name])
 
         if len(gate.qubits) == 2:
             pair = tuple(platform.get_qubit(q).name for q in gate.qubits)
