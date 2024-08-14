@@ -939,7 +939,7 @@ class Pulse:
                 self.start,
                 self.duration,
                 self.amplitude,
-                self._shape,
+                self.shape,
                 self.channel,
                 self.qubit,
             )
