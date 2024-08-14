@@ -299,13 +299,17 @@ class Platform:
         cls,
         path: Path,
         instruments: Union[InstrumentMap, Iterable[Instrument]],
+        qubits: QubitMap,
+        couplers: Optional[QubitMap] = None,
         name: Optional[str] = None,
-    ):
+    ) -> "Platform":
         """Dump platform."""
         if name is None:
             name = path.name
         if not isinstance(instruments, dict):
             instruments = {i.name: i for i in instruments}
+        if couplers is None:
+            couplers = {}
 
         return cls(
             name=name,
@@ -313,6 +317,8 @@ class Platform:
                 json.loads((path / PARAMETERS).read_text())
             ),
             instruments=instruments,
+            qubits=qubits,
+            couplers=couplers,
         )
 
     def dump(self, path: Path):
