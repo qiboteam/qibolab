@@ -104,8 +104,19 @@ class Platform:
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
     qubits: QubitMap = field(default_factory=dict)
+    """Qubit controllers.
+
+    The mapped objects hold the :class:`qubit.components.channels.Channel` instances
+    required to send pulses addressing the desired qubits.
+    """
     couplers: QubitMap = field(default_factory=dict)
+    """Coupler controllers.
+
+    Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
+    in the mapped objects.
+    """
     pairs: list[QubitPairId] = field(default_factory=list)
+    """Available pairs in thee platform."""
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
