@@ -86,7 +86,7 @@ class Qubit:
     mean_exc_states: List[float] = field(default_factory=lambda: [0, 0])
 
     # parameters for single shot classification
-    threshold: Optional[float] = None
+    threshold: float = 0.0
     iq_angle: float = 0.0
     kernel: Optional[np.ndarray] = field(default=None, repr=False)
     # required for mixers (not sure if it should be here)
