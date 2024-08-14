@@ -24,11 +24,12 @@ def test_dummy_initialization(platform: Platform):
 )
 def test_dummy_execute_pulse_sequence(platform: Platform, acquisition):
     nshots = 100
-    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    natives = platform.parameters.native_gates.single_qubit[0]
+    probe_seq = natives.MZ.create_sequence()
     probe_pulse = probe_seq[0][1]
     sequence = PulseSequence()
     sequence.concatenate(probe_seq)
-    sequence.concatenate(platform.qubits[0].native_gates.RX12.create_sequence())
+    sequence.concatenate(natives.RX12.create_sequence())
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute([sequence], options)
     if acquisition is AcquisitionType.INTEGRATION:
@@ -56,20 +57,22 @@ def test_dummy_execute_pulse_sequence_couplers():
     platform = create_platform("dummy")
     sequence = PulseSequence()
 
-    cz = platform.pairs[(1, 2)].native_gates.CZ.create_sequence()
+    natives = platform.parameters.native_gates
+    cz = natives.two_qubit[(1, 2)].CZ.create_sequence()
 
     sequence.concatenate(cz)
     sequence.append((platform.qubits[0].probe.name, Delay(duration=40)))
     sequence.append((platform.qubits[2].probe.name, Delay(duration=40)))
-    sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
-    sequence.concatenate(platform.qubits[2].native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
+    sequence.concatenate(natives.single_qubit[2].MZ.create_sequence())
     options = ExecutionParameters(nshots=None)
     _ = platform.execute([sequence], options)
 
 
 def test_dummy_execute_pulse_sequence_fast_reset(platform: Platform):
+    natives = platform.parameters.native_gates
     sequence = PulseSequence()
-    sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     options = ExecutionParameters(nshots=None, fast_reset=True)
     _ = platform.execute([sequence], options)
 
@@ -84,9 +87,10 @@ def test_dummy_execute_pulse_sequence_unrolling(
     nshots = 100
     nsequences = 10
     platform.instruments["dummy"].UNROLLING_BATCH_SIZE = batch_size
+    natives = platform.parameters.native_gates
     sequences = []
     sequence = PulseSequence()
-    sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     for _ in range(nsequences):
         sequences.append(sequence)
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
@@ -101,7 +105,8 @@ def test_dummy_execute_pulse_sequence_unrolling(
 
 def test_dummy_single_sweep_raw(platform: Platform):
     sequence = PulseSequence()
-    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    natives = platform.parameters.native_gates
+    probe_seq = natives.single_qubit[0].MZ.create_sequence()
     pulse = probe_seq[0][1]
 
     parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
@@ -136,7 +141,8 @@ def test_dummy_single_sweep_coupler(
 ):
     platform = create_platform("dummy")
     sequence = PulseSequence()
-    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    natives = platform.parameters.native_gates
+    probe_seq = natives.single_qubit[0].MZ.create_sequence()
     probe_pulse = probe_seq[0][1]
     coupler_pulse = Pulse.flux(
         duration=40,
@@ -196,7 +202,8 @@ def test_dummy_single_sweep(
     platform: Platform, fast_reset, parameter, average, acquisition, nshots
 ):
     sequence = PulseSequence()
-    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    natives = platform.parameters.native_gates
+    probe_seq = natives.single_qubit[0].MZ.create_sequence()
     pulse = probe_seq[0][1]
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
@@ -254,7 +261,8 @@ def test_dummy_double_sweep(
 ):
     sequence = PulseSequence()
     pulse = Pulse(duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
-    probe_seq = platform.qubits[0].native_gates.MZ.create_sequence()
+    natives = platform.parameters.native_gates
+    probe_seq = natives.single_qubit[0].MZ.create_sequence()
     probe_pulse = probe_seq[0][1]
     sequence.append((platform.get_qubit(0).drive.name, pulse))
     sequence.append((platform.qubits[0].probe.name, Delay(duration=pulse.duration)))
@@ -327,8 +335,9 @@ def test_dummy_single_sweep_multiplex(
 ):
     sequence = PulseSequence()
     probe_pulses = {}
+    natives = platform.parameters.native_gates
     for qubit in platform.qubits:
-        probe_seq = platform.qubits[qubit].native_gates.MZ.create_sequence()
+        probe_seq = natives.single_qubit[qubit].MZ.create_sequence()
         probe_pulses[qubit] = probe_seq[0][1]
         sequence.concatenate(probe_seq)
     parameter_range = (
