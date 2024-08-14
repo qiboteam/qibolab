@@ -6,6 +6,7 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
+from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
 
 
@@ -86,26 +87,28 @@ def test_rz_to_sequence(platform):
     assert len(sequence) == 2
 
 
-def test_gpi_to_sequence(platform):
+def test_gpi_to_sequence(platform: Platform):
+    natives = platform.parameters.native_gates
+
     circuit = Circuit(1)
     circuit.add(gates.GPI(0, phi=0.2))
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
-    rx_seq = platform.qubits[0].native_gates.RX.create_sequence(phi=0.2)
+    rx_seq = natives.single_qubit[0].RX.create_sequence(phi=0.2)
 
     np.testing.assert_allclose(sequence.duration, rx_seq.duration)
 
 
 def test_gpi2_to_sequence(platform):
+    natives = platform.parameters.native_gates
+
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0.2))
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
-    rx90_seq = platform.qubits[0].native_gates.RX.create_sequence(
-        theta=np.pi / 2, phi=0.2
-    )
+    rx90_seq = natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2)
 
     np.testing.assert_allclose(sequence.duration, rx90_seq.duration)
     assert sequence == rx90_seq
@@ -113,25 +116,31 @@ def test_gpi2_to_sequence(platform):
 
 def test_cz_to_sequence():
     platform = create_platform("dummy")
+    natives = platform.parameters.native_gates
+
     circuit = Circuit(3)
     circuit.add(gates.CZ(1, 2))
 
     sequence = compile_circuit(circuit, platform)
-    test_sequence = platform.pairs[(2, 1)].native_gates.CZ.create_sequence()
+    test_sequence = natives.two_qubit[(2, 1)].CZ.create_sequence()
     assert sequence == test_sequence
 
 
 def test_cnot_to_sequence():
     platform = create_platform("dummy")
+    natives = platform.parameters.native_gates
+
     circuit = Circuit(4)
     circuit.add(gates.CNOT(2, 3))
 
     sequence = compile_circuit(circuit, platform)
-    test_sequence = platform.pairs[(2, 3)].native_gates.CNOT.create_sequence()
+    test_sequence = natives.two_qubit[(2, 3)].CNOT.create_sequence()
     assert sequence == test_sequence
 
 
-def test_add_measurement_to_sequence(platform):
+def test_add_measurement_to_sequence(platform: Platform):
+    natives = platform.parameters.native_gates
+
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, 0.1))
     circuit.add(gates.GPI2(0, 0.2))
@@ -144,16 +153,18 @@ def test_add_measurement_to_sequence(platform):
     assert len(list(sequence.channel(qubit.probe.name))) == 2  # include delay
 
     s = PulseSequence()
-    s.concatenate(qubit.native_gates.RX.create_sequence(theta=np.pi / 2, phi=0.1))
-    s.concatenate(qubit.native_gates.RX.create_sequence(theta=np.pi / 2, phi=0.2))
+    s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.1))
+    s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2))
     s.append((qubit.probe.name, Delay(duration=s.duration)))
-    s.concatenate(qubit.native_gates.MZ.create_sequence())
+    s.concatenate(natives.single_qubit[0].MZ.create_sequence())
 
     assert sequence == s
 
 
 @pytest.mark.parametrize("delay", [0, 100])
-def test_align_delay_measurement(platform, delay):
+def test_align_delay_measurement(platform: Platform, delay):
+    natives = platform.parameters.native_gates
+
     circuit = Circuit(1)
     circuit.add(gates.Align(0, delay=delay))
     circuit.add(gates.M(0))
@@ -162,12 +173,12 @@ def test_align_delay_measurement(platform, delay):
     target_sequence = PulseSequence()
     if delay > 0:
         target_sequence.append((platform.qubits[0].probe.name, Delay(duration=delay)))
-    target_sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
+    target_sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     assert sequence == target_sequence
     assert len(sequence.probe_pulses) == 1
 
 
-def test_align_multiqubit(platform):
+def test_align_multiqubit(platform: Platform):
     main, coupled = 0, 2
     circuit = Circuit(3)
     circuit.add(gates.GPI2(main, phi=0.2))
