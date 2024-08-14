@@ -115,8 +115,6 @@ class Platform:
     Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
     in the mapped objects.
     """
-    pairs: list[QubitPairId] = field(default_factory=list)
-    """Available pairs in thee platform."""
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
@@ -135,6 +133,11 @@ class Platform:
     def nqubits(self) -> int:
         """Total number of usable qubits in the QPU."""
         return len(self.qubits)
+
+    @property
+    def pairs(self) -> list[QubitPairId]:
+        """Available pairs in thee platform."""
+        return list(self.parameters.native_gates.two_qubit)
 
     @property
     def ordered_pairs(self):
@@ -318,7 +321,7 @@ class Platform:
             json.dumps(self.parameters.model_dump(), sort_keys=False, indent=4)
         )
 
-    def get_qubit(self, qubit):
+    def get_qubit(self, qubit: QubitId) -> Qubit:
         """Return the name of the physical qubit corresponding to a logical
         qubit.
 
@@ -330,7 +333,7 @@ class Platform:
         except KeyError:
             return list(self.qubits.values())[qubit]
 
-    def get_coupler(self, coupler):
+    def get_coupler(self, coupler: QubitId) -> Qubit:
         """Return the name of the physical coupler corresponding to a logical
         coupler.
 
