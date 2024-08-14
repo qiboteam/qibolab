@@ -1,8 +1,8 @@
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from qibo import Circuit, gates
-from qibo.config import raise_error
 
 from qibolab.compilers.default import (
     align_rule,
@@ -41,7 +41,7 @@ class Compiler:
     See :class:`qibolab.compilers.default` for an example of a compiler implementation.
     """
 
-    rules: dict = field(default_factory=dict)
+    rules: dict[type[gates.Gate], Callable] = field(default_factory=dict)
     """Map from gates to compilation rules."""
 
     @classmethod
@@ -60,29 +60,26 @@ class Compiler:
             }
         )
 
-    def __setitem__(self, key, rule):
-        """Sets a new rule to the compiler.
+    def __setitem__(self, key: type[gates.Gate], rule: Callable):
+        """Set a new rule to the compiler.
 
         If a rule already exists for the gate, it will be overwritten.
         """
         self.rules[key] = rule
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: type[gates.Gate]) -> Callable:
         """Get an existing rule for a given gate."""
         try:
             return self.rules[item]
         except KeyError:
-            raise_error(KeyError, f"Compiler rule not available for {item}.")
+            raise KeyError(f"Compiler rule not available for {item}.")
 
-    def __delitem__(self, item):
+    def __delitem__(self, item: type[gates.Gate]):
         """Remove rule for the given gate."""
         try:
             del self.rules[item]
         except KeyError:
-            raise_error(
-                KeyError,
-                f"Cannot remove {item} from compiler because it does not exist.",
-            )
+            KeyError(f"Cannot remove {item} from compiler because it does not exist.")
 
     def register(self, gate_cls):
         """Decorator for registering a function as a rule in the compiler.
@@ -100,7 +97,7 @@ class Compiler:
 
         return inner
 
-    def get_sequence(self, gate, platform):
+    def get_sequence(self, gate: gates.Gate, platform: Platform):
         """Get pulse sequence implementing the given gate using the registered
         rules.
 
@@ -110,20 +107,31 @@ class Compiler:
         """
         # get local sequence for the current gate
         rule = self[type(gate)]
-        if isinstance(gate, (gates.M, gates.Align)):
+
+        natives = platform.parameters.native_gates
+
+        if isinstance(gate, (gates.M)):
+            qubits = [natives.single_qubit[q] for q in gate.qubits]
+            return rule(gate, qubits)
+
+        if isinstance(gate, (gates.Align)):
             qubits = [platform.get_qubit(q) for q in gate.qubits]
-            gate_sequence = rule(gate, qubits)
-        elif len(gate.qubits) == 1:
+            return rule(gate, qubits)
+
+        if isinstance(gate, (gates.Z, gates.RZ)):
             qubit = platform.get_qubit(gate.target_qubits[0])
-            gate_sequence = rule(gate, qubit)
-        elif len(gate.qubits) == 2:
-            pair = platform.pairs[
-                tuple(platform.get_qubit(q).name for q in gate.qubits)
-            ]
-            gate_sequence = rule(gate, pair)
-        else:
-            raise NotImplementedError(f"{type(gate)} is not a native gate.")
-        return gate_sequence
+            return rule(gate, qubit)
+
+        if len(gate.qubits) == 1:
+            qubit = gate.target_qubits[0]
+            return rule(gate, natives.single_qubit[qubit])
+
+        if len(gate.qubits) == 2:
+            pair = tuple(platform.get_qubit(q).name for q in gate.qubits)
+            assert len(pair) == 2
+            return rule(gate, natives.two_qubit[pair])
+
+        raise NotImplementedError(f"{type(gate)} is not a native gate.")
 
     # FIXME: pulse.qubit and pulse.channel do not exist anymore
     def compile(
