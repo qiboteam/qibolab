@@ -4,7 +4,9 @@ The format is explained in the :ref:`Using parameters <using_runcards>`
 example.
 """
 
-from pydantic import Field
+from collections.abc import Iterable
+
+from pydantic import Field, TypeAdapter, model_serializer, model_validator
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
@@ -50,6 +52,49 @@ class Settings(Model):
         return options
 
 
+class TwoQubitContainer(Model):
+    pairs: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def wrap(cls, data: dict) -> dict:
+        return {"pairs": data}
+
+    @model_serializer
+    def unwrap(self) -> dict:
+        return TypeAdapter(dict[QubitPairId, TwoQubitNatives]).dump_python(self.pairs)
+
+    def __getitem__(self, key: QubitPairId):
+        try:
+            return self.pairs[key]
+        except KeyError as e:
+            value = self.pairs[(key[1], key[0])]
+            if value.symmetric:
+                return value
+            raise e
+
+    def __setitem__(self, key: QubitPairId, value: TwoQubitNatives):
+        self.pairs[key] = value
+
+    def __delitem__(self, key: QubitPairId):
+        del self.pairs[key]
+
+    def __contains__(self, key: QubitPairId) -> bool:
+        return key in self.pairs
+
+    def __iter__(self) -> Iterable[QubitPairId]:
+        return iter(self.pairs)
+
+    def keys(self) -> Iterable[QubitPairId]:
+        return self.pairs.keys()
+
+    def values(self) -> Iterable[TwoQubitNatives]:
+        return self.pairs.values()
+
+    def items(self) -> Iterable[tuple[QubitPairId, TwoQubitNatives]]:
+        return self.pairs.items()
+
+
 class NativeGates(Model):
     """Native gates parameters.
 
@@ -58,7 +103,7 @@ class NativeGates(Model):
 
     single_qubit: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
     coupler: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
-    two_qubit: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
+    two_qubit: TwoQubitContainer = Field(default_factory=TwoQubitContainer)
 
 
 ComponentId = str
