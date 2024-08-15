@@ -4,9 +4,11 @@ The format is explained in the :ref:`Using parameters <using_runcards>`
 example.
 """
 
-from collections.abc import Iterable
+from collections.abc import Callable
+from typing import Any
 
-from pydantic import Field, TypeAdapter, model_serializer, model_validator
+from pydantic import Field, TypeAdapter
+from pydantic_core import core_schema
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
@@ -52,47 +54,36 @@ class Settings(Model):
         return options
 
 
-class TwoQubitContainer(Model):
-    pairs: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
-
-    @model_validator(mode="before")
+class TwoQubitContainer(dict[QubitPairId, TwoQubitNatives]):
     @classmethod
-    def wrap(cls, data: dict) -> dict:
-        return {"pairs": data}
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: Callable[[Any], core_schema.CoreSchema]
+    ) -> core_schema.CoreSchema:
+        schema = handler(dict[QubitPairId, TwoQubitNatives])
+        return core_schema.no_info_after_validator_function(
+            cls._validate,
+            schema,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls._serialize, info_arg=False
+            ),
+        )
 
-    @model_serializer
-    def unwrap(self) -> dict:
-        return TypeAdapter(dict[QubitPairId, TwoQubitNatives]).dump_python(self.pairs)
+    @classmethod
+    def _validate(cls, value):
+        return cls(value)
+
+    @staticmethod
+    def _serialize(value):
+        return TypeAdapter(dict[QubitPairId, TwoQubitNatives]).dump_python(value)
 
     def __getitem__(self, key: QubitPairId):
         try:
-            return self.pairs[key]
+            return super().__getitem__(key)
         except KeyError as e:
-            value = self.pairs[(key[1], key[0])]
+            value = super().__getitem__((key[1], key[0]))
             if value.symmetric:
                 return value
             raise e
-
-    def __setitem__(self, key: QubitPairId, value: TwoQubitNatives):
-        self.pairs[key] = value
-
-    def __delitem__(self, key: QubitPairId):
-        del self.pairs[key]
-
-    def __contains__(self, key: QubitPairId) -> bool:
-        return key in self.pairs
-
-    def __iter__(self) -> Iterable[QubitPairId]:
-        return iter(self.pairs)
-
-    def keys(self) -> Iterable[QubitPairId]:
-        return self.pairs.keys()
-
-    def values(self) -> Iterable[TwoQubitNatives]:
-        return self.pairs.values()
-
-    def items(self) -> Iterable[tuple[QubitPairId, TwoQubitNatives]]:
-        return self.pairs.items()
 
 
 class NativeGates(Model):
@@ -103,7 +94,7 @@ class NativeGates(Model):
 
     single_qubit: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
     coupler: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
-    two_qubit: TwoQubitContainer = Field(default_factory=TwoQubitContainer)
+    two_qubit: TwoQubitContainer = Field(default_factory=dict)
 
 
 ComponentId = str
