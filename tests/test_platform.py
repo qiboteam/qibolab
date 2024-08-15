@@ -59,6 +59,7 @@ def test_platform_basics():
         name="ciao",
         parameters=Parameters(native_gates=NativeGates()),
         instruments={},
+        qubits={},
     )
     assert str(platform) == "ciao"
     assert platform.topology == []
@@ -75,6 +76,7 @@ def test_platform_basics():
             )
         ),
         instruments={},
+        qubits=qs,
     )
     assert str(platform2) == "come va?"
     assert (1, 6) in platform2.topology
