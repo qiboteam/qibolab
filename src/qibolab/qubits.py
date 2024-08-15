@@ -1,4 +1,4 @@
-from typing import Annotated, Optional, Union
+from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
 
@@ -13,6 +13,13 @@ CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flu
 
 Not all channels are required to operate a qubit.
 """
+
+ChannelId = tuple[
+    QubitId,
+    Literal["drive", "flux", "probe", "acquisition", "drive12", "drive_cross"],
+    Optional[str],
+]
+"""Unique identifier for a channel."""
 
 
 class Qubit(Model):

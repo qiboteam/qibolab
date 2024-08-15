@@ -7,9 +7,8 @@ from typing import Any
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab.components import ChannelId
-
 from .pulses import Delay, Pulse, PulseLike
+from .qubits import ChannelId
 
 __all__ = ["PulseSequence"]
 
