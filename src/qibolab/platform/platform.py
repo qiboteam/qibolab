@@ -99,11 +99,7 @@ class Platform:
     instruments: InstrumentMap
     """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
-    resonator_type: Literal["2D", "3D"] = "2D"
-    """Type of resonator (2D or 3D) in the used QPU."""
-    is_connected: bool = False
-    """Flag for whether we are connected to the physical instruments."""
-    qubits: QubitMap = field(default_factory=dict)
+    qubits: QubitMap
     """Qubit controllers.
 
     The mapped objects hold the :class:`qubit.components.channels.Channel` instances
@@ -115,6 +111,10 @@ class Platform:
     Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
     in the mapped objects.
     """
+    resonator_type: Literal["2D", "3D"] = "2D"
+    """Type of resonator (2D or 3D) in the used QPU."""
+    is_connected: bool = False
+    """Flag for whether we are connected to the physical instruments."""
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
@@ -261,7 +261,8 @@ class Platform:
 
                 platform = create_dummy()
                 qubit = platform.qubits[0]
-                sequence = qubit.native_gates.MZ.create_sequence()
+                natives = platform.parameters.native_gates.single_qubit[0]
+                sequence = natives.MZ.create_sequence()
                 parameter = Parameter.frequency
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.probe.name])]

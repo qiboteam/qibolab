@@ -17,8 +17,7 @@ def create_dummy() -> Platform:
     qubits = {}
     # attach the channels
     for q in range(5):
-        acquisition = f"qubit_{q}/acquire"
-        probe = f"qubit_{q}/probe"
+        probe, acquisition = f"qubit_{q}/probe", f"qubit_{q}/acquire"
         qubits[q] = Qubit(
             name=q,
             probe=IqChannel(probe, mixer=None, lo=None, acquisition=acquisition),
