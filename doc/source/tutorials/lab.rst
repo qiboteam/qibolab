@@ -83,7 +83,7 @@ using different Qibolab primitives.
         instruments = {instrument.name: instrument}
 
         # allocate and return Platform object
-        return Platform("my_platform", qubits, configs, instruments)
+        return Platform("my_platform", parameters, instruments, qubits)
 
 
 This code creates a platform with a single qubit that is controlled by the
@@ -287,14 +287,11 @@ a two-qubit system:
 .. code-block::  json
 
     {
-      "nqubits": 2,
-      "qubits": [0, 1],
       "settings": {
         "nshots": 1024,
         "sampling_rate": 1000000000,
         "relaxation_time": 50000
       },
-      "topology": [[0, 1]],
       "components": {
         "drive_0": {
           "frequency": 4855663000
@@ -511,19 +508,13 @@ the above runcard:
         # define channels and load component configs
         qubits = {}
         for q in range(2):
-            drive_name = f"qubit_{q}/drive"
-            qubits[q].drive = IqChannel(drive_name, mixer=None, lo=None)
-
-            flux_name = f"qubit_{q}/flux"
-            qubits[q].flux = DcChannel(flux_name)
-
             probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
-            qubits[q].probe = IqChannel(
-                probe_name, mixer=None, lo=None, acquistion=acquire_name
-            )
-
-            quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, probe=probe_name
+            qubits[q] = Qubit(
+                name=q,
+                drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
+                flux=DcChannel(f"qubit_{q}/flux"),
+                probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
+                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
             )
 
         # create dictionary of instruments
@@ -579,13 +570,12 @@ The runcard can contain an ``instruments`` section that provides these parameter
 .. code-block::  json
 
     {
-        "nqubits": 2,
         "settings": {
             "nshots": 1024,
             "sampling_rate": 1000000000,
             "relaxation_time": 50000
         },
-        "instruments": {
+        "configs": {
             "twpa_pump": {
                 "frequency": 4600000000,
                 "power": 5
@@ -627,42 +617,18 @@ in this case ``"twpa_pump"``.
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
-        # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = Parameters.load(folder)
-        qubits = runcard.native_gates.single_qubit
-        pairs = runcard.native_gates.pairs
-
         # define channels and load component configs
-        configs = {}
-        component_params = runcard["components"]
+        qubits = {}
         for q in range(2):
-            drive_name = f"qubit_{q}/drive"
-            configs[drive_name] = IqConfig(**component_params[drive_name])
-            qubits[q].drive = IqChannel(drive_name, mixer=None, lo=None)
-
-            flux_name = f"qubit_{q}/flux"
-            configs[flux_name] = DcConfig(**component_params[flux_name])
-            qubits[q].flux = DcChannel(flux_name)
-
             probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
-            configs[probe_name] = IqConfig(**component_params[probe_name])
-            qubits[q].probe = IqChannel(
-                probe_name, mixer=None, lo=None, acquistion=acquire_name
-            )
-
-            configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
-            quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, probe=probe_name
+            qubits[q] = Qubit(
+                name=q,
+                drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
+                flux=DcChannel(f"qubit_{q}/flux"),
+                probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
+                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
             )
 
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
-        return Platform(
-            "my_platform",
-            qubits,
-            pairs,
-            configs,
-            instruments,
-            settings=runcard.settings,
-            resonator_type="2D",
-        )
+        return Platform.load(FOLDER, instruments, qubits)
