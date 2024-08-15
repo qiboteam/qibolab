@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal, Optional, Union, get_args
 
 from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
 
@@ -8,17 +8,13 @@ from qibolab.serialize import Model
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Type for qubit names."""
 
-CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")
+ChannelName = Literal["probe", "acquisition", "drive", "drive12", "drive_cross", "flux"]
 """Names of channels that belong to a qubit.
 
 Not all channels are required to operate a qubit.
 """
 
-ChannelId = tuple[
-    QubitId,
-    Literal["drive", "flux", "probe", "acquisition", "drive12", "drive_cross"],
-    Optional[str],
-]
+ChannelId = tuple[QubitId, ChannelName, Optional[str]]
 """Unique identifier for a channel."""
 
 
@@ -51,7 +47,7 @@ class Qubit(Model):
 
     @property
     def channels(self):
-        for name in CHANNEL_NAMES:
+        for name in get_args(ChannelName):
             channel = getattr(self, name)
             if channel is not None:
                 yield channel
