@@ -1,4 +1,7 @@
+import shutil
+import tempfile
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, Optional
 
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script, qua
@@ -23,6 +26,8 @@ from .sweepers import sweep
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
 xxx are the last three digits of the Octave IP address."""
+CALIBRATION_DB = "calibration_db.json"
+"""Name of the file where the mixer calibration is stored."""
 
 
 def declare_octaves(octaves, host, calibration_path=None):
@@ -127,6 +132,15 @@ class QMController(Controller):
     """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[str] = None
     """Path to the JSON file that contains the mixer calibration."""
+    write_calibration: bool = False
+    """Require writing permissions on calibration DB."""
+    _calibration_path: Optional[str] = None
+    """The calibration path for internal use.
+
+    Cf. :attr:`calibration_path` for its role. This might be set to a different one
+    internally to avoid writing attempts over a file for which the user has only read
+    access (because TinyDB, through QUA, is often attempting to open it in append mode).
+    """
     script_file_name: Optional[str] = None
     """Name of the file that the QUA program will dumped in that after every
     execution.
@@ -206,10 +220,28 @@ class QMController(Controller):
         """Sampling rate of Quantum Machines instruments."""
         return SAMPLING_RATE
 
+    def _temporary_calibration(self):
+        if self.calibration_path is not None:
+            if self.write_calibration:
+                self._calibration_path = self.calibration_path
+            else:
+                self._calibration_path = tempfile.mkdtemp()
+                shutil.copy(
+                    Path(self.calibration_path) / CALIBRATION_DB,
+                    Path(self._calibration_path) / CALIBRATION_DB,
+                )
+
+    def _reset_temporary_calibration(self):
+        if self._calibration_path != self.calibration_path:
+            assert self._calibration_path is not None
+            shutil.rmtree(self._calibration_path)
+            self._calibration_path = None
+
     def connect(self):
         """Connect to the Quantum Machines manager."""
         host, port = self.address.split(":")
-        octave = declare_octaves(self.octaves, host, self.calibration_path)
+        self._temporary_calibration()
+        octave = declare_octaves(self.octaves, host, self._calibration_path)
         credentials = None
         if self.cloud:
             credentials = create_credentials()
@@ -220,6 +252,7 @@ class QMController(Controller):
 
     def disconnect(self):
         """Disconnect from QM manager."""
+        self._reset_temporary_calibration()
         if self.manager is not None:
             self.manager.close_all_quantum_machines()
             self.manager.close()
