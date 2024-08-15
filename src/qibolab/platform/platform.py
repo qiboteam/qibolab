@@ -10,11 +10,11 @@ from typing import Any, Literal, Optional, TypeVar, Union
 
 from qibo.config import log, raise_error
 
-from qibolab.components import AcquireChannel, Config
+from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
-from qibolab.pulses import Delay, Pulse
+from qibolab.pulses import Delay
 from qibolab.qubits import Qubit, QubitId, QubitPairId
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
@@ -87,16 +87,6 @@ def estimate_duration(
 def _channels_map(elements: QubitMap):
     """Map channel names to element (qubit or coupler)."""
     return {ch.name: id for id, el in elements.items() for ch in el.channels}
-
-
-def probe_pulses(
-    sequence: PulseSequence, configs: dict[str, Config]
-) -> Iterable[Pulse]:
-    """Filter probe pulses."""
-    for ch, pulse in sequence:
-        if isinstance(configs[ch], AcquireChannel):
-            assert isinstance(pulse, Pulse)
-            yield pulse
 
 
 @dataclass
