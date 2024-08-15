@@ -43,7 +43,8 @@ around the pre-defined frequency.
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
-    sequence = qubit.native_gates.MZ.create_sequence()
+    natives = platform.parameters.native_gates.single_qubit[0]
+    sequence = natives.MZ.create_sequence()
 
     # allocate frequency sweeper
     sweeper = Sweeper(
@@ -124,6 +125,7 @@ complex pulse sequence. Therefore with start with that:
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
+    natives = platform.parameters.native_gates.single_qubit[0]
 
     # create pulse sequence and add pulses
     sequence = PulseSequence(
@@ -135,7 +137,7 @@ complex pulse sequence. Therefore with start with that:
             (qubit.probe.name, Delay(duration=sequence.duration)),
         ]
     )
-    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.MZ.create_sequence())
 
     # allocate frequency sweeper
     sweeper = Sweeper(
@@ -226,15 +228,16 @@ and its impact on qubit states in the IQ plane.
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
+    natives = platform.parameters.native_gates.single_qubit[0]
 
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()
-    one_sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    one_sequence.concatenate(natives.RX.create_sequence())
     one_sequence.append((qubit.probe.name, Delay(duration=one_sequence.duration)))
-    one_sequence.concatenate(qubit.native_gates.MZ.create_sequence())
+    one_sequence.concatenate(natives.MZ.create_sequence())
 
     # create pulse sequence 2 and add pulses
-    zero_sequence = qubit.native_gates.MZ.create_sequence()
+    zero_sequence = natives.MZ.create_sequence()
 
     options = ExecutionParameters(
         nshots=1000,
