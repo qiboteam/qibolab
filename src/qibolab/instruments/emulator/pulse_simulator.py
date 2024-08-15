@@ -14,8 +14,9 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
+from qibolab.instruments.emulator.models.methods import flux_detuning
 from qibolab.platform import Platform
-from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse, DrivePulse
+from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse, DrivePulse, FluxPulse
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
@@ -77,7 +78,9 @@ class PulseSimulator(Controller):
 
         model_name = model_params["model_name"]
         model_config = MODELS[model_name].generate_model_config(model_params)
+        print(model_config)
 
+        self.flux_params_dict = model_config["flux_params"]
         simulation_engine_name = simulation_config["simulation_engine_name"]
         self.simulation_engine = SIMULATION_ENGINES[simulation_engine_name](
             model_config, sim_opts
@@ -135,6 +138,18 @@ class PulseSimulator(Controller):
             self.sim_sampling_boost,
             self.runcard_duration_in_dt_units,
         )
+
+        # convert flux pulse signals into flux detuning
+        for channel_name, waveform in channel_waveforms["channels"].items():
+            if channel_name[:2] == "F-":
+                ##flux_quanta = self.flux_params_dict['flux_quanta']
+                ##max_frequency = current_frequency = self.flux_params_dict['current_frequency']
+                ##flux_op_coeffs = flux_detuning(pulse_signal, flux_quanta, max_frequency, current_frequency)
+                q = channel_name.split('-')[1]
+                flux_op_coeffs = flux_detuning(waveform, **self.flux_params_dict[q])
+                ##print('flux_op_coeffs:', flux_op_coeffs)
+                ##self.flux_op_coeffs = flux_op_coeffs
+                channel_waveforms["channels"].update({channel_name: flux_op_coeffs})
 
         # execute pulse simulation in emulator
         simulation_results = self.simulation_engine.qevolve(
@@ -451,7 +466,7 @@ def ps_to_waveform_dict(
         """Option to add frequency specific channel operators."""
         try:
             # frequency dependent channel operation
-            return platform_to_simulator_channels[platform_channel_name + frequency]
+            return platform_to_simulator_channels[platform_channel_name+'-'+frequency]
         except:
             # frequency independent channel operation (default)
             return platform_to_simulator_channels[platform_channel_name]
@@ -470,45 +485,18 @@ def ps_to_waveform_dict(
             for channel in qubit_pulses.channels:
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    start = int(pulse.start * sim_sampling_boost)
-                    actual_pulse_frequency = (
-                        pulse.frequency
-                    )  # store actual pulse frequency for channel_translator
-                    # rescale frequency to be compatible with sampling_rate = 1
-                    pulse.frequency = pulse.frequency / sampling_rate
-                    # need to first set pulse._if in GHz to use modulated_waveform_i method
-                    pulse._if = pulse.frequency / GHZ
-
-                    i_env = pulse.envelope_waveform_i(sim_sampling_boost).data
-                    q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
-
-                    # Qubit drive microwave signals
-                    end = start + len(i_env)
-                    t = np.arange(start, end) / sampling_rate / sim_sampling_boost
-                    cosalpha = np.cos(
-                        2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
-                    )
-                    sinalpha = np.sin(
-                        2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
-                    )
-                    pulse_signal = i_env * sinalpha + q_env * cosalpha
-                    # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
-
+                    t, pulse_signal = get_pulse_signal(pulse, sampling_rate, sim_sampling_boost)
                     times_list.append(t)
-                    signals_list.append(pulse_signal)
-
+                    
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
-                    # TODO: to add during flux pulse update
-                    # elif pulse.type.value == "qf":
-                    #   platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
+                    elif pulse.type.value == "qf":
+                        platform_channel_name = f"flux-{qubit}"
 
-                    # restore pulse frequency values
-                    pulse.frequency = actual_pulse_frequency
-                    pulse._if = pulse.frequency / GHZ
-
+                    signals_list.append(pulse_signal)
+                    
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
                     )
@@ -530,34 +518,17 @@ def ps_to_waveform_dict(
             for channel in qubit_pulses.channels:
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    sim_sampling_rate = sampling_rate * sim_sampling_boost
-
-                    start = int(pulse.start * sim_sampling_rate)
-                    # need to first set pulse._if in GHz to use modulated_waveform_i method
-                    pulse._if = pulse.frequency / GHZ
-
-                    i_env = pulse.envelope_waveform_i(sim_sampling_rate).data
-                    q_env = pulse.envelope_waveform_q(sim_sampling_rate).data
-
-                    # Qubit drive microwave signals
-                    end = start + len(i_env)
-                    t = np.arange(start, end) / sim_sampling_rate
-                    cosalpha = np.cos(2 * np.pi * pulse._if * t + pulse.relative_phase)
-                    sinalpha = np.sin(2 * np.pi * pulse._if * t + pulse.relative_phase)
-                    pulse_signal = i_env * sinalpha + q_env * cosalpha
-                    # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
-
+                    t, pulse_signal = get_pulse_signal_ns(pulse, sampling_rate, sim_sampling_boost)
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-
+                    
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
-                    # TODO: add during flux pulse update
-                    # elif pulse.type.value == "qf":
-                    # platform_channel_name = f"flux-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
-
+                    elif pulse.type.value == "qf":
+                        platform_channel_name = f"flux-{qubit}"
+                    
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
                     )
@@ -590,6 +561,87 @@ def ps_to_waveform_dict(
 
     return channel_waveforms
 
+
+def get_pulse_signal(
+    pulse: Union[ReadoutPulse, DrivePulse, FluxPulse],
+    sampling_rate: float = 1.0,
+    sim_sampling_boost: int = 1,
+) -> tuple:
+    """Converts pulse to a list of times and a list of corresponding pulse signal values assuming pulse duration in runcard is in units of dt=1/sampling_rate, i.e. time interval between samples.
+
+    Args:
+        pulse (`qibolab.pulses.ReadoutPulse`, `qibolab.pulses.DrivePulse`, `qibolab.pulses.FluxPulse`): Input pulse.
+        sampling_rate (float): Sampling rate in units of samples/ns. Defaults to 1.
+        sim_sampling_boost (int): Additional factor multiplied to sampling_rate for improving numerical accuracy in simulation. Defaults to 1.
+
+    Returns:
+        tuple: list of times and corresponding pulse signal values.
+    """
+    start = int(pulse.start * sim_sampling_boost)
+    actual_pulse_frequency = (
+        pulse.frequency
+    )  # store actual pulse frequency for channel_translator
+    # rescale frequency to be compatible with sampling_rate = 1
+    pulse.frequency = pulse.frequency / sampling_rate
+    # need to first set pulse._if in GHz to use modulated_waveform_i method
+    pulse._if = pulse.frequency / GHZ
+
+    i_env = pulse.envelope_waveform_i(sim_sampling_boost).data
+    q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
+
+    # Qubit drive microwave signals
+    end = start + len(i_env)
+    t = np.arange(start, end) / sampling_rate / sim_sampling_boost
+    cosalpha = np.cos(
+        2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
+    )
+    sinalpha = np.sin(
+        2 * np.pi * pulse._if * sampling_rate * t + pulse.relative_phase
+    )
+    pulse_signal = i_env * sinalpha + q_env * cosalpha
+    # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
+
+    # restore pulse frequency values
+    pulse.frequency = actual_pulse_frequency
+    pulse._if = pulse.frequency / GHZ
+
+    return t, pulse_signal
+
+
+def get_pulse_signal_ns(
+    pulse: Union[ReadoutPulse, DrivePulse],
+    sampling_rate: float = 1.0,
+    sim_sampling_boost: int = 1,
+) -> tuple:
+    """Converts pulse to a list of times and a list of corresponding pulse signal values assuming pulse duration in runcard is in ns.
+
+    Args:
+        pulse (`qibolab.pulses.ReadoutPulse`, `qibolab.pulses.DrivePulse`, `qibolab.pulses.FluxPulse`): Input pulse.
+        sampling_rate (float): Sampling rate in units of samples/ns. Defaults to 1.
+        sim_sampling_boost (int): Additional factor multiplied to sampling_rate for improving numerical accuracy in simulation. Defaults to 1.
+
+    Returns:
+        tuple: list of times and corresponding pulse signal values.
+    """
+    # need to first set pulse._if in GHz to use modulated_waveform_i method
+    pulse._if = pulse.frequency / GHZ
+
+    sim_sampling_rate = sampling_rate * sim_sampling_boost
+
+    
+    i_env = pulse.envelope_waveform_i(sim_sampling_rate).data
+    q_env = pulse.envelope_waveform_q(sim_sampling_rate).data
+
+    # Qubit drive microwave signals
+    start = int(pulse.start * sim_sampling_rate)
+    end = start + len(i_env)
+    t = np.arange(start, end) / sim_sampling_rate
+    cosalpha = np.cos(2 * np.pi * pulse._if * t + pulse.relative_phase)
+    sinalpha = np.sin(2 * np.pi * pulse._if * t + pulse.relative_phase)
+    pulse_signal = i_env * sinalpha + q_env * cosalpha
+    # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
+
+    return t, pulse_signal
 
 def apply_readout_noise(
     samples: dict[Union[str, int], list],
@@ -845,7 +897,7 @@ def make_emulator_runcard(
     model_name: str = 'general_no_coupler_model',
     output_folder: Optional[str]=None,
 ) -> dict:
-    """Constructs emulator runcard from an initialized device platform.
+    """Constructs emulator runcard from an initialized device platform. #TODO add flux-pulse related parts
 
     Args:
         nlevels_q(int, list): Number of levels for each qubit. If int, the same value gets assigned to all qubits.

@@ -4,9 +4,11 @@ import numpy as np
 
 from qibolab.instruments.emulator.models.methods import (
     default_noflux_platform_to_simulator_channels,
+    default_platform_to_simulator_channels,
 )
 
 GHZ = 1e9
+
 
 # model template for 0-1 system
 def generate_default_params():
@@ -38,9 +40,13 @@ def generate_default_params():
             "0": 0.0,
             "1": 0.0,
         },
-        "lo_freq": {
+        "max_lo_freq": {
             "0": 5.0,
             "1": 5.1,
+        },
+        "flux_quanta": {
+            "0": 0.,
+            "1": 0.,
         },
         "rabi_freq": {
             "0": 0.2,
@@ -99,7 +105,8 @@ def get_model_params(
     drive_freq_dict = {}
     T1_dict = {}
     T2_dict = {}
-    lo_freq_dict = {}
+    max_lo_freq_dict = {}
+    flux_quanta_dict = {}
     rabi_freq_dict = {}
     anharmonicity_dict = {}
     readout_error_dict = {}
@@ -117,15 +124,17 @@ def get_model_params(
         drive_freq_dict |= {str(q): qubit_characterization_dict[q]['drive_frequency']/GHZ}
         T1_dict |= {str(q): qubit_characterization_dict[q]['T1']}
         T2_dict |= {str(q): qubit_characterization_dict[q]['T2']}
-        lo_freq_dict |= {str(q): qubit_characterization_dict[q]['drive_frequency']/GHZ}
+        max_lo_freq_dict |= {str(q): qubit_characterization_dict[q]['drive_frequency']/GHZ}
         rabi_freq_dict |= {str(q): qubit_characterization_dict[q]['rabi_frequency']/GHZ}
         anharmonicity_dict |= {str(q): qubit_characterization_dict[q]['anharmonicity']/GHZ}
+        #flux_quanta_dict |= {str(q): 0.1} # to be updated 
 
     model_params_dict |= {'readout_error': readout_error_dict}
     model_params_dict |= {'drive_freq': drive_freq_dict}
     model_params_dict |= {'T1': T1_dict}
     model_params_dict |= {'T2': T2_dict}
-    model_params_dict |= {'lo_freq': lo_freq_dict}
+    model_params_dict |= {'max_lo_freq': max_lo_freq_dict}
+    model_params_dict |= {'flux_quanta': flux_quanta_dict}
     model_params_dict |= {'rabi_freq': rabi_freq_dict}
     model_params_dict |= {'anharmonicity': anharmonicity_dict}    
     model_params_dict |= {'coupling_strength': {}}
@@ -166,6 +175,8 @@ def generate_model_config(
 
     drift_hamiltonian_dict = {"one_body": [], "two_body": []}
     drive_hamiltonian_dict = {}
+    flux_hamiltonian_dict = {}
+    flux_params_dict = {}
 
     dissipation_dict = {"t1": [], "t2": []}
 
@@ -174,7 +185,7 @@ def generate_model_config(
     for i, q in enumerate(qubits_list):
         # drift Hamiltonian terms (constant in time)
         drift_hamiltonian_dict["one_body"].append(
-            (2 * np.pi * model_params["lo_freq"][q], f"O_{q}", [q])
+            (2 * np.pi * model_params["drive_freq"][q], f"O_{q}", [q])
         )
         drift_hamiltonian_dict["one_body"].append(
             (
@@ -189,6 +200,24 @@ def generate_model_config(
         drive_hamiltonian_dict[f"D-{qubits_list[i]}"].append(
             (2 * np.pi * model_params["rabi_freq"][q], f"X_{q}", [q])
         )
+
+        # flux Hamiltonian terms (amplitude determined by processed pulse sequence)
+        flux_hamiltonian_dict.update({f"F-{qubits_list[i]}": []})
+        flux_hamiltonian_dict[f"F-{qubits_list[i]}"].append(
+            (2 * np.pi, f"O_{q}", [q])
+        )
+
+        # flux detuning parameters:
+        try:
+            flux_params_dict |= {
+                q: {
+                    "flux_quanta": model_params["flux_quanta"][q],
+                    "max_frequency": model_params["max_lo_freq"][q],
+                    "current_frequency": model_params["drive_freq"][q],
+                }
+            }
+        except:
+            pass
 
         # dissipation terms (one qubit, constant in time)
         t1 = model_params["T1"][q]
@@ -222,10 +251,13 @@ def generate_model_config(
         "nlevels_c": [],
         "drift": drift_hamiltonian_dict,
         "drive": drive_hamiltonian_dict,
+        "flux": flux_hamiltonian_dict,
+        "flux_params": flux_params_dict,
         "dissipation": dissipation_dict,
         "method": "master_equation",
         "readout_error": readout_error,
-        "platform_to_simulator_channels": default_noflux_platform_to_simulator_channels(
+        #"platform_to_simulator_channels": default_noflux_platform_to_simulator_channels(
+        "platform_to_simulator_channels": default_platform_to_simulator_channels(
             qubits_list, couplers_list=[]
         ),
     }

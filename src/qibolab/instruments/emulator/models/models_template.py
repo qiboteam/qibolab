@@ -34,7 +34,7 @@ def generate_default_params():
             "0": 0.0,
             "1": 0.0,
         },
-        "lo_freq": {
+        "max_lo_freq": {
             "0": 5.0,
             "1": 5.1,
             "c1": 6.5,
@@ -105,7 +105,7 @@ def generate_model_config(
     for i, q in enumerate(qubits_list):
         # drift Hamiltonian terms (constant in time)
         drift_hamiltonian_dict["one_body"].append(
-            (2 * np.pi * model_params["lo_freq"][q], f"O_{q}", [q])
+            (2 * np.pi * model_params["max_lo_freq"][q], f"O_{q}", [q])
         )
         drift_hamiltonian_dict["one_body"].append(
             (
@@ -134,7 +134,7 @@ def generate_model_config(
     for i, c in enumerate(couplers_list):
         # drift Hamiltonian terms (constant in time)
         drift_hamiltonian_dict["one_body"].append(
-            (2 * np.pi * model_params["lo_freq"][c], f"O_{c}", [c])
+            (2 * np.pi * model_params["max_lo_freq"][c], f"O_{c}", [c])
         )
         drift_hamiltonian_dict["one_body"].append(
             (
