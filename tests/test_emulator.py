@@ -16,7 +16,10 @@ from qibolab.instruments.emulator.models import (
     general_no_coupler_model,
     models_template,
 )
-from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS, make_emulator_runcard
+from qibolab.instruments.emulator.pulse_simulator import (
+    AVAILABLE_SWEEP_PARAMETERS,
+    make_emulator_runcard,
+)
 from qibolab.platform.load import PLATFORMS
 from qibolab.pulses import PulseSequence
 from qibolab.sweeper import Parameter, QubitParameter, Sweeper
