@@ -1,5 +1,6 @@
-from qibolab.pulses import Delay, Drag, Gaussian, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Delay, Drag, Gaussian, Pulse, Rectangular
 from qibolab.pulses.pulse import VirtualZ
+from qibolab.sequence import PulseSequence
 
 
 def test_init():

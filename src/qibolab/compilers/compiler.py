@@ -16,8 +16,9 @@ from qibolab.compilers.default import (
     z_rule,
 )
 from qibolab.platform import Platform
-from qibolab.pulses import Delay, PulseSequence
+from qibolab.pulses import Delay
 from qibolab.qubits import QubitId
+from qibolab.sequence import PulseSequence
 
 Rule = Callable[..., PulseSequence]
 """Compiler rule."""

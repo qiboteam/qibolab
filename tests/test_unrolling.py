@@ -2,7 +2,8 @@
 
 import pytest
 
-from qibolab.pulses import Drag, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Drag, Pulse, Rectangular
+from qibolab.sequence import PulseSequence
 from qibolab.unrolling import Bounds, batch
 
 

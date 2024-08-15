@@ -9,7 +9,7 @@ from pydantic_core import core_schema
 
 from qibolab.components import ChannelId
 
-from .pulse import Delay, Pulse, PulseLike
+from .pulses import Delay, Pulse, PulseLike
 
 __all__ = ["PulseSequence"]
 

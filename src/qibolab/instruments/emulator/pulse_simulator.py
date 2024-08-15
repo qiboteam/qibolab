@@ -12,9 +12,9 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
-from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import average, collect
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 AVAILABLE_SWEEP_PARAMETERS = {

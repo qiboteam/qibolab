@@ -6,16 +6,8 @@ import pytest
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.zhinst import ProcessedSweeps, Zurich, classify_sweepers
 from qibolab.instruments.zhinst.pulse import select_pulse
-from qibolab.pulses import (
-    Delay,
-    Drag,
-    Gaussian,
-    Iir,
-    Pulse,
-    PulseSequence,
-    Rectangular,
-    Snz,
-)
+from qibolab.pulses import Delay, Drag, Gaussian, Iir, Pulse, Rectangular, Snz
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import batch
 

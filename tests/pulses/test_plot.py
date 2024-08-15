@@ -10,12 +10,12 @@ from qibolab.pulses import (
     GaussianSquare,
     Iir,
     Pulse,
-    PulseSequence,
     Rectangular,
     Snz,
     plot,
 )
 from qibolab.pulses.modulation import modulate
+from qibolab.sequence import PulseSequence
 
 HERE = pathlib.Path(__file__).parent
 SAMPLING_RATE = 1

@@ -6,8 +6,9 @@ from qm import qua
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
 from qibolab.instruments.qm import QmController
-from qibolab.pulses import Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Pulse, Rectangular
 from qibolab.qubits import Qubit
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile

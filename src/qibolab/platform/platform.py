@@ -14,8 +14,9 @@ from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
-from qibolab.pulses import Delay, PulseSequence
+from qibolab.pulses import Delay
 from qibolab.qubits import Qubit, QubitId, QubitPairId
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds, batch
 
@@ -252,7 +253,7 @@ class Platform:
                 import numpy as np
                 from qibolab.dummy import create_dummy
                 from qibolab.sweeper import Sweeper, Parameter
-                from qibolab.pulses import PulseSequence
+                from qibolab.sequence import PulseSequence
                 from qibolab.execution_parameters import ExecutionParameters
 
 

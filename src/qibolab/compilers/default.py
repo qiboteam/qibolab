@@ -9,8 +9,9 @@ import numpy as np
 from qibo.gates import Align, Gate
 
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.pulses import Delay, PulseSequence, VirtualZ
+from qibolab.pulses import Delay, VirtualZ
 from qibolab.qubits import Qubit
+from qibolab.sequence import PulseSequence
 
 
 def z_rule(gate: Gate, qubit: Qubit) -> PulseSequence:

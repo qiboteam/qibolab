@@ -11,8 +11,8 @@ from qibosoq import client
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import PulseSequence
 from qibolab.qubits import Qubit
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import BIAS, Sweeper
 
 from .convert import convert, convert_units_sweeper

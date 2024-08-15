@@ -3,7 +3,8 @@ from typing import Annotated, Optional
 
 import numpy as np
 
-from .pulses import Drag, Gaussian, Pulse, PulseSequence
+from .pulses import Drag, Gaussian, Pulse
+from .sequence import PulseSequence
 from .serialize import Model, replace
 
 

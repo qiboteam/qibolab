@@ -8,8 +8,9 @@ import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 
-from qibolab.pulses import Envelope, Pulse, PulseSequence
+from qibolab.pulses import Envelope, Pulse
 from qibolab.qubits import Qubit
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import BIAS, DURATION, Parameter, Sweeper
 
 HZ_TO_MHZ = 1e-6

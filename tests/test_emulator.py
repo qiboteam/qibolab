@@ -18,7 +18,7 @@ from qibolab.instruments.emulator.models import (
 )
 from qibolab.instruments.emulator.pulse_simulator import AVAILABLE_SWEEP_PARAMETERS
 from qibolab.platform.load import PLATFORMS
-from qibolab.pulses import PulseSequence
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators/")

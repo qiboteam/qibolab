@@ -106,7 +106,8 @@ the native gates, but separately from the single-qubit ones.
     from qibolab.components import IqChannel, AcquireChannel, DcChannel, IqConfig
     from qibolab.qubits import Qubit
     from qibolab.parameters import Parameters, TwoQubitContainer
-    from qibolab.pulses import Gaussian, Pulse, PulseSequence, Rectangular
+    from qibolab.pulses import Gaussian, Pulse, Rectangular
+    from qibolab.sequence import PulseSequence
     from qibolab.native import (
         RxyFactory,
         FixedSequenceFactory,
@@ -207,7 +208,8 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
 
     from qibolab.components import DcChannel
     from qibolab.qubits import Qubit
-    from qibolab.pulses import Pulse, PulseSequence
+    from qibolab.pulses import Pulse
+    from qibolab.sequence import PulseSequence
     from qibolab.native import (
         FixedSequenceFactory,
         SingleQubitNatives,
