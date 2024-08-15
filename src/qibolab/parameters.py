@@ -79,11 +79,11 @@ class TwoQubitContainer(dict[QubitPairId, TwoQubitNatives]):
     def __getitem__(self, key: QubitPairId):
         try:
             return super().__getitem__(key)
-        except KeyError as e:
+        except KeyError:
             value = super().__getitem__((key[1], key[0]))
             if value.symmetric:
                 return value
-            raise e
+            raise
 
 
 class NativeGates(Model):
