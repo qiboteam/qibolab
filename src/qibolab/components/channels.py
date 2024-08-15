@@ -15,7 +15,9 @@ share a component, because channels will refer to the same name for the componen
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
+
+from qibolab.qubits import QubitId
 
 __all__ = [
     "Channel",
@@ -25,7 +27,11 @@ __all__ = [
     "AcquireChannel",
 ]
 
-ChannelId = str
+ChannelId = tuple[
+    QubitId,
+    Literal["drive", "flux", "probe", "acquisition", "drive12", "drive_cross"],
+    Optional[str],
+]
 """Unique identifier for a channel."""
 
 
