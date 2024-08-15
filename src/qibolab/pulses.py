@@ -19,6 +19,22 @@ a different value.
 """
 
 
+def _np_array_from_string_or_array_like(x) -> np.ndarray:
+    """Convert input into numpy array.
+
+    The input can be in one of these forms:
+        1. string in form '[1, 2, 3, ...]'
+        2. list, e.g. [1, 2, 3, ...]
+        3. numpy array. This will be identity conversion.
+    """
+    if isinstance(x, str):
+        return np.fromstring(x[1:-1], sep=",")
+    elif isinstance(x, (list, np.ndarray)):
+        return np.array(x)
+    else:
+        raise ValueError(f"Data in unrecognized format: {x}")
+
+
 class PulseType(Enum):
     """An enumeration to distinguish different types of pulses.
 
@@ -215,12 +231,19 @@ class PulseShape(ABC):
 
             To be replaced by proper serialization.
         """
-        shape_name = re.findall(r"(\w+)", value)[0]
-        if shape_name not in globals():
-            raise ValueError(f"shape {value} not found")
-        shape_parameters = re.findall(r"[-\w+\d\.\d]+", value)[1:]
-        # TODO: create multiple tests to prove regex working correctly
-        return globals()[shape_name](*shape_parameters)
+        match = re.fullmatch(r"(\w+)\((.*)\)", value)
+        shape_name, params = None, None
+        if match is not None:
+            shape_name, params = match.groups()
+        if match is None or shape_name not in globals():
+            raise ValueError(f"shape {value} not recognized")
+
+        single_item_pattern = r"[^,\s\[\]\(\)]+"
+        csv_items_pattern = rf"(?:{single_item_pattern}(?:,\s*)?)*"
+        param_pattern = (
+            rf"\[{csv_items_pattern}\]|\w+\({csv_items_pattern}\)|{single_item_pattern}"
+        )
+        return globals()[shape_name](*re.findall(param_pattern, params))
 
 
 class Rectangular(PulseShape):
@@ -509,12 +532,14 @@ class IIR(PulseShape):
     # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
     # p = [b0, b1, a0, a1]
 
-    def __init__(self, b, a, target: PulseShape):
+    def __init__(self, b, a, target):
         self.name = "IIR"
-        self.target: PulseShape = target
+        self.target: PulseShape = (
+            PulseShape.eval(target) if isinstance(target, str) else target
+        )
         self._pulse: Pulse = None
-        self.a: np.ndarray = np.array(a)
-        self.b: np.ndarray = np.array(b)
+        self.a: np.ndarray = _np_array_from_string_or_array_like(a)
+        self.b: np.ndarray = _np_array_from_string_or_array_like(b)
         # Check len(a) = len(b) = 2
 
     def __eq__(self, item) -> bool:
@@ -596,8 +621,10 @@ class SNZ(PulseShape):
     def __init__(self, t_idling, b_amplitude=None):
         self.name = "SNZ"
         self.pulse: Pulse = None
-        self.t_idling: float = t_idling
-        self.b_amplitude = b_amplitude
+        self.t_idling: float = float(t_idling)
+        self.b_amplitude = (
+            float(b_amplitude) if b_amplitude is not None else b_amplitude
+        )
 
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
@@ -708,9 +735,11 @@ class Custom(PulseShape):
 
         self.name = "Custom"
         self.pulse: Pulse = None
-        self.envelope_i: np.ndarray = np.array(envelope_i)
+        self.envelope_i: np.ndarray = _np_array_from_string_or_array_like(envelope_i)
         if envelope_q is not None:
-            self.envelope_q: np.ndarray = np.array(envelope_q)
+            self.envelope_q: np.ndarray = _np_array_from_string_or_array_like(
+                envelope_q
+            )
         else:
             self.envelope_q = self.envelope_i
 
@@ -745,7 +774,7 @@ class Custom(PulseShape):
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
+        return f"{self.name}({self.envelope_i[:3]}, {self.envelope_q[:3]})"
 
 
 @dataclass
