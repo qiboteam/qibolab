@@ -43,14 +43,14 @@ We can easily access the names of channels and other components, and based on th
 
     drive_channel = platform.qubits[0].drive
     print(f"Drive channel name: {drive_channel.name}")
-    print(f"Drive frequency: {platform.config(drive_channel.name).frequency}")
+    print(f"Drive frequency: {platform.config(str(drive_channel.name)).frequency}")
 
     drive_lo = drive_channel.lo
     if drive_lo is None:
         print(f"Drive channel {drive_channel.name} does not use an LO.")
     else:
         print(f"Name of LO for channel {drive_channel.name} is {drive_lo}")
-        print(f"LO frequency: {platform.config(drive_lo).frequency}")
+        print(f"LO frequency: {platform.config(str(drive_lo)).frequency}")
 
 .. testoutput:: python
     :hide:
@@ -304,12 +304,12 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
     )
-    sequence = PulseSequence(
+    sequence = PulseSequence.load(
         [
-            ("channel", pulse1),
-            ("channel", pulse2),
-            ("channel", pulse3),
-            ("channel", pulse4),
+            ("qubit/drive", pulse1),
+            ("qubit/drive", pulse2),
+            ("qubit/drive", pulse3),
+            ("qubit/drive", pulse4),
         ],
     )
 
@@ -336,13 +336,14 @@ Typical experiments may include both pre-defined pulses and new ones:
 .. testcode:: python
 
     from qibolab.pulses import Rectangular
+    from qibolab.identifier import ChannelId
 
     natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
     sequence.append(
         (
-            "some_channel",
+            ChannelId.load("some/drive"),
             Pulse(duration=10, amplitude=0.5, relative_phase=0, envelope=Rectangular()),
         )
     )

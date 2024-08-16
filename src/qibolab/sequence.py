@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
 
-from .identifier import ChannelId
+from .identifier import ChannelId, ChannelType
 from .pulses import Delay, Pulse, PulseLike
 
 __all__ = ["PulseSequence"]

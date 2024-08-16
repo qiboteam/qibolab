@@ -12,10 +12,10 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
     from qibolab.sequence import PulseSequence
 
     # Define PulseSequence
-    sequence = PulseSequence(
+    sequence = PulseSequence.load(
         [
             (
-                "channel_0",
+                "0/drive",
                 Pulse(
                     amplitude=0.3,
                     duration=60,
@@ -23,9 +23,9 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
                     envelope=Gaussian(rel_sigma=0.2),
                 ),
             ),
-            ("channel_1", Delay(duration=100)),
+            ("1/drive", Delay(duration=100)),
             (
-                "channel_1",
+                "1/drive",
                 Pulse(
                     amplitude=0.5, duration=3000, relative_phase=0, envelope=Rectangular()
                 ),

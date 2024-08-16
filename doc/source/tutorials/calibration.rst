@@ -75,7 +75,9 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     probe_pulse = sequence.probe_pulses[0]
     amplitudes = magnitude(results[probe_pulse.id][0])
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
+    frequencies = (
+        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.probe.name)).frequency
+    )
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -166,7 +168,9 @@ We can now proceed to launch on hardware:
 
     probe_pulse = next(iter(sequence.probe_pulses))
     amplitudes = magnitude(results[probe_pulse.id][0])
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.drive.name).frequency
+    frequencies = (
+        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.drive.name)).frequency
+    )
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
