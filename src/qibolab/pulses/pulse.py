@@ -61,11 +61,13 @@ class Pulse(_PulseLike):
 
 
 class Delay(_PulseLike):
-    """A wait instruction during which we are not sending any pulses to the
-    QPU."""
+    """Wait instruction.
+
+    During its length no pulse is sent on the same channel.
+    """
 
     duration: float
-    """Delay duration in ns."""
+    """Duration in ns."""
 
 
 class VirtualZ(_PulseLike):
@@ -80,4 +82,15 @@ class VirtualZ(_PulseLike):
         return 0
 
 
-PulseLike = Union[Pulse, Delay, VirtualZ]
+class Acquisition(_PulseLike):
+    """Acquisition instruction.
+
+    This event instructs the device to acquire samples for the event
+    span.
+    """
+
+    duration: float
+    """Duration in ns."""
+
+
+PulseLike = Union[Pulse, Delay, VirtualZ, Acquisition]
