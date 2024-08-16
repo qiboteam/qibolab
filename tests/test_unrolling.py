@@ -8,7 +8,7 @@ from qibolab.unrolling import Bounds, batch
 
 
 def test_bounds_update():
-    ps = PulseSequence(
+    ps = PulseSequence.load(
         [
             (
                 "ch3/drive",
@@ -72,7 +72,7 @@ def test_bounds_comparison():
     ],
 )
 def test_batch(bounds):
-    ps = PulseSequence(
+    ps = PulseSequence.load(
         [
             (
                 "ch3/drive",

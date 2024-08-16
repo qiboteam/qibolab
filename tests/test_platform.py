@@ -167,17 +167,17 @@ def test_dump_parameters(platform: Platform, tmp_path: Path):
 
 def test_dump_parameters_with_updates(platform: Platform, tmp_path: Path):
     qubit = next(iter(platform.qubits.values()))
-    frequency = platform.config(qubit.drive.name).frequency + 1.5e9
-    smearing = platform.config(qubit.acquisition.name).smearing + 10
+    frequency = platform.config(str(qubit.drive.name)).frequency + 1.5e9
+    smearing = platform.config(str(qubit.acquisition.name)).smearing + 10
     update = {
-        qubit.drive.name: {"frequency": frequency},
-        qubit.acquisition.name: {"smearing": smearing},
+        str(qubit.drive.name): {"frequency": frequency},
+        str(qubit.acquisition.name): {"smearing": smearing},
     }
     update_configs(platform.parameters.configs, [update])
     (tmp_path / PARAMETERS).write_text(platform.parameters.model_dump_json())
     final = Parameters.model_validate_json((tmp_path / PARAMETERS).read_text())
-    assert final.configs[qubit.drive.name].frequency == frequency
-    assert final.configs[qubit.acquisition.name].smearing == smearing
+    assert final.configs[str(qubit.drive.name)].frequency == frequency
+    assert final.configs[str(qubit.acquisition.name)].smearing == smearing
 
 
 def test_kernels(tmp_path: Path):
@@ -199,8 +199,8 @@ def test_kernels(tmp_path: Path):
     )
 
     for qubit in platform.qubits.values():
-        orig = platform.parameters.configs[qubit.acquisition.name].kernel
-        load = reloaded.parameters.configs[qubit.acquisition.name].kernel
+        orig = platform.parameters.configs[str(qubit.acquisition.name)].kernel
+        load = reloaded.parameters.configs[str(qubit.acquisition.name)].kernel
         np.testing.assert_array_equal(orig, load)
 
 

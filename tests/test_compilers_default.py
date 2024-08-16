@@ -6,6 +6,7 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
+from qibolab.identifier import ChannelId
 from qibolab.platform import Platform
 from qibolab.pulses import Delay
 from qibolab.sequence import PulseSequence
@@ -187,8 +188,8 @@ def test_align_multiqubit(platform: Platform):
     circuit.add(gates.M(main, coupled))
 
     sequence = compile_circuit(circuit, platform)
-    flux_duration = sequence.channel_duration(f"qubit_{coupled}/flux")
+    flux_duration = sequence.channel_duration(ChannelId.load(f"qubit_{coupled}/flux"))
     for q in (main, coupled):
-        probe_delay = next(iter(sequence.channel(f"qubit_{q}/probe")))
+        probe_delay = next(iter(sequence.channel(ChannelId.load(f"qubit_{q}/probe"))))
         assert isinstance(probe_delay, Delay)
         assert flux_duration == probe_delay.duration

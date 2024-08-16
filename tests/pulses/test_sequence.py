@@ -1,5 +1,5 @@
-from qibolab.pulses import Delay, Drag, Gaussian, Pulse, Rectangular
-from qibolab.pulses.pulse import VirtualZ
+from qibolab.identifier import ChannelId
+from qibolab.pulses import Delay, Drag, Gaussian, Pulse, Rectangular, VirtualZ
 from qibolab.sequence import PulseSequence
 
 
@@ -9,22 +9,20 @@ def test_init():
 
 
 def test_init_with_iterable():
+    sc = ChannelId.load("some/probe")
+    oc = ChannelId.load("other/drive")
+    c5 = ChannelId.load("5/drive")
     seq = PulseSequence(
         [
-            ("some channel", p)
+            (sc, p)
             for p in [
                 Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=3)),
                 Pulse(duration=30, amplitude=0.5, envelope=Gaussian(rel_sigma=3)),
             ]
         ]
+        + [(oc, Pulse(duration=40, amplitude=0.2, envelope=Gaussian(rel_sigma=3)))]
         + [
-            (
-                "other channel",
-                Pulse(duration=40, amplitude=0.2, envelope=Gaussian(rel_sigma=3)),
-            )
-        ]
-        + [
-            ("chanel #5", p)
+            (c5, p)
             for p in [
                 Pulse(duration=45, amplitude=1.0, envelope=Gaussian(rel_sigma=3)),
                 Pulse(duration=50, amplitude=0.7, envelope=Gaussian(rel_sigma=3)),
@@ -34,10 +32,10 @@ def test_init_with_iterable():
     )
 
     assert len(seq) == 6
-    assert set(seq.channels) == {"some channel", "other channel", "chanel #5"}
-    assert len(list(seq.channel("some channel"))) == 2
-    assert len(list(seq.channel("other channel"))) == 1
-    assert len(list(seq.channel("chanel #5"))) == 3
+    assert set(seq.channels) == {sc, oc, c5}
+    assert len(list(seq.channel(sc))) == 2
+    assert len(list(seq.channel(oc))) == 1
+    assert len(list(seq.channel(c5))) == 3
 
 
 def test_durations():
