@@ -250,8 +250,8 @@ class RFSOC_RO(RFSOC):
         """
         super().play(qubits, couplers, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))
-        readout_pulses = sequence.probe_pulses
-        readout_qubits = [pulse.qubit for pulse in readout_pulses]
+        readout_pulses = sequence.acquisitions
+        readout_qubits = [acq.qubit for (_, acq) in readout_pulses]
 
         if options.acquisition_type is AcquisitionType.RAW:
             self.device.set_adc_trigger_mode(0)
