@@ -52,7 +52,7 @@ def test_compile(platform, gateargs):
     nqubits = platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits
+    assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits * 2
 
 
 def test_compile_two_gates(platform):
@@ -64,7 +64,7 @@ def test_compile_two_gates(platform):
     sequence = compile_circuit(circuit, platform)
 
     qubit = platform.qubits[0]
-    assert len(sequence.channels) == 2
+    assert len(sequence.channels) == 3
     assert len(list(sequence.channel(qubit.drive.name))) == 2
     assert len(list(sequence.channel(qubit.probe.name))) == 2  # includes delay
 
@@ -76,8 +76,8 @@ def test_measurement(platform):
     circuit.add(gates.M(*qubits))
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence.channels) == 1 * nqubits
-    assert len(sequence.probe_pulses) == 1 * nqubits
+    assert len(sequence.channels) == 2 * nqubits
+    assert len(sequence.acquisitions) == 1 * nqubits
 
 
 def test_rz_to_sequence(platform):
@@ -150,7 +150,7 @@ def test_add_measurement_to_sequence(platform: Platform):
 
     sequence = compile_circuit(circuit, platform)
     qubit = platform.qubits[0]
-    assert len(sequence.channels) == 2
+    assert len(sequence.channels) == 3
     assert len(list(sequence.channel(qubit.drive.name))) == 2
     assert len(list(sequence.channel(qubit.probe.name))) == 2  # include delay
 
@@ -158,6 +158,7 @@ def test_add_measurement_to_sequence(platform: Platform):
     s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.1))
     s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2))
     s.append((qubit.probe.name, Delay(duration=s.duration)))
+    s.append((qubit.acquisition.name, Delay(duration=s.duration)))
     s.concatenate(natives.single_qubit[0].MZ.create_sequence())
 
     assert sequence == s
@@ -177,7 +178,7 @@ def test_align_delay_measurement(platform: Platform, delay):
         target_sequence.append((platform.qubits[0].probe.name, Delay(duration=delay)))
     target_sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     assert sequence == target_sequence
-    assert len(sequence.probe_pulses) == 1
+    assert len(sequence.acquisitions) == 1
 
 
 def test_align_multiqubit(platform: Platform):
