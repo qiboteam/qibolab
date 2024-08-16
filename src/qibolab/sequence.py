@@ -2,7 +2,7 @@
 
 from collections import UserList
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, Union
 
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
@@ -45,6 +45,10 @@ class PulseSequence(UserList[_Element]):
     @staticmethod
     def _serialize(value):
         return TypeAdapter(list[_Element]).dump_python(list(value))
+
+    @classmethod
+    def load(cls, value: list[tuple[str, PulseLike]]):
+        return TypeAdapter(cls).validate_python(value)
 
     @property
     def duration(self) -> float:
