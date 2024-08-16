@@ -7,8 +7,10 @@ from typing import Any
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
 
-from .identifier import ChannelId, ChannelType
-from .pulses import Delay, Pulse, PulseLike
+from qibolab.pulses.pulse import Acquisition
+
+from .identifier import ChannelId
+from .pulses import Delay, PulseLike
 
 __all__ = ["PulseSequence"]
 
@@ -101,12 +103,7 @@ class PulseSequence(UserList[_Element]):
         return type(self)(reversed(new))
 
     @property
-    def probe_pulses(self) -> list[Pulse]:
+    def acquisitions(self) -> list[tuple[ChannelId, Acquisition]]:
         """Return list of the readout pulses in this sequence."""
         # pulse filter needed to exclude delays
-        return [
-            pulse
-            for (ch, pulse) in self
-            if isinstance(pulse, Pulse)
-            if ch.channel_type is ChannelType.PROBE
-        ]
+        return [el for el in self if isinstance(el[1], Acquisition)]
