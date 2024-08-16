@@ -3,6 +3,7 @@
 import pytest
 
 from qibolab.pulses import Drag, Pulse, Rectangular
+from qibolab.pulses.pulse import Acquisition
 from qibolab.sequence import PulseSequence
 from qibolab.unrolling import Bounds, batch
 
@@ -34,13 +35,17 @@ def test_bounds_update():
                 "ch1/probe",
                 Pulse(duration=1000, amplitude=0.9, envelope=Rectangular()),
             ),
+            (
+                "ch1/acquisition",
+                Acquisition(duration=3000),
+            ),
         ]
     )
 
     bounds = Bounds.update(ps)
 
     assert bounds.waveforms >= 40
-    assert bounds.readout == 3
+    assert bounds.readout == 1
     assert bounds.instructions > 1
 
 
@@ -87,8 +92,11 @@ def test_batch(bounds):
                 Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
             ),
             ("ch3/probe", Pulse(duration=1000, amplitude=0.9, envelope=Rectangular())),
+            ("ch3/acquisition", Acquisition(duration=1000)),
             ("ch2/probe", Pulse(duration=1000, amplitude=0.9, envelope=Rectangular())),
+            ("ch2/acquisition", Acquisition(duration=1000)),
             ("ch1/probe", Pulse(duration=1000, amplitude=0.9, envelope=Rectangular())),
+            ("ch1/acquisition", Acquisition(duration=1000)),
         ]
     )
 
