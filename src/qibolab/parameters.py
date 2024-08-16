@@ -98,6 +98,10 @@ class NativeGates(Model):
 
 
 ComponentId = str
+"""Identifier of a generic component.
+
+This is assumed to always be in its serialized form.
+"""
 
 
 class Parameters(Model):
