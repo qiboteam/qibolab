@@ -16,7 +16,10 @@ class _PulseLike(Model):
 
 
 class Pulse(_PulseLike):
-    """A pulse to be sent to the QPU."""
+    """A pulse to be sent to the QPU.
+
+    Valid on any channel, except acquisition ones.
+    """
 
     duration: float
     """Pulse duration."""
@@ -64,6 +67,8 @@ class Delay(_PulseLike):
     """Wait instruction.
 
     During its length no pulse is sent on the same channel.
+
+    Valid on any channel.
     """
 
     duration: float
@@ -71,7 +76,10 @@ class Delay(_PulseLike):
 
 
 class VirtualZ(_PulseLike):
-    """Implementation of Z-rotations using virtual phase."""
+    """Implementation of Z-rotations using virtual phase.
+
+    Only valid on a drive channel.
+    """
 
     phase: float
     """Phase that implements the rotation."""
@@ -87,6 +95,8 @@ class Acquisition(_PulseLike):
 
     This event instructs the device to acquire samples for the event
     span.
+
+    Only valid on an acquisition channel.
     """
 
     duration: float
