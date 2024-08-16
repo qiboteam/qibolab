@@ -87,6 +87,7 @@ qm = ["qm-qua", "qualang-tools"]
 zh = ["laboneq"]
 rfsoc = ["qibosoq"]
 los = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
+twpa = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 emulator = ["qutip"]
 
 
