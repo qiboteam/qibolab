@@ -39,7 +39,7 @@ def default(value: Optional[T], default: T) -> T:
 
 def unroll_sequences(
     sequences: list[PulseSequence], relaxation_time: int
-) -> tuple[PulseSequence, dict[str, list[str]]]:
+) -> tuple[PulseSequence, dict[int, list[int]]]:
     """Unrolls a list of pulse sequences to a single sequence.
 
     The resulting sequence may contain multiple measurements.
