@@ -155,6 +155,7 @@ def execute(connected_platform: Platform) -> Execution:
             qd_seq = natives.RX.create_sequence()
             probe_seq = natives.MZ.create_sequence()
             probe_pulse = probe_seq[0][1]
+            acq = probe_seq[1][1]
             sequence = PulseSequence()
             sequence.concatenate(qd_seq)
             sequence.concatenate(probe_seq)
@@ -169,7 +170,7 @@ def execute(connected_platform: Platform) -> Execution:
                 )
                 sweepers = [[sweeper1], [sweeper2]]
             if target is None:
-                target = (probe_pulse.id, 0)
+                target = (acq.id, 0)
 
         # default target and sweepers only supported for default sequence
         assert target is not None

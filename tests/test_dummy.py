@@ -27,16 +27,16 @@ def test_dummy_execute_pulse_sequence(platform: Platform, acquisition):
     nshots = 100
     natives = platform.natives.single_qubit[0]
     probe_seq = natives.MZ.create_sequence()
-    probe_pulse = probe_seq[0][1]
+    acq = probe_seq[1][1]
     sequence = PulseSequence()
     sequence.concatenate(probe_seq)
     sequence.concatenate(natives.RX12.create_sequence())
     options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
     result = platform.execute([sequence], options)
     if acquisition is AcquisitionType.INTEGRATION:
-        assert result[probe_pulse.id][0].shape == (nshots, 2)
+        assert result[acq.id][0].shape == (nshots, 2)
     elif acquisition is AcquisitionType.RAW:
-        assert result[probe_pulse.id][0].shape == (nshots, int(probe_seq.duration), 2)
+        assert result[acq.id][0].shape == (nshots, int(acq.duration), 2)
 
 
 def test_dummy_execute_coupler_pulse(platform: Platform):
@@ -108,7 +108,7 @@ def test_dummy_single_sweep_raw(platform: Platform):
     sequence = PulseSequence()
     natives = platform.natives
     probe_seq = natives.single_qubit[0].MZ.create_sequence()
-    pulse = probe_seq[0][1]
+    acq = probe_seq[1][1]
 
     parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
     sequence.concatenate(probe_seq)
@@ -123,9 +123,9 @@ def test_dummy_single_sweep_raw(platform: Platform):
         acquisition_type=AcquisitionType.RAW,
     )
     results = platform.execute([sequence], options, [[sweeper]])
-    assert pulse.id in results
-    shape = results[pulse.id][0].shape
-    assert shape == (SWEPT_POINTS, int(pulse.duration), 2)
+    assert acq.id in results
+    shape = results[acq.id][0].shape
+    assert shape == (SWEPT_POINTS, int(acq.duration), 2)
 
 
 @pytest.mark.parametrize("fast_reset", [True, False])
@@ -144,7 +144,7 @@ def test_dummy_single_sweep_coupler(
     sequence = PulseSequence()
     natives = platform.natives
     probe_seq = natives.single_qubit[0].MZ.create_sequence()
-    probe_pulse = probe_seq[0][1]
+    acq = probe_seq[1][1]
     coupler_pulse = Pulse.flux(
         duration=40,
         amplitude=0.5,
@@ -170,18 +170,18 @@ def test_dummy_single_sweep_coupler(
     )
     results = platform.execute([sequence], options, [[sweeper]])
 
-    assert probe_pulse.id in results
+    assert acq.id in results
     if not options.averaging_mode.average:
         results_shape = (
-            results[probe_pulse.id][0].shape
+            results[acq.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].shape
+            else results[acq.id][0].shape
         )
     else:
         results_shape = (
-            results[probe_pulse.id][0].shape
+            results[acq.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].shape
+            else results[acq.id][0].shape
         )
 
     expected_shape = (SWEPT_POINTS,)
@@ -206,6 +206,7 @@ def test_dummy_single_sweep(
     natives = platform.natives
     probe_seq = natives.single_qubit[0].MZ.create_sequence()
     pulse = probe_seq[0][1]
+    acq = probe_seq[1][1]
     if parameter is Parameter.amplitude:
         parameter_range = np.random.rand(SWEPT_POINTS)
     else:
@@ -228,18 +229,18 @@ def test_dummy_single_sweep(
     )
     results = platform.execute([sequence], options, [[sweeper]])
 
-    assert pulse.id in results
+    assert acq.id in results
     if options.averaging_mode.average:
         results_shape = (
-            results[pulse.id][0].shape
+            results[acq.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.id][0].shape
+            else results[acq.id][0].shape
         )
     else:
         results_shape = (
-            results[pulse.id][0].shape
+            results[acq.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[pulse.id][0].shape
+            else results[acq.id][0].shape
         )
 
     expected_shape = (SWEPT_POINTS,)
@@ -265,6 +266,7 @@ def test_dummy_double_sweep(
     natives = platform.natives
     probe_seq = natives.single_qubit[0].MZ.create_sequence()
     probe_pulse = probe_seq[0][1]
+    acq = probe_seq[1][1]
     sequence.append((platform.get_qubit(0).drive.name, pulse))
     sequence.append((platform.qubits[0].probe.name, Delay(duration=pulse.duration)))
     sequence.concatenate(probe_seq)
@@ -302,19 +304,19 @@ def test_dummy_double_sweep(
     )
     results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
 
-    assert probe_pulse.id in results
+    assert acq.id in results
 
     if options.averaging_mode.average:
         results_shape = (
-            results[probe_pulse.id][0].shape
+            results[acq.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].shape
+            else results[acq.id][0].shape
         )
     else:
         results_shape = (
-            results[probe_pulse.id][0].shape
+            results[acq.id][0].shape
             if acquisition is AcquisitionType.INTEGRATION
-            else results[probe_pulse.id][0].shape
+            else results[acq.id][0].shape
         )
 
     expected_shape = (SWEPT_POINTS, SWEPT_POINTS)
@@ -336,10 +338,12 @@ def test_dummy_single_sweep_multiplex(
 ):
     sequence = PulseSequence()
     probe_pulses = {}
+    acqs = {}
     natives = platform.natives
     for qubit in platform.qubits:
         probe_seq = natives.single_qubit[qubit].MZ.create_sequence()
         probe_pulses[qubit] = probe_seq[0][1]
+        acqs[qubit] = probe_seq[1][1]
         sequence.concatenate(probe_seq)
     parameter_range = (
         np.random.rand(SWEPT_POINTS)
@@ -367,19 +371,19 @@ def test_dummy_single_sweep_multiplex(
     )
     results = platform.execute([sequence], options, [[sweeper1]])
 
-    for pulse in probe_pulses.values():
-        assert pulse.id in results
+    for acq in acqs.values():
+        assert acq.id in results
         if not options.averaging_mode.average:
             results_shape = (
-                results[pulse.id][0].shape
+                results[acq.id][0].shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[pulse.id][0].shape
+                else results[acq.id][0].shape
             )
         else:
             results_shape = (
-                results[pulse.id][0].shape
+                results[acq.id][0].shape
                 if acquisition is AcquisitionType.INTEGRATION
-                else results[pulse.id][0].shape
+                else results[acq.id][0].shape
             )
 
         expected_shape = (SWEPT_POINTS,)
