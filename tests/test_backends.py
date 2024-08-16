@@ -109,18 +109,14 @@ def dummy_string_qubit_names():
     for q, qubit in platform.qubits.copy().items():
         name = f"A{q}"
         qubit.name = name
-        platform._qubits[name] = qubit
-        del platform._qubits[q]
+        platform.qubits[name] = qubit
+        del platform.qubits[q]
         platform.parameters.native_gates.single_qubit[name] = (
             platform.parameters.native_gates.single_qubit[q]
         )
         del platform.parameters.native_gates.single_qubit[q]
-    for (q0, q1), pair in platform.pairs.copy().items():
+    for q0, q1 in platform.pairs:
         name = (f"A{q0}", f"A{q1}")
-        pair.qubit1 = name[0]
-        pair.qubit2 = name[1]
-        platform._pairs[name] = pair
-        del platform._pairs[(q0, q1)]
         try:
             platform.parameters.native_gates.two_qubit[name] = (
                 platform.parameters.native_gates.two_qubit[(q0, q1)]

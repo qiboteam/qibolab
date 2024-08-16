@@ -216,8 +216,9 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
+    natives = platform.parameters.native_gates.single_qubit[0]
     # define the pulse sequence
-    sequence = qubit.native_gates.MZ.create_sequence()
+    sequence = natives.MZ.create_sequence()
 
     # define a sweeper for a frequency scan
     sweeper = Sweeper(

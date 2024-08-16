@@ -4,7 +4,11 @@ The format is explained in the :ref:`Using parameters <using_runcards>`
 example.
 """
 
-from pydantic import Field
+from collections.abc import Callable
+from typing import Any
+
+from pydantic import Field, TypeAdapter
+from pydantic_core import core_schema
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
@@ -50,6 +54,38 @@ class Settings(Model):
         return options
 
 
+class TwoQubitContainer(dict[QubitPairId, TwoQubitNatives]):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: Callable[[Any], core_schema.CoreSchema]
+    ) -> core_schema.CoreSchema:
+        schema = handler(dict[QubitPairId, TwoQubitNatives])
+        return core_schema.no_info_after_validator_function(
+            cls._validate,
+            schema,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls._serialize, info_arg=False
+            ),
+        )
+
+    @classmethod
+    def _validate(cls, value):
+        return cls(value)
+
+    @staticmethod
+    def _serialize(value):
+        return TypeAdapter(dict[QubitPairId, TwoQubitNatives]).dump_python(value)
+
+    def __getitem__(self, key: QubitPairId):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            value = super().__getitem__((key[1], key[0]))
+            if value.symmetric:
+                return value
+            raise
+
+
 class NativeGates(Model):
     """Native gates parameters.
 
@@ -58,7 +94,7 @@ class NativeGates(Model):
 
     single_qubit: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
     coupler: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
-    two_qubit: dict[QubitPairId, TwoQubitNatives] = Field(default_factory=dict)
+    two_qubit: TwoQubitContainer = Field(default_factory=dict)
 
 
 ComponentId = str

@@ -8,13 +8,9 @@ import math
 import numpy as np
 from qibo.gates import Align, Gate
 
+from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import Delay, PulseSequence, VirtualZ
-from qibolab.qubits import Qubit, QubitPair
-
-
-def identity_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
-    """Identity gate skipped."""
-    return PulseSequence()
+from qibolab.qubits import Qubit
 
 
 def z_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
@@ -27,11 +23,15 @@ def rz_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     return PulseSequence([(qubit.drive.name, VirtualZ(phase=gate.parameters[0]))])
 
 
-def gpi2_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
+def identity_rule(gate: Gate, qubit: SingleQubitNatives) -> PulseSequence:
+    """Identity gate skipped."""
+    return PulseSequence()
+
+
+def gpi2_rule(gate: Gate, qubit: SingleQubitNatives) -> PulseSequence:
     """Rule for GPI2."""
-    return qubit.native_gates.RX.create_sequence(
-        theta=np.pi / 2, phi=gate.parameters[0]
-    )
+    assert qubit.RX is not None
+    return qubit.RX.create_sequence(theta=np.pi / 2, phi=gate.parameters[0])
 
 
 def gpi_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
@@ -40,28 +40,31 @@ def gpi_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     # to the matrix representation. See
     # https://github.com/qiboteam/qibolab/pull/804#pullrequestreview-1890205509
     # for more detail.
-    return qubit.native_gates.RX.create_sequence(theta=np.pi, phi=gate.parameters[0])
+    return qubit.RX.create_sequence(theta=np.pi, phi=gate.parameters[0])
 
 
-def cz_rule(gate: Gate, pair: QubitPair) -> PulseSequence:
+def cz_rule(gate: Gate, pair: TwoQubitNatives) -> PulseSequence:
     """CZ applied as defined in the platform runcard.
 
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    return pair.native_gates.CZ.create_sequence()
+    assert pair.CZ is not None
+    return pair.CZ.create_sequence()
 
 
-def cnot_rule(gate: Gate, pair: QubitPair) -> PulseSequence:
+def cnot_rule(gate: Gate, pair: TwoQubitNatives) -> PulseSequence:
     """CNOT applied as defined in the platform runcard."""
-    return pair.native_gates.CNOT.create_sequence()
+    assert pair.CNOT is not None
+    return pair.CNOT.create_sequence()
 
 
-def measurement_rule(gate: Gate, qubits: list[Qubit]) -> PulseSequence:
+def measurement_rule(gate: Gate, qubits: list[SingleQubitNatives]) -> PulseSequence:
     """Measurement gate applied using the platform readout pulse."""
     seq = PulseSequence()
     for qubit in qubits:
-        seq.concatenate(qubit.native_gates.MZ.create_sequence())
+        assert qubit.MZ is not None
+        seq.concatenate(qubit.MZ.create_sequence())
     return seq
 
 

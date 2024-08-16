@@ -32,12 +32,13 @@ from .conftest import find_instrument
 nshots = 1024
 
 
-def test_unroll_sequences(platform):
+def test_unroll_sequences(platform: Platform):
     qubit = next(iter(platform.qubits.values()))
+    natives = platform.parameters.native_gates.single_qubit[0]
     sequence = PulseSequence()
-    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.concatenate(natives.RX.create_sequence())
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
-    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.MZ.create_sequence())
     total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence.probe_pulses) == 10
     assert len(readouts) == 1
@@ -58,6 +59,7 @@ def test_platform_basics():
         name="ciao",
         parameters=Parameters(native_gates=NativeGates()),
         instruments={},
+        qubits={},
     )
     assert str(platform) == "ciao"
     assert platform.topology == []
@@ -74,6 +76,7 @@ def test_platform_basics():
             )
         ),
         instruments={},
+        qubits=qs,
     )
     assert str(platform2) == "come va?"
     assert (1, 6) in platform2.topology
@@ -187,7 +190,12 @@ def test_kernels(tmp_path: Path):
             )
 
     platform.dump(tmp_path)
-    reloaded = Platform.load(tmp_path, instruments=platform.instruments)
+    reloaded = Platform.load(
+        tmp_path,
+        instruments=platform.instruments,
+        qubits=platform.qubits,
+        couplers=platform.couplers,
+    )
 
     for qubit in platform.qubits.values():
         orig = platform.parameters.configs[qubit.acquisition.name].kernel

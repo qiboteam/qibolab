@@ -15,12 +15,12 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import Parameters, Settings, update_configs
 from qibolab.pulses import Delay, PulseSequence
-from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
+from qibolab.qubits import Qubit, QubitId, QubitPairId
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds, batch
 
 QubitMap = dict[QubitId, Qubit]
-QubitPairMap = dict[QubitPairId, QubitPair]
+QubitPairMap = list[QubitPairId]
 InstrumentMap = dict[InstrumentId, Instrument]
 
 NS_TO_SEC = 1e-9
@@ -99,13 +99,22 @@ class Platform:
     instruments: InstrumentMap
     """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
+    qubits: QubitMap
+    """Qubit controllers.
+
+    The mapped objects hold the :class:`qubit.components.channels.Channel` instances
+    required to send pulses addressing the desired qubits.
+    """
+    couplers: QubitMap = field(default_factory=dict)
+    """Coupler controllers.
+
+    Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
+    in the mapped objects.
+    """
     resonator_type: Literal["2D", "3D"] = "2D"
     """Type of resonator (2D or 3D) in the used QPU."""
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
-    _qubits: QubitMap = field(default_factory=dict)
-    _couplers: QubitMap = field(default_factory=dict)
-    _pairs: QubitPairMap = field(default_factory=dict)
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
@@ -114,51 +123,6 @@ class Platform:
 
     def __str__(self):
         return self.name
-
-    @property
-    def qubits(self) -> QubitMap:
-        """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-        if len(self._qubits) == 0:
-            for q, natives in self.parameters.native_gates.single_qubit.items():
-                self._qubits[q] = Qubit(name=q, native_gates=natives)
-
-        for q, natives in self.parameters.native_gates.single_qubit.items():
-            self._qubits[q].native_gates = natives
-
-        return self._qubits
-
-    @property
-    def couplers(self) -> QubitMap:
-        """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
-        if len(self._couplers) == 0:
-            for c, natives in self.parameters.native_gates.coupler.items():
-                self._couplers[c] = Qubit(name=c, native_gates=natives)
-
-        for c, natives in self.parameters.native_gates.coupler.items():
-            self._couplers[c].native_gates = natives
-
-        return self._couplers
-
-    @property
-    def pairs(self) -> QubitPairMap:
-        """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
-        objects."""
-        if len(self._pairs) == 0:
-            for p, natives in self.parameters.native_gates.two_qubit.items():
-                self._pairs[p] = QubitPair(
-                    qubit1=p[0], qubit2=p[1], native_gates=natives
-                )
-                if natives.symmetric:
-                    self._pairs[(p[1], p[0])] = QubitPair(
-                        qubit1=p[0], qubit2=p[1], native_gates=natives
-                    )
-
-        for p, natives in self.parameters.native_gates.two_qubit.items():
-            self._pairs[p].native_gates = natives
-            if natives.symmetric:
-                self._pairs[(p[1], p[0])].native_gates = natives
-
-        return self._pairs
 
     @property
     def settings(self) -> Settings:
@@ -171,14 +135,22 @@ class Platform:
         return len(self.qubits)
 
     @property
+    def pairs(self) -> list[QubitPairId]:
+        """Available pairs in thee platform."""
+        return list(self.parameters.native_gates.two_qubit)
+
+    @property
     def ordered_pairs(self):
         """List of qubit pairs that are connected in the QPU."""
         return sorted({tuple(sorted(pair)) for pair in self.pairs})
 
     @property
     def topology(self) -> list[QubitPairId]:
-        """Graph representing the qubit connectivity in the quantum chip."""
-        return list(self.pairs)
+        """Graph representing the qubit connectivity in the quantum chip.
+
+        Synonym of :attr:`pairs`.
+        """
+        return self.pairs
 
     @property
     def sampling_rate(self):
@@ -289,7 +261,8 @@ class Platform:
 
                 platform = create_dummy()
                 qubit = platform.qubits[0]
-                sequence = qubit.native_gates.MZ.create_sequence()
+                natives = platform.parameters.native_gates.single_qubit[0]
+                sequence = natives.MZ.create_sequence()
                 parameter = Parameter.frequency
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.probe.name])]
@@ -327,13 +300,17 @@ class Platform:
         cls,
         path: Path,
         instruments: Union[InstrumentMap, Iterable[Instrument]],
+        qubits: QubitMap,
+        couplers: Optional[QubitMap] = None,
         name: Optional[str] = None,
-    ):
+    ) -> "Platform":
         """Dump platform."""
         if name is None:
             name = path.name
         if not isinstance(instruments, dict):
             instruments = {i.name: i for i in instruments}
+        if couplers is None:
+            couplers = {}
 
         return cls(
             name=name,
@@ -341,6 +318,8 @@ class Platform:
                 json.loads((path / PARAMETERS).read_text())
             ),
             instruments=instruments,
+            qubits=qubits,
+            couplers=couplers,
         )
 
     def dump(self, path: Path):
@@ -349,7 +328,7 @@ class Platform:
             json.dumps(self.parameters.model_dump(), sort_keys=False, indent=4)
         )
 
-    def get_qubit(self, qubit):
+    def get_qubit(self, qubit: QubitId) -> Qubit:
         """Return the name of the physical qubit corresponding to a logical
         qubit.
 
@@ -361,7 +340,7 @@ class Platform:
         except KeyError:
             return list(self.qubits.values())[qubit]
 
-    def get_coupler(self, coupler):
+    def get_coupler(self, coupler: QubitId) -> Qubit:
         """Return the name of the physical coupler corresponding to a logical
         coupler.
 
