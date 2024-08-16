@@ -1,8 +1,9 @@
 """Pulse class."""
 
-from typing import Union
+from typing import Annotated, Literal, Union
 
 import numpy as np
+from pydantic import Field
 
 from qibolab.serialize import Model
 
@@ -20,6 +21,8 @@ class Pulse(_PulseLike):
 
     Valid on any channel, except acquisition ones.
     """
+
+    kind: Literal["pulse"] = "pulse"
 
     duration: float
     """Pulse duration."""
@@ -71,6 +74,8 @@ class Delay(_PulseLike):
     Valid on any channel.
     """
 
+    kind: Literal["delay"] = "delay"
+
     duration: float
     """Duration in ns."""
 
@@ -80,6 +85,8 @@ class VirtualZ(_PulseLike):
 
     Only valid on a drive channel.
     """
+
+    kind: Literal["virtualz"] = "virtualz"
 
     phase: float
     """Phase that implements the rotation."""
@@ -99,8 +106,12 @@ class Acquisition(_PulseLike):
     Only valid on an acquisition channel.
     """
 
+    kind: Literal["acquisition"] = "acquisition"
+
     duration: float
     """Duration in ns."""
 
 
-PulseLike = Union[Pulse, Delay, VirtualZ, Acquisition]
+PulseLike = Annotated[
+    Union[Pulse, Delay, VirtualZ, Acquisition], Field(discriminator="kind")
+]
