@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Annotated, Optional, Union
 
-from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
+from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer, TypeAdapter
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
 from qibolab.serialize import Model
@@ -26,7 +26,22 @@ class ChannelType(str, Enum):
     FLUX = "flux"
 
 
-ChannelId = tuple[QubitId, ChannelType, Optional[str]]
+def _str_to_chid(ch: str) -> "ChannelId":
+    elements = ch.split("/")
+    # TODO: replace with pattern matching, once py3.9 will be abandoned
+    if len(elements) > 3:
+        raise ValueError()
+    q = TypeAdapter(QubitId).validate_python(elements[0])
+    ct = ChannelType(elements[1])
+    cross = elements[2] if len(elements) == 3 else None
+    return (q, ct, cross)
+
+
+ChannelId = Annotated[
+    tuple[QubitId, ChannelType, Optional[str]],
+    BeforeValidator(_str_to_chid),
+    PlainSerializer(lambda ch: "/".join(str(el) for el in ch)),
+]
 """Unique identifier for a channel."""
 
 
