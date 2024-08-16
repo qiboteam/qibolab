@@ -90,7 +90,7 @@
             "kind": "iq",
             "frequency": 5500000000.0
         },
-        "qubit_0/acquire": {
+        "qubit_0/acquisition": {
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
@@ -98,7 +98,7 @@
             "iq_angle": 0.0,
             "kernel": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDEwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAp5sDfS7uHlP2DIMKNvnKc/gCqN8KV/pT94FQCYYJC3PzSbwfi/894/APwg6C61rj8MSN3blizAP2ha9unQYsM/+BFjHTxcwT+gXaJazvbpPw=="
         },
-        "qubit_1/acquire": {
+        "qubit_1/acquisition": {
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
@@ -106,7 +106,7 @@
             "iq_angle": 0.0,
             "kernel": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDEwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAr4dT6V5tHrP1w+JhHImN8/sPePZeSUuj/4yTKrD5fRP/ysonZip98/6GJMAPV9xD/LTiJo4k7oP96aWXpxduU/6fUxETe/7z9GXEBNGebWPw=="
         },
-        "qubit_2/acquire": {
+        "qubit_2/acquisition": {
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
@@ -114,7 +114,7 @@
             "iq_angle": 0.0,
             "kernel": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDEwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIApUtcFdBpTsPzzwG8Xkbts/OAvkS0qo4z+OUcJpZ8HlP/jsO9cUwso/s6DVM7e/4T/NL4JYzUXvP9CibqEg98M/AENJ8QPkcD8wAOtI4pHNPw=="
         },
-        "qubit_3/acquire": {
+        "qubit_3/acquisition": {
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
@@ -122,7 +122,7 @@
             "iq_angle": 0.0,
             "kernel": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDEwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogk3D0+DqsP1ry/LSlMuM/ydJYpPk/6D8BJMdYs+zsP1CqhVqYz+o/1A3srA5z7j8CUqCE6lvqPwjNySZ1DuA/YHGvVmuFsz+XwaQKz/bqPw=="
         },
-        "qubit_4/acquire": {
+        "qubit_4/acquisition": {
             "kind": "acquisition",
             "delay": 0.0,
             "smearing": 0.0,
