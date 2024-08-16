@@ -14,29 +14,23 @@ make sure that there is only one copy of configuration for a component, plus use
 share a component, because channels will refer to the same name for the component under discussion.
 """
 
-from dataclasses import dataclass
 from typing import Optional
 
-__all__ = [
-    "Channel",
-    "DcChannel",
-    "IqChannel",
-    "AcquireChannel",
-]
+from qibolab.identifier import ChannelId
+from qibolab.serialize import Model
+
+__all__ = ["Channel", "DcChannel", "IqChannel", "AcquireChannel"]
 
 
-@dataclass(frozen=True)
-class Channel:
-    name: str
+class Channel(Model):
+    name: ChannelId
     """Name of the channel."""
 
 
-@dataclass(frozen=True)
 class DcChannel(Channel):
     """Channel that can be used to send DC pulses."""
 
 
-@dataclass(frozen=True)
 class IqChannel(Channel):
     """Channel that can be used to send IQ pulses."""
 
@@ -60,7 +54,6 @@ class IqChannel(Channel):
     """
 
 
-@dataclass(frozen=True)
 class AcquireChannel(Channel):
     twpa_pump: Optional[str]
     """Name of the TWPA pump component.
