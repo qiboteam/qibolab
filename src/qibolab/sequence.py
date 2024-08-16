@@ -2,7 +2,7 @@
 
 from collections import UserList
 from collections.abc import Callable, Iterable
-from typing import Any, Union
+from typing import Any
 
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
@@ -105,5 +105,8 @@ class PulseSequence(UserList[_Element]):
         """Return list of the readout pulses in this sequence."""
         # pulse filter needed to exclude delays
         return [
-            pulse for (ch, pulse) in self if isinstance(pulse, Pulse) if "probe" in ch
+            pulse
+            for (ch, pulse) in self
+            if isinstance(pulse, Pulse)
+            if ch.channel_type is ChannelType.PROBE
         ]
