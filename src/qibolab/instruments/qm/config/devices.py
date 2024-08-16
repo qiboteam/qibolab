@@ -5,6 +5,7 @@ from qibolab.components.configs import OscillatorConfig
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 
 __all__ = [
+    "AnalogOutput",
     "OctaveOutput",
     "OctaveInput",
     "Controller",
@@ -29,6 +30,19 @@ class PortDict(dict):
 
     def __setitem__(self, key, value):
         super().__setitem__(str(key), value)
+
+
+@dataclass(frozen=True)
+class AnalogOutput:
+    offset: float = 0.0
+    filter: dict[str, float] = field(default_factory=dict)
+
+    @classmethod
+    def from_config(cls, config: OpxOutputConfig):
+        return cls(
+            offset=config.offset,
+            filter=config.filter,
+        )
 
 
 @dataclass(frozen=True)
@@ -69,7 +83,7 @@ class OctaveInput:
 
 @dataclass
 class Controller:
-    analog_outputs: PortDict[str, dict[str, OpxOutputConfig]] = field(
+    analog_outputs: PortDict[str, dict[str, AnalogOutput]] = field(
         default_factory=PortDict
     )
     digital_outputs: PortDict[str, dict[str, dict]] = field(default_factory=PortDict)
@@ -79,8 +93,8 @@ class Controller:
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
-        self.analog_outputs[2 * port - 1] = OpxOutputConfig()
-        self.analog_outputs[2 * port] = OpxOutputConfig()
+        self.analog_outputs[2 * port - 1] = AnalogOutput()
+        self.analog_outputs[2 * port] = AnalogOutput()
 
         self.digital_outputs[2 * port - 1] = {}
 
