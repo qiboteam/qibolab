@@ -182,11 +182,29 @@ def test_trim():
     assert isinstance(next(iter(trimmed.channel("d"))), Pulse)
 
 
+def test_acquisitions():
+    probe = Pulse(duration=10, amplitude=1, envelope=Rectangular())
+    acq = Acquisition(duration=10)
+    sequence = PulseSequence.load(
+        [
+            ("1/drive", VirtualZ(phase=0.7)),
+            ("1/probe", Delay(duration=15)),
+            ("1/acquisition", Delay(duration=20)),
+            ("1/probe", probe),
+            ("1/acquisition", acq),
+            ("1/flux", probe),
+        ]
+    )
+    acqs = sequence.acquisitions
+    assert len(acqs) == 1
+    assert acqs[0][1] is acq
+
+
 def test_readouts():
     probe = Pulse(duration=10, amplitude=1, envelope=Rectangular())
     acq = Acquisition(duration=10)
     sequence = PulseSequence.load([("1/probe", probe), ("1/acquisition", acq)])
-    ros = sequence.to_readouts
+    ros = sequence.as_readouts
     assert len(ros) == 1
     ro = ros[0][1]
     assert isinstance(ro, _Readout)
@@ -203,20 +221,20 @@ def test_readouts():
             ("1/flux", probe),
         ]
     )
-    ros = sequence.to_readouts
+    ros = sequence.as_readouts
     assert len(ros) == 5
 
     sequence = PulseSequence.load([("1/probe", probe)])
     with pytest.raises(ValueError, match="(?i)probe"):
-        sequence.to_readouts
+        sequence.as_readouts
 
     sequence = PulseSequence.load([("1/acquisition", acq)])
     with pytest.raises(ValueError, match="(?i)acquisition"):
-        sequence.to_readouts
+        sequence.as_readouts
 
     sequence = PulseSequence.load([("1/acquisition", acq), ("1/probe", probe)])
     with pytest.raises(ValueError):
-        sequence.to_readouts
+        sequence.as_readouts
 
     sequence = PulseSequence.load(
         [
@@ -226,4 +244,4 @@ def test_readouts():
         ]
     )
     with pytest.raises(ValueError):
-        sequence.to_readouts
+        sequence.as_readouts

@@ -110,7 +110,7 @@ class PulseSequence(UserList[_Element]):
         return [el for el in self if isinstance(el[1], Acquisition)]
 
     @property
-    def to_readouts(self):
+    def as_readouts(self):
         new = []
         skip = False
         for (ch, p), (nch, np) in zip_longest(self, self[1:], fillvalue=(None, None)):
