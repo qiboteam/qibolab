@@ -89,7 +89,7 @@ The following example shows how to modify the compiler in order to execute a cir
 
     backend = QibolabBackend(platform="dummy")
     # register the new X rule in the compiler
-    backend.compiler[gates.X] = x_rule
+    backend.compiler.rules[gates.X] = x_rule
 
     # execute the circuit
     result = backend.execute_circuit(circuit, nshots=1000)
