@@ -23,15 +23,15 @@ def rz_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     return PulseSequence([(qubit.drive.name, VirtualZ(phase=gate.parameters[0]))])
 
 
-def identity_rule(gate: Gate, qubit: SingleQubitNatives) -> PulseSequence:
+def identity_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
     """Identity gate skipped."""
     return PulseSequence()
 
 
-def gpi2_rule(gate: Gate, qubit: SingleQubitNatives) -> PulseSequence:
+def gpi2_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
     """Rule for GPI2."""
-    assert qubit.RX is not None
-    return qubit.RX.create_sequence(theta=np.pi / 2, phi=gate.parameters[0])
+    assert natives.RX is not None
+    return natives.RX.create_sequence(theta=np.pi / 2, phi=gate.parameters[0])
 
 
 def gpi_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
@@ -43,26 +43,26 @@ def gpi_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     return qubit.RX.create_sequence(theta=np.pi, phi=gate.parameters[0])
 
 
-def cz_rule(gate: Gate, pair: TwoQubitNatives) -> PulseSequence:
+def cz_rule(gate: Gate, natives: TwoQubitNatives) -> PulseSequence:
     """CZ applied as defined in the platform runcard.
 
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    assert pair.CZ is not None
-    return pair.CZ.create_sequence()
+    assert natives.CZ is not None
+    return natives.CZ.create_sequence()
 
 
-def cnot_rule(gate: Gate, pair: TwoQubitNatives) -> PulseSequence:
+def cnot_rule(gate: Gate, natives: TwoQubitNatives) -> PulseSequence:
     """CNOT applied as defined in the platform runcard."""
-    assert pair.CNOT is not None
-    return pair.CNOT.create_sequence()
+    assert natives.CNOT is not None
+    return natives.CNOT.create_sequence()
 
 
-def measurement_rule(gate: Gate, qubits: list[SingleQubitNatives]) -> PulseSequence:
+def measurement_rule(gate: Gate, natives: list[SingleQubitNatives]) -> PulseSequence:
     """Measurement gate applied using the platform readout pulse."""
     seq = PulseSequence()
-    for qubit in qubits:
+    for qubit in natives:
         assert qubit.MZ is not None
         seq.concatenate(qubit.MZ.create_sequence())
     return seq
