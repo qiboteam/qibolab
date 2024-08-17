@@ -115,6 +115,7 @@ class PulseSequence(UserList[_Element]):
         skip = False
         for (ch, p), (nch, np) in zip_longest(self, self[1:], fillvalue=(None, None)):
             if skip:
+                skip = False
                 continue
 
             # TODO: replace with pattern matching, once py3.9 will be abandoned
