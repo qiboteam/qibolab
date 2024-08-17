@@ -161,7 +161,16 @@ def test_add_measurement_to_sequence(platform: Platform):
     s.append((qubit.acquisition.name, Delay(duration=s.duration)))
     s.concatenate(natives.single_qubit[0].MZ.create_sequence())
 
-    assert sequence == s
+    # the delay sorting depends on PulseSequence.channels, which is a set, and it's
+    # order is not guaranteed
+    def without_delays(seq: PulseSequence) -> PulseSequence:
+        return [el for el in seq if not isinstance(el[1], Delay)]
+
+    def delays(seq: PulseSequence) -> set[tuple[ChannelId, Delay]]:
+        return {el for el in seq if isinstance(el[1], Delay)}
+
+    assert without_delays(sequence) == without_delays(s)
+    assert delays(sequence) == delays(s)
 
 
 @pytest.mark.parametrize("delay", [0, 100])
