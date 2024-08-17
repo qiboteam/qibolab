@@ -140,14 +140,6 @@ class Platform:
         return sorted({tuple(sorted(pair)) for pair in self.pairs})
 
     @property
-    def topology(self) -> list[QubitPairId]:
-        """Graph representing the qubit connectivity in the quantum chip.
-
-        Synonym of :attr:`pairs`.
-        """
-        return self.pairs
-
-    @property
     def settings(self) -> Settings:
         """Container with default execution settings."""
         return self.parameters.settings
