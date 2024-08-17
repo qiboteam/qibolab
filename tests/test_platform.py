@@ -62,7 +62,7 @@ def test_platform_basics():
         qubits={},
     )
     assert str(platform) == "ciao"
-    assert platform.topology == []
+    assert platform.pairs == []
 
     qs = {q: SingleQubitNatives() for q in range(10)}
     ts = {(q1, q2): TwoQubitNatives() for q1 in range(3) for q2 in range(4, 8)}
@@ -79,7 +79,7 @@ def test_platform_basics():
         qubits=qs,
     )
     assert str(platform2) == "come va?"
-    assert (1, 6) in platform2.topology
+    assert (1, 6) in platform2.pairs
 
 
 def test_create_platform_multipath(tmp_path: Path):
