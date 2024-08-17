@@ -1,5 +1,16 @@
+import pytest
+
 from qibolab.identifier import ChannelId
-from qibolab.pulses import Delay, Drag, Gaussian, Pulse, Rectangular, VirtualZ
+from qibolab.pulses import (
+    Acquisition,
+    Delay,
+    Drag,
+    Gaussian,
+    Pulse,
+    Rectangular,
+    VirtualZ,
+)
+from qibolab.pulses.pulse import _Readout
 from qibolab.sequence import PulseSequence
 
 
@@ -169,3 +180,50 @@ def test_trim():
     assert len(list(trimmed.channel("c"))) == 2
     # the order is preserved
     assert isinstance(next(iter(trimmed.channel("d"))), Pulse)
+
+
+def test_readouts():
+    probe = Pulse(duration=10, amplitude=1, envelope=Rectangular())
+    acq = Acquisition(duration=10)
+    sequence = PulseSequence.load([("1/probe", probe), ("1/acquisition", acq)])
+    ros = sequence.to_readouts
+    assert len(ros) == 1
+    ro = ros[0][1]
+    assert isinstance(ro, _Readout)
+    assert ro.duration == acq.duration
+    assert ro.id == acq.id
+
+    sequence = PulseSequence.load(
+        [
+            ("1/drive", VirtualZ(phase=0.7)),
+            ("1/probe", Delay(duration=15)),
+            ("1/acquisition", Delay(duration=20)),
+            ("1/probe", probe),
+            ("1/acquisition", acq),
+            ("1/flux", probe),
+        ]
+    )
+    ros = sequence.to_readouts
+    assert len(ros) == 5
+
+    sequence = PulseSequence.load([("1/probe", probe)])
+    with pytest.raises(ValueError, match="(?i)probe"):
+        sequence.to_readouts
+
+    sequence = PulseSequence.load([("1/acquisition", acq)])
+    with pytest.raises(ValueError, match="(?i)acquisition"):
+        sequence.to_readouts
+
+    sequence = PulseSequence.load([("1/acquisition", acq), ("1/probe", probe)])
+    with pytest.raises(ValueError):
+        sequence.to_readouts
+
+    sequence = PulseSequence.load(
+        [
+            ("1/probe", probe),
+            ("1/acquisition", Delay(duration=20)),
+            ("1/acquisition", acq),
+        ]
+    )
+    with pytest.raises(ValueError):
+        sequence.to_readouts
