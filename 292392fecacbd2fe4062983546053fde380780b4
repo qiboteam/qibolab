@@ -1,0 +1,29 @@
+Alternative way of comparing sequences:
+```py
+    def __eq__(self, other) -> bool:
+        if len(self) != len(other):
+            return False
+
+        sdelays = []
+        odelays = []
+        for sel, oel in zip(self, other):
+            # batch delays
+            if isinstance(sel[1], Delay) and isinstance(oel[1], Delay):
+                sdelays.append(sel)
+                odelays.append(oel)
+                continue
+            if sel != oel:
+                return False
+            # compare delays without internal order
+            if set(sdelays) != set(odelays):
+                return False
+            # reset delays
+            sdelays.clear()
+            odelays.clear()
+```
+
+For the time being, there is no specific need of comparing sequences,
+other than for testing purposes.
+Moreover, the proper way of testing sequences equality is sorted by
+channel, within aligned chunks. So, even the one above is only a certain
+approximation.
