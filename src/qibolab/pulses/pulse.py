@@ -13,6 +13,7 @@ from .envelope import Envelope, IqWaveform, Waveform
 class _PulseLike(Model):
     @property
     def id(self) -> int:
+        """Instruction identifier."""
         return id(self)
 
 
@@ -112,6 +113,31 @@ class Acquisition(_PulseLike):
     """Duration in ns."""
 
 
+class _Readout(_PulseLike):
+    """Readout instruction.
+
+    This event instructs the device to acquire samples for the event
+    span.
+
+    Only valid on an acquisition channel.
+    """
+
+    kind: Literal["readout"] = "readout"
+
+    acquisition: Acquisition
+    probe: Pulse
+
+    @property
+    def duration(self) -> float:
+        """Duration in ns."""
+        return self.acquisition.duration
+
+    @property
+    def id(self) -> int:
+        """Instruction identifier."""
+        return self.acquisition.id
+
+
 PulseLike = Annotated[
-    Union[Pulse, Delay, VirtualZ, Acquisition], Field(discriminator="kind")
+    Union[Pulse, Delay, VirtualZ, Acquisition, _Readout], Field(discriminator="kind")
 ]
