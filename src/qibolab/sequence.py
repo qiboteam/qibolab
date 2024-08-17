@@ -105,7 +105,14 @@ class PulseSequence(UserList[_Element]):
 
     @property
     def acquisitions(self) -> list[tuple[ChannelId, Acquisition]]:
-        """Return list of the readout pulses in this sequence."""
+        """Return list of the readout pulses in this sequence.
+
+        .. note::
+
+            This selects only the :cls:`Acquisition` events, and not all the
+            instructions directed to an acquistion channel (i.e.
+            :attr:`ChannelType.ACQUISITION`)
+        """
         # pulse filter needed to exclude delays
         return [el for el in self if isinstance(el[1], Acquisition)]
 
