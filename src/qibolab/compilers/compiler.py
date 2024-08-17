@@ -19,6 +19,9 @@ from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import QubitId
 
+Rule = Callable[..., PulseSequence]
+"""Compiler rule."""
+
 
 @dataclass
 class Compiler:
@@ -41,7 +44,7 @@ class Compiler:
     See :class:`qibolab.compilers.default` for an example of a compiler implementation.
     """
 
-    rules: dict[type[gates.Gate], Callable] = field(default_factory=dict)
+    rules: dict[type[gates.Gate], Rule] = field(default_factory=dict)
     """Map from gates to compilation rules."""
 
     @classmethod
@@ -60,28 +63,7 @@ class Compiler:
             }
         )
 
-    def __setitem__(self, key: type[gates.Gate], rule: Callable):
-        """Set a new rule to the compiler.
-
-        If a rule already exists for the gate, it will be overwritten.
-        """
-        self.rules[key] = rule
-
-    def __getitem__(self, item: type[gates.Gate]) -> Callable:
-        """Get an existing rule for a given gate."""
-        try:
-            return self.rules[item]
-        except KeyError:
-            raise KeyError(f"Compiler rule not available for {item}.")
-
-    def __delitem__(self, item: type[gates.Gate]):
-        """Remove rule for the given gate."""
-        try:
-            del self.rules[item]
-        except KeyError:
-            KeyError(f"Cannot remove {item} from compiler because it does not exist.")
-
-    def register(self, gate_cls):
+    def register(self, gate_cls: type[gates.Gate]) -> Callable[[Rule], Rule]:
         """Decorator for registering a function as a rule in the compiler.
 
         Using this decorator is optional. Alternatively the user can set the rules directly
@@ -91,13 +73,13 @@ class Compiler:
             gate_cls: Qibo gate object that the rule will be assigned to.
         """
 
-        def inner(func):
-            self[gate_cls] = func
+        def inner(func: Rule) -> Rule:
+            self.rules[gate_cls] = func
             return func
 
         return inner
 
-    def get_sequence(self, gate: gates.Gate, platform: Platform):
+    def get_sequence(self, gate: gates.Gate, platform: Platform) -> PulseSequence:
         """Get pulse sequence implementing the given gate using the registered
         rules.
 
@@ -106,7 +88,7 @@ class Compiler:
             platform (:class:`qibolab.platform.Platform`): Qibolab platform to read the native gates from.
         """
         # get local sequence for the current gate
-        rule = self[type(gate)]
+        rule = self.rules[type(gate)]
 
         natives = platform.natives
 
@@ -138,7 +120,7 @@ class Compiler:
     # FIXME: pulse.qubit and pulse.channel do not exist anymore
     def compile(
         self, circuit: Circuit, platform: Platform
-    ) -> tuple[PulseSequence, dict]:
+    ) -> tuple[PulseSequence, dict[gates.M, PulseSequence]]:
         """Transforms a circuit to pulse sequence.
 
         Args:
