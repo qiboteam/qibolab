@@ -119,8 +119,8 @@ class PulseSequence(UserList[_Element]):
 
             # TODO: replace with pattern matching, once py3.9 will be abandoned
             assert ch is not None
-            if ch.channel_type is ChannelType.ACQUISITION:
-                raise ValueError("")
+            if ch.channel_type is ChannelType.ACQUISITION and not isinstance(p, Delay):
+                raise ValueError("Acquisition not preceded by probe.")
             if ch.channel_type is ChannelType.PROBE and isinstance(p, Pulse):
                 if (
                     nch is not None
@@ -130,7 +130,7 @@ class PulseSequence(UserList[_Element]):
                     new.append((ch, _Readout(acquisition=np, probe=p)))
                     skip = True
                 else:
-                    raise ValueError("")
+                    raise ValueError("Probe not followed by acquisition.")
             else:
                 new.append((ch, p))
 
