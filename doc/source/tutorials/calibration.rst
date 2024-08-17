@@ -43,7 +43,7 @@ around the pre-defined frequency.
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
     sequence = natives.MZ.create_sequence()
 
     # allocate frequency sweeper
@@ -125,7 +125,7 @@ complex pulse sequence. Therefore with start with that:
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
 
     # create pulse sequence and add pulses
     sequence = PulseSequence(
@@ -228,7 +228,7 @@ and its impact on qubit states in the IQ plane.
     platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
 
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()

@@ -88,7 +88,7 @@ def test_rz_to_sequence(platform):
 
 
 def test_gpi_to_sequence(platform: Platform):
-    natives = platform.parameters.native_gates
+    natives = platform.natives
 
     circuit = Circuit(1)
     circuit.add(gates.GPI(0, phi=0.2))
@@ -101,7 +101,7 @@ def test_gpi_to_sequence(platform: Platform):
 
 
 def test_gpi2_to_sequence(platform):
-    natives = platform.parameters.native_gates
+    natives = platform.natives
 
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0.2))
@@ -116,7 +116,7 @@ def test_gpi2_to_sequence(platform):
 
 def test_cz_to_sequence():
     platform = create_platform("dummy")
-    natives = platform.parameters.native_gates
+    natives = platform.natives
 
     circuit = Circuit(3)
     circuit.add(gates.CZ(1, 2))
@@ -128,7 +128,7 @@ def test_cz_to_sequence():
 
 def test_cnot_to_sequence():
     platform = create_platform("dummy")
-    natives = platform.parameters.native_gates
+    natives = platform.natives
 
     circuit = Circuit(4)
     circuit.add(gates.CNOT(2, 3))
@@ -139,7 +139,7 @@ def test_cnot_to_sequence():
 
 
 def test_add_measurement_to_sequence(platform: Platform):
-    natives = platform.parameters.native_gates
+    natives = platform.natives
 
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, 0.1))
@@ -163,7 +163,7 @@ def test_add_measurement_to_sequence(platform: Platform):
 
 @pytest.mark.parametrize("delay", [0, 100])
 def test_align_delay_measurement(platform: Platform, delay):
-    natives = platform.parameters.native_gates
+    natives = platform.natives
 
     circuit = Circuit(1)
     circuit.add(gates.Align(0, delay=delay))

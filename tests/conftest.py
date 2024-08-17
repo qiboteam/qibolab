@@ -149,7 +149,7 @@ def execute(connected_platform: Platform) -> Execution:
         )
 
         qubit = next(iter(connected_platform.qubits.values()))
-        natives = connected_platform.parameters.native_gates.single_qubit[0]
+        natives = connected_platform.natives.single_qubit[0]
 
         if sequence is None:
             qd_seq = natives.RX.create_sequence()

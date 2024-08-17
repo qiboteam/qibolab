@@ -13,7 +13,7 @@ from qibo.config import log, raise_error
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.parameters import Parameters, Settings, update_configs
+from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import Qubit, QubitId, QubitPairId
 from qibolab.sweeper import ParallelSweepers
@@ -125,11 +125,6 @@ class Platform:
         return self.name
 
     @property
-    def settings(self) -> Settings:
-        """Container with default execution settings."""
-        return self.parameters.settings
-
-    @property
     def nqubits(self) -> int:
         """Total number of usable qubits in the QPU."""
         return len(self.qubits)
@@ -151,6 +146,16 @@ class Platform:
         Synonym of :attr:`pairs`.
         """
         return self.pairs
+
+    @property
+    def settings(self) -> Settings:
+        """Container with default execution settings."""
+        return self.parameters.settings
+
+    @property
+    def natives(self) -> NativeGates:
+        """Native gates containers."""
+        return self.parameters.native_gates
 
     @property
     def sampling_rate(self):
@@ -261,7 +266,7 @@ class Platform:
 
                 platform = create_dummy()
                 qubit = platform.qubits[0]
-                natives = platform.parameters.native_gates.single_qubit[0]
+                natives = platform.natives.single_qubit[0]
                 sequence = natives.MZ.create_sequence()
                 parameter = Parameter.frequency
                 parameter_range = np.random.randint(10, size=10)

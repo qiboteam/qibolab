@@ -34,7 +34,7 @@ nshots = 1024
 
 def test_unroll_sequences(platform: Platform):
     qubit = next(iter(platform.qubits.values()))
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))

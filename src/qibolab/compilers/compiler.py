@@ -108,7 +108,7 @@ class Compiler:
         # get local sequence for the current gate
         rule = self[type(gate)]
 
-        natives = platform.parameters.native_gates
+        natives = platform.natives
 
         if isinstance(gate, (gates.M)):
             qubits = [

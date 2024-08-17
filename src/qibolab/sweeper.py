@@ -66,7 +66,7 @@ class Sweeper:
 
             platform = create_dummy()
             qubit = platform.qubits[0]
-            natives = platform.parameters.native_gates.single_qubit[0]
+            natives = platform.natives.single_qubit[0]
             sequence = natives.MZ.create_sequence()
             parameter = Parameter.frequency
             parameter_range = np.random.randint(10, size=10)

@@ -68,7 +68,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
    ps = PulseSequence()
    qubit = platform.qubits[0]
-   natives = platform.parameters.native_gates.single_qubit[0]
+   natives = platform.natives.single_qubit[0]
    ps.concatenate(natives.RX.create_sequence())
    ps.concatenate(natives.RX.create_sequence(phi=np.pi / 2))
    ps.append((qubit.probe.name, Delay(duration=200)))
@@ -336,7 +336,7 @@ Typical experiments may include both pre-defined pulses and new ones:
 
     from qibolab.pulses import Rectangular
 
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
     sequence.append(
@@ -416,7 +416,7 @@ A tipical resonator spectroscopy experiment could be defined with:
 
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
-    natives = platform.parameters.native_gates.single_qubit
+    natives = platform.natives.single_qubit
 
     sequence = PulseSequence()
     sequence.concatenate(
@@ -463,7 +463,7 @@ For example:
     from qibolab.pulses import PulseSequence, Delay
 
     qubit = platform.qubits[0]
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
@@ -560,7 +560,7 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 .. testcode:: python
 
     qubit = platform.qubits[0]
-    natives = platform.parameters.native_gates.single_qubit[0]
+    natives = platform.natives.single_qubit[0]
 
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
