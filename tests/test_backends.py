@@ -106,12 +106,22 @@ def test_multiple_measurements():
 def dummy_string_qubit_names():
     """Create dummy platform with string-named qubits."""
     platform = create_platform("dummy")
-    for q, qubit in platform.qubits.items():
-        qubit.name = f"A{q}"
-    platform.qubits = {qubit.name: qubit for qubit in platform.qubits.values()}
-    platform.pairs = {
-        (f"A{q0}", f"A{q1}"): pair for (q0, q1), pair in platform.pairs.items()
-    }
+    for q, qubit in platform.qubits.copy().items():
+        name = f"A{q}"
+        qubit.name = name
+        platform.qubits[name] = qubit
+        del platform.qubits[q]
+        platform.natives.single_qubit[name] = platform.natives.single_qubit[q]
+        del platform.natives.single_qubit[q]
+    for q0, q1 in platform.pairs:
+        name = (f"A{q0}", f"A{q1}")
+        try:
+            platform.natives.two_qubit[name] = platform.natives.two_qubit[(q0, q1)]
+            del platform.natives.two_qubit[(q0, q1)]
+        except KeyError:
+            # the symmetrized pair is only present in pairs, not in the natives
+            pass
+
     return platform
 
 

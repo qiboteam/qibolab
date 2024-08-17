@@ -1,28 +1,30 @@
 """A platform for executing quantum algorithms."""
 
-import dataclasses
+import json
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from math import prod
-from typing import Any, Optional, TypeVar, Union
+from pathlib import Path
+from typing import Any, Literal, Optional, TypeVar, Union
 
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
-from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
+from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
+from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
 from qibolab.pulses import Delay, PulseSequence
-from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
-from qibolab.serialize_ import replace
+from qibolab.qubits import Qubit, QubitId, QubitPairId
 from qibolab.sweeper import ParallelSweepers
-from qibolab.unrolling import batch
+from qibolab.unrolling import Bounds, batch
 
-InstrumentMap = dict[InstrumentId, Instrument]
 QubitMap = dict[QubitId, Qubit]
-CouplerMap = dict[QubitId, Qubit]
-QubitPairMap = dict[QubitPairId, QubitPair]
+QubitPairMap = list[QubitPairId]
+InstrumentMap = dict[InstrumentId, Instrument]
 
 NS_TO_SEC = 1e-9
+PARAMETERS = "parameters.json"
 
 # TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
 T = TypeVar("T")
@@ -64,23 +66,6 @@ def unroll_sequences(
     return total_sequence, readout_map
 
 
-def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
-    """Apply updates to configs in place.
-
-    Args:
-        configs: configs to update. Maps component name to respective config.
-        updates: list of config updates. Later entries in the list take precedence over earlier entries
-                 (if they happen to update the same thing).
-    """
-    for update in updates:
-        for name, changes in update.items():
-            if name not in configs:
-                raise ValueError(
-                    f"Cannot update configuration for unknown component {name}"
-                )
-            configs[name] = dataclasses.replace(configs[name], **changes)
-
-
 def estimate_duration(
     sequences: list[PulseSequence],
     options: ExecutionParameters,
@@ -98,28 +83,7 @@ def estimate_duration(
     )
 
 
-@dataclass
-class Settings:
-    """Default execution settings read from the runcard."""
-
-    nshots: int = 1024
-    """Default number of repetitions when executing a pulse sequence."""
-    relaxation_time: int = int(1e5)
-    """Time in ns to wait for the qubit to relax to its ground state between
-    shots."""
-
-    def fill(self, options: ExecutionParameters):
-        """Use default values for missing execution options."""
-        if options.nshots is None:
-            options = replace(options, nshots=self.nshots)
-
-        if options.relaxation_time is None:
-            options = replace(options, relaxation_time=self.relaxation_time)
-
-        return options
-
-
-def _channels_map(elements: Union[QubitMap, CouplerMap]):
+def _channels_map(elements: QubitMap):
     """Map channel names to element (qubit or coupler)."""
     return {ch.name: id for id, el in elements.items() for ch in el.channels}
 
@@ -130,28 +94,25 @@ class Platform:
 
     name: str
     """Name of the platform."""
-    qubits: QubitMap
-    """Mapping qubit names to :class:`qibolab.qubits.Qubit` objects."""
-    pairs: QubitPairMap
-    """Mapping tuples of qubit names to :class:`qibolab.qubits.QubitPair`
-    objects."""
-    configs: dict[str, Config]
-    """Mapping name of component to its default config."""
+    parameters: Parameters
+    """..."""
     instruments: InstrumentMap
     """Mapping instrument names to
     :class:`qibolab.instruments.abstract.Instrument` objects."""
+    qubits: QubitMap
+    """Qubit controllers.
 
-    settings: Settings = field(default_factory=Settings)
-    """Container with default execution settings."""
-    resonator_type: Optional[str] = None
-    """Type of resonator (2D or 3D) in the used QPU.
-
-    Default is 3D for single-qubit chips and 2D for multi-qubit.
+    The mapped objects hold the :class:`qubit.components.channels.Channel` instances
+    required to send pulses addressing the desired qubits.
     """
+    couplers: QubitMap = field(default_factory=dict)
+    """Coupler controllers.
 
-    couplers: CouplerMap = field(default_factory=dict)
-    """Mapping coupler names to :class:`qibolab.qubits.Qubit` objects."""
-
+    Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
+    in the mapped objects.
+    """
+    resonator_type: Literal["2D", "3D"] = "2D"
+    """Type of resonator (2D or 3D) in the used QPU."""
     is_connected: bool = False
     """Flag for whether we are connected to the physical instruments."""
 
@@ -169,14 +130,24 @@ class Platform:
         return len(self.qubits)
 
     @property
+    def pairs(self) -> list[QubitPairId]:
+        """Available pairs in thee platform."""
+        return list(self.parameters.native_gates.two_qubit)
+
+    @property
     def ordered_pairs(self):
         """List of qubit pairs that are connected in the QPU."""
         return sorted({tuple(sorted(pair)) for pair in self.pairs})
 
     @property
-    def topology(self) -> list[QubitPairId]:
-        """Graph representing the qubit connectivity in the quantum chip."""
-        return list(self.pairs)
+    def settings(self) -> Settings:
+        """Container with default execution settings."""
+        return self.parameters.settings
+
+    @property
+    def natives(self) -> NativeGates:
+        """Native gates containers."""
+        return self.parameters.native_gates
 
     @property
     def sampling_rate(self):
@@ -189,7 +160,7 @@ class Platform:
     @property
     def components(self) -> set[str]:
         """Names of all components available in the platform."""
-        return set(self.configs.keys())
+        return set(self.parameters.configs.keys())
 
     @property
     def channels(self) -> list[str]:
@@ -203,7 +174,8 @@ class Platform:
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
-        return self.configs[name]
+        # pylint: disable=unsubscriptable-object
+        return self.parameters.configs[name]
 
     def connect(self):
         """Connect to all instruments."""
@@ -286,7 +258,8 @@ class Platform:
 
                 platform = create_dummy()
                 qubit = platform.qubits[0]
-                sequence = qubit.native_gates.MZ.create_sequence()
+                natives = platform.natives.single_qubit[0]
+                sequence = natives.MZ.create_sequence()
                 parameter = Parameter.frequency
                 parameter_range = np.random.randint(10, size=10)
                 sweeper = [Sweeper(parameter, parameter_range, channels=[qubit.probe.name])]
@@ -300,24 +273,59 @@ class Platform:
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")
 
-        configs = self.configs.copy()
+        configs = self.parameters.configs.copy()
         update_configs(configs, options.updates)
 
         # for components that represent aux external instruments (e.g. lo) to the main control instrument
         # set the config directly
         for name, cfg in configs.items():
             if name in self.instruments:
-                self.instruments[name].setup(**asdict(cfg))
+                self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
 
         results = defaultdict(list)
-        for b in batch(sequences, self._controller.bounds):
+        # pylint: disable=unsubscriptable-object
+        bounds = Bounds.from_config(self.parameters.configs[self._controller.bounds])
+        for b in batch(sequences, bounds):
             result = self._execute(b, options, configs, sweepers)
             for serial, data in result.items():
                 results[serial].append(data)
 
         return results
 
-    def get_qubit(self, qubit):
+    @classmethod
+    def load(
+        cls,
+        path: Path,
+        instruments: Union[InstrumentMap, Iterable[Instrument]],
+        qubits: QubitMap,
+        couplers: Optional[QubitMap] = None,
+        name: Optional[str] = None,
+    ) -> "Platform":
+        """Dump platform."""
+        if name is None:
+            name = path.name
+        if not isinstance(instruments, dict):
+            instruments = {i.name: i for i in instruments}
+        if couplers is None:
+            couplers = {}
+
+        return cls(
+            name=name,
+            parameters=Parameters.model_validate(
+                json.loads((path / PARAMETERS).read_text())
+            ),
+            instruments=instruments,
+            qubits=qubits,
+            couplers=couplers,
+        )
+
+    def dump(self, path: Path):
+        """Dump platform."""
+        (path / PARAMETERS).write_text(
+            json.dumps(self.parameters.model_dump(), sort_keys=False, indent=4)
+        )
+
+    def get_qubit(self, qubit: QubitId) -> Qubit:
         """Return the name of the physical qubit corresponding to a logical
         qubit.
 
@@ -329,7 +337,7 @@ class Platform:
         except KeyError:
             return list(self.qubits.values())[qubit]
 
-    def get_coupler(self, coupler):
+    def get_coupler(self, coupler: QubitId) -> Qubit:
         """Return the name of the physical coupler corresponding to a logical
         coupler.
 

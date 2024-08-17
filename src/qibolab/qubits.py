@@ -1,10 +1,11 @@
-from dataclasses import dataclass, field, fields
-from typing import Optional, Union
+from typing import Annotated, Optional, Union
+
+from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
 
 from qibolab.components import AcquireChannel, DcChannel, IqChannel
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.serialize import Model
 
-QubitId = Union[str, int]
+QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Type for qubit names."""
 
 CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")
@@ -14,8 +15,7 @@ Not all channels are required to operate a qubit.
 """
 
 
-@dataclass
-class Qubit:
+class Qubit(Model):
     """Representation of a physical qubit.
 
     Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
@@ -31,9 +31,9 @@ class Qubit:
             send flux pulses to the qubit.
     """
 
-    name: QubitId
+    model_config = ConfigDict(frozen=False)
 
-    native_gates: SingleQubitNatives = field(default_factory=SingleQubitNatives)
+    name: QubitId
 
     probe: Optional[IqChannel] = None
     acquisition: Optional[AcquireChannel] = None
@@ -56,38 +56,19 @@ class Qubit:
         Assumes RF = LO + IF.
         """
         freqs = {}
-        for gate in fields(self.native_gates):
-            native = getattr(self.native_gates, gate.name)
+        for name in self.native_gates.model_fields:
+            native = getattr(self.native_gates, name)
             if native is not None:
                 channel_type = native.pulse_type.name.lower()
                 _lo = getattr(self, channel_type).lo_frequency
                 _if = native.frequency - _lo
-                freqs[gate.name] = _lo, _if
+                freqs[name] = _lo, _if
         return freqs
 
 
-QubitPairId = tuple[QubitId, QubitId]
+QubitPairId = Annotated[
+    tuple[QubitId, QubitId],
+    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
+    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+]
 """Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
-
-
-@dataclass
-class QubitPair:
-    """Data structure for holding the native two-qubit gates acting on a pair
-    of qubits.
-
-    This is needed for symmetry to the single-qubit gates which are storred in the
-    :class:`qibolab.platforms.abstract.Qubit`.
-    """
-
-    qubit1: QubitId
-    """First qubit of the pair.
-
-    Acts as control on two-qubit gates.
-    """
-    qubit2: QubitId
-    """Second qubit of the pair.
-
-    Acts as target on two-qubit gates.
-    """
-
-    native_gates: TwoQubitNatives = field(default_factory=TwoQubitNatives)

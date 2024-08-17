@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from typing import Any, Optional
 
-from qibolab.serialize_ import Model
+from qibolab.serialize import Model
 from qibolab.sweeper import ParallelSweepers
 
 

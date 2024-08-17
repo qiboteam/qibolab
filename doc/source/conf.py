@@ -18,6 +18,11 @@ from sphinx.ext import apidoc
 
 import qibolab
 
+# TODO: the following is a workaround for Sphinx doctest, cf.
+# - https://github.com/qiboteam/qibolab/commit/e04a6ab
+# - https://github.com/pydantic/pydantic/discussions/7763
+import qibolab.instruments.zhinst
+
 # -- Project information -----------------------------------------------------
 
 project = "qibolab"

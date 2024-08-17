@@ -56,7 +56,7 @@ We can easily access the names of channels and other components, and based on th
     :hide:
 
     Drive channel name: qubit_0/drive
-    Drive frequency: 4000000000
+    Drive frequency: 4000000000.0
     Drive channel qubit_0/drive does not use an LO.
 
 Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
@@ -68,10 +68,11 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
    ps = PulseSequence()
    qubit = platform.qubits[0]
-   ps.concatenate(qubit.native_gates.RX.create_sequence())
-   ps.concatenate(qubit.native_gates.RX.create_sequence(phi=np.pi / 2))
+   natives = platform.natives.single_qubit[0]
+   ps.concatenate(natives.RX.create_sequence())
+   ps.concatenate(natives.RX.create_sequence(phi=np.pi / 2))
    ps.append((qubit.probe.name, Delay(duration=200)))
-   ps.concatenate(qubit.native_gates.MZ.create_sequence())
+   ps.concatenate(natives.MZ.create_sequence())
 
 Now we can execute the sequence on hardware:
 
@@ -251,11 +252,8 @@ To illustrate, here are some examples of single pulses using the Qibolab API:
     pulse = Pulse(
         duration=40,  # Pulse duration in ns
         amplitude=0.5,  # Amplitude relative to instrument range
-        frequency=1e8,  # Frequency in Hz
         relative_phase=0,  # Phase in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
 
 In this way, we defined a rectangular drive pulse using the generic Pulse object.
@@ -268,11 +266,8 @@ Alternatively, you can achieve the same result using the dedicated :class:`qibol
     pulse = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        frequency=1e8,  # frequency are in Hz
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
-        channel="channel",
-        qubit=0,
     )
 
 Both the Pulses objects and the PulseShape object have useful plot functions and several different various helper methods.
@@ -341,15 +336,16 @@ Typical experiments may include both pre-defined pulses and new ones:
 
     from qibolab.pulses import Rectangular
 
+    natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
-    sequence.concatenate(platform.qubits[0].native_gates.RX.create_sequence())
+    sequence.concatenate(natives.RX.create_sequence())
     sequence.append(
         (
             "some_channel",
             Pulse(duration=10, amplitude=0.5, relative_phase=0, envelope=Rectangular()),
         )
     )
-    sequence.concatenate(platform.qubits[0].native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.MZ.create_sequence())
 
     results = platform.execute([sequence], options=options)
 
@@ -420,15 +416,17 @@ A tipical resonator spectroscopy experiment could be defined with:
 
     from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
+    natives = platform.natives.single_qubit
+
     sequence = PulseSequence()
     sequence.concatenate(
-        platform.qubits[0].native_gates.MZ.create_sequence()
+        natives[0].MZ.create_sequence()
     )  # readout pulse for qubit 0 at 4 GHz
     sequence.concatenate(
-        platform.qubits[1].native_gates.MZ.create_sequence()
+        natives[1].MZ.create_sequence()
     )  # readout pulse for qubit 1 at 5 GHz
     sequence.concatenate(
-        platform.qubits[2].native_gates.MZ.create_sequence()
+        natives[2].MZ.create_sequence()
     )  # readout pulse for qubit 2 at 6 GHz
 
     sweeper = Sweeper(
@@ -465,10 +463,11 @@ For example:
     from qibolab.pulses import PulseSequence, Delay
 
     qubit = platform.qubits[0]
+    natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
-    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.concatenate(natives.RX.create_sequence())
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
-    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.MZ.create_sequence())
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
@@ -561,11 +560,12 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 .. testcode:: python
 
     qubit = platform.qubits[0]
+    natives = platform.natives.single_qubit[0]
 
     sequence = PulseSequence()
-    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.concatenate(natives.RX.create_sequence())
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
-    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.MZ.create_sequence())
 
     options = ExecutionParameters(
         nshots=1000,

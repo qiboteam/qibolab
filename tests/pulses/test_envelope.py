@@ -26,7 +26,6 @@ def test_sampling_rate(shape):
     pulse = Pulse(
         duration=40,
         amplitude=0.9,
-        frequency=int(100e6),
         envelope=shape,
         relative_phase=0,
     )
@@ -38,7 +37,6 @@ def test_drag_shape():
     pulse = Pulse(
         duration=2,
         amplitude=1,
-        frequency=int(4e9),
         envelope=Drag(rel_sigma=0.5, beta=1),
         relative_phase=0,
     )
@@ -75,11 +73,8 @@ def test_rectangular():
     pulse = Pulse(
         duration=50,
         amplitude=1,
-        frequency=200_000_000,
         relative_phase=0,
         envelope=Rectangular(),
-        channel="1",
-        qubit=0,
     )
 
     assert pulse.duration == 50
@@ -100,11 +95,8 @@ def test_gaussian():
     pulse = Pulse(
         duration=50,
         amplitude=1,
-        frequency=200_000_000,
         relative_phase=0,
         envelope=Gaussian(rel_sigma=5),
-        channel="1",
-        qubit=0,
     )
 
     assert pulse.duration == 50
@@ -130,10 +122,8 @@ def test_drag():
     pulse = Pulse(
         duration=50,
         amplitude=1,
-        frequency=200_000_000,
         relative_phase=0,
         envelope=Drag(rel_sigma=0.2, beta=0.2),
-        qubit=0,
     )
 
     assert pulse.duration == 50

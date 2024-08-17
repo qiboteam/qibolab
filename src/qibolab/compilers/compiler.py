@@ -1,8 +1,8 @@
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from qibo import Circuit, gates
-from qibo.config import raise_error
 
 from qibolab.compilers.default import (
     align_rule,
@@ -18,6 +18,9 @@ from qibolab.compilers.default import (
 from qibolab.platform import Platform
 from qibolab.pulses import Delay, PulseSequence
 from qibolab.qubits import QubitId
+
+Rule = Callable[..., PulseSequence]
+"""Compiler rule."""
 
 
 @dataclass
@@ -41,7 +44,7 @@ class Compiler:
     See :class:`qibolab.compilers.default` for an example of a compiler implementation.
     """
 
-    rules: dict = field(default_factory=dict)
+    rules: dict[type[gates.Gate], Rule] = field(default_factory=dict)
     """Map from gates to compilation rules."""
 
     @classmethod
@@ -60,31 +63,7 @@ class Compiler:
             }
         )
 
-    def __setitem__(self, key, rule):
-        """Sets a new rule to the compiler.
-
-        If a rule already exists for the gate, it will be overwritten.
-        """
-        self.rules[key] = rule
-
-    def __getitem__(self, item):
-        """Get an existing rule for a given gate."""
-        try:
-            return self.rules[item]
-        except KeyError:
-            raise_error(KeyError, f"Compiler rule not available for {item}.")
-
-    def __delitem__(self, item):
-        """Remove rule for the given gate."""
-        try:
-            del self.rules[item]
-        except KeyError:
-            raise_error(
-                KeyError,
-                f"Cannot remove {item} from compiler because it does not exist.",
-            )
-
-    def register(self, gate_cls):
+    def register(self, gate_cls: type[gates.Gate]) -> Callable[[Rule], Rule]:
         """Decorator for registering a function as a rule in the compiler.
 
         Using this decorator is optional. Alternatively the user can set the rules directly
@@ -94,13 +73,13 @@ class Compiler:
             gate_cls: Qibo gate object that the rule will be assigned to.
         """
 
-        def inner(func):
-            self[gate_cls] = func
+        def inner(func: Rule) -> Rule:
+            self.rules[gate_cls] = func
             return func
 
         return inner
 
-    def get_sequence(self, gate, platform):
+    def get_sequence(self, gate: gates.Gate, platform: Platform) -> PulseSequence:
         """Get pulse sequence implementing the given gate using the registered
         rules.
 
@@ -109,26 +88,39 @@ class Compiler:
             platform (:class:`qibolab.platform.Platform`): Qibolab platform to read the native gates from.
         """
         # get local sequence for the current gate
-        rule = self[type(gate)]
-        if isinstance(gate, (gates.M, gates.Align)):
-            qubits = [platform.get_qubit(q) for q in gate.qubits]
-            gate_sequence = rule(gate, qubits)
-        elif len(gate.qubits) == 1:
-            qubit = platform.get_qubit(gate.target_qubits[0])
-            gate_sequence = rule(gate, qubit)
-        elif len(gate.qubits) == 2:
-            pair = platform.pairs[
-                tuple(platform.get_qubit(q).name for q in gate.qubits)
+        rule = self.rules[type(gate)]
+
+        natives = platform.natives
+
+        if isinstance(gate, (gates.M)):
+            qubits = [
+                natives.single_qubit[platform.get_qubit(q).name] for q in gate.qubits
             ]
-            gate_sequence = rule(gate, pair)
-        else:
-            raise NotImplementedError(f"{type(gate)} is not a native gate.")
-        return gate_sequence
+            return rule(gate, qubits)
+
+        if isinstance(gate, (gates.Align)):
+            qubits = [platform.get_qubit(q) for q in gate.qubits]
+            return rule(gate, qubits)
+
+        if isinstance(gate, (gates.Z, gates.RZ)):
+            qubit = platform.get_qubit(gate.target_qubits[0])
+            return rule(gate, qubit)
+
+        if len(gate.qubits) == 1:
+            qubit = platform.get_qubit(gate.target_qubits[0])
+            return rule(gate, natives.single_qubit[qubit.name])
+
+        if len(gate.qubits) == 2:
+            pair = tuple(platform.get_qubit(q).name for q in gate.qubits)
+            assert len(pair) == 2
+            return rule(gate, natives.two_qubit[pair])
+
+        raise NotImplementedError(f"{type(gate)} is not a native gate.")
 
     # FIXME: pulse.qubit and pulse.channel do not exist anymore
     def compile(
         self, circuit: Circuit, platform: Platform
-    ) -> tuple[PulseSequence, dict]:
+    ) -> tuple[PulseSequence, dict[gates.M, PulseSequence]]:
         """Transforms a circuit to pulse sequence.
 
         Args:

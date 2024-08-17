@@ -5,12 +5,6 @@ from qibolab.instruments.erasynth import ERA
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rohde_schwarz import SGS100A
 from qibolab.platform import Platform
-from qibolab.serialize import (
-    load_instrument_settings,
-    load_qubits,
-    load_runcard,
-    load_settings,
-)
 
 FOLDER = pathlib.Path(__file__).parent
 
@@ -45,7 +39,6 @@ def create():
 
     instruments = {inst.name: inst for inst in [controller, lo_twpa, lo_era]}
     settings = load_settings(runcard)
-    instruments = load_instrument_settings(runcard, instruments)
     return Platform(
         str(FOLDER), qubits, pairs, instruments, settings, resonator_type="3D"
     )

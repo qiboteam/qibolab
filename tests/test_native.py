@@ -2,6 +2,7 @@ import contextlib
 
 import numpy as np
 import pytest
+from pydantic import TypeAdapter
 
 from qibolab.native import FixedSequenceFactory, RxyFactory, TwoQubitNatives
 from qibolab.pulses import (
@@ -141,7 +142,7 @@ def test_rxy_rotation_factory_envelopes(envelope):
         context = pytest.raises(ValueError, match="Incompatible pulse envelope")
 
     with context:
-        _ = RxyFactory(seq)
+        _ = TypeAdapter(RxyFactory).validate_python(seq)
 
 
 def test_two_qubit_natives_symmetric():

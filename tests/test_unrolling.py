@@ -44,8 +44,8 @@ def test_bounds_update():
 
 
 def test_bounds_add():
-    bounds1 = Bounds(2, 1, 3)
-    bounds2 = Bounds(1, 2, 1)
+    bounds1 = Bounds(waveforms=2, readout=1, instructions=3)
+    bounds2 = Bounds(waveforms=1, readout=2, instructions=1)
 
     bounds_sum = bounds1 + bounds2
 
@@ -55,8 +55,8 @@ def test_bounds_add():
 
 
 def test_bounds_comparison():
-    bounds1 = Bounds(2, 1, 3)
-    bounds2 = Bounds(1, 2, 1)
+    bounds1 = Bounds(waveforms=2, readout=1, instructions=3)
+    bounds2 = Bounds(waveforms=1, readout=2, instructions=1)
 
     assert bounds1 > bounds2
     assert not bounds2 < bounds1
@@ -65,9 +65,9 @@ def test_bounds_comparison():
 @pytest.mark.parametrize(
     "bounds",
     [
-        Bounds(150, int(10e6), int(10e6)),
-        Bounds(int(10e6), 10, int(10e6)),
-        Bounds(int(10e6), int(10e6), 20),
+        Bounds(waveforms=150, readout=int(10e6), instructions=int(10e6)),
+        Bounds(waveforms=int(10e6), readout=10, instructions=int(10e6)),
+        Bounds(waveforms=int(10e6), readout=int(10e6), instructions=20),
     ],
 )
 def test_batch(bounds):

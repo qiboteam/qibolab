@@ -26,6 +26,7 @@ using different Qibolab primitives.
     from qibolab.qubits import Qubit
     from qibolab.pulses import Gaussian, Pulse, Rectangular
     from qibolab.native import RxyFactory, FixedSequenceFactory, SingleQubitNatives
+    from qibolab.parameters import NativeGates, Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
 
@@ -34,11 +35,11 @@ using different Qibolab primitives.
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
         # create the qubit object
-        qubit = Qubit(0)
+        qubit = Qubit(name=0)
 
         # assign channels to the qubit
         qubit.probe = IqChannel(name="probe", mixer=None, lo=None, acquisition="acquire")
-        qubit.acquire = AcquireChannel(name="acquire", twpa_pump=None, probe="probe")
+        qubit.acquisition = AcquireChannel(name="acquire", twpa_pump=None, probe="probe")
         qubit.drive = Iqchannel(name="drive", mixer=None, lo=None)
 
         # define configuration for channels
@@ -67,20 +68,22 @@ using different Qibolab primitives.
         )
 
         # assign native gates to the qubit
-        qubit.native_gates = SingleQubitNatives(
+        native_gates = SingleQubitNatives(
             RX=RxyFactory(drive_seq),
             MZ=FixedSequenceFactory(probe_seq),
         )
 
+        # create a parameters instance
+        parameters = Parameters(
+            native_gates=NativeGates(single_qubit=native_gates), configs=configs
+        )
+
         # create dictionaries of the different objects
         qubits = {qubit.name: qubit}
-        pairs = {}  # empty as for single qubit we have no qubit pairs
         instruments = {instrument.name: instrument}
 
         # allocate and return Platform object
-        return Platform(
-            "my_platform", qubits, pairs, configs, instruments, resonator_type="3D"
-        )
+        return Platform("my_platform", parameters, instruments, qubits)
 
 
 This code creates a platform with a single qubit that is controlled by the
@@ -95,14 +98,14 @@ control instrument and we assigned two native gates to the qubit.
 These can be passed when defining the :class:`qibolab.qubits.Qubit` objects.
 
 When the QPU contains more than one qubit, some of the qubits are connected so
-that two-qubit gates can be applied. For such connected pairs of qubits one
-needs to additionally define :class:`qibolab.qubits.QubitPair` objects, which
-hold the parameters of the two-qubit gates.
+that two-qubit gates can be applied. These are called in a single dictionary, within
+the native gates, but separately from the single-qubit ones.
 
 .. testcode::  python
 
     from qibolab.components import IqChannel, AcquireChannel, DcChannel, IqConfig
-    from qibolab.qubits import Qubit, QubitPair
+    from qibolab.qubits import Qubit
+    from qibolab.parameters import Parameters, TwoQubitContainer
     from qibolab.pulses import Gaussian, Pulse, PulseSequence, Rectangular
     from qibolab.native import (
         RxyFactory,
@@ -112,20 +115,21 @@ hold the parameters of the two-qubit gates.
     )
 
     # create the qubit objects
-    qubit0 = Qubit(0)
-    qubit1 = Qubit(1)
+    qubit0 = Qubit(name=0)
+    qubit1 = Qubit(name=1)
 
     # assign channels to the qubits
     qubit0.probe = IqChannel(name="probe_0", mixer=None, lo=None, acquisition="acquire_0")
-    qubit0.acquire = AcquireChannel(name="acquire_0", twpa_pump=None, probe="probe_0")
+    qubit0.acquisition = AcquireChannel(name="acquire_0", twpa_pump=None, probe="probe_0")
     qubit0.drive = IqChannel(name="drive_0", mixer=None, lo=None)
     qubit0.flux = DcChannel(name="flux_0")
     qubit1.probe = IqChannel(name="probe_1", mixer=None, lo=None, acquisition="acquire_1")
-    qubit1.acquire = AcquireChannel(name="acquire_1", twpa_pump=None, probe="probe_1")
+    qubit1.acquisition = AcquireChannel(name="acquire_1", twpa_pump=None, probe="probe_1")
     qubit1.drive = IqChannel(name="drive_1", mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
-    qubit0.native_gates = SingleQubitNatives(
+    single_qubit = {}
+    single_qubit[qubit0.name] = SingleQubitNatives(
         RX=RxyFactory(
             PulseSequence(
                 [
@@ -151,7 +155,7 @@ hold the parameters of the two-qubit gates.
             )
         ),
     )
-    qubit1.native_gates = SingleQubitNatives(
+    single_qubit[qubit1.name] = SingleQubitNatives(
         RX=RxyFactory(
             PulseSequence(
                 [
@@ -177,30 +181,32 @@ hold the parameters of the two-qubit gates.
     )
 
     # define the pair of qubits
-    pair = QubitPair(qubit0.name, qubit1.name)
-    pair.native_gates = TwoQubitNatives(
-        CZ=FixedSequenceFactory(
-            PulseSequence(
-                [
-                    (
-                        qubit0.flux.name,
-                        Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
-                    ),
-                ]
+    two_qubit = TwoQubitContainer(
+        {
+            f"{qubit0.name}-{qubit1.name}": TwoQubitNatives(
+                CZ=FixedSequenceFactory(
+                    PulseSequence(
+                        [
+                            (
+                                qubit0.flux.name,
+                                Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
+                            ),
+                        ]
+                    )
+                )
             )
-        )
+        }
     )
 
 Some architectures may also have coupler qubits that mediate the interactions.
-Then we add them to their corresponding :class:`qibolab.qubits.QubitPair` objects according
-to the chip topology. We neglected characterization parameters associated to the
-coupler but qibolab will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
+We neglected characterization parameters associated to the coupler but qibolab
+will take them into account when calling :class:`qibolab.native.TwoQubitNatives`.
 
 
 .. testcode::  python
 
     from qibolab.components import DcChannel
-    from qibolab.qubits import Qubit, QubitPair
+    from qibolab.qubits import Qubit
     from qibolab.pulses import Pulse, PulseSequence
     from qibolab.native import (
         FixedSequenceFactory,
@@ -209,9 +215,9 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     )
 
     # create the qubit and coupler objects
-    qubit0 = Qubit(0)
-    qubit1 = Qubit(1)
-    coupler_01 = Qubit(100)
+    qubit0 = Qubit(name=0)
+    qubit1 = Qubit(name=1)
+    coupler_01 = Qubit(name=100)
 
     # assign channel(s) to the coupler
     coupler_01.flux = DcChannel(name="flux_coupler_01")
@@ -220,28 +226,25 @@ coupler but qibolab will take them into account when calling :class:`qibolab.nat
     # Look above example
 
     # define the pair of qubits
-    pair = QubitPair(qubit0.name, qubit1.name)
-    pair.native_gates = TwoQubitNatives(
-        CZ=FixedSequenceFactory(
-            PulseSequence(
-                [
-                    (
-                        coupler_01.flux.name,
-                        Pulse(
-                            duration=30,
-                            amplitude=0.005,
-                            frequency=1e9,
-                            envelope=Rectangular(),
-                            qubit=qubit1.name,
-                        ),
+    two_qubit = TwoQubitContainer(
+        {
+            f"{qubit0.name}-{qubit1.name}": TwoQubitNatives(
+                CZ=FixedSequenceFactory(
+                    PulseSequence(
+                        [
+                            (
+                                coupler_01.flux.name,
+                                Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
+                            )
+                        ],
                     )
-                ],
-            )
-        )
+                )
+            ),
+        }
     )
 
-The platform automatically creates the connectivity graph of the given chip
-using the dictionary of :class:`qibolab.qubits.QubitPair` objects.
+The platform automatically creates the connectivity graph of the given chip,
+using the keys of :class:`qibolab.parameters.TwoQubitContainer` map.
 
 Registering platforms
 ^^^^^^^^^^^^^^^^^^^^^
@@ -277,21 +280,18 @@ since ``create()`` is part of a Python module, is is possible to load parameters
 from an external file or database.
 
 Qibolab provides some utility functions, accessible through
-:py:mod:`qibolab.serialize`, for loading calibration parameters stored in a JSON
+:py:mod:`qibolab.parameters`, for loading calibration parameters stored in a JSON
 file with a specific format. We call such file a runcard. Here is a runcard for
 a two-qubit system:
 
 .. code-block::  json
 
     {
-      "nqubits": 2,
-      "qubits": [0, 1],
       "settings": {
         "nshots": 1024,
         "sampling_rate": 1000000000,
         "relaxation_time": 50000
       },
-      "topology": [[0, 1]],
       "components": {
         "drive_0": {
           "frequency": 4855663000
@@ -476,7 +476,7 @@ however the pulses under ``native_gates`` should comply with the
 Providing the above runcard is not sufficient to instantiate a
 :class:`qibolab.platform.Platform`. This should still be done using a
 ``create()`` method, however this is significantly simplified by
-``qibolab.serialize``. The ``create()`` method should be put in a
+``qibolab.parameters``. The ``create()`` method should be put in a
 file named ``platform.py`` inside the ``my_platform`` directory.
 Here is the ``create()`` method that loads the parameters of
 the above runcard:
@@ -495,11 +495,6 @@ the above runcard:
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import (
-        load_runcard,
-        load_qubits,
-        load_settings,
-    )
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -507,49 +502,25 @@ the above runcard:
 
 
     def create():
-        # Create a controller instrument
+        # create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
-        # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
-        qubits, _, pairs = load_qubits(runcard)
-
         # define channels and load component configs
-        configs = {}
-        component_params = runcard["components"]
+        qubits = {}
         for q in range(2):
-            drive_name = f"qubit_{q}/drive"
-            configs[drive_name] = IqConfig(**component_params[drive_name])
-            qubits[q].drive = IqChannel(drive_name, mixer=None, lo=None)
-
-            flux_name = f"qubit_{q}/flux"
-            configs[flux_name] = DcConfig(**component_params[flux_name])
-            qubits[q].flux = DcChannel(flux_name)
-
             probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
-            configs[probe_name] = IqConfig(**component_params[probe_name])
-            qubits[q].probe = IqChannel(
-                probe_name, mixer=None, lo=None, acquistion=acquire_name
-            )
-
-            configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
-            quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, probe=probe_name
+            qubits[q] = Qubit(
+                name=q,
+                drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
+                flux=DcChannel(f"qubit_{q}/flux"),
+                probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
+                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
             )
 
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
         # load ``settings`` from the runcard
-        settings = load_settings(runcard)
-        return Platform(
-            "my_platform",
-            qubits,
-            pairs,
-            configs,
-            instruments,
-            settings,
-            resonator_type="2D",
-        )
+        return Platform.load(FOLDER, instruments, qubits)
 
 With the following additions for coupler architectures:
 
@@ -557,56 +528,30 @@ With the following additions for coupler architectures:
 
     # my_platform / platform.py
 
+    FOLDER = Path.cwd()
+
 
     def create():
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
-        # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
-        qubits, couplers, pairs = load_qubits(runcard)
-
+        qubits = {}
         # define channels and load component configs
-        configs = {}
-        component_params = runcard["components"]
         for q in range(2):
-            drive_name = f"qubit_{q}/drive"
-            configs[drive_name] = IqConfig(**component_params[drive_name])
-            qubits[q].drive = IqChannel(drive_name, mixer=None, lo=None)
-
-            flux_name = f"qubit_{q}/flux"
-            configs[flux_name] = DcConfig(**component_params[flux_name])
-            qubits[q].flux = DcChannel(flux_name)
-
             probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
-            configs[probe_name] = IqConfig(**component_params[probe_name])
-            qubits[q].probe = IqChannel(
-                probe_name, mixer=None, lo=None, acquistion=acquire_name
+            qubits[q] = Qubit(
+                name=q,
+                drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
+                flux=DcChannel(f"qubit_{q}/flux"),
+                probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
+                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
             )
 
-            configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
-            quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, probe=probe_name
-            )
-
-        coupler_flux_name = "coupler_0/flux"
-        configs[coupler_flux_name] = DcConfig(**component_params[coupler_flux_name])
-        couplers[0].flux = DcChannel(coupler_flux_name)
+        couplers = {0: Qubit(name=0, flux=DcChannel("coupler_0/flux"))}
 
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
-        # load ``settings`` from the runcard
-        settings = load_settings(runcard)
-        return Platform(
-            "my_platform",
-            qubits,
-            pairs,
-            configs,
-            instruments,
-            settings,
-            resonator_type="2D",
-            couplers=couplers,
-        )
+        return Platform.load(FOLDER, instruments, qubits, couplers=couplers)
 
 Note that this assumes that the runcard is saved as ``<folder>/parameters.json`` where ``<folder>``
 is the directory containing ``platform.py``.
@@ -625,13 +570,12 @@ The runcard can contain an ``instruments`` section that provides these parameter
 .. code-block::  json
 
     {
-        "nqubits": 2,
         "settings": {
             "nshots": 1024,
             "sampling_rate": 1000000000,
             "relaxation_time": 50000
         },
-        "instruments": {
+        "configs": {
             "twpa_pump": {
                 "frequency": 4600000000,
                 "power": 5
@@ -644,7 +588,7 @@ The runcard can contain an ``instruments`` section that provides these parameter
     }
 
 
-These settings are loaded when creating the platform using :meth:`qibolab.serialize.load_instrument_settings`.
+These settings are loaded when creating the platform using :meth:`qibolab.parameters.load_instrument_settings`.
 Note that the key used in the runcard should be the same with the name used when instantiating the instrument,
 in this case ``"twpa_pump"``.
 
@@ -662,11 +606,7 @@ in this case ``"twpa_pump"``.
         DcConfig,
         IqConfig,
     )
-    from qibolab.serialize import (
-        load_runcard,
-        load_qubits,
-        load_settings,
-    )
+    from qibolab.parameters import Parameters
     from qibolab.instruments.dummy import DummyInstrument
 
     FOLDER = Path.cwd()
@@ -677,45 +617,18 @@ in this case ``"twpa_pump"``.
         # Create a controller instrument
         instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
 
-        # create ``Qubit`` and ``QubitPair`` objects by loading the runcard
-        runcard = load_runcard(folder)
-        qubits, _, pairs = load_qubits(runcard)
-
         # define channels and load component configs
-        configs = {}
-        component_params = runcard["components"]
+        qubits = {}
         for q in range(2):
-            drive_name = f"qubit_{q}/drive"
-            configs[drive_name] = IqConfig(**component_params[drive_name])
-            qubits[q].drive = IqChannel(drive_name, mixer=None, lo=None)
-
-            flux_name = f"qubit_{q}/flux"
-            configs[flux_name] = DcConfig(**component_params[flux_name])
-            qubits[q].flux = DcChannel(flux_name)
-
             probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
-            configs[probe_name] = IqConfig(**component_params[probe_name])
-            qubits[q].probe = IqChannel(
-                probe_name, mixer=None, lo=None, acquistion=acquire_name
-            )
-
-            configs[acquire_name] = AcquisitionConfig(**component_params[acquire_name])
-            quibts[q].acquisition = AcquireChannel(
-                acquire_name, twpa_pump=None, probe=probe_name
+            qubits[q] = Qubit(
+                name=q,
+                drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
+                flux=DcChannel(f"qubit_{q}/flux"),
+                probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
+                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
             )
 
         # create dictionary of instruments
         instruments = {instrument.name: instrument}
-        # load instrument settings from the runcard
-        instruments = load_instrument_settings(runcard, instruments)
-        # load ``settings`` from the runcard
-        settings = load_settings(runcard)
-        return Platform(
-            "my_platform",
-            qubits,
-            pairs,
-            configs,
-            instruments,
-            settings,
-            resonator_type="2D",
-        )
+        return Platform.load(FOLDER, instruments, qubits)

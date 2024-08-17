@@ -25,7 +25,7 @@ TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to
     # "qm_octave",
     # "qblox",
     # "rfsoc",
-    "zurich",
+    # "zurich",
 ]
 """Platforms used for testing without access to real instruments."""
 
@@ -149,10 +149,11 @@ def execute(connected_platform: Platform) -> Execution:
         )
 
         qubit = next(iter(connected_platform.qubits.values()))
+        natives = connected_platform.natives.single_qubit[0]
 
         if sequence is None:
-            qd_seq = qubit.native_gates.RX.create_sequence()
-            probe_seq = qubit.native_gates.MZ.create_sequence()
+            qd_seq = natives.RX.create_sequence()
+            probe_seq = natives.MZ.create_sequence()
             probe_pulse = probe_seq[0][1]
             sequence = PulseSequence()
             sequence.concatenate(qd_seq)

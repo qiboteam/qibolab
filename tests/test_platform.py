@@ -5,7 +5,6 @@ import inspect
 import os
 import pathlib
 import warnings
-from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -20,32 +19,26 @@ from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
-from qibolab.kernels import Kernels
+from qibolab.native import SingleQubitNatives, TwoQubitNatives
+from qibolab.parameters import NativeGates, Parameters, update_configs
 from qibolab.platform import Platform, unroll_sequences
-from qibolab.platform.load import PLATFORMS
-from qibolab.platform.platform import update_configs
+from qibolab.platform.load import PLATFORM, PLATFORMS
+from qibolab.platform.platform import PARAMETERS
 from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
-from qibolab.qubits import Qubit, QubitPair
-from qibolab.serialize import (
-    PLATFORM,
-    dump_kernels,
-    dump_platform,
-    dump_runcard,
-    load_runcard,
-    load_settings,
-)
+from qibolab.serialize import replace
 
 from .conftest import find_instrument
 
 nshots = 1024
 
 
-def test_unroll_sequences(platform):
+def test_unroll_sequences(platform: Platform):
     qubit = next(iter(platform.qubits.values()))
+    natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
-    sequence.concatenate(qubit.native_gates.RX.create_sequence())
+    sequence.concatenate(natives.RX.create_sequence())
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
-    sequence.concatenate(qubit.native_gates.MZ.create_sequence())
+    sequence.concatenate(natives.MZ.create_sequence())
     total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
     assert len(total_sequence.probe_pulses) == 10
     assert len(readouts) == 1
@@ -62,20 +55,31 @@ def test_create_platform_error():
 
 
 def test_platform_basics():
-    platform = Platform("ciao", {}, {}, {}, {})
+    platform = Platform(
+        name="ciao",
+        parameters=Parameters(native_gates=NativeGates()),
+        instruments={},
+        qubits={},
+    )
     assert str(platform) == "ciao"
-    assert platform.topology == []
+    assert platform.pairs == []
 
-    qs = {q: Qubit(q) for q in range(10)}
+    qs = {q: SingleQubitNatives() for q in range(10)}
+    ts = {(q1, q2): TwoQubitNatives() for q1 in range(3) for q2 in range(4, 8)}
     platform2 = Platform(
-        "come va?",
-        qs,
-        {(q1, q2): QubitPair(q1, q2) for q1 in range(3) for q2 in range(4, 8)},
-        {},
-        {},
+        name="come va?",
+        parameters=Parameters(
+            native_gates=NativeGates(
+                single_qubit=qs,
+                two_qubit=ts,
+                coupler={},
+            )
+        ),
+        instruments={},
+        qubits=qs,
     )
     assert str(platform2) == "come va?"
-    assert (1, 6) in platform2.topology
+    assert (1, 6) in platform2.pairs
 
 
 def test_create_platform_multipath(tmp_path: Path):
@@ -122,8 +126,8 @@ def test_update_configs(platform):
     drive_name = "q0/drive"
     pump_name = "twpa_pump"
     configs = {
-        drive_name: IqConfig(4.1e9),
-        pump_name: OscillatorConfig(3e9, -5),
+        drive_name: IqConfig(frequency=4.1e9),
+        pump_name: OscillatorConfig(frequency=3e9, power=-5),
     }
 
     updated = update_configs(configs, [{drive_name: {"frequency": 4.2e9}}])
@@ -146,26 +150,21 @@ def test_update_configs(platform):
     with pytest.raises(ValueError, match="unknown component"):
         update_configs(configs, [{"non existent": {"property": 1.0}}])
 
-    with pytest.raises(TypeError, match="prprty"):
-        update_configs(configs, [{pump_name: {"prprty": 0.7}}])
 
-
-def test_dump_runcard(platform, tmp_path):
-    dump_runcard(platform, tmp_path)
-    final_runcard = load_runcard(tmp_path)
+def test_dump_parameters(platform: Platform, tmp_path: Path):
+    (tmp_path / PARAMETERS).write_text(platform.parameters.model_dump_json())
+    final = Parameters.model_validate_json((tmp_path / PARAMETERS).read_text())
     if platform.name == "dummy":
-        target_runcard = load_runcard(FOLDER)
+        target = Parameters.model_validate_json((FOLDER / PARAMETERS).read_text())
     else:
         target_path = pathlib.Path(__file__).parent / "dummy_qrc" / f"{platform.name}"
-        target_runcard = load_runcard(target_path)
+        target = Parameters.model_validate_json((target_path / PARAMETERS).read_text())
 
-    # assert instrument section is dumped properly in the runcard
-    target_instruments = target_runcard.pop("instruments")
-    final_instruments = final_runcard.pop("instruments")
-    assert final_instruments == target_instruments
+    # assert configs section is dumped properly in the parameters
+    assert final.configs == target.configs
 
 
-def test_dump_runcard_with_updates(platform, tmp_path):
+def test_dump_parameters_with_updates(platform: Platform, tmp_path: Path):
     qubit = next(iter(platform.qubits.values()))
     frequency = platform.config(qubit.drive.name).frequency + 1.5e9
     smearing = platform.config(qubit.acquisition.name).smearing + 10
@@ -173,52 +172,47 @@ def test_dump_runcard_with_updates(platform, tmp_path):
         qubit.drive.name: {"frequency": frequency},
         qubit.acquisition.name: {"smearing": smearing},
     }
-    dump_runcard(platform, tmp_path, [update])
-    final_runcard = load_runcard(tmp_path)
-    assert final_runcard["components"][qubit.drive.name]["frequency"] == frequency
-    assert final_runcard["components"][qubit.acquisition.name]["smearing"] == smearing
+    update_configs(platform.parameters.configs, [update])
+    (tmp_path / PARAMETERS).write_text(platform.parameters.model_dump_json())
+    final = Parameters.model_validate_json((tmp_path / PARAMETERS).read_text())
+    assert final.configs[qubit.drive.name].frequency == frequency
+    assert final.configs[qubit.acquisition.name].smearing == smearing
 
 
-@pytest.mark.parametrize("has_kernels", [False, True])
-def test_kernels(tmp_path, has_kernels):
+def test_kernels(tmp_path: Path):
     """Test dumping and loading of `Kernels`."""
 
     platform = create_dummy()
-    if has_kernels:
-        for name, config in platform.configs.items():
-            if isinstance(config, AcquisitionConfig):
-                platform.configs[name] = replace(config, kernel=np.random.rand(10))
+    for name, config in platform.parameters.configs.items():
+        if isinstance(config, AcquisitionConfig):
+            platform.parameters.configs[name] = replace(
+                config, kernel=np.random.rand(10)
+            )
 
-    dump_kernels(platform, tmp_path)
+    platform.dump(tmp_path)
+    reloaded = Platform.load(
+        tmp_path,
+        instruments=platform.instruments,
+        qubits=platform.qubits,
+        couplers=platform.couplers,
+    )
 
-    if has_kernels:
-        kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits.values():
-            kernel = platform.configs[qubit.acquisition.name].kernel
-            np.testing.assert_array_equal(kernel, kernels[qubit.name])
-    else:
-        with pytest.raises(FileNotFoundError):
-            Kernels.load(tmp_path)
+    for qubit in platform.qubits.values():
+        orig = platform.parameters.configs[qubit.acquisition.name].kernel
+        load = reloaded.parameters.configs[qubit.acquisition.name].kernel
+        np.testing.assert_array_equal(orig, load)
 
 
-@pytest.mark.parametrize("has_kernels", [False, True])
-def test_dump_platform(tmp_path, has_kernels):
-    """Test platform dump and loading runcard and kernels."""
+def test_dump_platform(tmp_path):
+    """Test platform dump and loading parameters and kernels."""
 
     platform = create_dummy()
-    if has_kernels:
-        for name, config in platform.configs.items():
-            if isinstance(config, AcquisitionConfig):
-                platform.configs[name] = replace(config, kernel=np.random.rand(10))
 
-    dump_platform(platform, tmp_path)
+    platform.dump(tmp_path)
 
-    settings = load_settings(load_runcard(tmp_path))
-    if has_kernels:
-        kernels = Kernels.load(tmp_path)
-        for qubit in platform.qubits.values():
-            kernel = platform.configs[qubit.acquisition.name].kernel
-            np.testing.assert_array_equal(kernel, kernels[qubit.name])
+    settings = Parameters.model_validate_json(
+        (tmp_path / PARAMETERS).read_text()
+    ).settings
 
     assert settings == platform.settings
 

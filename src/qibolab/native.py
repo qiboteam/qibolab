@@ -1,10 +1,10 @@
-from dataclasses import dataclass, field, fields
-from typing import Optional
+from abc import ABC, abstractmethod
+from typing import Annotated, Optional
 
 import numpy as np
 
 from .pulses import Drag, Gaussian, Pulse, PulseSequence
-from .serialize_ import replace
+from .serialize import Model, replace
 
 
 def _normalize_angles(theta, phi):
@@ -15,7 +15,13 @@ def _normalize_angles(theta, phi):
     return theta, phi
 
 
-class RxyFactory:
+class Native(ABC, PulseSequence):
+    @abstractmethod
+    def create_sequence(self, *args, **kwargs) -> PulseSequence:
+        """Create a sequence for single-qubit rotation."""
+
+
+class RxyFactory(Native):
     """Factory for pulse sequences that generate single-qubit rotations around
     an axis in xy plane.
 
@@ -27,29 +33,29 @@ class RxyFactory:
         sequence: The base sequence for the factory.
     """
 
-    def __init__(self, sequence: PulseSequence):
-        if len(sequence.channels) != 1:
+    def __init__(self, iterable):
+        super().__init__(iterable)
+        cls = type(self)
+        if len(self.channels) != 1:
             raise ValueError(
-                f"Incompatible number of channels: {len(sequence.channels)}. "
-                f"{self.__class__} expects a sequence on exactly one channel."
+                f"Incompatible number of channels: {len(self.channels)}. "
+                f"{cls} expects a sequence on exactly one channel."
             )
 
-        if len(sequence) != 1:
+        if len(self) != 1:
             raise ValueError(
-                f"Incompatible number of pulses: {len(sequence)}. "
-                f"{self.__class__} expects a sequence with exactly one pulse."
+                f"Incompatible number of pulses: {len(self)}. "
+                f"{cls} expects a sequence with exactly one pulse."
             )
 
-        pulse = sequence[0][1]
+        pulse = self[0][1]
         assert isinstance(pulse, Pulse)
         expected_envelopes = (Gaussian, Drag)
         if not isinstance(pulse.envelope, expected_envelopes):
             raise ValueError(
                 f"Incompatible pulse envelope: {pulse.envelope.__class__}. "
-                f"{self.__class__} expects {expected_envelopes} envelope."
+                f"{cls} expects {expected_envelopes} envelope."
             )
-
-        self._seq = sequence
 
     def create_sequence(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
         """Create a sequence for single-qubit rotation.
@@ -59,7 +65,7 @@ class RxyFactory:
             phi: the angle that rotation axis forms with x axis.
         """
         theta, phi = _normalize_angles(theta, phi)
-        ch, pulse = self._seq[0]
+        ch, pulse = self[0]
         assert isinstance(pulse, Pulse)
         new_amplitude = pulse.amplitude * theta / np.pi
         return PulseSequence(
@@ -67,18 +73,29 @@ class RxyFactory:
         )
 
 
-class FixedSequenceFactory:
+class FixedSequenceFactory(Native):
     """Simple factory for a fixed arbitrary sequence."""
 
-    def __init__(self, sequence: PulseSequence):
-        self._seq = sequence
-
     def create_sequence(self) -> PulseSequence:
-        return self._seq.copy()
+        return self.copy()
 
 
-@dataclass
-class SingleQubitNatives:
+class MissingNative(RuntimeError):
+    """Missing native gate."""
+
+    def __init__(self, gate: str):
+        super().__init__(f"Native gate definition not found, for gate {gate}")
+
+
+class NativeContainer(Model):
+    def ensure(self, name: str) -> Native:
+        value = getattr(self, name)
+        if value is None:
+            raise MissingNative(value)
+        return value
+
+
+class SingleQubitNatives(NativeContainer):
     """Container with the native single-qubit gates acting on a specific
     qubit."""
 
@@ -92,26 +109,19 @@ class SingleQubitNatives:
     """Pulse to activate coupler."""
 
 
-@dataclass
-class TwoQubitNatives:
+class TwoQubitNatives(NativeContainer):
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Optional[FixedSequenceFactory] = field(
-        default=None, metadata={"symmetric": True}
-    )
-    CNOT: Optional[FixedSequenceFactory] = field(
-        default=None, metadata={"symmetric": False}
-    )
-    iSWAP: Optional[FixedSequenceFactory] = field(
-        default=None, metadata={"symmetric": True}
-    )
+    CZ: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
+    CNOT: Annotated[Optional[FixedSequenceFactory], {"symmetric": False}] = None
+    iSWAP: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
 
     @property
     def symmetric(self):
         """Check if the defined two-qubit gates are symmetric between target
         and control qubits."""
         return all(
-            fld.metadata["symmetric"] or getattr(self, fld.name) is None
-            for fld in fields(self)
+            info.metadata[0]["symmetric"] or getattr(self, fld) is None
+            for fld, info in self.model_fields.items()
         )

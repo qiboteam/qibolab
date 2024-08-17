@@ -22,7 +22,7 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
                     envelope=Gaussian(rel_sigma=0.2),
                 ),
             ),
-            ("channel_1", Delay(duration=100, channel="1")),
+            ("channel_1", Delay(duration=100)),
             (
                 "channel_1",
                 Pulse(
