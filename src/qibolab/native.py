@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Annotated, Optional
 
 import numpy as np
@@ -14,7 +15,13 @@ def _normalize_angles(theta, phi):
     return theta, phi
 
 
-class RxyFactory(PulseSequence):
+class Native(ABC, PulseSequence):
+    @abstractmethod
+    def create_sequence(self, *args, **kwargs) -> PulseSequence:
+        """Create a sequence for single-qubit rotation."""
+
+
+class RxyFactory(Native):
     """Factory for pulse sequences that generate single-qubit rotations around
     an axis in xy plane.
 
@@ -66,14 +73,29 @@ class RxyFactory(PulseSequence):
         )
 
 
-class FixedSequenceFactory(PulseSequence):
+class FixedSequenceFactory(Native):
     """Simple factory for a fixed arbitrary sequence."""
 
     def create_sequence(self) -> PulseSequence:
         return self.copy()
 
 
-class SingleQubitNatives(Model):
+class MissingNative(RuntimeError):
+    """Missing native gate."""
+
+    def __init__(self, gate: str):
+        super().__init__(f"Native gate definition not found, for gate {gate}")
+
+
+class NativeContainer(Model):
+    def ensure(self, name: str) -> Native:
+        value = getattr(self, name)
+        if value is None:
+            raise MissingNative(value)
+        return value
+
+
+class SingleQubitNatives(NativeContainer):
     """Container with the native single-qubit gates acting on a specific
     qubit."""
 
@@ -87,7 +109,7 @@ class SingleQubitNatives(Model):
     """Pulse to activate coupler."""
 
 
-class TwoQubitNatives(Model):
+class TwoQubitNatives(NativeContainer):
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
