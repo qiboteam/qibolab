@@ -203,7 +203,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     import matplotlib.pyplot as plt
 
     from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
+    from qibolab.sequence import PulseSequence
     from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (

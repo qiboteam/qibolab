@@ -24,7 +24,8 @@ from qibolab.parameters import NativeGates, Parameters, update_configs
 from qibolab.platform import Platform, unroll_sequences
 from qibolab.platform.load import PLATFORM, PLATFORMS
 from qibolab.platform.platform import PARAMETERS
-from qibolab.pulses import Delay, Gaussian, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Delay, Gaussian, Pulse, Rectangular
+from qibolab.sequence import PulseSequence
 from qibolab.serialize import replace
 
 from .conftest import find_instrument

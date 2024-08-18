@@ -71,7 +71,7 @@ The following example shows how to modify the compiler in order to execute a cir
     from qibo import gates
     from qibo.models import Circuit
     from qibolab.backends import QibolabBackend
-    from qibolab.pulses import PulseSequence
+    from qibolab.sequence import PulseSequence
 
     # define the circuit
     circuit = Circuit(1)

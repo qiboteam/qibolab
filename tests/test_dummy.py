@@ -3,7 +3,8 @@ import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.platform.platform import Platform
-from qibolab.pulses import Delay, Gaussian, GaussianSquare, Pulse, PulseSequence
+from qibolab.pulses import Delay, Gaussian, GaussianSquare, Pulse
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 SWEPT_POINTS = 5

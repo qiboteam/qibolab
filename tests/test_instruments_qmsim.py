@@ -23,7 +23,8 @@ from qibo.models import Circuit
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.backends import QibolabBackend
-from qibolab.pulses import Pulse, PulseSequence, Rectangular, Snz
+from qibolab.pulses import Pulse, Rectangular, Snz
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 
 from .conftest import set_platform_profile

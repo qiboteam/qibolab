@@ -5,7 +5,8 @@ import pytest
 
 from qibolab import AveragingMode, ExecutionParameters
 from qibolab.instruments.qblox.controller import MAX_NUM_BINS, QbloxController
-from qibolab.pulses import Gaussian, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Gaussian, Pulse, Rectangular
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 
 from .qblox_fixtures import connected_controller, controller

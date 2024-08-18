@@ -11,9 +11,9 @@ from qibolab.pulses import (
     Gaussian,
     GaussianSquare,
     Pulse,
-    PulseSequence,
     Rectangular,
 )
+from qibolab.sequence import PulseSequence
 
 
 def test_fixed_sequence_factory():

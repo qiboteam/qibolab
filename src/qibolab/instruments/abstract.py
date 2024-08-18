@@ -6,7 +6,7 @@ import numpy.typing as npt
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.pulses.sequence import PulseSequence
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 
 InstrumentId = str

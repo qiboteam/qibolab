@@ -14,8 +14,9 @@ from qibolab.instruments.rfsoc.convert import (
     convert_units_sweeper,
     replace_pulse_shape,
 )
-from qibolab.pulses import Drag, Gaussian, Pulse, PulseSequence, Rectangular
+from qibolab.pulses import Drag, Gaussian, Pulse, Rectangular
 from qibolab.qubits import Qubit
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 from .conftest import get_instrument

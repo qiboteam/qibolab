@@ -63,7 +63,8 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
 
 .. testcode::  python
 
-   from qibolab.pulses import PulseSequence, Delay
+   from qibolab.pulses import Delay
+   from qibolab.sequence import PulseSequence
    import numpy as np
 
    ps = PulseSequence()
@@ -276,7 +277,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
 
 .. testcode:: python
 
-    from qibolab.pulses import PulseSequence
+    from qibolab.sequence import PulseSequence
 
 
     pulse1 = Pulse(
@@ -460,7 +461,8 @@ For example:
 
 .. testcode:: python
 
-    from qibolab.pulses import PulseSequence, Delay
+    from qibolab.pulses import Delay
+    from qibolab.sequence import PulseSequence
 
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]

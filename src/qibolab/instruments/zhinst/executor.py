@@ -10,7 +10,8 @@ from laboneq.dsl.device import create_connection
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, Pulse, PulseSequence
+from qibolab.pulses import Delay, Pulse
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 

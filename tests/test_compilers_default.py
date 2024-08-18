@@ -7,7 +7,8 @@ from qibo.models import Circuit
 from qibolab import create_platform
 from qibolab.compilers import Compiler
 from qibolab.platform import Platform
-from qibolab.pulses import Delay, PulseSequence
+from qibolab.pulses import Delay
+from qibolab.sequence import PulseSequence
 
 
 def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):

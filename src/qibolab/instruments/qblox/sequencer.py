@@ -4,8 +4,9 @@ import numpy as np
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer as QbloxSequencer
 
 from qibolab.instruments.qblox.q1asm import Program
-from qibolab.pulses import Pulse, PulseSequence
+from qibolab.pulses import Pulse
 from qibolab.pulses.modulation import modulate
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 
 SAMPLING_RATE = 1

@@ -30,7 +30,7 @@ around the pre-defined frequency.
 
     import numpy as np
     from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
+    from qibolab.sequence import PulseSequence
     from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
@@ -111,7 +111,8 @@ complex pulse sequence. Therefore with start with that:
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import Pulse, PulseSequence, Delay, Gaussian
+    from qibolab.pulses import Pulse, Delay, Gaussian
+    from qibolab.sequence import PulseSequence
     from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (
@@ -215,7 +216,8 @@ and its impact on qubit states in the IQ plane.
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import PulseSequence, Delay
+    from qibolab.pulses import Delay
+    from qibolab.sequence import PulseSequence
     from qibolab.result import unpack
     from qibolab.sweeper import Sweeper, SweeperType, Parameter
     from qibolab.execution_parameters import (

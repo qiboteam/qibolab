@@ -13,9 +13,10 @@ from qibolab.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Pulse, PulseSequence
+from qibolab.pulses import Pulse
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import average, average_iq, collect
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 
 DAC_SAMPLNG_RATE_MHZ = 5898.24

@@ -15,7 +15,7 @@ from qibolab import (
     create_platform,
 )
 from qibolab.platform.load import PLATFORMS
-from qibolab.pulses import PulseSequence
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")

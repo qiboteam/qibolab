@@ -4,7 +4,7 @@ from typing import Optional
 
 from qm.qua._dsl import _Variable  # for type declaration only
 
-from qibolab.pulses import PulseSequence
+from qibolab.sequence import PulseSequence
 
 from .acquisition import Acquisition
 

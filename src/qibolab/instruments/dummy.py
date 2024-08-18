@@ -4,8 +4,8 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.pulses import PulseSequence
-from qibolab.pulses.pulse import Pulse
+from qibolab.pulses import Pulse
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
 

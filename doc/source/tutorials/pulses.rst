@@ -8,7 +8,8 @@ pulses (:class:`qibolab.pulses.Pulse`) through the
 
 .. testcode::  python
 
-    from qibolab.pulses import Pulse, PulseSequence, Rectangular, Gaussian, Delay
+    from qibolab.pulses import Pulse, Rectangular, Gaussian, Delay
+    from qibolab.sequence import PulseSequence
 
     # Define PulseSequence
     sequence = PulseSequence(

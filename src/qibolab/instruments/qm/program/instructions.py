@@ -6,7 +6,8 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.pulses import Delay, PulseSequence
+from qibolab.pulses import Delay
+from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 
 from ..config import operation

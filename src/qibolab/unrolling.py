@@ -9,8 +9,9 @@ from typing import Annotated
 from qibolab.components.configs import BoundsConfig
 from qibolab.serialize import Model
 
-from .pulses import Pulse, PulseSequence
+from .pulses import Pulse
 from .pulses.envelope import Rectangular
+from .sequence import PulseSequence
 
 
 def _waveform(sequence: PulseSequence):
