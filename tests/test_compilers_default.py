@@ -212,6 +212,7 @@ def test_inactive_qubits(platform: Platform):
     main, coupled = 0, 1
     circuit = Circuit(2)
     circuit.add(gates.CZ(main, coupled))
+    # another gate on drive is needed, to prevent trimming the delay, if alone
     circuit.add(gates.GPI2(coupled, phi=0.15))
     circuit.add(gates.M(main, coupled))
 
@@ -231,12 +232,14 @@ def test_inactive_qubits(platform: Platform):
 
     assert len(no_measurement(sequence)) == 1
 
+    mflux = f"qubit_{main}/flux"
+    cdrive = f"qubit_{coupled}/drive"
     duration = 200
     natives.CZ.extend(
         PulseSequence.load(
             [
                 (
-                    f"qubit_{main}/flux",
+                    mflux,
                     Pulse(duration=duration, amplitude=0.42, envelope=Rectangular()),
                 )
             ]
@@ -244,3 +247,9 @@ def test_inactive_qubits(platform: Platform):
     )
     padded_seq = compile_circuit(circuit, platform)
     assert len(no_measurement(padded_seq)) == 3
+    cdrive_delay = next(iter(padded_seq.channel(ChannelId.load(cdrive))))
+    assert isinstance(cdrive_delay, Delay)
+    assert (
+        cdrive_delay.duration
+        == next(iter(padded_seq.channel(ChannelId.load(mflux)))).duration
+    )
