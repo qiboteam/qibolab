@@ -215,6 +215,12 @@ class QmController(Controller):
             shutil.rmtree(self._calibration_path)
             self._calibration_path = None
 
+    def setup(self, *args, **kwargs):
+        """Complying with abstract instrument interface.
+
+        Not needed for this instrument.
+        """
+
     def connect(self):
         """Connect to the Quantum Machines manager."""
         host, port = self.address.split(":")

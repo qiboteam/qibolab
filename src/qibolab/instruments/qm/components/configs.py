@@ -1,4 +1,6 @@
-from dataclasses import dataclass, field
+from typing import Literal
+
+from pydantic import Field
 
 from qibolab.components import AcquisitionConfig, DcConfig
 
@@ -8,16 +10,17 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True)
 class OpxOutputConfig(DcConfig):
     """DC channel config using QM OPX+."""
+
+    kind: Literal["opx-output"] = "opx-output"
 
     offset: float = 0.0
     """DC offset to be applied in V.
 
     Possible values are -0.5V to 0.5V.
     """
-    filter: dict[str, float] = field(default_factory=dict)
+    filter: dict[str, float] = Field(default_factory=dict)
     """FIR and IIR filters to be applied for correcting signal distortions.
 
     See
@@ -27,9 +30,10 @@ class OpxOutputConfig(DcConfig):
     """
 
 
-@dataclass(frozen=True)
 class QmAcquisitionConfig(AcquisitionConfig):
     """Acquisition config for QM OPX+."""
+
+    kind: Literal["qm-acquisition"] = "qm-acquisition"
 
     gain: int = 0
     """Input gain in dB.

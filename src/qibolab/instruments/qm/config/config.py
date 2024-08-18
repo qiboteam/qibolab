@@ -50,7 +50,7 @@ class QmConfig:
 
     def configure_dc_line(self, channel: QmChannel, config: OpxOutputConfig):
         controller = self.controllers[channel.device]
-        controller.analog_outputs[channel.port] = config
+        controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
         self.elements[channel.logical_channel.name] = DcElement.from_channel(channel)
 
     def configure_iq_line(
