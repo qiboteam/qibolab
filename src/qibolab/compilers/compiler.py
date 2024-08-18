@@ -26,8 +26,9 @@ Rule = Callable[..., PulseSequence]
 
 @dataclass
 class Compiler:
-    """Compiler that transforms a :class:`qibo.models.Circuit` to a
-    :class:`qibolab.pulses.PulseSequence`.
+    """Compile native circuits into pulse sequences.
+
+    It transforms a :class:`qibo.models.Circuit` to a :class:`qibolab.pulses.PulseSequence`.
 
     The transformation is done using a dictionary of rules which map each Qibo gate to a
     pulse sequence and some virtual Z-phases.
@@ -65,7 +66,7 @@ class Compiler:
         )
 
     def register(self, gate_cls: type[gates.Gate]) -> Callable[[Rule], Rule]:
-        """Decorator for registering a function as a rule in the compiler.
+        """Register a function as a rule in the compiler.
 
         Using this decorator is optional. Alternatively the user can set the rules directly
         via ``__setitem__``.
@@ -81,8 +82,9 @@ class Compiler:
         return inner
 
     def get_sequence(self, gate: gates.Gate, platform: Platform) -> PulseSequence:
-        """Get pulse sequence implementing the given gate using the registered
-        rules.
+        """Get pulse sequence implementing the given gate.
+
+        The sequence is obtained using the registered rules.
 
         Args:
             gate (:class:`qibo.gates.Gate`): Qibo gate to convert to pulses.
@@ -122,7 +124,7 @@ class Compiler:
     def compile(
         self, circuit: Circuit, platform: Platform
     ) -> tuple[PulseSequence, dict[gates.M, PulseSequence]]:
-        """Transforms a circuit to pulse sequence.
+        """Transform a circuit to pulse sequence.
 
         Args:
             circuit (qibo.models.Circuit): Qibo circuit that respects the platform's
@@ -170,6 +172,9 @@ class Compiler:
                 for q in gate.qubits:
                     if q not in active_qubits:
                         qubit = platform.get_qubit(q)
+                        # all actual qubits have a non-null drive channel, and couplers
+                        # are not explicitedly listed in gates
+                        assert qubit.drive is not None
                         delay = end - channel_clock[qubit.drive]
                         if delay > 0:
                             delay_sequence.append(
