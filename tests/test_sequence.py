@@ -1,4 +1,5 @@
 import pytest
+from pydantic import TypeAdapter
 
 from qibolab.identifier import ChannelId
 from qibolab.pulses import (
@@ -47,6 +48,28 @@ def test_init_with_iterable():
     assert len(list(seq.channel(sc))) == 2
     assert len(list(seq.channel(oc))) == 1
     assert len(list(seq.channel(c5))) == 3
+
+
+def test_serialization():
+    sp = ChannelId.load("some/probe")
+    sa = ChannelId.load("some/acquisition")
+    od = ChannelId.load("other/drive")
+    of = ChannelId.load("other/flux")
+
+    seq = PulseSequence(
+        [
+            (sp, Delay(duration=10)),
+            (sa, Delay(duration=20)),
+            (of, Pulse(duration=10, amplitude=1, envelope=Rectangular())),
+            (od, VirtualZ(phase=0.6)),
+            (od, Pulse(duration=10, amplitude=1, envelope=Rectangular())),
+            (sp, Pulse(duration=100, amplitude=0.3, envelope=Gaussian(rel_sigma=0.1))),
+            (sa, Acquisition(duration=150)),
+        ]
+    )
+
+    aslist = TypeAdapter(PulseSequence).dump_python(seq)
+    assert PulseSequence.load(aslist) == seq
 
 
 def test_durations():
