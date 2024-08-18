@@ -6,9 +6,12 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, ChannelType
+from qibolab.native import FixedSequenceFactory, TwoQubitNatives
 from qibolab.platform import Platform
 from qibolab.pulses import Delay
+from qibolab.pulses.envelope import Rectangular
+from qibolab.pulses.pulse import Pulse
 from qibolab.sequence import PulseSequence
 
 
@@ -203,3 +206,40 @@ def test_align_multiqubit(platform: Platform):
         probe_delay = next(iter(sequence.channel(ChannelId.load(f"qubit_{q}/probe"))))
         assert isinstance(probe_delay, Delay)
         assert flux_duration == probe_delay.duration
+
+
+def test_inactive_qubits(platform: Platform):
+    main, coupled = 0, 1
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(main, coupled))
+    circuit.add(gates.M(main, coupled))
+
+    natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
+        CZ=FixedSequenceFactory([])
+    )
+    assert natives.CZ is not None
+    natives.CZ.clear()
+    sequence = compile_circuit(circuit, platform)
+
+    def no_measurement(seq: PulseSequence):
+        return [
+            el
+            for el in seq
+            if el[0].channel_type not in (ChannelType.PROBE, ChannelType.ACQUISITION)
+        ]
+
+    assert len(no_measurement(sequence)) == 0
+
+    duration = 200
+    natives.CZ.extend(
+        PulseSequence.load(
+            [
+                (
+                    f"qubit_{main}/flux",
+                    Pulse(duration=duration, amplitude=0.42, envelope=Rectangular()),
+                )
+            ]
+        )
+    )
+    padded_seq = compile_circuit(circuit, platform)
+    assert len(no_measurement(padded_seq)) == 2
