@@ -161,17 +161,22 @@ class Compiler:
                         delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
                     increment[ch] = gate_sequence.channel_duration(ch)
-                for q in gate.qubits:
-                    qubit = platform.get_qubit(q)
-                    if qubit not in active_qubits:
-                        increment[qubit.drive] = (
-                            start + gate_sequence.duration - channel_clock[qubit.drive]
-                        )
-
                 # add the increment only after computing them, since multiple channels
                 # are related to each other because belonging to the same qubit
                 for ch, inc in increment.items():
                     channel_clock[ch] += inc
+
+                end = start + gate_sequence.duration
+                for q in gate.qubits:
+                    if q not in active_qubits:
+                        qubit = platform.get_qubit(q)
+                        delay = end - channel_clock[qubit.drive]
+                        if delay > 0:
+                            delay_sequence.append(
+                                (qubit.drive.name, Delay(duration=delay))
+                            )
+                            channel_clock[qubit.drive.name] += delay
+
                 sequence.concatenate(delay_sequence)
                 sequence.concatenate(gate_sequence)
 
