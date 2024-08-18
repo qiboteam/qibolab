@@ -149,23 +149,25 @@ class Compiler:
 
         # process circuit gates
         for moment in circuit.queue.moments:
-            for gate in set(filter(lambda x: x is not None, moment)):
+            for gate in {x for x in moment if x is not None}:
                 delay_sequence = PulseSequence()
                 gate_sequence = self.get_sequence(gate, platform)
-                increment = defaultdict(int)
-                start = max(
-                    (
-                        qubit_clock(el)
-                        for el in {ch_to_qb[ch] for ch in gate_sequence.channels}
-                    ),
-                    default=0.0,
-                )
+                increment = defaultdict(float)
+                active_qubits = {ch_to_qb[ch] for ch in gate_sequence.channels}
+                start = max((qubit_clock(el) for el in active_qubits), default=0.0)
                 for ch in gate_sequence.channels:
                     delay = start - channel_clock[ch]
                     if delay > 0:
                         delay_sequence.append((ch, Delay(duration=delay)))
                         channel_clock[ch] += delay
                     increment[ch] = gate_sequence.channel_duration(ch)
+                for q in gate.qubits:
+                    qubit = platform.get_qubit(q)
+                    if qubit not in active_qubits:
+                        increment[qubit.drive] = (
+                            start + gate_sequence.duration - channel_clock[qubit.drive]
+                        )
+
                 # add the increment only after computing them, since multiple channels
                 # are related to each other because belonging to the same qubit
                 for ch, inc in increment.items():
