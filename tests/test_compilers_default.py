@@ -212,6 +212,7 @@ def test_inactive_qubits(platform: Platform):
     main, coupled = 0, 1
     circuit = Circuit(2)
     circuit.add(gates.CZ(main, coupled))
+    circuit.add(gates.GPI2(coupled, phi=0.15))
     circuit.add(gates.M(main, coupled))
 
     natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
@@ -228,7 +229,7 @@ def test_inactive_qubits(platform: Platform):
             if el[0].channel_type not in (ChannelType.PROBE, ChannelType.ACQUISITION)
         ]
 
-    assert len(no_measurement(sequence)) == 0
+    assert len(no_measurement(sequence)) == 1
 
     duration = 200
     natives.CZ.extend(
@@ -242,4 +243,4 @@ def test_inactive_qubits(platform: Platform):
         )
     )
     padded_seq = compile_circuit(circuit, platform)
-    assert len(no_measurement(padded_seq)) == 2
+    assert len(no_measurement(padded_seq)) == 3
