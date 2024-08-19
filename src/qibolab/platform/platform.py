@@ -1,6 +1,5 @@
 """A platform for executing quantum algorithms."""
 
-import json
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -288,9 +287,7 @@ class Platform:
 
         return cls(
             name=name,
-            parameters=Parameters.model_validate(
-                json.loads((path / PARAMETERS).read_text())
-            ),
+            parameters=Parameters.model_validate_json((path / PARAMETERS).read_text()),
             instruments=instruments,
             qubits=qubits,
             couplers=couplers,
@@ -298,9 +295,7 @@ class Platform:
 
     def dump(self, path: Path):
         """Dump platform."""
-        (path / PARAMETERS).write_text(
-            json.dumps(self.parameters.model_dump(), sort_keys=False, indent=4)
-        )
+        (path / PARAMETERS).write_text(self.parameters.model_dump_json(indent=4))
 
     def get_qubit(self, qubit: QubitId) -> Qubit:
         """Return the name of the physical qubit corresponding to a logical
