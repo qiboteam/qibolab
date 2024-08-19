@@ -9,15 +9,14 @@ from qibolab.instruments.abstract import Instrument
 class TemperatureController(Instrument):
     """Bluefors temperature controller.
 
-    ```
-    # Example usage
-    if __name__ == "__main__":
-        tc = TemperatureController("XLD1000_Temperature_Controller", "192.168.0.114", 8888)
-        tc.connect()
-        temperature_values = tc.read_data()
-        for temperature_value in temperature_values:
-            print(temperature_value)
-    ```
+    Example usage::
+
+        if __name__ == "__main__":
+            tc = TemperatureController("XLD1000_Temperature_Controller", "192.168.0.114", 8888)
+            tc.connect()
+            temperature_values = tc.read_data()
+            for temperature_value in temperature_values:
+                print(temperature_value)
     """
 
     def __init__(self, name: str, address: str, port: int = 8888):
@@ -53,9 +52,12 @@ class TemperatureController(Instrument):
     def get_data(self) -> dict[str, dict[str, float]]:
         """Connect to the socket and get temperature data.
 
-        The typical message looks like this:
+        The typical message looks like this::
+
             flange_name: {'temperature':12.345678, 'timestamp':1234567890.123456}
-        `timestamp` can be converted to datetime using `datetime.fromtimestamp`.
+
+        ``timestamp`` can be converted to datetime using ``datetime.fromtimestamp``.
+
         Returns:
             message (dict[str, dict[str, float]]): socket message in this format:
                 {"flange_name": {'temperature': <value(float)>, 'timestamp':<value(float)>}}

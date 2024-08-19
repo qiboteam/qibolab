@@ -120,8 +120,8 @@ class QmController(Controller):
     Playing pulses on QM controllers requires a ``config`` dictionary and a program
     written in QUA language.
     The ``config`` file is generated using the ``dataclass`` objects defined in
-    :py_mod:`qibolab.instruments.qm.config`.
-    The QUA program is generated using the methods in :py_mod:`qibolab.instruments.qm.program`.
+    :mod:`qibolab.instruments.qm.config`.
+    The QUA program is generated using the methods in :mod:`qibolab.instruments.qm.program`.
     Controllers, elements and pulses are added in the ``config`` after a pulse sequence is given,
     so that only elements related to the participating channels are registered.
     """

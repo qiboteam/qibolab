@@ -79,7 +79,7 @@ class RFSOC(Controller):
         Arguments:
             qubits (dict): Dictionary of qubit IDs mapped to qubit objects.
             sequence (PulseSequence): Pulse sequence to be played on this instrument.
-            options (ExecutionParameters): Execution parameters for readout and repetition.
+            options (qibolab.ExecutionParameters): Execution parameters for readout and repetition.
         """
 
         waveform_array = {dac.id: np.zeros(dac.max_samples) for dac in self.device.dac}
@@ -246,7 +246,7 @@ class RFSOC_RO(RFSOC):
         Arguments:
             qubits (dict): Dictionary of qubit IDs mapped to qubit objects.
             sequence (PulseSequence): Pulse sequence to be played on this instrument.
-            options (ExecutionParameters): Object representing acquisition type and number of shots.
+            options (qibolab.ExecutionParameters): Object representing acquisition type and number of shots.
         """
         super().play(qubits, couplers, sequence, options)
         self.device.set_adc_trigger_repetition_rate(int(options.relaxation_time / 1e3))

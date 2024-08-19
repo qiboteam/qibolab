@@ -58,6 +58,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "recommonmark",
     "sphinx_copybutton",
+    "sphinx.ext.todo",
     "sphinx.ext.viewcode",
 ]
 
