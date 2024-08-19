@@ -109,7 +109,7 @@ class PulseSequence(UserList[_Element]):
 
         .. note::
 
-            This selects only the :cls:`Acquisition` events, and not all the
+            This selects only the :class:`Acquisition` events, and not all the
             instructions directed to an acquistion channel (i.e.
             :attr:`ChannelType.ACQUISITION`)
         """

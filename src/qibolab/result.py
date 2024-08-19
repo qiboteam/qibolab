@@ -53,7 +53,7 @@ def average(values: npt.NDArray) -> tuple[npt.NDArray, npt.NDArray]:
     It returns both the average estimator itself, and its standard
     deviation estimator.
 
-    Use this also for I and Q values in the *standard layout*, cf. :cls:`IQ`.
+    Use this also for I and Q values in the *standard layout*, cf. :class:`IQ`.
     """
     mean = np.mean(values, axis=0)
     std = np.std(values, axis=0, ddof=1) / np.sqrt(values.shape[0])
