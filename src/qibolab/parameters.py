@@ -4,8 +4,8 @@ The format is explained in the :ref:`Using parameters <using_runcards>`
 example.
 """
 
-from collections.abc import Callable
-from typing import Annotated, Any, Union
+from collections.abc import Callable, Iterable
+from typing import Annotated, Any, Type, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
@@ -104,17 +104,35 @@ ComponentId = str
 This is assumed to always be in its serialized form.
 """
 
+_BUILTIN_CONFIGS = [ChannelConfig, Bounds]
+
+
+class ConfigKinds:
+    _registered: list[Type[Config]] = _BUILTIN_CONFIGS
+
+    @classmethod
+    def extend(cls, kinds: Iterable[Type[Config]]):
+        cls._registered.extend(kinds)
+
+    @classmethod
+    def reset(cls):
+        cls._registered = _BUILTIN_CONFIGS
+
+    @classmethod
+    def registered(cls) -> list[Type[Config]]:
+        return cls._registered.copy()
+
 
 def _load_configs(raw: dict[str, dict]) -> dict[ComponentId, Config]:
     config_types = TypeAdapter(
-        Annotated[Union[ChannelConfig, Bounds], Field(discriminator="kind")]
+        Annotated[Union[*ConfigKinds.registered()], Field(discriminator="kind")]
     )
     return {k: config_types.validate_python(v) for k, v in raw.items()}
 
 
 def _dump_configs(obj: dict[ComponentId, Config]) -> dict[str, dict]:
     config_types = TypeAdapter(
-        Annotated[Union[ChannelConfig, Bounds], Field(discriminator="kind")]
+        Annotated[Union[*ConfigKinds.registered()], Field(discriminator="kind")]
     )
     return {k: config_types.dump_python(v) for k, v in obj.items()}
 
