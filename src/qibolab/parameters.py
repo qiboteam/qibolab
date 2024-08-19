@@ -148,7 +148,9 @@ class ConfigKinds:
         configuration kinds as the appropriate Python objects.
         """
         return TypeAdapter(
-            Annotated[Union[*ConfigKinds._registered], Field(discriminator="kind")]
+            Annotated[
+                Union[tuple(ConfigKinds._registered)], Field(discriminator="kind")
+            ]
         )
 
 
