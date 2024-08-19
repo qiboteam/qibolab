@@ -7,7 +7,7 @@ example.
 from collections.abc import Callable
 from typing import Annotated, Any, Union
 
-from pydantic import Field, TypeAdapter
+from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
 
 from qibolab.components import ChannelConfig, Config
@@ -105,12 +105,27 @@ This is assumed to always be in its serialized form.
 """
 
 
+def _load_configs(raw: dict[str, dict]) -> dict[ComponentId, Config]:
+    config_types = TypeAdapter(
+        Annotated[Union[ChannelConfig, Bounds], Field(discriminator="kind")]
+    )
+    return {k: config_types.validate_python(v) for k, v in raw.items()}
+
+
+def _dump_configs(obj: dict[ComponentId, Config]) -> dict[str, dict]:
+    config_types = TypeAdapter(
+        Annotated[Union[ChannelConfig, Bounds], Field(discriminator="kind")]
+    )
+    return {k: config_types.dump_python(v) for k, v in obj.items()}
+
+
 class Parameters(Model):
     """Serializable parameters."""
 
     settings: Settings = Field(default_factory=Settings)
-    configs: dict[
-        ComponentId,
-        Annotated[Union[ChannelConfig, Bounds], Field(discriminator="kind")],
+    configs: Annotated[
+        dict[ComponentId, Config],
+        BeforeValidator(_load_configs),
+        PlainSerializer(_dump_configs),
     ] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
