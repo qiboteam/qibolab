@@ -5,12 +5,12 @@ example.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import Field, TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab.components import Config
+from qibolab.components import Config, ChannelConfig
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.qubits import QubitId, QubitPairId
@@ -108,5 +108,8 @@ class Parameters(Model):
     """Serializable parameters."""
 
     settings: Settings = Field(default_factory=Settings)
-    configs: dict[ComponentId, Config] = Field(default_factory=dict)
+    configs: dict[
+        ComponentId,
+        Annotated[ChannelConfig, Field(discriminator="kind")],
+    ] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
