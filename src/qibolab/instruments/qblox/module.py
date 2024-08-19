@@ -42,15 +42,17 @@ class ClusterModule(Instrument):
 
         Returns this port object.
 
-        Example:
-        >>> qrm_module = QrmRf("qrm_rf", f"{IP_ADDRESS}:{SLOT_IDX}")
-        >>> output_port = qrm_module.add_port("o1")
-        >>> input_port = qrm_module.add_port("i1", out=False)
-        >>> qrm_module.ports
-        {
-            'o1': QbloxOutputPort(module=qrm_module, port_number=0, port_name='o1'),
-            'i1': QbloxInputPort(module=qrm_module, port_number=0, port_name='i1')
-        }
+        Example::
+
+            qrm_module = QrmRf("qrm_rf", f"{IP_ADDRESS}:{SLOT_IDX}")
+            output_port = qrm_module.add_port("o1")
+            input_port = qrm_module.add_port("i1", out=False)
+            qrm_module.ports
+
+            # {
+            #     'o1': QbloxOutputPort(module=qrm_module, port_number=0, port_name='o1'),
+            #     'i1': QbloxInputPort(module=qrm_module, port_number=0, port_name='i1')
+            # }
         """
 
         def count(cls):
