@@ -124,20 +124,31 @@ class ConfigKinds:
 
     @classmethod
     def extend(cls, kinds: Iterable[Type[Config]]):
+        """Extend the known configuration kinds.
+
+        Nested unions are supported (i.e. :class:`Union` as elements of ``kinds``).
+        """
         cls._registered.extend(kinds)
 
     @classmethod
     def reset(cls):
+        """Reset known configuration kinds to built-ins."""
         cls._registered = _BUILTIN_CONFIGS
 
     @classmethod
     def registered(cls) -> list[Type[Config]]:
+        """Retrieve registered configuration kinds."""
         return cls._registered.copy()
 
     @classmethod
-    def adapted(cls):
+    def adapted(cls) -> TypeAdapter:
+        """Construct tailored pydantic type adapter.
+
+        The adapter will be able to directly load all the registered
+        configuration kinds as the appropriate Python objects.
+        """
         return TypeAdapter(
-            Annotated[Union[*ConfigKinds.registered()], Field(discriminator="kind")]
+            Annotated[Union[*ConfigKinds._registered], Field(discriminator="kind")]
         )
 
 
