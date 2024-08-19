@@ -5,16 +5,17 @@ example.
 """
 
 from collections.abc import Callable
-from typing import Annotated, Any
+from typing import Annotated, Any, Union
 
 from pydantic import Field, TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab.components import Config, ChannelConfig
+from qibolab.components import ChannelConfig, Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
+from qibolab.identifier import QubitId, QubitPairId
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.qubits import QubitId, QubitPairId
 from qibolab.serialize import Model, replace
+from qibolab.unrolling import Bounds
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -110,6 +111,6 @@ class Parameters(Model):
     settings: Settings = Field(default_factory=Settings)
     configs: dict[
         ComponentId,
-        Annotated[ChannelConfig, Field(discriminator="kind")],
+        Annotated[Union[ChannelConfig, Bounds], Field(discriminator="kind")],
     ] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)

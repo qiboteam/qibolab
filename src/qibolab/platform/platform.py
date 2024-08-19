@@ -260,7 +260,8 @@ class Platform:
 
         results = defaultdict(list)
         # pylint: disable=unsubscriptable-object
-        bounds = Bounds.from_config(self.parameters.configs[self._controller.bounds])
+        bounds = self.parameters.configs[self._controller.bounds]
+        assert isinstance(bounds, Bounds)
         for b in batch(sequences, bounds):
             result = self._execute(b, options, configs, sweepers)
             for serial, data in result.items():

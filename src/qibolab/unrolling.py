@@ -5,10 +5,11 @@ May be reused by different instruments.
 
 from collections import defaultdict
 from functools import total_ordering
-from typing import Annotated
+from typing import Annotated, Iterable, Literal
 
-from qibolab.components.configs import BoundsConfig
-from qibolab.serialize import Model
+from pydantic.fields import FieldInfo
+
+from qibolab.components.configs import Config
 
 from .pulses import Delay, Pulse
 from .pulses.envelope import Rectangular
@@ -40,8 +41,10 @@ def _instructions(sequence: PulseSequence):
 
 
 @total_ordering
-class Bounds(Model):
+class Bounds(Config):
     """Instument memory limitations proxies."""
+
+    kind: Literal["bounds"] = "bounds"
 
     waveforms: Annotated[int, {"count": _waveform}]
     """Waveforms estimated size."""
@@ -49,12 +52,6 @@ class Bounds(Model):
     """Number of readouts."""
     instructions: Annotated[int, {"count": _instructions}]
     """Instructions estimated size."""
-
-    @classmethod
-    def from_config(cls, config: BoundsConfig):
-        d = config.model_dump()
-        del d["kind"]
-        return cls(**d)
 
     @classmethod
     def update(cls, sequence: PulseSequence):

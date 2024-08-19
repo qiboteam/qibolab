@@ -120,19 +120,6 @@ class AcquisitionConfig(Config):
         )
 
 
-class BoundsConfig(Config):
-    """Instument memory limitations proxies."""
-
-    kind: Literal["bounds"] = "bounds"
-
-    waveforms: int
-    """Waveforms estimated size."""
-    readout: int
-    """Number of readouts."""
-    instructions: int
-    """Instructions estimated size."""
-
-
 ChannelConfig = Union[
-    DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig, BoundsConfig
+    DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig
 ]
