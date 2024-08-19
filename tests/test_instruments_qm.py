@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-qua = pytest.importorskip("qm").qua
+qua = pytest.importorskip("qm.qua")
 
 # ruff: noqa: E402
 from qibolab import AcquisitionType, ExecutionParameters, create_platform

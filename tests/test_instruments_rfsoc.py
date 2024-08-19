@@ -5,8 +5,8 @@ from dataclasses import asdict
 import numpy as np
 import pytest
 
-rfsoc = pytest.importorskip("qibosoq").components.base
-rfsoc_pulses = pytest.importorskip("qibosoq").components.pulses
+rfsoc = pytest.importorskip("qibosoq.components.base")
+rfsoc_pulses = pytest.importorskip("qibosoq.components.pulses")
 
 # ruff: noqa: E402
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
