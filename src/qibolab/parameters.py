@@ -108,6 +108,18 @@ _BUILTIN_CONFIGS = [ChannelConfig, Bounds]
 
 
 class ConfigKinds:
+    """Registered configuration kinds.
+
+    This class is handling the known configuration kinds for deserialization.
+
+    .. attention::
+
+        Beware that is managing a global state. This should not be a major issue, as the
+        known configurations should be fixed per run. But prefer avoiding changing them
+        during a single session, unless you are clearly controlling the sequence of all
+        loading operations.
+    """
+
     _registered: list[Type[Config]] = _BUILTIN_CONFIGS
 
     @classmethod
@@ -122,19 +134,21 @@ class ConfigKinds:
     def registered(cls) -> list[Type[Config]]:
         return cls._registered.copy()
 
+    @classmethod
+    def adapted(cls):
+        return TypeAdapter(
+            Annotated[Union[*ConfigKinds.registered()], Field(discriminator="kind")]
+        )
+
 
 def _load_configs(raw: dict[str, dict]) -> dict[ComponentId, Config]:
-    config_types = TypeAdapter(
-        Annotated[Union[*ConfigKinds.registered()], Field(discriminator="kind")]
-    )
-    return {k: config_types.validate_python(v) for k, v in raw.items()}
+    a = ConfigKinds.adapted()
+    return {k: a.validate_python(v) for k, v in raw.items()}
 
 
 def _dump_configs(obj: dict[ComponentId, Config]) -> dict[str, dict]:
-    config_types = TypeAdapter(
-        Annotated[Union[*ConfigKinds.registered()], Field(discriminator="kind")]
-    )
-    return {k: config_types.dump_python(v) for k, v in obj.items()}
+    a = ConfigKinds.adapted()
+    return {k: a.dump_python(v) for k, v in obj.items()}
 
 
 class Parameters(Model):
