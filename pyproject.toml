@@ -22,7 +22,7 @@ include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
-qibo = "^0.2.6"
+qibo = "^0.2.8"
 numpy = "^1.26.4"
 scipy = "^1.13.0"
 more-itertools = "^9.1.0"

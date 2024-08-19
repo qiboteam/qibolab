@@ -5919,4 +5919,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "bde6cb86d4fe55b5f91310f5d3995640d5e16bedc86bfb4dfb6e5625c2bdcae1"
+content-hash = "ef38aec46ecd9f84cad3b7eca72b289b15d6495fc3388d5ba26c64f29ddc3390"
