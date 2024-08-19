@@ -12,10 +12,10 @@ from qibo.config import log, raise_error
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, QubitId, QubitPairId
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
-from qibolab.qubits import Qubit, QubitId, QubitPairId
+from qibolab.qubits import Qubit
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds, batch

@@ -1,12 +1,26 @@
 from enum import Enum
 from typing import Annotated, Optional, Union
 
-from pydantic import Field, TypeAdapter, model_serializer, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    TypeAdapter,
+    model_serializer,
+    model_validator,
+)
 
 from .serialize import Model
 
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Type for qubit names."""
+
+QubitPairId = Annotated[
+    tuple[QubitId, QubitId],
+    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
+    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+]
+"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
 # TODO: replace with StrEnum, once py3.10 will be abandoned
