@@ -2,8 +2,10 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from qm import qua
 
+qua = pytest.importorskip("qm").qua
+
+# ruff: noqa: E402
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
 from qibolab.instruments.qm import QmController
 from qibolab.pulses import Pulse, Rectangular

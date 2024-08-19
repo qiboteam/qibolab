@@ -4,9 +4,11 @@ from dataclasses import asdict
 
 import numpy as np
 import pytest
-import qibosoq.components.base as rfsoc
-import qibosoq.components.pulses as rfsoc_pulses
 
+rfsoc = pytest.importorskip("qibosoq").components.base
+rfsoc_pulses = pytest.importorskip("qibosoq").components.pulses
+
+# ruff: noqa: E402
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.instruments.rfsoc import RFSoC
 from qibolab.instruments.rfsoc.convert import (
