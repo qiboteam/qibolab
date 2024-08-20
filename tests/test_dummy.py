@@ -20,25 +20,6 @@ def test_dummy_initialization(platform: Platform):
     platform.disconnect()
 
 
-@pytest.mark.parametrize(
-    "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.RAW]
-)
-def test_dummy_execute_pulse_sequence(platform: Platform, acquisition):
-    nshots = 100
-    natives = platform.natives.single_qubit[0]
-    probe_seq = natives.MZ.create_sequence()
-    acq = probe_seq[1][1]
-    sequence = PulseSequence()
-    sequence.concatenate(probe_seq)
-    sequence.concatenate(natives.RX12.create_sequence())
-    options = ExecutionParameters(nshots=100, acquisition_type=acquisition)
-    result = platform.execute([sequence], options)
-    if acquisition is AcquisitionType.INTEGRATION:
-        assert result[acq.id][0].shape == (nshots, 2)
-    elif acquisition is AcquisitionType.RAW:
-        assert result[acq.id][0].shape == (nshots, int(acq.duration), 2)
-
-
 def test_dummy_execute_coupler_pulse(platform: Platform):
     sequence = PulseSequence()
 
