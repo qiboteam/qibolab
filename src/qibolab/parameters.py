@@ -5,7 +5,6 @@ example.
 """
 
 from collections.abc import Callable, Iterable
-from types import UnionType
 from typing import Annotated, Any, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
@@ -105,7 +104,9 @@ ComponentId = str
 This is assumed to always be in its serialized form.
 """
 
-_ChannelConfigT = Union[UnionType, type[Config]]
+# TODO: replace _UnionType with UnionType, once py3.9 will be abandoned
+_UnionType = Any
+_ChannelConfigT = Union[_UnionType, type[Config]]
 _BUILTIN_CONFIGS: tuple[_ChannelConfigT, ...] = (ChannelConfig, Bounds)
 
 
