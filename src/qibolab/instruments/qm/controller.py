@@ -11,11 +11,11 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import Config, DcChannel, IqChannel
+from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Acquisition, Delay, VirtualZ
+from qibolab.pulses.pulse import Acquisition, Delay, VirtualZ, _Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter
 from qibolab.unrolling import Bounds
@@ -277,8 +277,8 @@ class QmController(Controller):
                     lo_config,
                 )
 
-        else:
-            raise TypeError(f"Unknown channel type: {type(channel)}.")
+        elif not isinstance(logical_channel, AcquireChannel):
+            raise TypeError(f"Unknown channel type: {type(logical_channel)}.")
 
     def configure_channels(
         self,
@@ -328,6 +328,9 @@ class QmController(Controller):
         """
         acquisitions = {}
         for channel_id, readout in sequence.as_readouts:
+            if not isinstance(readout, _Readout):
+                continue
+
             if readout.probe.duration != readout.acquisition.duration:
                 raise ValueError(
                     "Quantum Machines does not support acquisition with different duration than probe."

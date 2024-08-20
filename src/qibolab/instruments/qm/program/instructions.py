@@ -6,7 +6,7 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.pulses import Delay
+from qibolab.pulses import Delay, Pulse
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 
@@ -57,7 +57,7 @@ def play(args: ExecutionArguments):
         params = args.parameters[op]
         if isinstance(pulse, Delay):
             _delay(pulse, element, params)
-        else:
+        elif isinstance(pulse, Pulse):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
 
