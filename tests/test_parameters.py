@@ -4,7 +4,7 @@ import pytest
 
 from qibolab.components.configs import Config
 from qibolab.native import FixedSequenceFactory, TwoQubitNatives
-from qibolab.parameters import ConfigKinds, TwoQubitContainer
+from qibolab.parameters import ConfigKinds, Parameters, TwoQubitContainer
 
 
 def test_two_qubit_container():
@@ -68,3 +68,14 @@ class TestConfigKinds:
         assert dump1["come"] == 42
         reloaded1 = adapted.validate_python(dump1)
         assert reloaded1 == dummy1
+
+    def test_within_parameters(self):
+        ConfigKinds.extend([DummyConfig, DummyConfig1])
+        pars = Parameters(configs={"come": DummyConfig1(come=42)})
+
+        dump = pars.model_dump()
+        assert dump["configs"]["come"]["come"] == 42
+        assert "dummy1" in pars.model_dump_json()
+
+        reloaded = Parameters.model_validate(dump)
+        assert reloaded == pars
