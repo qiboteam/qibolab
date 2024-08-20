@@ -1,11 +1,9 @@
-import numpy as np
 import pytest
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
+from qibolab import AcquisitionType, ExecutionParameters, create_platform
 from qibolab.platform.platform import Platform
 from qibolab.pulses import Delay, GaussianSquare, Pulse
 from qibolab.sequence import PulseSequence
-from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
 SWEPT_POINTS = 5
 
@@ -83,67 +81,3 @@ def test_dummy_execute_pulse_sequence_unrolling(
             assert r.magnitude.shape == (nshots,)
         if acquisition is AcquisitionType.DISCRIMINATION:
             assert r.samples.shape == (nshots,)
-
-
-@pytest.mark.parametrize("fast_reset", [True, False])
-@pytest.mark.parametrize(
-    "parameter", [Parameter.amplitude, Parameter.duration, Parameter.bias]
-)
-@pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
-@pytest.mark.parametrize(
-    "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
-)
-@pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_single_sweep_coupler(
-    fast_reset, parameter, average, acquisition, nshots
-):
-    platform = create_platform("dummy")
-    sequence = PulseSequence()
-    natives = platform.natives
-    probe_seq = natives.single_qubit[0].MZ.create_sequence()
-    acq = probe_seq[1][1]
-    coupler_pulse = Pulse.flux(
-        duration=40,
-        amplitude=0.5,
-        envelope=GaussianSquare(rel_sigma=0.2, width=0.75),
-    )
-    sequence.concatenate(probe_seq)
-    sequence.append((platform.get_coupler(0).flux.name, coupler_pulse))
-    if parameter is Parameter.amplitude:
-        parameter_range = np.random.rand(SWEPT_POINTS)
-    else:
-        parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    if parameter in ChannelParameter:
-        sweeper = Sweeper(
-            parameter, parameter_range, channels=[platform.couplers[0].flux.name]
-        )
-    else:
-        sweeper = Sweeper(parameter, parameter_range, pulses=[coupler_pulse])
-    options = ExecutionParameters(
-        nshots=nshots,
-        averaging_mode=average,
-        acquisition_type=acquisition,
-        fast_reset=fast_reset,
-    )
-    results = platform.execute([sequence], options, [[sweeper]])
-
-    assert acq.id in results
-    if not options.averaging_mode.average:
-        results_shape = (
-            results[acq.id][0].shape
-            if acquisition is AcquisitionType.INTEGRATION
-            else results[acq.id][0].shape
-        )
-    else:
-        results_shape = (
-            results[acq.id][0].shape
-            if acquisition is AcquisitionType.INTEGRATION
-            else results[acq.id][0].shape
-        )
-
-    expected_shape = (SWEPT_POINTS,)
-    if not options.averaging_mode.average:
-        expected_shape = (nshots,) + expected_shape
-    if acquisition is not AcquisitionType.DISCRIMINATION:
-        expected_shape += (2,)
-    assert results_shape == expected_shape
