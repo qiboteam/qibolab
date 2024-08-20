@@ -5,6 +5,7 @@ example.
 """
 
 from collections.abc import Callable, Iterable
+from types import UnionType
 from typing import Annotated, Any, Type, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
@@ -104,7 +105,8 @@ ComponentId = str
 This is assumed to always be in its serialized form.
 """
 
-_BUILTIN_CONFIGS = [ChannelConfig, Bounds]
+_ChannelConfigT = Union[UnionType, type[Config]]
+_BUILTIN_CONFIGS: tuple[_ChannelConfigT, ...] = (ChannelConfig, Bounds)
 
 
 class ConfigKinds:
@@ -120,7 +122,7 @@ class ConfigKinds:
         loading operations.
     """
 
-    _registered: list[Type[Config]] = _BUILTIN_CONFIGS
+    _registered: list[_ChannelConfigT] = list(_BUILTIN_CONFIGS)
 
     @classmethod
     def extend(cls, kinds: Iterable[Type[Config]]):
@@ -133,10 +135,10 @@ class ConfigKinds:
     @classmethod
     def reset(cls):
         """Reset known configuration kinds to built-ins."""
-        cls._registered = _BUILTIN_CONFIGS
+        cls._registered = list(_BUILTIN_CONFIGS)
 
     @classmethod
-    def registered(cls) -> list[Type[Config]]:
+    def registered(cls) -> list[_ChannelConfigT]:
         """Retrieve registered configuration kinds."""
         return cls._registered.copy()
 
