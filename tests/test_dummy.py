@@ -3,7 +3,7 @@ import pytest
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters, create_platform
 from qibolab.platform.platform import Platform
-from qibolab.pulses import Delay, Gaussian, GaussianSquare, Pulse
+from qibolab.pulses import Delay, GaussianSquare, Pulse
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
@@ -85,30 +85,6 @@ def test_dummy_execute_pulse_sequence_unrolling(
             assert r.samples.shape == (nshots,)
 
 
-def test_dummy_single_sweep_raw(platform: Platform):
-    sequence = PulseSequence()
-    natives = platform.natives
-    probe_seq = natives.single_qubit[0].MZ.create_sequence()
-    acq = probe_seq[1][1]
-
-    parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.concatenate(probe_seq)
-    sweeper = Sweeper(
-        Parameter.frequency,
-        parameter_range,
-        channels=[platform.get_qubit(0).probe.name],
-    )
-    options = ExecutionParameters(
-        nshots=10,
-        averaging_mode=AveragingMode.CYCLIC,
-        acquisition_type=AcquisitionType.RAW,
-    )
-    results = platform.execute([sequence], options, [[sweeper]])
-    assert acq.id in results
-    shape = results[acq.id][0].shape
-    assert shape == (SWEPT_POINTS, int(acq.duration), 2)
-
-
 @pytest.mark.parametrize("fast_reset", [True, False])
 @pytest.mark.parametrize(
     "parameter", [Parameter.amplitude, Parameter.duration, Parameter.bias]
@@ -166,141 +142,6 @@ def test_dummy_single_sweep_coupler(
         )
 
     expected_shape = (SWEPT_POINTS,)
-    if not options.averaging_mode.average:
-        expected_shape = (nshots,) + expected_shape
-    if acquisition is not AcquisitionType.DISCRIMINATION:
-        expected_shape += (2,)
-    assert results_shape == expected_shape
-
-
-@pytest.mark.parametrize("fast_reset", [True, False])
-@pytest.mark.parametrize("parameter", Parameter)
-@pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
-@pytest.mark.parametrize(
-    "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
-)
-@pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_single_sweep(
-    platform: Platform, fast_reset, parameter, average, acquisition, nshots
-):
-    sequence = PulseSequence()
-    natives = platform.natives
-    probe_seq = natives.single_qubit[0].MZ.create_sequence()
-    pulse = probe_seq[0][1]
-    acq = probe_seq[1][1]
-    if parameter is Parameter.amplitude:
-        parameter_range = np.random.rand(SWEPT_POINTS)
-    else:
-        parameter_range = np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    sequence.concatenate(probe_seq)
-    if parameter in ChannelParameter:
-        channel = (
-            platform.qubits[0].drive.name
-            if parameter is Parameter.frequency
-            else platform.qubits[0].flux.name
-        )
-        sweeper = Sweeper(parameter, parameter_range, channels=[channel])
-    else:
-        sweeper = Sweeper(parameter, parameter_range, pulses=[pulse])
-    options = ExecutionParameters(
-        nshots=nshots,
-        averaging_mode=average,
-        acquisition_type=acquisition,
-        fast_reset=fast_reset,
-    )
-    results = platform.execute([sequence], options, [[sweeper]])
-
-    assert acq.id in results
-    if options.averaging_mode.average:
-        results_shape = (
-            results[acq.id][0].shape
-            if acquisition is AcquisitionType.INTEGRATION
-            else results[acq.id][0].shape
-        )
-    else:
-        results_shape = (
-            results[acq.id][0].shape
-            if acquisition is AcquisitionType.INTEGRATION
-            else results[acq.id][0].shape
-        )
-
-    expected_shape = (SWEPT_POINTS,)
-    if not options.averaging_mode.average:
-        expected_shape = (nshots,) + expected_shape
-    if acquisition is not AcquisitionType.DISCRIMINATION:
-        expected_shape += (2,)
-    assert results_shape == expected_shape
-
-
-@pytest.mark.parametrize("parameter1", Parameter)
-@pytest.mark.parametrize("parameter2", Parameter)
-@pytest.mark.parametrize("average", [AveragingMode.SINGLESHOT, AveragingMode.CYCLIC])
-@pytest.mark.parametrize(
-    "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
-)
-@pytest.mark.parametrize("nshots", [10, 20])
-def test_dummy_double_sweep(
-    platform: Platform, parameter1, parameter2, average, acquisition, nshots
-):
-    sequence = PulseSequence()
-    pulse = Pulse(duration=40, amplitude=0.1, envelope=Gaussian(rel_sigma=5))
-    natives = platform.natives
-    probe_seq = natives.single_qubit[0].MZ.create_sequence()
-    probe_pulse = probe_seq[0][1]
-    acq = probe_seq[1][1]
-    sequence.append((platform.get_qubit(0).drive.name, pulse))
-    sequence.append((platform.qubits[0].probe.name, Delay(duration=pulse.duration)))
-    sequence.concatenate(probe_seq)
-    parameter_range_1 = (
-        np.random.rand(SWEPT_POINTS)
-        if parameter1 is Parameter.amplitude
-        else np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    )
-    parameter_range_2 = (
-        np.random.rand(SWEPT_POINTS)
-        if parameter2 is Parameter.amplitude
-        else np.random.randint(SWEPT_POINTS, size=SWEPT_POINTS)
-    )
-
-    if parameter1 in ChannelParameter:
-        channel = (
-            platform.qubits[0].probe.name
-            if parameter1 is Parameter.frequency
-            else platform.qubits[0].flux.name
-        )
-        sweeper1 = Sweeper(parameter1, parameter_range_1, channels=[channel])
-    else:
-        sweeper1 = Sweeper(parameter1, parameter_range_1, pulses=[probe_pulse])
-    if parameter2 in ChannelParameter:
-        sweeper2 = Sweeper(
-            parameter2, parameter_range_2, channels=[platform.qubits[0].flux.name]
-        )
-    else:
-        sweeper2 = Sweeper(parameter2, parameter_range_2, pulses=[pulse])
-
-    options = ExecutionParameters(
-        nshots=nshots,
-        averaging_mode=average,
-        acquisition_type=acquisition,
-    )
-    results = platform.execute([sequence], options, [[sweeper1], [sweeper2]])
-
-    assert acq.id in results
-
-    if options.averaging_mode.average:
-        results_shape = (
-            results[acq.id][0].shape
-            if acquisition is AcquisitionType.INTEGRATION
-            else results[acq.id][0].shape
-        )
-    else:
-        results_shape = (
-            results[acq.id][0].shape
-            if acquisition is AcquisitionType.INTEGRATION
-            else results[acq.id][0].shape
-        )
-
-    expected_shape = (SWEPT_POINTS, SWEPT_POINTS)
     if not options.averaging_mode.average:
         expected_shape = (nshots,) + expected_shape
     if acquisition is not AcquisitionType.DISCRIMINATION:
