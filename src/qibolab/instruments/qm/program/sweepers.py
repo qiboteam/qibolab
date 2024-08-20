@@ -70,17 +70,18 @@ def _frequency(
     args: ExecutionArguments,
 ):
     for channel in channels:
+        name = str(channel.name)
         lo_frequency = configs[channel.lo].frequency
         # convert to IF frequency for readout and drive pulses
-        f0 = math.floor(configs[channel.name].frequency - lo_frequency)
+        f0 = math.floor(configs[name].frequency - lo_frequency)
         # check if sweep is within the supported bandwidth [-400, 400] MHz
         max_freq = maximum_sweep_value(values, f0)
         if max_freq > 4e8:
             raise_error(
                 ValueError,
-                f"Frequency {max_freq} for channel {channel.name} is beyond instrument bandwidth.",
+                f"Frequency {max_freq} for channel {name} is beyond instrument bandwidth.",
             )
-        qua.update_frequency(channel.name, variable + f0)
+        qua.update_frequency(name, variable + f0)
 
 
 def _amplitude(
@@ -124,16 +125,17 @@ def _bias(
     args: ExecutionArguments,
 ):
     for channel in channels:
-        offset = configs[channel.name].offset
+        name = str(channel.name)
+        offset = configs[name].offset
         max_value = maximum_sweep_value(values, offset)
         check_max_offset(max_value, MAX_OFFSET)
         b0 = declare(fixed, value=offset)
         with qua.if_((variable + b0) >= 0.49):
-            qua.set_dc_offset(f"flux{channel.name}", "single", 0.49)
+            qua.set_dc_offset(f"flux{name}", "single", 0.49)
         with qua.elif_((variable + b0) <= -0.49):
-            qua.set_dc_offset(f"flux{channel.name}", "single", -0.49)
+            qua.set_dc_offset(f"flux{name}", "single", -0.49)
         with qua.else_():
-            qua.set_dc_offset(f"flux{channel.name}", "single", (variable + b0))
+            qua.set_dc_offset(f"flux{name}", "single", (variable + b0))
 
 
 def _duration(

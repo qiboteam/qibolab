@@ -51,7 +51,8 @@ def play(args: ExecutionArguments):
     Should be used inside a ``program()`` context.
     """
     qua.align()
-    for element, pulse in args.sequence:
+    for channel_id, pulse in args.sequence:
+        element = str(channel_id)
         op = operation(pulse)
         params = args.parameters[op]
         if isinstance(pulse, Delay):
