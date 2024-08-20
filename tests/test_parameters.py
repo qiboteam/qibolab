@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pytest
 
 from qibolab.components.configs import Config
@@ -25,11 +27,13 @@ def test_two_qubit_container():
 
 
 class DummyConfig(Config):
+    kind: Literal["dummy"] = "dummy"
     ciao: str
 
 
 class DummyConfig1(Config):
-    come: str
+    kind: Literal["dummy1"] = "dummy1"
+    come: int
 
 
 class TestConfigKinds:
@@ -48,3 +52,19 @@ class TestConfigKinds:
         ConfigKinds.extend([DummyConfig, DummyConfig1])
         assert DummyConfig in ConfigKinds.registered()
         assert DummyConfig1 in ConfigKinds.registered()
+
+    def test_adapted(self):
+        ConfigKinds.extend([DummyConfig, DummyConfig1])
+        adapted = ConfigKinds.adapted()
+
+        dummy = DummyConfig(ciao="come")
+        dump = adapted.dump_python(dummy)
+        assert dump["ciao"] == "come"
+        reloaded = adapted.validate_python(dump)
+        assert reloaded == dummy
+
+        dummy1 = DummyConfig1(come=42)
+        dump1 = adapted.dump_python(dummy1)
+        assert dump1["come"] == 42
+        reloaded1 = adapted.validate_python(dump1)
+        assert reloaded1 == dummy1

@@ -6,7 +6,7 @@ example.
 
 from collections.abc import Callable, Iterable
 from types import UnionType
-from typing import Annotated, Any, Type, Union
+from typing import Annotated, Any, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
@@ -125,7 +125,7 @@ class ConfigKinds:
     _registered: list[_ChannelConfigT] = list(_BUILTIN_CONFIGS)
 
     @classmethod
-    def extend(cls, kinds: Iterable[Type[Config]]):
+    def extend(cls, kinds: Iterable[type[Config]]):
         """Extend the known configuration kinds.
 
         Nested unions are supported (i.e. :class:`Union` as elements of ``kinds``).
