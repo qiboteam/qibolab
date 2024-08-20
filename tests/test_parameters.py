@@ -37,9 +37,9 @@ class DummyConfig1(Config):
 
 
 class TestConfigKinds:
+    # TODO: add @staticmethod and drop unused `self`, once py3.9 will be abandoned
     @pytest.fixture(autouse=True)
-    @staticmethod
-    def clean_kinds():
+    def clean_kinds(self):
         ConfigKinds.reset()
 
     def test_manipulation(self):
