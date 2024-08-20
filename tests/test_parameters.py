@@ -1,7 +1,8 @@
 import pytest
 
+from qibolab.components.configs import Config
 from qibolab.native import FixedSequenceFactory, TwoQubitNatives
-from qibolab.parameters import TwoQubitContainer
+from qibolab.parameters import ConfigKinds, TwoQubitContainer
 
 
 def test_two_qubit_container():
@@ -21,3 +22,29 @@ def test_two_qubit_container():
 
     empty = TwoQubitContainer({(0, 1): TwoQubitNatives()})
     assert empty[(1, 0)] is not None
+
+
+class DummyConfig(Config):
+    ciao: str
+
+
+class DummyConfig1(Config):
+    come: str
+
+
+class TestConfigKinds:
+    @pytest.fixture(autouse=True)
+    @staticmethod
+    def clean_kinds():
+        ConfigKinds.reset()
+
+    def test_manipulation(self):
+        ConfigKinds.extend([DummyConfig])
+        assert DummyConfig in ConfigKinds.registered()
+
+        ConfigKinds.reset()
+        assert DummyConfig not in ConfigKinds.registered()
+
+        ConfigKinds.extend([DummyConfig, DummyConfig1])
+        assert DummyConfig in ConfigKinds.registered()
+        assert DummyConfig1 in ConfigKinds.registered()
