@@ -18,6 +18,19 @@ __all__ = ["PulseSequence"]
 _Element = tuple[ChannelId, PulseLike]
 
 
+def _synchronize(sequence: "PulseSequence", channels: Iterable[ChannelId]) -> None:
+    """Helper for ``concatenate`` and ``align_to_delays``.
+
+    Modifies given ``sequence`` in-place!
+    """
+    durations = {ch: sequence.channel_duration(ch) for ch in channels}
+    max_duration = max(durations.values(), default=0.0)
+    for ch, duration in durations.items():
+        delay = max_duration - duration
+        if delay > 0:
+            sequence.append((ch, Delay(duration=delay)))
+
+
 class PulseSequence(UserList[_Element]):
     """Synchronized sequence of control instructions across multiple channels.
 
@@ -71,14 +84,6 @@ class PulseSequence(UserList[_Element]):
         """Duration of the given channel."""
         return sum(pulse.duration for pulse in self.channel(channel))
 
-    # TODO: Drop ``pulse_channel`` in favor of ``pulse_channels``
-    def pulse_channel(self, pulse_id: int) -> ChannelId:
-        """Find channel on which a pulse with a given id plays."""
-        for channel, pulse in self:
-            if pulse.id == pulse_id:
-                return channel
-        raise ValueError(f"Pulse with id {pulse_id} does not exist in the sequence.")
-
     def pulse_channels(self, pulse_id: int) -> ChannelId:
         """Find channels on which a pulse with a given id plays."""
         channels = [channel for channel, pulse in self if pulse.id == pulse_id]
@@ -96,12 +101,7 @@ class PulseSequence(UserList[_Element]):
             - necessary delays to synchronize channels
             - ``other``
         """
-        durations = {ch: self.channel_duration(ch) for ch in other.channels}
-        max_duration = max(durations.values(), default=0.0)
-        for ch, duration in durations.items():
-            delay = max_duration - duration
-            if delay > 0:
-                self.append((ch, Delay(duration=delay)))
+        _synchronize(self, other.channels)
         self.extend(other)
 
     def align(self, channels: list[ChannelId]) -> Align:
@@ -124,12 +124,7 @@ class PulseSequence(UserList[_Element]):
             if isinstance(pulse, Align):
                 if pulse.id not in processed_aligns:
                     channels = self.pulse_channels(pulse.id)
-                    durations = {ch: new.channel_duration(ch) for ch in channels}
-                    max_duration = max(durations.values(), default=0.0)
-                    for ch, duration in durations.items():
-                        delay = max_duration - duration
-                        if delay > 0:
-                            new.append((ch, Delay(delay)))
+                    _synchronize(new, channels)
                     processed_aligns.add(pulse.id)
             else:
                 new.append((channel, pulse))

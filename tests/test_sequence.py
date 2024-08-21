@@ -178,6 +178,56 @@ def test_copy():
     assert "ch3" not in sequence
 
 
+def test_align_to_delay():
+    sequence = PulseSequence(
+        [
+            (
+                "ch1",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch1",
+                Delay(duration=20),
+            ),
+            (
+                "ch1",
+                Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch2",
+                Pulse(duration=60, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch2",
+                Pulse(duration=80, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+        ]
+    )
+    sequence.align(["ch1", "ch2"])
+    sequence.append(
+        (
+            "ch1",
+            Pulse(duration=20, amplitude=0.1, envelope=Gaussian(rel_sigma=3)),
+        )
+    )
+    sequence.append(
+        (
+            "ch2",
+            Pulse(duration=30, amplitude=0.1, envelope=Gaussian(rel_sigma=3)),
+        )
+    )
+
+    delay_sequence = sequence.align_to_delays()
+    assert len(delay_sequence) == len(sequence) - 1
+    for (ch1, p1), (ch2, p2) in zip(sequence[:5], delay_sequence[:5]):
+        assert ch1 == ch2
+        assert p1 is p2
+    assert delay_sequence[5] == ("ch1", Delay(duration=40))
+    for (ch1, p1), (ch2, p2) in zip(sequence[7:], delay_sequence[6:]):
+        assert ch1 == ch2
+        assert p1 is p2
+
+
 def test_trim():
     p = Pulse(duration=40, amplitude=0.9, envelope=Rectangular())
     d = Delay(duration=10)
