@@ -226,6 +226,11 @@ def test_align_to_delay():
     for (ch1, p1), (ch2, p2) in zip(sequence[7:], delay_sequence[6:]):
         assert ch1 == ch2
         assert p1 is p2
+    # assert that pulses after align start simultaneously
+    sequence_without_last = PulseSequence(delay_sequence[:-2])
+    ch1_start = sequence_without_last.channel_duration("ch1")
+    ch2_start = sequence_without_last.channel_duration("ch2")
+    assert ch1_start == ch2_start
 
 
 def test_trim():
