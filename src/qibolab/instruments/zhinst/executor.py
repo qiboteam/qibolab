@@ -559,6 +559,34 @@ class Zurich(Controller):
             f"Could not find instrument node corresponding to channel {channel_name}"
         )
 
+    def _calculate_weight(self, pulse, qubit, exp_options):
+        if (
+            qubit.kernel is not None
+            and exp_options.acquisition_type == lo.AcquisitionType.DISCRIMINATION
+        ):
+            return lo.pulse_library.sampled_pulse_complex(
+                samples=qubit.kernel * np.exp(1j * qubit.iq_angle),
+            )
+
+        elif exp_options.acquisition_type == lo.AcquisitionType.DISCRIMINATION:
+            return lo.pulse_library.sampled_pulse_complex(
+                samples=np.ones(
+                    [
+                        int(
+                            pulse.pulse.duration * 2
+                            - 3 * self.smearing * NANO_TO_SECONDS
+                        )
+                    ]
+                )
+                * np.exp(1j * qubit.iq_angle),
+            )
+        else:
+            return lo.pulse_library.const(
+                length=round(pulse.pulse.duration * NANO_TO_SECONDS, 9)
+                - 1.5 * self.smearing * NANO_TO_SECONDS,
+                amplitude=1,
+            )
+
     def select_exp(self, exp, qubits, exp_options):
         """Build Zurich Experiment selecting the relevant sections."""
         # channels that were not split are just applied in parallel to the rest of the experiment
@@ -607,52 +635,16 @@ class Zurich(Controller):
             with exp.section(uid=section_uid, play_after=previous_section):
                 for ch, pulse in seq.measurements:
                     qubit = qubits[pulse.pulse.qubit]
-                    q = qubit.name
 
                     exp.delay(
                         signal=acquire_channel_name(qubit),
                         time=self.smearing * NANO_TO_SECONDS,
                     )
 
-                    if (
-                        qubit.kernel is not None
-                        and exp_options.acquisition_type
-                        == lo.AcquisitionType.DISCRIMINATION
-                    ):
-                        weight = lo.pulse_library.sampled_pulse_complex(
-                            samples=qubit.kernel * np.exp(1j * qubit.iq_angle),
+                    if qubit.name not in weights:
+                        weights[qubit.name] = self._calculate_weight(
+                            pulse, qubit, exp_options
                         )
-
-                    else:
-                        if i == 0:
-                            if (
-                                exp_options.acquisition_type
-                                == lo.AcquisitionType.DISCRIMINATION
-                            ):
-                                weight = lo.pulse_library.sampled_pulse_complex(
-                                    samples=np.ones(
-                                        [
-                                            int(
-                                                pulse.pulse.duration * 2
-                                                - 3 * self.smearing * NANO_TO_SECONDS
-                                            )
-                                        ]
-                                    )
-                                    * np.exp(1j * qubit.iq_angle),
-                                )
-                                weights[q] = weight
-                            else:
-                                weight = lo.pulse_library.const(
-                                    length=round(
-                                        pulse.pulse.duration * NANO_TO_SECONDS, 9
-                                    )
-                                    - 1.5 * self.smearing * NANO_TO_SECONDS,
-                                    amplitude=1,
-                                )
-
-                                weights[q] = weight
-                        elif i != 0:
-                            weight = weights[q]
 
                     measure_pulse_parameters = {"phase": 0}
 
@@ -663,8 +655,8 @@ class Zurich(Controller):
 
                     exp.measure(
                         acquire_signal=acquire_channel_name(qubit),
-                        handle=f"sequence{q}_{i}",
-                        integration_kernel=weight,
+                        handle=f"sequence{qubit.name}_{i}",
+                        integration_kernel=weights[qubit.name],
                         integration_kernel_parameters=None,
                         integration_length=None,
                         measure_signal=measure_channel_name(qubit),
