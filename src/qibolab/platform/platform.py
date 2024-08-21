@@ -167,12 +167,17 @@ class Platform:
     @property
     def channels(self) -> list[ChannelId]:
         """Channels in the platform."""
-        return list(self.channels_map)
+        return list(self.qubit_channels) + list(self.coupler_channels)
 
     @property
-    def channels_map(self) -> dict[ChannelId, QubitId]:
-        """Channel to element map."""
-        return _channels_map(self.qubits) | _channels_map(self.couplers)
+    def qubit_channels(self) -> dict[ChannelId, QubitId]:
+        """Channel to qubit map."""
+        return _channels_map(self.qubits)
+
+    @property
+    def coupler_channels(self):
+        """Channel to coupler map."""
+        return _channels_map(self.couplers)
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""

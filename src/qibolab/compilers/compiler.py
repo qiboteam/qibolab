@@ -15,6 +15,7 @@ from qibolab.compilers.default import (
     rz_rule,
     z_rule,
 )
+from qibolab.identifier import ChannelId
 from qibolab.platform import Platform
 from qibolab.pulses import Delay
 from qibolab.qubits import QubitId
@@ -120,7 +121,62 @@ class Compiler:
 
         raise NotImplementedError(f"{type(gate)} is not a native gate.")
 
-    # FIXME: pulse.qubit and pulse.channel do not exist anymore
+    def _compile_gate(
+        self,
+        gate: gates.Gate,
+        platform: Platform,
+        channel_clock: defaultdict[ChannelId, float],
+    ) -> PulseSequence:
+        def qubit_clock(el: QubitId):
+            return max(channel_clock[ch.name] for ch in platform.qubits[el].channels)
+
+        def coupler_clock(el: QubitId):
+            return max(channel_clock[ch.name] for ch in platform.couplers[el].channels)
+
+        gate_seq = self.get_sequence(gate, platform)
+        # qubits receiving pulses
+        qubits = {
+            q
+            for q in [platform.qubit_channels.get(ch) for ch in gate_seq.channels]
+            if q is not None
+        }
+        # couplers receiving pulses
+        couplers = {
+            c
+            for c in [platform.coupler_channels.get(ch) for ch in gate_seq.channels]
+            if c is not None
+        }
+
+        # add delays to pad all involved channels to begin at the same time
+        start = max(
+            [qubit_clock(q) for q in qubits] + [coupler_clock(c) for c in couplers],
+            default=0.0,
+        )
+        initial = PulseSequence()
+        for ch in gate_seq.channels:
+            delay = start - channel_clock[ch]
+            if delay > 0:
+                initial.append((ch, Delay(duration=delay)))
+            channel_clock[ch] = start + gate_seq.channel_duration(ch)
+
+        # pad all qubits to have at least one channel busy for the duration of the gate
+        # (drive arbitrarily chosen, as always present)
+        end = start + gate_seq.duration
+        final = PulseSequence()
+        for q in gate.qubits:
+            qubit = platform.get_qubit(q)
+            # all actual qubits have a non-null drive channel, and couplers are not
+            # explicitedly listed in gates
+            assert qubit.drive is not None
+            delay = end - channel_clock[qubit.drive.name]
+            if delay > 0:
+                final.append((qubit.drive.name, Delay(duration=delay)))
+                channel_clock[qubit.drive.name] += delay
+        # couplers do not require individual padding, because they do are only
+        # involved in gates where both of the other qubits are involved
+
+        return initial + gate_seq + final
+
     def compile(
         self, circuit: Circuit, platform: Platform
     ) -> tuple[PulseSequence, dict[gates.M, PulseSequence]]:
@@ -136,58 +192,19 @@ class Compiler:
             sequence (qibolab.pulses.PulseSequence): Pulse sequence that implements the circuit.
             measurement_map (dict): Map from each measurement gate to the sequence of  readout pulse implementing it.
         """
-        ch_to_qb = platform.channels_map
-
         sequence = PulseSequence()
-        # FIXME: This will not work with qubits that have string names
-        # TODO: Implement a mapping between circuit qubit ids and platform ``Qubit``s
 
         measurement_map = {}
         channel_clock = defaultdict(float)
 
-        def qubit_clock(el: QubitId):
-            elements = platform.qubits if el in platform.qubits else platform.couplers
-            return max(channel_clock[ch.name] for ch in elements[el].channels)
-
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in {x for x in moment if x is not None}:
-                delay_sequence = PulseSequence()
-                gate_sequence = self.get_sequence(gate, platform)
-                increment = defaultdict(float)
-                active_qubits = {ch_to_qb[ch] for ch in gate_sequence.channels}
-                start = max((qubit_clock(el) for el in active_qubits), default=0.0)
-                for ch in gate_sequence.channels:
-                    delay = start - channel_clock[ch]
-                    if delay > 0:
-                        delay_sequence.append((ch, Delay(duration=delay)))
-                        channel_clock[ch] += delay
-                    increment[ch] = gate_sequence.channel_duration(ch)
-                # add the increment only after computing them, since multiple channels
-                # are related to each other because belonging to the same qubit
-                for ch, inc in increment.items():
-                    channel_clock[ch] += inc
-
-                end = start + gate_sequence.duration
-                for q in gate.qubits:
-                    if q not in active_qubits:
-                        qubit = platform.get_qubit(q)
-                        # all actual qubits have a non-null drive channel, and couplers
-                        # are not explicitedly listed in gates
-                        assert qubit.drive is not None
-                        delay = end - channel_clock[qubit.drive]
-                        if delay > 0:
-                            delay_sequence.append(
-                                (qubit.drive.name, Delay(duration=delay))
-                            )
-                            channel_clock[qubit.drive.name] += delay
-
-                sequence.concatenate(delay_sequence)
-                sequence.concatenate(gate_sequence)
+                sequence += self._compile_gate(gate, platform, channel_clock)
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates
                 if isinstance(gate, gates.M):
-                    measurement_map[gate] = gate_sequence
+                    measurement_map[gate] = self.get_sequence(gate, platform)
 
         return sequence.trim(), measurement_map
