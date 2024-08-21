@@ -6,13 +6,13 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.pulses import Delay
+from qibolab.pulses import Align, Delay, Pulse, VirtualZ
 from qibolab.sweeper import ParallelSweepers
 
 from ..config import operation
 from .acquisition import Acquisition
 from .arguments import ExecutionArguments, Parameters
-from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS
+from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS, normalize_phase
 
 
 def _delay(pulse: Delay, element: str, parameters: Parameters):
@@ -61,6 +61,12 @@ def play(args: ExecutionArguments):
     Should be used inside a ``program()`` context.
     """
     qua.align()
+
+    # keep track of ``Align`` command that were already played
+    # because the same ``Align`` will appear on multiple channels
+    # in the sequence
+    played_aligns = set()
+
     for channel_id, pulse in args.sequence:
         element = str(channel_id)
         op = operation(pulse)
@@ -70,6 +76,12 @@ def play(args: ExecutionArguments):
         elif isinstance(pulse, Pulse):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
+        elif isinstance(pulse, VirtualZ):
+            qua.frame_rotation_2pi(normalize_phase(pulse.phase), element)
+        elif isinstance(pulse, Align) and pulse.id not in played_aligns:
+            elements = args.sequence.pulse_channels(pulse.id)
+            qua.align(*elements)
+            played_aligns.add(pulse.id)
 
     if args.relaxation_time > 0:
         qua.wait(args.relaxation_time // 4)
