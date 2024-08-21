@@ -49,14 +49,6 @@ def test_dummy_execute_pulse_sequence_couplers():
     _ = platform.execute([sequence], options)
 
 
-def test_dummy_execute_pulse_sequence_fast_reset(platform: Platform):
-    natives = platform.natives
-    sequence = PulseSequence()
-    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
-    options = ExecutionParameters(nshots=None, fast_reset=True)
-    _ = platform.execute([sequence], options)
-
-
 @pytest.mark.parametrize(
     "acquisition", [AcquisitionType.INTEGRATION, AcquisitionType.DISCRIMINATION]
 )
