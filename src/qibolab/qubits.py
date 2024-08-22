@@ -38,19 +38,3 @@ class Qubit(Model):
             channel = getattr(self, ct.value)
             if channel is not None:
                 yield channel
-
-    @property
-    def mixer_frequencies(self):
-        """Get local oscillator and intermediate frequencies of native gates.
-
-        Assumes RF = LO + IF.
-        """
-        freqs = {}
-        for name in self.native_gates.model_fields:
-            native = getattr(self.native_gates, name)
-            if native is not None:
-                channel_type = native.pulse_type.name.lower()
-                _lo = getattr(self, channel_type).lo_frequency
-                _if = native.frequency - _lo
-                freqs[name] = _lo, _if
-        return freqs
