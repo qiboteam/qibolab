@@ -11,8 +11,9 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import Channel, ChannelId, Config, DcChannel, IqChannel
+from qibolab.components import Channel, Config, DcChannel, IqChannel
 from qibolab.execution_parameters import ExecutionParameters
+from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
 from qibolab.pulses import Delay, Pulse, VirtualZ
 from qibolab.sequence import PulseSequence

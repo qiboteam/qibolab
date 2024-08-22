@@ -617,7 +617,7 @@ class QrmRf(ClusterModule):
                 # Acquisitions
                 pulse = None
                 for acquisition_index, pulse in enumerate(
-                    sequencer.pulses.probe_pulses
+                    sequencer.pulses.acquisitions
                 ):
                     sequencer.acquisitions[pulse.id] = {
                         "num_bins": num_bins,
@@ -766,14 +766,14 @@ class QrmRf(ClusterModule):
                         # Prepare acquire instruction: acquire acquisition_index, bin_index, delay_next_instruction
                         if active_reset:
                             pulses_block.append(
-                                f"acquire {pulses.probe_pulses.index(pulses[n])},{bin_n},4"
+                                f"acquire {pulses.acquisitions.index(pulses[n])},{bin_n},4"
                             )
                             pulses_block.append(
                                 f"latch_rst {delay_after_acquire + 300 - 4}"
                             )
                         else:
                             pulses_block.append(
-                                f"acquire {pulses.probe_pulses.index(pulses[n])},{bin_n},{delay_after_acquire}"
+                                f"acquire {pulses.acquisitions.index(pulses[n])},{bin_n},{delay_after_acquire}"
                             )
 
                     else:
@@ -999,8 +999,8 @@ class QrmRf(ClusterModule):
                         "scope_acquisition"
                     ]
                 if not hardware_demod_enabled:  # Software Demodulation
-                    if len(sequencer.pulses.probe_pulses) == 1:
-                        pulse = sequencer.pulses.probe_pulses[0]
+                    if len(sequencer.pulses.acquisitions) == 1:
+                        pulse = sequencer.pulses.acquisitions[0]
                         frequency = self.get_if(pulse)
                         acquisitions[pulse.qubit] = acquisitions[pulse.id] = (
                             AveragedAcquisition(scope, duration, frequency)
@@ -1012,7 +1012,7 @@ class QrmRf(ClusterModule):
                         )
                 else:  # Hardware Demodulation
                     results = self.device.get_acquisitions(sequencer.number)
-                    for pulse in sequencer.pulses.probe_pulses:
+                    for pulse in sequencer.pulses.acquisitions:
                         bins = results[pulse.id]["acquisition"]["bins"]
                         acquisitions[pulse.qubit] = acquisitions[pulse.id] = (
                             DemodulatedAcquisition(scope, bins, duration)

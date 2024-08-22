@@ -73,9 +73,11 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     import matplotlib.pyplot as plt
 
-    probe_pulse = sequence.probe_pulses[0]
-    amplitudes = magnitude(results[probe_pulse.id][0])
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
+    acq = sequence.acquisitions[0][1]
+    amplitudes = magnitude(results[acq.id][0])
+    frequencies = (
+        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.probe.name)).frequency
+    )
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -164,9 +166,11 @@ We can now proceed to launch on hardware:
 
     results = platform.execute([sequence], options, [[sweeper]])
 
-    probe_pulse = next(iter(sequence.probe_pulses))
-    amplitudes = magnitude(results[probe_pulse.id][0])
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.drive.name).frequency
+    _, acq = next(iter(sequence.acquisitions))
+    amplitudes = magnitude(results[acq.id][0])
+    frequencies = (
+        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.drive.name)).frequency
+    )
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -251,19 +255,19 @@ and its impact on qubit states in the IQ plane.
     results_one = platform.execute([one_sequence], options)
     results_zero = platform.execute([zero_sequence], options)
 
-    probe_pulse1 = next(iter(one_sequence.probe_pulses))
-    probe_pulse2 = next(iter(zero_sequence.probe_pulses))
+    _, acq1 = next(iter(one_sequence.acquisitions))
+    _, acq0 = next(iter(zero_sequence.acquisitions))
 
     plt.title("Single shot classification")
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[probe_pulse1.id][0],
-        results_one[probe_pulse1.id][0],
+        results_one[acq1.id][0],
+        results_one[acq1.id][0],
         label="One state",
     )
     plt.scatter(
-        *unpack(results_zero[probe_pulse2.id][0]),
+        *unpack(results_zero[acq0.id][0]),
         label="Zero state",
     )
     plt.show()

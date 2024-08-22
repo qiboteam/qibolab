@@ -4,7 +4,7 @@ import numpy as np
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.pulses import Pulse
+from qibolab.pulses.pulse import Acquisition
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds
@@ -95,10 +95,12 @@ class DummyInstrument(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ):
-        def values(pulse: Pulse):
-            samples = int(pulse.duration * self.sampling_rate)
+        def values(acq: Acquisition):
+            samples = int(acq.duration * self.sampling_rate)
             return np.array(
                 self.values(options, options.results_shape(sweepers, samples))
             )
 
-        return {ro.id: values(ro) for seq in sequences for ro in seq.probe_pulses}
+        return {
+            acq.id: values(acq) for seq in sequences for (_, acq) in seq.acquisitions
+        }

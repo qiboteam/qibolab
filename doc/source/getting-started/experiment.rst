@@ -237,11 +237,13 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     )
 
     results = platform.execute([sequence], options, [[sweeper]])
-    probe_pulse = next(iter(sequence.probe_pulses))
+    _, acq = next(iter(sequence.acquisitions))
 
     # plot the results
-    amplitudes = magnitude(results[probe_pulse.id][0])
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe.name).frequency
+    amplitudes = magnitude(results[acq.id][0])
+    frequencies = (
+        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.probe.name)).frequency
+    )
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")

@@ -39,7 +39,7 @@ def default(value: Optional[T], default: T) -> T:
 
 def unroll_sequences(
     sequences: list[PulseSequence], relaxation_time: int
-) -> tuple[PulseSequence, dict[str, list[str]]]:
+) -> tuple[PulseSequence, dict[int, list[int]]]:
     """Unrolls a list of pulse sequences to a single sequence.
 
     The resulting sequence may contain multiple measurements.
@@ -56,8 +56,8 @@ def unroll_sequences(
     for sequence in sequences:
         total_sequence.concatenate(sequence)
         # TODO: Fix unrolling results
-        for pulse in sequence.probe_pulses:
-            readout_map[pulse.id].append(pulse.id)
+        for _, acq in sequence.acquisitions:
+            readout_map[acq.id].append(acq.id)
 
         length = sequence.duration + relaxation_time
         for channel in sequence.channels:

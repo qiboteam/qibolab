@@ -1,8 +1,9 @@
 """Pulse class."""
 
-from typing import Union
+from typing import Annotated, Literal, Union
 
 import numpy as np
+from pydantic import Field
 
 from qibolab.serialize import Model
 
@@ -12,11 +13,17 @@ from .envelope import Envelope, IqWaveform, Waveform
 class _PulseLike(Model):
     @property
     def id(self) -> int:
+        """Instruction identifier."""
         return id(self)
 
 
 class Pulse(_PulseLike):
-    """A pulse to be sent to the QPU."""
+    """A pulse to be sent to the QPU.
+
+    Valid on any channel, except acquisition ones.
+    """
+
+    kind: Literal["pulse"] = "pulse"
 
     duration: float
     """Pulse duration."""
@@ -61,15 +68,26 @@ class Pulse(_PulseLike):
 
 
 class Delay(_PulseLike):
-    """A wait instruction during which we are not sending any pulses to the
-    QPU."""
+    """Wait instruction.
+
+    During its length no pulse is sent on the same channel.
+
+    Valid on any channel.
+    """
+
+    kind: Literal["delay"] = "delay"
 
     duration: float
-    """Delay duration in ns."""
+    """Duration in ns."""
 
 
 class VirtualZ(_PulseLike):
-    """Implementation of Z-rotations using virtual phase."""
+    """Implementation of Z-rotations using virtual phase.
+
+    Only valid on a drive channel.
+    """
+
+    kind: Literal["virtualz"] = "virtualz"
 
     phase: float
     """Phase that implements the rotation."""
@@ -80,4 +98,46 @@ class VirtualZ(_PulseLike):
         return 0
 
 
-PulseLike = Union[Pulse, Delay, VirtualZ]
+class Acquisition(_PulseLike):
+    """Acquisition instruction.
+
+    This event instructs the device to acquire samples for the event
+    span.
+
+    Only valid on an acquisition channel.
+    """
+
+    kind: Literal["acquisition"] = "acquisition"
+
+    duration: float
+    """Duration in ns."""
+
+
+class _Readout(_PulseLike):
+    """Readout instruction.
+
+    This event instructs the device to acquire samples for the event
+    span.
+
+    Only valid on an acquisition channel.
+    """
+
+    kind: Literal["readout"] = "readout"
+
+    acquisition: Acquisition
+    probe: Pulse
+
+    @property
+    def duration(self) -> float:
+        """Duration in ns."""
+        return self.acquisition.duration
+
+    @property
+    def id(self) -> int:
+        """Instruction identifier."""
+        return self.acquisition.id
+
+
+PulseLike = Annotated[
+    Union[Pulse, Delay, VirtualZ, Acquisition, _Readout], Field(discriminator="kind")
+]

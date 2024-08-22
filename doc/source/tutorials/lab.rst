@@ -38,14 +38,18 @@ using different Qibolab primitives.
         qubit = Qubit(name=0)
 
         # assign channels to the qubit
-        qubit.probe = IqChannel(name="probe", mixer=None, lo=None, acquisition="acquire")
-        qubit.acquisition = AcquireChannel(name="acquire", twpa_pump=None, probe="probe")
-        qubit.drive = Iqchannel(name="drive", mixer=None, lo=None)
+        qubit.probe = IqChannel(
+            name="0/probe", mixer=None, lo=None, acquisition="0/acquisition"
+        )
+        qubit.acquisition = AcquireChannel(
+            name="0/acquisition", twpa_pump=None, probe="probe"
+        )
+        qubit.drive = Iqchannel(name="0/drive", mixer=None, lo=None)
 
         # define configuration for channels
         configs = {}
-        configs[qubit.drive.name] = IqConfig(frequency=3e9)
-        configs[qubit.probe.name] = IqConfig(frequency=7e9)
+        configs[str(qubit.drive.name)] = IqConfig(frequency=3e9)
+        configs[str(qubit.probe.name)] = IqConfig(frequency=7e9)
 
         # create sequence that drives qubit from state 0 to 1
         drive_seq = PulseSequence(
@@ -120,13 +124,21 @@ the native gates, but separately from the single-qubit ones.
     qubit1 = Qubit(name=1)
 
     # assign channels to the qubits
-    qubit0.probe = IqChannel(name="probe_0", mixer=None, lo=None, acquisition="acquire_0")
-    qubit0.acquisition = AcquireChannel(name="acquire_0", twpa_pump=None, probe="probe_0")
-    qubit0.drive = IqChannel(name="drive_0", mixer=None, lo=None)
-    qubit0.flux = DcChannel(name="flux_0")
-    qubit1.probe = IqChannel(name="probe_1", mixer=None, lo=None, acquisition="acquire_1")
-    qubit1.acquisition = AcquireChannel(name="acquire_1", twpa_pump=None, probe="probe_1")
-    qubit1.drive = IqChannel(name="drive_1", mixer=None, lo=None)
+    qubit0.probe = IqChannel(
+        name="0/probe", mixer=None, lo=None, acquisition="0/acquisition"
+    )
+    qubit0.acquisition = AcquireChannel(
+        name="0/acquisition", twpa_pump=None, probe="probe_0"
+    )
+    qubit0.drive = IqChannel(name="0/drive", mixer=None, lo=None)
+    qubit0.flux = DcChannel(name="0/flux")
+    qubit1.probe = IqChannel(
+        name="1/probe", mixer=None, lo=None, acquisition="1/acquisition"
+    )
+    qubit1.acquisition = AcquireChannel(
+        name="1/acquisition", twpa_pump=None, probe="probe_1"
+    )
+    qubit1.drive = IqChannel(name="1/drive", mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
     single_qubit = {}
@@ -219,10 +231,10 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
     # create the qubit and coupler objects
     qubit0 = Qubit(name=0)
     qubit1 = Qubit(name=1)
-    coupler_01 = Qubit(name=100)
+    coupler_01 = Qubit(name="c01")
 
     # assign channel(s) to the coupler
-    coupler_01.flux = DcChannel(name="flux_coupler_01")
+    coupler_01.flux = DcChannel(name="c01/flux")
 
     # assign single-qubit native gates to each qubit
     # Look above example
@@ -295,26 +307,26 @@ a two-qubit system:
         "relaxation_time": 50000
       },
       "components": {
-        "drive_0": {
+        "0/drive": {
           "frequency": 4855663000
         },
-        "drive_1": {
+        "1/drive": {
           "frequency": 5800563000
         },
-        "flux_0": {
+        "0/flux": {
           "bias": 0.0
         },
-        "probe_0": {
+        "0/probe": {
           "frequency": 7453265000
         },
-        "probe_1": {
+        "1/probe": {
           "frequency": 7655107000
         },
-        "acquire_0": {
+        "0/acquisition": {
           "delay": 0,
           "smearing": 0
         },
-        "acquire_1": {
+        "1/acquisition": {
           "delay": 0,
           "smearing": 0
         }
@@ -510,7 +522,7 @@ the above runcard:
         # define channels and load component configs
         qubits = {}
         for q in range(2):
-            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquisition"
             qubits[q] = Qubit(
                 name=q,
                 drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
@@ -540,7 +552,7 @@ With the following additions for coupler architectures:
         qubits = {}
         # define channels and load component configs
         for q in range(2):
-            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquisition"
             qubits[q] = Qubit(
                 name=q,
                 drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
@@ -622,7 +634,7 @@ in this case ``"twpa_pump"``.
         # define channels and load component configs
         qubits = {}
         for q in range(2):
-            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+            probe_name, acquire_name = f"qubit_{q}/probe", f"qubit_{q}/acquisition"
             qubits[q] = Qubit(
                 name=q,
                 drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),

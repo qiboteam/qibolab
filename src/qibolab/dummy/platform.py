@@ -17,19 +17,21 @@ def create_dummy() -> Platform:
     qubits = {}
     # attach the channels
     for q in range(5):
-        probe, acquisition = f"qubit_{q}/probe", f"qubit_{q}/acquire"
+        probe, acquisition = f"qubit_{q}/probe", f"qubit_{q}/acquisition"
         qubits[q] = Qubit(
             name=q,
-            probe=IqChannel(probe, mixer=None, lo=None, acquisition=acquisition),
-            acquisition=AcquireChannel(acquisition, twpa_pump=pump.name, probe=probe),
-            drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
-            drive12=IqChannel(f"qubit_{q}/drive12", mixer=None, lo=None),
-            flux=DcChannel(f"qubit_{q}/flux"),
+            probe=IqChannel(name=probe, mixer=None, lo=None, acquisition=acquisition),
+            acquisition=AcquireChannel(
+                name=acquisition, twpa_pump=pump.name, probe=probe
+            ),
+            drive=IqChannel(name=f"qubit_{q}/drive", mixer=None, lo=None),
+            drive12=IqChannel(name=f"qubit_{q}/drive12", mixer=None, lo=None),
+            flux=DcChannel(name=f"qubit_{q}/flux"),
         )
 
     couplers = {}
     for c in (0, 1, 3, 4):
-        couplers[c] = Qubit(name=c, flux=DcChannel(f"coupler_{c}/flux"))
+        couplers[c] = Qubit(name=c, flux=DcChannel(name=f"coupler_{c}/flux"))
 
     return Platform.load(
         path=FOLDER, instruments=[instrument, pump], qubits=qubits, couplers=couplers

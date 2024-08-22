@@ -1,18 +1,10 @@
-from typing import Annotated, Optional, Union
+from typing import Annotated, Optional
 
-from pydantic import BeforeValidator, ConfigDict, Field, PlainSerializer
+from pydantic import BeforeValidator, ConfigDict, PlainSerializer
 
-from qibolab.components import AcquireChannel, DcChannel, IqChannel
-from qibolab.serialize import Model
-
-QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
-"""Type for qubit names."""
-
-CHANNEL_NAMES = ("probe", "acquisition", "drive", "drive12", "drive_cross", "flux")
-"""Names of channels that belong to a qubit.
-
-Not all channels are required to operate a qubit.
-"""
+from .components import AcquireChannel, DcChannel, IqChannel
+from .identifier import ChannelType, QubitId
+from .serialize import Model
 
 
 class Qubit(Model):
@@ -44,8 +36,8 @@ class Qubit(Model):
 
     @property
     def channels(self):
-        for name in CHANNEL_NAMES:
-            channel = getattr(self, name)
+        for ct in ChannelType:
+            channel = getattr(self, ct.value)
             if channel is not None:
                 yield channel
 
