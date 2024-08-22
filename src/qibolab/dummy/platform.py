@@ -11,8 +11,8 @@ FOLDER = pathlib.Path(__file__).parent
 def create_dummy() -> Platform:
     """Create a dummy platform using the dummy instrument."""
     # register the instruments
-    instrument = DummyInstrument("dummy", "0.0.0.0")
-    pump = DummyLocalOscillator("twpa_pump", "0.0.0.0")
+    instrument = DummyInstrument(name="dummy", address="0.0.0.0")
+    pump = DummyLocalOscillator(name="twpa_pump", address="0.0.0.0")
 
     qubits = {}
     # attach the channels
