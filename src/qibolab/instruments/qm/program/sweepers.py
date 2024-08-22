@@ -150,12 +150,17 @@ def _duration(
         args.parameters[operation(pulse)].duration = variable
 
 
-def normalize_phase(phase):
+def normalize_phase(values):
     """Normalize phase from [0, 2pi] to [0, 1]."""
-    return phase / (2 * np.pi)
+    return values / (2 * np.pi)
 
 
-INT_TYPE = {Parameter.frequency, Parameter.duration}
+def normalize_duration(values):
+    """Convert duration from ns to clock cycles (clock cycle = 4ns)."""
+    return (values // 4).astype(int)
+
+
+INT_TYPE = {Parameter.frequency, Parameter.duration, Parameter.duration_interpolated}
 """Sweeper parameters for which we need ``int`` variable type.
 
 The rest parameters need ``fixed`` type.
@@ -163,7 +168,8 @@ The rest parameters need ``fixed`` type.
 
 NORMALIZERS = {
     Parameter.relative_phase: normalize_phase,
-    Parameter.duration: lambda values: (values // 4).astype(int),
+    Parameter.duration: normalize_duration,
+    Parameter.duration_interpolated: normalize_duration,
 }
 """Functions to normalize sweeper values.
 
