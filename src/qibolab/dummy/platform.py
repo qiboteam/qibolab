@@ -35,7 +35,7 @@ def create_dummy() -> Platform:
             probe=probe,
             acquisition=acquisition,
             drive=drive,
-            drive_qudits={(1, 2): f"qubit_{q}/flux"},
+            drive_qudits={(1, 2): drive12},
             flux=flux,
         )
 
