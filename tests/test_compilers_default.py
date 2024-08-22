@@ -258,3 +258,44 @@ def test_inactive_qubits(platform: Platform, joint: bool):
         cdrive_delay.duration
         == next(iter(padded_seq.channel(ChannelId.load(mflux)))).duration
     )
+
+
+def test_joint_split_equivalence(platform: Platform):
+    """Test joint-split equivalence after 2q gate.
+
+    Joint measurements are only equivalent to split in specific
+    circumstances. When the two qubits involved are just coming out of a
+    mutual interaction is one of those cases.
+
+    Cf.
+    https://github.com/qiboteam/qibolab/pull/992#issuecomment-2302708439
+    """
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.GPI2(2, phi=0.15))
+    circuit.add(gates.CZ(0, 2))
+
+    joint = Circuit(3)
+    joint.add(gates.M(0, 2))
+
+    joint_seq = compile_circuit(circuit + joint, platform)
+
+    split = Circuit(3)
+    split.add(gates.M(0))
+    split.add(gates.M(2))
+
+    split_seq = compile_circuit(circuit + split, platform)
+
+    # the inter-channel sorting is unreliable, and mostly irrelevant (unless align
+    # instructions are involved, which is not the case)
+    assert not any(
+        isinstance(p, gates.Align) for seq in (joint_seq, split_seq) for _, p in seq
+    )  # TODO: gates.Align is just a placeholder, replace with the pulse-like when available
+    for ch in (
+        "qubit_0/acquisition",
+        "qubit_2/acquisition",
+        "qubit_0/probe",
+        "qubit_2/probe",
+    ):
+        chid = ChannelId.load(ch)
+        assert list(joint_seq.channel(chid)) == list(split_seq.channel(chid))
