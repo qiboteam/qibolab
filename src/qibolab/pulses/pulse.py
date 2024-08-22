@@ -37,7 +37,7 @@ class Pulse(_PulseLike):
     """The pulse envelope shape.
 
     See
-    :cls:`qibolab.pulses.envelope.Envelopes` for list of available shapes.
+    :class:`qibolab.pulses.envelope.Envelopes` for list of available shapes.
     """
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
@@ -46,7 +46,7 @@ class Pulse(_PulseLike):
     def flux(cls, **kwargs):
         """Construct a flux pulse.
 
-        It provides a simplified syntax for the :cls:`Pulse` constructor, by applying
+        It provides a simplified syntax for the :class:`Pulse` constructor, by applying
         suitable defaults.
         """
         kwargs["relative_phase"] = 0

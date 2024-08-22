@@ -82,7 +82,7 @@ def batch(sequences: list[PulseSequence], bounds: Bounds):
     """Split a list of sequences to batches.
 
     Takes into account the various limitations throught the mechanics defined in
-    :cls:`Bounds`, and the numerical limitations specified by the `bounds` argument.
+    :class:`Bounds`, and the numerical limitations specified by the `bounds` argument.
     """
     counters = Bounds(waveforms=0, readout=0, instructions=0)
     batch = []

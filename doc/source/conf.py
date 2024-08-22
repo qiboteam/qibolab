@@ -37,7 +37,15 @@ release = qibolab.__version__
 # https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
 # master_doc = "index"
 
-autodoc_mock_imports = ["qm"]
+autodoc_mock_imports = ["icarusq_rfsoc_driver"]
+try:
+    import qibolab.instruments.qm
+except ModuleNotFoundError:
+    autodoc_mock_imports.extend(["qm", "qualang_tools"])
+try:
+    import qibolab.instruments.rfsoc
+except ModuleNotFoundError:
+    autodoc_mock_imports.extend(["qibosoq"])
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -50,6 +58,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "recommonmark",
     "sphinx_copybutton",
+    "sphinx.ext.todo",
     "sphinx.ext.viewcode",
 ]
 

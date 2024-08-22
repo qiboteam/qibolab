@@ -1,13 +1,17 @@
-"""Channels are a specific type of component, that are responsible for
+"""Define channels, representing the physical components handling signals.
+
+Channels are a specific type of component, that are responsible for
 generating signals. A channel has a name, and it can refer to the names of
 other components as needed. The default configuration of components should be
 stored elsewhere (in Platform). By dissecting configuration in smaller pieces
 and storing them externally (as opposed to storing the channel configuration
 inside the channel itself) has multiple benefits, that.
 
-all revolve around the fact that channels may have shared components, e.g.
- - Some instruments use one LO for more than one channel,
- - For some use cases (like qutrit experiments, or CNOT gates), we need to define multiple channels that point to the same physical wire.
+All revolve around the fact that channels may have shared components, e.g.
+
+- some instruments use one LO for more than one channel,
+- for some use cases (like qutrit experiments, or CNOT gates), we need to define multiple channels that point to the same physical wire.
+
 If channels contain their configuration, it becomes cumbersome to make sure that user can easily see that some channels have shared
 components, and changing configuration for one may affect the other as well. By storing component configurations externally we
 make sure that there is only one copy of configuration for a component, plus users can clearly see when two different channels

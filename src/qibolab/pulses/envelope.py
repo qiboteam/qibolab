@@ -177,7 +177,12 @@ class Drag(BaseEnvelope):
     In units of the interval duration.
     """
     beta: float
-    """.. todo::"""
+    """Beta.
+
+    .. todo::
+
+        Add docstring
+    """
 
     def i(self, samples: int) -> Waveform:
         """Generate a Gaussian envelope."""
@@ -187,6 +192,8 @@ class Drag(BaseEnvelope):
         """Generate ...
 
         .. todo::
+
+            Add docstring
         """
         ts = np.arange(samples)
         mu = (samples - 1) / 2
@@ -221,15 +228,29 @@ class Iir(BaseEnvelope):
         return data
 
     def i(self, samples: int) -> Waveform:
-        """.. todo::"""
+        """I.
+
+        .. todo::
+
+            Add docstring
+        """
         return self._data(self.target.i(samples))
 
     def q(self, samples: int) -> Waveform:
-        """.. todo::"""
+        """Q.
+        .. todo::
+
+            Add docstring
+        """
         return self._data(self.target.q(samples))
 
     def __eq__(self, other) -> bool:
-        """.. todo::"""
+        """Eq.
+
+        .. todo::
+
+            Add docstring
+        """
         return eq(self, other)
 
 
@@ -252,7 +273,12 @@ class Snz(BaseEnvelope):
     """Relative B amplitude (wrt A)."""
 
     def i(self, samples: int) -> Waveform:
-        """.. todo::"""
+        """I.
+
+        .. todo::
+
+            Add docstring
+        """
         # convert timings to samples
         half_pulse_duration = (1 - self.t_idling) * samples / 2
         aspan = np.sum(np.arange(samples) < half_pulse_duration)
@@ -285,7 +311,12 @@ class ECap(BaseEnvelope):
     """In units of the inverse interval duration."""
 
     def i(self, samples: int) -> Waveform:
-        """.. todo::"""
+        """I.
+
+        .. todo::
+
+            Add docstring
+        """
         ss = np.arange(samples)
         x = ss / samples
         return (
@@ -310,21 +341,36 @@ class Custom(BaseEnvelope):
     q_: npt.NDArray
 
     def i(self, samples: int) -> Waveform:
-        """.. todo::"""
+        """I.
+
+        .. todo::
+
+            Add docstring
+        """
         if len(self.i_) != samples:
             raise ValueError
 
         return self.i_
 
     def q(self, samples: int) -> Waveform:
-        """.. todo::"""
+        """Q.
+
+        .. todo::
+
+            Add docstring
+        """
         if len(self.q_) != samples:
             raise ValueError
 
         return self.q_
 
     def __eq__(self, other) -> bool:
-        """.. todo::"""
+        """Eq.
+
+        .. todo::
+
+            Add docstring
+        """
         return eq(self, other)
 
 
