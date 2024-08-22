@@ -40,12 +40,12 @@ def test_plot_functions():
         envelope=Drag(rel_sigma=0.2, beta=2),
         relative_phase=0,
     )
-    p3 = Pulse.flux(
+    p3 = Pulse(
         duration=40,
         amplitude=0.9,
         envelope=Iir(a=np.array([-0.5, 2]), b=np.array([1]), target=Rectangular()),
     )
-    p4 = Pulse.flux(duration=40, amplitude=0.9, envelope=Snz(t_idling=10))
+    p4 = Pulse(duration=40, amplitude=0.9, envelope=Snz(t_idling=10))
     p5 = Pulse(
         duration=40,
         amplitude=0.9,
