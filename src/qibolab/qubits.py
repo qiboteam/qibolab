@@ -3,9 +3,8 @@ from typing import Optional
 
 from pydantic import ConfigDict
 
-from .components import AcquireChannel, DcChannel, IqChannel
 from .components.channels import Channel
-from .identifier import ChannelType, QubitId
+from .identifier import ChannelId, ChannelType, QubitId
 from .serialize import Model
 
 
@@ -29,12 +28,11 @@ class Qubit(Model):
 
     name: QubitId
 
-    probe: Optional[IqChannel] = None
-    acquisition: Optional[AcquireChannel] = None
-    drive: Optional[IqChannel] = None
-    drive12: Optional[IqChannel] = None
-    drive_cross: Optional[dict[QubitId, IqChannel]] = None
-    flux: Optional[DcChannel] = None
+    probe: Optional[ChannelId] = None
+    acquisition: Optional[ChannelId] = None
+    drive: Optional[ChannelId] = None
+    drive_qudits: Optional[dict[str, ChannelId]] = None
+    flux: Optional[ChannelId] = None
 
     @property
     def channels(self) -> Iterable[Channel]:
