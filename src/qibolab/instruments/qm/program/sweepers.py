@@ -174,6 +174,7 @@ SWEEPER_METHODS = {
     Parameter.frequency: _frequency,
     Parameter.amplitude: _amplitude,
     Parameter.duration: _duration,
+    Parameter.duration_interpolated: _duration,
     Parameter.relative_phase: _relative_phase,
     Parameter.bias: _bias,
 }

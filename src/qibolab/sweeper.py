@@ -13,6 +13,7 @@ class Parameter(Enum):
     frequency = auto()
     amplitude = auto()
     duration = auto()
+    duration_interpolated = auto()
     relative_phase = auto()
 
     attenuation = auto()
@@ -24,6 +25,7 @@ class Parameter(Enum):
 FREQUENCY = Parameter.frequency
 AMPLITUDE = Parameter.amplitude
 DURATION = Parameter.duration
+DURATION_INTERPOLATED = Parameter.duration_interpolated
 RELATIVE_PHASE = Parameter.relative_phase
 ATTENUATION = Parameter.attenuation
 GAIN = Parameter.gain
