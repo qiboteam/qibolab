@@ -208,13 +208,18 @@ def test_align_multiqubit(platform: Platform):
         assert flux_duration == probe_delay.duration
 
 
-def test_inactive_qubits(platform: Platform):
+@pytest.mark.parametrize("joint", [True, False])
+def test_inactive_qubits(platform: Platform, joint: bool):
     main, coupled = 0, 1
     circuit = Circuit(2)
     circuit.add(gates.CZ(main, coupled))
     # another gate on drive is needed, to prevent trimming the delay, if alone
     circuit.add(gates.GPI2(coupled, phi=0.15))
-    circuit.add(gates.M(main, coupled))
+    if joint:
+        circuit.add(gates.M(main, coupled))
+    else:
+        circuit.add(gates.M(main))
+        circuit.add(gates.M(coupled))
 
     natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
         CZ=FixedSequenceFactory([])
