@@ -1,6 +1,7 @@
 import socket
 
 import yaml
+from pydantic import Field
 from qibo.config import log
 
 from qibolab.instruments.abstract import Instrument
@@ -19,17 +20,13 @@ class TemperatureController(Instrument):
                 print(temperature_value)
     """
 
-    def __init__(self, name: str, address: str, port: int = 8888):
-        """Creation of the controller object.
-
-        Args:
-            name (str): name of the instrument.
-            address (str): IP address of the board sending cryo temperature data.
-            port (int): port of the board sending cryo temperature data.
-        """
-        super().__init__(name, address)
-        self.port = port
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    address: str
+    """IP address of the board sending cryo temperature data."""
+    port: int = 8888
+    """Port of the board sending cryo temperature data."""
+    client_socket: socket.socket = Field(
+        default_factory=lambda: socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    )
 
     def connect(self):
         """Connect to the socket."""

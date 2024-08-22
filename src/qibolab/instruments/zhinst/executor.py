@@ -56,7 +56,7 @@ class Zurich(Controller):
         time_of_flight=0.0,
         smearing=0.0,
     ):
-        super().__init__(name, None)
+        super().__init__(name=name, address=None)
 
         self.signal_map = {}
         "Signals to lines mapping"

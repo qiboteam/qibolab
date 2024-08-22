@@ -2,10 +2,11 @@ import shutil
 import tempfile
 import warnings
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
 
+from pydantic import Field
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
@@ -107,7 +108,6 @@ def find_sweepers(
     return [s for ps in sweepers for s in ps if s.parameter is parameter]
 
 
-@dataclass
 class QmController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
     a Quantum Machines cluster.
@@ -133,7 +133,7 @@ class QmController(Controller):
     """Dictionary containing the
     :class:`qibolab.instruments.qm.controller.Octave` instruments being
     used."""
-    channels: dict[str, QmChannel]
+    channels: dict[ChannelId, QmChannel]
 
     bounds: str = "qm/bounds"
     """Maximum bounds used for batching in sequence unrolling."""
@@ -160,7 +160,7 @@ class QmController(Controller):
     is_connected: bool = False
     """Boolean that shows whether we are connected to the QM manager."""
 
-    config: QmConfig = field(default_factory=QmConfig)
+    config: QmConfig = Field(default_factory=QmConfig)
     """Configuration dictionary required for pulse execution on the OPXs."""
 
     simulation_duration: Optional[int] = None
@@ -179,12 +179,9 @@ class QmController(Controller):
     Default is ``False``.
     """
 
-    def __post_init__(self):
-        super().__init__(self.name, self.address)
+    def model_post_init(self, __context):
         # convert ``channels`` from list to dict
-        self.channels = {
-            str(channel.logical_channel.name): channel for channel in self.channels
-        }
+        self.channels = {channel.logical_channel: channel for channel in self.channels}
 
         if self.simulation_duration is not None:
             # convert simulation duration from ns to clock cycles
