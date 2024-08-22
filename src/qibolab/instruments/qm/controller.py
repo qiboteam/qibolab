@@ -11,11 +11,11 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import Channel, Config, DcChannel, IqChannel
+from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, Pulse, VirtualZ
+from qibolab.pulses.pulse import Acquisition, Delay, VirtualZ, _Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter
 from qibolab.unrolling import Bounds
@@ -188,7 +188,7 @@ class QmController(Controller):
         super().__init__(self.name, self.address)
         # convert ``channels`` from list to dict
         self.channels = {
-            channel.logical_channel.name: channel for channel in self.channels
+            str(channel.logical_channel.name): channel for channel in self.channels
         }
 
         if self.simulation_duration is not None:
@@ -254,7 +254,7 @@ class QmController(Controller):
     def configure_channel(self, channel: QmChannel, configs: dict[str, Config]):
         """Add element (QM version of channel) in the config."""
         logical_channel = channel.logical_channel
-        channel_config = configs[logical_channel.name]
+        channel_config = configs[str(logical_channel.name)]
         self.configure_device(channel.device)
 
         if isinstance(logical_channel, DcChannel):
@@ -277,8 +277,8 @@ class QmController(Controller):
                     lo_config,
                 )
 
-        else:
-            raise TypeError(f"Unknown channel type: {type(channel)}.")
+        elif not isinstance(logical_channel, AcquireChannel):
+            raise TypeError(f"Unknown channel type: {type(logical_channel)}.")
 
     def configure_channels(
         self,
@@ -287,65 +287,74 @@ class QmController(Controller):
     ):
         """Register channels participating in the sequence in the QM
         ``config``."""
-        for channel_name in channels:
-            channel = self.channels[channel_name]
+        for channel_id in channels:
+            channel = self.channels[str(channel_id)]
             self.configure_channel(channel, configs)
 
-    def register_pulse(self, channel: Channel, pulse: Pulse):
-        """Add pulse in the QM ``config``."""
-        # if (
-        #    pulse.duration % 4 != 0
-        #    or pulse.duration < 16
-        #    or pulse.id in pulses_to_bake
-        # ):
-        #    qmpulse = BakedPulse(pulse, element)
-        #    qmpulse.bake(self.config, durations=[pulse.duration])
-        # else:
-        if isinstance(channel, DcChannel):
-            return self.config.register_dc_pulse(channel.name, pulse)
-        if channel.acquisition is None:
-            return self.config.register_iq_pulse(channel.name, pulse)
-        return self.config.register_acquisition_pulse(channel.name, pulse)
+    def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
+        """Adds all pulses except measurements of a given sequence in the QM
+        ``config``.
 
-    def register_pulses(
+        Returns:
+            acquisitions (dict): Map from measurement instructions to acquisition objects.
+        """
+        for channel_id, pulse in sequence:
+            if not isinstance(pulse, (Acquisition, Delay, VirtualZ)):
+                name = str(channel_id)
+                channel = self.channels[name].logical_channel
+                # if (
+                #    pulse.duration % 4 != 0
+                #    or pulse.duration < 16
+                #    or pulse.id in pulses_to_bake
+                # ):
+                #    qmpulse = BakedPulse(pulse, element)
+                #    qmpulse.bake(self.config, durations=[pulse.duration])
+                # else:
+                if isinstance(channel, DcChannel):
+                    self.config.register_dc_pulse(name, pulse)
+                elif channel.acquisition is None:
+                    self.config.register_iq_pulse(name, pulse)
+
+    def register_acquisitions(
         self,
         configs: dict[str, Config],
         sequence: PulseSequence,
         options: ExecutionParameters,
     ):
-        """Adds all pulses of a given sequence in the QM ``config``.
+        """Adds all measurements of a given sequence in the QM ``config``.
 
         Returns:
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         acquisitions = {}
-        for channel_name, pulse in sequence:
-            if isinstance(pulse, (Delay, VirtualZ)):
+        for channel_id, readout in sequence.as_readouts:
+            if not isinstance(readout, _Readout):
                 continue
 
-            channel = self.channels[channel_name]
-            logical_channel = channel.logical_channel
-            op = self.register_pulse(logical_channel, pulse)
-
-            if (
-                isinstance(logical_channel, IqChannel)
-                and logical_channel.acquisition is not None
-            ):
-                acq_config = configs[logical_channel.acquisition]
-                self.config.register_integration_weights(
-                    channel_name, pulse.duration, acq_config.kernel
+            if readout.probe.duration != readout.acquisition.duration:
+                raise ValueError(
+                    "Quantum Machines does not support acquisition with different duration than probe."
                 )
-                if (op, channel_name) in acquisitions:
-                    acquisition = acquisitions[(op, channel_name)]
-                else:
-                    acquisition = acquisitions[(op, channel_name)] = create_acquisition(
-                        op,
-                        channel_name,
-                        options,
-                        acq_config.threshold,
-                        acq_config.iq_angle,
-                    )
-                acquisition.keys.append(pulse.id)
+
+            channel_name = str(channel_id)
+            channel = self.channels[channel_name].logical_channel
+            op = self.config.register_acquisition_pulse(channel_name, readout.probe)
+
+            acq_config = configs[channel.acquisition]
+            self.config.register_integration_weights(
+                channel_name, readout.duration, acq_config.kernel
+            )
+            if (op, channel_name) in acquisitions:
+                acquisition = acquisitions[(op, channel_name)]
+            else:
+                acquisition = acquisitions[(op, channel_name)] = create_acquisition(
+                    op,
+                    channel_name,
+                    options,
+                    acq_config.threshold,
+                    acq_config.iq_angle,
+                )
+            acquisition.keys.append(readout.acquisition.id)
 
         return acquisitions
 
@@ -384,7 +393,8 @@ class QmController(Controller):
 
         sequence = sequences[0]
         self.configure_channels(configs, sequence.channels)
-        acquisitions = self.register_pulses(configs, sequence, options)
+        self.register_pulses(configs, sequence)
+        acquisitions = self.register_acquisitions(configs, sequence, options)
         experiment = program(configs, sequence, options, acquisitions, sweepers)
 
         if self.manager is None:
@@ -403,8 +413,8 @@ class QmController(Controller):
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
             results = {}
-            for channel_name, pulse in sequence:
-                if self.channels[channel_name].logical_channel.acquisition is not None:
+            for _, pulse in sequence:
+                if isinstance(pulse, Acquisition):
                     results[pulse.id] = result
             return results
 
