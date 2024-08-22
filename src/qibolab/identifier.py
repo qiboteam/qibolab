@@ -4,7 +4,7 @@ from typing import Annotated, Union
 from pydantic import BeforeValidator, Field, PlainSerializer
 
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
-"""Type for qubit names."""
+"""Qubit name."""
 
 QubitPairId = Annotated[
     tuple[QubitId, QubitId],
@@ -33,3 +33,21 @@ class ChannelType(str, Enum):
 
 ChannelId = str
 """Unique identifier for a channel."""
+
+
+StateId = int
+"""State identifier."""
+
+TransitionId = Annotated[
+    tuple[StateId, StateId],
+    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
+    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+]
+"""Identifier for a state transition."""
+
+QubitPairId = Annotated[
+    tuple[QubitId, QubitId],
+    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
+    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+]
+"""Two-qubit active interaction identifier."""
