@@ -16,7 +16,7 @@ from qibolab.components import AcquireChannel, Channel, Config, DcChannel, IqCha
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses.pulse import Acquisition, Align, Delay, Pulse, _Readout
+from qibolab.pulses import Acquisition, Align, Delay, Pulse, Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab.unrolling import Bounds, unroll_sequences
@@ -364,7 +364,7 @@ class QmController(Controller):
         """
         acquisitions = {}
         for channel_id, readout in sequence.as_readouts:
-            if not isinstance(readout, _Readout):
+            if not isinstance(readout, Readout):
                 continue
 
             if readout.probe.duration != readout.acquisition.duration:
