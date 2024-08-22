@@ -2,20 +2,18 @@
 
 from collections import UserList
 from collections.abc import Callable, Iterable
-from itertools import zip_longest
-from typing import Any
+from typing import Any, Union
 
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab.pulses.pulse import Pulse, _Readout
-
-from .identifier import ChannelId, ChannelType
-from .pulses import Acquisition, Align, Delay, PulseLike
+from .identifier import ChannelId
+from .pulses import Acquisition, Align, Delay, PulseLike, Readout
 
 __all__ = ["PulseSequence"]
 
 _Element = tuple[ChannelId, PulseLike]
+InputOps = Union[Readout, Acquisition]
 
 _adapted_sequence = TypeAdapter(list[_Element])
 
@@ -149,7 +147,7 @@ class PulseSequence(UserList[_Element]):
         return type(self)(reversed(new))
 
     @property
-    def acquisitions(self) -> list[tuple[ChannelId, Acquisition]]:
+    def acquisitions(self) -> list[tuple[ChannelId, InputOps]]:
         """Return list of the readout pulses in this sequence.
 
         .. note::
@@ -159,32 +157,4 @@ class PulseSequence(UserList[_Element]):
             :attr:`ChannelType.ACQUISITION`)
         """
         # pulse filter needed to exclude delays
-        return [el for el in self if isinstance(el[1], Acquisition)]
-
-    @property
-    def as_readouts(self) -> list[_Element]:
-        new = []
-        skip = False
-        for (ch, p), (nch, np) in zip_longest(self, self[1:], fillvalue=(None, None)):
-            if skip:
-                skip = False
-                continue
-
-            # TODO: replace with pattern matching, once py3.9 will be abandoned
-            assert ch is not None
-            if ch.channel_type is ChannelType.ACQUISITION and not isinstance(p, Delay):
-                raise ValueError("Acquisition not preceded by probe.")
-            if ch.channel_type is ChannelType.PROBE and isinstance(p, Pulse):
-                if (
-                    nch is not None
-                    and nch.channel_type is ChannelType.ACQUISITION
-                    and isinstance(np, Acquisition)
-                ):
-                    new.append((ch, _Readout(acquisition=np, probe=p)))
-                    skip = True
-                else:
-                    raise ValueError("Probe not followed by acquisition.")
-            else:
-                new.append((ch, p))
-
-        return new
+        return [(ch, p) for ch, p in self if isinstance(p, (Acquisition, Readout))]

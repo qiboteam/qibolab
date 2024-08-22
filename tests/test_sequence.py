@@ -1,17 +1,15 @@
-import pytest
 from pydantic import TypeAdapter
 
-from qibolab.identifier import ChannelId
 from qibolab.pulses import (
     Acquisition,
     Delay,
     Drag,
     Gaussian,
     Pulse,
+    Readout,
     Rectangular,
     VirtualZ,
 )
-from qibolab.pulses.pulse import _Readout
 from qibolab.sequence import PulseSequence
 
 
@@ -21,9 +19,9 @@ def test_init():
 
 
 def test_init_with_iterable():
-    sc = ChannelId.load("some/probe")
-    oc = ChannelId.load("other/drive")
-    c5 = ChannelId.load("5/drive")
+    sc = "some/probe"
+    oc = "other/drive"
+    c5 = "5/drive"
     seq = PulseSequence(
         [
             (sc, p)
@@ -51,10 +49,10 @@ def test_init_with_iterable():
 
 
 def test_serialization():
-    sp = ChannelId.load("some/probe")
-    sa = ChannelId.load("some/acquisition")
-    od = ChannelId.load("other/drive")
-    of = ChannelId.load("other/flux")
+    sp = "some/probe"
+    sa = "some/acquisition"
+    od = "other/drive"
+    of = "other/flux"
 
     seq = PulseSequence(
         [
@@ -281,45 +279,24 @@ def test_acquisitions():
 def test_readouts():
     probe = Pulse(duration=10, amplitude=1, envelope=Rectangular())
     acq = Acquisition(duration=10)
-    sequence = PulseSequence.load([("1/probe", probe), ("1/acquisition", acq)])
-    ros = sequence.as_readouts
-    assert len(ros) == 1
-    ro = ros[0][1]
-    assert isinstance(ro, _Readout)
+    sequence = PulseSequence([("1/acquisition", Readout(probe=probe, acquisition=acq))])
+    assert len(sequence) == 1
+    ro = sequence[0][1]
+    assert isinstance(ro, Readout)
     assert ro.duration == acq.duration
     assert ro.id == acq.id
 
-    sequence = PulseSequence.load(
+    sequence = PulseSequence(
         [
             ("1/drive", VirtualZ(phase=0.7)),
-            ("1/probe", Delay(duration=15)),
             ("1/acquisition", Delay(duration=20)),
-            ("1/probe", probe),
-            ("1/acquisition", acq),
+            ("1/acquisition", Readout(probe=probe, acquisition=acq)),
             ("1/flux", probe),
         ]
     )
-    ros = sequence.as_readouts
-    assert len(ros) == 5
+    assert len(sequence) == 4
+    assert len(sequence.acquisitions) == 1
+    assert isinstance(sequence.acquisitions[0][1], Readout)
 
-    sequence = PulseSequence.load([("1/probe", probe)])
-    with pytest.raises(ValueError, match="(?i)probe"):
-        sequence.as_readouts
-
-    sequence = PulseSequence.load([("1/acquisition", acq)])
-    with pytest.raises(ValueError, match="(?i)acquisition"):
-        sequence.as_readouts
-
-    sequence = PulseSequence.load([("1/acquisition", acq), ("1/probe", probe)])
-    with pytest.raises(ValueError):
-        sequence.as_readouts
-
-    sequence = PulseSequence.load(
-        [
-            ("1/probe", probe),
-            ("1/acquisition", Delay(duration=20)),
-            ("1/acquisition", acq),
-        ]
-    )
-    with pytest.raises(ValueError):
-        sequence.as_readouts
+    aslist = TypeAdapter(PulseSequence).dump_python(sequence)
+    assert PulseSequence.load(aslist) == sequence

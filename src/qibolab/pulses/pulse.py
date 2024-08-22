@@ -103,7 +103,7 @@ class Acquisition(_PulseLike):
     """Duration in ns."""
 
 
-class _Readout(_PulseLike):
+class Readout(_PulseLike):
     """Readout instruction.
 
     This event instructs the device to acquire samples for the event
@@ -135,6 +135,6 @@ class Align(_PulseLike):
 
 
 PulseLike = Annotated[
-    Union[Align, Pulse, Delay, VirtualZ, Acquisition, _Readout],
+    Union[Align, Pulse, Delay, VirtualZ, Acquisition, Readout],
     Field(discriminator="kind"),
 ]
