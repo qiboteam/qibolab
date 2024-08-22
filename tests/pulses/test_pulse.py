@@ -4,7 +4,7 @@ import numpy as np
 from pytest import approx, raises
 
 from qibolab.pulses import Acquisition, Custom, Pulse, Rectangular, VirtualZ
-from qibolab.pulses.pulse import _Readout
+from qibolab.pulses.pulse import Readout
 
 
 def test_virtual_z():
@@ -15,7 +15,7 @@ def test_virtual_z():
 def test_readout():
     p = Pulse(duration=5, amplitude=0.9, envelope=Rectangular())
     a = Acquisition(duration=60)
-    r = _Readout(acquisition=a, probe=p)
+    r = Readout(acquisition=a, probe=p)
     assert r.duration == a.duration
     assert r.id == a.id
 
