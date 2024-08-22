@@ -47,13 +47,6 @@ class IqChannel(Channel):
 
     None, if the channel does not have an LO, or it is not configurable.
     """
-    acquisition: Optional[str] = None
-    """In case self is a readout channel this shall contain the name of the
-    corresponding acquire channel.
-
-    FIXME: This is temporary solution to be able to generate acquisition commands on correct channel in drivers,
-    until we make acquire channels completely independent, and users start putting explicit acquisition commands in pulse sequence.
-    """
 
 
 class AcquireChannel(Channel):

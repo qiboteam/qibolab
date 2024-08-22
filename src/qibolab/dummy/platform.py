@@ -25,7 +25,7 @@ def create_dummy() -> Platform:
             f"qubit_{q}/acquisition",
         )
         instrument.channels |= {
-            probe: IqChannel(mixer=None, lo=None, acquisition=acquisition),
+            probe: IqChannel(mixer=None, lo=None),
             acquisition: AcquireChannel(twpa_pump=pump.name, probe=probe),
             drive: IqChannel(mixer=None, lo=None),
             drive12: IqChannel(mixer=None, lo=None),
