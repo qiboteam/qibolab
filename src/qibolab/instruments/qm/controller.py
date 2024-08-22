@@ -11,11 +11,11 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
+from qibolab.components import AcquireChannel, Channel, Config, DcChannel, IqChannel
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses.pulse import Acquisition, Delay, VirtualZ, _Readout
+from qibolab.pulses.pulse import Acquisition, Delay, Pulse, VirtualZ, _Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -307,11 +307,24 @@ class QmController(Controller):
         #    qmpulse = BakedPulse(pulse, element)
         #    qmpulse.bake(self.config, durations=[pulse.duration])
         # else:
+        name = str(channel.name)
         if isinstance(channel, DcChannel):
-            return self.config.register_dc_pulse(channel.name, pulse)
+            return self.config.register_dc_pulse(name, pulse)
         if channel.acquisition is None:
-            return self.config.register_iq_pulse(channel.name, pulse)
-        return self.config.register_acquisition_pulse(channel.name, pulse)
+            return self.config.register_iq_pulse(name, pulse)
+        return self.config.register_acquisition_pulse(name, pulse)
+
+    def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
+        """Adds all pulses except measurements of a given sequence in the QM
+        ``config``.
+
+        Returns:
+            acquisitions (dict): Map from measurement instructions to acquisition objects.
+        """
+        for channel_id, pulse in sequence:
+            if not isinstance(pulse, (Acquisition, Delay, VirtualZ)):
+                channel = self.channels[str(channel_id)].logical_channel
+                self.register_pulse(channel, pulse)
 
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
@@ -323,14 +336,14 @@ class QmController(Controller):
                 continue
 
             op = operation(pulse)
-            channel_name = args.sequence.pulse_channels(pulse.id)[0]
+            channel_name = str(args.sequence.pulse_channels(pulse.id)[0])
             channel = self.channels[channel_name].logical_channel
             for value in sweeper.values:
                 sweep_pulse = pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(channel, sweep_pulse)
                 args.parameters[op].pulses.append((value, sweep_op))
 
-    def register_pulses(
+    def register_acquisitions(
         self,
         configs: dict[str, Config],
         sequence: PulseSequence,
