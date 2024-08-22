@@ -143,5 +143,6 @@ class Align(_PulseLike):
 
 
 PulseLike = Annotated[
-    Union[Align, Pulse, Delay, VirtualZ, Acquisition, _Readout], Field(discriminator="kind")
+    Union[Align, Pulse, Delay, VirtualZ, Acquisition, _Readout],
+    Field(discriminator="kind"),
 ]

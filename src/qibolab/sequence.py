@@ -11,7 +11,7 @@ from pydantic_core import core_schema
 from qibolab.pulses.pulse import Pulse, _Readout
 
 from .identifier import ChannelId, ChannelType
-from .pulses import Align, Acquisition, Delay, PulseLike
+from .pulses import Acquisition, Align, Delay, PulseLike
 
 __all__ = ["PulseSequence"]
 
