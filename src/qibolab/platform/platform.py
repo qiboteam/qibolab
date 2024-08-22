@@ -10,6 +10,7 @@ from typing import Any, Literal, Optional, TypeVar, Union
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
+from qibolab.components.channels import Channel
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId, QubitId, QubitPairId
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
@@ -55,7 +56,7 @@ def estimate_duration(
 
 def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
     """Map channel names to element (qubit or coupler)."""
-    return {ch.name: id for id, el in elements.items() for ch in el.channels}
+    return {ch: id for id, el in elements.items() for ch in el.channels}
 
 
 @dataclass
@@ -133,9 +134,14 @@ class Platform:
         return set(self.parameters.configs.keys())
 
     @property
-    def channels(self) -> list[ChannelId]:
+    def channels(self) -> dict[ChannelId, Channel]:
         """Channels in the platform."""
-        return list(self.qubit_channels) + list(self.coupler_channels)
+        return {
+            id: ch
+            for instr in self.instruments.values()
+            if isinstance(instr, Controller)
+            for id, ch in instr.channels.items()
+        }
 
     @property
     def qubit_channels(self) -> dict[ChannelId, QubitId]:
