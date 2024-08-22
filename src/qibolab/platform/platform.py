@@ -308,26 +308,26 @@ class Platform:
         """Dump platform."""
         (path / PARAMETERS).write_text(self.parameters.model_dump_json(indent=4))
 
-    def get_qubit(self, qubit: QubitId) -> Qubit:
-        """Return the name of the physical qubit corresponding to a logical
-        qubit.
+    def _element(self, qubit: QubitId, coupler=False) -> tuple[QubitId, Qubit]:
+        elements = self.qubits if not coupler else self.couplers
+        try:
+            return qubit, elements[qubit]
+        except KeyError:
+            assert isinstance(qubit, int)
+            return list(self.qubits.items())[qubit]
+
+    def qubit(self, qubit: QubitId) -> tuple[QubitId, Qubit]:
+        """Retrieve physical qubit name and object.
 
         Temporary fix for the compiler to work for platforms where the
         qubits are not named as 0, 1, 2, ...
         """
-        try:
-            return self.qubits[qubit]
-        except KeyError:
-            return list(self.qubits.values())[qubit]
+        return self._element(qubit)
 
-    def get_coupler(self, coupler: QubitId) -> Qubit:
-        """Return the name of the physical coupler corresponding to a logical
-        coupler.
+    def coupler(self, coupler: QubitId) -> tuple[QubitId, Qubit]:
+        """Retrieve physical coupler name and object.
 
         Temporary fix for the compiler to work for platforms where the
         couplers are not named as 0, 1, 2, ...
         """
-        try:
-            return self.couplers[coupler]
-        except KeyError:
-            return list(self.couplers.values())[coupler]
+        return self._element(coupler, coupler=True)

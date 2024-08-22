@@ -16,12 +16,12 @@ from qibolab.sequence import PulseSequence
 
 def z_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """Z gate applied virtually."""
-    return PulseSequence([(qubit.drive.name, VirtualZ(phase=math.pi))])
+    return PulseSequence([(qubit.drive, VirtualZ(phase=math.pi))])
 
 
 def rz_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """RZ gate applied virtually."""
-    return PulseSequence([(qubit.drive.name, VirtualZ(phase=gate.parameters[0]))])
+    return PulseSequence([(qubit.drive, VirtualZ(phase=gate.parameters[0]))])
 
 
 def identity_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
@@ -71,5 +71,5 @@ def align_rule(gate: Align, qubits: list[Qubit]) -> PulseSequence:
     if delay == 0.0:
         return PulseSequence()
     return PulseSequence(
-        [(ch.name, Delay(duration=delay)) for qubit in qubits for ch in qubit.channels]
+        [(ch, Delay(duration=delay)) for qubit in qubits for ch in qubit.channels]
     )
