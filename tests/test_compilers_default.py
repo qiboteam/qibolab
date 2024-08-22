@@ -6,9 +6,12 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, ChannelType
+from qibolab.native import FixedSequenceFactory, TwoQubitNatives
 from qibolab.platform import Platform
 from qibolab.pulses import Delay
+from qibolab.pulses.envelope import Rectangular
+from qibolab.pulses.pulse import Pulse
 from qibolab.sequence import PulseSequence
 
 
@@ -203,3 +206,96 @@ def test_align_multiqubit(platform: Platform):
         probe_delay = next(iter(sequence.channel(ChannelId.load(f"qubit_{q}/probe"))))
         assert isinstance(probe_delay, Delay)
         assert flux_duration == probe_delay.duration
+
+
+@pytest.mark.parametrize("joint", [True, False])
+def test_inactive_qubits(platform: Platform, joint: bool):
+    main, coupled = 0, 1
+    circuit = Circuit(2)
+    circuit.add(gates.CZ(main, coupled))
+    # another gate on drive is needed, to prevent trimming the delay, if alone
+    circuit.add(gates.GPI2(coupled, phi=0.15))
+    if joint:
+        circuit.add(gates.M(main, coupled))
+    else:
+        circuit.add(gates.M(main))
+        circuit.add(gates.M(coupled))
+
+    natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
+        CZ=FixedSequenceFactory([])
+    )
+    assert natives.CZ is not None
+    natives.CZ.clear()
+    sequence = compile_circuit(circuit, platform)
+
+    def no_measurement(seq: PulseSequence):
+        return [
+            el
+            for el in seq
+            if el[0].channel_type not in (ChannelType.PROBE, ChannelType.ACQUISITION)
+        ]
+
+    assert len(no_measurement(sequence)) == 1
+
+    mflux = f"qubit_{main}/flux"
+    cdrive = f"qubit_{coupled}/drive"
+    duration = 200
+    natives.CZ.extend(
+        PulseSequence.load(
+            [
+                (
+                    mflux,
+                    Pulse(duration=duration, amplitude=0.42, envelope=Rectangular()),
+                )
+            ]
+        )
+    )
+    padded_seq = compile_circuit(circuit, platform)
+    assert len(no_measurement(padded_seq)) == 3
+    cdrive_delay = next(iter(padded_seq.channel(ChannelId.load(cdrive))))
+    assert isinstance(cdrive_delay, Delay)
+    assert (
+        cdrive_delay.duration
+        == next(iter(padded_seq.channel(ChannelId.load(mflux)))).duration
+    )
+
+
+def test_joint_split_equivalence(platform: Platform):
+    """Test joint-split equivalence after 2q gate.
+
+    Joint measurements are only equivalent to split in specific
+    circumstances. When the two qubits involved are just coming out of a
+    mutual interaction is one of those cases.
+
+    Cf.
+    https://github.com/qiboteam/qibolab/pull/992#issuecomment-2302708439
+    """
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.GPI2(2, phi=0.15))
+    circuit.add(gates.CZ(0, 2))
+
+    joint = Circuit(3)
+    joint.add(gates.M(0, 2))
+
+    joint_seq = compile_circuit(circuit + joint, platform)
+
+    split = Circuit(3)
+    split.add(gates.M(0))
+    split.add(gates.M(2))
+
+    split_seq = compile_circuit(circuit + split, platform)
+
+    # the inter-channel sorting is unreliable, and mostly irrelevant (unless align
+    # instructions are involved, which is not the case)
+    assert not any(
+        isinstance(p, gates.Align) for seq in (joint_seq, split_seq) for _, p in seq
+    )  # TODO: gates.Align is just a placeholder, replace with the pulse-like when available
+    for ch in (
+        "qubit_0/acquisition",
+        "qubit_2/acquisition",
+        "qubit_0/probe",
+        "qubit_2/probe",
+    ):
+        chid = ChannelId.load(ch)
+        assert list(joint_seq.channel(chid)) == list(split_seq.channel(chid))

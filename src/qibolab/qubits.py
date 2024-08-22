@@ -1,8 +1,10 @@
+from collections.abc import Iterable
 from typing import Annotated, Optional
 
 from pydantic import BeforeValidator, ConfigDict, PlainSerializer
 
 from .components import AcquireChannel, DcChannel, IqChannel
+from .components.channels import Channel
 from .identifier import ChannelType, QubitId
 from .serialize import Model
 
@@ -35,7 +37,7 @@ class Qubit(Model):
     flux: Optional[DcChannel] = None
 
     @property
-    def channels(self):
+    def channels(self) -> Iterable[Channel]:
         for ct in ChannelType:
             channel = getattr(self, ct.value)
             if channel is not None:

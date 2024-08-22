@@ -12,6 +12,7 @@ from qibo.config import log, raise_error
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
+from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
 from qibolab.pulses import Delay
@@ -84,7 +85,7 @@ def estimate_duration(
     )
 
 
-def _channels_map(elements: QubitMap):
+def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
     """Map channel names to element (qubit or coupler)."""
     return {ch.name: id for id, el in elements.items() for ch in el.channels}
 
@@ -164,14 +165,19 @@ class Platform:
         return set(self.parameters.configs.keys())
 
     @property
-    def channels(self) -> list[str]:
+    def channels(self) -> list[ChannelId]:
         """Channels in the platform."""
-        return list(self.channels_map)
+        return list(self.qubit_channels) + list(self.coupler_channels)
 
     @property
-    def channels_map(self) -> dict[str, QubitId]:
-        """Channel to element map."""
-        return _channels_map(self.qubits) | _channels_map(self.couplers)
+    def qubit_channels(self) -> dict[ChannelId, QubitId]:
+        """Channel to qubit map."""
+        return _channels_map(self.qubits)
+
+    @property
+    def coupler_channels(self):
+        """Channel to coupler map."""
+        return _channels_map(self.couplers)
 
     def config(self, name: str) -> Config:
         """Returns configuration of given component."""
