@@ -1,30 +1,27 @@
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
 from typing import Optional
 
 import numpy.typing as npt
+from pydantic import ConfigDict, Field
 
 from qibolab.components import Config
+from qibolab.components.channels import Channel
 from qibolab.execution_parameters import ExecutionParameters
+from qibolab.identifier import ChannelId
 from qibolab.sequence import PulseSequence
+from qibolab.serialize import Model
 from qibolab.sweeper import ParallelSweepers
 
 InstrumentId = str
 
 
-@dataclass
-class InstrumentSettings:
+class InstrumentSettings(Model):
     """Container of settings that are dumped in the platform runcard json."""
 
-    def dump(self):
-        """Dictionary containing the settings.
-
-        Useful when dumping the instruments to the runcard JSON.
-        """
-        return asdict(self)
+    model_config = ConfigDict(frozen=False)
 
 
-class Instrument(ABC):
+class Instrument(Model, ABC):
     """Parent class for all the instruments connected via TCPIP.
 
     Args:
@@ -32,11 +29,12 @@ class Instrument(ABC):
         address (str): Instrument network address.
     """
 
-    def __init__(self, name, address):
-        self.name: InstrumentId = name
-        self.address: str = address
-        self.is_connected: bool = False
-        self.settings: Optional[InstrumentSettings] = None
+    model_config = ConfigDict(frozen=False)
+
+    name: InstrumentId
+    address: str
+    is_connected: bool = False
+    settings: Optional[InstrumentSettings] = None
 
     @property
     def signature(self):
@@ -58,10 +56,9 @@ class Instrument(ABC):
 class Controller(Instrument):
     """Instrument that can play pulses (using waveform generator)."""
 
-    def __init__(self, name, address):
-        super().__init__(name, address)
-        self.bounds: str
-        """Estimated limitations of the device memory."""
+    bounds: str
+    """Estimated limitations of the device memory."""
+    channels: dict[ChannelId, Channel] = Field(default_factory=dict)
 
     @property
     @abstractmethod
