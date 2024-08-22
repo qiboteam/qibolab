@@ -15,10 +15,9 @@ from qibolab.compilers.default import (
     rz_rule,
     z_rule,
 )
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, QubitId
 from qibolab.platform import Platform
 from qibolab.pulses import Delay
-from qibolab.qubits import QubitId
 from qibolab.sequence import PulseSequence
 
 Rule = Callable[..., PulseSequence]
