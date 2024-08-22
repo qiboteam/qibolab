@@ -15,7 +15,7 @@ from qibolab.components import AcquireChannel, Channel, Config, DcChannel, IqCha
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
-from qibolab.pulses.pulse import Acquisition, Delay, Pulse, VirtualZ, _Readout
+from qibolab.pulses.pulse import Acquisition, Align, Delay, Pulse, _Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab.unrolling import Bounds
@@ -322,7 +322,7 @@ class QmController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         for channel_id, pulse in sequence:
-            if not isinstance(pulse, (Acquisition, Delay, VirtualZ)):
+            if isinstance(pulse, Pulse):
                 channel = self.channels[str(channel_id)].logical_channel
                 self.register_pulse(channel, pulse)
 
@@ -332,7 +332,7 @@ class QmController(Controller):
         """Register pulse with many different durations, in order to sweep
         duration."""
         for pulse in sweeper.pulses:
-            if isinstance(pulse, Delay):
+            if isinstance(pulse, (Align, Delay)):
                 continue
 
             op = operation(pulse)

@@ -79,8 +79,8 @@ def play(args: ExecutionArguments):
         elif isinstance(pulse, VirtualZ):
             qua.frame_rotation_2pi(normalize_phase(pulse.phase), element)
         elif isinstance(pulse, Align) and pulse.id not in processed_aligns:
-            elements = args.sequence.pulse_channels(pulse.id)
-            qua.align(*elements)
+            channel_ids = args.sequence.pulse_channels(pulse.id)
+            qua.align(*(str(ch) for ch in channel_ids))
             processed_aligns.add(pulse.id)
 
     if args.relaxation_time > 0:
