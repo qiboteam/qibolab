@@ -42,16 +42,6 @@ class Pulse(_PulseLike):
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
 
-    @classmethod
-    def flux(cls, **kwargs):
-        """Construct a flux pulse.
-
-        It provides a simplified syntax for the :class:`Pulse` constructor, by applying
-        suitable defaults.
-        """
-        kwargs["relative_phase"] = 0
-        return cls(**kwargs)
-
     def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
         samples = int(self.duration * sampling_rate)
