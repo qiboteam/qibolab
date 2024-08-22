@@ -154,15 +154,14 @@ def execute(connected_platform: Platform) -> Execution:
             sequence.concatenate(qd_seq)
             sequence.concatenate(probe_seq)
             if sweepers is None:
-                amp_values = np.arange(0, 0.8, 0.1)
                 sweeper1 = Sweeper(
                     parameter=Parameter.offset,
                     range=(0.01, 0.06, 0.01),
-                    channels=[qubit.flux.name],
+                    channels=[qubit.flux],
                 )
                 sweeper2 = Sweeper(
                     parameter=Parameter.amplitude,
-                    values=amp_values,
+                    range=(0, 0.8, 0.1),
                     pulses=[probe_pulse],
                 )
                 sweepers = [[sweeper1], [sweeper2]]
