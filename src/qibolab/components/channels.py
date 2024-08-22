@@ -20,15 +20,13 @@ share a component, because channels will refer to the same name for the componen
 
 from typing import Optional
 
-from qibolab.identifier import ChannelId
 from qibolab.serialize import Model
 
 __all__ = ["Channel", "DcChannel", "IqChannel", "AcquireChannel"]
 
 
 class Channel(Model):
-    name: ChannelId
-    """Name of the channel."""
+    """Channel to communicate with the qubit."""
 
 
 class DcChannel(Channel):

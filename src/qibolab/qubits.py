@@ -26,8 +26,6 @@ class Qubit(Model):
 
     model_config = ConfigDict(frozen=False)
 
-    name: QubitId
-
     probe: Optional[ChannelId] = None
     acquisition: Optional[ChannelId] = None
     drive: Optional[ChannelId] = None
