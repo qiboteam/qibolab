@@ -117,6 +117,14 @@ class Readout(_PulseLike):
     acquisition: Acquisition
     probe: Pulse
 
+    @classmethod
+    def from_probe(cls, probe: Pulse):
+        """Create a whole readout operation from its probe pulse.
+
+        The acquisition is made to match the same probe duration.
+        """
+        return cls(acquisition=Acquisition(duration=probe.duration), probe=probe)
+
     @property
     def duration(self) -> float:
         """Duration in ns."""
