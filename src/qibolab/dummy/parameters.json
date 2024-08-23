@@ -187,24 +187,24 @@
         ],
         "MZ": [
           [
-            "qubit_0/probe",
-            {
-              "duration": 2000.0,
-              "amplitude": 0.1,
-              "envelope": {
-                "kind": "gaussian_square",
-                "rel_sigma": 5.0,
-                "width": 0.75
-              },
-              "relative_phase": 0.0,
-              "kind": "pulse"
-            }
-          ],
-          [
             "qubit_0/acquisition",
             {
-              "kind": "acquisition",
-              "duration": 2000.0
+              "kind": "readout",
+              "acquisition": {
+                "kind": "acquisition",
+                "duration": 2000.0
+              },
+              "probe": {
+                "duration": 2000.0,
+                "amplitude": 0.1,
+                "envelope": {
+                  "kind": "gaussian_square",
+                  "rel_sigma": 5.0,
+                  "width": 0.75
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
             }
           ]
         ],
@@ -245,24 +245,24 @@
         ],
         "MZ": [
           [
-            "qubit_1/probe",
-            {
-              "duration": 2000.0,
-              "amplitude": 0.1,
-              "envelope": {
-                "kind": "gaussian_square",
-                "rel_sigma": 5.0,
-                "width": 0.75
-              },
-              "relative_phase": 0.0,
-              "kind": "pulse"
-            }
-          ],
-          [
             "qubit_1/acquisition",
             {
-              "kind": "acquisition",
-              "duration": 2000.0
+              "kind": "readout",
+              "acquisition": {
+                "kind": "acquisition",
+                "duration": 2000.0
+              },
+              "probe": {
+                "duration": 2000.0,
+                "amplitude": 0.1,
+                "envelope": {
+                  "kind": "gaussian_square",
+                  "rel_sigma": 5.0,
+                  "width": 0.75
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
             }
           ]
         ],
@@ -302,24 +302,24 @@
         ],
         "MZ": [
           [
-            "qubit_2/probe",
-            {
-              "duration": 2000.0,
-              "amplitude": 0.1,
-              "envelope": {
-                "kind": "gaussian_square",
-                "rel_sigma": 5.0,
-                "width": 0.75
-              },
-              "relative_phase": 0.0,
-              "kind": "pulse"
-            }
-          ],
-          [
             "qubit_2/acquisition",
             {
-              "kind": "acquisition",
-              "duration": 2000.0
+              "kind": "readout",
+              "acquisition": {
+                "kind": "acquisition",
+                "duration": 2000.0
+              },
+              "probe": {
+                "duration": 2000.0,
+                "amplitude": 0.1,
+                "envelope": {
+                  "kind": "gaussian_square",
+                  "rel_sigma": 5.0,
+                  "width": 0.75
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
             }
           ]
         ],
@@ -360,24 +360,24 @@
         ],
         "MZ": [
           [
-            "qubit_3/probe",
-            {
-              "duration": 2000.0,
-              "amplitude": 0.1,
-              "envelope": {
-                "kind": "gaussian_square",
-                "rel_sigma": 5.0,
-                "width": 0.75
-              },
-              "relative_phase": 0.0,
-              "kind": "pulse"
-            }
-          ],
-          [
             "qubit_3/acquisition",
             {
-              "kind": "acquisition",
-              "duration": 2000.0
+              "kind": "readout",
+              "acquisition": {
+                "kind": "acquisition",
+                "duration": 2000.0
+              },
+              "probe": {
+                "duration": 2000.0,
+                "amplitude": 0.1,
+                "envelope": {
+                  "kind": "gaussian_square",
+                  "rel_sigma": 5.0,
+                  "width": 0.75
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
             }
           ]
         ],
@@ -418,24 +418,24 @@
         ],
         "MZ": [
           [
-            "qubit_4/probe",
-            {
-              "duration": 2000.0,
-              "amplitude": 0.1,
-              "envelope": {
-                "kind": "gaussian_square",
-                "rel_sigma": 5.0,
-                "width": 0.75
-              },
-              "relative_phase": 0.0,
-              "kind": "pulse"
-            }
-          ],
-          [
             "qubit_4/acquisition",
             {
-              "kind": "acquisition",
-              "duration": 2000.0
+              "kind": "readout",
+              "acquisition": {
+                "kind": "acquisition",
+                "duration": 2000.0
+              },
+              "probe": {
+                "duration": 2000.0,
+                "amplitude": 0.1,
+                "envelope": {
+                  "kind": "gaussian_square",
+                  "rel_sigma": 5.0,
+                  "width": 0.75
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
             }
           ]
         ],
