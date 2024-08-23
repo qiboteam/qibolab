@@ -82,11 +82,11 @@ class PulseSequence(UserList[_Element]):
 
     def channel_duration(self, channel: ChannelId) -> float:
         """Duration of the given channel."""
-        sequence = self
-        for _, pulse in self:
-            if isinstance(pulse, Align):
-                sequence = self.align_to_delays()
-                break
+        sequence = (
+            self.align_to_delays()
+            if any(isinstance(pulse, Align) for _, pulse in self)
+            else self
+        )
         return sum(pulse.duration for pulse in sequence.channel(channel))
 
     def pulse_channels(self, pulse_id: int) -> list[ChannelId]:
