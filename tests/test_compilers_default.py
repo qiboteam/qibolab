@@ -54,7 +54,7 @@ def test_compile(platform: Platform, gateargs):
     nqubits = platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits * 2
+    assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits * 1
 
 
 def test_compile_two_gates(platform: Platform):
@@ -78,7 +78,7 @@ def test_measurement(platform: Platform):
     circuit.add(gates.M(*qubits))
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence.channels) == 2 * nqubits
+    assert len(sequence.channels) == 1 * nqubits
     assert len(sequence.acquisitions) == 1 * nqubits
 
 
@@ -152,7 +152,7 @@ def test_add_measurement_to_sequence(platform: Platform):
 
     sequence = compile_circuit(circuit, platform)
     qubit = platform.qubits[0]
-    assert len(sequence.channels) == 3
+    assert len(sequence.channels) == 2
     assert len(list(sequence.channel(qubit.drive))) == 2
     assert len(list(sequence.channel(qubit.probe))) == 2  # include delay
 
@@ -202,7 +202,7 @@ def test_align_multiqubit(platform: Platform):
     sequence = compile_circuit(circuit, platform)
     flux_duration = sequence.channel_duration(f"qubit_{coupled}/flux")
     for q in (main, coupled):
-        probe_delay = next(iter(sequence.channel(f"qubit_{q}/probe")))
+        probe_delay = next(iter(sequence.channel(f"qubit_{q}/acquisition")))
         assert isinstance(probe_delay, Delay)
         assert flux_duration == probe_delay.duration
 

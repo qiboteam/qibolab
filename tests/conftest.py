@@ -147,8 +147,8 @@ def execute(connected_platform: Platform) -> Execution:
         if sequence is None:
             qd_seq = natives.RX.create_sequence()
             probe_seq = natives.MZ.create_sequence()
-            probe_pulse = probe_seq[0][1]
-            acq = probe_seq[1][1]
+            probe_pulse = probe_seq[0][1].probe
+            acq = probe_seq[0][1].acquisition
             wrapped.acquisition_duration = acq.duration
             sequence = PulseSequence()
             sequence.concatenate(qd_seq)
