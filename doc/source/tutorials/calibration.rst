@@ -51,7 +51,7 @@ around the pre-defined frequency.
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.probe.name],
+        channels=[qubit.probe],
     )
 
 We then define the execution parameters and launch the experiment.
@@ -75,7 +75,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     acq = sequence.acquisitions[0][1]
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -132,10 +132,10 @@ complex pulse sequence. Therefore with start with that:
     sequence = PulseSequence(
         [
             (
-                qubit.drive.name,
+                qubit.drive,
                 Pulse(duration=2000, amplitude=0.01, envelope=Gaussian(rel_sigma=5)),
             ),
-            (qubit.probe.name, Delay(duration=sequence.duration)),
+            (qubit.probe, Delay(duration=sequence.duration)),
         ]
     )
     sequence.concatenate(natives.MZ.create_sequence())
@@ -145,7 +145,7 @@ complex pulse sequence. Therefore with start with that:
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.drive.name],
+        channels=[qubit.drive],
     )
 
 Note that the drive pulse has been changed to match the characteristics required
@@ -166,7 +166,7 @@ We can now proceed to launch on hardware:
 
     _, acq = next(iter(sequence.acquisitions))
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.drive).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -235,7 +235,7 @@ and its impact on qubit states in the IQ plane.
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()
     one_sequence.concatenate(natives.RX.create_sequence())
-    one_sequence.append((qubit.probe.name, Delay(duration=one_sequence.duration)))
+    one_sequence.append((qubit.probe, Delay(duration=one_sequence.duration)))
     one_sequence.concatenate(natives.MZ.create_sequence())
 
     # create pulse sequence 2 and add pulses
