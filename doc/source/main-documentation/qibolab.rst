@@ -40,15 +40,16 @@ We can easily access the names of channels and other components, and based on th
 
 .. testcode::  python
 
-    drive_channel = platform.qubits[0].drive
-    print(f"Drive channel name: {drive_channel.name}")
-    print(f"Drive frequency: {platform.config(str(drive_channel.name)).frequency}")
+    drive_channel_id = platform.qubits[0].drive
+    drive_channel = platform.channels[drive_channel_id]
+    print(f"Drive channel name: {drive_channel_id}")
+    print(f"Drive frequency: {platform.config(drive_channel_id).frequency}")
 
     drive_lo = drive_channel.lo
     if drive_lo is None:
-        print(f"Drive channel {drive_channel.name} does not use an LO.")
+        print(f"Drive channel {drive_channel_id} does not use an LO.")
     else:
-        print(f"Name of LO for channel {drive_channel.name} is {drive_lo}")
+        print(f"Name of LO for channel {drive_channel_id} is {drive_lo}")
         print(f"LO frequency: {platform.config(str(drive_lo)).frequency}")
 
 .. testoutput:: python
@@ -71,7 +72,7 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
    natives = platform.natives.single_qubit[0]
    ps.concatenate(natives.RX.create_sequence())
    ps.concatenate(natives.RX.create_sequence(phi=np.pi / 2))
-   ps.append((qubit.probe.name, Delay(duration=200)))
+   ps.append((qubit.probe, Delay(duration=200)))
    ps.concatenate(natives.MZ.create_sequence())
 
 Now we can execute the sequence on hardware:
@@ -316,7 +317,7 @@ Typical experiments may include both pre-defined pulses and new ones:
     sequence.concatenate(natives.RX.create_sequence())
     sequence.append(
         (
-            ChannelId.load("some/drive"),
+            "some/drive",
             Pulse(duration=10, amplitude=0.5, relative_phase=0, envelope=Rectangular()),
         )
     )
@@ -399,9 +400,9 @@ A tipical resonator spectroscopy experiment could be defined with:
     sweepers = [
         Sweeper(
             parameter=Parameter.frequency,
-            values=platform.config(str(qubit.probe.name)).frequency
+            values=platform.config(qubit.probe).frequency
             + np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-            channels=[qubit.probe.name],
+            channels=[qubit.probe],
         )
         for qubit in platform.qubits.values()
     ]
@@ -429,19 +430,19 @@ For example:
     natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
+    sequence.append((qubit.probe, Delay(duration=sequence.duration)))
     sequence.concatenate(natives.MZ.create_sequence())
 
     f0 = platform.config(str(qubit.drive.name)).frequency
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 10_000),
-        channels=[qubit.drive.name],
+        channels=[qubit.drive],
     )
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
         range=(0, 0.43, 0.3),
-        pulses=[next(iter(sequence.channel(qubit.drive.name)))],
+        pulses=[next(iter(sequence.channel(qubit.drive)))],
     )
 
     results = platform.execute([sequence], options, [[sweeper_freq], [sweeper_amp]])
@@ -526,7 +527,7 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
+    sequence.append((qubit.probe, Delay(duration=sequence.duration)))
     sequence.concatenate(natives.MZ.create_sequence())
 
     options = ExecutionParameters(
@@ -554,12 +555,12 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 1),
-        channels=[qubit.drive.name],
+        channels=[qubit.drive],
     )
     sweeper2 = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 200_000, f0 + 200_000, 1),
-        channels=[qubit.probe.name],
+        channels=[qubit.probe],
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 

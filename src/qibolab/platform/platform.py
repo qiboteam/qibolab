@@ -246,7 +246,7 @@ class Platform:
                     Sweeper(
                         parameter=Parameter.frequency,
                         values=parameter_range,
-                        channels=[qubit.probe.name],
+                        channels=[qubit.probe],
                     )
                 ]
                 platform.execute([sequence], ExecutionParameters(), [sweeper])

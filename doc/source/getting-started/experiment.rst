@@ -82,7 +82,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         return Platform(
             name=NAME,
             runcard=runcard,
-            instruments={controller.name: controller},
+            instruments={controller: controller},
             resonator_type="3D",
         )
 
@@ -225,7 +225,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.probe.name],
+        channels=[qubit.probe],
     )
 
     # perform the experiment using specific options
@@ -241,7 +241,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     # plot the results
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values
+    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe).frequency
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
