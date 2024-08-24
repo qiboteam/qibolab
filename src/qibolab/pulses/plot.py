@@ -143,6 +143,8 @@ def sequence(ps: PulseSequence, freq: dict[str, float], filename=None):
         import matplotlib.pyplot as plt
         from matplotlib import gridspec
 
+        # compile ``Align`` to delays as it is not supported here
+        ps = ps.align_to_delays()
         num_pulses = len(ps)
         _ = plt.figure(figsize=(14, 2 * num_pulses), dpi=200)
         gs = gridspec.GridSpec(ncols=1, nrows=num_pulses)

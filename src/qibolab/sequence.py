@@ -11,11 +11,24 @@ from pydantic_core import core_schema
 from qibolab.pulses.pulse import Pulse, _Readout
 
 from .identifier import ChannelId, ChannelType
-from .pulses import Acquisition, Delay, PulseLike
+from .pulses import Acquisition, Align, Delay, PulseLike
 
 __all__ = ["PulseSequence"]
 
 _Element = tuple[ChannelId, PulseLike]
+
+
+def _synchronize(sequence: "PulseSequence", channels: Iterable[ChannelId]) -> None:
+    """Helper for ``concatenate`` and ``align_to_delays``.
+
+    Modifies given ``sequence`` in-place!
+    """
+    durations = {ch: sequence.channel_duration(ch) for ch in channels}
+    max_duration = max(durations.values(), default=0.0)
+    for ch, duration in durations.items():
+        delay = max_duration - duration
+        if delay > 0:
+            sequence.append((ch, Delay(duration=delay)))
 
 
 class PulseSequence(UserList[_Element]):
@@ -69,7 +82,16 @@ class PulseSequence(UserList[_Element]):
 
     def channel_duration(self, channel: ChannelId) -> float:
         """Duration of the given channel."""
-        return sum(pulse.duration for pulse in self.channel(channel))
+        sequence = (
+            self.align_to_delays()
+            if any(isinstance(pulse, Align) for _, pulse in self)
+            else self
+        )
+        return sum(pulse.duration for pulse in sequence.channel(channel))
+
+    def pulse_channels(self, pulse_id: int) -> list[ChannelId]:
+        """Find channels on which a pulse with a given id plays."""
+        return [channel for channel, pulse in self if pulse.id == pulse_id]
 
     def concatenate(self, other: "PulseSequence") -> None:
         """Juxtapose two sequences.
@@ -79,13 +101,34 @@ class PulseSequence(UserList[_Element]):
             - necessary delays to synchronize channels
             - ``other``
         """
-        durations = {ch: self.channel_duration(ch) for ch in other.channels}
-        max_duration = max(durations.values(), default=0.0)
-        for ch, duration in durations.items():
-            delay = max_duration - duration
-            if delay > 0:
-                self.append((ch, Delay(duration=delay)))
+        _synchronize(self, other.channels)
         self.extend(other)
+
+    def align(self, channels: list[ChannelId]) -> Align:
+        """Introduce align commands to the sequence."""
+        align = Align()
+        for channel in channels:
+            self.append((channel, align))
+        return align
+
+    def align_to_delays(self) -> "PulseSequence":
+        """Compile align commands to delays."""
+
+        # keep track of ``Align`` command that were already played
+        # because the same ``Align`` will appear on multiple channels
+        # in the sequence
+        processed_aligns = set()
+
+        new = type(self)()
+        for channel, pulse in self:
+            if isinstance(pulse, Align):
+                if pulse.id not in processed_aligns:
+                    channels = self.pulse_channels(pulse.id)
+                    _synchronize(new, channels)
+                    processed_aligns.add(pulse.id)
+            else:
+                new.append((channel, pulse))
+        return new
 
     def trim(self) -> "PulseSequence":
         """Drop final delays.

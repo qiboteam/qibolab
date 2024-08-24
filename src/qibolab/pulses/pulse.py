@@ -138,6 +138,13 @@ class _Readout(_PulseLike):
         return self.acquisition.id
 
 
+class Align(_PulseLike):
+    """Brings different channels at the same point in time."""
+
+    kind: Literal["align"] = "align"
+
+
 PulseLike = Annotated[
-    Union[Pulse, Delay, VirtualZ, Acquisition, _Readout], Field(discriminator="kind")
+    Union[Align, Pulse, Delay, VirtualZ, Acquisition, _Readout],
+    Field(discriminator="kind"),
 ]

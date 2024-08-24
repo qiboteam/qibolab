@@ -6,23 +6,30 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.pulses import Delay, Pulse
-from qibolab.sequence import PulseSequence
+from qibolab.pulses import Align, Delay, Pulse, VirtualZ
 from qibolab.sweeper import ParallelSweepers
 
 from ..config import operation
-from .acquisition import Acquisition, Acquisitions
+from .acquisition import Acquisition
 from .arguments import ExecutionArguments, Parameters
-from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS
+from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS, normalize_phase
 
 
 def _delay(pulse: Delay, element: str, parameters: Parameters):
     # TODO: How to play delays on multiple elements?
     if parameters.duration is None:
-        duration = int(pulse.duration) // 4 + 1
+        duration = int(pulse.duration) // 4
     else:
         duration = parameters.duration
-    qua.wait(duration, element)
+    qua.wait(duration + 1, element)
+
+
+def _play_multiple_waveforms(element: str, parameters: Parameters):
+    """Sweeping pulse duration using distinctly uploaded waveforms."""
+    with qua.switch_(parameters.duration, unsafe=True):
+        for value, sweep_op in parameters.pulses:
+            with qua.case_(value // 4):
+                qua.play(sweep_op, element)
 
 
 def _play(
@@ -36,10 +43,13 @@ def _play(
     if parameters.amplitude is not None:
         op = op * parameters.amplitude
 
-    if acquisition is not None:
-        acquisition.measure(op)
+    if len(parameters.pulses) > 0:
+        _play_multiple_waveforms(element, parameters)
     else:
-        qua.play(op, element, duration=parameters.duration)
+        if acquisition is not None:
+            acquisition.measure(op)
+        else:
+            qua.play(op, element, duration=parameters.duration)
 
     if parameters.phase is not None:
         qua.reset_frame(element)
@@ -51,6 +61,12 @@ def play(args: ExecutionArguments):
     Should be used inside a ``program()`` context.
     """
     qua.align()
+
+    # keep track of ``Align`` command that were already played
+    # because the same ``Align`` will appear on multiple channels
+    # in the sequence
+    processed_aligns = set()
+
     for channel_id, pulse in args.sequence:
         element = str(channel_id)
         op = operation(pulse)
@@ -60,6 +76,12 @@ def play(args: ExecutionArguments):
         elif isinstance(pulse, Pulse):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
+        elif isinstance(pulse, VirtualZ):
+            qua.frame_rotation_2pi(normalize_phase(pulse.phase), element)
+        elif isinstance(pulse, Align) and pulse.id not in processed_aligns:
+            channel_ids = args.sequence.pulse_channels(pulse.id)
+            qua.align(*(str(ch) for ch in channel_ids))
+            processed_aligns.add(pulse.id)
 
     if args.relaxation_time > 0:
         qua.wait(args.relaxation_time // 4)
@@ -110,25 +132,23 @@ def sweep(
 
 def program(
     configs: dict[str, Config],
-    sequence: PulseSequence,
+    args: ExecutionArguments,
     options: ExecutionParameters,
-    acquisitions: Acquisitions,
     sweepers: list[ParallelSweepers],
 ):
     """QUA program implementing the required experiment."""
     with qua.program() as experiment:
         n = declare(int)
         # declare acquisition variables
-        for acquisition in acquisitions.values():
+        for acquisition in args.acquisitions.values():
             acquisition.declare()
         # execute pulses
-        args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
         with for_(n, 0, n < options.nshots, n + 1):
             sweep(list(sweepers), configs, args)
         # download acquisitions
         has_iq = options.acquisition_type is AcquisitionType.INTEGRATION
         buffer_dims = options.results_shape(sweepers)[::-1][int(has_iq) :]
         with qua.stream_processing():
-            for acquisition in acquisitions.values():
+            for acquisition in args.acquisitions.values():
                 acquisition.download(*buffer_dims)
     return experiment
