@@ -6,6 +6,7 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab.identifier import ChannelType
 from qibolab.pulses import Align, Delay, Pulse, VirtualZ
 from qibolab.sweeper import ParallelSweepers
 
@@ -70,6 +71,9 @@ def play(args: ExecutionArguments):
     processed_aligns = set()
 
     for channel_id, pulse in args.sequence:
+        if channel_id.channel_type is ChannelType.ACQUISITION:
+            continue
+
         element = str(channel_id)
         op = operation(pulse)
         params = args.parameters[op]
