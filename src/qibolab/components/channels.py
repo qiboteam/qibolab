@@ -20,6 +20,7 @@ share a component, because channels will refer to the same name for the componen
 
 from typing import Optional
 
+from qibolab.identifier import ChannelId
 from qibolab.serialize import Model
 
 __all__ = ["Channel", "DcChannel", "IqChannel", "AcquireChannel"]
@@ -27,6 +28,15 @@ __all__ = ["Channel", "DcChannel", "IqChannel", "AcquireChannel"]
 
 class Channel(Model):
     """Channel to communicate with the qubit."""
+
+    device: str = ""
+    """Name of the device."""
+    path: str = ""
+    """Physical port addresss within the device."""
+
+    @property
+    def port(self) -> int:
+        return int(self.path)
 
 
 class DcChannel(Channel):
@@ -55,7 +65,7 @@ class AcquireChannel(Channel):
 
     None, if there is no TWPA, or it is not configurable.
     """
-    probe: Optional[str] = None
+    probe: Optional[ChannelId] = None
     """Name of the corresponding measure/probe channel.
 
     FIXME: This is temporary solution to be able to relate acquisition channel to corresponding probe channel wherever needed in drivers,
