@@ -297,6 +297,11 @@ class QmController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         for channel_id, pulse in sequence:
+            if hasattr(pulse, "duration") and not pulse.duration.is_integer():
+                raise ValueError(
+                    f"Quantum Machines cannot play pulse with duration {pulse.duration}. "
+                    "Only integer duration in ns is supported."
+                )
             if isinstance(pulse, Pulse):
                 channel = self.channels[str(channel_id)].logical_channel
                 self.register_pulse(channel, pulse)
