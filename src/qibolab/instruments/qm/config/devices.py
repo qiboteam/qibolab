@@ -1,16 +1,12 @@
+from collections import UserDict
 from dataclasses import dataclass, field
+from typing import Any, Generic, TypeVar
 
 from qibolab.components.configs import OscillatorConfig
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 
-__all__ = [
-    "AnalogOutput",
-    "OctaveOutput",
-    "OctaveInput",
-    "Controller",
-    "Octave",
-]
+__all__ = ["AnalogOutput", "OctaveOutput", "OctaveInput", "Controller", "Octave"]
 
 
 DEFAULT_INPUTS = {"1": {}, "2": {}}
@@ -20,15 +16,17 @@ Inputs are always registered to avoid issues with automatic mixer
 calibration when using Octaves.
 """
 
+V = TypeVar("V")
 
-class PortDict(dict):
+
+class PortDict(Generic[V], UserDict[str, V]):
     """Dictionary that automatically converts keys to strings.
 
     Used to register input and output ports to controllers and Octaves
     in the QUA config.
     """
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Any, value: V):
         super().__setitem__(str(key), value)
 
 
@@ -39,10 +37,7 @@ class AnalogOutput:
 
     @classmethod
     def from_config(cls, config: OpxOutputConfig):
-        return cls(
-            offset=config.offset,
-            filter=config.filter,
-        )
+        return cls(offset=config.offset, filter=config.filter)
 
 
 @dataclass(frozen=True)
@@ -52,10 +47,7 @@ class AnalogInput:
 
     @classmethod
     def from_config(cls, config: QmAcquisitionConfig):
-        return cls(
-            offset=config.offset,
-            gain_db=config.gain,
-        )
+        return cls(offset=config.offset, gain_db=config.gain)
 
 
 @dataclass(frozen=True)
@@ -67,10 +59,7 @@ class OctaveOutput:
 
     @classmethod
     def from_config(cls, config: OscillatorConfig):
-        return cls(
-            LO_frequency=config.frequency,
-            gain=config.power,
-        )
+        return cls(LO_frequency=config.frequency, gain=config.power)
 
 
 @dataclass(frozen=True)
@@ -83,11 +72,9 @@ class OctaveInput:
 
 @dataclass
 class Controller:
-    analog_outputs: PortDict[str, dict[str, AnalogOutput]] = field(
-        default_factory=PortDict
-    )
-    digital_outputs: PortDict[str, dict[str, dict]] = field(default_factory=PortDict)
-    analog_inputs: PortDict[str, dict[str, AnalogInput]] = field(
+    analog_outputs: PortDict[dict[str, AnalogOutput]] = field(default_factory=PortDict)
+    digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
+    analog_inputs: PortDict[dict[str, AnalogInput]] = field(
         default_factory=lambda: PortDict(DEFAULT_INPUTS)
     )
 
@@ -107,5 +94,5 @@ class Controller:
 @dataclass
 class Octave:
     connectivity: str
-    RF_outputs: PortDict[str, dict[str, OctaveOutput]] = field(default_factory=PortDict)
-    RF_inputs: PortDict[str, dict[str, OctaveInput]] = field(default_factory=PortDict)
+    RF_outputs: PortDict[dict[str, OctaveOutput]] = field(default_factory=PortDict)
+    RF_inputs: PortDict[dict[str, OctaveInput]] = field(default_factory=PortDict)
