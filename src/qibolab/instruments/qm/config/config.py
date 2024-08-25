@@ -1,13 +1,15 @@
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
+from qibolab.components.channels import AcquireChannel, DcChannel, IqChannel
 from qibolab.components.configs import IqConfig, OscillatorConfig
+from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse
 
-from ..components import OpxOutputConfig, QmAcquisitionConfig, QmChannel
-from .devices import *
-from .elements import *
-from .pulses import *
+from ..components import OpxOutputConfig, QmAcquisitionConfig
+from .devices import AnalogOutput, Controller, Octave, OctaveInput, OctaveOutput
+from .elements import AcquireOctaveElement, DcElement, Element, RfOctaveElement
+from .pulses import QmAcquisition, QmPulse, Waveform, operation, waveforms_from_pulse
 
 __all__ = ["QmConfig"]
 
@@ -48,15 +50,19 @@ class QmConfig:
             self.add_controller(connectivity)
             self.octaves[device] = Octave(connectivity)
 
-    def configure_dc_line(self, channel: QmChannel, config: OpxOutputConfig):
+    def configure_dc_line(
+        self, id: ChannelId, channel: DcChannel, config: OpxOutputConfig
+    ):
         controller = self.controllers[channel.device]
         controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
-        self.elements[str(channel.logical_channel.name)] = DcElement.from_channel(
-            channel
-        )
+        self.elements[id] = DcElement.from_channel(channel)
 
     def configure_iq_line(
-        self, channel: QmChannel, config: IqConfig, lo_config: OscillatorConfig
+        self,
+        id: ChannelId,
+        channel: IqChannel,
+        config: IqConfig,
+        lo_config: OscillatorConfig,
     ):
         port = channel.port
         octave = self.octaves[channel.device]
@@ -64,14 +70,15 @@ class QmConfig:
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = config.frequency - lo_config.frequency
-        self.elements[str(channel.logical_channel.name)] = RfOctaveElement.from_channel(
+        self.elements[id] = RfOctaveElement.from_channel(
             channel, octave.connectivity, intermediate_frequency
         )
 
     def configure_acquire_line(
         self,
-        acquire_channel: QmChannel,
-        probe_channel: QmChannel,
+        id: ChannelId,
+        acquire_channel: AcquireChannel,
+        probe_channel: IqChannel,
         acquire_config: QmAcquisitionConfig,
         probe_config: IqConfig,
         lo_config: OscillatorConfig,
@@ -87,15 +94,13 @@ class QmConfig:
         self.controllers[octave.connectivity].add_octave_output(port)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
-        self.elements[str(probe_channel.logical_channel.name)] = (
-            AcquireOctaveElement.from_channel(
-                probe_channel,
-                acquire_channel,
-                octave.connectivity,
-                intermediate_frequency,
-                time_of_flight=acquire_config.delay,
-                smearing=acquire_config.smearing,
-            )
+        self.elements[id] = AcquireOctaveElement.from_channel(
+            probe_channel,
+            acquire_channel,
+            octave.connectivity,
+            intermediate_frequency,
+            time_of_flight=acquire_config.delay,
+            smearing=acquire_config.smearing,
         )
 
     def register_waveforms(
