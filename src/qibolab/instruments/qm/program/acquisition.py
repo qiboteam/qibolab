@@ -43,7 +43,7 @@ class Acquisition(ABC):
     element: str
     """Element from QM ``config`` that the pulse will be applied on."""
     average: bool
-    keys: list[str] = field(default_factory=list)
+    keys: list[int] = field(default_factory=list)
 
     @property
     def name(self):

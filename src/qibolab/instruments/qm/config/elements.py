@@ -3,19 +3,15 @@ from typing import Union
 
 import numpy as np
 
-from ..components import QmChannel
+from qibolab.components.channels import Channel
 
-__all__ = [
-    "DcElement",
-    "RfOctaveElement",
-    "AcquireOctaveElement",
-    "Element",
-]
+__all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
 
 
 def iq_imbalance(g, phi):
-    """Creates the correction matrix for the mixer imbalance caused by the gain
-    and phase imbalances.
+    """Create the correction matrix for the mixer imbalance.
+
+    Mixer imbalance is caused by the gain and phase imbalances.
 
     More information here:
     https://docs.qualang.io/libs/examples/mixer-calibration/#non-ideal-mixer
@@ -45,7 +41,7 @@ class OutputSwitch:
     """
 
 
-def _to_port(channel: QmChannel) -> dict[str, tuple[str, int]]:
+def _to_port(channel: Channel) -> dict[str, tuple[str, int]]:
     """Convert a channel to the port dictionary required for the QUA config."""
     return {"port": (channel.device, channel.port)}
 
@@ -62,7 +58,7 @@ class DcElement:
     operations: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_channel(cls, channel: QmChannel):
+    def from_channel(cls, channel: Channel):
         return cls(_to_port(channel))
 
 
@@ -75,7 +71,7 @@ class RfOctaveElement:
 
     @classmethod
     def from_channel(
-        cls, channel: QmChannel, connectivity: str, intermediate_frequency: int
+        cls, channel: Channel, connectivity: str, intermediate_frequency: int
     ):
         return cls(
             _to_port(channel),
@@ -97,8 +93,8 @@ class AcquireOctaveElement:
     @classmethod
     def from_channel(
         cls,
-        probe_channel: QmChannel,
-        acquire_channel: QmChannel,
+        probe_channel: Channel,
+        acquire_channel: Channel,
         connectivity: str,
         intermediate_frequency: int,
         time_of_flight: int,

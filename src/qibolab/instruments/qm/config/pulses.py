@@ -42,7 +42,7 @@ class ConstantWaveform:
     type: str = "constant"
 
     @classmethod
-    def from_pulse(cls, pulse: Pulse):
+    def from_pulse(cls, pulse: Pulse) -> dict[str, "Waveform"]:
         phase = wrap_phase(pulse.relative_phase)
         voltage_amp = pulse.amplitude * MAX_VOLTAGE_OUTPUT
         return {
@@ -57,7 +57,7 @@ class ArbitraryWaveform:
     type: str = "arbitrary"
 
     @classmethod
-    def from_pulse(cls, pulse: Pulse):
+    def from_pulse(cls, pulse: Pulse) -> dict[str, "Waveform"]:
         original_waveforms = pulse.envelopes(SAMPLING_RATE) * MAX_VOLTAGE_OUTPUT
         rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
         new_duration = baked_duration(pulse.duration)
@@ -72,7 +72,7 @@ class ArbitraryWaveform:
 Waveform = Union[ConstantWaveform, ArbitraryWaveform]
 
 
-def waveforms_from_pulse(pulse: Pulse) -> Waveform:
+def waveforms_from_pulse(pulse: Pulse) -> dict[str, Waveform]:
     """Register QM waveforms for a given pulse."""
     needs_baking = pulse.duration < 16 or pulse.duration % 4 != 0
     wvtype = (
