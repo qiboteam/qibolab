@@ -19,6 +19,8 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
     # TODO: How to play delays on multiple elements?
     if parameters.duration is None:
         duration = int(pulse.duration) // 4
+    elif parameters.interpolated:
+        duration = parameters.duration
     else:
         duration = parameters.duration / 4
     qua.wait(duration + 1, element)

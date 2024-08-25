@@ -130,6 +130,19 @@ def _duration(
         args.parameters[operation(pulse)].duration = variable
 
 
+def _duration_interpolated(
+    pulses: list[Pulse],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    for pulse in pulses:
+        params = args.parameters[operation(pulse)]
+        params.duration = variable
+        params.interpolated = True
+
+
 def normalize_phase(values):
     """Normalize phase from [0, 2pi] to [0, 1]."""
     return values / (2 * np.pi)
@@ -163,7 +176,7 @@ SWEEPER_METHODS = {
     Parameter.frequency: _frequency,
     Parameter.amplitude: _amplitude,
     Parameter.duration: _duration,
-    Parameter.duration_interpolated: _duration,
+    Parameter.duration_interpolated: _duration_interpolated,
     Parameter.relative_phase: _relative_phase,
     Parameter.bias: _bias,
 }
