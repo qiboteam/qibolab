@@ -71,23 +71,6 @@ def declare_octaves(octaves, host, calibration_path=None):
     return config
 
 
-def find_baking_pulses(sweepers):
-    """Find pulses that require baking because we are sweeping their duration.
-
-    Args:
-        sweepers (list): List of :class:`qibolab.sweeper.Sweeper` objects.
-    """
-    to_bake = set()
-    for sweeper in sweepers:
-        values = sweeper.values
-        step = values[1] - values[0] if len(values) > 0 else values[0]
-        if sweeper.parameter is Parameter.duration and step % 4 != 0:
-            for pulse in sweeper.pulses:
-                to_bake.add(pulse.id)
-
-    return to_bake
-
-
 def fetch_results(result, acquisitions):
     """Fetches results from an executed experiment.
 

@@ -20,7 +20,7 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
     if parameters.duration is None:
         duration = int(pulse.duration) // 4
     else:
-        duration = parameters.duration
+        duration = parameters.duration / 4
     qua.wait(duration + 1, element)
 
 
@@ -28,7 +28,7 @@ def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     with qua.switch_(parameters.duration, unsafe=True):
         for value, sweep_op in parameters.pulses:
-            with qua.case_(value // 4):
+            with qua.case_(value):
                 qua.play(sweep_op, element)
 
 

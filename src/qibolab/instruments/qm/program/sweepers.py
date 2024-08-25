@@ -46,22 +46,6 @@ def check_max_offset(offset: Optional[float], max_offset: float = MAX_OFFSET):
         )
 
 
-# def _update_baked_pulses(sweeper, qmsequence, config):
-#    """Updates baked pulse if duration sweeper is used."""
-#    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].id]
-#    is_baked = isinstance(qmpulse, BakedPulse)
-#    for pulse in sweeper.pulses:
-#        qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
-#        if isinstance(qmpulse, BakedPulse):
-#            if not is_baked:
-#                raise_error(
-#                    TypeError,
-#                    "Duration sweeper cannot contain both baked and not baked pulses.",
-#                )
-#            values = np.array(sweeper.values).astype(int)
-#            qmpulse.bake(config, values)
-
-
 def _frequency(
     channels: list[Channel],
     values: npt.NDArray,
@@ -100,9 +84,6 @@ def _amplitude(
         raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
 
     for pulse in pulses:
-        # if isinstance(instruction, Bake):
-        #    instructions.update_kwargs(instruction, amplitude=a)
-        # else:
         args.parameters[operation(pulse)].amplitude = qua.amp(variable)
 
 
@@ -145,7 +126,6 @@ def _duration(
     configs: dict[str, Config],
     args: ExecutionArguments,
 ):
-    # TODO: Handle baked pulses
     for pulse in pulses:
         args.parameters[operation(pulse)].duration = variable
 
@@ -157,6 +137,10 @@ def normalize_phase(values):
 
 def normalize_duration(values):
     """Convert duration from ns to clock cycles (clock cycle = 4ns)."""
+    if not all(values % 4 == 0):
+        raise ValueError(
+            "Cannot use interpolated duration sweeper for durations that are not multiple of 4ns. Please use normal duration sweeper."
+        )
     return (values // 4).astype(int)
 
 
@@ -168,7 +152,6 @@ The rest parameters need ``fixed`` type.
 
 NORMALIZERS = {
     Parameter.relative_phase: normalize_phase,
-    Parameter.duration: normalize_duration,
     Parameter.duration_interpolated: normalize_duration,
 }
 """Functions to normalize sweeper values.
