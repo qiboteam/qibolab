@@ -299,14 +299,6 @@ class QmController(Controller):
     def register_pulse(self, channel: Channel, pulse: Pulse) -> str:
         """Add pulse in the QM ``config`` and return corresponding
         operation."""
-        # if (
-        #    pulse.duration % 4 != 0
-        #    or pulse.duration < 16
-        #    or pulse.id in pulses_to_bake
-        # ):
-        #    qmpulse = BakedPulse(pulse, element)
-        #    qmpulse.bake(self.config, durations=[pulse.duration])
-        # else:
         name = str(channel.name)
         if isinstance(channel, DcChannel):
             return self.config.register_dc_pulse(name, pulse)

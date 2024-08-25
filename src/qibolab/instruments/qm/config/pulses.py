@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Union
 
 import numpy as np
+import numpy.typing as npt
 
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.pulses.modulation import rotate, wrap_phase
@@ -22,6 +23,25 @@ __all__ = [
 def operation(pulse):
     """Generate operation name in QM ``config`` for the given pulse."""
     return str(hash(pulse))
+
+
+def baked_duration(duration: int) -> int:
+    if duration < 16:
+        return 16
+    elif duration % 4 != 0:
+        return duration - (duration % 4) + 4
+    return duration
+
+
+def bake(waveforms: npt.NDArray) -> npt.NDArray:
+    """Handle waveforms with length that is not multiple of 4."""
+    ncomponents, duration = waveforms.shape
+    new_duration = baked_duration(duration)
+    if new_duration == duration:
+        return waveforms
+    pad_len = new_duration - duration
+    padding = np.zeros((ncomponents, pad_len), dtype=waveforms.dtype)
+    return np.concatenate((waveforms, padding), axis=1)
 
 
 @dataclass(frozen=True)
@@ -47,9 +67,10 @@ class ArbitraryWaveform:
     def from_pulse(cls, pulse: Pulse):
         original_waveforms = pulse.envelopes(SAMPLING_RATE)
         rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
+        baked_waveforms = bake(rotated_waveforms)
         return {
-            "I": cls(rotated_waveforms[0]),
-            "Q": cls(rotated_waveforms[1]),
+            "I": cls(baked_waveforms[0]),
+            "Q": cls(baked_waveforms[1]),
         }
 
 
@@ -87,7 +108,7 @@ class QmPulse:
     def from_pulse(cls, pulse: Pulse):
         op = operation(pulse)
         return cls(
-            length=pulse.duration,
+            length=baked_duration(pulse.duration),
             waveforms=Waveforms.from_op(op),
         )
 
@@ -95,7 +116,7 @@ class QmPulse:
     def from_dc_pulse(cls, pulse: Pulse):
         op = operation(pulse)
         return cls(
-            length=pulse.duration,
+            length=baked_duration(pulse.duration),
             waveforms={"single": op},
         )
 
