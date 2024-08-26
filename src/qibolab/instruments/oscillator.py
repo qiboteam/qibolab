@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -9,6 +9,7 @@ RECONNECTION_ATTEMPTS = 3
 """Number of times to attempt connecting to instrument in case of failure."""
 
 
+@runtime_checkable
 class Device(Protocol):
     """Dummy device that does nothing but follows the QCoDeS interface.
 
