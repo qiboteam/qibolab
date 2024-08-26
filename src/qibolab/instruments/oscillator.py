@@ -1,13 +1,34 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Any, Optional, Protocol
 
 from pydantic import Field
-from qcodes.instrument import Instrument as QcodesInstrument
 
 from qibolab.instruments.abstract import Instrument, InstrumentSettings
 
 RECONNECTION_ATTEMPTS = 3
 """Number of times to attempt connecting to instrument in case of failure."""
+
+
+class Device(Protocol):
+    """Dummy device that does nothing but follows the QCoDeS interface.
+
+    Used by :class:`qibolab.instruments.dummy.DummyLocalOscillator`.
+    """
+
+    def set(self, name: str, value: Any):
+        """Set device property."""
+
+    def get(self, name: str) -> Any:
+        """Get device property."""
+
+    def on(self):
+        """Turn device on."""
+
+    def off(self):
+        """Turn device on."""
+
+    def close(self):
+        """Close connection with device."""
 
 
 class LocalOscillatorSettings(InstrumentSettings):
@@ -49,7 +70,7 @@ class LocalOscillator(Instrument):
     qubits and resonators. They cannot be used to play or sweep pulses.
     """
 
-    device: Optional[QcodesInstrument] = None
+    device: Optional[Device] = None
     settings: Optional[InstrumentSettings] = Field(
         default_factory=lambda: LocalOscillatorSettings()
     )
@@ -59,7 +80,7 @@ class LocalOscillator(Instrument):
     ref_osc_source = _property("ref_osc_source")
 
     @abstractmethod
-    def create(self) -> QcodesInstrument:
+    def create(self) -> Device:
         """Create instance of physical device."""
 
     def connect(self):
