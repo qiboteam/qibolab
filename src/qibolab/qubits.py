@@ -5,7 +5,7 @@ from pydantic import ConfigDict, Field
 # TODO: the unused import are there because Qibocal is still importing them from here
 # since the export scheme will be reviewed, it should be changed at that time, removing
 # the unused ones from here
-from .identifier import ChannelId, TransitionId, QubitId, QubitPairId
+from .identifier import ChannelId, QubitId, QubitPairId, TransitionId  # noqa
 from .serialize import Model
 
 

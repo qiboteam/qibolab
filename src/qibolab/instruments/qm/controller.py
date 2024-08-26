@@ -1,27 +1,27 @@
-from os import PathLike
 import shutil
 import tempfile
 import warnings
 from collections import defaultdict
 from dataclasses import asdict, dataclass
+from os import PathLike
 from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
-from qibolab.components.configs import AcquisitionConfig, IqConfig, OscillatorConfig
-from qibolab.instruments.qm.components.configs import (
-    OpxOutputConfig,
-    QmAcquisitionConfig,
-)
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import AcquireChannel, Channel, Config, DcChannel, IqChannel
+from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
+from qibolab.components.configs import IqConfig, OscillatorConfig
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
 from qibolab.instruments.abstract import Controller
+from qibolab.instruments.qm.components.configs import (
+    OpxOutputConfig,
+    QmAcquisitionConfig,
+)
 from qibolab.pulses import Acquisition, Align, Delay, Pulse, Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
