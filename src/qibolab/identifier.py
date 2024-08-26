@@ -38,16 +38,24 @@ ChannelId = str
 StateId = int
 """State identifier."""
 
+
+def _split(pair: Union[str, tuple]) -> tuple[str, str]:
+    if isinstance(pair, str):
+        a, b = pair.split("-")
+        return a, b
+    return pair
+
+
+def _join(pair: tuple[str, str]) -> str:
+    return f"{pair[0]}-{pair[1]}"
+
+
 TransitionId = Annotated[
-    tuple[StateId, StateId],
-    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
-    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+    tuple[StateId, StateId], BeforeValidator(_split), PlainSerializer(_join)
 ]
 """Identifier for a state transition."""
 
 QubitPairId = Annotated[
-    tuple[QubitId, QubitId],
-    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
-    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+    tuple[QubitId, QubitId], BeforeValidator(_split), PlainSerializer(_join)
 ]
 """Two-qubit active interaction identifier."""
