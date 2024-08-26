@@ -10,6 +10,10 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixpkgs-python = {
+      url = "github:cachix/nixpkgs-python";
+      inputs = {nixpkgs.follows = "nixpkgs";};
+    };
   };
 
   outputs = {
@@ -62,6 +66,7 @@
               languages.python = {
                 enable = true;
                 libraries = with pkgs; [zlib];
+                version = "3.11";
                 poetry = {
                   enable = true;
                   install = {
