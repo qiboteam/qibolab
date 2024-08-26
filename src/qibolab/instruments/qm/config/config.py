@@ -9,7 +9,14 @@ from qibolab.pulses import Pulse
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 from .devices import AnalogOutput, Controller, Octave, OctaveInput, OctaveOutput
 from .elements import AcquireOctaveElement, DcElement, Element, RfOctaveElement
-from .pulses import QmAcquisition, QmPulse, Waveform, operation, waveforms_from_pulse
+from .pulses import (
+    QmAcquisition,
+    QmPulse,
+    Waveform,
+    integration_weights,
+    operation,
+    waveforms_from_pulse,
+)
 
 __all__ = ["QmConfig"]
 
