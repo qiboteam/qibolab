@@ -29,7 +29,7 @@ class Instrument(Model, ABC):
         address (str): Instrument network address.
     """
 
-    model_config = ConfigDict(frozen=False)
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=False, extra="allow")
 
     name: InstrumentId
     address: str

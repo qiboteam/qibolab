@@ -58,7 +58,6 @@ def test_dummy_execute_pulse_sequence_unrolling(
 ):
     nshots = 100
     nsequences = 10
-    platform.instruments["dummy"].UNROLLING_BATCH_SIZE = batch_size
     natives = platform.natives
     sequences = []
     sequence = PulseSequence()
