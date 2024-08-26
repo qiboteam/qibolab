@@ -120,18 +120,22 @@ the native gates, but separately from the single-qubit ones.
     )
 
     # create the qubit objects
-    qubit0 = Qubit(drive="0/drive", flux="0/flux", probe="0/probe", acquisition="0/acquisition")
-    qubit1 = Qubit(drive="1/drive", flux="1/flux", probe="1/probe", acquisition="1/acquisition")
+    qubit0 = Qubit(
+        drive="0/drive", flux="0/flux", probe="0/probe", acquisition="0/acquisition"
+    )
+    qubit1 = Qubit(
+        drive="1/drive", flux="1/flux", probe="1/probe", acquisition="1/acquisition"
+    )
 
     channels = {}
 
     # assign channels to the qubits
     channels[qubit0.probe] = IqChannel(mixer=None, lo=None)
-    channels[qubit0.acquisition] = AcquireChannel( twpa_pump=None, probe=qubit0.probe)
+    channels[qubit0.acquisition] = AcquireChannel(twpa_pump=None, probe=qubit0.probe)
     channels[qubit0.drive] = IqChannel(mixer=None, lo=None)
     channels[qubit0.flux] = DcChannel()
-    channels[qubit1.probe] = IqChannel( mixer=None, lo=None)
-    channels[qubit1.acquisition] = AcquireChannel( twpa_pump=None, probe=qubit1.probe)
+    channels[qubit1.probe] = IqChannel(mixer=None, lo=None)
+    channels[qubit1.acquisition] = AcquireChannel(twpa_pump=None, probe=qubit1.probe)
     channels[qubit1.drive] = IqChannel(mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
