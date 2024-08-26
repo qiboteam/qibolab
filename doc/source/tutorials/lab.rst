@@ -120,34 +120,28 @@ the native gates, but separately from the single-qubit ones.
     )
 
     # create the qubit objects
-    qubit0 = Qubit(name=0)
-    qubit1 = Qubit(name=1)
+    qubit0 = Qubit(drive="0/drive", flux="0/flux", probe="0/probe", acquisition="0/acquisition")
+    qubit1 = Qubit(drive="1/drive", flux="1/flux", probe="1/probe", acquisition="1/acquisition")
+
+    channels = {}
 
     # assign channels to the qubits
-    qubit0.probe = IqChannel(
-        name="0/probe", mixer=None, lo=None, acquisition="0/acquisition"
-    )
-    qubit0.acquisition = AcquireChannel(
-        name="0/acquisition", twpa_pump=None, probe="probe_0"
-    )
-    qubit0.drive = IqChannel(name="0/drive", mixer=None, lo=None)
-    qubit0.flux = DcChannel(name="0/flux")
-    qubit1.probe = IqChannel(
-        name="1/probe", mixer=None, lo=None, acquisition="1/acquisition"
-    )
-    qubit1.acquisition = AcquireChannel(
-        name="1/acquisition", twpa_pump=None, probe="probe_1"
-    )
-    qubit1.drive = IqChannel(name="1/drive", mixer=None, lo=None)
+    channels[qubit0.probe] = IqChannel(mixer=None, lo=None)
+    channels[qubit0.acquisition] = AcquireChannel( twpa_pump=None, probe=qubit0.probe)
+    channels[qubit0.drive] = IqChannel(mixer=None, lo=None)
+    channels[qubit0.flux] = DcChannel()
+    channels[qubit1.probe] = IqChannel( mixer=None, lo=None)
+    channels[qubit1.acquisition] = AcquireChannel( twpa_pump=None, probe=qubit1.probe)
+    channels[qubit1.drive] = IqChannel(mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
     single_qubit = {}
-    single_qubit[qubit0.name] = SingleQubitNatives(
+    single_qubit["0"] = SingleQubitNatives(
         RX=RxyFactory(
             PulseSequence(
                 [
                     (
-                        qubit0.drive.name,
+                        qubit0.drive,
                         Pulse(
                             duration=40,
                             amplitude=0.05,
@@ -161,19 +155,19 @@ the native gates, but separately from the single-qubit ones.
             PulseSequence(
                 [
                     (
-                        qubit0.probe.name,
+                        qubit0.probe,
                         Pulse(duration=1000, amplitude=0.005, envelope=Rectangular()),
                     )
                 ]
             )
         ),
     )
-    single_qubit[qubit1.name] = SingleQubitNatives(
+    single_qubit["1"] = SingleQubitNatives(
         RX=RxyFactory(
             PulseSequence(
                 [
                     (
-                        qubit1.drive.name,
+                        qubit1.drive,
                         Pulse(
                             duration=40, amplitude=0.05, envelope=Gaussian(rel_sigma=0.2)
                         ),
@@ -185,7 +179,7 @@ the native gates, but separately from the single-qubit ones.
             PulseSequence(
                 [
                     (
-                        qubit1.probe.name,
+                        qubit1.probe,
                         Pulse(duration=1000, amplitude=0.005, envelope=Rectangular()),
                     )
                 ]
@@ -196,12 +190,12 @@ the native gates, but separately from the single-qubit ones.
     # define the pair of qubits
     two_qubit = TwoQubitContainer(
         {
-            f"{qubit0.name}-{qubit1.name}": TwoQubitNatives(
+            f"0-1": TwoQubitNatives(
                 CZ=FixedSequenceFactory(
                     PulseSequence(
                         [
                             (
-                                qubit0.flux.name,
+                                qubit0.flux,
                                 Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
                             ),
                         ]
@@ -229,12 +223,11 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
     )
 
     # create the qubit and coupler objects
-    qubit0 = Qubit(name=0)
-    qubit1 = Qubit(name=1)
-    coupler_01 = Qubit(name="c01")
+    coupler_01 = Qubit(flux="c01/flux")
 
+    channels = {}
     # assign channel(s) to the coupler
-    coupler_01.flux = DcChannel(name="c01/flux")
+    channels[coupler_01.flux] = DcChannel()
 
     # assign single-qubit native gates to each qubit
     # Look above example
@@ -242,12 +235,12 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
     # define the pair of qubits
     two_qubit = TwoQubitContainer(
         {
-            f"{qubit0.name}-{qubit1.name}": TwoQubitNatives(
+            f"0-1": TwoQubitNatives(
                 CZ=FixedSequenceFactory(
                     PulseSequence(
                         [
                             (
-                                coupler_01.flux.name,
+                                coupler_01.flux,
                                 Pulse(duration=30, amplitude=0.005, envelope=Rectangular()),
                             )
                         ],
