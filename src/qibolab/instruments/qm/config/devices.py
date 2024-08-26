@@ -1,4 +1,3 @@
-from collections import UserDict
 from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 
@@ -19,7 +18,7 @@ calibration when using Octaves.
 V = TypeVar("V")
 
 
-class PortDict(Generic[V], UserDict[str, V]):
+class PortDict(Generic[V], dict[str, V]):
     """Dictionary that automatically converts keys to strings.
 
     Used to register input and output ports to controllers and Octaves
