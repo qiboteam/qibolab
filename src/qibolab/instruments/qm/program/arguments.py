@@ -17,6 +17,7 @@ class Parameters:
     amplitude: Optional[_Variable] = None
     phase: Optional[_Variable] = None
     pulses: list[tuple[float, str]] = field(default_factory=list)
+    interpolated: bool = False
 
 
 @dataclass

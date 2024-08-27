@@ -24,6 +24,16 @@ def operation(pulse):
     return str(hash(pulse))
 
 
+def baked_duration(duration: int) -> int:
+    """Calculate waveform length after pulse baking.
+
+    QM can only play pulses with length that is >16ns and multiple of
+    4ns. Waveforms that don't satisfy these constraints are padded with
+    zeros.
+    """
+    return int(np.maximum((duration + 3) // 4 * 4, 16))
+
+
 @dataclass(frozen=True)
 class ConstantWaveform:
     sample: float
@@ -47,9 +57,12 @@ class ArbitraryWaveform:
     def from_pulse(cls, pulse: Pulse):
         original_waveforms = pulse.envelopes(SAMPLING_RATE)
         rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
+        new_duration = baked_duration(pulse.duration)
+        pad_len = new_duration - int(pulse.duration)
+        baked_waveforms = np.pad(rotated_waveforms, ((0, 0), (0, pad_len)))
         return {
-            "I": cls(rotated_waveforms[0]),
-            "Q": cls(rotated_waveforms[1]),
+            "I": cls(baked_waveforms[0]),
+            "Q": cls(baked_waveforms[1]),
         }
 
 
@@ -58,9 +71,10 @@ Waveform = Union[ConstantWaveform, ArbitraryWaveform]
 
 def waveforms_from_pulse(pulse: Pulse) -> Waveform:
     """Register QM waveforms for a given pulse."""
+    needs_baking = pulse.duration < 16 or pulse.duration % 4 != 0
     wvtype = (
         ConstantWaveform
-        if isinstance(pulse.envelope, Rectangular)
+        if isinstance(pulse.envelope, Rectangular) and not needs_baking
         else ArbitraryWaveform
     )
     return wvtype.from_pulse(pulse)
@@ -87,7 +101,7 @@ class QmPulse:
     def from_pulse(cls, pulse: Pulse):
         op = operation(pulse)
         return cls(
-            length=pulse.duration,
+            length=baked_duration(pulse.duration),
             waveforms=Waveforms.from_op(op),
         )
 
@@ -95,7 +109,7 @@ class QmPulse:
     def from_dc_pulse(cls, pulse: Pulse):
         op = operation(pulse)
         return cls(
-            length=pulse.duration,
+            length=baked_duration(pulse.duration),
             waveforms={"single": op},
         )
 

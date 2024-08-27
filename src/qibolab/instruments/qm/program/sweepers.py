@@ -46,22 +46,6 @@ def check_max_offset(offset: Optional[float], max_offset: float = MAX_OFFSET):
         )
 
 
-# def _update_baked_pulses(sweeper, qmsequence, config):
-#    """Updates baked pulse if duration sweeper is used."""
-#    qmpulse = qmsequence.pulse_to_qmpulse[sweeper.pulses[0].id]
-#    is_baked = isinstance(qmpulse, BakedPulse)
-#    for pulse in sweeper.pulses:
-#        qmpulse = qmsequence.pulse_to_qmpulse[pulse.id]
-#        if isinstance(qmpulse, BakedPulse):
-#            if not is_baked:
-#                raise_error(
-#                    TypeError,
-#                    "Duration sweeper cannot contain both baked and not baked pulses.",
-#                )
-#            values = np.array(sweeper.values).astype(int)
-#            qmpulse.bake(config, values)
-
-
 def _frequency(
     channels: list[Channel],
     values: npt.NDArray,
@@ -100,9 +84,6 @@ def _amplitude(
         raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
 
     for pulse in pulses:
-        # if isinstance(instruction, Bake):
-        #    instructions.update_kwargs(instruction, amplitude=a)
-        # else:
         args.parameters[operation(pulse)].amplitude = qua.amp(variable)
 
 
@@ -145,9 +126,21 @@ def _duration(
     configs: dict[str, Config],
     args: ExecutionArguments,
 ):
-    # TODO: Handle baked pulses
     for pulse in pulses:
         args.parameters[operation(pulse)].duration = variable
+
+
+def _duration_interpolated(
+    pulses: list[Pulse],
+    values: npt.NDArray,
+    variable: _Variable,
+    configs: dict[str, Config],
+    args: ExecutionArguments,
+):
+    for pulse in pulses:
+        params = args.parameters[operation(pulse)]
+        params.duration = variable
+        params.interpolated = True
 
 
 def normalize_phase(values):
@@ -157,6 +150,10 @@ def normalize_phase(values):
 
 def normalize_duration(values):
     """Convert duration from ns to clock cycles (clock cycle = 4ns)."""
+    if any(values < 16) and not all(values % 4 == 0):
+        raise ValueError(
+            "Cannot use interpolated duration sweeper for durations that are not multiple of 4ns or are less than 16ns. Please use normal duration sweeper."
+        )
     return (values // 4).astype(int)
 
 
@@ -168,7 +165,6 @@ The rest parameters need ``fixed`` type.
 
 NORMALIZERS = {
     Parameter.relative_phase: normalize_phase,
-    Parameter.duration: normalize_duration,
     Parameter.duration_interpolated: normalize_duration,
 }
 """Functions to normalize sweeper values.
@@ -180,7 +176,7 @@ SWEEPER_METHODS = {
     Parameter.frequency: _frequency,
     Parameter.amplitude: _amplitude,
     Parameter.duration: _duration,
-    Parameter.duration_interpolated: _duration,
+    Parameter.duration_interpolated: _duration_interpolated,
     Parameter.relative_phase: _relative_phase,
     Parameter.bias: _bias,
 }

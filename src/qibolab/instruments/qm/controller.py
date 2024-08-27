@@ -71,23 +71,6 @@ def declare_octaves(octaves, host, calibration_path=None):
     return config
 
 
-def find_baking_pulses(sweepers):
-    """Find pulses that require baking because we are sweeping their duration.
-
-    Args:
-        sweepers (list): List of :class:`qibolab.sweeper.Sweeper` objects.
-    """
-    to_bake = set()
-    for sweeper in sweepers:
-        values = sweeper.values
-        step = values[1] - values[0] if len(values) > 0 else values[0]
-        if sweeper.parameter is Parameter.duration and step % 4 != 0:
-            for pulse in sweeper.pulses:
-                to_bake.add(pulse.id)
-
-    return to_bake
-
-
 def fetch_results(result, acquisitions):
     """Fetches results from an executed experiment.
 
@@ -299,14 +282,6 @@ class QmController(Controller):
     def register_pulse(self, channel: Channel, pulse: Pulse) -> str:
         """Add pulse in the QM ``config`` and return corresponding
         operation."""
-        # if (
-        #    pulse.duration % 4 != 0
-        #    or pulse.duration < 16
-        #    or pulse.id in pulses_to_bake
-        # ):
-        #    qmpulse = BakedPulse(pulse, element)
-        #    qmpulse.bake(self.config, durations=[pulse.duration])
-        # else:
         name = str(channel.name)
         if isinstance(channel, DcChannel):
             return self.config.register_dc_pulse(name, pulse)
@@ -322,6 +297,11 @@ class QmController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         for channel_id, pulse in sequence:
+            if hasattr(pulse, "duration") and not pulse.duration.is_integer():
+                raise ValueError(
+                    f"Quantum Machines cannot play pulse with duration {pulse.duration}. "
+                    "Only integer duration in ns is supported."
+                )
             if isinstance(pulse, Pulse):
                 channel = self.channels[str(channel_id)].logical_channel
                 self.register_pulse(channel, pulse)

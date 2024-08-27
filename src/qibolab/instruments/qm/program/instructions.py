@@ -6,6 +6,7 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab.identifier import ChannelType
 from qibolab.pulses import Align, Delay, Pulse, VirtualZ
 from qibolab.sweeper import ParallelSweepers
 
@@ -18,17 +19,24 @@ from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS, normalize_phase
 def _delay(pulse: Delay, element: str, parameters: Parameters):
     # TODO: How to play delays on multiple elements?
     if parameters.duration is None:
-        duration = int(pulse.duration) // 4
+        duration = max(int(pulse.duration) // 4 + 1, 4)
+        qua.wait(duration, element)
+    elif parameters.interpolated:
+        duration = parameters.duration + 1
+        qua.wait(duration, element)
     else:
-        duration = parameters.duration
-    qua.wait(duration + 1, element)
+        duration = parameters.duration / 4
+        with qua.if_(duration < 4):
+            qua.wait(4, element)
+        with qua.else_():
+            qua.wait(duration, element)
 
 
 def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     with qua.switch_(parameters.duration, unsafe=True):
         for value, sweep_op in parameters.pulses:
-            with qua.case_(value // 4):
+            with qua.case_(value):
                 qua.play(sweep_op, element)
 
 
@@ -68,6 +76,9 @@ def play(args: ExecutionArguments):
     processed_aligns = set()
 
     for channel_id, pulse in args.sequence:
+        if channel_id.channel_type is ChannelType.ACQUISITION:
+            continue
+
         element = str(channel_id)
         op = operation(pulse)
         params = args.parameters[op]
