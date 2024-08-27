@@ -19,12 +19,17 @@ from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS, normalize_phase
 def _delay(pulse: Delay, element: str, parameters: Parameters):
     # TODO: How to play delays on multiple elements?
     if parameters.duration is None:
-        duration = int(pulse.duration) // 4
+        duration = max(int(pulse.duration) // 4 + 1, 4)
+        qua.wait(duration, element)
     elif parameters.interpolated:
-        duration = parameters.duration
+        duration = parameters.duration + 1
+        qua.wait(duration, element)
     else:
         duration = parameters.duration / 4
-    qua.wait(duration + 1, element)
+        with qua.if_(duration < 4):
+            qua.wait(4, element)
+        with qua.else_():
+            qua.wait(duration, element)
 
 
 def _play_multiple_waveforms(element: str, parameters: Parameters):

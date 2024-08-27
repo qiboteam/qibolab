@@ -150,9 +150,9 @@ def normalize_phase(values):
 
 def normalize_duration(values):
     """Convert duration from ns to clock cycles (clock cycle = 4ns)."""
-    if not all(values % 4 == 0):
+    if any(values < 16) and not all(values % 4 == 0):
         raise ValueError(
-            "Cannot use interpolated duration sweeper for durations that are not multiple of 4ns. Please use normal duration sweeper."
+            "Cannot use interpolated duration sweeper for durations that are not multiple of 4ns or are less than 16ns. Please use normal duration sweeper."
         )
     return (values // 4).astype(int)
 

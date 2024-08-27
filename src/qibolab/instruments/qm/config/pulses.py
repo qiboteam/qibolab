@@ -71,9 +71,10 @@ Waveform = Union[ConstantWaveform, ArbitraryWaveform]
 
 def waveforms_from_pulse(pulse: Pulse) -> Waveform:
     """Register QM waveforms for a given pulse."""
+    needs_baking = pulse.duration < 16 or pulse.duration % 4 != 0
     wvtype = (
         ConstantWaveform
-        if isinstance(pulse.envelope, Rectangular)
+        if isinstance(pulse.envelope, Rectangular) and not needs_baking
         else ArbitraryWaveform
     )
     return wvtype.from_pulse(pulse)
