@@ -8,7 +8,7 @@ from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab.identifier import ChannelType
 from qibolab.pulses import Align, Delay, Pulse, VirtualZ
-from qibolab.sweeper import ParallelSweepers
+from qibolab.sweeper import ParallelSweepers, Sweeper
 
 from ..config import operation
 from .acquisition import Acquisition
@@ -98,35 +98,17 @@ def play(args: ExecutionArguments):
         qua.wait(args.relaxation_time // 4)
 
 
-def _sweep_recursion(sweepers, configs, args):
-    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops
-    using recursion."""
-    if len(sweepers) > 0:
-        parallel_sweepers = sweepers[0]
-        if len(parallel_sweepers) > 1:
-            raise NotImplementedError
+def _process_sweeper(sweeper: Sweeper):
+    parameter = sweeper.parameter
+    if parameter not in SWEEPER_METHODS:
+        raise NotImplementedError(f"Sweeper for {parameter} is not implemented.")
 
-        sweeper = parallel_sweepers[0]
-        parameter = sweeper.parameter
-        if parameter not in SWEEPER_METHODS:
-            raise NotImplementedError(f"Sweeper for {parameter} is not implemented.")
+    variable = declare(int) if parameter in INT_TYPE else declare(fixed)
+    values = sweeper.values
+    if parameter in NORMALIZERS:
+        values = NORMALIZERS[parameter](sweeper.values)
 
-        variable = declare(int) if parameter in INT_TYPE else declare(fixed)
-        values = sweeper.values
-        if parameter in NORMALIZERS:
-            values = NORMALIZERS[parameter](sweeper.values)
-
-        method = SWEEPER_METHODS[parameter]
-        with for_(*from_array(variable, values)):
-            if sweeper.pulses is not None:
-                method(sweeper.pulses, values, variable, configs, args)
-            else:
-                method(sweeper.channels, values, variable, configs, args)
-
-            _sweep_recursion(sweepers[1:], configs, args)
-
-    else:
-        play(args)
+    return variable, values
 
 
 def sweep(
@@ -134,11 +116,35 @@ def sweep(
     configs: dict[str, Config],
     args: ExecutionArguments,
 ):
-    """Public sweep function that is called by the driver."""
-    # for sweeper in sweepers:
-    #    if sweeper.parameter is Parameter.duration:
-    #        _update_baked_pulses(sweeper, instructions, config)
-    _sweep_recursion(sweepers, configs, args)
+    """Unrolls a list of qibolab sweepers to the corresponding QUA for loops.
+
+    Uses recursion to handle nested sweepers.
+    """
+    if len(sweepers) > 0:
+        parallel_sweepers = sweepers[0]
+
+        variables, all_values = zip(
+            *(_process_sweeper(sweeper) for sweeper in parallel_sweepers)
+        )
+        if len(parallel_sweepers) > 1:
+            loop = qua.for_each_(variables, all_values)
+        else:
+            loop = for_(*from_array(variables[0], all_values[0]))
+
+        with loop:
+            for sweeper, variable, values in zip(
+                parallel_sweepers, variables, all_values
+            ):
+                method = SWEEPER_METHODS[sweeper.parameter]
+                if sweeper.pulses is not None:
+                    method(sweeper.pulses, values, variable, configs, args)
+                else:
+                    method(sweeper.channels, values, variable, configs, args)
+
+            sweep(sweepers[1:], configs, args)
+
+    else:
+        play(args)
 
 
 def program(
