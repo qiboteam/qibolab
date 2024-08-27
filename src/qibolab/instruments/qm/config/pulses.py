@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Union
 
 import numpy as np
-import numpy.typing as npt
 
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.pulses.modulation import rotate, wrap_phase
@@ -26,22 +25,13 @@ def operation(pulse):
 
 
 def baked_duration(duration: int) -> int:
-    if duration < 16:
-        return 16
-    elif duration % 4 != 0:
-        return duration - (duration % 4) + 4
-    return duration
+    """Calculate waveform length after pulse baking.
 
-
-def bake(waveforms: npt.NDArray) -> npt.NDArray:
-    """Handle waveforms with length that is not multiple of 4."""
-    ncomponents, duration = waveforms.shape
-    new_duration = baked_duration(duration)
-    if new_duration == duration:
-        return waveforms
-    pad_len = new_duration - duration
-    padding = np.zeros((ncomponents, pad_len), dtype=waveforms.dtype)
-    return np.concatenate((waveforms, padding), axis=1)
+    QM can only play pulses with length that is >16ns and multiple of
+    4ns. Waveforms that don't satisfy these constraints are padded with
+    zeros.
+    """
+    return int(np.maximum((duration + 3) // 4 * 4, 16))
 
 
 @dataclass(frozen=True)
@@ -67,7 +57,9 @@ class ArbitraryWaveform:
     def from_pulse(cls, pulse: Pulse):
         original_waveforms = pulse.envelopes(SAMPLING_RATE)
         rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
-        baked_waveforms = bake(rotated_waveforms)
+        new_duration = baked_duration(pulse.duration)
+        pad_len = new_duration - int(pulse.duration)
+        baked_waveforms = np.pad(rotated_waveforms, ((0, 0), (0, pad_len)))
         return {
             "I": cls(baked_waveforms[0]),
             "Q": cls(baked_waveforms[1]),
