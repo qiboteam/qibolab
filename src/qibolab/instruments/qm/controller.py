@@ -374,7 +374,7 @@ class QmController(Controller):
                     "Quantum Machines does not support acquisition with different duration than probe."
                 )
 
-            op = self.config.register_acquisition_pulse(channel_id, readout.probe)
+            op = self.config.register_acquisition_pulse(channel_id, readout)
 
             acq_config = configs[channel_id]
             assert isinstance(acq_config, QmAcquisitionConfig)

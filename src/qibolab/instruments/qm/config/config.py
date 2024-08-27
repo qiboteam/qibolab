@@ -5,6 +5,7 @@ from qibolab.components.channels import AcquireChannel, DcChannel, IqChannel
 from qibolab.components.configs import IqConfig, OscillatorConfig
 from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse
+from qibolab.pulses.pulse import Readout
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 from .devices import AnalogOutput, Controller, Octave, OctaveInput, OctaveOutput
@@ -142,12 +143,12 @@ class QmConfig:
         self.elements[element].operations[op] = op
         return op
 
-    def register_acquisition_pulse(self, element: str, pulse: Pulse):
+    def register_acquisition_pulse(self, element: str, readout: Readout):
         """Registers pulse, waveforms and integration weights in QM config."""
-        op = operation(pulse)
+        op = operation(readout)
         acquisition = f"{op}_{element}"
         if acquisition not in self.pulses:
-            self.pulses[acquisition] = self.register_waveforms(pulse, element)
+            self.pulses[acquisition] = self.register_waveforms(readout.probe, element)
         self.elements[element].operations[op] = acquisition
         return op
 
