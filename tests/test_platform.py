@@ -21,7 +21,7 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.parameters import NativeGates, Parameters, update_configs
-from qibolab.platform import Platform, unroll_sequences
+from qibolab.platform import Platform
 from qibolab.platform.load import PLATFORM, PLATFORMS
 from qibolab.platform.platform import PARAMETERS
 from qibolab.pulses import Delay, Gaussian, Pulse, Rectangular
@@ -31,19 +31,6 @@ from qibolab.serialize import replace
 from .conftest import find_instrument
 
 nshots = 1024
-
-
-def test_unroll_sequences(platform: Platform):
-    qubit = next(iter(platform.qubits.values()))
-    natives = platform.natives.single_qubit[0]
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
-    sequence.concatenate(natives.MZ.create_sequence())
-    total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
-    assert len(total_sequence.acquisitions) == 10
-    assert len(readouts) == 1
-    assert all(len(readouts[acq.id]) == 10 for _, acq in sequence.acquisitions)
 
 
 def test_create_platform(platform):
