@@ -415,16 +415,19 @@ class QmController(Controller):
 
         experiment = program(configs, args, options, sweepers)
 
+        if self.script_file_name is not None:
+            script_config = (
+                {"version": 1} if self.manager is None else asdict(self.config)
+            )
+            script = generate_qua_script(experiment, script_config)
+            with open(self.script_file_name, "w") as file:
+                file.write(script)
+
         if self.manager is None:
             warnings.warn(
                 "Not connected to Quantum Machines. Returning program and config."
             )
             return {"program": experiment, "config": asdict(self.config)}
-
-        if self.script_file_name is not None:
-            script = generate_qua_script(experiment, asdict(self.config))
-            with open(self.script_file_name, "w") as file:
-                file.write(script)
 
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)
