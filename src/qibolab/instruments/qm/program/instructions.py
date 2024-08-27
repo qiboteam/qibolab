@@ -36,8 +36,24 @@ def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     with qua.switch_(parameters.duration, unsafe=True):
         for value, sweep_op in parameters.pulses:
+            if parameters.amplitude is not None:
+                sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
                 qua.play(sweep_op, element)
+
+
+def _play_single_waveform(
+    op: str,
+    element: str,
+    parameters: Parameters,
+    acquisition: Optional[Acquisition] = None,
+):
+    if parameters.amplitude is not None:
+        op = op * parameters.amplitude
+    if acquisition is not None:
+        acquisition.measure(op)
+    else:
+        qua.play(op, element, duration=parameters.duration)
 
 
 def _play(
@@ -48,16 +64,11 @@ def _play(
 ):
     if parameters.phase is not None:
         qua.frame_rotation_2pi(parameters.phase, element)
-    if parameters.amplitude is not None:
-        op = op * parameters.amplitude
 
     if len(parameters.pulses) > 0:
         _play_multiple_waveforms(element, parameters)
     else:
-        if acquisition is not None:
-            acquisition.measure(op)
-        else:
-            qua.play(op, element, duration=parameters.duration)
+        _play_single_waveform(op, element, parameters, acquisition)
 
     if parameters.phase is not None:
         qua.reset_frame(element)
