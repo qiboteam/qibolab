@@ -7,7 +7,7 @@ from qualang_tools.loops import from_array
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab.identifier import ChannelType
-from qibolab.pulses import Align, Delay, Pulse, VirtualZ
+from qibolab.pulses import Align, Delay, Pulse, Readout, VirtualZ
 from qibolab.sweeper import ParallelSweepers, Sweeper
 
 from ..config import operation
@@ -96,6 +96,8 @@ def play(args: ExecutionArguments):
         if isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, Pulse):
+            _play(op, element, params)
+        elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
         elif isinstance(pulse, VirtualZ):
