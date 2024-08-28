@@ -18,28 +18,12 @@ class Parameter(Enum):
     duration = auto()
     duration_interpolated = auto()
     relative_phase = auto()
-
-    attenuation = auto()
-    gain = auto()
     bias = auto()
-    lo_frequency = auto()
-
-
-FREQUENCY = Parameter.frequency
-AMPLITUDE = Parameter.amplitude
-DURATION = Parameter.duration
-DURATION_INTERPOLATED = Parameter.duration_interpolated
-RELATIVE_PHASE = Parameter.relative_phase
-ATTENUATION = Parameter.attenuation
-GAIN = Parameter.gain
-BIAS = Parameter.bias
 
 
 ChannelParameter = {
     Parameter.frequency,
     Parameter.bias,
-    Parameter.attenuation,
-    Parameter.gain,
 }
 
 
