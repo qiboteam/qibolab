@@ -180,9 +180,3 @@ def execute(connected_platform: Platform) -> Execution:
         return results[target[0]][target[1]]
 
     return wrapped
-
-
-def pytest_generate_tests(metafunc):
-    name = metafunc.module.__name__
-    if "test_instruments" in name:
-        pytest.skip()
