@@ -561,7 +561,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
         range=(f0 - 200_000, f0 + 200_000, 1),
         channels=[qubit.probe.name],
     )
-    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
+    shape = (options.nshots, len(sweeper1.values_array), len(sweeper2.values_array))
 
 .. _main_doc_compiler:
 
