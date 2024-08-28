@@ -18,12 +18,12 @@ class Parameter(Enum):
     duration = auto()
     duration_interpolated = auto()
     relative_phase = auto()
-    bias = auto()
+    offset = auto()
 
 
 ChannelParameter = {
     Parameter.frequency,
-    Parameter.bias,
+    Parameter.offset,
 }
 
 
@@ -56,13 +56,9 @@ class Sweeper(Model):
 
     Args:
         parameter: parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
-        values: sweep range. If the parameter of the sweep is a pulse parameter, if the sweeper type is not ABSOLUTE, the base value
-            will be taken from the runcard pulse parameters. If the sweep parameter is Bias, the base value will be the sweetspot of the qubits.
+        values: sweep range.
         pulses : list of `qibolab.pulses.Pulse` to be swept.
         channels: list of channel names for which the parameter should be swept.
-        type: can be ABSOLUTE (the sweeper range is swept directly),
-            FACTOR (sweeper values are multiplied by base value), OFFSET (sweeper values are added
-            to base value)
     """
 
     parameter: Parameter

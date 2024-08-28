@@ -157,7 +157,7 @@ def execute(connected_platform: Platform) -> Execution:
                 amp_values = np.arange(0.01, 0.06, 0.01)
                 freq_values = np.arange(-4e6, 4e6, 1e6)
                 sweeper1 = Sweeper(
-                    parameter=Parameter.bias,
+                    parameter=Parameter.offset,
                     values=amp_values,
                     channels=[qubit.flux.name],
                 )

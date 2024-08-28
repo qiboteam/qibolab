@@ -98,7 +98,7 @@ def _relative_phase(
         args.parameters[operation(pulse)].phase = variable
 
 
-def _bias(
+def _offset(
     channels: list[Channel],
     values: npt.NDArray,
     variable: _Variable,
@@ -178,6 +178,6 @@ SWEEPER_METHODS = {
     Parameter.duration: _duration,
     Parameter.duration_interpolated: _duration_interpolated,
     Parameter.relative_phase: _relative_phase,
-    Parameter.bias: _bias,
+    Parameter.offset: _offset,
 }
 """Methods that return part of QUA program to be used inside the loop."""

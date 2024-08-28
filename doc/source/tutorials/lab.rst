@@ -314,7 +314,7 @@ a two-qubit system:
           "frequency": 5800563000
         },
         "0/flux": {
-          "bias": 0.0
+          "offset": 0.0
         },
         "0/probe": {
           "frequency": 7453265000
@@ -431,7 +431,7 @@ we need the following changes to the previous runcard:
     {
       "components": {
         "flux_coupler_01": {
-          "bias": 0.12
+          "offset": 0.12
         }
       },
       "native_gates": {

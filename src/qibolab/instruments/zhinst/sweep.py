@@ -20,7 +20,7 @@ def classify_sweepers(
     can be done in real-time (i.e. on hardware)"""
     nt_sweepers, rt_sweepers = [], []
     for sweeper in sweepers:
-        if sweeper.parameter is Parameter.bias or (
+        if sweeper.parameter is Parameter.offset or (
             sweeper.parameter is Parameter.amplitude
             # FIXME:
             # and sweeper.pulses[0].type is PulseType.READOUT
@@ -80,7 +80,7 @@ class ProcessedSweeps:
 
             for ch in sweeper.channels or []:
                 logical_channel = channels[ch].logical_channel
-                if sweeper.parameter is Parameter.bias:
+                if sweeper.parameter is Parameter.offset:
                     sweep_param = laboneq.SweepParameter(
                         values=sweeper.values + configs[logical_channel.name].offset
                     )
