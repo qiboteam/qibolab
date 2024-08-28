@@ -14,7 +14,7 @@ messages = [
 
 def test_connect():
     with mock.patch("socket.socket"):
-        tc = TemperatureController("Test_Temperature_Controller", "")
+        tc = TemperatureController(name="Test_Temperature_Controller", address="")
         assert tc.is_connected is False
         # if already connected, it should stay connected
         for _ in range(2):
@@ -25,7 +25,7 @@ def test_connect():
 @pytest.mark.parametrize("already_connected", [True, False])
 def test_disconnect(already_connected):
     with mock.patch("socket.socket"):
-        tc = TemperatureController("Test_Temperature_Controller", "")
+        tc = TemperatureController(name="Test_Temperature_Controller", address="")
         if not already_connected:
             tc.connect()
         # if already disconnected, it should stay disconnected
@@ -39,7 +39,7 @@ def test_continuously_read_data():
         "qibolab.instruments.bluefors.TemperatureController.get_data",
         new=lambda _: yaml.safe_load(messages[0]),
     ):
-        tc = TemperatureController("Test_Temperature_Controller", "")
+        tc = TemperatureController(name="Test_Temperature_Controller", address="")
         read_temperatures = tc.read_data()
         for read_temperature in read_temperatures:
             assert read_temperature == yaml.safe_load(messages[0])
