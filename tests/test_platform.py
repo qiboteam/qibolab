@@ -18,7 +18,6 @@ from qibolab.components import AcquisitionConfig, IqConfig, OscillatorConfig
 from qibolab.dummy import create_dummy
 from qibolab.dummy.platform import FOLDER
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.instruments.qblox.controller import QbloxController
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.parameters import NativeGates, Parameters, update_configs
 from qibolab.platform import Platform
@@ -27,8 +26,6 @@ from qibolab.platform.platform import PARAMETERS
 from qibolab.pulses import Delay, Gaussian, Pulse, Rectangular
 from qibolab.sequence import PulseSequence
 from qibolab.serialize import replace
-
-from .conftest import find_instrument
 
 nshots = 1024
 
@@ -289,11 +286,7 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     pulse = Pulse(duration=8192 + 200, amplitude=0.12, envelope=Gaussian(5))
     sequence = PulseSequence([(qubit.drive.name, pulse)])
     options = ExecutionParameters(nshots=nshots)
-    if find_instrument(platform, QbloxController) is not None:
-        with pytest.raises(NotImplementedError):
-            platform.execute_pulse_sequence(sequence, options)
-    else:
-        platform.execute_pulse_sequence(sequence, options)
+    platform.execute_pulse_sequence(sequence, options)
 
 
 @pytest.mark.qpu
@@ -304,11 +297,7 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     pulse = Pulse(duration=2 * 8192 + 200, amplitude=0.12, envelope=Gaussian(0.2))
     sequence = PulseSequence([(qubit.drive.name, pulse)])
     options = ExecutionParameters(nshots=nshots)
-    if find_instrument(platform, QbloxController) is not None:
-        with pytest.raises(NotImplementedError):
-            platform.execute_pulse_sequence(sequence, options)
-    else:
-        platform.execute_pulse_sequence(sequence, options)
+    platform.execute_pulse_sequence(sequence, options)
 
 
 @pytest.mark.qpu

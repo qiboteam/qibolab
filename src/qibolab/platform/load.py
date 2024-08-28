@@ -50,7 +50,7 @@ def create_platform(name: str) -> Platform:
     It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
-        name (str): name of the platform. Options are 'tiiq', 'qili' and 'icarusq'.
+        name (str): name of the platform.
         path (pathlib.Path): path with platform serialization
     Returns:
         The plaform class.

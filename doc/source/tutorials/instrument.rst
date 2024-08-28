@@ -5,9 +5,7 @@ Currently, Qibolab support various instruments:
 as **controller**:
 
 * Quantum Machines
-* QBlox
 * Zurich instruments
-* Xilinx RFSoCs
 
 and as **local oscillators**:
 
@@ -18,7 +16,7 @@ If you need to add a new driver, to support a new instruments in your setup, we 
 In this section, anyway, a basic example will be given.
 
 For clarity, we divide the instruments in two different groups: the **controllers** and the standard **instruments**, where the controller is an instrument that can execute pulse sequences.
-For example, a local oscillator is just an instrument, while QBlox is a controller.
+For example, a local oscillator is just an instrument, while Quantum Machines is a controller.
 
 Add an instrument
 -----------------
@@ -104,10 +102,6 @@ The additional methods required are:
 * ``play()``
 * ``play_sequences()``
 * ``sweep()``
-
-The simplest real example is the RFSoCs driver in
-:class:`qibolab.instruments.rfsoc.driver.RFSoC`, but still the code is much more
-complex than the local oscillator ones.
 
 Let's see a minimal example:
 

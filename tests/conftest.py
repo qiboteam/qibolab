@@ -19,14 +19,7 @@ from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
-TESTING_PLATFORM_NAMES = [  # FIXME: uncomment platforms as they get upgraded to 0.2
-    "dummy",
-    # "qm",
-    # "qm_octave",
-    # "qblox",
-    # "rfsoc",
-    # "zurich",
-]
+TESTING_PLATFORM_NAMES = ["dummy"]
 """Platforms used for testing without access to real instruments."""
 
 
@@ -180,9 +173,3 @@ def execute(connected_platform: Platform) -> Execution:
         return results[target[0]][target[1]]
 
     return wrapped
-
-
-def pytest_generate_tests(metafunc):
-    name = metafunc.module.__name__
-    if "test_instruments" in name:
-        pytest.skip()
