@@ -149,6 +149,7 @@ def execute(connected_platform: Platform) -> Execution:
             probe_seq = natives.MZ.create_sequence()
             probe_pulse = probe_seq[0][1]
             acq = probe_seq[1][1]
+            wrapped.acquisition_duration = acq.duration
             sequence = PulseSequence()
             sequence.concatenate(qd_seq)
             sequence.concatenate(probe_seq)

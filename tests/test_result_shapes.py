@@ -43,3 +43,16 @@ def test_integration_cyclic(execute, sweep):
         assert result.shape == (2,)
     else:
         assert result.shape == (NSWEEP1, NSWEEP2, 2)
+
+
+def test_raw_singleshot(execute):
+    result = execute(Acq.RAW, Av.SINGLESHOT, NSHOTS, [])
+    assert result.shape == (NSHOTS, int(execute.acquisition_duration), 2)
+
+
+def test_raw_cyclic(execute, sweep):
+    result = execute(Acq.RAW, Av.CYCLIC, NSHOTS, sweep)
+    if sweep == []:
+        assert result.shape == (int(execute.acquisition_duration), 2)
+    else:
+        assert result.shape == (NSWEEP1, NSWEEP2, int(execute.acquisition_duration), 2)
