@@ -49,7 +49,7 @@ def estimate_duration(
         (duration + len(sequences) * relaxation)
         * nshots
         * NS_TO_SEC
-        * prod(len(s[0].values) for s in sweepers)
+        * prod(len(s[0].values_array) for s in sweepers)
     )
 
 

@@ -71,10 +71,12 @@ class ProcessedSweeps:
             for pulse in sweeper.pulses or []:
                 if sweeper.parameter is Parameter.duration:
                     sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values * NANO_TO_SECONDS
+                        values=sweeper.values_array * NANO_TO_SECONDS
                     )
                 else:
-                    sweep_param = laboneq.SweepParameter(values=copy(sweeper.values))
+                    sweep_param = laboneq.SweepParameter(
+                        values=copy(sweeper.values_array)
+                    )
                 pulse_sweeps.append((pulse, sweeper.parameter, sweep_param))
                 parallel_sweeps.append((sweeper, sweep_param))
 
@@ -82,7 +84,8 @@ class ProcessedSweeps:
                 logical_channel = channels[ch].logical_channel
                 if sweeper.parameter is Parameter.offset:
                     sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values + configs[logical_channel.name].offset
+                        values=sweeper.values_array
+                        + configs[logical_channel.name].offset
                     )
                 elif sweeper.parameter is Parameter.frequency:
                     intermediate_frequency = (
@@ -90,7 +93,7 @@ class ProcessedSweeps:
                         - configs[logical_channel.lo].frequency
                     )
                     sweep_param = laboneq.SweepParameter(
-                        values=sweeper.values + intermediate_frequency
+                        values=sweeper.values_array + intermediate_frequency
                     )
                 else:
                     raise ValueError(
