@@ -66,11 +66,18 @@ def test_sweeper_errors():
             channels=[channel],
         )
     with pytest.raises(
-        ValueError, match="'linspace' and 'values' are mutually exclusive"
+        ValueError, match="'range' and 'values' are mutually exclusive."
     ):
         Sweeper(
             parameter=Parameter.frequency,
             values=parameter_range,
-            linspace=(0, 10, 1),
+            range=(0, 10, 1),
+            channels=[channel],
+        )
+    with pytest.raises(
+        ValueError, match="Either 'range' or 'values' needs to be provided."
+    ):
+        Sweeper(
+            parameter=Parameter.frequency,
             channels=[channel],
         )

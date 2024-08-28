@@ -56,14 +56,16 @@ class Sweeper(Model):
 
     Args:
         parameter: parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
-        values: sweep range.
+        values: array of parameter values to sweep over.
+        range: tuple of ``(start, stop, step)`` to sweep over the array ``np.arange(start, stop, step)``.
+            Can be provided instead of ``values`` for more efficient sweeps on some instruments.
         pulses : list of `qibolab.pulses.Pulse` to be swept.
         channels: list of channel names for which the parameter should be swept.
     """
 
     parameter: Parameter
     values: Optional[npt.NDArray] = None
-    linspace: Optional[tuple[float, float, float]] = None
+    range: Optional[tuple[float, float, float]] = None
     pulses: Optional[list[Pulse]] = None
     channels: Optional[list[ChannelId]] = None
 
@@ -85,15 +87,17 @@ class Sweeper(Model):
             raise ValueError(
                 "Cannot create a sweeper without specifying pulses or channels."
             )
-        if self.linspace is not None and self.values is not None:
-            raise ValueError("'linspace' and 'values' are mutually exclusive")
+        if self.range is not None and self.values is not None:
+            raise ValueError("'range' and 'values' are mutually exclusive.")
+        if self.range is None and self.values is None:
+            raise ValueError("Either 'range' or 'values' needs to be provided.")
 
         return self
 
     @property
     def values_array(self) -> npt.NDArray:
-        if self.linspace is not None:
-            return np.linspace(*self.linspace)
+        if self.range is not None:
+            return np.arange(*self.range)
         return self.values
 
 
