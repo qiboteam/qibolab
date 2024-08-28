@@ -4,7 +4,7 @@ from pydantic import Field
 
 from qibolab.components import AcquisitionConfig, DcConfig
 
-__all__ = ["OpxOutputConfig", "QmAcquisitionConfig", "QmConfig"]
+__all__ = ["OpxOutputConfig", "QmAcquisitionConfig", "QmConfigs"]
 
 
 class OpxOutputConfig(DcConfig):
@@ -41,4 +41,4 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """Constant voltage to be applied on the input."""
 
 
-QmConfig = Union[OpxOutputConfig, QmAcquisitionConfig]
+QmConfigs = Union[OpxOutputConfig, QmAcquisitionConfig]
