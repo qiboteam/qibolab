@@ -157,10 +157,14 @@ def execute(connected_platform: Platform) -> Execution:
                 amp_values = np.arange(0.01, 0.06, 0.01)
                 freq_values = np.arange(-4e6, 4e6, 1e6)
                 sweeper1 = Sweeper(
-                    Parameter.bias, amp_values, channels=[qubit.flux.name]
+                    parameter=Parameter.bias,
+                    values=amp_values,
+                    channels=[qubit.flux.name],
                 )
                 sweeper2 = Sweeper(
-                    Parameter.amplitude, freq_values, pulses=[probe_pulse]
+                    parameter=Parameter.amplitude,
+                    values=freq_values,
+                    pulses=[probe_pulse],
                 )
                 sweepers = [[sweeper1], [sweeper2]]
             if target is None:

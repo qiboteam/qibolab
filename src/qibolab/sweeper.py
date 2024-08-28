@@ -1,8 +1,13 @@
-from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
 
+import numpy as np
 import numpy.typing as npt
+from pydantic import model_validator
+
+from .identifier import ChannelId
+from .pulses import Pulse
+from .serialize import Model
 
 
 class Parameter(Enum):
@@ -38,8 +43,7 @@ ChannelParameter = {
 }
 
 
-@dataclass
-class Sweeper:
+class Sweeper(Model):
     """Data structure for Sweeper object.
 
     This object is passed as an argument to the method :func:`qibolab.platforms.platform.Platform.execute`
@@ -77,11 +81,13 @@ class Sweeper:
     """
 
     parameter: Parameter
-    values: npt.NDArray
-    pulses: Optional[list] = None
-    channels: Optional[list] = None
+    values: Optional[npt.NDArray] = None
+    linspace: Optional[tuple[float, float, float]] = None
+    pulses: Optional[list[Pulse]] = None
+    channels: Optional[list[ChannelId]] = None
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def check_values(self):
         if self.pulses is not None and self.channels is not None:
             raise ValueError(
                 "Cannot create a sweeper by using both pulses and channels."
@@ -98,6 +104,16 @@ class Sweeper:
             raise ValueError(
                 "Cannot create a sweeper without specifying pulses or channels."
             )
+        if self.linspace is not None and self.values is not None:
+            raise ValueError("'linspace' and 'values' are mutually exclusive")
+
+        return self
+
+    @property
+    def values_array(self) -> npt.NDArray:
+        if self.linspace is not None:
+            return np.linspace(*self.linspace)
+        return self.values
 
 
 ParallelSweepers = list[Sweeper]

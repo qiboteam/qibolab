@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
 
@@ -20,26 +21,30 @@ def test_sweeper_pulses(parameter):
         with pytest.raises(
             ValueError, match="Cannot create a sweeper .* without specifying channels"
         ):
-            _ = Sweeper(parameter, parameter_range, pulses=[pulse])
+            _ = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
     else:
-        sweeper = Sweeper(parameter, parameter_range, pulses=[pulse])
+        sweeper = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
         assert sweeper.parameter is parameter
 
 
 @pytest.mark.parametrize("parameter", Parameter)
 def test_sweeper_channels(parameter):
+    channel = ChannelId.load("0/probe")
     parameter_range = np.random.randint(10, size=10)
     if parameter in ChannelParameter:
-        sweeper = Sweeper(parameter, parameter_range, channels=["some channel"])
+        sweeper = Sweeper(
+            parameter=parameter, values=parameter_range, channels=[channel]
+        )
         assert sweeper.parameter is parameter
     else:
         with pytest.raises(
             ValueError, match="Cannot create a sweeper .* without specifying pulses"
         ):
-            _ = Sweeper(parameter, parameter_range, channels=["canal"])
+            _ = Sweeper(parameter=parameter, values=parameter_range, channels=[channel])
 
 
 def test_sweeper_errors():
+    channel = ChannelId.load("0/probe")
     pulse = Pulse(
         duration=40,
         amplitude=0.1,
@@ -50,13 +55,22 @@ def test_sweeper_errors():
         ValueError,
         match="Cannot create a sweeper without specifying pulses or channels",
     ):
-        Sweeper(Parameter.frequency, parameter_range)
+        Sweeper(parameter=Parameter.frequency, values=parameter_range)
     with pytest.raises(
         ValueError, match="Cannot create a sweeper by using both pulses and channels"
     ):
         Sweeper(
-            Parameter.frequency,
-            parameter_range,
+            parameter=Parameter.frequency,
+            values=parameter_range,
             pulses=[pulse],
-            channels=["some channel"],
+            channels=[channel],
+        )
+    with pytest.raises(
+        ValueError, match="'linspace' and 'values' are mutually exclusive"
+    ):
+        Sweeper(
+            parameter=Parameter.frequency,
+            values=parameter_range,
+            linspace=(0, 10, 1),
+            channels=[channel],
         )
