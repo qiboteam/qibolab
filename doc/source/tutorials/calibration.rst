@@ -50,7 +50,7 @@ around the pre-defined frequency.
     f0 = platform.config(str(qubit.probe.name)).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=f0 + np.arange(-2e8, +2e8, 1e6),
+        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.probe.name],
     )
 
@@ -75,7 +75,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     acq = sequence.acquisitions[0][1]
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values
+    frequencies = sweeper.values_array
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -144,7 +144,7 @@ complex pulse sequence. Therefore with start with that:
     f0 = platform.config(str(qubit.probe.name)).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=f0 + np.arange(-2e8, +2e8, 1e6),
+        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.drive.name],
     )
 
@@ -166,7 +166,7 @@ We can now proceed to launch on hardware:
 
     _, acq = next(iter(sequence.acquisitions))
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values
+    frequencies = sweeper.values_array
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")

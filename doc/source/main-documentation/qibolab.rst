@@ -432,15 +432,15 @@ For example:
     sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
     sequence.concatenate(natives.MZ.create_sequence())
 
+    f0 = platform.config(str(qubit.drive.name)).frequency
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
-        values=platform.config(str(qubit.drive.name)).frequency
-        + np.arange(-100_000, +100_000, 10_000),
+        range=(f0 - 100_000, f0 + 100_000, 10_000),
         channels=[qubit.drive.name],
     )
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
-        values=np.arange(0, 0.43, 0.3),
+        range=(0, 0.43, 0.3),
         pulses=[next(iter(sequence.channel(qubit.drive.name)))],
     )
 
@@ -550,16 +550,15 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
 .. testcode:: python
 
+    f0 = platform.config(str(qubit.drive.name)).frequency
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
-        values=platform.config(str(qubit.drive.name)).frequency
-        + np.arange(-100_000, +100_000, 1),
+        range=(f0 - 100_000, f0 + 100_000, 1),
         channels=[qubit.drive.name],
     )
     sweeper2 = Sweeper(
         parameter=Parameter.frequency,
-        values=platform.config(str(qubit.drive.name)).frequency
-        + np.arange(-200_000, +200_000, 1),
+        range=(f0 - 200_000, f0 + 200_000, 1),
         channels=[qubit.probe.name],
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
