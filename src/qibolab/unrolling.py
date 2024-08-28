@@ -5,10 +5,11 @@ May be reused by different instruments.
 
 from collections import defaultdict
 from functools import total_ordering
-from typing import Annotated
+from typing import Annotated, Literal
 
-from qibolab.components.configs import BoundsConfig
-from qibolab.serialize import Model
+from pydantic.fields import FieldInfo
+
+from qibolab.components.configs import Config
 
 from .pulses import Delay, Pulse
 from .pulses.envelope import Rectangular
@@ -40,8 +41,10 @@ def _instructions(sequence: PulseSequence):
 
 
 @total_ordering
-class Bounds(Model):
+class Bounds(Config):
     """Instument memory limitations proxies."""
+
+    kind: Literal["bounds"] = "bounds"
 
     waveforms: Annotated[int, {"count": _waveform}]
     """Waveforms estimated size."""
@@ -51,15 +54,9 @@ class Bounds(Model):
     """Instructions estimated size."""
 
     @classmethod
-    def from_config(cls, config: BoundsConfig):
-        d = config.model_dump()
-        del d["kind"]
-        return cls(**d)
-
-    @classmethod
     def update(cls, sequence: PulseSequence):
         up = {}
-        for name, info in cls.model_fields.items():
+        for name, info in cls._entries().items():
             up[name] = info.metadata[0]["count"](sequence)
 
         return cls(**up)
@@ -70,13 +67,22 @@ class Bounds(Model):
         for (k, x), (_, y) in zip(
             self.model_dump().items(), other.model_dump().items()
         ):
-            new[k] = x + y
+            if k in type(self)._entries():
+                new[k] = x + y
 
         return type(self)(**new)
 
     def __gt__(self, other: "Bounds") -> bool:
         """Define ordering as exceeding any bound."""
-        return any(getattr(self, f) > getattr(other, f) for f in self.model_fields)
+        return any(getattr(self, f) > getattr(other, f) for f in type(self)._entries())
+
+    @classmethod
+    def _entries(cls) -> dict[str, FieldInfo]:
+        return {
+            n: f
+            for n, f in cls.model_fields.items()
+            if "count" in next(iter(f.metadata), {})
+        }
 
 
 def batch(sequences: list[PulseSequence], bounds: Bounds):

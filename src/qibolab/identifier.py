@@ -1,12 +1,26 @@
 from enum import Enum
 from typing import Annotated, Optional, Union
 
-from pydantic import Field, TypeAdapter, model_serializer, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    TypeAdapter,
+    model_serializer,
+    model_validator,
+)
 
 from .serialize import Model
 
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Type for qubit names."""
+
+QubitPairId = Annotated[
+    tuple[QubitId, QubitId],
+    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
+    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
+]
+"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
 
 
 # TODO: replace with StrEnum, once py3.10 will be abandoned
@@ -28,6 +42,9 @@ class ChannelType(str, Enum):
         return str(self.value)
 
 
+_adapted_qubit = TypeAdapter(QubitId)
+
+
 class ChannelId(Model):
     """Unique identifier for a channel."""
 
@@ -42,7 +59,7 @@ class ChannelId(Model):
         # TODO: replace with pattern matching, once py3.9 will be abandoned
         if len(elements) > 3:
             raise ValueError()
-        q = TypeAdapter(QubitId).validate_python(elements[0])
+        q = _adapted_qubit.validate_python(elements[0])
         ct = ChannelType(elements[1])
         assert len(elements) == 2 or ct is ChannelType.DRIVE_CROSS
         dc = elements[2] if len(elements) == 3 else None

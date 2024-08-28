@@ -374,13 +374,7 @@ To designate the pulse(s) or channel(s) to which a sweeper is applied, you can u
 
 To effectively specify the sweeping behavior, Qibolab provides the ``values`` attribute along with the ``type`` attribute.
 
-The ``values`` attribute comprises an array of numerical values that define the sweeper's progression. To facilitate multi-qubit execution, these numbers can be interpreted in three ways:
-
-- Absolute Values: Represented by `qibolab.sweeper.SweeperType.ABSOLUTE`, these values are used directly.
-- Relative Values with Offset: Utilizing `qibolab.sweeper.SweeperType.OFFSET`, these values are relative to a designated base value, corresponding to the pulse or qubit value.
-- Relative Values with Factor: Employing `qibolab.sweeper.SweeperType.FACTOR`, these values are scaled by a factor from the base value, akin to a multiplier.
-
-For offset and factor sweepers, the base value is determined by the respective pulse or qubit value.
+The ``values`` attribute comprises an array of numerical values that define the sweeper's progression.
 
 Let's see some examples.
 Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
@@ -390,7 +384,7 @@ A tipical resonator spectroscopy experiment could be defined with:
 
     import numpy as np
 
-    from qibolab.sweeper import Parameter, Sweeper, SweeperType
+    from qibolab.sweeper import Parameter, Sweeper
 
     natives = platform.natives.single_qubit
 
@@ -405,31 +399,26 @@ A tipical resonator spectroscopy experiment could be defined with:
         natives[2].MZ.create_sequence()
     )  # readout pulse for qubit 2 at 6 GHz
 
-    sweeper = Sweeper(
-        parameter=Parameter.frequency,
-        values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
-        channels=[qubit.probe.name for qubit in platform.qubits.values()],
-        type=SweeperType.OFFSET,
-    )
+    sweepers = [
+        Sweeper(
+            parameter=Parameter.frequency,
+            values=platform.config(str(qubit.probe.name)).frequency
+            + np.arange(-200_000, +200_000, 1),  # define an interval of swept values
+            channels=[qubit.probe.name],
+        )
+        for qubit in platform.qubits.values()
+    ]
 
-    results = platform.execute([sequence], options, [[sweeper]])
+    results = platform.execute([sequence], options, [sweepers])
 
 .. note::
 
    options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
 
-In this way, we first define a sweeper with an interval of 400 MHz (-200 MHz --- 200 MHz), assigning it to all three readout pulses and setting is as an offset sweeper. The resulting probed frequency will then be:
+In this way, we first define three parallel sweepers with an interval of 400 MHz (-200 MHz --- 200 MHz). The resulting probed frequency will then be:
     - for qubit 0: [3.8 GHz, 4.2 GHz]
     - for qubit 1: [4.8 GHz, 5.2 GHz]
     - for qubit 2: [5.8 GHz, 6.2 GHz]
-
-If we had used the :class:`qibolab.sweeper.SweeperType` absolute, we would have probed for all qubits the same frequencies [-200 MHz, 200 MHz].
-
-.. note::
-
-   The default :class:`qibolab.sweeper.SweeperType` is absolute!
-
-For factor sweepers, usually useful when dealing with amplitudes, the base value is multipled by the values set.
 
 It is possible to define and executes multiple sweepers at the same time.
 For example:
@@ -448,15 +437,14 @@ For example:
 
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
-        values=np.arange(-100_000, +100_000, 10_000),
+        values=platform.config(str(qubit.drive.name)).frequency
+        + np.arange(-100_000, +100_000, 10_000),
         channels=[qubit.drive.name],
-        type=SweeperType.OFFSET,
     )
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
-        values=np.arange(0, 1.5, 0.1),
+        values=np.arange(0, 0.43, 0.3),
         pulses=[next(iter(sequence.channel(qubit.drive.name)))],
-        type=SweeperType.FACTOR,
     )
 
     results = platform.execute([sequence], options, [[sweeper_freq], [sweeper_amp]])
@@ -567,15 +555,15 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
-        values=np.arange(-100_000, +100_000, 1),  # define an interval of swept values
+        values=platform.config(str(qubit.drive.name)).frequency
+        + np.arange(-100_000, +100_000, 1),
         channels=[qubit.drive.name],
-        type=SweeperType.OFFSET,
     )
     sweeper2 = Sweeper(
         parameter=Parameter.frequency,
-        values=np.arange(-200_000, +200_000, 1),  # define an interval of swept values
+        values=platform.config(str(qubit.drive.name)).frequency
+        + np.arange(-200_000, +200_000, 1),
         channels=[qubit.probe.name],
-        type=SweeperType.OFFSET,
     )
     shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
 

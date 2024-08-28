@@ -1,7 +1,7 @@
 from collections.abc import Iterable
-from typing import Annotated, Optional
+from typing import Optional
 
-from pydantic import BeforeValidator, ConfigDict, PlainSerializer
+from pydantic import ConfigDict
 
 from .components import AcquireChannel, DcChannel, IqChannel
 from .components.channels import Channel
@@ -58,11 +58,3 @@ class Qubit(Model):
                 _if = native.frequency - _lo
                 freqs[name] = _lo, _if
         return freqs
-
-
-QubitPairId = Annotated[
-    tuple[QubitId, QubitId],
-    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
-    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
-]
-"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""

@@ -1,6 +1,5 @@
 """A platform for executing quantum algorithms."""
 
-import json
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -12,10 +11,10 @@ from qibo.config import log, raise_error
 
 from qibolab.components import Config
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, QubitId, QubitPairId
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
-from qibolab.qubits import Qubit, QubitId, QubitPairId
+from qibolab.qubits import Qubit
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds, batch
@@ -260,7 +259,8 @@ class Platform:
 
         results = defaultdict(list)
         # pylint: disable=unsubscriptable-object
-        bounds = Bounds.from_config(self.parameters.configs[self._controller.bounds])
+        bounds = self.parameters.configs[self._controller.bounds]
+        assert isinstance(bounds, Bounds)
         for b in batch(sequences, bounds):
             result = self._execute(b, options, configs, sweepers)
             for serial, data in result.items():
@@ -287,9 +287,7 @@ class Platform:
 
         return cls(
             name=name,
-            parameters=Parameters.model_validate(
-                json.loads((path / PARAMETERS).read_text())
-            ),
+            parameters=Parameters.model_validate_json((path / PARAMETERS).read_text()),
             instruments=instruments,
             qubits=qubits,
             couplers=couplers,
@@ -297,9 +295,7 @@ class Platform:
 
     def dump(self, path: Path):
         """Dump platform."""
-        (path / PARAMETERS).write_text(
-            json.dumps(self.parameters.model_dump(), sort_keys=False, indent=4)
-        )
+        (path / PARAMETERS).write_text(self.parameters.model_dump_json(indent=4))
 
     def get_qubit(self, qubit: QubitId) -> Qubit:
         """Return the name of the physical qubit corresponding to a logical

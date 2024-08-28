@@ -1,7 +1,5 @@
-import operator
 from dataclasses import dataclass
 from enum import Enum, auto
-from functools import partial
 from typing import Optional
 
 import numpy.typing as npt
@@ -30,14 +28,6 @@ RELATIVE_PHASE = Parameter.relative_phase
 ATTENUATION = Parameter.attenuation
 GAIN = Parameter.gain
 BIAS = Parameter.bias
-
-
-class SweeperType(Enum):
-    """Type of the Sweeper."""
-
-    ABSOLUTE = partial(lambda x, y=None: x)
-    FACTOR = operator.mul
-    OFFSET = operator.add
 
 
 ChannelParameter = {
@@ -90,7 +80,6 @@ class Sweeper:
     values: npt.NDArray
     pulses: Optional[list] = None
     channels: Optional[list] = None
-    type: Optional[SweeperType] = SweeperType.ABSOLUTE
 
     def __post_init__(self):
         if self.pulses is not None and self.channels is not None:
@@ -109,10 +98,6 @@ class Sweeper:
             raise ValueError(
                 "Cannot create a sweeper without specifying pulses or channels."
             )
-
-    def get_values(self, base_value):
-        """Convert sweeper values depending on the sweeper type."""
-        return self.type.value(self.values, base_value)
 
 
 ParallelSweepers = list[Sweeper]

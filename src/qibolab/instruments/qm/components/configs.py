@@ -1,13 +1,10 @@
-from typing import Literal
+from typing import Literal, Union
 
 from pydantic import Field
 
 from qibolab.components import AcquisitionConfig, DcConfig
 
-__all__ = [
-    "OpxOutputConfig",
-    "QmAcquisitionConfig",
-]
+__all__ = ["OpxOutputConfig", "QmAcquisitionConfig", "QmConfigs"]
 
 
 class OpxOutputConfig(DcConfig):
@@ -20,7 +17,7 @@ class OpxOutputConfig(DcConfig):
 
     Possible values are -0.5V to 0.5V.
     """
-    filter: dict[str, float] = Field(default_factory=dict)
+    filter: dict[str, list[float]] = Field(default_factory=dict)
     """FIR and IIR filters to be applied for correcting signal distortions.
 
     See
@@ -42,3 +39,6 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """
     offset: float = 0.0
     """Constant voltage to be applied on the input."""
+
+
+QmConfigs = Union[OpxOutputConfig, QmAcquisitionConfig]

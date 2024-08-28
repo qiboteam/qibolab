@@ -32,7 +32,7 @@ around the pre-defined frequency.
     from qibolab import create_platform
     from qibolab.sequence import PulseSequence
     from qibolab.result import magnitude
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
+    from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
         AveragingMode,
@@ -47,11 +47,11 @@ around the pre-defined frequency.
     sequence = natives.MZ.create_sequence()
 
     # allocate frequency sweeper
+    f0 = platform.config(str(qubit.probe.name)).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=np.arange(-2e8, +2e8, 1e6),
+        values=f0 + np.arange(-2e8, +2e8, 1e6),
         channels=[qubit.probe.name],
-        type=SweeperType.OFFSET,
     )
 
 We then define the execution parameters and launch the experiment.
@@ -75,9 +75,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     acq = sequence.acquisitions[0][1]
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = (
-        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.probe.name)).frequency
-    )
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -116,7 +114,7 @@ complex pulse sequence. Therefore with start with that:
     from qibolab.pulses import Pulse, Delay, Gaussian
     from qibolab.sequence import PulseSequence
     from qibolab.result import magnitude
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
+    from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
         AveragingMode,
@@ -143,11 +141,11 @@ complex pulse sequence. Therefore with start with that:
     sequence.concatenate(natives.MZ.create_sequence())
 
     # allocate frequency sweeper
+    f0 = platform.config(str(qubit.probe.name)).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=np.arange(-2e8, +2e8, 1e6),
+        values=f0 + np.arange(-2e8, +2e8, 1e6),
         channels=[qubit.drive.name],
-        type=SweeperType.OFFSET,
     )
 
 Note that the drive pulse has been changed to match the characteristics required
@@ -168,9 +166,7 @@ We can now proceed to launch on hardware:
 
     _, acq = next(iter(sequence.acquisitions))
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = (
-        np.arange(-2e8, +2e8, 1e6) + platform.config(str(qubit.drive.name)).frequency
-    )
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -223,7 +219,7 @@ and its impact on qubit states in the IQ plane.
     from qibolab.pulses import Delay
     from qibolab.sequence import PulseSequence
     from qibolab.result import unpack
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
+    from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
         AveragingMode,

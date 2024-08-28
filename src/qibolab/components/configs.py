@@ -20,10 +20,15 @@ __all__ = [
     "IqMixerConfig",
     "OscillatorConfig",
     "Config",
+    "ChannelConfig",
 ]
 
 
-class DcConfig(Model):
+class Config(Model):
+    """Configuration values depot."""
+
+
+class DcConfig(Config):
     """Configuration for a channel that can be used to send DC pulses (i.e.
     just envelopes without modulation)."""
 
@@ -33,7 +38,7 @@ class DcConfig(Model):
     """DC offset/bias of the channel."""
 
 
-class OscillatorConfig(Model):
+class OscillatorConfig(Config):
     """Configuration for an oscillator."""
 
     kind: Literal["oscillator"] = "oscillator"
@@ -42,7 +47,7 @@ class OscillatorConfig(Model):
     power: float
 
 
-class IqMixerConfig(Model):
+class IqMixerConfig(Config):
     """Configuration for IQ mixer.
 
     Mixers usually have various imperfections, and one needs to
@@ -64,7 +69,7 @@ class IqMixerConfig(Model):
     imbalance."""
 
 
-class IqConfig(Model):
+class IqConfig(Config):
     """Configuration for an IQ channel."""
 
     kind: Literal["iq"] = "iq"
@@ -73,7 +78,7 @@ class IqConfig(Model):
     """The carrier frequency of the channel."""
 
 
-class AcquisitionConfig(Model):
+class AcquisitionConfig(Config):
     """Configuration for acquisition channel.
 
     Currently, in qibolab, acquisition channels are FIXME:
@@ -115,27 +120,6 @@ class AcquisitionConfig(Model):
         )
 
 
-class BoundsConfig(Model):
-    """Instument memory limitations proxies."""
-
-    kind: Literal["bounds"] = "bounds"
-
-    waveforms: int
-    """Waveforms estimated size."""
-    readout: int
-    """Number of readouts."""
-    instructions: int
-    """Instructions estimated size."""
-
-
-Config = Annotated[
-    Union[
-        DcConfig,
-        IqMixerConfig,
-        OscillatorConfig,
-        IqConfig,
-        AcquisitionConfig,
-        BoundsConfig,
-    ],
-    Field(discriminator="kind"),
+ChannelConfig = Union[
+    DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig
 ]

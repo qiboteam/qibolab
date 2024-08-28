@@ -4,17 +4,18 @@ The format is explained in the :ref:`Using parameters <using_runcards>`
 example.
 """
 
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Iterable
+from typing import Annotated, Any, Union
 
-from pydantic import Field, TypeAdapter
+from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab.components import Config
+from qibolab.components import ChannelConfig, Config
 from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
+from qibolab.identifier import QubitId, QubitPairId
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.qubits import QubitId, QubitPairId
 from qibolab.serialize import Model, replace
+from qibolab.unrolling import Bounds
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -103,10 +104,76 @@ ComponentId = str
 This is assumed to always be in its serialized form.
 """
 
+# TODO: replace _UnionType with UnionType, once py3.9 will be abandoned
+_UnionType = Any
+_ChannelConfigT = Union[_UnionType, type[Config]]
+_BUILTIN_CONFIGS: tuple[_ChannelConfigT, ...] = (ChannelConfig, Bounds)
+
+
+class ConfigKinds:
+    """Registered configuration kinds.
+
+    This class is handling the known configuration kinds for deserialization.
+
+    .. attention::
+
+        Beware that is managing a global state. This should not be a major issue, as the
+        known configurations should be fixed per run. But prefer avoiding changing them
+        during a single session, unless you are clearly controlling the sequence of all
+        loading operations.
+    """
+
+    _registered: list[_ChannelConfigT] = list(_BUILTIN_CONFIGS)
+
+    @classmethod
+    def extend(cls, kinds: Iterable[type[Config]]):
+        """Extend the known configuration kinds.
+
+        Nested unions are supported (i.e. :class:`Union` as elements of ``kinds``).
+        """
+        cls._registered.extend(kinds)
+
+    @classmethod
+    def reset(cls):
+        """Reset known configuration kinds to built-ins."""
+        cls._registered = list(_BUILTIN_CONFIGS)
+
+    @classmethod
+    def registered(cls) -> list[_ChannelConfigT]:
+        """Retrieve registered configuration kinds."""
+        return cls._registered.copy()
+
+    @classmethod
+    def adapted(cls) -> TypeAdapter:
+        """Construct tailored pydantic type adapter.
+
+        The adapter will be able to directly load all the registered
+        configuration kinds as the appropriate Python objects.
+        """
+        return TypeAdapter(
+            Annotated[
+                Union[tuple(ConfigKinds._registered)], Field(discriminator="kind")
+            ]
+        )
+
+
+def _load_configs(raw: dict[str, dict]) -> dict[ComponentId, Config]:
+    a = ConfigKinds.adapted()
+    return {k: a.validate_python(v) for k, v in raw.items()}
+
+
+def _dump_configs(obj: dict[ComponentId, Config]) -> dict[str, dict]:
+    a = ConfigKinds.adapted()
+    return {k: a.dump_python(v) for k, v in obj.items()}
+
 
 class Parameters(Model):
     """Serializable parameters."""
 
     settings: Settings = Field(default_factory=Settings)
-    configs: dict[ComponentId, Config] = Field(default_factory=dict)
+    configs: Annotated[
+        dict[ComponentId, Config],
+        BeforeValidator(_load_configs),
+        PlainSerializer(_dump_configs),
+    ] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
