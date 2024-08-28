@@ -92,10 +92,11 @@ class Sweeper(Model):
         if self.range is None and self.values is None:
             raise ValueError("Either 'range' or 'values' needs to be provided.")
 
-        if self.range is not None:
-            self.values = np.arange(*range)
-
         return self
+
+    def model_post_init(self, __context):
+        if self.range is not None:
+            self.values = np.arange(*self.range)
 
 
 ParallelSweepers = list[Sweeper]
