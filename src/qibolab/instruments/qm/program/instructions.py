@@ -115,7 +115,7 @@ def _process_sweeper(sweeper: Sweeper):
         raise NotImplementedError(f"Sweeper for {parameter} is not implemented.")
 
     variable = declare(int) if parameter in INT_TYPE else declare(fixed)
-    values = sweeper.values_array
+    values = sweeper.values
     if parameter in NORMALIZERS:
         values = NORMALIZERS[parameter](values)
 

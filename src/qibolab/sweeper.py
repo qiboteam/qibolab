@@ -92,13 +92,10 @@ class Sweeper(Model):
         if self.range is None and self.values is None:
             raise ValueError("Either 'range' or 'values' needs to be provided.")
 
-        return self
-
-    @property
-    def values_array(self) -> npt.NDArray:
         if self.range is not None:
-            return np.arange(*self.range)
-        return self.values
+            self.values = np.arange(*range)
+
+        return self
 
 
 ParallelSweepers = list[Sweeper]

@@ -80,8 +80,7 @@ class ExecutionParameters(Model):
             (self.nshots,) if self.averaging_mode is AveragingMode.SINGLESHOT else ()
         )
         sweeps = tuple(
-            min(len(sweep.values_array) for sweep in parsweeps)
-            for parsweeps in sweepers
+            min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
         )
         inner = {
             AcquisitionType.DISCRIMINATION: (),

@@ -241,7 +241,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     # plot the results
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values_array
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")

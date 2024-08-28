@@ -75,7 +75,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
 
     acq = sequence.acquisitions[0][1]
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values_array
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
@@ -166,7 +166,7 @@ We can now proceed to launch on hardware:
 
     _, acq = next(iter(sequence.acquisitions))
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = sweeper.values_array
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
