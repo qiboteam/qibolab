@@ -18,7 +18,7 @@ from qibolab.instruments.abstract import Controller
 from qibolab.pulses.pulse import Acquisition, Align, Delay, Pulse, _Readout
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
-from qibolab.unrolling import Bounds
+from qibolab.unrolling import Bounds, unroll_sequences
 
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
@@ -388,9 +388,14 @@ class QmController(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ):
-        if len(sequences) > 1:
-            raise NotImplementedError
-        elif len(sequences) == 0 or len(sequences[0]) == 0:
+        if len(sequences) == 0:
+            return {}
+        elif len(sequences) == 1:
+            sequence = sequences[0]
+        else:
+            sequence, _ = unroll_sequences(sequences, options.relaxation_time)
+
+        if len(sequence) == 0:
             return {}
 
         # register DC elements so that all qubits are
@@ -399,7 +404,6 @@ class QmController(Controller):
             if isinstance(channel.logical_channel, DcChannel):
                 self.configure_channel(channel, configs)
 
-        sequence = sequences[0]
         self.configure_channels(configs, sequence.channels)
         self.register_pulses(configs, sequence)
         acquisitions = self.register_acquisitions(configs, sequence, options)
@@ -411,16 +415,19 @@ class QmController(Controller):
 
         experiment = program(configs, args, options, sweepers)
 
+        if self.script_file_name is not None:
+            script_config = (
+                {"version": 1} if self.manager is None else asdict(self.config)
+            )
+            script = generate_qua_script(experiment, script_config)
+            with open(self.script_file_name, "w") as file:
+                file.write(script)
+
         if self.manager is None:
             warnings.warn(
                 "Not connected to Quantum Machines. Returning program and config."
             )
             return {"program": experiment, "config": asdict(self.config)}
-
-        if self.script_file_name is not None:
-            script = generate_qua_script(experiment, asdict(self.config))
-            with open(self.script_file_name, "w") as file:
-                file.write(script)
 
         if self.simulation_duration is not None:
             result = self.simulate_program(experiment)

@@ -2,10 +2,11 @@
 
 import pytest
 
-from qibolab.pulses import Drag, Pulse, Rectangular
+from qibolab.platform import Platform
+from qibolab.pulses import Delay, Drag, Pulse, Rectangular
 from qibolab.pulses.pulse import Acquisition
 from qibolab.sequence import PulseSequence
-from qibolab.unrolling import Bounds, batch
+from qibolab.unrolling import Bounds, batch, unroll_sequences
 
 
 def test_bounds_update():
@@ -104,3 +105,16 @@ def test_batch(bounds):
 
     batches = list(batch(sequences, bounds))
     assert len(batches) > 1
+
+
+def test_unroll_sequences(platform: Platform):
+    qubit = next(iter(platform.qubits.values()))
+    natives = platform.natives.single_qubit[0]
+    sequence = PulseSequence()
+    sequence.concatenate(natives.RX.create_sequence())
+    sequence.append((qubit.probe.name, Delay(duration=sequence.duration)))
+    sequence.concatenate(natives.MZ.create_sequence())
+    total_sequence, readouts = unroll_sequences(10 * [sequence], relaxation_time=10000)
+    assert len(total_sequence.acquisitions) == 10
+    assert len(readouts) == 1
+    assert all(len(readouts[acq.id]) == 10 for _, acq in sequence.acquisitions)
