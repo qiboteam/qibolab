@@ -67,6 +67,8 @@ qibosoq = ">=0.1.2,<0.2"
 qualang-tools = "^0.15.0"
 laboneq = "==2.25.0"
 qutip = "^4.7.5"
+# to run code examples from tutorial
+matplotlib = "^3.8.2"
 
 [tool.poetry.group.tests]
 optional = true
