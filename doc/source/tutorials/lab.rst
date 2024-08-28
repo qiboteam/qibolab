@@ -48,14 +48,14 @@ using different Qibolab primitives.
 
         # define configuration for channels
         configs = {}
-        configs[qubit.drive.name] = IqConfig(frequency=3e9)
-        configs[qubit.probe.name] = IqConfig(frequency=7e9)
+        configs[qubit.drive] = IqConfig(frequency=3e9)
+        configs[qubit.probe] = IqConfig(frequency=7e9)
 
         # create sequence that drives qubit from state 0 to 1
         drive_seq = PulseSequence(
             [
                 (
-                    qubit.drive.name,
+                    qubit.drive,
                     Pulse(duration=40, amplitude=0.05, envelope=Gaussian(rel_sigma=0.2)),
                 )
             ]
@@ -65,7 +65,7 @@ using different Qibolab primitives.
         probe_seq = PulseSequence(
             [
                 (
-                    qubit.probe.name,
+                    qubit.probe,
                     Pulse(duration=1000, amplitude=0.005, envelope=Rectangular()),
                 )
             ]

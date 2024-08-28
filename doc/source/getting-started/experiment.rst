@@ -221,7 +221,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     sequence = natives.MZ.create_sequence()
 
     # define a sweeper for a frequency scan
-    f0 = platform.config(str(qubit.probe.name)).frequency  # center frequency
+    f0 = platform.config(qubit.probe).frequency  # center frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),

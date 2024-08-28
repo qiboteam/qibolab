@@ -47,7 +47,7 @@ around the pre-defined frequency.
     sequence = natives.MZ.create_sequence()
 
     # allocate frequency sweeper
-    f0 = platform.config(str(qubit.probe.name)).frequency
+    f0 = platform.config(qubit.probe).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
@@ -141,7 +141,7 @@ complex pulse sequence. Therefore with start with that:
     sequence.concatenate(natives.MZ.create_sequence())
 
     # allocate frequency sweeper
-    f0 = platform.config(str(qubit.probe.name)).frequency
+    f0 = platform.config(qubit.probe).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
