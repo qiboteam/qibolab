@@ -7,7 +7,9 @@ from qibolab.pulses import Pulse, Rectangular
 from qibolab.pulses.modulation import rotate, wrap_phase
 
 SAMPLING_RATE = 1
-"""Sampling rate of Quantum Machines OPX in GSps."""
+"""Sampling rate of Quantum Machines OPX+ in GSps."""
+MAX_VOLTAGE_OUTPUT = 0.5
+"""Maximum output of Quantum Machines OPX+ in Volts."""
 
 __all__ = [
     "operation",
@@ -42,9 +44,10 @@ class ConstantWaveform:
     @classmethod
     def from_pulse(cls, pulse: Pulse):
         phase = wrap_phase(pulse.relative_phase)
+        voltage_amp = pulse.amplitude * MAX_VOLTAGE_OUTPUT
         return {
-            "I": cls(pulse.amplitude * np.cos(phase)),
-            "Q": cls(pulse.amplitude * np.sin(phase)),
+            "I": cls(voltage_amp * np.cos(phase)),
+            "Q": cls(voltage_amp * np.sin(phase)),
         }
 
 
@@ -55,7 +58,7 @@ class ArbitraryWaveform:
 
     @classmethod
     def from_pulse(cls, pulse: Pulse):
-        original_waveforms = pulse.envelopes(SAMPLING_RATE)
+        original_waveforms = pulse.envelopes(SAMPLING_RATE) * MAX_VOLTAGE_OUTPUT
         rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
         new_duration = baked_duration(pulse.duration)
         pad_len = new_duration - int(pulse.duration)
