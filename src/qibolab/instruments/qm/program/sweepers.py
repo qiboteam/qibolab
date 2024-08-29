@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 import numpy.typing as npt
 from qibo.config import raise_error
@@ -30,18 +28,6 @@ def maximum_sweep_value(values: npt.NDArray, value0: npt.NDArray) -> float:
         value0 (float, int): Center value of the sweep.
     """
     return max(abs(min(values) + value0), abs(max(values) + value0))
-
-
-def check_max_offset(offset: Optional[float], max_offset: float = MAX_OFFSET):
-    """Checks if a given offset value exceeds the maximum supported offset.
-
-    This is to avoid sending high currents that could damage lab
-    equipment such as amplifiers.
-    """
-    if max_offset is not None and abs(offset) > max_offset:
-        raise_error(
-            ValueError, f"{offset} exceeds the maximum allowed offset {max_offset}."
-        )
 
 
 def _frequency(
@@ -104,7 +90,6 @@ def _offset(
     for channel in channels:
         name = str(channel.name)
         max_value = maximum_sweep_value(values, 0)
-        check_max_offset(max_value, MAX_OFFSET)
         with qua.if_(variable >= MAX_OFFSET):
             qua.set_dc_offset(name, "single", MAX_OFFSET)
         with qua.elif_(variable <= -MAX_OFFSET):
