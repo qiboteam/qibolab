@@ -15,21 +15,6 @@ MAX_OFFSET = 0.5
 """Maximum voltage supported by Quantum Machines OPX+ instrument in volts."""
 
 
-def maximum_sweep_value(values: npt.NDArray, value0: npt.NDArray) -> float:
-    """Calculates maximum value that is reached during a sweep.
-
-    Useful to check whether a sweep exceeds the range of allowed values.
-    Note that both the array of values we sweep and the center value can
-    be negative, so we need to make sure that the maximum absolute value
-    is within range.
-
-    Args:
-        values (np.ndarray): Array of values we will sweep over.
-        value0 (float, int): Center value of the sweep.
-    """
-    return max(abs(min(values) + value0), abs(max(values) + value0))
-
-
 def _frequency(
     channels: list[Channel],
     values: npt.NDArray,
@@ -41,7 +26,7 @@ def _frequency(
         name = str(channel.name)
         lo_frequency = configs[channel.lo].frequency
         # check if sweep is within the supported bandwidth [-400, 400] MHz
-        max_freq = maximum_sweep_value(values, -lo_frequency)
+        max_freq = np.max(np.abs(values - lo_frequency))
         if max_freq > 4e8:
             raise_error(
                 ValueError,
@@ -89,7 +74,6 @@ def _offset(
 ):
     for channel in channels:
         name = str(channel.name)
-        max_value = maximum_sweep_value(values, 0)
         with qua.if_(variable >= MAX_OFFSET):
             qua.set_dc_offset(name, "single", MAX_OFFSET)
         with qua.elif_(variable <= -MAX_OFFSET):
