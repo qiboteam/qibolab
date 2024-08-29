@@ -154,7 +154,7 @@ def execute(connected_platform: Platform) -> Execution:
             sequence.concatenate(qd_seq)
             sequence.concatenate(probe_seq)
             if sweepers is None:
-                freq_values = np.arange(-4e6, 4e6, 1e6)
+                amp_values = np.arange(0, 0.8, 0.1)
                 sweeper1 = Sweeper(
                     parameter=Parameter.offset,
                     range=(0.01, 0.06, 0.01),
@@ -162,7 +162,7 @@ def execute(connected_platform: Platform) -> Execution:
                 )
                 sweeper2 = Sweeper(
                     parameter=Parameter.amplitude,
-                    values=freq_values,
+                    values=amp_values,
                     pulses=[probe_pulse],
                 )
                 sweepers = [[sweeper1], [sweeper2]]

@@ -49,7 +49,7 @@ def _play_single_waveform(
     acquisition: Optional[Acquisition] = None,
 ):
     if parameters.amplitude is not None:
-        op = op * parameters.amplitude
+        op = parameters.amplitude_pulse * parameters.amplitude
     if acquisition is not None:
         acquisition.measure(op)
     else:

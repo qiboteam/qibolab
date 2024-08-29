@@ -13,6 +13,11 @@ from .arguments import ExecutionArguments
 
 MAX_OFFSET = 0.5
 """Maximum voltage supported by Quantum Machines OPX+ instrument in volts."""
+MAX_AMPLITUDE_FACTOR = 1.99
+"""Maximum multiplication factor for ``qua.amp`` used when sweeping amplitude.
+
+https://docs.quantum-machines.co/1.2.0/docs/API_references/qua/dsl_main/#qm.qua._dsl.amp
+"""
 
 
 def _frequency(
@@ -42,14 +47,6 @@ def _amplitude(
     configs: dict[str, Config],
     args: ExecutionArguments,
 ):
-    # TODO: Consider sweeping amplitude without multiplication
-    if min(values) < -2:
-        raise_error(
-            ValueError, "Amplitude sweep values are <-2 which is not supported."
-        )
-    if max(values) > 2:
-        raise_error(ValueError, "Amplitude sweep values are >2 which is not supported.")
-
     for pulse in pulses:
         args.parameters[operation(pulse)].amplitude = qua.amp(variable)
 
@@ -106,12 +103,29 @@ def _duration_interpolated(
         params.interpolated = True
 
 
-def normalize_phase(values):
+def sweeper_amplitude(values: npt.NDArray) -> float:
+    """Pulse amplitude to be registered in the QM ``config`` when sweeping
+    amplitude.
+
+    The multiplicative factor used in the ``qua.amp`` command is limited, so we
+    may need to register a pulse with different amplitude than the original pulse
+    in the sequence, in order to reach all sweeper values when sweeping amplitude.
+    """
+    return max(abs(values)) / MAX_AMPLITUDE_FACTOR
+
+
+def normalize_amplitude(values: npt.NDArray) -> npt.NDArray:
+    """Normalize amplitude factor to [-MAX_AMPLITUDE_FACTOR,
+    MAX_AMPLITUDE_FACTOR]."""
+    return values / sweeper_amplitude(values)
+
+
+def normalize_phase(values: npt.NDArray) -> npt.NDArray:
     """Normalize phase from [0, 2pi] to [0, 1]."""
     return values / (2 * np.pi)
 
 
-def normalize_duration(values):
+def normalize_duration(values: npt.NDArray) -> npt.NDArray:
     """Convert duration from ns to clock cycles (clock cycle = 4ns)."""
     if any(values < 16) and not all(values % 4 == 0):
         raise ValueError(
@@ -127,6 +141,7 @@ The rest parameters need ``fixed`` type.
 """
 
 NORMALIZERS = {
+    Parameter.amplitude: normalize_amplitude,
     Parameter.relative_phase: normalize_phase,
     Parameter.duration_interpolated: normalize_duration,
 }

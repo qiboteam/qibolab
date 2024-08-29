@@ -7,7 +7,7 @@ import numpy.typing as npt
 from pydantic import model_validator
 
 from .identifier import ChannelId
-from .pulses import Pulse
+from .pulses import PulseLike
 from .serialize import Model
 
 _PULSE = "pulse"
@@ -80,7 +80,7 @@ class Sweeper(Model):
     parameter: Parameter
     values: Optional[npt.NDArray] = None
     range: Optional[tuple[float, float, float]] = None
-    pulses: Optional[list[Pulse]] = None
+    pulses: Optional[list[PulseLike]] = None
     channels: Optional[list[ChannelId]] = None
 
     @model_validator(mode="after")
@@ -99,6 +99,9 @@ class Sweeper(Model):
 
         if self.range is not None:
             object.__setattr__(self, "values", np.arange(*self.range))
+
+        if self.parameter is Parameter.amplitude and max(abs(self.values)) > 1:
+            raise ValueError("Amplitude sweeper cannot have values larger than 1.")
 
         return self
 

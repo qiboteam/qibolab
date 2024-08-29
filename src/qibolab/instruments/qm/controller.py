@@ -23,6 +23,7 @@ from qibolab.unrolling import Bounds, unroll_sequences
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
 from .program import ExecutionArguments, create_acquisition, program
+from .program.sweepers import sweeper_amplitude
 
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
@@ -95,9 +96,15 @@ def fetch_results(result, acquisitions):
     }
 
 
-def find_duration_sweepers(sweepers: list[ParallelSweepers]) -> list[Sweeper]:
-    """Find duration sweepers in order to register multiple pulses."""
-    return [s for ps in sweepers for s in ps if s.parameter is Parameter.duration]
+def find_sweepers(
+    sweepers: list[ParallelSweepers], parameter: Parameter
+) -> list[Sweeper]:
+    """Find sweepers of given parameter in order to register specific pulses.
+
+    Duration and amplitude sweepers may require registering additional pulses
+    in the QM ``config``.
+    """
+    return [s for ps in sweepers for s in ps if s.parameter is parameter]
 
 
 @dataclass
@@ -309,8 +316,10 @@ class QmController(Controller):
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
     ):
-        """Register pulse with many different durations, in order to sweep
-        duration."""
+        """Register pulse with many different durations.
+
+        Needed when sweeping duration.
+        """
         for pulse in sweeper.pulses:
             if isinstance(pulse, (Align, Delay)):
                 continue
@@ -322,6 +331,24 @@ class QmController(Controller):
                 sweep_pulse = pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(channel, sweep_pulse)
                 args.parameters[op].pulses.append((value, sweep_op))
+
+    def register_amplitude_sweeper_pulses(
+        self, args: ExecutionArguments, sweeper: Sweeper
+    ):
+        """Register pulse with different amplitude.
+
+        Needed when sweeping amplitude and the original amplitude is not
+        sufficient to reach all the sweeper values.
+        """
+        new_op = None
+        amplitude = sweeper_amplitude(sweeper.values)
+        for pulse in sweeper.pulses:
+            new_pulse = pulse.model_copy(update={"amplitude": amplitude})
+            channel_ids = args.sequence.pulse_channels(pulse.id)
+            channel = self.channels[str(channel_ids[0])].logical_channel
+            args.parameters[operation(pulse)].amplitude_pulse = self.register_pulse(
+                channel, new_pulse
+            )
 
     def register_acquisitions(
         self,
@@ -410,8 +437,10 @@ class QmController(Controller):
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
 
-        for sweeper in find_duration_sweepers(sweepers):
+        for sweeper in find_sweepers(sweepers, Parameter.duration):
             self.register_duration_sweeper_pulses(args, sweeper)
+        for sweeper in find_sweepers(sweepers, Parameter.amplitude):
+            self.register_amplitude_sweeper_pulses(args, sweeper)
 
         experiment = program(configs, args, options, sweepers)
 

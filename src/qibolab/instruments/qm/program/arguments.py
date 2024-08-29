@@ -13,9 +13,12 @@ from .acquisition import Acquisitions
 class Parameters:
     """Container of swept QUA variables."""
 
-    duration: Optional[_Variable] = None
     amplitude: Optional[_Variable] = None
+    amplitude_pulse: Optional[str] = None
+
     phase: Optional[_Variable] = None
+
+    duration: Optional[_Variable] = None
     pulses: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
 
