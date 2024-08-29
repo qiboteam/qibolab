@@ -1,11 +1,9 @@
-import math
 from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
 from qibo.config import raise_error
 from qm import qua
-from qm.qua import declare, fixed
 from qm.qua._dsl import _Variable  # for type declaration only
 
 from qibolab.components import Channel, Config
@@ -56,16 +54,14 @@ def _frequency(
     for channel in channels:
         name = str(channel.name)
         lo_frequency = configs[channel.lo].frequency
-        # convert to IF frequency for readout and drive pulses
-        f0 = math.floor(configs[name].frequency - lo_frequency)
         # check if sweep is within the supported bandwidth [-400, 400] MHz
-        max_freq = maximum_sweep_value(values, f0)
+        max_freq = maximum_sweep_value(values, -lo_frequency)
         if max_freq > 4e8:
             raise_error(
                 ValueError,
                 f"Frequency {max_freq} for channel {name} is beyond instrument bandwidth.",
             )
-        qua.update_frequency(name, variable + f0)
+        qua.update_frequency(name, variable - lo_frequency)
 
 
 def _amplitude(
@@ -107,16 +103,14 @@ def _offset(
 ):
     for channel in channels:
         name = str(channel.name)
-        offset = configs[name].offset
-        max_value = maximum_sweep_value(values, offset)
+        max_value = maximum_sweep_value(values, 0)
         check_max_offset(max_value, MAX_OFFSET)
-        b0 = declare(fixed, value=offset)
-        with qua.if_((variable + b0) >= 0.49):
-            qua.set_dc_offset(f"flux{name}", "single", 0.49)
-        with qua.elif_((variable + b0) <= -0.49):
-            qua.set_dc_offset(f"flux{name}", "single", -0.49)
+        with qua.if_(variable >= MAX_OFFSET):
+            qua.set_dc_offset(name, "single", MAX_OFFSET)
+        with qua.elif_(variable <= -MAX_OFFSET):
+            qua.set_dc_offset(name, "single", -MAX_OFFSET)
         with qua.else_():
-            qua.set_dc_offset(f"flux{name}", "single", (variable + b0))
+            qua.set_dc_offset(name, "single", variable)
 
 
 def _duration(
