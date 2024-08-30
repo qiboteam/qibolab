@@ -353,7 +353,7 @@ class Zurich(Controller):
             sweeper
         ):
             channel_node_path = self.get_channel_node_path(ch)
-            if param is Parameter.bias:
+            if param is Parameter.offset:
                 offset_node_path = f"{channel_node_path}/offset"
                 exp.set_node(path=offset_node_path, value=sweep_param)
 

@@ -50,7 +50,7 @@ around the pre-defined frequency.
     f0 = platform.config(str(qubit.probe.name)).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=f0 + np.arange(-2e8, +2e8, 1e6),
+        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.probe.name],
     )
 
@@ -144,7 +144,7 @@ complex pulse sequence. Therefore with start with that:
     f0 = platform.config(str(qubit.probe.name)).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=f0 + np.arange(-2e8, +2e8, 1e6),
+        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.drive.name],
     )
 

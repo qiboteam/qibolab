@@ -117,7 +117,7 @@ def _process_sweeper(sweeper: Sweeper):
     variable = declare(int) if parameter in INT_TYPE else declare(fixed)
     values = sweeper.values
     if parameter in NORMALIZERS:
-        values = NORMALIZERS[parameter](sweeper.values)
+        values = NORMALIZERS[parameter](values)
 
     return variable, values
 

@@ -1,45 +1,47 @@
-from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional
+from functools import cache
+from typing import Any, Optional
 
+import numpy as np
 import numpy.typing as npt
+from pydantic import model_validator
+
+from .identifier import ChannelId
+from .pulses import Pulse
+from .serialize import Model
+
+_PULSE = "pulse"
+_CHANNEL = "channel"
 
 
 class Parameter(Enum):
     """Sweeping parameters."""
 
-    frequency = auto()
-    amplitude = auto()
-    duration = auto()
-    duration_interpolated = auto()
-    relative_phase = auto()
+    frequency = (auto(), _CHANNEL)
+    amplitude = (auto(), _PULSE)
+    duration = (auto(), _PULSE)
+    duration_interpolated = (auto(), _PULSE)
+    relative_phase = (auto(), _PULSE)
+    offset = (auto(), _CHANNEL)
 
-    attenuation = auto()
-    gain = auto()
-    bias = auto()
-    lo_frequency = auto()
-
-
-FREQUENCY = Parameter.frequency
-AMPLITUDE = Parameter.amplitude
-DURATION = Parameter.duration
-DURATION_INTERPOLATED = Parameter.duration_interpolated
-RELATIVE_PHASE = Parameter.relative_phase
-ATTENUATION = Parameter.attenuation
-GAIN = Parameter.gain
-BIAS = Parameter.bias
+    @classmethod
+    @cache
+    def channels(cls) -> set["Parameter"]:
+        """Set of parameters to be swept on the channel."""
+        return {p for p in cls if p.value[1] == _CHANNEL}
 
 
-ChannelParameter = {
-    Parameter.frequency,
-    Parameter.bias,
-    Parameter.attenuation,
-    Parameter.gain,
-}
+_Field = tuple[Any, str]
 
 
-@dataclass
-class Sweeper:
+def _alternative_fields(a: _Field, b: _Field):
+    if (a[0] is None) == (b[0] is None):
+        raise ValueError(
+            f"Either '{a[1]}' or '{b[1]}' needs to be provided, and only one of them."
+        )
+
+
+class Sweeper(Model):
     """Data structure for Sweeper object.
 
     This object is passed as an argument to the method :func:`qibolab.platforms.platform.Platform.execute`
@@ -60,44 +62,45 @@ class Sweeper:
             qubit = platform.qubits[0]
             natives = platform.natives.single_qubit[0]
             sequence = natives.MZ.create_sequence()
-            parameter = Parameter.frequency
             parameter_range = np.random.randint(10, size=10)
-            sweeper = Sweeper(parameter, parameter_range, channels=[qubit.probe.name])
+            sweeper = Sweeper(
+                parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe.name]
+            )
             platform.execute([sequence], ExecutionParameters(), [[sweeper]])
 
     Args:
         parameter: parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
-        values: sweep range. If the parameter of the sweep is a pulse parameter, if the sweeper type is not ABSOLUTE, the base value
-            will be taken from the runcard pulse parameters. If the sweep parameter is Bias, the base value will be the sweetspot of the qubits.
+        values: array of parameter values to sweep over.
+        range: tuple of ``(start, stop, step)`` to sweep over the array ``np.arange(start, stop, step)``.
+            Can be provided instead of ``values`` for more efficient sweeps on some instruments.
         pulses : list of `qibolab.pulses.Pulse` to be swept.
         channels: list of channel names for which the parameter should be swept.
-        type: can be ABSOLUTE (the sweeper range is swept directly),
-            FACTOR (sweeper values are multiplied by base value), OFFSET (sweeper values are added
-            to base value)
     """
 
     parameter: Parameter
-    values: npt.NDArray
-    pulses: Optional[list] = None
-    channels: Optional[list] = None
+    values: Optional[npt.NDArray] = None
+    range: Optional[tuple[float, float, float]] = None
+    pulses: Optional[list[Pulse]] = None
+    channels: Optional[list[ChannelId]] = None
 
-    def __post_init__(self):
-        if self.pulses is not None and self.channels is not None:
-            raise ValueError(
-                "Cannot create a sweeper by using both pulses and channels."
-            )
-        if self.pulses is not None and self.parameter in ChannelParameter:
+    @model_validator(mode="after")
+    def check_values(self):
+        _alternative_fields((self.pulses, "pulses"), (self.channels, "channels"))
+        _alternative_fields((self.range, "range"), (self.values, "values"))
+
+        if self.pulses is not None and self.parameter in Parameter.channels():
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying channels."
             )
-        if self.parameter not in ChannelParameter and (self.channels is not None):
+        if self.parameter not in Parameter.channels() and (self.channels is not None):
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying pulses."
             )
-        if self.pulses is None and self.channels is None:
-            raise ValueError(
-                "Cannot create a sweeper without specifying pulses or channels."
-            )
+
+        if self.range is not None:
+            object.__setattr__(self, "values", np.arange(*self.range))
+
+        return self
 
 
 ParallelSweepers = list[Sweeper]

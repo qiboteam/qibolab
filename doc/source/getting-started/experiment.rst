@@ -224,7 +224,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     f0 = platform.config(str(qubit.probe.name)).frequency  # center frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=f0 + np.arange(-2e8, +2e8, 1e6),
+        range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.probe.name],
     )
 
