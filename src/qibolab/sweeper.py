@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -25,6 +25,15 @@ ChannelParameter = {
     Parameter.frequency,
     Parameter.offset,
 }
+
+_Field = tuple[Any, str]
+
+
+def _alternative_fields(a: _Field, b: _Field):
+    if (a[0] is None) == (b[0] is None):
+        raise ValueError(
+            f"Either '{a[1]}' or '{b[1]}' needs to be provided, and only one of them."
+        )
 
 
 class Sweeper(Model):
@@ -71,10 +80,9 @@ class Sweeper(Model):
 
     @model_validator(mode="after")
     def check_values(self):
-        if self.pulses is not None and self.channels is not None:
-            raise ValueError(
-                "Cannot create a sweeper by using both pulses and channels."
-            )
+        _alternative_fields((self.pulses, "pulses"), (self.channels, "channels"))
+        _alternative_fields((self.range, "range"), (self.values, "values"))
+
         if self.pulses is not None and self.parameter in ChannelParameter:
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying channels."
@@ -83,14 +91,6 @@ class Sweeper(Model):
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying pulses."
             )
-        if self.pulses is None and self.channels is None:
-            raise ValueError(
-                "Cannot create a sweeper without specifying pulses or channels."
-            )
-        if self.range is not None and self.values is not None:
-            raise ValueError("'range' and 'values' are mutually exclusive.")
-        if self.range is None and self.values is None:
-            raise ValueError("Either 'range' or 'values' needs to be provided.")
 
         if self.range is not None:
             object.__setattr__(self, "values", np.arange(*self.range))

@@ -18,9 +18,7 @@ def test_sweeper_pulses(parameter):
     else:
         parameter_range = np.random.randint(10, size=10)
     if parameter in ChannelParameter:
-        with pytest.raises(
-            ValueError, match="Cannot create a sweeper .* without specifying channels"
-        ):
+        with pytest.raises(ValueError, match="channels"):
             _ = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
     else:
         sweeper = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
@@ -37,9 +35,7 @@ def test_sweeper_channels(parameter):
         )
         assert sweeper.parameter is parameter
     else:
-        with pytest.raises(
-            ValueError, match="Cannot create a sweeper .* without specifying pulses"
-        ):
+        with pytest.raises(ValueError, match="pulses"):
             _ = Sweeper(parameter=parameter, values=parameter_range, channels=[channel])
 
 
@@ -51,32 +47,23 @@ def test_sweeper_errors():
         envelope=Rectangular(),
     )
     parameter_range = np.random.randint(10, size=10)
-    with pytest.raises(
-        ValueError,
-        match="Cannot create a sweeper without specifying pulses or channels",
-    ):
+    with pytest.raises(ValueError, match="(?=.*pulses)(?=.*channels)"):
         Sweeper(parameter=Parameter.frequency, values=parameter_range)
-    with pytest.raises(
-        ValueError, match="Cannot create a sweeper by using both pulses and channels"
-    ):
+    with pytest.raises(ValueError, match="(?=.*pulses)(?=.*channels)"):
         Sweeper(
             parameter=Parameter.frequency,
             values=parameter_range,
             pulses=[pulse],
             channels=[channel],
         )
-    with pytest.raises(
-        ValueError, match="'range' and 'values' are mutually exclusive."
-    ):
+    with pytest.raises(ValueError, match="(?=.*range)(?=.*values)"):
         Sweeper(
             parameter=Parameter.frequency,
             values=parameter_range,
             range=(0, 10, 1),
             channels=[channel],
         )
-    with pytest.raises(
-        ValueError, match="Either 'range' or 'values' needs to be provided."
-    ):
+    with pytest.raises(ValueError, match="(?=.*range)(?=.*values)"):
         Sweeper(
             parameter=Parameter.frequency,
             channels=[channel],
