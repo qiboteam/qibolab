@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from functools import cache
 from typing import Any, Optional
 
 import numpy as np
@@ -8,7 +9,6 @@ from pydantic import model_validator
 from .identifier import ChannelId
 from .pulses import Pulse
 from .serialize import Model
-
 
 _PULSE = "pulse"
 _CHANNEL = "channel"
@@ -25,9 +25,10 @@ class Parameter(Enum):
     offset = (auto(), _CHANNEL)
 
     @classmethod
+    @cache
     def channels(cls) -> set["Parameter"]:
         """Set of parameters to be swept on the channel."""
-        return set(p for p in cls if p.value[1] == _CHANNEL)
+        return {p for p in cls if p.value[1] == _CHANNEL}
 
 
 _Field = tuple[Any, str]
