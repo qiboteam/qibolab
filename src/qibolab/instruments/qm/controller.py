@@ -23,6 +23,7 @@ from qibolab.unrolling import Bounds, unroll_sequences
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
 from .program import ExecutionArguments, create_acquisition, program
+from .program.sweepers import check_frequency_bandwidth, sweeper_amplitude
 
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
@@ -95,9 +96,15 @@ def fetch_results(result, acquisitions):
     }
 
 
-def find_duration_sweepers(sweepers: list[ParallelSweepers]) -> list[Sweeper]:
-    """Find duration sweepers in order to register multiple pulses."""
-    return [s for ps in sweepers for s in ps if s.parameter is Parameter.duration]
+def find_sweepers(
+    sweepers: list[ParallelSweepers], parameter: Parameter
+) -> list[Sweeper]:
+    """Find sweepers of given parameter in order to register specific pulses.
+
+    Duration and amplitude sweepers may require registering additional pulses
+    in the QM ``config``.
+    """
+    return [s for ps in sweepers for s in ps if s.parameter is parameter]
 
 
 @dataclass
@@ -309,19 +316,43 @@ class QmController(Controller):
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
     ):
-        """Register pulse with many different durations, in order to sweep
-        duration."""
+        """Register pulse with many different durations.
+
+        Needed when sweeping duration.
+        """
         for pulse in sweeper.pulses:
             if isinstance(pulse, (Align, Delay)):
                 continue
 
-            op = operation(pulse)
-            channel_name = str(args.sequence.pulse_channels(pulse.id)[0])
-            channel = self.channels[channel_name].logical_channel
+            params = args.parameters[operation(pulse)]
+            channel_ids = args.sequence.pulse_channels(pulse.id)
+            channel = self.channels[str(channel_ids[0])].logical_channel
+            original_pulse = (
+                pulse if params.amplitude_pulse is None else params.amplitude_pulse
+            )
             for value in sweeper.values:
-                sweep_pulse = pulse.model_copy(update={"duration": value})
+                sweep_pulse = original_pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(channel, sweep_pulse)
-                args.parameters[op].pulses.append((value, sweep_op))
+                params.duration_ops.append((value, sweep_op))
+
+    def register_amplitude_sweeper_pulses(
+        self, args: ExecutionArguments, sweeper: Sweeper
+    ):
+        """Register pulse with different amplitude.
+
+        Needed when sweeping amplitude because the original amplitude
+        may not sufficient to reach all the sweeper values.
+        """
+        new_op = None
+        amplitude = sweeper_amplitude(sweeper.values)
+        for pulse in sweeper.pulses:
+            channel_ids = args.sequence.pulse_channels(pulse.id)
+            channel = self.channels[str(channel_ids[0])].logical_channel
+            sweep_pulse = pulse.model_copy(update={"amplitude": amplitude})
+
+            params = args.parameters[operation(pulse)]
+            params.amplitude_pulse = sweep_pulse
+            params.amplitude_op = self.register_pulse(channel, sweep_pulse)
 
     def register_acquisitions(
         self,
@@ -366,6 +397,23 @@ class QmController(Controller):
 
         return acquisitions
 
+    def preprocess_sweeps(
+        self,
+        sweepers: list[ParallelSweepers],
+        configs: dict[str, Config],
+        args: ExecutionArguments,
+    ):
+        """Preprocessing and checks needed before executing some sweeps.
+
+        Amplitude and duration sweeps require registering additional pulses in the QM ``config.
+        """
+        for sweeper in find_sweepers(sweepers, Parameter.frequency):
+            check_frequency_bandwidth(sweeper.channels, configs, sweeper.values)
+        for sweeper in find_sweepers(sweepers, Parameter.amplitude):
+            self.register_amplitude_sweeper_pulses(args, sweeper)
+        for sweeper in find_sweepers(sweepers, Parameter.duration):
+            self.register_duration_sweeper_pulses(args, sweeper)
+
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language."""
         machine = self.manager.open_qm(asdict(self.config))
@@ -409,10 +457,7 @@ class QmController(Controller):
         acquisitions = self.register_acquisitions(configs, sequence, options)
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
-
-        for sweeper in find_duration_sweepers(sweepers):
-            self.register_duration_sweeper_pulses(args, sweeper)
-
+        self.preprocess_sweeps(sweepers, configs, args)
         experiment = program(configs, args, options, sweepers)
 
         if self.script_file_name is not None:
