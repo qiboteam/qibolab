@@ -324,13 +324,16 @@ class QmController(Controller):
             if isinstance(pulse, (Align, Delay)):
                 continue
 
-            op = operation(pulse)
-            channel_name = str(args.sequence.pulse_channels(pulse.id)[0])
-            channel = self.channels[channel_name].logical_channel
+            params = args.parameters[operation(pulse)]
+            channel_ids = args.sequence.pulse_channels(pulse.id)
+            channel = self.channels[str(channel_ids[0])].logical_channel
+            original_pulse = (
+                pulse if params.amplitude_pulse is None else params.amplitude_pulse
+            )
             for value in sweeper.values:
-                sweep_pulse = pulse.model_copy(update={"duration": value})
+                sweep_pulse = original_pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(channel, sweep_pulse)
-                args.parameters[op].pulses.append((value, sweep_op))
+                params.duration_ops.append((value, sweep_op))
 
     def register_amplitude_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
@@ -343,12 +346,13 @@ class QmController(Controller):
         new_op = None
         amplitude = sweeper_amplitude(sweeper.values)
         for pulse in sweeper.pulses:
-            new_pulse = pulse.model_copy(update={"amplitude": amplitude})
             channel_ids = args.sequence.pulse_channels(pulse.id)
             channel = self.channels[str(channel_ids[0])].logical_channel
-            args.parameters[operation(pulse)].amplitude_pulse = self.register_pulse(
-                channel, new_pulse
-            )
+            sweep_pulse = pulse.model_copy(update={"amplitude": amplitude})
+
+            params = args.parameters[operation(pulse)]
+            params.amplitude_pulse = sweep_pulse
+            params.amplitude_op = self.register_pulse(channel, sweep_pulse)
 
     def register_acquisitions(
         self,
@@ -437,10 +441,10 @@ class QmController(Controller):
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
 
-        for sweeper in find_sweepers(sweepers, Parameter.duration):
-            self.register_duration_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
+        for sweeper in find_sweepers(sweepers, Parameter.duration):
+            self.register_duration_sweeper_pulses(args, sweeper)
 
         experiment = program(configs, args, options, sweepers)
 

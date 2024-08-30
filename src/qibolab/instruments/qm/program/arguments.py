@@ -4,6 +4,7 @@ from typing import Optional
 
 from qm.qua._dsl import _Variable  # for type declaration only
 
+from qibolab.pulses import Pulse
 from qibolab.sequence import PulseSequence
 
 from .acquisition import Acquisitions
@@ -14,12 +15,13 @@ class Parameters:
     """Container of swept QUA variables."""
 
     amplitude: Optional[_Variable] = None
-    amplitude_pulse: Optional[str] = None
+    amplitude_pulse: Optional[Pulse] = None
+    amplitude_op: Optional[str] = None
 
     phase: Optional[_Variable] = None
 
     duration: Optional[_Variable] = None
-    pulses: list[tuple[float, str]] = field(default_factory=list)
+    duration_ops: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
 
 
