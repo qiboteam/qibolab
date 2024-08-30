@@ -433,7 +433,7 @@ For example:
     sequence.append((qubit.probe, Delay(duration=sequence.duration)))
     sequence.concatenate(natives.MZ.create_sequence())
 
-    f0 = platform.config(str(qubit.drive.name)).frequency
+    f0 = platform.config(str(qubit.drive)).frequency
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 10_000),
@@ -551,7 +551,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
 
 .. testcode:: python
 
-    f0 = platform.config(str(qubit.drive.name)).frequency
+    f0 = platform.config(str(qubit.drive)).frequency
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 1),

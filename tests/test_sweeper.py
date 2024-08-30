@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse, Rectangular
 from qibolab.sweeper import Parameter, Sweeper
 
