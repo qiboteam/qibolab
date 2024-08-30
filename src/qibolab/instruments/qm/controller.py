@@ -23,7 +23,7 @@ from qibolab.unrolling import Bounds, unroll_sequences
 from .components import QmChannel
 from .config import SAMPLING_RATE, QmConfig, operation
 from .program import ExecutionArguments, create_acquisition, program
-from .program.sweepers import sweeper_amplitude
+from .program.sweepers import check_frequency_bandwidth, sweeper_amplitude
 
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
@@ -397,6 +397,23 @@ class QmController(Controller):
 
         return acquisitions
 
+    def preprocess_sweeps(
+        self,
+        sweepers: list[ParallelSweepers],
+        configs: dict[str, Config],
+        args: ExecutionArguments,
+    ):
+        """Preprocessing and checks needed before executing some sweeps.
+
+        Amplitude and duration sweeps require registering additional pulses in the QM ``config.
+        """
+        for sweeper in find_sweepers(sweepers, Parameter.frequency):
+            check_frequency_bandwidth(sweeper.channels, configs, sweeper.values)
+        for sweeper in find_sweepers(sweepers, Parameter.amplitude):
+            self.register_amplitude_sweeper_pulses(args, sweeper)
+        for sweeper in find_sweepers(sweepers, Parameter.duration):
+            self.register_duration_sweeper_pulses(args, sweeper)
+
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language."""
         machine = self.manager.open_qm(asdict(self.config))
@@ -440,12 +457,7 @@ class QmController(Controller):
         acquisitions = self.register_acquisitions(configs, sequence, options)
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
-
-        for sweeper in find_sweepers(sweepers, Parameter.amplitude):
-            self.register_amplitude_sweeper_pulses(args, sweeper)
-        for sweeper in find_sweepers(sweepers, Parameter.duration):
-            self.register_duration_sweeper_pulses(args, sweeper)
-
+        self.preprocess_sweeps(sweepers, configs, args)
         experiment = program(configs, args, options, sweepers)
 
         if self.script_file_name is not None:

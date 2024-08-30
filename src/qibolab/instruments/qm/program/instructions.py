@@ -148,9 +148,12 @@ def sweep(
             ):
                 method = SWEEPER_METHODS[sweeper.parameter]
                 if sweeper.pulses is not None:
-                    method(sweeper.pulses, values, variable, configs, args)
+                    for pulse in sweeper.pulses:
+                        params = args.parameters[operation(pulse)]
+                        method(variable, params)
                 else:
-                    method(sweeper.channels, values, variable, configs, args)
+                    for channel in sweeper.channels:
+                        method(variable, channel, configs)
 
             sweep(sweepers[1:], configs, args)
 

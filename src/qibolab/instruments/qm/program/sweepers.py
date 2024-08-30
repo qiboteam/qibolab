@@ -5,11 +5,9 @@ from qm import qua
 from qm.qua._dsl import _Variable  # for type declaration only
 
 from qibolab.components import Channel, Config
-from qibolab.pulses import Pulse
 from qibolab.sweeper import Parameter
 
-from ..config import operation
-from .arguments import ExecutionArguments
+from .arguments import Parameters
 
 MAX_OFFSET = 0.5
 """Maximum voltage supported by Quantum Machines OPX+ instrument in volts."""
@@ -18,89 +16,24 @@ MAX_AMPLITUDE_FACTOR = 1.99
 
 https://docs.quantum-machines.co/1.2.0/docs/API_references/qua/dsl_main/#qm.qua._dsl.amp
 """
+FREQUENCY_BANDWIDTH = 4e8
+"""Quantum Machines OPX+ frequency bandwidth in Hz."""
 
 
-def _frequency(
-    channels: list[Channel],
-    values: npt.NDArray,
-    variable: _Variable,
-    configs: dict[str, Config],
-    args: ExecutionArguments,
+def check_frequency_bandwidth(
+    channels: list[Channel], configs: dict[str, Channel], values: npt.NDArray
 ):
+    """Check if frequency sweep is within the supported instrument bandwidth
+    [-400, 400] MHz."""
     for channel in channels:
         name = str(channel.name)
         lo_frequency = configs[channel.lo].frequency
-        # check if sweep is within the supported bandwidth [-400, 400] MHz
-        max_freq = np.max(np.abs(values - lo_frequency))
-        if max_freq > 4e8:
+        max_freq = max(abs(values - lo_frequency))
+        if max_freq > FREQUENCY_BANDWIDTH:
             raise_error(
                 ValueError,
                 f"Frequency {max_freq} for channel {name} is beyond instrument bandwidth.",
             )
-        qua.update_frequency(name, variable - lo_frequency)
-
-
-def _amplitude(
-    pulses: list[Pulse],
-    values: npt.NDArray,
-    variable: _Variable,
-    configs: dict[str, Config],
-    args: ExecutionArguments,
-):
-    for pulse in pulses:
-        args.parameters[operation(pulse)].amplitude = qua.amp(variable)
-
-
-def _relative_phase(
-    pulses: list[Pulse],
-    values: npt.NDArray,
-    variable: _Variable,
-    configs: dict[str, Config],
-    args: ExecutionArguments,
-):
-    for pulse in pulses:
-        args.parameters[operation(pulse)].phase = variable
-
-
-def _offset(
-    channels: list[Channel],
-    values: npt.NDArray,
-    variable: _Variable,
-    configs: dict[str, Config],
-    args: ExecutionArguments,
-):
-    for channel in channels:
-        name = str(channel.name)
-        with qua.if_(variable >= MAX_OFFSET):
-            qua.set_dc_offset(name, "single", MAX_OFFSET)
-        with qua.elif_(variable <= -MAX_OFFSET):
-            qua.set_dc_offset(name, "single", -MAX_OFFSET)
-        with qua.else_():
-            qua.set_dc_offset(name, "single", variable)
-
-
-def _duration(
-    pulses: list[Pulse],
-    values: npt.NDArray,
-    variable: _Variable,
-    configs: dict[str, Config],
-    args: ExecutionArguments,
-):
-    for pulse in pulses:
-        args.parameters[operation(pulse)].duration = variable
-
-
-def _duration_interpolated(
-    pulses: list[Pulse],
-    values: npt.NDArray,
-    variable: _Variable,
-    configs: dict[str, Config],
-    args: ExecutionArguments,
-):
-    for pulse in pulses:
-        params = args.parameters[operation(pulse)]
-        params.duration = variable
-        params.interpolated = True
 
 
 def sweeper_amplitude(values: npt.NDArray) -> float:
@@ -132,6 +65,39 @@ def normalize_duration(values: npt.NDArray) -> npt.NDArray:
             "Cannot use interpolated duration sweeper for durations that are not multiple of 4ns or are less than 16ns. Please use normal duration sweeper."
         )
     return (values // 4).astype(int)
+
+
+def _amplitude(variable: _Variable, parameters: Parameters):
+    parameters.amplitude = qua.amp(variable)
+
+
+def _relative_phase(variable: _Variable, parameters: Parameters):
+    parameters.phase = variable
+
+
+def _duration(variable: _Variable, parameters: Parameters):
+    parameters.duration = variable
+
+
+def _duration_interpolated(variable: _Variable, parameters: Parameters):
+    parameters.duration = variable
+    parameters.interpolated = True
+
+
+def _offset(variable: _Variable, channel: Channel, configs: dict[str, Config]):
+    name = str(channel.name)
+    with qua.if_(variable >= MAX_OFFSET):
+        qua.set_dc_offset(name, "single", MAX_OFFSET)
+    with qua.elif_(variable <= -MAX_OFFSET):
+        qua.set_dc_offset(name, "single", -MAX_OFFSET)
+    with qua.else_():
+        qua.set_dc_offset(name, "single", variable)
+
+
+def _frequency(variable: _Variable, channel: Channel, configs: dict[str, Config]):
+    name = str(channel.name)
+    lo_frequency = configs[channel.lo].frequency
+    qua.update_frequency(name, variable - lo_frequency)
 
 
 INT_TYPE = {Parameter.frequency, Parameter.duration, Parameter.duration_interpolated}
