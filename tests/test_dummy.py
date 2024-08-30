@@ -21,13 +21,13 @@ def test_dummy_initialization(platform: Platform):
 def test_dummy_execute_coupler_pulse(platform: Platform):
     sequence = PulseSequence()
 
-    channel = platform.get_coupler(0).flux
+    channel = platform.coupler(0)[1].flux
     pulse = Pulse(
         duration=30,
         amplitude=0.05,
         envelope=GaussianSquare(rel_sigma=5, width=0.75),
     )
-    sequence.append((channel.name, pulse))
+    sequence.append((channel, pulse))
 
     options = ExecutionParameters(nshots=None)
     _ = platform.execute([sequence], options)
@@ -41,8 +41,8 @@ def test_dummy_execute_pulse_sequence_couplers():
     cz = natives.two_qubit[(1, 2)].CZ.create_sequence()
 
     sequence.concatenate(cz)
-    sequence.append((platform.qubits[0].probe.name, Delay(duration=40)))
-    sequence.append((platform.qubits[2].probe.name, Delay(duration=40)))
+    sequence.append((platform.qubits[0].probe, Delay(duration=40)))
+    sequence.append((platform.qubits[2].probe, Delay(duration=40)))
     sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     sequence.concatenate(natives.single_qubit[2].MZ.create_sequence())
     options = ExecutionParameters(nshots=None)
