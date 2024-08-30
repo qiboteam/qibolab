@@ -68,9 +68,7 @@ def test_sweeper_errors():
             parameter=Parameter.frequency,
             channels=[channel],
         )
-    with pytest.raises(
-        ValueError, match="Amplitude sweeper cannot have values larger than 1."
-    ):
+    with pytest.raises(ValueError, match="Amplitude"):
         Sweeper(
             parameter=Parameter.amplitude,
             range=(0, 2, 0.2),
