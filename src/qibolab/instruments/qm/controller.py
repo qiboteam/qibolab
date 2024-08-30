@@ -340,8 +340,8 @@ class QmController(Controller):
     ):
         """Register pulse with different amplitude.
 
-        Needed when sweeping amplitude and the original amplitude is not
-        sufficient to reach all the sweeper values.
+        Needed when sweeping amplitude because the original amplitude
+        may not sufficient to reach all the sweeper values.
         """
         new_op = None
         amplitude = sweeper_amplitude(sweeper.values)
