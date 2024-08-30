@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 from os import PathLike
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import Field
 from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
@@ -284,16 +284,19 @@ class QmController(Controller):
         for id in channels:
             self.configure_channel(id, configs)
 
-    def register_pulse(self, channel: ChannelId, pulse: Pulse) -> str:
+    def register_pulse(self, channel: ChannelId, pulse: Union[Pulse, Readout]) -> str:
         """Add pulse in the QM ``config``.
 
         And return corresponding operation.
         """
         ch = self.channels[channel]
         if isinstance(ch, DcChannel):
+            assert isinstance(pulse, Pulse)
             return self.config.register_dc_pulse(channel, pulse)
         if isinstance(ch, IqChannel):
+            assert isinstance(pulse, Pulse)
             return self.config.register_iq_pulse(channel, pulse)
+        assert isinstance(pulse, Readout)
         return self.config.register_acquisition_pulse(channel, pulse)
 
     def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
@@ -313,7 +316,7 @@ class QmController(Controller):
             if isinstance(pulse, Pulse):
                 self.register_pulse(id, pulse)
             elif isinstance(pulse, Readout):
-                self.register_pulse(id, pulse.probe)
+                self.register_pulse(id, pulse)
 
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
