@@ -10,21 +10,25 @@ from .pulses import Pulse
 from .serialize import Model
 
 
+_PULSE = "pulse"
+_CHANNEL = "channel"
+
+
 class Parameter(Enum):
     """Sweeping parameters."""
 
-    frequency = auto()
-    amplitude = auto()
-    duration = auto()
-    duration_interpolated = auto()
-    relative_phase = auto()
-    offset = auto()
+    frequency = (auto(), _CHANNEL)
+    amplitude = (auto(), _PULSE)
+    duration = (auto(), _PULSE)
+    duration_interpolated = (auto(), _PULSE)
+    relative_phase = (auto(), _PULSE)
+    offset = (auto(), _CHANNEL)
 
+    @classmethod
+    def channels(cls) -> set["Parameter"]:
+        """Set of parameters to be swept on the channel."""
+        return set(p for p in cls if p.value[1] == _CHANNEL)
 
-ChannelParameter = {
-    Parameter.frequency,
-    Parameter.offset,
-}
 
 _Field = tuple[Any, str]
 
@@ -83,11 +87,11 @@ class Sweeper(Model):
         _alternative_fields((self.pulses, "pulses"), (self.channels, "channels"))
         _alternative_fields((self.range, "range"), (self.values, "values"))
 
-        if self.pulses is not None and self.parameter in ChannelParameter:
+        if self.pulses is not None and self.parameter in Parameter.channels():
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying channels."
             )
-        if self.parameter not in ChannelParameter and (self.channels is not None):
+        if self.parameter not in Parameter.channels() and (self.channels is not None):
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying pulses."
             )

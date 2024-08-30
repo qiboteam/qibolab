@@ -3,7 +3,7 @@ import pytest
 
 from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse, Rectangular
-from qibolab.sweeper import ChannelParameter, Parameter, Sweeper
+from qibolab.sweeper import Parameter, Sweeper
 
 
 @pytest.mark.parametrize("parameter", Parameter)
@@ -17,7 +17,7 @@ def test_sweeper_pulses(parameter):
         parameter_range = np.random.rand(10)
     else:
         parameter_range = np.random.randint(10, size=10)
-    if parameter in ChannelParameter:
+    if parameter in Parameter.channels():
         with pytest.raises(ValueError, match="channels"):
             _ = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
     else:
@@ -29,7 +29,7 @@ def test_sweeper_pulses(parameter):
 def test_sweeper_channels(parameter):
     channel = ChannelId.load("0/probe")
     parameter_range = np.random.randint(10, size=10)
-    if parameter in ChannelParameter:
+    if parameter in Parameter.channels():
         sweeper = Sweeper(
             parameter=parameter, values=parameter_range, channels=[channel]
         )
