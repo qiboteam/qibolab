@@ -101,7 +101,7 @@ class Sweeper(Model):
             object.__setattr__(self, "values", np.arange(*self.range))
 
         if self.parameter is Parameter.amplitude and max(abs(self.values)) > 1:
-            raise ValueError("Amplitude sweeper cannot have values larger than 1.")
+            raise ValueError("Amplitude sweeper cannot have absolute values larger than 1.")
 
         return self
 
