@@ -312,6 +312,8 @@ class QmController(Controller):
 
             if isinstance(pulse, Pulse):
                 self.register_pulse(id, pulse)
+            elif isinstance(pulse, Readout):
+                self.register_pulse(id, pulse.probe)
 
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
