@@ -330,14 +330,13 @@ class QmController(Controller):
                 continue
 
             params = args.parameters[operation(pulse)]
-            channel_ids = args.sequence.pulse_channels(pulse.id)
-            channel = self.channels[channel_ids[0]].logical_channel
+            ids = args.sequence.pulse_channels(pulse.id)
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
             for value in sweeper.values:
                 sweep_pulse = original_pulse.model_copy(update={"duration": value})
-                sweep_op = self.register_pulse(channel, sweep_pulse)
+                sweep_op = self.register_pulse(ids[0], sweep_pulse)
                 params.duration_ops.append((value, sweep_op))
 
     def register_amplitude_sweeper_pulses(
@@ -350,13 +349,11 @@ class QmController(Controller):
         """
         amplitude = sweeper_amplitude(sweeper.values)
         for pulse in sweeper.pulses:
-            channel_ids = args.sequence.pulse_channels(pulse.id)
-            channel = self.channels[channel_ids[0]].logical_channel
             sweep_pulse = pulse.model_copy(update={"amplitude": amplitude})
-
+            ids = args.sequence.pulse_channels(pulse.id)
             params = args.parameters[operation(pulse)]
             params.amplitude_pulse = sweep_pulse
-            params.amplitude_op = self.register_pulse(channel, sweep_pulse)
+            params.amplitude_op = self.register_pulse(ids[0], sweep_pulse)
 
     def register_acquisitions(
         self,
