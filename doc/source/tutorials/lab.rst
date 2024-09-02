@@ -194,7 +194,7 @@ the native gates, but separately from the single-qubit ones.
     # define the pair of qubits
     two_qubit = TwoQubitContainer(
         {
-            f"0-1": TwoQubitNatives(
+            "0-1": TwoQubitNatives(
                 CZ=FixedSequenceFactory(
                     PulseSequence(
                         [
@@ -239,7 +239,7 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
     # define the pair of qubits
     two_qubit = TwoQubitContainer(
         {
-            f"0-1": TwoQubitNatives(
+            "0-1": TwoQubitNatives(
                 CZ=FixedSequenceFactory(
                     PulseSequence(
                         [
