@@ -12,11 +12,9 @@ To define a platform the user needs to provide a folder with the following struc
     my_platform/
         platform.py
         parameters.json
-        kernels.npz # (optional)
 
 where ``platform.py`` contains instruments information, ``parameters.json``
-includes calibration parameters and ``kernels.npz`` is an optional
-file with additional calibration parameters.
+includes calibration parameters.
 
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
