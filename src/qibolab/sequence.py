@@ -153,8 +153,7 @@ class PulseSequence(UserList[_Element]):
         .. note::
 
             This selects only the :class:`Acquisition` events, and not all the
-            instructions directed to an acquistion channel (i.e.
-            :attr:`ChannelType.ACQUISITION`)
+            instructions directed to an acquistion channel
         """
         # pulse filter needed to exclude delays
         return [(ch, p) for ch, p in self if isinstance(p, (Acquisition, Readout))]
