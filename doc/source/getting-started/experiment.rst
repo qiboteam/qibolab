@@ -239,7 +239,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
 
     # plot the results
     amplitudes = magnitude(results[acq.id][0])
-    frequencies = np.arange(-2e8, +2e8, 1e6) + platform.config(qubit.probe).frequency
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
