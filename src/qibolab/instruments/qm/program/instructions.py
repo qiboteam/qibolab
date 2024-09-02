@@ -151,7 +151,8 @@ def sweep(
                         method(variable, params)
                 else:
                     for channel in sweeper.channels:
-                        method(variable, channel, configs)
+                        params = args.parameters[channel]
+                        method(variable, params, channel)
 
             sweep(sweepers[1:], configs, args)
 

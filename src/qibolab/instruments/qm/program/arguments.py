@@ -1,9 +1,10 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 from qm.qua._dsl import _Variable  # for type declaration only
 
+from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse
 from qibolab.sequence import PulseSequence
 
@@ -24,6 +25,8 @@ class Parameters:
     duration_ops: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
 
+    lo_frequency: Optional[int] = None
+
 
 @dataclass
 class ExecutionArguments:
@@ -36,6 +39,6 @@ class ExecutionArguments:
     sequence: PulseSequence
     acquisitions: Acquisitions
     relaxation_time: int = 0
-    parameters: dict[str, Parameters] = field(
+    parameters: dict[Union[str, ChannelId], Parameters] = field(
         default_factory=lambda: defaultdict(Parameters)
     )

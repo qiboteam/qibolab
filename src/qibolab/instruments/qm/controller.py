@@ -29,7 +29,7 @@ from qibolab.unrolling import Bounds, unroll_sequences
 
 from .config import SAMPLING_RATE, QmConfig, operation
 from .program import ExecutionArguments, create_acquisition, program
-from .program.sweepers import check_frequency_bandwidth, sweeper_amplitude
+from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
 OCTAVE_ADDRESS_OFFSET = 11000
 """Offset to be added to Octave addresses, because they must be 11xxx, where
@@ -404,7 +404,8 @@ class QmController(Controller):
         Amplitude and duration sweeps require registering additional pulses in the QM ``config.
         """
         for sweeper in find_sweepers(sweepers, Parameter.frequency):
-            check_frequency_bandwidth(sweeper.channels, configs, sweeper.values)
+            channels = [(id, self.channels[id]) for id in sweeper.channels]
+            find_lo_frequencies(args, channels, configs, sweeper.values)
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
