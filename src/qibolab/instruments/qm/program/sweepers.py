@@ -32,6 +32,11 @@ def find_lo_frequencies(
     It also checks if frequency sweep is within the supported instrument
     bandwidth [-400, 400] MHz.
     """
+    los = {channel.lo for _, channel in channels}
+    if len(los) > 1:
+        raise ValueError(
+            "Cannot sweep frequency of channels using different LO using the same `Sweeper` object. Please use parallel sweepers instead."
+        )
     for id, channel in channels:
         lo_frequency = configs[channel.lo].frequency
         max_freq = max(abs(values - lo_frequency))
@@ -73,6 +78,14 @@ def normalize_duration(values: npt.NDArray) -> npt.NDArray:
     return (values // 4).astype(int)
 
 
+def normalize_frequency(values: npt.NDArray, lo_frequency: int) -> npt.NDArray:
+    """Convert frequencies to integer and substract LO frequency.
+
+    Because QUA does not support large numbers of ``fixed`` type.
+    """
+    return (values - lo_frequency).astype(int)
+
+
 def _amplitude(variable: _Variable, parameters: Parameters):
     parameters.amplitude = qua.amp(variable)
 
@@ -90,17 +103,17 @@ def _duration_interpolated(variable: _Variable, parameters: Parameters):
     parameters.interpolated = True
 
 
-def _offset(variable: _Variable, parameters: Parameters, element: ChannelId):
+def _offset(variable: _Variable, parameters: Parameters):
     with qua.if_(variable >= MAX_OFFSET):
-        qua.set_dc_offset(element, "single", MAX_OFFSET)
+        qua.set_dc_offset(parameters.element, "single", MAX_OFFSET)
     with qua.elif_(variable <= -MAX_OFFSET):
-        qua.set_dc_offset(element, "single", -MAX_OFFSET)
+        qua.set_dc_offset(parameters.element, "single", -MAX_OFFSET)
     with qua.else_():
-        qua.set_dc_offset(element, "single", variable)
+        qua.set_dc_offset(parameters.element, "single", variable)
 
 
-def _frequency(variable: _Variable, parameters: Parameters, element: ChannelId):
-    qua.update_frequency(element, variable - parameters.lo_frequency)
+def _frequency(variable: _Variable, parameters: Parameters):
+    qua.update_frequency(parameters.element, variable)
 
 
 INT_TYPE = {Parameter.frequency, Parameter.duration, Parameter.duration_interpolated}
@@ -110,6 +123,7 @@ The rest parameters need ``fixed`` type.
 """
 
 NORMALIZERS = {
+    Parameter.frequency: normalize_frequency,
     Parameter.amplitude: normalize_amplitude,
     Parameter.relative_phase: normalize_phase,
     Parameter.duration_interpolated: normalize_duration,

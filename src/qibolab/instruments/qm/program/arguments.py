@@ -13,7 +13,7 @@ from .acquisition import Acquisitions
 
 @dataclass
 class Parameters:
-    """Container of swept QUA variables."""
+    """Container of QUA variables and other parameters needed for sweeping."""
 
     amplitude: Optional[_Variable] = None
     amplitude_pulse: Optional[Pulse] = None
@@ -25,6 +25,7 @@ class Parameters:
     duration_ops: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
 
+    element: Optional[str] = None
     lo_frequency: Optional[int] = None
 
 

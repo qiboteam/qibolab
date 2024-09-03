@@ -393,6 +393,14 @@ class QmController(Controller):
 
         return acquisitions
 
+    def _acquisition_id(self, probe_id: ChannelId) -> Optional[ChannelId]:
+        """Find id of acquisition channel corresponding to a given probe
+        channel."""
+        for id, channel in self.channels.items():
+            if isinstance(channel, AcquireChannel) and channel.probe == probe_id:
+                return id
+        return None
+
     def preprocess_sweeps(
         self,
         sweepers: list[ParallelSweepers],
@@ -406,6 +414,11 @@ class QmController(Controller):
         for sweeper in find_sweepers(sweepers, Parameter.frequency):
             channels = [(id, self.channels[id]) for id in sweeper.channels]
             find_lo_frequencies(args, channels, configs, sweeper.values)
+            for id, channel in channels:
+                acquisition_id = self._acquisition_id(id)
+                args.parameters[id].element = (
+                    id if acquisition_id is None else acquisition_id
+                )
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
