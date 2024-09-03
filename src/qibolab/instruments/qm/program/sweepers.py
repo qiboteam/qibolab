@@ -79,9 +79,10 @@ def normalize_duration(values: npt.NDArray) -> npt.NDArray:
 
 
 def normalize_frequency(values: npt.NDArray, lo_frequency: int) -> npt.NDArray:
-    """Convert frequencies to integer and substract LO frequency.
+    """Convert frequencies to integer and subtract LO frequency.
 
-    Because QUA does not support large numbers of ``fixed`` type.
+    QUA gives an error if the raw frequency values are uploaded to sweep
+    over.
     """
     return (values - lo_frequency).astype(int)
 
