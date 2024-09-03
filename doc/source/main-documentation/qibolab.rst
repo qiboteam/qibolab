@@ -5,7 +5,8 @@ Platforms
 
 Qibolab provides support to different quantum laboratories.
 
-Each lab configuration is implemented using a :class:`qibolab.platform.Platform` object which orchestrates instruments, qubits and channels and provides the basic features for executing pulses.
+Each lab configuration is implemented using a :class:`qibolab.platform.Platform` object which orchestrates instruments,
+qubits and channels and provides the basic features for executing pulses.
 Therefore, the ``Platform`` enables the user to interface with all
 the required lab instruments at the same time with minimum effort.
 
@@ -13,11 +14,12 @@ The API reference section provides a description of all the attributes and metho
 
 In the platform, the main methods can be divided in different sections:
 
-- functions save and change qubit parameters (``dump``, ``update``)
-- functions to coordinate the instruments (``connect``, ``setup``, ``disconnect``)
+- functions to coordinate the instruments (``connect``, ``disconnect``)
 - a unique interface to execute experiments (``execute``)
+- functions save parameters (``dump``)
 
-The idea of the ``Platform`` is to serve as the only object exposed to the user,  so that we can deploy experiments, without any need of going into the low-level instrument-specific code.
+The idea of the ``Platform`` is to serve as the only object exposed to the user, so that we can deploy experiments,
+without any need of going into the low-level instrument-specific code.
 
 For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/tutorials/lab`:
 
@@ -50,7 +52,7 @@ We can easily access the names of channels and other components, and based on th
         print(f"Drive channel {drive_channel_id} does not use an LO.")
     else:
         print(f"Name of LO for channel {drive_channel_id} is {drive_lo}")
-        print(f"LO frequency: {platform.config(str(drive_lo)).frequency}")
+        print(f"LO frequency: {platform.config(drive_lo).frequency}")
 
 .. testoutput:: python
     :hide:
@@ -59,7 +61,8 @@ We can easily access the names of channels and other components, and based on th
     Drive frequency: 4000000000.0
     Drive channel 0/drive does not use an LO.
 
-Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
+Now we can create a simple sequence without explicitly giving any qubit specific parameter,
+as these are loaded automatically from the platform, as defined in the corresponding ``parameters.json``:
 
 .. testcode::  python
 
@@ -118,14 +121,6 @@ This instrument is also part of the dummy platform which is defined in :py:mod:`
 
 This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
 It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
-
-.. testcode::  python
-
-    from qibolab import create_platform
-
-    platform = create_platform("dummy")
-
-will create a dummy platform that also has coupler qubits.
 
 
 .. _main_doc_qubits:
