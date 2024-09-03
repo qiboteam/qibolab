@@ -112,7 +112,7 @@ def execute(connected_platform: Platform) -> Execution:
         nshots: int = 1000,
         sweepers: Optional[list[ParallelSweepers]] = None,
         sequence: Optional[PulseSequence] = None,
-        target: Optional[tuple[int, int]] = None,
+        target: Optional[int] = None,
     ) -> npt.NDArray:
         options = ExecutionParameters(
             nshots=nshots,
@@ -145,13 +145,13 @@ def execute(connected_platform: Platform) -> Execution:
                 )
                 sweepers = [[sweeper1], [sweeper2]]
             if target is None:
-                target = (acq.id, 0)
+                target = acq.id
 
         # default target and sweepers only supported for default sequence
         assert target is not None
         assert sweepers is not None
 
         results = connected_platform.execute([sequence], options, sweepers)
-        return results[target[0]][target[1]]
+        return results[target]
 
     return wrapped
