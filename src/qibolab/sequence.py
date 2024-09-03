@@ -2,6 +2,7 @@
 
 from collections import UserList
 from collections.abc import Callable, Iterable
+from copy import deepcopy
 from typing import Any, Union
 
 from pydantic import TypeAdapter
@@ -103,6 +104,25 @@ class PulseSequence(UserList[_Element]):
         """
         _synchronize(self, other.channels)
         self.extend(other)
+
+    def __ior__(self, other: "PulseSequence") -> "PulseSequence":
+        """Juxtapose two sequences.
+
+        Alias to :meth:`concatenate`.
+        """
+        self.concatenate(other)
+        return self
+
+    def __or__(self, other: "PulseSequence") -> "PulseSequence":
+        """Juxtapose two sequences.
+
+        A copy is made, and no input is altered.
+
+        Other than that, it is based on :meth:`concatenate`.
+        """
+        copy = deepcopy(self)
+        copy |= other
+        return copy
 
     def align(self, channels: list[ChannelId]) -> Align:
         """Introduce align commands to the sequence."""
