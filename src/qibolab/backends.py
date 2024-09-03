@@ -1,5 +1,3 @@
-from collections import deque
-
 import numpy as np
 from qibo import __version__ as qibo_version
 from qibo.backends import NumpyBackend
@@ -106,7 +104,7 @@ class QibolabBackend(NumpyBackend):
             [sequence],
             ExecutionParameters(nshots=nshots),
         )
-        readout = {k: v[0] for k, v in readout_.items()}
+        readout = {k: v for k, v in readout_.items()}
 
         self.platform.disconnect()
 
@@ -153,15 +151,12 @@ class QibolabBackend(NumpyBackend):
         self.platform.disconnect()
 
         results = []
-        readout = {k: deque(v) for k, v in readout.items()}
         for circuit, measurement_map in zip(circuits, measurement_maps):
             results.append(
                 MeasurementOutcomes(circuit.measurements, self, nshots=nshots)
             )
             for gate, sequence in measurement_map.items():
-                samples = [
-                    readout[acq.id].popleft() for _, acq in sequence.acquisitions
-                ]
+                samples = [readout[acq.id] for _, acq in sequence.acquisitions]
                 gate.result.backend = self
                 gate.result.register_samples(np.array(samples).T)
         return results
