@@ -1,5 +1,7 @@
 from typing import Annotated, Union
 
+import numpy as np
+import numpy.typing as npt
 from pydantic import BeforeValidator, Field, PlainSerializer
 
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
@@ -41,3 +43,7 @@ QubitPairId = Annotated[
     tuple[QubitId, QubitId], BeforeValidator(_split), PlainSerializer(_join)
 ]
 """Two-qubit active interaction identifier."""
+
+
+Result = npt.NDArray[np.float64]
+"""An array of results returned by instruments."""

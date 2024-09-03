@@ -31,7 +31,6 @@ around the pre-defined frequency.
     import numpy as np
     from qibolab import create_platform
     from qibolab.sequence import PulseSequence
-    from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -74,7 +73,8 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
     import matplotlib.pyplot as plt
 
     acq = sequence.acquisitions[0][1]
-    amplitudes = magnitude(results[acq.id])
+    signal_i, signal_q = np.moveaxis(results[acq.id], -1, 0)
+    amplitudes = np.abs(signal_i + 1j * signal_q)
     frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
@@ -113,7 +113,6 @@ complex pulse sequence. Therefore with start with that:
     from qibolab import create_platform
     from qibolab.pulses import Pulse, Delay, Gaussian
     from qibolab.sequence import PulseSequence
-    from qibolab.result import magnitude
     from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -165,7 +164,8 @@ We can now proceed to launch on hardware:
     results = platform.execute([sequence], options, [[sweeper]])
 
     _, acq = next(iter(sequence.acquisitions))
-    amplitudes = magnitude(results[acq.id])
+    signal_i, signal_q = np.moveaxis(results[acq.id], -1, 0)
+    amplitudes = np.abs(signal_i + 1j * signal_q)
     frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
@@ -218,7 +218,6 @@ and its impact on qubit states in the IQ plane.
     from qibolab import create_platform
     from qibolab.pulses import Delay
     from qibolab.sequence import PulseSequence
-    from qibolab.result import unpack
     from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -263,7 +262,7 @@ and its impact on qubit states in the IQ plane.
         label="One state",
     )
     plt.scatter(
-        *unpack(results_zero[acq0.id]),
+        *tuple(np.moveaxis(results_zero[acq0.id], -1, 0)),
         label="Zero state",
     )
     plt.show()

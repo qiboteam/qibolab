@@ -14,7 +14,10 @@ from qibolab.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab.result import collect
+
+
+def _collect(i, q):
+    return np.moveaxis(np.stack([i, q]), 0, -1)
 
 
 def _split(data, npulses, iq=False):
@@ -111,7 +114,7 @@ class RawAcquisition(Acquisition):
         qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
-        signal = collect(u.raw2volts(ires), u.raw2volts(qres))
+        signal = _collect(u.raw2volts(ires), u.raw2volts(qres))
         return _split(signal, self.npulses, iq=True)
 
 
@@ -162,7 +165,7 @@ class IntegratedAcquisition(Acquisition):
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
-        signal = collect(ires, qres)
+        signal = _collect(ires, qres)
         return _split(signal, self.npulses, iq=True)
 
 
