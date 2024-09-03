@@ -19,7 +19,7 @@ from qibolab.execution_parameters import (
 def _collect(i, q, npulses):
     """Collect I and Q components of signal."""
     signal = np.stack([i, q])
-    return np.moveaxis(signal, 0, -1 - int(self.npulses > 1))
+    return np.moveaxis(signal, 0, -1 - int(npulses > 1))
 
 
 def _split(data, npulses):
@@ -114,7 +114,7 @@ class RawAcquisition(Acquisition):
         qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
-        signal = _collect(u.raw2volts(ires), u.raw2volts(qres), npulses)
+        signal = _collect(u.raw2volts(ires), u.raw2volts(qres), self.npulses)
         return _split(signal, self.npulses)
 
 
@@ -165,7 +165,7 @@ class IntegratedAcquisition(Acquisition):
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
-        signal = _collect(i, q, self.npulses)
+        signal = _collect(ires, qres, self.npulses)
         return _split(signal, self.npulses)
 
 
