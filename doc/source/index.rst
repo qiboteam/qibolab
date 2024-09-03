@@ -12,9 +12,9 @@ Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ backend for
 quantum hardware control. This module automates the implementation of quantum
 circuits on quantum hardware. Qibolab includes:
 
-#. :ref:`Platform API <main_doc_platform>`: support custom allocation of quantum hardware platforms / lab setup.
+#. :ref:`Platform API <main_doc_platform>`: support custom allocation of quantum hardware platforms and lab setup.
+#. :ref:`Pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
 #. :ref:`Drivers <main_doc_instruments>`: supports commercial and open-source firmware for hardware control.
-#. :ref:`Arbitrary pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
 #. :ref:`Compiler <main_doc_compiler>`: compiles quantum circuits into pulse sequences.
 #. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on quantum hardware.
 
