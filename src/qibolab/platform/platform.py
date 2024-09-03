@@ -39,6 +39,11 @@ def default(value: Optional[T], default: T) -> T:
     return value if value is not None else default
 
 
+def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
+    """Map channel names to element (qubit or coupler)."""
+    return {ch: id for id, el in elements.items() for ch in el.channels}
+
+
 def estimate_duration(
     sequences: list[PulseSequence],
     options: ExecutionParameters,
@@ -56,9 +61,13 @@ def estimate_duration(
     )
 
 
-def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
-    """Map channel names to element (qubit or coupler)."""
-    return {ch: id for id, el in elements.items() for ch in el.channels}
+def _unique_acquisitions(sequences: list[PulseSequence]) -> bool:
+    """Check unique acquisition identifiers."""
+    ids = []
+    for seq in sequences:
+        ids += (id for id, _ in seq.acquisitions)
+
+    return len(ids) == len(set(ids))
 
 
 @dataclass
@@ -255,6 +264,10 @@ class Platform:
         """
         if sweepers is None:
             sweepers = []
+        if not _unique_acquisitions(sequences):
+            raise ValueError(
+                "The acquisitions identifiers have to be unique across all sequences."
+            )
 
         options = self.settings.fill(options)
 
