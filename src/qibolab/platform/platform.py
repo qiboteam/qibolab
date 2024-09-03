@@ -1,6 +1,5 @@
 """A platform for executing quantum algorithms."""
 
-from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from math import prod
@@ -230,7 +229,7 @@ class Platform:
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
-    ) -> dict[PulseId, list[Result]]:
+    ) -> dict[PulseId, Result]:
         """Execute pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values
@@ -277,20 +276,18 @@ class Platform:
         configs = self.parameters.configs.copy()
         update_configs(configs, options.updates)
 
-        # for components that represent aux external instruments (e.g. lo) to the main control instrument
-        # set the config directly
+        # for components that represent aux external instruments (e.g. lo) to the main
+        # control instrument set the config directly
         for name, cfg in configs.items():
             if name in self.instruments:
                 self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
 
-        results = defaultdict(list)
+        results = {}
         # pylint: disable=unsubscriptable-object
         bounds = self.parameters.configs[self._controller.bounds]
         assert isinstance(bounds, Bounds)
         for b in batch(sequences, bounds):
-            result = self._execute(b, options, configs, sweepers)
-            for serial, data in result.items():
-                results[serial].append(data)
+            results |= self._execute(b, options, configs, sweepers)
 
         return results
 
