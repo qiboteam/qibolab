@@ -12,11 +12,9 @@ To define a platform the user needs to provide a folder with the following struc
     my_platform/
         platform.py
         parameters.json
-        kernels.npz # (optional)
 
 where ``platform.py`` contains instruments information, ``parameters.json``
-includes calibration parameters and ``kernels.npz`` is an optional
-file with additional calibration parameters.
+includes calibration parameters.
 
 More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
@@ -82,7 +80,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         return Platform(
             name=NAME,
             runcard=runcard,
-            instruments={controller.name: controller},
+            instruments={controller: controller},
             resonator_type="3D",
         )
 
@@ -221,11 +219,11 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     sequence = natives.MZ.create_sequence()
 
     # define a sweeper for a frequency scan
-    f0 = platform.config(str(qubit.probe.name)).frequency  # center frequency
+    f0 = platform.config(qubit.probe).frequency  # center frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.probe.name],
+        channels=[qubit.probe],
     )
 
     # perform the experiment using specific options

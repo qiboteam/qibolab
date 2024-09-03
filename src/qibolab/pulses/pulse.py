@@ -42,16 +42,6 @@ class Pulse(_PulseLike):
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
 
-    @classmethod
-    def flux(cls, **kwargs):
-        """Construct a flux pulse.
-
-        It provides a simplified syntax for the :class:`Pulse` constructor, by applying
-        suitable defaults.
-        """
-        kwargs["relative_phase"] = 0
-        return cls(**kwargs)
-
     def i(self, sampling_rate: float) -> Waveform:
         """The envelope waveform of the i component of the pulse."""
         samples = int(self.duration * sampling_rate)
@@ -113,7 +103,7 @@ class Acquisition(_PulseLike):
     """Duration in ns."""
 
 
-class _Readout(_PulseLike):
+class Readout(_PulseLike):
     """Readout instruction.
 
     This event instructs the device to acquire samples for the event
@@ -126,6 +116,14 @@ class _Readout(_PulseLike):
 
     acquisition: Acquisition
     probe: Pulse
+
+    @classmethod
+    def from_probe(cls, probe: Pulse):
+        """Create a whole readout operation from its probe pulse.
+
+        The acquisition is made to match the same probe duration.
+        """
+        return cls(acquisition=Acquisition(duration=probe.duration), probe=probe)
 
     @property
     def duration(self) -> float:
@@ -145,6 +143,6 @@ class Align(_PulseLike):
 
 
 PulseLike = Annotated[
-    Union[Align, Pulse, Delay, VirtualZ, Acquisition, _Readout],
+    Union[Align, Pulse, Delay, VirtualZ, Acquisition, Readout],
     Field(discriminator="kind"),
 ]

@@ -3,7 +3,6 @@ import pathlib
 from collections.abc import Callable
 from typing import Optional
 
-import numpy as np
 import numpy.typing as npt
 import pytest
 
@@ -69,26 +68,6 @@ def emulators():
     os.environ[PLATFORMS] = str(pathlib.Path(__file__).parent / "emulators")
 
 
-def find_instrument(platform, instrument_type):
-    for instrument in platform.instruments.values():
-        if isinstance(instrument, instrument_type):
-            return instrument
-    return None
-
-
-def get_instrument(platform, instrument_type):
-    """Finds if an instrument of a given type exists in the given platform.
-
-    If the platform does not have such an instrument, the corresponding
-    test that asked for this instrument is skipped. This ensures that
-    QPU tests are executed only on the available instruments.
-    """
-    instrument = find_instrument(platform, instrument_type)
-    if instrument is None:
-        pytest.skip(f"Skipping {instrument_type.__name__} test for {platform.name}.")
-    return instrument
-
-
 @pytest.fixture(scope="module", params=TESTING_PLATFORM_NAMES)
 def platform(request):
     """Dummy platform to be used when there is no access to QPU.
@@ -147,22 +126,21 @@ def execute(connected_platform: Platform) -> Execution:
         if sequence is None:
             qd_seq = natives.RX.create_sequence()
             probe_seq = natives.MZ.create_sequence()
-            probe_pulse = probe_seq[0][1]
-            acq = probe_seq[1][1]
+            probe_pulse = probe_seq[0][1].probe
+            acq = probe_seq[0][1].acquisition
             wrapped.acquisition_duration = acq.duration
             sequence = PulseSequence()
             sequence.concatenate(qd_seq)
             sequence.concatenate(probe_seq)
             if sweepers is None:
-                amp_values = np.arange(0, 0.8, 0.1)
                 sweeper1 = Sweeper(
                     parameter=Parameter.offset,
                     range=(0.01, 0.06, 0.01),
-                    channels=[qubit.flux.name],
+                    channels=[qubit.flux],
                 )
                 sweeper2 = Sweeper(
                     parameter=Parameter.amplitude,
-                    values=amp_values,
+                    range=(0, 0.8, 0.1),
                     pulses=[probe_pulse],
                 )
                 sweepers = [[sweeper1], [sweeper2]]

@@ -9,6 +9,7 @@ from qibo.models import Circuit
 
 from qibolab import MetaBackend, create_platform
 from qibolab.backends import QibolabBackend
+from qibolab.platform.platform import Platform
 
 
 def generate_circuit_with_gate(nqubits, gate, **kwargs):
@@ -108,7 +109,6 @@ def dummy_string_qubit_names():
     platform = create_platform("dummy")
     for q, qubit in platform.qubits.copy().items():
         name = f"A{q}"
-        qubit.name = name
         platform.qubits[name] = qubit
         del platform.qubits[q]
         platform.natives.single_qubit[name] = platform.natives.single_qubit[q]
@@ -141,7 +141,7 @@ def test_execute_circuit_str_qubit_names():
 @pytest.mark.xfail(
     raises=AssertionError, reason="Probabilities are not well calibrated"
 )
-def test_ground_state_probabilities_circuit(connected_backend):
+def test_ground_state_probabilities_circuit(connected_backend: QibolabBackend):
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
@@ -159,7 +159,7 @@ def test_ground_state_probabilities_circuit(connected_backend):
 @pytest.mark.xfail(
     raises=AssertionError, reason="Probabilities are not well calibrated"
 )
-def test_excited_state_probabilities_circuit(connected_backend):
+def test_excited_state_probabilities_circuit(connected_backend: QibolabBackend):
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
@@ -178,7 +178,7 @@ def test_excited_state_probabilities_circuit(connected_backend):
 @pytest.mark.xfail(
     raises=AssertionError, reason="Probabilities are not well calibrated"
 )
-def test_superposition_for_all_qubits(connected_backend):
+def test_superposition_for_all_qubits(connected_backend: QibolabBackend):
     """Applies an H gate to each qubit of the circuit and measures the
     probabilities."""
     nshots = 5000
@@ -205,20 +205,20 @@ def test_superposition_for_all_qubits(connected_backend):
 # TODO: test_circuit_result_representation
 
 
-def test_metabackend_load(platform):
+def test_metabackend_load(platform: Platform):
     backend = MetaBackend.load(platform.name)
     assert isinstance(backend, QibolabBackend)
     assert backend.platform.name == platform.name
 
 
-def test_metabackend_list_available(tmpdir):
+def test_metabackend_list_available(tmp_path: Path):
     for platform in (
         "valid_platform/platform.py",
         "invalid_platform/invalid_platform.py",
     ):
-        path = Path(tmpdir / platform)
+        path = tmp_path / platform
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
-    os.environ["QIBOLAB_PLATFORMS"] = str(tmpdir)
+    os.environ["QIBOLAB_PLATFORMS"] = str(tmp_path)
     available_platforms = {"valid_platform": True}
     assert MetaBackend().list_available() == available_platforms

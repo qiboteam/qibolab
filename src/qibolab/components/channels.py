@@ -27,8 +27,16 @@ __all__ = ["Channel", "DcChannel", "IqChannel", "AcquireChannel"]
 
 
 class Channel(Model):
-    name: ChannelId
-    """Name of the channel."""
+    """Channel to communicate with the qubit."""
+
+    device: str = ""
+    """Name of the device."""
+    path: str = ""
+    """Physical port addresss within the device."""
+
+    @property
+    def port(self) -> int:
+        return int(self.path)
 
 
 class DcChannel(Channel):
@@ -49,13 +57,6 @@ class IqChannel(Channel):
 
     None, if the channel does not have an LO, or it is not configurable.
     """
-    acquisition: Optional[str] = None
-    """In case self is a readout channel this shall contain the name of the
-    corresponding acquire channel.
-
-    FIXME: This is temporary solution to be able to generate acquisition commands on correct channel in drivers,
-    until we make acquire channels completely independent, and users start putting explicit acquisition commands in pulse sequence.
-    """
 
 
 class AcquireChannel(Channel):
@@ -64,7 +65,7 @@ class AcquireChannel(Channel):
 
     None, if there is no TWPA, or it is not configurable.
     """
-    probe: Optional[str] = None
+    probe: Optional[ChannelId] = None
     """Name of the corresponding measure/probe channel.
 
     FIXME: This is temporary solution to be able to relate acquisition channel to corresponding probe channel wherever needed in drivers,

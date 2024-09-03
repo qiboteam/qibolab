@@ -126,7 +126,7 @@ class ConfigKinds:
     _registered: list[_ChannelConfigT] = list(_BUILTIN_CONFIGS)
 
     @classmethod
-    def extend(cls, kinds: Iterable[type[Config]]):
+    def extend(cls, kinds: Iterable[_ChannelConfigT]):
         """Extend the known configuration kinds.
 
         Nested unions are supported (i.e. :class:`Union` as elements of ``kinds``).

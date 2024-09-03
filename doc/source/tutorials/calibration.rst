@@ -47,11 +47,11 @@ around the pre-defined frequency.
     sequence = natives.MZ.create_sequence()
 
     # allocate frequency sweeper
-    f0 = platform.config(str(qubit.probe.name)).frequency
+    f0 = platform.config(qubit.probe).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.probe.name],
+        channels=[qubit.probe],
     )
 
 We then define the execution parameters and launch the experiment.
@@ -132,20 +132,20 @@ complex pulse sequence. Therefore with start with that:
     sequence = PulseSequence(
         [
             (
-                qubit.drive.name,
+                qubit.drive,
                 Pulse(duration=2000, amplitude=0.01, envelope=Gaussian(rel_sigma=5)),
             ),
-            (qubit.probe.name, Delay(duration=sequence.duration)),
+            (qubit.probe, Delay(duration=sequence.duration)),
         ]
     )
     sequence.concatenate(natives.MZ.create_sequence())
 
     # allocate frequency sweeper
-    f0 = platform.config(str(qubit.probe.name)).frequency
+    f0 = platform.config(qubit.probe).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.drive.name],
+        channels=[qubit.drive],
     )
 
 Note that the drive pulse has been changed to match the characteristics required
@@ -235,7 +235,7 @@ and its impact on qubit states in the IQ plane.
     # create pulse sequence 1 and add pulses
     one_sequence = PulseSequence()
     one_sequence.concatenate(natives.RX.create_sequence())
-    one_sequence.append((qubit.probe.name, Delay(duration=one_sequence.duration)))
+    one_sequence.append((qubit.probe, Delay(duration=one_sequence.duration)))
     one_sequence.concatenate(natives.MZ.create_sequence())
 
     # create pulse sequence 2 and add pulses

@@ -5,7 +5,7 @@ from qibolab.instruments.dummy import DummyDevice, DummyLocalOscillator
 
 @pytest.fixture
 def lo():
-    return DummyLocalOscillator("lo", "0")
+    return DummyLocalOscillator(name="lo", address="0")
 
 
 def test_oscillator_init(lo):

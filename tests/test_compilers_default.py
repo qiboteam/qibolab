@@ -6,16 +6,15 @@ from qibo.models import Circuit
 
 from qibolab import create_platform
 from qibolab.compilers import Compiler
-from qibolab.identifier import ChannelId, ChannelType
+from qibolab.identifier import ChannelId
 from qibolab.native import FixedSequenceFactory, TwoQubitNatives
 from qibolab.platform import Platform
-from qibolab.pulses import Delay
+from qibolab.pulses import Delay, Pulse
 from qibolab.pulses.envelope import Rectangular
-from qibolab.pulses.pulse import Pulse
 from qibolab.sequence import PulseSequence
 
 
-def generate_circuit_with_gate(nqubits, gate, *params, **kwargs):
+def generate_circuit_with_gate(nqubits: int, gate, *params, **kwargs):
     circuit = Circuit(nqubits)
     circuit.add(gate(q, *params, **kwargs) for q in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
@@ -35,7 +34,7 @@ def test_u3_sim_agreement():
     np.testing.assert_allclose(u3_matrix, target_matrix)
 
 
-def compile_circuit(circuit, platform) -> PulseSequence:
+def compile_circuit(circuit: Circuit, platform: Platform) -> PulseSequence:
     """Compile a circuit to a pulse sequence."""
     compiler = Compiler.default()
     return compiler.compile(circuit, platform)[0]
@@ -51,14 +50,14 @@ def compile_circuit(circuit, platform) -> PulseSequence:
         (gates.RZ, np.pi / 4),
     ],
 )
-def test_compile(platform, gateargs):
+def test_compile(platform: Platform, gateargs):
     nqubits = platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, *gateargs)
     sequence = compile_circuit(circuit, platform)
-    assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits * 2
+    assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits * 1
 
 
-def test_compile_two_gates(platform):
+def test_compile_two_gates(platform: Platform):
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0.1))
     circuit.add(gates.GPI(0, 0.2))
@@ -67,23 +66,23 @@ def test_compile_two_gates(platform):
     sequence = compile_circuit(circuit, platform)
 
     qubit = platform.qubits[0]
-    assert len(sequence.channels) == 3
-    assert len(list(sequence.channel(qubit.drive.name))) == 2
-    assert len(list(sequence.channel(qubit.probe.name))) == 2  # includes delay
+    assert len(sequence.channels) == 2
+    assert len(list(sequence.channel(qubit.drive))) == 2
+    assert len(list(sequence.channel(qubit.acquisition))) == 2  # includes delay
 
 
-def test_measurement(platform):
+def test_measurement(platform: Platform):
     nqubits = platform.nqubits
     circuit = Circuit(nqubits)
     qubits = [qubit for qubit in range(nqubits)]
     circuit.add(gates.M(*qubits))
     sequence = compile_circuit(circuit, platform)
 
-    assert len(sequence.channels) == 2 * nqubits
+    assert len(sequence.channels) == 1 * nqubits
     assert len(sequence.acquisitions) == 1 * nqubits
 
 
-def test_rz_to_sequence(platform):
+def test_rz_to_sequence(platform: Platform):
     circuit = Circuit(1)
     circuit.add(gates.RZ(0, theta=0.2))
     circuit.add(gates.Z(0))
@@ -105,7 +104,7 @@ def test_gpi_to_sequence(platform: Platform):
     np.testing.assert_allclose(sequence.duration, rx_seq.duration)
 
 
-def test_gpi2_to_sequence(platform):
+def test_gpi2_to_sequence(platform: Platform):
     natives = platform.natives
 
     circuit = Circuit(1)
@@ -153,15 +152,14 @@ def test_add_measurement_to_sequence(platform: Platform):
 
     sequence = compile_circuit(circuit, platform)
     qubit = platform.qubits[0]
-    assert len(sequence.channels) == 3
-    assert len(list(sequence.channel(qubit.drive.name))) == 2
-    assert len(list(sequence.channel(qubit.probe.name))) == 2  # include delay
+    assert len(sequence.channels) == 2
+    assert len(list(sequence.channel(qubit.drive))) == 2
+    assert len(list(sequence.channel(qubit.acquisition))) == 2  # include delay
 
     s = PulseSequence()
     s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.1))
     s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2))
-    s.append((qubit.probe.name, Delay(duration=s.duration)))
-    s.append((qubit.acquisition.name, Delay(duration=s.duration)))
+    s.append((qubit.acquisition, Delay(duration=s.duration)))
     s.concatenate(natives.single_qubit[0].MZ.create_sequence())
 
     # the delay sorting depends on PulseSequence.channels, which is a set, and it's
@@ -187,7 +185,7 @@ def test_align_delay_measurement(platform: Platform, delay):
 
     target_sequence = PulseSequence()
     if delay > 0:
-        target_sequence.append((platform.qubits[0].probe.name, Delay(duration=delay)))
+        target_sequence.append((platform.qubits[0].acquisition, Delay(duration=delay)))
     target_sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     assert sequence == target_sequence
     assert len(sequence.acquisitions) == 1
@@ -201,9 +199,9 @@ def test_align_multiqubit(platform: Platform):
     circuit.add(gates.M(main, coupled))
 
     sequence = compile_circuit(circuit, platform)
-    flux_duration = sequence.channel_duration(ChannelId.load(f"qubit_{coupled}/flux"))
+    flux_duration = sequence.channel_duration(f"qubit_{coupled}/flux")
     for q in (main, coupled):
-        probe_delay = next(iter(sequence.channel(ChannelId.load(f"qubit_{q}/probe"))))
+        probe_delay = next(iter(sequence.channel(f"qubit_{q}/acquisition")))
         assert isinstance(probe_delay, Delay)
         assert flux_duration == probe_delay.duration
 
@@ -228,12 +226,12 @@ def test_inactive_qubits(platform: Platform, joint: bool):
     natives.CZ.clear()
     sequence = compile_circuit(circuit, platform)
 
+    qm = platform.qubit(main)[1]
+    qc = platform.qubit(coupled)[1]
+    readouts = {qm.probe, qm.acquisition, qc.probe, qc.acquisition}
+
     def no_measurement(seq: PulseSequence):
-        return [
-            el
-            for el in seq
-            if el[0].channel_type not in (ChannelType.PROBE, ChannelType.ACQUISITION)
-        ]
+        return [el for el in seq if el[0] not in readouts]
 
     assert len(no_measurement(sequence)) == 1
 
@@ -252,12 +250,9 @@ def test_inactive_qubits(platform: Platform, joint: bool):
     )
     padded_seq = compile_circuit(circuit, platform)
     assert len(no_measurement(padded_seq)) == 3
-    cdrive_delay = next(iter(padded_seq.channel(ChannelId.load(cdrive))))
+    cdrive_delay = next(iter(padded_seq.channel(cdrive)))
     assert isinstance(cdrive_delay, Delay)
-    assert (
-        cdrive_delay.duration
-        == next(iter(padded_seq.channel(ChannelId.load(mflux)))).duration
-    )
+    assert cdrive_delay.duration == next(iter(padded_seq.channel(mflux))).duration
 
 
 def test_joint_split_equivalence(platform: Platform):
@@ -297,5 +292,4 @@ def test_joint_split_equivalence(platform: Platform):
         "qubit_0/probe",
         "qubit_2/probe",
     ):
-        chid = ChannelId.load(ch)
-        assert list(joint_seq.channel(chid)) == list(split_seq.channel(chid))
+        assert list(joint_seq.channel(ch)) == list(split_seq.channel(ch))

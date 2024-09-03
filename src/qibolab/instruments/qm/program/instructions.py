@@ -6,8 +6,7 @@ from qualang_tools.loops import from_array
 
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.identifier import ChannelType
-from qibolab.pulses import Align, Delay, Pulse, VirtualZ
+from qibolab.pulses import Align, Delay, Pulse, Readout, VirtualZ
 from qibolab.sweeper import ParallelSweepers, Sweeper
 
 from ..config import operation
@@ -87,15 +86,14 @@ def play(args: ExecutionArguments):
     processed_aligns = set()
 
     for channel_id, pulse in args.sequence:
-        if channel_id.channel_type is ChannelType.ACQUISITION:
-            continue
-
         element = str(channel_id)
         op = operation(pulse)
         params = args.parameters[op]
         if isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, Pulse):
+            _play(op, element, params)
+        elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
         elif isinstance(pulse, VirtualZ):
@@ -153,7 +151,8 @@ def sweep(
                         method(variable, params)
                 else:
                     for channel in sweeper.channels:
-                        method(variable, channel, configs)
+                        params = args.parameters[channel]
+                        method(variable, params, channel)
 
             sweep(sweepers[1:], configs, args)
 

@@ -4,7 +4,7 @@ import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibo.config import log
 
-from qibolab.instruments.oscillator import LocalOscillator
+from qibolab.instruments.oscillator import LocalOscillator, LocalOscillatorSettings
 
 RECONNECTION_ATTEMPTS = 10
 """Number of times to attempt sending requests to the web server in case of
@@ -128,7 +128,11 @@ class ERA(LocalOscillator):
     """
 
     def __init__(self, name, address, ethernet=True, ref_osc_source=None):
-        super().__init__(name, address, ref_osc_source)
+        super().__init__(
+            name=name,
+            address=address,
+            settings=LocalOscillatorSettings(ref_osc_source=ref_osc_source),
+        )
         self.ethernet = ethernet
 
     def create(self):

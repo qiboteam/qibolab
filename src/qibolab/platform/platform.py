@@ -10,6 +10,7 @@ from typing import Any, Literal, Optional, TypeVar, Union
 from qibo.config import log, raise_error
 
 from qibolab.components import Config
+from qibolab.components.channels import Channel
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId, QubitId, QubitPairId
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
@@ -55,7 +56,7 @@ def estimate_duration(
 
 def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
     """Map channel names to element (qubit or coupler)."""
-    return {ch.name: id for id, el in elements.items() for ch in el.channels}
+    return {ch: id for id, el in elements.items() for ch in el.channels}
 
 
 @dataclass
@@ -133,9 +134,14 @@ class Platform:
         return set(self.parameters.configs.keys())
 
     @property
-    def channels(self) -> list[ChannelId]:
+    def channels(self) -> dict[ChannelId, Channel]:
         """Channels in the platform."""
-        return list(self.qubit_channels) + list(self.coupler_channels)
+        return {
+            id: ch
+            for instr in self.instruments.values()
+            if isinstance(instr, Controller)
+            for id, ch in instr.channels.items()
+        }
 
     @property
     def qubit_channels(self) -> dict[ChannelId, QubitId]:
@@ -240,7 +246,7 @@ class Platform:
                     Sweeper(
                         parameter=Parameter.frequency,
                         values=parameter_range,
-                        channels=[qubit.probe.name],
+                        channels=[qubit.probe],
                     )
                 ]
                 platform.execute([sequence], ExecutionParameters(), [sweeper])
@@ -302,26 +308,26 @@ class Platform:
         """Dump platform."""
         (path / PARAMETERS).write_text(self.parameters.model_dump_json(indent=4))
 
-    def get_qubit(self, qubit: QubitId) -> Qubit:
-        """Return the name of the physical qubit corresponding to a logical
-        qubit.
+    def _element(self, qubit: QubitId, coupler=False) -> tuple[QubitId, Qubit]:
+        elements = self.qubits if not coupler else self.couplers
+        try:
+            return qubit, elements[qubit]
+        except KeyError:
+            assert isinstance(qubit, int)
+            return list(self.qubits.items())[qubit]
+
+    def qubit(self, qubit: QubitId) -> tuple[QubitId, Qubit]:
+        """Retrieve physical qubit name and object.
 
         Temporary fix for the compiler to work for platforms where the
         qubits are not named as 0, 1, 2, ...
         """
-        try:
-            return self.qubits[qubit]
-        except KeyError:
-            return list(self.qubits.values())[qubit]
+        return self._element(qubit)
 
-    def get_coupler(self, coupler: QubitId) -> Qubit:
-        """Return the name of the physical coupler corresponding to a logical
-        coupler.
+    def coupler(self, coupler: QubitId) -> tuple[QubitId, Qubit]:
+        """Retrieve physical coupler name and object.
 
         Temporary fix for the compiler to work for platforms where the
         couplers are not named as 0, 1, 2, ...
         """
-        try:
-            return self.couplers[coupler]
-        except KeyError:
-            return list(self.couplers.values())[coupler]
+        return self._element(coupler, coupler=True)

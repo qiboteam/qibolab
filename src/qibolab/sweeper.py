@@ -64,7 +64,7 @@ class Sweeper(Model):
             sequence = natives.MZ.create_sequence()
             parameter_range = np.random.randint(10, size=10)
             sweeper = Sweeper(
-                parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe.name]
+                parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe]
             )
             platform.execute([sequence], ExecutionParameters(), [[sweeper]])
 

@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 from pydantic import TypeAdapter
 
-from qibolab.identifier import ChannelId
 from qibolab.native import FixedSequenceFactory, RxyFactory, TwoQubitNatives
 from qibolab.pulses import (
     Drag,
@@ -18,7 +17,7 @@ from qibolab.sequence import PulseSequence
 
 
 def test_fixed_sequence_factory():
-    seq = PulseSequence.load(
+    seq = PulseSequence(
         [
             (
                 "channel_1/probe",
@@ -37,7 +36,7 @@ def test_fixed_sequence_factory():
     assert fseq1 == seq
     assert fseq2 == seq
 
-    np = ChannelId.load("new/probe")
+    np = "new/probe"
     fseq1.append(
         (
             np,
@@ -62,7 +61,7 @@ def test_fixed_sequence_factory():
     ],
 )
 def test_rxy_rotation_factory(args, amplitude, phase):
-    seq = PulseSequence.load(
+    seq = PulseSequence(
         [
             (
                 "1/drive",
@@ -75,17 +74,17 @@ def test_rxy_rotation_factory(args, amplitude, phase):
     fseq1 = factory.create_sequence(**args)
     fseq2 = factory.create_sequence(**args)
     assert fseq1 == fseq2
-    np = ChannelId.load("new/probe")
+    np = "new/probe"
     fseq2.append((np, Pulse(duration=56, amplitude=0.43, envelope=Rectangular())))
     assert np not in fseq1.channels
 
-    pulse = next(iter(fseq1.channel(ChannelId.load("1/drive"))))
+    pulse = next(iter(fseq1.channel("1/drive")))
     assert pulse.amplitude == pytest.approx(amplitude)
     assert pulse.relative_phase == pytest.approx(phase)
 
 
 def test_rxy_factory_multiple_channels():
-    seq = PulseSequence.load(
+    seq = PulseSequence(
         [
             (
                 "1/drive",
@@ -103,7 +102,7 @@ def test_rxy_factory_multiple_channels():
 
 
 def test_rxy_factory_multiple_pulses():
-    seq = PulseSequence.load(
+    seq = PulseSequence(
         [
             (
                 "1/drive",
@@ -131,13 +130,8 @@ def test_rxy_factory_multiple_pulses():
     ],
 )
 def test_rxy_rotation_factory_envelopes(envelope):
-    seq = PulseSequence.load(
-        [
-            (
-                "1/drive",
-                Pulse(duration=100, amplitude=1.0, envelope=envelope),
-            )
-        ]
+    seq = PulseSequence(
+        [("1/drive", Pulse(duration=100, amplitude=1.0, envelope=envelope))]
     )
 
     if isinstance(envelope, (Gaussian, Drag)):

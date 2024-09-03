@@ -1,11 +1,11 @@
-from collections.abc import Iterable
 from typing import Optional
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
-from .components import AcquireChannel, DcChannel, IqChannel
-from .components.channels import Channel
-from .identifier import ChannelType, QubitId
+# TODO: the unused import are there because Qibocal is still importing them from here
+# since the export scheme will be reviewed, it should be changed at that time, removing
+# the unused ones from here
+from .identifier import ChannelId, QubitId, QubitPairId, TransitionId  # noqa
 from .serialize import Model
 
 
@@ -14,47 +14,35 @@ class Qubit(Model):
 
     Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
     but they are passed to instrument designs in order to play pulses.
-
-    Args:
-        name (int, str): Qubit number or name.
-        readout (:class:`qibolab.platforms.utils.Channel`): Channel used to
-            readout pulses to the qubit.
-        drive (:class:`qibolab.platforms.utils.Channel`): Channel used to
-            send drive pulses to the qubit.
-        flux (:class:`qibolab.platforms.utils.Channel`): Channel used to
-            send flux pulses to the qubit.
     """
 
     model_config = ConfigDict(frozen=False)
 
-    name: QubitId
-
-    probe: Optional[IqChannel] = None
-    acquisition: Optional[AcquireChannel] = None
-    drive: Optional[IqChannel] = None
-    drive12: Optional[IqChannel] = None
-    drive_cross: Optional[dict[QubitId, IqChannel]] = None
-    flux: Optional[DcChannel] = None
-
-    @property
-    def channels(self) -> Iterable[Channel]:
-        for ct in ChannelType:
-            channel = getattr(self, ct.value)
-            if channel is not None:
-                yield channel
+    drive: Optional[ChannelId] = None
+    """Ouput channel, to drive the qubit state."""
+    drive_qudits: dict[TransitionId, ChannelId] = Field(default_factory=dict)
+    """Output channels collection, to drive non-qubit transitions."""
+    flux: Optional[ChannelId] = None
+    """Output channel, to control the qubit flux."""
+    probe: Optional[ChannelId] = None
+    """Output channel, to probe the resonator."""
+    acquisition: Optional[ChannelId] = None
+    """Input channel, to acquire the readout results."""
 
     @property
-    def mixer_frequencies(self):
-        """Get local oscillator and intermediate frequencies of native gates.
+    def channels(self) -> list[ChannelId]:
+        return [
+            x
+            for x in (
+                [getattr(self, ch) for ch in ["probe", "acquisition", "drive", "flux"]]
+                + list(self.drive_qudits.values())
+            )
+            if x is not None
+        ]
 
-        Assumes RF = LO + IF.
-        """
-        freqs = {}
-        for name in self.native_gates.model_fields:
-            native = getattr(self.native_gates, name)
-            if native is not None:
-                channel_type = native.pulse_type.name.lower()
-                _lo = getattr(self, channel_type).lo_frequency
-                _if = native.frequency - _lo
-                freqs[name] = _lo, _if
-        return freqs
+
+class QubitPair(Model):
+    """Represent a two-qubit interaction."""
+
+    drive: Optional[ChannelId] = None
+    """Output channel, for cross-resonance driving."""

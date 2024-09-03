@@ -15,10 +15,9 @@ from qibolab.compilers.default import (
     rz_rule,
     z_rule,
 )
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, QubitId
 from qibolab.platform import Platform
 from qibolab.pulses import Delay
-from qibolab.qubits import QubitId
 from qibolab.sequence import PulseSequence
 
 Rule = Callable[..., PulseSequence]
@@ -97,25 +96,23 @@ class Compiler:
         natives = platform.natives
 
         if isinstance(gate, (gates.M)):
-            qubits = [
-                natives.single_qubit[platform.get_qubit(q).name] for q in gate.qubits
-            ]
+            qubits = [natives.single_qubit[platform.qubit(q)[0]] for q in gate.qubits]
             return rule(gate, qubits)
 
         if isinstance(gate, (gates.Align)):
-            qubits = [platform.get_qubit(q) for q in gate.qubits]
+            qubits = [platform.qubit(q)[1] for q in gate.qubits]
             return rule(gate, qubits)
 
         if isinstance(gate, (gates.Z, gates.RZ)):
-            qubit = platform.get_qubit(gate.target_qubits[0])
+            qubit = platform.qubit(gate.target_qubits[0])[1]
             return rule(gate, qubit)
 
         if len(gate.qubits) == 1:
-            qubit = platform.get_qubit(gate.target_qubits[0])
-            return rule(gate, natives.single_qubit[qubit.name])
+            qubit = platform.qubit(gate.target_qubits[0])[0]
+            return rule(gate, natives.single_qubit[qubit])
 
         if len(gate.qubits) == 2:
-            pair = tuple(platform.get_qubit(q).name for q in gate.qubits)
+            pair = tuple(platform.qubit(q)[0] for q in gate.qubits)
             assert len(pair) == 2
             return rule(gate, natives.two_qubit[pair])
 
@@ -128,10 +125,10 @@ class Compiler:
         channel_clock: defaultdict[ChannelId, float],
     ) -> PulseSequence:
         def qubit_clock(el: QubitId):
-            return max(channel_clock[ch.name] for ch in platform.qubits[el].channels)
+            return max(channel_clock[ch] for ch in platform.qubits[el].channels)
 
         def coupler_clock(el: QubitId):
-            return max(channel_clock[ch.name] for ch in platform.couplers[el].channels)
+            return max(channel_clock[ch] for ch in platform.couplers[el].channels)
 
         gate_seq = self.get_sequence(gate, platform)
         # qubits receiving pulses
@@ -164,14 +161,14 @@ class Compiler:
         end = start + gate_seq.duration
         final = PulseSequence()
         for q in gate.qubits:
-            qubit = platform.get_qubit(q)
+            qubit = platform.qubit(q)[1]
             # all actual qubits have a non-null drive channel, and couplers are not
             # explicitedly listed in gates
             assert qubit.drive is not None
-            delay = end - channel_clock[qubit.drive.name]
+            delay = end - channel_clock[qubit.drive]
             if delay > 0:
-                final.append((qubit.drive.name, Delay(duration=delay)))
-                channel_clock[qubit.drive.name] += delay
+                final.append((qubit.drive, Delay(duration=delay)))
+                channel_clock[qubit.drive] += delay
         # couplers do not require individual padding, because they do are only
         # involved in gates where both of the other qubits are involved
 

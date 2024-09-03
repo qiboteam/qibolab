@@ -1,6 +1,7 @@
 from abc import abstractmethod
-from dataclasses import dataclass, fields
-from typing import Optional
+from typing import Any, Optional, Protocol, runtime_checkable
+
+from pydantic import Field
 
 from qibolab.instruments.abstract import Instrument, InstrumentSettings
 
@@ -8,24 +9,35 @@ RECONNECTION_ATTEMPTS = 3
 """Number of times to attempt connecting to instrument in case of failure."""
 
 
-@dataclass
+@runtime_checkable
+class Device(Protocol):
+    """Dummy device that does nothing but follows the QCoDeS interface.
+
+    Used by :class:`qibolab.instruments.dummy.DummyLocalOscillator`.
+    """
+
+    def set(self, name: str, value: Any):
+        """Set device property."""
+
+    def get(self, name: str) -> Any:
+        """Get device property."""
+
+    def on(self):
+        """Turn device on."""
+
+    def off(self):
+        """Turn device on."""
+
+    def close(self):
+        """Close connection with device."""
+
+
 class LocalOscillatorSettings(InstrumentSettings):
     """Local oscillator parameters that are saved in the platform runcard."""
 
     power: Optional[float] = None
     frequency: Optional[float] = None
     ref_osc_source: Optional[str] = None
-
-    def dump(self):
-        """Dictionary containing local oscillator settings.
-
-        The reference clock is excluded as it is not a calibrated
-        parameter. None values are also excluded.
-        """
-        data = super().dump()
-        return {
-            k: v for k, v in data.items() if k != "ref_osc_source" and v is not None
-        }
 
 
 def _setter(instrument, parameter, value):
@@ -44,10 +56,11 @@ def _setter(instrument, parameter, value):
 
 
 def _property(parameter):
-    """Creates an instrument property."""
-    getter = lambda self: getattr(self.settings, parameter)
-    setter = lambda self, value: _setter(self, parameter, value)
-    return property(getter, setter)
+    """Create an instrument property."""
+    return property(
+        lambda self: getattr(self.settings, parameter),
+        lambda self, value: _setter(self, parameter, value),
+    )
 
 
 class LocalOscillator(Instrument):
@@ -58,22 +71,21 @@ class LocalOscillator(Instrument):
     qubits and resonators. They cannot be used to play or sweep pulses.
     """
 
+    device: Optional[Device] = None
+    settings: Optional[InstrumentSettings] = Field(
+        default_factory=lambda: LocalOscillatorSettings()
+    )
+
     frequency = _property("frequency")
     power = _property("power")
     ref_osc_source = _property("ref_osc_source")
 
-    def __init__(self, name, address, ref_osc_source=None):
-        super().__init__(name, address)
-        self.device = None
-        self.settings = LocalOscillatorSettings(ref_osc_source=ref_osc_source)
-
     @abstractmethod
-    def create(self):
+    def create(self) -> Device:
         """Create instance of physical device."""
 
     def connect(self):
-        """Connects to the instrument using the IP address set in the
-        runcard."""
+        """Connect to the instrument."""
         if not self.is_connected:
             self.device = self.create()
             self.is_connected = True
@@ -84,13 +96,15 @@ class LocalOscillator(Instrument):
                 f"There is an open connection to the instrument {self.name}."
             )
 
-        for fld in fields(self.settings):
-            self.sync(fld.name)
+        assert self.settings is not None
+        for fld in self.settings.model_fields:
+            self.sync(fld)
 
         self.device.on()
 
     def disconnect(self):
         if self.is_connected:
+            assert self.device is not None
             self.device.off()
             self.device.close()
             self.is_connected = False
@@ -105,6 +119,7 @@ class LocalOscillator(Instrument):
             parameter (str): Parameter name to be synced.
         """
         value = getattr(self, parameter)
+        assert self.device is not None
         if value is None:
             setattr(self.settings, parameter, self.device.get(parameter))
         else:
@@ -119,11 +134,8 @@ class LocalOscillator(Instrument):
         Args:
             **kwargs: Instrument settings loaded from the runcard.
         """
-        type_ = self.__class__
-        _fields = {fld.name for fld in fields(self.settings)}
+        assert self.settings is not None
         for name, value in kwargs.items():
-            if name not in _fields:
-                raise KeyError(
-                    f"Cannot set {name} to instrument {self.name} of type {type_.__name__}"
-                )
+            if name not in self.settings.model_fields:
+                raise KeyError(f"Cannot set {name} to instrument {self.name}")
             setattr(self, name, value)

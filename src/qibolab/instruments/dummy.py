@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import numpy as np
 from qibo.config import log
 
@@ -50,7 +48,6 @@ class DummyLocalOscillator(LocalOscillator):
         return DummyDevice()
 
 
-@dataclass
 class DummyInstrument(Controller):
     """Dummy instrument that returns random voltage values.
 
