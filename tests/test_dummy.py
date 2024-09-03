@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
@@ -62,10 +60,8 @@ def test_dummy_execute_pulse_sequence_unrolling(
     nsequences = 10
     natives = platform.natives
     sequences = []
-    sequence = PulseSequence()
-    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     for _ in range(nsequences):
-        sequences.append(deepcopy(sequence))
+        sequences.append(natives.single_qubit[0].MZ.create_sequence())
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
     result = platform.execute(sequences, options)
     assert len(next(iter(result.values()))) == nshots
