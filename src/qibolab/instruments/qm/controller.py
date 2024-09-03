@@ -244,8 +244,14 @@ class QmController(Controller):
         else:
             self.config.add_controller(device)
 
-    def configure_channel(self, channel: ChannelId, configs: dict[str, Config]):
-        """Add element (QM version of channel) in the config."""
+    def configure_channel(
+        self, channel: ChannelId, configs: dict[str, Config]
+    ) -> Optional[ChannelId]:
+        """Add element (QM version of channel) in the config.
+
+        When an ``AcquireChannel`` is registered it returns the corresponding probe
+        channel in order to build an (acquisition, probe) map.
+        """
         config = configs[channel]
         ch = self.channels[channel]
         self.configure_device(ch.device)
@@ -275,14 +281,28 @@ class QmController(Controller):
             self.config.configure_acquire_line(
                 channel, ch, probe, config, probe_config, lo_config
             )
+            return ch.probe
 
         else:
             raise TypeError(f"Unknown channel type: {type(ch)}.")
 
-    def configure_channels(self, configs: dict[str, Config], channels: set[ChannelId]):
-        """Register channels in the sequence in the QM ``config``."""
+        return None
+
+    def configure_channels(
+        self, configs: dict[str, Config], channels: set[ChannelId]
+    ) -> dict[ChannelId, ChannelId]:
+        """Register channels in the sequence in the QM ``config``.
+
+        Builds a map from probe channels to the corresponding ``AcquireChannel``.
+        This is useful when sweeping frequency of probe channels, as these are
+        registered as acquire elements in the QM config.
+        """
+        probe_map = {}
         for id in channels:
-            self.configure_channel(id, configs)
+            probe = self.configure_channel(id, configs)
+            if probe is not None:
+                probe_map[probe] = id
+        return probe_map
 
     def register_pulse(self, channel: ChannelId, pulse: Union[Pulse, Readout]) -> str:
         """Add pulse in the QM ``config``.
@@ -393,19 +413,12 @@ class QmController(Controller):
 
         return acquisitions
 
-    def _acquisition_id(self, probe_id: ChannelId) -> Optional[ChannelId]:
-        """Find id of acquisition channel corresponding to a given probe
-        channel."""
-        for id, channel in self.channels.items():
-            if isinstance(channel, AcquireChannel) and channel.probe == probe_id:
-                return id
-        return None
-
     def preprocess_sweeps(
         self,
         sweepers: list[ParallelSweepers],
         configs: dict[str, Config],
         args: ExecutionArguments,
+        probe_map: dict[ChannelId, ChannelId],
     ):
         """Preprocessing and checks needed before executing some sweeps.
 
@@ -414,11 +427,8 @@ class QmController(Controller):
         for sweeper in find_sweepers(sweepers, Parameter.frequency):
             channels = [(id, self.channels[id]) for id in sweeper.channels]
             find_lo_frequencies(args, channels, configs, sweeper.values)
-            for id, channel in channels:
-                acquisition_id = self._acquisition_id(id)
-                args.parameters[id].element = (
-                    id if acquisition_id is None else acquisition_id
-                )
+            for id in sweeper.channels:
+                args.parameters[id].element = probe_map.get(id, id)
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
@@ -462,12 +472,12 @@ class QmController(Controller):
             if isinstance(channel, DcChannel):
                 self.configure_channel(id, configs)
 
-        self.configure_channels(configs, sequence.channels)
+        probe_map = self.configure_channels(configs, sequence.channels)
         self.register_pulses(configs, sequence)
         acquisitions = self.register_acquisitions(configs, sequence, options)
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
-        self.preprocess_sweeps(sweepers, configs, args)
+        self.preprocess_sweeps(sweepers, configs, args, probe_map)
         experiment = program(configs, args, options, sweepers)
 
         if self.script_file_name is not None:
