@@ -16,11 +16,13 @@ from qibolab.execution_parameters import (
 )
 
 
-def _collect(i, q):
-    return np.moveaxis(np.stack([i, q]), 0, -1)
+def _collect(i, q, npulses):
+    """Collect I and Q components of signal."""
+    signal = np.stack([i, q])
+    return np.moveaxis(signal, 0, -1 - int(self.npulses > 1))
 
 
-def _split(data, npulses, iq=False):
+def _split(data, npulses):
     """Split results of different readout pulses to list.
 
     These results were acquired in the same acquisition stream in the
@@ -28,8 +30,6 @@ def _split(data, npulses, iq=False):
     """
     if npulses == 1:
         return [data]
-    if iq:
-        return list(np.moveaxis(data, -2, 0))
     return list(np.moveaxis(data, -1, 0))
 
 
@@ -114,8 +114,8 @@ class RawAcquisition(Acquisition):
         qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
         u = unit()
-        signal = _collect(u.raw2volts(ires), u.raw2volts(qres))
-        return _split(signal, self.npulses, iq=True)
+        signal = _collect(u.raw2volts(ires), u.raw2volts(qres), npulses)
+        return _split(signal, self.npulses)
 
 
 @dataclass
@@ -165,8 +165,8 @@ class IntegratedAcquisition(Acquisition):
     def fetch(self, handles):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
-        signal = _collect(ires, qres)
-        return _split(signal, self.npulses, iq=True)
+        signal = _collect(i, q, self.npulses)
+        return _split(signal, self.npulses)
 
 
 @dataclass
@@ -226,7 +226,7 @@ class ShotsAcquisition(Acquisition):
 
     def fetch(self, handles):
         shots = handles.get(f"{self.name}_shots").fetch_all()
-        return _split(shots, self.npulses, iq=False)
+        return _split(shots, self.npulses)
 
 
 ACQUISITION_TYPES = {
