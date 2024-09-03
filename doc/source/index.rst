@@ -18,12 +18,6 @@ circuits on quantum hardware. Qibolab includes:
 #. :ref:`Compiler <main_doc_compiler>`: compiles quantum circuits into pulse sequences.
 #. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on quantum hardware.
 
-Components
-----------
-
-The main components of Qibolab are presented in :doc:`main-documentation/index`
-
-.. image:: /main-documentation/platform.svg
 
 Key features
 ------------
