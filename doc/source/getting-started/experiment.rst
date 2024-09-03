@@ -238,7 +238,7 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     _, acq = next(iter(sequence.acquisitions))
 
     # plot the results
-    amplitudes = magnitude(results[acq.id][0])
+    amplitudes = magnitude(results[acq.id])
     frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
