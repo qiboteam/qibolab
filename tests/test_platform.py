@@ -107,6 +107,21 @@ def test_platform_sampling_rate(platform):
     assert platform.sampling_rate >= 1
 
 
+def test_duplicated_acquisition():
+    """A shallow copy will duplicate the object.
+
+    This leads to non-unique identifiers across all sequences, and it's
+    then flagged as an error (since unique identifiers are assumed in
+    the return type, to avoid overwriting dict entries).
+    """
+    platform = create_platform("dummy")
+    sequence = platform.natives.single_qubit[0].MZ.create_sequence()
+
+    options = ExecutionParameters(nshots=None)
+    with pytest.raises(ValueError, match="unique"):
+        _ = platform.execute([sequence, sequence.copy()], options)
+
+
 def test_update_configs(platform):
     drive_name = "q0/drive"
     pump_name = "twpa_pump"

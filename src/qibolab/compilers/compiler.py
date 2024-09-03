@@ -197,11 +197,13 @@ class Compiler:
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in {x for x in moment if x is not None}:
-                sequence += self._compile_gate(gate, platform, channel_clock)
+                gate_seq = self._compile_gate(gate, platform, channel_clock)
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates
                 if isinstance(gate, gates.M):
-                    measurement_map[gate] = self.get_sequence(gate, platform)
+                    measurement_map[gate] = gate_seq
+
+                sequence += gate_seq
 
         return sequence.trim(), measurement_map

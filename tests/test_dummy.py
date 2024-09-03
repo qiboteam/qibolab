@@ -60,15 +60,13 @@ def test_dummy_execute_pulse_sequence_unrolling(
     nsequences = 10
     natives = platform.natives
     sequences = []
-    sequence = PulseSequence()
-    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
     for _ in range(nsequences):
-        sequences.append(sequence)
+        sequences.append(natives.single_qubit[0].MZ.create_sequence())
     options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
     result = platform.execute(sequences, options)
-    assert len(next(iter(result.values()))) == nsequences
-    for r in result[0]:
+    assert len(next(iter(result.values()))) == nshots
+    for r in result.values():
         if acquisition is AcquisitionType.INTEGRATION:
-            assert r.magnitude.shape == (nshots,)
+            assert r.shape == (nshots, 2)
         if acquisition is AcquisitionType.DISCRIMINATION:
-            assert r.samples.shape == (nshots,)
+            assert r.shape == (nshots,)

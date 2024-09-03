@@ -35,6 +35,8 @@ def test_fixed_sequence_factory():
     fseq2 = factory.create_sequence()
     assert fseq1 == seq
     assert fseq2 == seq
+    # while representing the same sequence, the objects are actually different
+    assert fseq1[0][1].id != fseq2[0][1].id
 
     np = "new/probe"
     fseq1.append(

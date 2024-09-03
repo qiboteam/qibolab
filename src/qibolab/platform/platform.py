@@ -1,11 +1,10 @@
 """A platform for executing quantum algorithms."""
 
-from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from math import prod
 from pathlib import Path
-from typing import Any, Literal, Optional, TypeVar, Union
+from typing import Literal, Optional, TypeVar, Union
 
 from qibo.config import log, raise_error
 
@@ -15,7 +14,9 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId, QubitId, QubitPairId
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
 from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
+from qibolab.pulses import PulseId
 from qibolab.qubits import Qubit
+from qibolab.result import Result
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
 from qibolab.unrolling import Bounds, batch
@@ -37,6 +38,11 @@ def default(value: Optional[T], default: T) -> T:
     return value if value is not None else default
 
 
+def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
+    """Map channel names to element (qubit or coupler)."""
+    return {ch: id for id, el in elements.items() for ch in el.channels}
+
+
 def estimate_duration(
     sequences: list[PulseSequence],
     options: ExecutionParameters,
@@ -54,9 +60,13 @@ def estimate_duration(
     )
 
 
-def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
-    """Map channel names to element (qubit or coupler)."""
-    return {ch: id for id, el in elements.items() for ch in el.channels}
+def _unique_acquisitions(sequences: list[PulseSequence]) -> bool:
+    """Check unique acquisition identifiers."""
+    ids = []
+    for seq in sequences:
+        ids += (p.id for _, p in seq.acquisitions)
+
+    return len(ids) == len(set(ids))
 
 
 @dataclass
@@ -202,7 +212,7 @@ class Platform:
         options: ExecutionParameters,
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
-    ):
+    ) -> dict[PulseId, Result]:
         """Execute sequences on the controllers."""
         result = {}
 
@@ -219,7 +229,7 @@ class Platform:
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: Optional[list[ParallelSweepers]] = None,
-    ) -> dict[Any, list]:
+    ) -> dict[PulseId, Result]:
         """Execute pulse sequences.
 
         If any sweeper is passed, the execution is performed for the different values
@@ -253,6 +263,10 @@ class Platform:
         """
         if sweepers is None:
             sweepers = []
+        if not _unique_acquisitions(sequences):
+            raise ValueError(
+                "The acquisitions' identifiers have to be unique across all sequences."
+            )
 
         options = self.settings.fill(options)
 
@@ -262,20 +276,18 @@ class Platform:
         configs = self.parameters.configs.copy()
         update_configs(configs, options.updates)
 
-        # for components that represent aux external instruments (e.g. lo) to the main control instrument
-        # set the config directly
+        # for components that represent aux external instruments (e.g. lo) to the main
+        # control instrument set the config directly
         for name, cfg in configs.items():
             if name in self.instruments:
                 self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
 
-        results = defaultdict(list)
+        results = {}
         # pylint: disable=unsubscriptable-object
         bounds = self.parameters.configs[self._controller.bounds]
         assert isinstance(bounds, Bounds)
         for b in batch(sequences, bounds):
-            result = self._execute(b, options, configs, sweepers)
-            for serial, data in result.items():
-                results[serial].append(data)
+            results |= self._execute(b, options, configs, sweepers)
 
         return results
 

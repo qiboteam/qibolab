@@ -74,7 +74,7 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
     import matplotlib.pyplot as plt
 
     acq = sequence.acquisitions[0][1]
-    amplitudes = magnitude(results[acq.id][0])
+    amplitudes = magnitude(results[acq.id])
     frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
@@ -165,7 +165,7 @@ We can now proceed to launch on hardware:
     results = platform.execute([sequence], options, [[sweeper]])
 
     _, acq = next(iter(sequence.acquisitions))
-    amplitudes = magnitude(results[acq.id][0])
+    amplitudes = magnitude(results[acq.id])
     frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
@@ -258,12 +258,12 @@ and its impact on qubit states in the IQ plane.
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[acq1.id][0],
-        results_one[acq1.id][0],
+        results_one[acq1.id],
+        results_one[acq1.id],
         label="One state",
     )
     plt.scatter(
-        *unpack(results_zero[acq0.id][0]),
+        *unpack(results_zero[acq0.id]),
         label="Zero state",
     )
     plt.show()

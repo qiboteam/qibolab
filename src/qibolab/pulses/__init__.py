@@ -1,2 +1,11 @@
 from .envelope import *
-from .pulse import Acquisition, Align, Delay, Pulse, PulseLike, Readout, VirtualZ
+from .pulse import (
+    Acquisition,
+    Align,
+    Delay,
+    Pulse,
+    PulseId,
+    PulseLike,
+    Readout,
+    VirtualZ,
+)

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import Annotated, Optional
 
 import numpy as np
@@ -78,7 +79,7 @@ class FixedSequenceFactory(Native):
     """Simple factory for a fixed arbitrary sequence."""
 
     def create_sequence(self) -> PulseSequence:
-        return self.copy()
+        return deepcopy(self)
 
 
 class MissingNative(RuntimeError):
