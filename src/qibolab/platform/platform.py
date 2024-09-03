@@ -64,7 +64,7 @@ def _unique_acquisitions(sequences: list[PulseSequence]) -> bool:
     """Check unique acquisition identifiers."""
     ids = []
     for seq in sequences:
-        ids += (id for id, _ in seq.acquisitions)
+        ids += (p.id for _, p in seq.acquisitions)
 
     return len(ids) == len(set(ids))
 
@@ -265,7 +265,7 @@ class Platform:
             sweepers = []
         if not _unique_acquisitions(sequences):
             raise ValueError(
-                "The acquisitions identifiers have to be unique across all sequences."
+                "The acquisitions' identifiers have to be unique across all sequences."
             )
 
         options = self.settings.fill(options)
