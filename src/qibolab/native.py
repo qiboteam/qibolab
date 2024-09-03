@@ -22,6 +22,13 @@ class Native(ABC, PulseSequence):
     def create_sequence(self, *args, **kwargs) -> PulseSequence:
         """Create a sequence for single-qubit rotation."""
 
+    def __call__(self, *args, **kwargs) -> PulseSequence:
+        """Create a sequence for single-qubit rotation.
+
+        Alias to :meth:`create_sequence`.
+        """
+        return self.create_sequence(*args, **kwargs)
+
 
 class RxyFactory(Native):
     """Factory for pulse sequences that generate single-qubit rotations around
