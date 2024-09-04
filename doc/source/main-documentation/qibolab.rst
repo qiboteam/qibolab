@@ -184,54 +184,42 @@ Pulses
 ------
 
 In Qibolab, an extensive API is available for working with pulses and pulse sequences, a fundamental aspect of quantum experiments.
-At the heart of this API is the :class:`qibolab.pulses.Pulse` object, which empowers users to define and customize pulses with specific parameters.
+At the heart of this API is the :class:`qibolab.pulses.pulse.Pulse` object, which empowers users to define and customize pulses with specific parameters.
 
-Each pulse is associated with a channel and a qubit.
-Additionally, pulses are defined by a shape, represented by a subclass of :class:`qibolab.pulses.PulseShape`.
-Qibolab offers a range of pre-defined pulse shapes:
+Additionally, pulses are defined by an envelope shape, represented by a subclass of :class:`qibolab.pulses.envelope.BaseEnvelope`.
+Qibolab offers a range of pre-defined pulse shapes which can be found in :py:mod:`qibolab.pulses.envelope`.
 
-- Rectangular (:class:`qibolab.pulses.Rectangular`)
-- Exponential (:class:`qibolab.pulses.Exponential`)
-- Gaussian (:class:`qibolab.pulses.Gaussian`)
-- Drag (:class:`qibolab.pulses.Drag`)
-- IIR (:class:`qibolab.pulses.IIR`)
-- SNZ (:class:`qibolab.pulses.SNZ`)
-- eCap (:class:`qibolab.pulses.eCap`)
-- Custom (:class:`qibolab.pulses.Custom`)
+- Rectangular (:class:`qibolab.pulses.envelope.Rectangular`)
+- Exponential (:class:`qibolab.pulses.envelope.Exponential`)
+- Gaussian (:class:`qibolab.pulses.envelope.Gaussian`)
+- Drag (:class:`qibolab.pulses.envelope.Drag`)
+- IIR (:class:`qibolab.pulses.envelope.Iir`)
+- SNZ (:class:`qibolab.pulses.envelope.Snz`)
+- eCap (:class:`qibolab.pulses.envelope.ECap`)
+- Custom (:class:`qibolab.pulses.envelope.Custom`)
 
-To illustrate, here are some examples of single pulses using the Qibolab API:
-
-.. testcode:: python
-
-    from qibolab.pulses import Pulse, Rectangular
-
-    pulse = Pulse(
-        duration=40,  # Pulse duration in ns
-        amplitude=0.5,  # Amplitude relative to instrument range
-        relative_phase=0,  # Phase in radians
-        envelope=Rectangular(),
-    )
-
-In this way, we defined a rectangular drive pulse using the generic Pulse object.
-Alternatively, you can achieve the same result using the dedicated :class:`qibolab.pulses.Pulse` object:
+To illustrate, here is an examples of how to instantiate a pulse using the Qibolab API:
 
 .. testcode:: python
 
     from qibolab.pulses import Pulse, Rectangular
 
     pulse = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
+        duration=40.0,  # Pulse duration in ns
+        amplitude=0.5,  # Amplitude normalized to [-1, 1]
+        relative_phase=0.0,  # Phase in radians
         envelope=Rectangular(),
     )
+
+Here, we defined a rectangular drive pulse using the generic Pulse object.
 
 Both the Pulses objects and the PulseShape object have useful plot functions and several different various helper methods.
 
-To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
+To organize pulses into sequences, Qibolab provides the :class:`qibolab.sequence.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
 
 .. testcode:: python
 
+    from qibolab.pulses import Pulse, Rectangular
     from qibolab.sequence import PulseSequence
 
 
@@ -259,7 +247,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
     )
-    sequence = PulseSequence.load(
+    sequence = PulseSequence(
         [
             ("qubit/drive", pulse1),
             ("qubit/drive", pulse2),
@@ -296,12 +284,6 @@ Typical experiments may include both pre-defined pulses and new ones:
     natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
-    sequence.append(
-        (
-            "some/drive",
-            Pulse(duration=10, amplitude=0.5, relative_phase=0, envelope=Rectangular()),
-        )
-    )
     sequence.concatenate(natives.MZ.create_sequence())
 
     results = platform.execute([sequence], options=options)
