@@ -288,10 +288,6 @@ Typical experiments may include both pre-defined pulses and new ones:
 
     results = platform.execute([sequence])
 
-.. note::
-
-   options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
-
 
 Sweepers
 --------
@@ -301,7 +297,7 @@ Sweeper objects, represented by the :class:`qibolab.sweeper.Sweeper` class, stan
 Consider a scenario where a resonator spectroscopy experiment is performed. This process involves a sequence of steps:
 
 1. Define a pulse sequence.
-2. Define a readout pulse with frequency A.
+2. Define a readout pulse with frequency :math:`A`.
 3. Execute the sequence.
 4. Define a new readout pulse with frequency :math:`A + \epsilon`.
 5. Execute the sequence again.
@@ -339,7 +335,7 @@ The ``values`` attribute comprises an array of numerical values that define the 
 
 Let's see some examples.
 Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
-A tipical resonator spectroscopy experiment could be defined with:
+A typical resonator spectroscopy experiment could be defined with:
 
 .. testcode:: python
 
@@ -381,7 +377,7 @@ In this way, we first define three parallel sweepers with an interval of 400 MHz
     - for qubit 1: [4.8 GHz, 5.2 GHz]
     - for qubit 2: [5.8 GHz, 6.2 GHz]
 
-It is possible to define and executes multiple sweepers at the same time.
+It is possible to define and executes multiple sweepers at the same time, in a nested loop style.
 For example:
 
 .. testcode:: python
@@ -392,20 +388,21 @@ For example:
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
     sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe, Delay(duration=sequence.duration)))
+    rx_sequence = natives.RX.create_sequence()
+    sequence.concatenate(rx_sequence)
     sequence.concatenate(natives.MZ.create_sequence())
 
-    f0 = platform.config(str(qubit.drive)).frequency
+    f0 = platform.config(qubit.drive).frequency
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 10_000),
         channels=[qubit.drive],
     )
+    rx_pulse = rx_sequence[0][1]
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
         range=(0, 0.43, 0.3),
-        pulses=[next(iter(sequence.channel(qubit.drive)))],
+        pulses=[rx_pulse],
     )
 
     results = platform.execute([sequence], options, [[sweeper_freq], [sweeper_amp]])
@@ -414,6 +411,9 @@ Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an
 
 - amplitudes: [0, 0.03, 0.06, 0.09, 0.12, ..., 0.39, 0.42]
 - frequencies: [4.4999, 4.49991, 4.49992, ...., 4.50008, 4.50009] (GHz)
+
+Sweepers given in the same list will be applied in parallel, in a Python ``zip`` style,
+while different lists define nested loops, with the first list corresponding to the outer loop.
 
 .. warning::
 
