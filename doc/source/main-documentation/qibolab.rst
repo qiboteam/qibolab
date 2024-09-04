@@ -269,7 +269,7 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
 
 .. testcode:: python
 
-    result = platform.execute([sequence], options=options)
+    result = platform.execute([sequence])
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
 Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
@@ -286,7 +286,7 @@ Typical experiments may include both pre-defined pulses and new ones:
     sequence.concatenate(natives.RX.create_sequence())
     sequence.concatenate(natives.MZ.create_sequence())
 
-    results = platform.execute([sequence], options=options)
+    results = platform.execute([sequence])
 
 .. note::
 

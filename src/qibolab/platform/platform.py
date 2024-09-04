@@ -225,7 +225,7 @@ class Platform:
     def execute(
         self,
         sequences: list[PulseSequence],
-        options: ExecutionParameters,
+        options: Optional[ExecutionParameters] = None,
         sweepers: Optional[list[ParallelSweepers]] = None,
     ) -> dict[PulseId, Result]:
         """Execute pulse sequences.
@@ -266,6 +266,8 @@ class Platform:
                 "The acquisitions' identifiers have to be unique across all sequences."
             )
 
+        if options is None:
+            options = ExecutionParameters()
         options = self.settings.fill(options)
 
         time = estimate_duration(sequences, options, sweepers)
