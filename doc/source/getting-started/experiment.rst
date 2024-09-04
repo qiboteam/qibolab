@@ -31,7 +31,6 @@ although minimal changes are needed to use other devices.
     from qibolab.components import AcquisitionChannel, Channel, DcChannel, IqChannel
     from qibolab.identifier import ChannelId
     from qibolab.instruments.qm import Octave, QmConfigs, QmController
-    from qibolab.instruments.rohde_schwarz import SGS100A
     from qibolab.parameters import ConfigKinds
     from qibolab.platform import Platform
     from qibolab.platform.platform import QubitMap
@@ -45,9 +44,6 @@ although minimal changes are needed to use other devices.
 
 
     def create():
-        # Define twpa pump instrument
-        twpa = SGS100A(name="twpa", address="192.168.0.33")
-
         # Define qubit
         qubits: QubitMap = {
             0: Qubit(
@@ -66,7 +62,7 @@ although minimal changes are needed to use other devices.
         )
         # Acquire
         channels[qubit.acquisition] = AcquisitionChannel(
-            device="octave1", path="1", twpa_pump=twpa.name, probe=qubit.probe
+            device="octave1", path="1", probe=qubit.probe
         )
         # Drive
         channels[qubit.drive] = IqChannel(
@@ -87,7 +83,7 @@ although minimal changes are needed to use other devices.
 
         # Define and return platform
         return Platform.load(
-            path=FOLDER, instruments=[controller, twpa], qubits=qubits, resonator_type="3D"
+            path=FOLDER, instruments=[controller], qubits=qubits, resonator_type="3D"
         )
 
 
