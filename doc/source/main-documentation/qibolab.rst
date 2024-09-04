@@ -462,26 +462,11 @@ Supported averaging modes, available through the :class:`qibolab.execution_param
 Results
 -------
 
-Within the Qibolab API, a variety of result types are available, contingent upon the chosen acquisition options. These results can be broadly classified into three main categories, based on the AcquisitionType:
+``platform.execute`` returns a dictionary, mapping the acquisition pulse id to the results of the corresponding measurements.
+The results of each measurement are a numpy array with dimension that depends on the number of shots, acquisition type,
+averaging mode and the number of swept points, if sweepers were used.
 
-- Integrated Results (:class:`qibolab.result.IntegratedResults`)
-- Raw Waveform Results (:class:`qibolab.result.RawWaveformResults`)
-- Sampled Results (:class:`qibolab.result.SampleResults`)
-
-Furthermore, depending on whether results are averaged or not, they can be presented in an averaged version (as seen in :class:`qibolab.results.AveragedIntegratedResults`).
-
-The result categories align as follows:
-
-- AveragingMode: cyclic or sequential ->
-    - AcquisitionType: integration -> :class:`qibolab.results.AveragedIntegratedResults`
-    - AcquisitionType: raw -> :class:`qibolab.results.AveragedRawWaveformResults`
-    - AcquisitionType: discrimination -> :class:`qibolab.results.AveragedSampleResults`
-- AveragingMode: singleshot ->
-    - AcquisitionType: integration -> :class:`qibolab.results.IntegratedResults`
-    - AcquisitionType: raw -> :class:`qibolab.results.RawWaveformResults`
-    - AcquisitionType: discrimination -> :class:`qibolab.results.SampleResults`
-
-Let's now delve into a typical use case for result objects within the qibolab framework:
+For example in
 
 .. testcode:: python
 
@@ -490,8 +475,8 @@ Let's now delve into a typical use case for result objects within the qibolab fr
 
     sequence = PulseSequence()
     sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe, Delay(duration=sequence.duration)))
-    sequence.concatenate(natives.MZ.create_sequence())
+    ro_sequence = natives.MZ.create_sequence()
+    sequence.concatenate(ro_sequence)
 
     options = ExecutionParameters(
         nshots=1000,
@@ -501,20 +486,20 @@ Let's now delve into a typical use case for result objects within the qibolab fr
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    res = platform.execute([sequence], options=options)
+    ro_pulse = ro_sequence[0][1]
+    result = platform.execute([sequence], options=options)
 
-The ``res`` object will manifest as a dictionary, mapping the measurement pulse serial to its corresponding results.
 
-The values related to the results will be find in the ``voltages`` attribute for IntegratedResults and RawWaveformResults, while for SampleResults  the values are in ``samples``.
+``result`` will be a dictionary with a single key ``ro_pulse.id`` and an array of
+two elements, the averaged I and Q components of the integrated signal.
+If instead, ``(AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT)`` was used, the array would have shape ``(options.nshots, 2)``,
+while for ``(AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT)`` the shape would be ``(options.nshots,)`` with values 0 or 1.
 
-While for execution of sequences the results represent single measurements, but what happens for sweepers?
-the results will be upgraded: from values to arrays and from arrays to matrices.
-
-The shape of the values of an integreted acquisition with 2 sweepers will be:
+The shape of the values of an integrated acquisition with two sweepers will be:
 
 .. testcode:: python
 
-    f0 = platform.config(str(qubit.drive)).frequency
+    f0 = platform.config(qubit.drive).frequency
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 1),
@@ -525,7 +510,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
         range=(f0 - 200_000, f0 + 200_000, 1),
         channels=[qubit.probe],
     )
-    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
+    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values), 2)
 
 .. _main_doc_compiler:
 
