@@ -123,74 +123,60 @@ This platform is equivalent to real platforms in terms of attributes and functio
 It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
 
 
-.. _main_doc_qubits:
-
-Qubits
-------
-
-The :class:`qibolab.qubits.Qubit` class serves as a comprehensive representation of a physical qubit within the Qibolab framework.
-It encapsulates three fundamental elements crucial to qubit control and operation:
-
-- :ref:`Channels <main_doc_channels>`: Physical Connections
-- :class:`Parameters <qibolab.qubits.Qubit>`: Configurable Properties
-- :ref:`Native Gates <main_doc_native>`: Quantum Operations
-
-Channels play a pivotal role in connecting the quantum system to the control infrastructure.
-They are optional and encompass distinct types, each serving a specific purpose:
-
-- measure (from controller device to the qubits)
-- acquisition (from qubits to controller)
-- drive
-- flux
-
-The Qubit class allows you to set and manage several key parameters that influence qubit behavior.
-These parameters are typically extracted from the runcard during platform initialization.
-
-.. _main_doc_couplers:
-
-Couplers
---------
-
-Instead of using a dedicated class, a :class:`qibolab.qubits.Qubit` object can also
-serve as a comprehensive representation of a physical coupler qubit within the Qibolab
-framework.
-Used like this, it would control couplers during 2q gate operation:
-
-- :ref:`Channels <main_doc_channels>`: Physical Connection
-- :class:`Parameters <qibolab.qubit.Qubit>`: Configurable Properties
-- :ref:`Qubits <main_doc_qubits>`: Qubits the coupler acts on
-
-We have a single required Channel for flux coupler control:
-
-- flux
-
-These instances allow us to handle 2q interactions in coupler based architectures
-in a simple way. They are usually associated with :class:`qibolab.qubits.QubitPair`
-and usually extracted from the runcard during platform initialization.
-
 .. _main_doc_channels:
 
 Channels
 --------
 
+Channels play a pivotal role in connecting the quantum system to the control infrastructure.
 Various types of channels are typically present in a quantum laboratory setup, including:
 
+- the probe line (from device to qubit)
+- the acquire line (from qubit to device)
 - the drive line
-- the readout line (from device to qubit)
-- the feedback line (from qubit to device)
 - the flux line
 - the TWPA pump line
 
+Qibolab provides a general :class:`qibolab.components.channels.Channel` object, as well as specializations depending on the channel role.
 A channel is typically associated with a specific port on a control instrument, with port-specific properties like "attenuation" and "gain" that can be managed using provided getter and setter methods.
+Channels are uniquely identified within the platform through their id.
 
 The idea of channels is to streamline the pulse execution process.
-When initiating a pulse, the platform identifies the corresponding channel for the pulse type and directs it to the appropriate port on the control instrument.
-For instance, to deliver a drive pulse to a qubit, the platform references the qubit's associated channel and delivers the pulse to the designated port.
+The :class:`qibolab.sequence.PulseSequence` is a list of ``(channel_id, pulse)`` tuples, so that the platform identifies the channel that every pulse plays
+and directs it to the appropriate port on the control instrument.
 
 In setups involving frequency-specific pulses, a local oscillator (LO) might be required for up-conversion.
 Although logically distinct from the qubit, the LO's frequency must align with the pulse requirements.
-Qibolab accommodates this by enabling the assignment of a :class:`qibolab.instruments.oscillator.LocalOscillator` object to the relevant channel.
+Qibolab accommodates this by enabling the assignment of a :class:`qibolab.instruments.oscillator.LocalOscillator` object
+to the relevant channel :class:`qibolab.components.channels.IqChannel`.
 The controller's driver ensures the correct pulse frequency is set based on the LO's configuration.
+
+Each channel has a :class:`qibolab.components.configs.Config` associated to it, which is a container of parameters related to the channel.
+Configs also have different specializations that correspond to different channel types.
+The platform holds default config parameters for all its channels, however the user is able to alter them by passing a config updates dictionary
+when calling :meth:`qibolab.platform.Platform.execute`.
+The final configs are then sent to the controller instrument, which matches them to channels via their ids and ensures they are uploaded to the proper electronics.
+
+
+.. _main_doc_qubits:
+
+Qubits
+------
+
+The :class:`qibolab.qubits.Qubit` class serves as a container for the channels that are used to control the corresponding physical qubit.
+These channels encompass distinct types, each serving a specific purpose:
+
+- probe (measurement probe from controller device to the qubits)
+- acquisition (measurement acquisition from qubits to controller)
+- drive
+- flux
+- drive_qudits (additional drive channels at different frequencies used to probe higher-level transition)
+
+Some channel types are optional because not all hardware platforms require them.
+For example, flux channels are typically relevant only for flux tunable qubits.
+
+The :class:`qibolab.qubits.Qubit` class can also be used to represent coupler qubits, when these are available.
+
 
 .. _main_doc_pulses:
 
