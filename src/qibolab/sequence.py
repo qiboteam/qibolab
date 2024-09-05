@@ -105,7 +105,7 @@ class PulseSequence(UserList[_Element]):
         _synchronize(self, PulseSequence(other).channels)
         self.extend(other)
 
-    def __ior__(self, other: "PulseSequence") -> "PulseSequence":
+    def __ior__(self, other: Iterable[_Element]) -> "PulseSequence":
         """Juxtapose two sequences.
 
         Alias to :meth:`concatenate`.
@@ -113,7 +113,7 @@ class PulseSequence(UserList[_Element]):
         self.concatenate(other)
         return self
 
-    def __or__(self, other: "PulseSequence") -> "PulseSequence":
+    def __or__(self, other: Iterable[_Element]) -> "PulseSequence":
         """Juxtapose two sequences.
 
         A copy is made, and no input is altered.
