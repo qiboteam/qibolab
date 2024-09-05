@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from pydantic import TypeAdapter
 
 from qibolab.pulses import (
@@ -143,6 +145,14 @@ def test_concatenate():
     assert s1[2][0] == "a"
     assert isinstance(s1[3][1], Pulse)
     assert s1[3][0] == "a"
+
+    # Check aliases
+    sa1 = deepcopy(s1)
+    sc1 = deepcopy(s1)
+    sa1 |= s2
+    sc1.concatenate(s2)
+    assert sa1 == sc1
+    assert sc1 == s1 | s2
 
 
 def test_copy():
