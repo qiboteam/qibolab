@@ -48,6 +48,9 @@ def test_fixed_sequence_factory():
     assert np not in seq.channels
     assert np not in fseq2.channels
 
+    # test alias
+    assert factory() == seq
+
 
 @pytest.mark.parametrize(
     "args,amplitude,phase",
