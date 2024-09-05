@@ -94,7 +94,7 @@ class PulseSequence(UserList[_Element]):
         """Find channels on which a pulse with a given id plays."""
         return [channel for channel, pulse in self if pulse.id == pulse_id]
 
-    def concatenate(self, other: "PulseSequence") -> None:
+    def concatenate(self, other: Iterable[_Element]) -> None:
         """Juxtapose two sequences.
 
         Appends ``other`` in-place such that the result is:
@@ -102,7 +102,7 @@ class PulseSequence(UserList[_Element]):
             - necessary delays to synchronize channels
             - ``other``
         """
-        _synchronize(self, other.channels)
+        _synchronize(self, PulseSequence(other).channels)
         self.extend(other)
 
     def __ior__(self, other: "PulseSequence") -> "PulseSequence":
