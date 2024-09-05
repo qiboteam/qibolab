@@ -528,13 +528,13 @@ The transpiler is responsible for steps 1 and 2, while the compiler for step 3 o
 To be executed in Qibolab, a circuit should be already transpiled. It possible to use the transpilers provided by Qibo to do it. For more information, please refer the `examples in the Qibo documentation <https://qibo.science/qibo/stable/code-examples/advancedexamples.html#how-to-modify-the-transpiler>`_.
 On the other hand, the compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend`.
 
-Once a circuit has been compiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
+Once a circuit has been compiled, it is converted to a :class:`qibolab.sequence.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
 This is a container of rules which define how each native gate can be translated to pulses.
 A rule is a Python function that accepts a Qibo gate and a platform object and returns the :class:`qibolab.pulses.PulseSequence` implementing this gate and a dictionary with potential virtual-Z phases that need to be applied in later pulses.
 Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which defines the default rules used by Qibolab.
 
 .. note::
-   Rules return a :class:`qibolab.pulses.PulseSequence` for each gate, instead of a single pulse, because some gates such as the U3 or two-qubit gates, require more than one pulses to be implemented.
+   Rules return a :class:`qibolab.sequence.PulseSequence` for each gate, instead of a single pulse, because some gates such as the U3 or two-qubit gates, require more than one pulses to be implemented.
 
 .. _main_doc_native:
 
@@ -542,16 +542,17 @@ Native
 ------
 
 Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated.
-If this set is universal any circuit can be transpiled and compiled to a pulse sequence which is then deployed in the given platform.
+If this set is universal any circuit can be transpiled and compiled to a pulse sequence which can then be deployed in the given platform.
 
 :py:mod:`qibolab.native` provides data containers for holding the pulse parameters required for implementing every native gate.
-Every :class:`qibolab.qubits.Qubit` object contains a :class:`qibolab.native.SingleQubitNatives` object which holds the parameters of its native single-qubit gates,
-while each :class:`qibolab.qubits.QubitPair` objects contains a :class:`qibolab.native.TwoQubitNatives` object which holds the parameters of the native two-qubit gates acting on the pair.
+The :class:`qibolab.platform.Platform` provides a natives property that returns the :class:`qibolab.native.SingleQubitNatives`
+which holds the single qubit native gates for every qubit and :class:`qibolab.native.TwoQubitNatives` for the two-qubit native gates of every qubit pair.
+Each native gate is represented by a :class:`qibolab.sequence.PulseSequence` which contains all the calibrated parameters.
 
-Each native gate is represented by a :class:`qibolab.pulses.Pulse` or :class:`qibolab.pulses.PulseSequence` which contain all the calibrated parameters.
-Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate, implemented via a pulse sent in the readout line followed by an acquisition.
-For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required, which is implemented by halving the amplitude of the calibrated pi-pulse.
-U3, the most general single-qubit gate can be implemented using two RX90 pi-pulses and some virtual Z-phases which are included in the phase of later pulses.
+Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate,
+implemented via a pulse sent in the readout line followed by an acquisition.
+For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required,
+which is implemented by halving the amplitude of the calibrated pi-pulse.
 
 Typical two-qubit native gates are the CZ and iSWAP, with their availability being platform dependent.
 These are implemented with a sequence of flux pulses, potentially to multiple qubits, and virtual Z-phases.
@@ -562,8 +563,8 @@ Depending on the platform and the quantum chip architecture, two-qubit gates may
 Instruments
 -----------
 
-One the key features of qibolab is its support for multiple different instruments.
-A list of all the supported instruments follows:
+One the key features of Qibolab is its support for multiple different electronics.
+A list of all the supported electronics follows:
 
 Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
@@ -574,18 +575,13 @@ Other Instruments (subclasses of :class:`qibolab.instruments.abstract.Instrument
     - Erasynth++: :class:`qibolab.instruments.erasynth.ERA`
     - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
 
-Instruments all implement a set of methods:
-
-- connect
-- setup
-- disconnect
-
-While the controllers, the main instruments in a typical setup, add another, i.e.
-execute.
+All instruments inherit the :class:`qibolab.instruments.abstract.Instrument` and implement methods for connecting and disconnecting.
+:class:`qibolab.instruments.abstract.Controller` is a special case of instruments that provides the :class:`qibolab.instruments.abstract.execute`
+method that deploys sequences on hardware.
 
 Some more detail on the interal functionalities of instruments is given in :doc:`/tutorials/instrument`
 
-The most important instruments are the controller, the following is a table of the current supported (or not supported) features, dev stands for `under development`:
+The following is a table of the currently supported or not supported features (dev stands for `under development`):
 
 .. csv-table:: Supported features
     :header: "Feature", "RFSoC", "Qblox", "QM", "ZH"
