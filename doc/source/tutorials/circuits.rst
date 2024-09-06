@@ -154,7 +154,7 @@ can be executed by passing it together with the platform name to the :func:`qibo
 
 .. testcode::
 
-   from qibolab import execute_qasm
+   from qibolab.backends import execute_qasm
 
    result = execute_qasm(circuit, platform="dummy")
 
