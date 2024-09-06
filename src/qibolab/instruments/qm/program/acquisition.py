@@ -17,7 +17,12 @@ from qibolab.execution_parameters import (
 
 
 def _collect(i, q, npulses):
-    """Collect I and Q components of signal."""
+    """Collect I and Q components of signal.
+
+    I and Q should be the the last dimension of the returned array,
+    except when multiple results are acquired to the same stream in the
+    instrument, when they should be second to last.
+    """
     signal = np.stack([i, q])
     return np.moveaxis(signal, 0, -1 - int(npulses > 1))
 
