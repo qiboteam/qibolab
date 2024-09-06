@@ -10,10 +10,13 @@ from qibolab.serialize import Model
 from .envelope import Envelope, IqWaveform, Waveform
 
 __all__ = [
+    "Acquisition",
+    "Align",
     "Delay",
     "Pulse",
     "PulseId",
     "PulseLike",
+    "Readout",
     "VirtualZ",
 ]
 
