@@ -100,8 +100,7 @@ class QibolabBackend(NumpyBackend):
 
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
-        if not self.platform.is_connected:
-            self.platform.connect()
+        self.platform.connect()
 
         readout_ = self.platform.execute(
             [sequence],
@@ -146,8 +145,7 @@ class QibolabBackend(NumpyBackend):
             *(self.compiler.compile(circuit, self.platform) for circuit in circuits)
         )
 
-        if not self.platform.is_connected:
-            self.platform.connect()
+        self.platform.connect()
 
         readout = self.platform.execute(sequences, ExecutionParameters(nshots=nshots))
 

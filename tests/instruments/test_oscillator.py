@@ -18,10 +18,9 @@ def test_oscillator_init(lo):
 def test_oscillator_connect(lo):
     assert lo.device is None
     lo.connect()
-    assert lo.is_connected
     assert isinstance(lo.device, DummyDevice)
     lo.disconnect()
-    assert not lo.is_connected
+    assert lo.device is None
 
 
 def test_oscillator_setup(lo):

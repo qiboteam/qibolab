@@ -15,11 +15,9 @@ messages = [
 def test_connect():
     with mock.patch("socket.socket"):
         tc = TemperatureController(name="Test_Temperature_Controller", address="")
-        assert tc.is_connected is False
         # if already connected, it should stay connected
         for _ in range(2):
             tc.connect()
-            assert tc.is_connected is True
 
 
 @pytest.mark.parametrize("already_connected", [True, False])
@@ -31,7 +29,6 @@ def test_disconnect(already_connected):
         # if already disconnected, it should stay disconnected
         for _ in range(2):
             tc.disconnect()
-            assert tc.is_connected is False
 
 
 def test_continuously_read_data():

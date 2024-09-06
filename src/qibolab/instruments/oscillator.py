@@ -51,7 +51,7 @@ def _setter(instrument, parameter, value):
     """
     if getattr(instrument, parameter) != value:
         setattr(instrument.settings, parameter, value)
-        if instrument.is_connected:
+        if instrument.device is not None:
             instrument.device.set(parameter, value)
 
 
@@ -86,15 +86,8 @@ class LocalOscillator(Instrument):
 
     def connect(self):
         """Connect to the instrument."""
-        if not self.is_connected:
+        if self.device is None:
             self.device = self.create()
-            self.is_connected = True
-            if not self.is_connected:
-                raise RuntimeError(f"Unable to connect to {self.name}.")
-        else:
-            raise RuntimeError(
-                f"There is an open connection to the instrument {self.name}."
-            )
 
         assert self.settings is not None
         for fld in self.settings.model_fields:
@@ -103,11 +96,10 @@ class LocalOscillator(Instrument):
         self.device.on()
 
     def disconnect(self):
-        if self.is_connected:
-            assert self.device is not None
+        if self.device is not None:
             self.device.off()
             self.device.close()
-            self.is_connected = False
+            self.device = None
 
     def sync(self, parameter):
         """Sync parameter value between our cache and the instrument.

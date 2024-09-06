@@ -32,7 +32,6 @@ class Instrument(Model, ABC):
 
     name: InstrumentId
     address: str
-    is_connected: bool = False
     settings: Optional[InstrumentSettings] = None
 
     @property

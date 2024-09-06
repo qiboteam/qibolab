@@ -13,8 +13,7 @@ def instrument(connected_platform):
 
 @pytest.mark.qpu
 def test_instruments_rohde_schwarz_init(instrument):
-    assert instrument.is_connected
-    assert instrument.device
+    assert instrument.device is not None
 
 
 @pytest.mark.qpu
