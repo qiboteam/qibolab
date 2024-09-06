@@ -1,7 +1,5 @@
 from . import configs
-
-# TODO: Fix pycln configurations in pre-commit to preserve the following with no comment
-from .configs import *  # noqa
+from .configs import *
 
 __all__ = []
 __all__ += configs.__all__
