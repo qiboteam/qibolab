@@ -102,7 +102,7 @@ class PulseSequence(UserList[_Element]):
             - necessary delays to synchronize channels
             - ``other``
         """
-        _synchronize(self, PulseSequence(other).channels)
+        _synchronize(self, PulseSequence(other).channels | self.channels)
         self.extend(other)
 
     def __ior__(self, other: Iterable[_Element]) -> "PulseSequence":
