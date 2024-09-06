@@ -7,8 +7,7 @@ characterize a qubit.
 .. note::
    This is just for demonstration purposes! In the `Qibo <https://qibo.science/qibo/stable/>`_ framework these experiments are already coded and available in the `Qibocal API <https://qibo.science/qibocal/stable/>`_.
 
-Let's consider a platform called `single_qubit` with, as expected, a single
-qubit.
+Let's consider a platform called `single_qubit` with, as expected, a single qubit.
 
 Resonator spectroscopy
 ----------------------
@@ -43,7 +42,7 @@ around the pre-defined frequency.
 
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
-    sequence = natives.MZ.create_sequence()
+    sequence = natives.MZ()
 
     # allocate frequency sweeper
     f0 = platform.config(qubit.probe).frequency
@@ -73,8 +72,8 @@ In few seconds, the experiment will be finished and we can proceed to plot it.
     import matplotlib.pyplot as plt
 
     acq = sequence.acquisitions[0][1]
-    signal_i, signal_q = np.moveaxis(results[acq.id], -1, 0)
-    amplitudes = np.abs(signal_i + 1j * signal_q)
+    signal = results[acq.id]
+    amplitudes = np.abs(signal[..., 0] + 1j * signal[..., 1])
     frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
@@ -99,11 +98,11 @@ typical qubit spectroscopy experiment is as follows:
    the qubit parameters are not known, this is typically a very long pulse (2
    microseconds) at low amplitude.
 2. A measurement, tuned with resonator spectroscopy, is performed.
-3. We repeat point 1 for different frequencies.
+3. We repeat point 1 for different frequencies of the drive pulse.
 4. We plot the acquired amplitudes, identifying the deep/peak value as the qubit
    frequency.
 
-So, mainly, the difference that this experiment introduces is a slightly more
+The main difference introduced by this experiment is a slightly more
 complex pulse sequence. Therefore with start with that:
 
 .. testcode:: python
@@ -119,7 +118,6 @@ complex pulse sequence. Therefore with start with that:
         AveragingMode,
         AcquisitionType,
     )
-    from qibolab.serialize import replace
 
     # allocate platform
     platform = create_platform("dummy")
@@ -128,19 +126,12 @@ complex pulse sequence. Therefore with start with that:
     natives = platform.natives.single_qubit[0]
 
     # create pulse sequence and add pulses
-    sequence = PulseSequence(
-        [
-            (
-                qubit.drive,
-                Pulse(duration=2000, amplitude=0.01, envelope=Gaussian(rel_sigma=5)),
-            ),
-            (qubit.probe, Delay(duration=sequence.duration)),
-        ]
-    )
-    sequence.concatenate(natives.MZ.create_sequence())
+    sequence = PulseSequence()
+    sequence |= natives.RX()
+    sequence |= natives.MZ()
 
     # allocate frequency sweeper
-    f0 = platform.config(qubit.probe).frequency
+    f0 = platform.config(qubit.drive).frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 2e8, f0 + 2e8, 1e6),
@@ -163,12 +154,12 @@ We can now proceed to launch on hardware:
 
     results = platform.execute([sequence], options, [[sweeper]])
 
-    _, acq = next(iter(sequence.acquisitions))
-    signal_i, signal_q = np.moveaxis(results[acq.id], -1, 0)
-    amplitudes = np.abs(signal_i + 1j * signal_q)
+    acq = sequence.acquisitions[0][1]
+    signal = results[acq.id]
+    amplitudes = np.abs(signal[..., 0] + 1j * signal[..., 1])
     frequencies = sweeper.values
 
-    plt.title("Resonator Spectroscopy")
+    plt.title("Qubit Spectroscopy")
     plt.xlabel("Frequencies [Hz]")
     plt.ylabel("Amplitudes [a.u.]")
 
@@ -231,14 +222,13 @@ and its impact on qubit states in the IQ plane.
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
 
-    # create pulse sequence 1 and add pulses
-    one_sequence = PulseSequence()
-    one_sequence.concatenate(natives.RX.create_sequence())
-    one_sequence.append((qubit.probe, Delay(duration=one_sequence.duration)))
-    one_sequence.concatenate(natives.MZ.create_sequence())
+    # create pulse sequence 1
+    zero_sequence = natives.MZ()
 
-    # create pulse sequence 2 and add pulses
-    zero_sequence = natives.MZ.create_sequence()
+    # create pulse sequence 2
+    one_sequence = PulseSequence()
+    one_sequence |= natives.RX()
+    one_sequence |= natives.MZ()
 
     options = ExecutionParameters(
         nshots=1000,
@@ -247,22 +237,22 @@ and its impact on qubit states in the IQ plane.
         acquisition_type=AcquisitionType.INTEGRATION,
     )
 
-    results_one = platform.execute([one_sequence], options)
-    results_zero = platform.execute([zero_sequence], options)
+    results = platform.execute([zero_sequence, one_sequence], options)
 
-    _, acq1 = next(iter(one_sequence.acquisitions))
-    _, acq0 = next(iter(zero_sequence.acquisitions))
+    acq0 = zero_sequence.acquisitions[0][1]
+    acq1 = one_sequence.acquisitions[0][1]
 
     plt.title("Single shot classification")
     plt.xlabel("I [a.u.]")
     plt.ylabel("Q [a.u.]")
     plt.scatter(
-        results_one[acq1.id],
-        results_one[acq1.id],
+        results[acq1.id][..., 0],
+        results[acq1.id][..., 1],
         label="One state",
     )
     plt.scatter(
-        *tuple(np.moveaxis(results_zero[acq0.id], -1, 0)),
+        results[acq0.id][..., 0],
+        results[acq0.id][..., 1],
         label="Zero state",
     )
     plt.show()
@@ -271,3 +261,7 @@ and its impact on qubit states in the IQ plane.
    :class: only-light
 .. image:: classification_dark.svg
    :class: only-dark
+
+Note that in this experiment we passed both sequences in the same ``platform.execute`` command.
+In this case the sequences will be unrolled to a single sequence automatically, which is
+then deployed with a single communication with the instruments, to reduce communication bottleneck.
