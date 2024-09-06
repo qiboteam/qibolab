@@ -7,7 +7,7 @@ from qualang_tools.loops import from_array
 from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab.pulses import Align, Delay, Pulse, Readout, VirtualZ
-from qibolab.sweeper import ParallelSweepers, Sweeper
+from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 
 from ..config import operation
 from .acquisition import Acquisition
@@ -107,14 +107,17 @@ def play(args: ExecutionArguments):
         qua.wait(args.relaxation_time // 4)
 
 
-def _process_sweeper(sweeper: Sweeper):
+def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
     parameter = sweeper.parameter
     if parameter not in SWEEPER_METHODS:
         raise NotImplementedError(f"Sweeper for {parameter} is not implemented.")
 
     variable = declare(int) if parameter in INT_TYPE else declare(fixed)
     values = sweeper.values
-    if parameter in NORMALIZERS:
+    if parameter is Parameter.frequency:
+        lo_frequency = args.parameters[sweeper.channels[0]].lo_frequency
+        values = NORMALIZERS[parameter](values, lo_frequency)
+    elif parameter in NORMALIZERS:
         values = NORMALIZERS[parameter](values)
 
     return variable, values
@@ -133,7 +136,7 @@ def sweep(
         parallel_sweepers = sweepers[0]
 
         variables, all_values = zip(
-            *(_process_sweeper(sweeper) for sweeper in parallel_sweepers)
+            *(_process_sweeper(sweeper, args) for sweeper in parallel_sweepers)
         )
         if len(parallel_sweepers) > 1:
             loop = qua.for_each_(variables, all_values)
@@ -152,7 +155,7 @@ def sweep(
                 else:
                     for channel in sweeper.channels:
                         params = args.parameters[channel]
-                        method(variable, params, channel)
+                        method(variable, params)
 
             sweep(sweepers[1:], configs, args)
 
