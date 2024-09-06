@@ -11,6 +11,8 @@ from qibolab.platform import Platform, create_platform
 from qibolab.platform.load import available_platforms
 from qibolab.version import __version__ as qibolab_version
 
+__all__ = ["MetaBackend", "QibolabBackend"]
+
 
 def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
     """Executes a QASM circuit.

@@ -4,6 +4,8 @@ from typing import Any, Optional
 from qibolab.serialize import Model
 from qibolab.sweeper import ParallelSweepers
 
+__all__ = ["AcquisitionType", "AveragingMode", "ExecutionParameters"]
+
 
 class AcquisitionType(Enum):
     """Data acquisition from hardware."""
