@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-import numpy.typing as npt
 from pydantic import ConfigDict, Field
 
 from qibolab.components import Config
 from qibolab.components.channels import Channel
 from qibolab.execution_parameters import ExecutionParameters
-from qibolab.identifier import ChannelId
+from qibolab.identifier import ChannelId, Result
 from qibolab.sequence import PulseSequence
 from qibolab.serialize import Model
 from qibolab.sweeper import ParallelSweepers
@@ -73,7 +72,7 @@ class Controller(Instrument):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, npt.NDArray]:
+    ) -> dict[int, Result]:
         """Play a pulse sequence and retrieve feedback.
 
         If :class:`qibolab.sweeper.Sweeper` objects are passed as arguments, they are
