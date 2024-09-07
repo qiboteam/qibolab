@@ -168,8 +168,6 @@ def generate_model_config(
     readout_error = model_params["readout_error"]
     qubits_list = model_params["qubits_list"]
 
-    rabi_freq_dict = model_params["rabi_freq"]
-
     if nlevels_q is None:
         nlevels_q = model_params["nlevels_q"]
 

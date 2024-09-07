@@ -44,8 +44,22 @@ def flux_detuning(
     flux_quanta: float,
     max_frequency: float,
     current_frequency: float,
-) -> float:
+) -> np.ndarray:
     """Function that returns detuned qubit frequency due to flux pulse."""
     phase = flux_pulse_amplitude/flux_quanta 
     
     return max_frequency * np.sqrt(np.abs(np.cos(phase))) - current_frequency
+
+
+def flux_pulse_amp_from_detuning(
+    flux_detuning: np.ndarray, 
+    flux_quanta: float,
+    max_frequency: float,
+    current_frequency: float,
+) -> np.ndarray:
+    """Function that returns flux pulse amplitude required to achieve desired detuning."""
+
+    abs_cos_phase = ((flux_detuning + current_frequency)/max_frequency)**2
+    phase = np.arccos(abs_cos_phase)
+    
+    return phase*flux_quanta
