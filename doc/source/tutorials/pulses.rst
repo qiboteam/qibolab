@@ -1,10 +1,9 @@
 Pulses execution
 ================
 
-First, we create the pulse sequence that will be executed. We can do this by
-defining a :class:`qibolab.pulses.PulseSequence` object and adding different
-pulses (:class:`qibolab.pulses.Pulse`) through the
-:func:`qibolab.pulses.PulseSequence.append()` method:
+We can create pulse sequence using the Qibolab pulse API directly,
+defining a :class:`qibolab.sequence.PulseSequence` object and adding different
+pulses (:class:`qibolab.pulses.Pulse`) using the :func:`qibolab.pulses.PulseSequence.append()` method:
 
 .. testcode::  python
 
@@ -41,10 +40,8 @@ the platform that will be used. The ``Platform`` constructor also takes care of
 loading the runcard containing all the calibration settings for that specific
 platform.
 
-After connecting and setting up the platform's instruments using the
-``connect()`` and ``setup()`` methods, the ``start`` method will turn on the
-local oscillators and the ``execute`` method will execute the previous defined
-pulse sequence according to the number of shots ``nshots`` specified.
+After connecting to the platform's instruments using the ``connect()``,
+we can execute the previously defined sequence using the ``execute`` method:
 
 .. testcode::  python
 
@@ -64,5 +61,24 @@ pulse sequence according to the number of shots ``nshots`` specified.
     # Disconnect from the instruments
     platform.disconnect()
 
-Remember to turn off the instruments and disconnect from the lab using the
-``stop()`` and ``disconnect()`` methods of the platform.
+Remember to turn off and disconnect from the instruments using the
+``disconnect()`` methods of the platform.
+
+.. note::
+   Calling ``platform.connect()`` automatically turns on auxilliary instruments such as local oscillators.
+
+Alternatively, instead of using the pulse API directly, one can use the native gate data structures to write a pulse sequence:
+
+.. testcode::  python
+
+    import numpy as np
+
+    from qibolab.pulses import Pulse, Rectangular, Gaussian, Delay
+    from qibolab.sequence import PulseSequence
+    from qibolab import create_platform
+
+    platform = create_platform("dummy")
+    q0 = platform.natives.single_qubit[0]
+    sequence = PulseSequence()
+    sequence |= q0.RX(theta=np.pi / 2)
+    sequence |= q0.MZ()
