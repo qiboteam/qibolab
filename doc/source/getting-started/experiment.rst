@@ -173,7 +173,7 @@ And the we can define the runcard ``my_platform/parameters.json``:
                     ]
                 }
             },
-            "two_qubits": {}
+            "two_qubit": {}
         }
     }
 

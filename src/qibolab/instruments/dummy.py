@@ -1,7 +1,10 @@
 import numpy as np
+from pydantic import Field
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.components.channels import Channel
+from qibolab.identifier import ChannelId
 from qibolab.pulses.pulse import Acquisition
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
@@ -63,6 +66,7 @@ class DummyInstrument(Controller):
 
     address: str
     bounds: str = "dummy/bounds"
+    channels: dict[ChannelId, Channel] = Field(default_factory=dict)
 
     @property
     def sampling_rate(self) -> int:

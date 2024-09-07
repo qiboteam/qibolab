@@ -65,7 +65,7 @@ Remember to turn off and disconnect from the instruments using the
 ``disconnect()`` methods of the platform.
 
 .. note::
-   Calling ``platform.connect()`` automatically turns on auxilliary instruments such as local oscillators.
+    Calling ``platform.connect()`` automatically turns on auxilliary instruments such as local oscillators.
 
 Alternatively, instead of using the pulse API directly, one can use the native gate data structures to write a pulse sequence:
 
