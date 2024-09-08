@@ -1,6 +1,7 @@
 import operator
-import numpy as np
 from functools import reduce
+
+import numpy as np
 
 
 def default_noflux_platform_to_simulator_channels(
@@ -34,7 +35,10 @@ def default_platform_to_simulator_channels(
     """
     return reduce(
         operator.or_,
-        [{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}", f"flux-{q}": f"F-{q}"} for q in qubits_list]
+        [
+            {f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}", f"flux-{q}": f"F-{q}"}
+            for q in qubits_list
+        ]
         + [{f"drive-{c}": f"D-{c}", f"flux-{c}": f"F-{c}"} for c in couplers_list],
     )
 
@@ -46,8 +50,8 @@ def flux_detuning(
     current_frequency: float,
 ) -> np.ndarray:
     """Function that returns detuned qubit frequency due to flux pulse."""
-    phase = flux_pulse_amplitude/flux_quanta 
-    
+    phase = flux_pulse_amplitude / flux_quanta
+
     return max_frequency * np.sqrt(np.abs(np.cos(phase))) - current_frequency
 
 
