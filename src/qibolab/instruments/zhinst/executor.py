@@ -111,17 +111,16 @@ class Zurich(Controller):
         }
 
     def connect(self):
-        if self.is_connected is False:
+        if self.session is None:
             # To fully remove logging #configure_logging=False
             # I strongly advise to set it to 20 to have time estimates of the experiment duration!
             self.session = laboneq.Session(self.device_setup, log_level=20)
             _ = self.session.connect()
-            self.is_connected = True
 
     def disconnect(self):
-        if self.is_connected:
+        if self.session is None:
             _ = self.session.disconnect()
-            self.is_connected = False
+            self.session = None
 
     def calibration_step(self, configs: dict[str, Config], options):
         """Zurich general pre experiment calibration definitions.

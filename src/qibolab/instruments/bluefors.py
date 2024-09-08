@@ -27,21 +27,22 @@ class TemperatureController(Instrument):
     client_socket: socket.socket = Field(
         default_factory=lambda: socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     )
+    _is_connected: bool = False
 
     def connect(self):
         """Connect to the socket."""
-        if self.is_connected:
+        if self._is_connected:
             return
         log.info(f"Bluefors connection. IP: {self.address} Port: {self.port}")
         self.client_socket.connect((self.address, self.port))
-        self.is_connected = True
+        self._is_connected = True
         log.info("Bluefors Temperature Controller Connected")
 
     def disconnect(self):
         """Disconnect from the socket."""
-        if self.is_connected:
+        if self._is_connected:
             self.client_socket.close()
-            self.is_connected = False
+            self._is_connected = False
 
     def setup(self):
         """Required by parent class, but not used here."""

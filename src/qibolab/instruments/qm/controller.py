@@ -161,8 +161,6 @@ class QmController(Controller):
 
     manager: Optional[QuantumMachinesManager] = None
     """Manager object used for controlling the Quantum Machines cluster."""
-    is_connected: bool = False
-    """Boolean that shows whether we are connected to the QM manager."""
 
     config: QmConfig = Field(default_factory=QmConfig)
     """Configuration dictionary required for pulse execution on the OPXs."""
@@ -227,7 +225,6 @@ class QmController(Controller):
         self.manager = QuantumMachinesManager(
             host=host, port=int(port), octave=octave, credentials=credentials
         )
-        self.is_connected = True
 
     def disconnect(self):
         """Disconnect from QM manager."""
@@ -235,7 +232,7 @@ class QmController(Controller):
         if self.manager is not None:
             self.manager.close_all_quantum_machines()
             self.manager.close()
-            self.is_connected = False
+            self.manager = None
 
     def configure_device(self, device: str):
         """Add device in the ``config``."""
