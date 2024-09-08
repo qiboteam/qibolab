@@ -21,13 +21,16 @@ as follows:
 3. We plot the acquired amplitudes, identifying the peak/deep value as the
    resonator frequency.
 
-We start by initializing the platform, that reads the information written in the
-respective runcard, a sequence composed of only a measurement and a sweeper
-around the pre-defined frequency.
+We start by initializing the platform, creating a sequence composed of only a measurement
+and a sweeper around the pre-defined frequency.
+We then define the execution parameters and launch the experiment.
+In few seconds, the experiment will be finished and we can proceed to plot it.
+This is done in the following script:
 
 .. testcode:: python
 
     import numpy as np
+    import matplotlib.pyplot as plt
     from qibolab import create_platform
     from qibolab.sequence import PulseSequence
     from qibolab.sweeper import Sweeper, Parameter
@@ -42,7 +45,7 @@ around the pre-defined frequency.
 
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
-    sequence = natives.MZ()
+    sequence = natives.MZ.create_sequence()
 
     # allocate frequency sweeper
     f0 = platform.config(qubit.probe).frequency
@@ -52,10 +55,6 @@ around the pre-defined frequency.
         channels=[qubit.probe],
     )
 
-We then define the execution parameters and launch the experiment.
-
-.. testcode:: python
-
     options = ExecutionParameters(
         nshots=1000,
         relaxation_time=50,
@@ -64,12 +63,6 @@ We then define the execution parameters and launch the experiment.
     )
 
     results = platform.execute([sequence], options, [[sweeper]])
-
-In few seconds, the experiment will be finished and we can proceed to plot it.
-
-.. testcode:: python
-
-    import matplotlib.pyplot as plt
 
     acq = sequence.acquisitions[0][1]
     signal = results[acq.id]
@@ -127,8 +120,9 @@ complex pulse sequence. Therefore with start with that:
 
     # create pulse sequence and add pulses
     sequence = PulseSequence()
-    sequence |= natives.RX()
-    sequence |= natives.MZ()
+    sequence.concatenate(natives.RX.create_sequence())
+    sequence.append((qubit.acquisition, Delay(duration=sequence.duration)))
+    sequence.concatenate(natives.MZ.create_sequence())
 
     # allocate frequency sweeper
     f0 = platform.config(qubit.drive).frequency
@@ -137,13 +131,6 @@ complex pulse sequence. Therefore with start with that:
         range=(f0 - 2e8, f0 + 2e8, 1e6),
         channels=[qubit.drive],
     )
-
-Note that the drive pulse has been changed to match the characteristics required
-for the experiment.
-
-We can now proceed to launch on hardware:
-
-.. testcode:: python
 
     options = ExecutionParameters(
         nshots=1000,
@@ -165,6 +152,10 @@ We can now proceed to launch on hardware:
 
     plt.plot(frequencies, amplitudes)
     plt.show()
+
+
+Note that the drive pulse has been changed to match the characteristics required
+for the experiment.
 
 .. image:: qubit_spectroscopy_light.svg
    :class: only-light
@@ -223,12 +214,13 @@ and its impact on qubit states in the IQ plane.
     natives = platform.natives.single_qubit[0]
 
     # create pulse sequence 1
-    zero_sequence = natives.MZ()
+    zero_sequence = natives.MZ.create_sequence()
 
     # create pulse sequence 2
     one_sequence = PulseSequence()
-    one_sequence |= natives.RX()
-    one_sequence |= natives.MZ()
+    one_sequence.concatenate(natives.RX.create_sequence())
+    one_sequence.append((qubit.acquisition, Delay(duration=sequence.duration)))
+    one_sequence.concatenate(natives.MZ.create_sequence())
 
     options = ExecutionParameters(
         nshots=1000,
