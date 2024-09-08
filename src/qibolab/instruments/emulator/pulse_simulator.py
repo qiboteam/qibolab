@@ -13,7 +13,10 @@ from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
-from qibolab.instruments.emulator.models import general_no_coupler_model, general_coupler_model
+from qibolab.instruments.emulator.models import (
+    general_coupler_model,
+    general_no_coupler_model,
+)
 from qibolab.instruments.emulator.models.methods import flux_detuning
 from qibolab.platform import Platform
 from qibolab.pulses import DrivePulse, FluxPulse, PulseSequence, PulseType, ReadoutPulse
@@ -502,7 +505,7 @@ def ps_to_waveform_dict(
                         platform_channel_name = f"flux-{qubit}"
 
                     signals_list.append(pulse_signal)
-                    
+
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
                     )
@@ -514,15 +517,19 @@ def ps_to_waveform_dict(
             for channel in coupler_pulses.channels:
                 channel_pulses = coupler_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    t, pulse_signal = get_pulse_signal(pulse, sampling_rate, sim_sampling_boost)
+                    t, pulse_signal = get_pulse_signal(
+                        pulse, sampling_rate, sim_sampling_boost
+                    )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-                    
+
                     if pulse.type.value == "cf":
                         platform_channel_name = f"flux-c{coupler}"
-                    elif pulse.type.value == "cd": # when drive pulse for couplers are available
+                    elif (
+                        pulse.type.value == "cd"
+                    ):  # when drive pulse for couplers are available
                         platform_channel_name = f"drive-{coupler}"
-                    
+
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
                     )
@@ -556,7 +563,7 @@ def ps_to_waveform_dict(
                         platform_channel_name = f"readout-{qubit}"
                     elif pulse.type.value == "qf":
                         platform_channel_name = f"flux-{qubit}"
-                    
+
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
                     )
@@ -568,15 +575,19 @@ def ps_to_waveform_dict(
             for channel in coupler_pulses.channels:
                 channel_pulses = coupler_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    t, pulse_signal = get_pulse_signal_ns(pulse, sampling_rate, sim_sampling_boost)
+                    t, pulse_signal = get_pulse_signal_ns(
+                        pulse, sampling_rate, sim_sampling_boost
+                    )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-                    
+
                     if pulse.type.value == "cf":
                         platform_channel_name = f"flux-c{coupler}"
-                    elif pulse.type.value == "cd": # when drive pulse for couplers are available
+                    elif (
+                        pulse.type.value == "cd"
+                    ):  # when drive pulse for couplers are available
                         platform_channel_name = f"drive-c{coupler}"
-                    
+
                     emulator_channel_name_list.append(
                         channel_translator(platform_channel_name, pulse._if)
                     )
@@ -947,7 +958,8 @@ def make_emulator_runcard(
     model_name: str = "general_no_coupler_model",
     output_folder: Optional[str] = None,
 ) -> dict:
-    """Constructs emulator runcard from an initialized device platform. #TODO add flux-pulse and coupler related parts
+    """Constructs emulator runcard from an initialized device platform. #TODO
+    add flux-pulse and coupler related parts.
 
     Args:
         nlevels_q(int, list): Number of levels for each qubit. If int, the same value gets assigned to all qubits.

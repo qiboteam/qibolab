@@ -412,7 +412,7 @@ class QutipSimulator:
 
         for ind, coeff in enumerate(combined_basis_vector):
             qind = combined_list[ind]
-            if ind==0:
+            if ind == 0:
                 fullstate = basis_list[qind][coeff]
             else:
                 fullstate = tensor(

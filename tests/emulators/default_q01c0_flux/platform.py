@@ -62,5 +62,5 @@ def create():
         instruments,
         settings,
         resonator_type="2D",
-        couplers=couplers
+        couplers=couplers,
     )
