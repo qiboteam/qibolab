@@ -177,11 +177,14 @@ class QutipSimulator:
             self.operators.update({channel_name: channel_op})
 
         ### flux ###
-        for channel_name, op_instruction_list in self.model_config["flux"].items():
-            channel_op = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
-            for op_instruction in op_instruction_list:
-                channel_op += self.make_operator(op_instruction)
-            self.operators.update({channel_name: channel_op})
+        try:
+            for channel_name, op_instruction_list in self.model_config["flux"].items():
+                channel_op = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
+                for op_instruction in op_instruction_list:
+                    channel_op += self.make_operator(op_instruction)
+                self.operators.update({channel_name: channel_op})
+        except:
+            pass
 
         ### dissipation ###
         for op_instruction in self.model_config["dissipation"]["t1"]:
