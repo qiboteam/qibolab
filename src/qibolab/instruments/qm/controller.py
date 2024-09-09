@@ -31,9 +31,6 @@ from .config import SAMPLING_RATE, Configuration, operation
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
-OCTAVE_ADDRESS_OFFSET = 11000
-"""Offset to be added to Octave addresses, because they must be 11xxx, where
-xxx are the last three digits of the Octave IP address."""
 CALIBRATION_DB = "calibration_db.json"
 """Name of the file where the mixer calibration is stored."""
 
@@ -74,7 +71,7 @@ def declare_octaves(octaves, host, calibration_path=None):
     if calibration_path is not None:
         config.set_calibration_db(calibration_path)
     for octave in octaves.values():
-        config.add_device_info(octave.name, host, OCTAVE_ADDRESS_OFFSET + octave.port)
+        config.add_device_info(octave.name, host, octave.port)
     return config
 
 
