@@ -126,8 +126,6 @@ class QmController(Controller):
     so that only elements related to the participating channels are registered.
     """
 
-    name: str
-    """Name of the instrument instance."""
     address: str
     """IP address and port for connecting to the OPX instruments.
 

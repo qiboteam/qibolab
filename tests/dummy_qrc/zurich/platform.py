@@ -121,7 +121,6 @@ def create():
         )
 
     controller = Zurich(
-        "EL_ZURO",
         device_setup=device_setup,
         channels=zi_channels,
         time_of_flight=75,
@@ -132,6 +131,6 @@ def create():
         name=str(FOLDER),
         configs=configs,
         parameters=parameters,
-        instruments={controller.name: controller},
+        instruments={"EL_ZURO": controller},
         resonator_type="3D",
     )

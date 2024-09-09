@@ -24,13 +24,11 @@ class Instrument(Model, ABC):
     """Parent class for all the instruments connected via TCPIP.
 
     Args:
-        name (str): Instrument name.
         address (str): Instrument network address.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=False, extra="allow")
 
-    name: InstrumentId
     address: str
     settings: Optional[InstrumentSettings] = None
 

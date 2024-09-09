@@ -129,5 +129,5 @@ class LocalOscillator(Instrument):
         assert self.settings is not None
         for name, value in kwargs.items():
             if name not in self.settings.model_fields:
-                raise KeyError(f"Cannot set {name} to instrument {self.name}")
+                raise KeyError(f"Cannot set {name} to instrument {type(self)}")
             setattr(self, name, value)

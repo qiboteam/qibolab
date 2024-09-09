@@ -50,13 +50,12 @@ class Zurich(Controller):
 
     def __init__(
         self,
-        name,
         device_setup,
         channels: list[ZiChannel],
         time_of_flight=0.0,
         smearing=0.0,
     ):
-        super().__init__(name=name, address=None)
+        super().__init__(address=None)
 
         self.signal_map = {}
         "Signals to lines mapping"

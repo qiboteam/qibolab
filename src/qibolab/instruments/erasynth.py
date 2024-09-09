@@ -127,16 +127,16 @@ class ERA(LocalOscillator):
     if we are connected via ethernet.
     """
 
-    def __init__(self, name, address, ethernet=True, ref_osc_source=None):
+    def __init__(self, address, ethernet=True, ref_osc_source=None):
         super().__init__(
-            name=name,
             address=address,
             settings=LocalOscillatorSettings(ref_osc_source=ref_osc_source),
         )
         self.ethernet = ethernet
 
     def create(self):
+        name = f"ERA:{self.address}"
         if self.ethernet:
-            return ERASynthEthernet(self.name, self.address)
+            return ERASynthEthernet(name, self.address)
         else:
-            return ERASynthPlusPlus(f"{self.name}", f"TCPIP::{self.address}::INSTR")
+            return ERASynthPlusPlus(name, f"TCPIP::{self.address}::INSTR")

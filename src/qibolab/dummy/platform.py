@@ -10,11 +10,10 @@ FOLDER = pathlib.Path(__file__).parent
 
 def create_dummy() -> Platform:
     """Create a dummy platform using the dummy instrument."""
-    pump_name = "twpa_pump"
-
     qubits = {}
     channels = {}
     # attach the channels
+    pump_name = "twpa_pump"
     for q in range(5):
         drive, drive12, flux, probe, acquisition = (
             f"qubit_{q}/drive",
@@ -45,9 +44,11 @@ def create_dummy() -> Platform:
         couplers[c] = Qubit(flux=flux)
 
     # register the instruments
-    instrument = DummyInstrument(name="dummy", address="0.0.0.0", channels=channels)
-    pump = DummyLocalOscillator(name=pump_name, address="0.0.0.0")
+    instruments = {
+        "dummy": DummyInstrument(address="0.0.0.0", channels=channels),
+        pump_name: DummyLocalOscillator(address="0.0.0.0"),
+    }
 
     return Platform.load(
-        path=FOLDER, instruments=[instrument, pump], qubits=qubits, couplers=couplers
+        path=FOLDER, instruments=instruments, qubits=qubits, couplers=couplers
     )
