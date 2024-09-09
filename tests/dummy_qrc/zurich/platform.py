@@ -5,7 +5,12 @@ from laboneq.dsl.device.instruments import HDAWG, PQSC, SHFQC
 from laboneq.simple import DeviceSetup
 
 from qibolab import Platform
-from qibolab.components import AcquireChannel, DcChannel, IqChannel, OscillatorConfig
+from qibolab.components import (
+    AcquisitionChannel,
+    DcChannel,
+    IqChannel,
+    OscillatorConfig,
+)
 from qibolab.instruments.zhinst import (
     ZiAcquisitionConfig,
     ZiChannel,
@@ -73,7 +78,7 @@ def create():
         configs[acquisition_name] = ZiAcquisitionConfig(
             **component_params[acquisition_name], kernel=kernels.get(q)
         )
-        qubits[q].acquisition = AcquireChannel(
+        qubits[q].acquisition = AcquisitionChannel(
             name=acquisition_name,
             twpa_pump=None,
             probe=probe_name,

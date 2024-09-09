@@ -22,7 +22,7 @@ using different Qibolab primitives.
 .. testcode::  python
 
     from qibolab import Platform
-    from qibolab.components import IqChannel, AcquireChannel, IqConfig
+    from qibolab.components import IqChannel, AcquisitionChannel, IqConfig
     from qibolab.qubits import Qubit
     from qibolab.pulses import Gaussian, Pulse, Rectangular
     from qibolab.native import RxyFactory, FixedSequenceFactory, SingleQubitNatives
@@ -41,7 +41,7 @@ using different Qibolab primitives.
         qubit.probe = IqChannel(
             name="0/probe", mixer=None, lo=None, acquisition="0/acquisition"
         )
-        qubit.acquisition = AcquireChannel(
+        qubit.acquisition = AcquisitionChannel(
             name="0/acquisition", twpa_pump=None, probe="probe"
         )
         qubit.drive = Iqchannel(name="0/drive", mixer=None, lo=None)
@@ -107,7 +107,7 @@ the native gates, but separately from the single-qubit ones.
 
 .. testcode::  python
 
-    from qibolab.components import IqChannel, AcquireChannel, DcChannel, IqConfig
+    from qibolab.components import IqChannel, AcquisitionChannel, DcChannel, IqConfig
     from qibolab.qubits import Qubit
     from qibolab.parameters import Parameters, TwoQubitContainer
     from qibolab.pulses import Gaussian, Pulse, Rectangular
@@ -131,11 +131,11 @@ the native gates, but separately from the single-qubit ones.
 
     # assign channels to the qubits
     channels[qubit0.probe] = IqChannel(mixer=None, lo=None)
-    channels[qubit0.acquisition] = AcquireChannel(twpa_pump=None, probe=qubit0.probe)
+    channels[qubit0.acquisition] = AcquisitionChannel(twpa_pump=None, probe=qubit0.probe)
     channels[qubit0.drive] = IqChannel(mixer=None, lo=None)
     channels[qubit0.flux] = DcChannel()
     channels[qubit1.probe] = IqChannel(mixer=None, lo=None)
-    channels[qubit1.acquisition] = AcquireChannel(twpa_pump=None, probe=qubit1.probe)
+    channels[qubit1.acquisition] = AcquisitionChannel(twpa_pump=None, probe=qubit1.probe)
     channels[qubit1.drive] = IqChannel(mixer=None, lo=None)
 
     # assign single-qubit native gates to each qubit
@@ -499,7 +499,7 @@ the above runcard:
     from pathlib import Path
     from qibolab import Platform
     from qibolab.components import (
-        AcquireChannel,
+        AcquisitionChannel,
         DcChannel,
         IqChannel,
         AcquisitionConfig,
@@ -525,7 +525,9 @@ the above runcard:
                 drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
                 flux=DcChannel(f"qubit_{q}/flux"),
                 probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
-                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
+                acquisition=AcquisitionChannel(
+                    acquire_name, twpa_pump=None, probe=probe_name
+                ),
             )
 
         # create dictionary of instruments
@@ -555,7 +557,9 @@ With the following additions for coupler architectures:
                 drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
                 flux=DcChannel(f"qubit_{q}/flux"),
                 probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
-                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
+                acquisition=AcquisitionChannel(
+                    acquire_name, twpa_pump=None, probe=probe_name
+                ),
             )
 
         couplers = {0: Qubit(name=0, flux=DcChannel("coupler_0/flux"))}
@@ -610,7 +614,7 @@ in this case ``"twpa_pump"``.
     from pathlib import Path
     from qibolab import Platform
     from qibolab.components import (
-        AcquireChannel,
+        AcquisitionChannel,
         DcChannel,
         IqChannel,
         AcquisitionConfig,
@@ -637,7 +641,9 @@ in this case ``"twpa_pump"``.
                 drive=IqChannel(f"qubit_{q}/drive", mixer=None, lo=None),
                 flux=DcChannel(f"qubit_{q}/flux"),
                 probe=IqChannel(probe_name, mixer=None, lo=None, acquistion=acquire_name),
-                acquisition=AcquireChannel(acquire_name, twpa_pump=None, probe=probe_name),
+                acquisition=AcquisitionChannel(
+                    acquire_name, twpa_pump=None, probe=probe_name
+                ),
             )
 
         # create dictionary of instruments

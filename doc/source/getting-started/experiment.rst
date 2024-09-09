@@ -29,7 +29,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
 
     from laboneq.simple import DeviceSetup, SHFQC
     from qibolab.components import (
-        AcquireChannel,
+        AcquisitionChannel,
         IqChannel,
         IqConfig,
         AcquisitionConfig,
@@ -67,7 +67,7 @@ In this example, the qubit is controlled by a Zurich Instruments' SHFQC instrume
         # assign channels to qubits
         qubit.drive = IqChannel(name=drive, lo=drive_lo, mixer=None)
         qubit.probe = IqChannel(name=probe, lo=readout_lo, mixer=None, acquisition=acquire)
-        qubit.acquisition = AcquireChannel(name=acquire, probe=probe, twpa_pump=None)
+        qubit.acquisition = AcquisitionChannel(name=acquire, probe=probe, twpa_pump=None)
 
         zi_channels = [
             ZiChannel(qubit.drive, device="device_shfqc", path="SGCHANNELS/0/OUTPUT"),

@@ -23,7 +23,7 @@ from typing import Optional
 from qibolab.identifier import ChannelId
 from qibolab.serialize import Model
 
-__all__ = ["Channel", "DcChannel", "IqChannel", "AcquireChannel"]
+__all__ = ["Channel", "DcChannel", "IqChannel", "AcquisitionChannel"]
 
 
 class Channel(Model):
@@ -59,7 +59,7 @@ class IqChannel(Channel):
     """
 
 
-class AcquireChannel(Channel):
+class AcquisitionChannel(Channel):
     twpa_pump: Optional[str]
     """Name of the TWPA pump component.
 

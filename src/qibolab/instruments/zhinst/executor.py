@@ -15,7 +15,7 @@ from qibolab.sequence import PulseSequence
 from qibolab.sweeper import Parameter, Sweeper
 from qibolab.unrolling import Bounds
 
-from ...components import AcquireChannel, Config, DcChannel, IqChannel
+from ...components import AcquisitionChannel, Config, DcChannel, IqChannel
 from .components import ZiChannel
 from .constants import NANO_TO_SECONDS, SAMPLING_RATE
 from .pulse import select_pulse
@@ -133,7 +133,7 @@ class Zurich(Controller):
                 self.configure_dc_line(ch.logical_channel, configs)
             if isinstance(ch.logical_channel, IqChannel):
                 self.configure_iq_line(ch.logical_channel, configs)
-            if isinstance(ch.logical_channel, AcquireChannel):
+            if isinstance(ch.logical_channel, AcquisitionChannel):
                 self.configure_acquire_line(ch.logical_channel, configs)
         self.device_setup.set_calibration(self.calibration)
 
@@ -171,7 +171,7 @@ class Zurich(Controller):
         )
 
     def configure_acquire_line(
-        self, channel: AcquireChannel, configs: dict[str, Config]
+        self, channel: AcquisitionChannel, configs: dict[str, Config]
     ):
         intermediate_frequency = (
             configs[channel.probe].frequency

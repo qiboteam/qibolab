@@ -1,6 +1,6 @@
 import pathlib
 
-from qibolab.components import AcquireChannel, DcChannel, IqChannel
+from qibolab.components import AcquisitionChannel, DcChannel, IqChannel
 from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
 from qibolab.platform import Platform
 from qibolab.qubits import Qubit
@@ -25,7 +25,7 @@ def create_dummy() -> Platform:
         )
         channels |= {
             probe: IqChannel(mixer=None, lo=None),
-            acquisition: AcquireChannel(twpa_pump=pump_name, probe=probe),
+            acquisition: AcquisitionChannel(twpa_pump=pump_name, probe=probe),
             drive: IqChannel(mixer=None, lo=None),
             drive12: IqChannel(mixer=None, lo=None),
             flux: DcChannel(),
