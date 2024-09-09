@@ -13,7 +13,7 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import AcquireChannel, Config, DcChannel, IqChannel
+from qibolab.components import AcquisitionChannel, Config, DcChannel, IqChannel
 from qibolab.components.configs import IqConfig, OscillatorConfig
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.identifier import ChannelId
@@ -246,7 +246,7 @@ class QmController(Controller):
     ) -> Optional[ChannelId]:
         """Add element (QM version of channel) in the config.
 
-        When an ``AcquireChannel`` is registered it returns the corresponding probe
+        When an ``AcquisitionChannel`` is registered it returns the corresponding probe
         channel in order to build an (acquisition, probe) map.
         """
         config = configs[channel]
@@ -264,7 +264,7 @@ class QmController(Controller):
             assert isinstance(lo_config, OscillatorConfig)
             self.config.configure_iq_line(channel, ch, config, lo_config)
 
-        elif isinstance(ch, AcquireChannel):
+        elif isinstance(ch, AcquisitionChannel):
             assert ch.probe is not None
             assert isinstance(config, QmAcquisitionConfig)
             probe = self.channels[ch.probe]
@@ -290,7 +290,7 @@ class QmController(Controller):
     ) -> dict[ChannelId, ChannelId]:
         """Register channels in the sequence in the QM ``config``.
 
-        Builds a map from probe channels to the corresponding ``AcquireChannel``.
+        Builds a map from probe channels to the corresponding ``AcquisitionChannel``.
         This is useful when sweeping frequency of probe channels, as these are
         registered as acquire elements in the QM config.
         """

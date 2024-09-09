@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
-from qibolab.components.channels import AcquireChannel, DcChannel, IqChannel
+from qibolab.components.channels import AcquisitionChannel, DcChannel, IqChannel
 from qibolab.components.configs import IqConfig, OscillatorConfig
 from qibolab.identifier import ChannelId
 from qibolab.pulses import Pulse
@@ -85,7 +85,7 @@ class QmConfig:
     def configure_acquire_line(
         self,
         id: ChannelId,
-        acquire_channel: AcquireChannel,
+        acquire_channel: AcquisitionChannel,
         probe_channel: IqChannel,
         acquire_config: QmAcquisitionConfig,
         probe_config: IqConfig,
