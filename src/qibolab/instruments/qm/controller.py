@@ -27,7 +27,7 @@ from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab.unrolling import Bounds, unroll_sequences
 
-from .config import SAMPLING_RATE, QmConfig, operation
+from .config import SAMPLING_RATE, Configuration, operation
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
@@ -162,7 +162,7 @@ class QmController(Controller):
     manager: Optional[QuantumMachinesManager] = None
     """Manager object used for controlling the Quantum Machines cluster."""
 
-    config: QmConfig = Field(default_factory=QmConfig)
+    config: Configuration = Field(default_factory=Configuration)
     """Configuration dictionary required for pulse execution on the OPXs."""
 
     simulation_duration: Optional[int] = None

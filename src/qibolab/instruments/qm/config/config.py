@@ -19,7 +19,7 @@ from .pulses import (
     waveforms_from_pulse,
 )
 
-__all__ = ["QmConfig"]
+__all__ = ["Configuration"]
 
 DEFAULT_DIGITAL_WAVEFORMS = {"ON": {"samples": [(1, 0)]}}
 """Required to be registered in the config for QM to work.
@@ -30,7 +30,7 @@ when we are executing something.
 
 
 @dataclass
-class QmConfig:
+class Configuration:
     """Configuration for communicating with the ``QuantumMachinesManager``.
 
     Contains nested ``dataclass`` objects and is serialized using ``asdict``
