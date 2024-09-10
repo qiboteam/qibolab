@@ -42,26 +42,21 @@ class Qubit(Model):
         ]
 
     @classmethod
-    def with_channels(cls, name: QubitId, channels: list[str], **kwargs):
+    def default(cls, name: QubitId, channels: Optional[list[str]] = None, **kwargs):
         """Create a qubit with default channel names.
 
         Default channel names follow the convention:
         '{qubit_name}/{channel_type}'
+
+        Args:
+            name: Name for the qubit to be used for channel ids.
+            channels: List of channels to add to the qubit.
+                If ``None`` the following channels will be added:
+                probe, acquisition, drive and flux.
         """
+        if channels is None:
+            channels = ["probe", "acquisition", "drive", "flux"]
         return cls(**{ch: f"{name}/{ch}" for ch in channels}, **kwargs)
-
-    @classmethod
-    def default(cls, name: QubitId, flux: bool = True, **kwargs):
-        """Create a qubit with the usual channels.
-
-        These are probe, acquisition, drive and flux.
-        For non flux-tunable qubits the flux channel can
-        be disabled using the ``flux: bool`` argument
-        """
-        channels = ["probe", "acquisition", "drive"]
-        if flux:
-            channels.append("flux")
-        return cls.with_channels(name, channels, **kwargs)
 
 
 class QubitPair(Model):
