@@ -22,5 +22,7 @@ plt.xlabel("Readout Frequency [GHz]")
 plt.legend()
 plt.grid()
 plt.tight_layout()
-plt.savefig("S21.png", dpi=300)
+# plt.savefig("S21.png", dpi=300)
 plt.show()
+
+
