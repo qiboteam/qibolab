@@ -52,10 +52,11 @@ class Qubit(Model):
 
     @classmethod
     def default(cls, name: QubitId, flux: bool = True, **kwargs):
-        """Create a flux tunable qubit with the default channel names.
+        """Create a qubit with the usual channels.
 
-        Flux tunable qubits have drive, flux, probe and acquisition
-        channels.
+        These are probe, acquisition, drive and flux.
+        For non flux-tunable qubits the flux channel can
+        be disabled using the ``flux: bool`` argument
         """
         channels = ["probe", "acquisition", "drive"]
         if flux:
