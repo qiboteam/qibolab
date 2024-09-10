@@ -12,8 +12,9 @@ from .serialize import Model
 class Qubit(Model):
     """Representation of a physical qubit.
 
-    Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
-    but they are passed to instrument designs in order to play pulses.
+    Contains the channel ids used to control the qubit and is instantiated
+    in the function that creates the corresponding
+    :class:`qibolab.platforms.platform.Platform`
     """
 
     model_config = ConfigDict(frozen=False)
@@ -39,6 +40,27 @@ class Qubit(Model):
             )
             if x is not None
         ]
+
+    @classmethod
+    def with_channels(cls, name: QubitId, channels: list[str], **kwargs):
+        """Create a qubit with default channel names.
+
+        Default channel names follow the convention:
+        '{qubit_name}/{channel_type}'
+        """
+        return cls(**{ch: f"{name}/{ch}" for ch in channels}, **kwargs)
+
+    @classmethod
+    def default(cls, name: QubitId, flux: bool = True, **kwargs):
+        """Create a flux tunable qubit with the default channel names.
+
+        Flux tunable qubits have drive, flux, probe and acquisition
+        channels.
+        """
+        channels = ["probe", "acquisition", "drive"]
+        if flux:
+            channels.append("flux")
+        return cls.with_channels(name, channels, **kwargs)
 
 
 class QubitPair(Model):

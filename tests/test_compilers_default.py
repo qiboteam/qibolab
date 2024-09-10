@@ -199,9 +199,10 @@ def test_align_multiqubit(platform: Platform):
     circuit.add(gates.M(main, coupled))
 
     sequence = compile_circuit(circuit, platform)
-    flux_duration = sequence.channel_duration(f"qubit_{coupled}/flux")
+    qubits = platform.qubits
+    flux_duration = sequence.channel_duration(qubits[coupled].flux)
     for q in (main, coupled):
-        probe_delay = next(iter(sequence.channel(f"qubit_{q}/acquisition")))
+        probe_delay = next(iter(sequence.channel(qubits[q].acquisition)))
         assert isinstance(probe_delay, Delay)
         assert flux_duration == probe_delay.duration
 
@@ -235,8 +236,9 @@ def test_inactive_qubits(platform: Platform, joint: bool):
 
     assert len(no_measurement(sequence)) == 1
 
-    mflux = f"qubit_{main}/flux"
-    cdrive = f"qubit_{coupled}/drive"
+    qubits = platform.qubits
+    mflux = qubits[main].flux
+    cdrive = qubits[coupled].drive
     duration = 200
     natives.CZ.extend(
         PulseSequence.load(
@@ -286,10 +288,11 @@ def test_joint_split_equivalence(platform: Platform):
     assert not any(
         isinstance(p, gates.Align) for seq in (joint_seq, split_seq) for _, p in seq
     )  # TODO: gates.Align is just a placeholder, replace with the pulse-like when available
+    qubits = platform.qubits
     for ch in (
-        "qubit_0/acquisition",
-        "qubit_2/acquisition",
-        "qubit_0/probe",
-        "qubit_2/probe",
+        qubits[0].acquisition,
+        qubits[2].acquisition,
+        qubits[0].probe,
+        qubits[2].probe,
     ):
         assert list(joint_seq.channel(ch)) == list(split_seq.channel(ch))

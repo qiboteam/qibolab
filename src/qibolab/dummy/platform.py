@@ -15,33 +15,22 @@ def create_dummy() -> Platform:
     # attach the channels
     pump_name = "twpa_pump"
     for q in range(5):
-        drive, drive12, flux, probe, acquisition = (
-            f"qubit_{q}/drive",
-            f"qubit_{q}/drive12",
-            f"qubit_{q}/flux",
-            f"qubit_{q}/probe",
-            f"qubit_{q}/acquisition",
-        )
+        drive12 = f"{q}/drive12"
+        qubits[q] = qubit = Qubit.default(q, drive_qudits={(1, 2): drive12})
         channels |= {
-            probe: IqChannel(mixer=None, lo=None),
-            acquisition: AcquisitionChannel(twpa_pump=pump_name, probe=probe),
-            drive: IqChannel(mixer=None, lo=None),
+            qubit.probe: IqChannel(mixer=None, lo=None),
+            qubit.acquisition: AcquisitionChannel(
+                twpa_pump=pump_name, probe=qubit.probe
+            ),
+            qubit.drive: IqChannel(mixer=None, lo=None),
             drive12: IqChannel(mixer=None, lo=None),
-            flux: DcChannel(),
+            qubit.flux: DcChannel(),
         }
-        qubits[q] = Qubit(
-            probe=probe,
-            acquisition=acquisition,
-            drive=drive,
-            drive_qudits={(1, 2): drive12},
-            flux=flux,
-        )
 
     couplers = {}
     for c in (0, 1, 3, 4):
-        flux = f"coupler_{c}/flux"
-        channels |= {flux: DcChannel()}
-        couplers[c] = Qubit(flux=flux)
+        couplers[c] = coupler = Qubit(flux=f"coupler_{c}/flux")
+        channels |= {coupler.flux: DcChannel()}
 
     # register the instruments
     instruments = {
