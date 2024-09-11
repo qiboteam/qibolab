@@ -1,8 +1,10 @@
 from collections import deque
 from dataclasses import fields
 
+import pytest
 from betterproto import Message
-from qm import qua
+
+qua = pytest.importorskip("qm.qua")
 from qm.qua import (
     Cast,
     align,
