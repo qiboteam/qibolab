@@ -1,0 +1,135 @@
+from collections import deque
+from dataclasses import fields
+
+from betterproto import Message
+from qm import qua
+from qm.qua import (
+    Cast,
+    align,
+    declare,
+    declare_stream,
+    dual_demod,
+    fixed,
+    for_,
+    measure,
+    play,
+    save,
+    stream_processing,
+    wait,
+)
+
+from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.instruments.qm.config import operation
+from qibolab.instruments.qm.program import (
+    ExecutionArguments,
+    create_acquisition,
+    program,
+)
+from qibolab.pulses import Acquisition, Gaussian, Pulse, Readout, Rectangular
+from qibolab.sequence import PulseSequence
+
+
+class QuaDummyBuilder:
+    """Builds the Abstract Syntrax Tree (AST) of a QUA program."""
+
+    def to_dict(self):
+        return {}
+
+
+def compare_ast_nodes(node1, node2):
+    """Compares two AST nodes for structural equality using a queue."""
+    queue = deque([(node1, node2)])
+
+    while queue:
+        n1, n2 = queue.popleft()
+
+        # Check if types of the two nodes are different
+        if type(n1) != type(n2):
+            return False
+
+        # If nodes are AST objects, compare their fields
+        if isinstance(n1, Message):
+            # Ignore commands that have no ``loc`` because
+            # they cause an infinite loop
+            if not hasattr(n1, "loc") or len(n1.loc) > 0:
+                for field in fields(n1):
+                    name = field.name
+                    if name != "loc":
+                        queue.append((getattr(n1, name), getattr(n2, name)))
+
+        # If nodes are lists, compare all elements
+        elif isinstance(n1, list):
+            if len(n1) != len(n2):
+                return False
+            queue.extend(zip(n1, n2))
+
+        # For basic types, check if they are equal
+        elif n1 != n2:
+            print(n1)
+            print(n2)
+            return False
+
+    return True
+
+
+def test_program():
+    qd = Pulse(duration=40, amplitude=0.05, envelope=Gaussian(rel_sigma=0.2))
+    ro = Readout(
+        acquisition=Acquisition(duration=1000),
+        probe=Pulse(duration=1000, amplitude=0.002, envelope=Rectangular()),
+    )
+    sequence = PulseSequence([("drive", qd), ("readout", ro)])
+    options = ExecutionParameters(
+        nshots=1000,
+        relaxation_time=1000,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.SINGLESHOT,
+    )
+
+    op = operation(ro)
+    acquisitions = {
+        (op, "readout"): create_acquisition(op, "readout", options, 1.0, 0.0)
+    }
+    args = ExecutionArguments(sequence, acquisitions, relaxation_time=1000)
+    experiment = program(args, options, [])
+
+    with qua.program() as target_experiment:
+        v1 = declare(
+            int,
+        )
+        v2 = declare(
+            fixed,
+        )
+        v3 = declare(
+            fixed,
+        )
+        wait((4 + (0 * (Cast.to_int(v2) + Cast.to_int(v3)))), "readout")
+        with for_(v1, 0, (v1 < 1000), (v1 + 1)):
+            align()
+            play(operation(qd), "drive")
+            measure(
+                op,
+                "readout",
+                None,
+                dual_demod.full("cos", "out1", "sin", "out2", v2),
+                dual_demod.full("minus_sin", "out1", "cos", "out2", v3),
+            )
+            r1 = declare_stream()
+            save(v2, r1)
+            r2 = declare_stream()
+            save(v3, r2)
+            wait(
+                250,
+            )
+        with stream_processing():
+            r1.buffer(1000).save(f"{op}_readout_I")
+            r2.buffer(1000).save(f"{op}_readout_Q")
+
+    build = experiment.build(QuaDummyBuilder())
+    target_build = target_experiment.build(QuaDummyBuilder())
+
+    assert compare_ast_nodes(build.script, target_build.script)
+    assert compare_ast_nodes(build.result_analysis, target_build.result_analysis)
+
+    # import pdb
+    # pdb.set_trace()
