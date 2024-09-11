@@ -6,23 +6,37 @@ from qibolab.pulses import ReadoutPulse
 from qibolab.qubits import Qubit
 
 
-def lamb_shift(g, delta):
-    """Calculates the lamb shift of the readout resonator from its bare
-    frequency.
+# def lamb_shift(g, delta):
+#     """Calculates the lamb shift of the readout resonator from its bare
+#     frequency.
 
-    Args:
-        g (float): Coupling strength between readout resonator and qubit in Hz.
-        delta (float): Detuning between readout resonator and qubit in Hz.
+#     Args:
+#         g (float): Coupling strength between readout resonator and qubit in Hz.
+#         delta (float): Detuning between readout resonator and qubit in Hz.
 
-    Returns:
-        Lambda (float): Lamb shift in Hz
-    """
-    return g * g / delta
+#     Returns:
+#         Lambda (float): Lamb shift in Hz
+#     """
+#     return g * g / delta
+
+# def dispersive_shift(g, delta, alpha):
+#     """Calculates the dispersive shift of the readout resonator for the first excited state of the qubit
+#     @see https://arxiv.org/abs/2106.06173, equation 35
+
+#     Args:
+#         g (float): Coupling strength between readout resonator and qubit in Hz.
+#         delta (float): Detuning between readout resonator and qubit in Hz.
+#         alpha (float): Qubit anharmonicity in Hz.
+
+#     Returns:
+#         chi (float): Dispersive shift in Hz.
+#     """
+#     return 2* alpha * g * g /delta / delta
 
 
 def dispersive_shift(g, delta, alpha):
-    """Calculates the dispersive shift of the readout resonator for the first excited state of the qubit
-    @see https://arxiv.org/abs/2106.06173, equation 35
+    """Calculates the dispersive shift of the readout resonator for depending on state of the qubit
+    @see https://arxiv.org/pdf/1904.06560, equation 146
 
     Args:
         g (float): Coupling strength between readout resonator and qubit in Hz.
@@ -32,7 +46,7 @@ def dispersive_shift(g, delta, alpha):
     Returns:
         chi (float): Dispersive shift in Hz.
     """
-    return 2 * alpha * g * g / delta / delta
+    return -1 *g *g /delta *(1/(1+(delta/alpha)))
 
 
 def s21_function(resonator_frequency, total_Q, coupling_Q):
@@ -66,11 +80,12 @@ class ReadoutSimulator:
             sampling_rate (float): Sampling rate of the ADC/digitizer.
         """
 
-        delta = qubit.bare_resonator_frequency - qubit.drive_frequency
-        ground_state_frequency = qubit.bare_resonator_frequency + lamb_shift(g, delta)
-        excited_state_frequency = ground_state_frequency + dispersive_shift(
-            g, delta, qubit.anharmonicity
-        )
+        delta = np.abs(qubit.bare_resonator_frequency - qubit.drive_frequency)
+        ground_state_frequency = qubit.bare_resonator_frequency - dispersive_shift(g, delta, qubit.anharmonicity)
+        excited_state_frequency = qubit.bare_resonator_frequency + dispersive_shift(g, delta, qubit.anharmonicity)
+        # excited_state_frequency = ground_state_frequency + dispersive_shift(
+        #     g, delta, qubit.anharmonicity
+        # )
         self.noise_model = noise_model
         self.sampling_rate = sampling_rate
 
