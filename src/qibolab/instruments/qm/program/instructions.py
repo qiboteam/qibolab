@@ -4,7 +4,6 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
-from qibolab.components import Config
 from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab.pulses import Align, Delay, Pulse, Readout, VirtualZ
 from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
@@ -125,7 +124,6 @@ def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
 
 def sweep(
     sweepers: list[ParallelSweepers],
-    configs: dict[str, Config],
     args: ExecutionArguments,
 ):
     """Unrolls a list of qibolab sweepers to the corresponding QUA for loops.
@@ -157,14 +155,13 @@ def sweep(
                         params = args.parameters[channel]
                         method(variable, params)
 
-            sweep(sweepers[1:], configs, args)
+            sweep(sweepers[1:], args)
 
     else:
         play(args)
 
 
 def program(
-    configs: dict[str, Config],
     args: ExecutionArguments,
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
@@ -177,7 +174,7 @@ def program(
             acquisition.declare()
         # execute pulses
         with for_(n, 0, n < options.nshots, n + 1):
-            sweep(list(sweepers), configs, args)
+            sweep(list(sweepers), args)
         # download acquisitions
         has_iq = options.acquisition_type is AcquisitionType.INTEGRATION
         buffer_dims = options.results_shape(sweepers)[::-1][int(has_iq) :]

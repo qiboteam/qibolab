@@ -470,7 +470,7 @@ class QmController(Controller):
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
         self.preprocess_sweeps(sweepers, configs, args, probe_map)
-        experiment = program(configs, args, options, sweepers)
+        experiment = program(args, options, sweepers)
 
         if self.script_file_name is not None:
             script_config = (
