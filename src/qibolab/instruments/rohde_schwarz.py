@@ -11,7 +11,6 @@ class SGS100A(LocalOscillator):
     """
 
     def create(self):
-        name = f"SGS100A:{self.address}"
         return LO_SGS100A.RohdeSchwarz_SGS100A(
-            name, f"TCPIP0::{self.address}::5025::SOCKET"
+            type(self).__name__, f"TCPIP0::{self.address}::5025::SOCKET"
         )

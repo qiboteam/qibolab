@@ -135,7 +135,7 @@ class ERA(LocalOscillator):
         self.ethernet = ethernet
 
     def create(self):
-        name = f"ERA:{self.address}"
+        name = type(self).__name__
         if self.ethernet:
             return ERASynthEthernet(name, self.address)
         else:
