@@ -19,6 +19,7 @@ def lamb_shift(g, delta):
     """
     return g * g / delta
 
+
 def dispersive_shift(g, delta, alpha):
     """Calculates the dispersive shift of the readout resonator for depending on state of the qubit
     @see https://arxiv.org/pdf/1904.06560, equation 146, we omit the negative sign as we included it in our definition of delta
@@ -31,7 +32,7 @@ def dispersive_shift(g, delta, alpha):
     Returns:
         chi (float): Dispersive shift in Hz.
     """
-    return g *g /delta *(1/(1+(delta/alpha)))
+    return g * g / delta * (1 / (1 + (delta / alpha)))
 
 
 def s21_function(resonator_frequency, total_Q, coupling_Q):
@@ -64,14 +65,18 @@ class ReadoutSimulator:
             coupling_Q (float): Coupling/external Q factor of the readout resonator.
             sampling_rate (float): Sampling rate of the ADC/digitizer.
         """
-        #maintaining the definition of |0> = |e> = (1 0) with the JC Hamiltonian model
+        # maintaining the definition of |0> = |e> = (1 0) with the JC Hamiltonian model
         delta = qubit.drive_frequency - qubit.bare_resonator_frequency
-        dressed_frequency = qubit.bare_resonator_frequency - lamb_shift(g,delta)
-        ground_state_frequency = dressed_frequency - dispersive_shift(g, delta, qubit.anharmonicity)
-        excited_state_frequency = dressed_frequency + dispersive_shift(g, delta, qubit.anharmonicity)
+        dressed_frequency = qubit.bare_resonator_frequency - lamb_shift(g, delta)
+        ground_state_frequency = dressed_frequency - dispersive_shift(
+            g, delta, qubit.anharmonicity
+        )
+        excited_state_frequency = dressed_frequency + dispersive_shift(
+            g, delta, qubit.anharmonicity
+        )
         # print(f"ground_state_frequency= {ground_state_frequency}; excited_state_frequency= {excited_state_frequency}")
 
-        self.lambshift = -lamb_shift(g,delta)
+        self.lambshift = -lamb_shift(g, delta)
         self.noise_model = noise_model
         self.sampling_rate = sampling_rate
 
@@ -86,8 +91,8 @@ class ReadoutSimulator:
         Args:
             pulse (qibolab.pulses.ReadoutPulse): Qibolab readout pulse.
         """
-        s21 = self.ground_s21(pulse.frequency)        
-        return self.simulate_and_demodulate(s21,pulse)
+        s21 = self.ground_s21(pulse.frequency)
+        return self.simulate_and_demodulate(s21, pulse)
 
     def simulate_excited_state_iq(self, pulse: ReadoutPulse):
         """Simulates the IQ result for a given readout pulse when the qubit is
@@ -96,12 +101,12 @@ class ReadoutSimulator:
         Args:
             pulse (qibolab.pulses.ReadoutPulse): Qibolab readout pulse.
         """
-        s21 = self.excited_s21(pulse.frequency)        
+        s21 = self.excited_s21(pulse.frequency)
         return self.simulate_and_demodulate(s21, pulse)
 
-    def simulate_and_demodulate(self, s21: complex,  pulse: ReadoutPulse):
-        """Simulates the readout pulse for a given S21-parameter and
-        homodyne demodulation/2nd stage of heterodyne demodulation.
+    def simulate_and_demodulate(self, s21: complex, pulse: ReadoutPulse):
+        """Simulates the readout pulse for a given S21-parameter and homodyne
+        demodulation/2nd stage of heterodyne demodulation.
 
         Args:
             s21 (complex): Complex S21 parameter.
@@ -112,21 +117,26 @@ class ReadoutSimulator:
         """
         reflected_amplitude = np.abs(s21)
         reflected_phase = np.angle(s21)
-        
-        env_I, env_Q = pulse.envelope_waveforms(self.sampling_rate / 1e9)   #Gigasample per second
 
-        start = int(pulse.start * 1e-9 * self.sampling_rate)                #n = gigasample index 
-        t = np.arange(start, start + len(env_I)) / self.sampling_rate       #t_n  
-     
-        #Low-pass filtered I-component (with intermediate frequency = carrier frequency)
-        I_filtered = reflected_amplitude*np.cos(2*np.pi*t*pulse.frequency+ pulse.relative_phase + reflected_phase) + self.noise_model(t)
+        env_I, env_Q = pulse.envelope_waveforms(
+            self.sampling_rate / 1e9
+        )  # Gigasample per second
 
-        #Low-pass filtered Q-component 
-        Q_filtered = reflected_amplitude*np.sin(2*np.pi*t*pulse.frequency+ pulse.relative_phase + reflected_phase) + self.noise_model(t)
+        start = int(pulse.start * 1e-9 * self.sampling_rate)  # n = gigasample index
+        t = np.arange(start, start + len(env_I)) / self.sampling_rate  # t_n
 
-        z = I_filtered+1j*Q_filtered 
-        z *= np.exp(-1j*2*np.pi*t*pulse.frequency)
-        z = np.sum(z)/len(t)
+        # Low-pass filtered I-component (with intermediate frequency = carrier frequency)
+        I_filtered = reflected_amplitude * np.cos(
+            2 * np.pi * t * pulse.frequency + pulse.relative_phase + reflected_phase
+        ) + self.noise_model(t)
+
+        # Low-pass filtered Q-component
+        Q_filtered = reflected_amplitude * np.sin(
+            2 * np.pi * t * pulse.frequency + pulse.relative_phase + reflected_phase
+        ) + self.noise_model(t)
+
+        z = I_filtered + 1j * Q_filtered
+        z *= np.exp(-1j * 2 * np.pi * t * pulse.frequency)
+        z = np.sum(z) / len(t)
 
         return z
-    

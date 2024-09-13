@@ -1,24 +1,37 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from qibolab.qubits import Qubit
+import numpy as np
+
 from qibolab.instruments.emulator.readout import ReadoutSimulator
 from qibolab.pulses import ReadoutPulse
+from qibolab.qubits import Qubit
 
 bare_resonator_frequency = 5.045e9
 nshots = 100
 
-SNR = 50 # dB
+SNR = 50  # dB
 READOUT_AMPLITUDE = 1
 NOISE_AMP = np.power(10, -SNR / 20)
 AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t))
 
-qb = Qubit(0, bare_resonator_frequency=bare_resonator_frequency, drive_frequency=3.99e9, anharmonicity=-263e6)
-readout = ReadoutSimulator(qubit=qb, g=10e6, noise_model=AWGN, internal_Q=2.5e6, coupling_Q=6e4, sampling_rate=1966.08e6)
+qb = Qubit(
+    0,
+    bare_resonator_frequency=bare_resonator_frequency,
+    drive_frequency=3.99e9,
+    anharmonicity=-263e6,
+)
+readout = ReadoutSimulator(
+    qubit=qb,
+    g=10e6,
+    noise_model=AWGN,
+    internal_Q=2.5e6,
+    coupling_Q=6e4,
+    sampling_rate=1966.08e6,
+)
 
 
-#demonstrates effect of state dependent dispersive shift on amplitude of reflected microwave from resonator; 
+# demonstrates effect of state dependent dispersive shift on amplitude of reflected microwave from resonator;
 span = 1e6
-center_frequency = bare_resonator_frequency 
+center_frequency = bare_resonator_frequency
 freq_sweep = np.linspace(center_frequency - span / 2, center_frequency + span / 2, 1000)
 y_gnd = np.abs(readout.ground_s21(freq_sweep))
 y_exc = np.abs(readout.excited_s21(freq_sweep))
@@ -36,7 +49,7 @@ plt.show()
 
 freq_sweep *= 1e9
 
-#demonstrates effect of state dependent dispersive shift on phase of reflected microwave from resonator; (for domain of [-pi/2,pi/2])
+# demonstrates effect of state dependent dispersive shift on phase of reflected microwave from resonator; (for domain of [-pi/2,pi/2])
 y_gnd1 = np.angle(readout.ground_s21(freq_sweep))
 y_exc1 = np.angle(readout.excited_s21(freq_sweep))
 freq_sweep /= 1e9
@@ -50,9 +63,16 @@ plt.tight_layout()
 # plt.savefig("phase.png", dpi=300)
 plt.show()
 
-#demonstrates the separation of V_I/V_Q data of reflected microwave on V_I/V_Q plane
+# demonstrates the separation of V_I/V_Q data of reflected microwave on V_I/V_Q plane
 ro_frequency = 5.0450e9 + readout.lambshift
-ro_pulse = ReadoutPulse(start=0, duration=1000, amplitude=READOUT_AMPLITUDE, frequency=ro_frequency, shape="Rectangular()", relative_phase=0)
+ro_pulse = ReadoutPulse(
+    start=0,
+    duration=1000,
+    amplitude=READOUT_AMPLITUDE,
+    frequency=ro_frequency,
+    shape="Rectangular()",
+    relative_phase=0,
+)
 
 rgnd = [readout.simulate_ground_state_iq(ro_pulse) for k in range(nshots)]
 rexc = [readout.simulate_excited_state_iq(ro_pulse) for k in range(nshots)]
@@ -66,8 +86,3 @@ plt.legend()
 plt.tight_layout()
 # plt.savefig("IQ.png", dpi=300)
 plt.show()
-
-
-
-
-
