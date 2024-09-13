@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 from pydantic import ConfigDict, Field
 
@@ -7,6 +7,9 @@ from pydantic import ConfigDict, Field
 # the unused ones from here
 from .identifier import ChannelId, QubitId, QubitPairId, TransitionId  # noqa
 from .serialize import Model
+
+DefaultChannelType = Annotated[Optional[ChannelId], True]
+"""If ``True`` the channel is included in the default qubit constructor."""
 
 
 class Qubit(Model):
@@ -19,15 +22,17 @@ class Qubit(Model):
 
     model_config = ConfigDict(frozen=False)
 
-    drive: Optional[ChannelId] = None
+    drive: DefaultChannelType = None
     """Ouput channel, to drive the qubit state."""
-    drive_qudits: dict[TransitionId, ChannelId] = Field(default_factory=dict)
+    drive_qudits: Annotated[dict[TransitionId, ChannelId], False] = Field(
+        default_factory=dict
+    )
     """Output channels collection, to drive non-qubit transitions."""
-    flux: Optional[ChannelId] = None
+    flux: DefaultChannelType = None
     """Output channel, to control the qubit flux."""
-    probe: Optional[ChannelId] = None
+    probe: DefaultChannelType = None
     """Output channel, to probe the resonator."""
-    acquisition: Optional[ChannelId] = None
+    acquisition: DefaultChannelType = None
     """Input channel, to acquire the readout results."""
 
     @property
@@ -55,7 +60,7 @@ class Qubit(Model):
                 probe, acquisition, drive and flux.
         """
         if channels is None:
-            channels = ["probe", "acquisition", "drive", "flux"]
+            channels = [name for name, f in cls.model_fields.items() if f.metadata[0]]
         return cls(**{ch: f"{name}/{ch}" for ch in channels}, **kwargs)
 
 
