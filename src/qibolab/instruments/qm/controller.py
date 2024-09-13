@@ -129,7 +129,7 @@ class QmController(Controller):
     Has the form XXX.XXX.XXX.XXX:XXX.
     """
 
-    octaves: dict[str, Octave]
+    octaves: dict[str, Octave] = Field(default_factory=dict)
     """Dictionary containing the
     :class:`qibolab.instruments.qm.controller.Octave` instruments being
     used."""
