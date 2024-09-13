@@ -73,10 +73,10 @@ as these are loaded automatically from the platform, as defined in the correspon
    ps = PulseSequence()
    qubit = platform.qubits[0]
    natives = platform.natives.single_qubit[0]
-   ps.concatenate(natives.RX.create_sequence())
-   ps.concatenate(natives.RX.create_sequence(phi=np.pi / 2))
+   ps.concatenate(natives.RX())
+   ps.concatenate(natives.RX(phi=np.pi / 2))
    ps.append((qubit.probe, Delay(duration=200)))
-   ps.concatenate(natives.MZ.create_sequence())
+   ps.concatenate(natives.MZ())
 
 Now we can execute the sequence on hardware:
 
@@ -282,9 +282,7 @@ Typical experiments may include both pre-defined pulses and new ones:
     from qibolab.identifier import ChannelId
 
     natives = platform.natives.single_qubit[0]
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.concatenate(natives.MZ.create_sequence())
+    sequence = natives.RX() | natives.MZ()
 
     results = platform.execute([sequence])
 
@@ -345,16 +343,11 @@ A typical resonator spectroscopy experiment could be defined with:
 
     natives = platform.natives.single_qubit
 
-    sequence = PulseSequence()
-    sequence.concatenate(
-        natives[0].MZ.create_sequence()
-    )  # readout pulse for qubit 0 at 4 GHz
-    sequence.concatenate(
-        natives[1].MZ.create_sequence()
-    )  # readout pulse for qubit 1 at 5 GHz
-    sequence.concatenate(
-        natives[2].MZ.create_sequence()
-    )  # readout pulse for qubit 2 at 6 GHz
+    sequence = (
+        natives[0].MZ()  # readout pulse for qubit 0 at 4 GHz
+        | natives[1].MZ()  # readout pulse for qubit 1 at 5 GHz
+        | natives[2].MZ()  # readout pulse for qubit 2 at 6 GHz
+    )
 
     sweepers = [
         Sweeper(
@@ -382,15 +375,10 @@ For example:
 
 .. testcode:: python
 
-    from qibolab.pulses import Delay
-    from qibolab.sequence import PulseSequence
-
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
-    sequence = PulseSequence()
-    rx_sequence = natives.RX.create_sequence()
-    sequence.concatenate(rx_sequence)
-    sequence.concatenate(natives.MZ.create_sequence())
+    rx_sequence = natives.RX()
+    sequence = rx_sequence | natives.MZ()
 
     f0 = platform.config(qubit.drive).frequency
     sweeper_freq = Sweeper(
@@ -473,10 +461,8 @@ For example in
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
 
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    ro_sequence = natives.MZ.create_sequence()
-    sequence.concatenate(ro_sequence)
+    ro_sequence = natives.MZ()
+    sequence = natives.RX() | ro_sequence
 
     options = ExecutionParameters(
         nshots=1000,

@@ -79,7 +79,4 @@ Alternatively, instead of using the pulse API directly, one can use the native g
 
     platform = create_platform("dummy")
     q0 = platform.natives.single_qubit[0]
-    sequence = PulseSequence()
-    sequence.concatenate(q0.RX.create_sequence(theta=np.pi / 2))
-    sequence.append((platform.qubits[0].acquisition, Delay(duration=sequence.duration)))
-    sequence.concatenate(q0.MZ.create_sequence())
+    sequence = q0.RX(theta=np.pi / 2) | q0.MZ()

@@ -103,7 +103,6 @@ complex pulse sequence. Therefore with start with that:
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import Pulse, Delay, Gaussian
     from qibolab.sequence import PulseSequence
     from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
@@ -119,10 +118,7 @@ complex pulse sequence. Therefore with start with that:
     natives = platform.natives.single_qubit[0]
 
     # create pulse sequence and add pulses
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.acquisition, Delay(duration=sequence.duration)))
-    sequence.concatenate(natives.MZ.create_sequence())
+    sequence = natives.RX() | natives.MZ()
 
     # allocate frequency sweeper
     f0 = platform.config(qubit.drive).frequency
@@ -198,8 +194,6 @@ and its impact on qubit states in the IQ plane.
     import numpy as np
     import matplotlib.pyplot as plt
     from qibolab import create_platform
-    from qibolab.pulses import Delay
-    from qibolab.sequence import PulseSequence
     from qibolab.sweeper import Sweeper, Parameter
     from qibolab.execution_parameters import (
         ExecutionParameters,
@@ -214,13 +208,10 @@ and its impact on qubit states in the IQ plane.
     natives = platform.natives.single_qubit[0]
 
     # create pulse sequence 1
-    zero_sequence = natives.MZ.create_sequence()
+    zero_sequence = natives.MZ()
 
     # create pulse sequence 2
-    one_sequence = PulseSequence()
-    one_sequence.concatenate(natives.RX.create_sequence())
-    one_sequence.append((qubit.acquisition, Delay(duration=sequence.duration)))
-    one_sequence.concatenate(natives.MZ.create_sequence())
+    one_sequence = natives.RX() | natives.MZ()
 
     options = ExecutionParameters(
         nshots=1000,
