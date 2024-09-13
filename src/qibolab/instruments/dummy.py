@@ -61,7 +61,6 @@ class DummyInstrument(Controller):
             instruments.
     """
 
-    name: str
     address: str
     bounds: str = "dummy/bounds"
 
@@ -70,13 +69,13 @@ class DummyInstrument(Controller):
         return SAMPLING_RATE
 
     def connect(self):
-        log.info(f"Connecting to {self.name} instrument.")
+        log.info(f"Connecting to dummy instrument.")
 
     def disconnect(self):
-        log.info(f"Disconnecting {self.name} instrument.")
+        log.info(f"Disconnecting dummy instrument.")
 
     def setup(self, *args, **kwargs):
-        log.info(f"Setting up {self.name} instrument.")
+        log.info(f"Setting up dummy instrument.")
 
     def values(self, options: ExecutionParameters, shape: tuple[int, ...]):
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:

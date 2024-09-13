@@ -1,10 +1,9 @@
 """A platform for executing quantum algorithms."""
 
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from math import prod
 from pathlib import Path
-from typing import Literal, Optional, TypeVar, Union
+from typing import Literal, Optional, TypeVar
 
 from qibo.config import log, raise_error
 
@@ -294,7 +293,7 @@ class Platform:
     def load(
         cls,
         path: Path,
-        instruments: Union[InstrumentMap, Iterable[Instrument]],
+        instruments: InstrumentMap,
         qubits: QubitMap,
         couplers: Optional[QubitMap] = None,
         name: Optional[str] = None,
@@ -302,8 +301,6 @@ class Platform:
         """Dump platform."""
         if name is None:
             name = path.name
-        if not isinstance(instruments, dict):
-            instruments = {i.name: i for i in instruments}
         if couplers is None:
             couplers = {}
 

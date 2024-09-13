@@ -20,7 +20,6 @@ def create(runcard_path=RUNCARD):
     octave2 = Octave("octave2", port=101, connectivity=opxs[1])
     octave3 = Octave("octave3", port=102, connectivity=opxs[2])
     controller = QMController(
-        "qm",
         "192.168.0.101:80",
         opxs=opxs,
         octaves=[octave1, octave2, octave3],
@@ -44,7 +43,7 @@ def create(runcard_path=RUNCARD):
     channels |= "L4-26"
 
     # Instantiate local oscillators
-    twpa = LocalOscillator("twpa_a", "192.168.0.35")
+    twpa = LocalOscillator("192.168.0.35")
     # Map LOs to channels
     channels["L4-26"].local_oscillator = twpa
 
@@ -66,7 +65,7 @@ def create(runcard_path=RUNCARD):
         qubits[q].drive = channels[f"L3-{10 + q}"]
         qubits[q].flux = channels[f"L4-{q}"]
 
-    instruments = {controller.name: controller, twpa.name: twpa}
+    instruments = {"qm": controller, "twpa_a": twpa}
     instruments.update(controller.opxs)
     instruments.update(controller.octaves)
     settings = load_settings(runcard)

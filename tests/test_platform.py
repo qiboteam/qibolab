@@ -299,7 +299,7 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     platform = qpu_platform
     qubit = next(iter(platform.qubits.values()))
     pulse = Pulse(duration=8192 + 200, amplitude=0.12, envelope=Gaussian(5))
-    sequence = PulseSequence([(qubit.drive.name, pulse)])
+    sequence = PulseSequence([(qubit.drive, pulse)])
     options = ExecutionParameters(nshots=nshots)
     platform.execute_pulse_sequence(sequence, options)
 
@@ -310,7 +310,7 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     platform = qpu_platform
     qubit = next(iter(platform.qubits.values()))
     pulse = Pulse(duration=2 * 8192 + 200, amplitude=0.12, envelope=Gaussian(0.2))
-    sequence = PulseSequence([(qubit.drive.name, pulse)])
+    sequence = PulseSequence([(qubit.drive, pulse)])
     options = ExecutionParameters(nshots=nshots)
     platform.execute_pulse_sequence(sequence, options)
 
@@ -334,9 +334,9 @@ def test_platform_execute_multiple_drive_pulses_one_readout(qpu_platform):
     qubit_id, qubit = next(iter(platform.qubits.items()))
     sequence = PulseSequence()
     sequence.concatenate(platform.create_RX_pulse(qubit_id))
-    sequence.append((qubit.drive.name, Delay(duration=4)))
+    sequence.append((qubit.drive, Delay(duration=4)))
     sequence.concatenate(platform.create_RX_pulse(qubit_id))
-    sequence.append((qubit.drive.name, Delay(duration=4)))
+    sequence.append((qubit.drive, Delay(duration=4)))
     sequence.concatenate(platform.create_RX_pulse(qubit_id))
     sequence.append((qubit.probe, Delay(duration=808)))
     sequence.concatenate(platform.create_MZ_pulse(qubit_id))
@@ -392,7 +392,7 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
     sequence.concatenate(qd_seq1)
     sequence.append((qubit.probe, Delay(duration=qd_seq1.duration)))
     sequence.concatenate(ro_seq1)
-    sequence.append((qubit.drive.name, Delay(duration=ro_seq1.duration)))
+    sequence.append((qubit.drive, Delay(duration=ro_seq1.duration)))
     sequence.concatenate(qd_seq2)
     sequence.append((qubit.probe, Delay(duration=qd_seq2.duration)))
     sequence.concatenate(ro_seq2)
