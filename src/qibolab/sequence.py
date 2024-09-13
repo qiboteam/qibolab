@@ -93,16 +93,68 @@ class PulseSequence(UserList[_Element]):
         """Find channels on which a pulse with a given id plays."""
         return [channel for channel, pulse in self if pulse.id == pulse_id]
 
-    def concatenate(self, other: "PulseSequence") -> None:
+    def concatenate(self, other: Iterable[_Element]) -> None:
+        """Concatenate two sequences.
+
+        Appends ``other`` in-place such that the result is:
+            - ``self``
+            - necessary delays to synchronize channels
+            - ``other``
+        Guarantees that the all the channels in the concatenated
+        sequence will start simultaneously
+        """
+        _synchronize(self, PulseSequence(other).channels)
+        self.extend(other)
+
+    def __ilshift__(self, other: Iterable[_Element]) -> "PulseSequence":
+        """Juxtapose two sequences.
+
+        Alias to :meth:`concatenate`.
+        """
+        self.concatenate(other)
+        return self
+
+    def __lshift__(self, other: Iterable[_Element]) -> "PulseSequence":
+        """Juxtapose two sequences.
+
+        A copy is made, and no input is altered.
+
+        Other than that, it is based on :meth:`concatenate`.
+        """
+        copy = self.copy()
+        copy <<= other
+        return copy
+
+    def juxtapose(self, other: Iterable[_Element]) -> None:
         """Juxtapose two sequences.
 
         Appends ``other`` in-place such that the result is:
             - ``self``
             - necessary delays to synchronize channels
             - ``other``
+        Guarantee simultaneous start and no overlap.
         """
-        _synchronize(self, other.channels)
+        _synchronize(self, PulseSequence(other).channels | self.channels)
         self.extend(other)
+
+    def __ior__(self, other: Iterable[_Element]) -> "PulseSequence":
+        """Juxtapose two sequences.
+
+        Alias to :meth:`concatenate`.
+        """
+        self.juxtapose(other)
+        return self
+
+    def __or__(self, other: Iterable[_Element]) -> "PulseSequence":
+        """Juxtapose two sequences.
+
+        A copy is made, and no input is altered.
+
+        Other than that, it is based on :meth:`concatenate`.
+        """
+        copy = self.copy()
+        copy |= other
+        return copy
 
     def align(self, channels: list[ChannelId]) -> Align:
         """Introduce align commands to the sequence."""

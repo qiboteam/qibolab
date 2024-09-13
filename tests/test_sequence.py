@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from pydantic import TypeAdapter
 
 from qibolab.pulses import (
@@ -143,6 +145,79 @@ def test_concatenate():
     assert s1[2][0] == "a"
     assert isinstance(s1[3][1], Pulse)
     assert s1[3][0] == "a"
+
+    # Check aliases
+    sa1 = deepcopy(s1)
+    sc1 = deepcopy(s1)
+    sa1 <<= s2
+    sc1.concatenate(s2)
+    assert sa1 == sc1
+    assert sc1 == s1 << s2
+
+
+def test_juxtapose():
+    p1 = Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    sequence1 = PulseSequence([("ch1", p1)])
+    p2 = Pulse(duration=60, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    sequence2 = PulseSequence([("ch2", p2)])
+
+    sequence1.juxtapose(sequence2)
+    assert set(sequence1.channels) == {"ch1", "ch2"}
+    assert len(list(sequence1.channel("ch1"))) == 1
+    assert len(list(sequence1.channel("ch2"))) == 2
+    assert sequence1.duration == 40 + 60
+    channel, delay = sequence1[1]
+    assert channel == "ch2"
+    assert isinstance(delay, Delay)
+    assert delay.duration == 40
+
+    sequence3 = PulseSequence(
+        [
+            (
+                "ch2",
+                Pulse(duration=80, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)),
+            ),
+            (
+                "ch3",
+                Pulse(
+                    duration=100, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1)
+                ),
+            ),
+        ]
+    )
+
+    sequence1.juxtapose(sequence3)
+    assert sequence1.channels == {"ch1", "ch2", "ch3"}
+    assert len(list(sequence1.channel("ch1"))) == 2
+    assert len(list(sequence1.channel("ch2"))) == 3
+    assert len(list(sequence1.channel("ch3"))) == 2
+    assert isinstance(next(iter(sequence1.channel("ch3"))), Delay)
+    assert sequence1.duration == 40 + 60 + 100
+    assert sequence1.channel_duration("ch1") == 40 + 60
+    assert sequence1.channel_duration("ch2") == 40 + 60 + 80
+    assert sequence1.channel_duration("ch3") == 40 + 60 + 100
+    delay = list(sequence1.channel("ch3"))[0]
+    assert isinstance(delay, Delay)
+    assert delay.duration == 100
+
+    # Check order preservation, even with various channels
+    vz = VirtualZ(phase=0.1)
+    s1 = PulseSequence([("a", p1), ("b", vz)])
+    s2 = PulseSequence([("a", vz), ("a", p2)])
+    s1.juxtapose(s2)
+    target_channels = ["a", "b", "b", "a", "a"]
+    target_pulse_types = [Pulse, VirtualZ, Delay, VirtualZ, Pulse]
+    for i, (channel, pulse) in enumerate(s1):
+        assert channel == target_channels[i]
+        assert isinstance(pulse, target_pulse_types[i])
+
+    # Check aliases
+    sa1 = deepcopy(s1)
+    sc1 = deepcopy(s1)
+    sa1 |= s2
+    sc1.juxtapose(s2)
+    assert sa1 == sc1
+    assert sc1 == s1 | s2
 
 
 def test_copy():
