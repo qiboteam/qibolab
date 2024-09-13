@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 from pydantic import ConfigDict, Field
 
@@ -8,25 +8,31 @@ from pydantic import ConfigDict, Field
 from .identifier import ChannelId, QubitId, QubitPairId, TransitionId  # noqa
 from .serialize import Model
 
+DefaultChannelType = Annotated[Optional[ChannelId], True]
+"""If ``True`` the channel is included in the default qubit constructor."""
+
 
 class Qubit(Model):
     """Representation of a physical qubit.
 
-    Qubit objects are instantiated by :class:`qibolab.platforms.platform.Platform`
-    but they are passed to instrument designs in order to play pulses.
+    Contains the channel ids used to control the qubit and is instantiated
+    in the function that creates the corresponding
+    :class:`qibolab.platforms.platform.Platform`
     """
 
     model_config = ConfigDict(frozen=False)
 
-    drive: Optional[ChannelId] = None
+    drive: DefaultChannelType = None
     """Ouput channel, to drive the qubit state."""
-    drive_qudits: dict[TransitionId, ChannelId] = Field(default_factory=dict)
+    drive_qudits: Annotated[dict[TransitionId, ChannelId], False] = Field(
+        default_factory=dict
+    )
     """Output channels collection, to drive non-qubit transitions."""
-    flux: Optional[ChannelId] = None
+    flux: DefaultChannelType = None
     """Output channel, to control the qubit flux."""
-    probe: Optional[ChannelId] = None
+    probe: DefaultChannelType = None
     """Output channel, to probe the resonator."""
-    acquisition: Optional[ChannelId] = None
+    acquisition: DefaultChannelType = None
     """Input channel, to acquire the readout results."""
 
     @property
@@ -39,6 +45,23 @@ class Qubit(Model):
             )
             if x is not None
         ]
+
+    @classmethod
+    def default(cls, name: QubitId, channels: Optional[list[str]] = None, **kwargs):
+        """Create a qubit with default channel names.
+
+        Default channel names follow the convention:
+        '{qubit_name}/{channel_type}'
+
+        Args:
+            name: Name for the qubit to be used for channel ids.
+            channels: List of channels to add to the qubit.
+                If ``None`` the following channels will be added:
+                probe, acquisition, drive and flux.
+        """
+        if channels is None:
+            channels = [name for name, f in cls.model_fields.items() if f.metadata[0]]
+        return cls(**{ch: f"{name}/{ch}" for ch in channels}, **kwargs)
 
 
 class QubitPair(Model):
