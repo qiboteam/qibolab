@@ -2,7 +2,6 @@
 
 from collections import UserList
 from collections.abc import Callable, Iterable
-from copy import deepcopy
 from typing import Any, Union
 
 from pydantic import TypeAdapter
@@ -122,7 +121,7 @@ class PulseSequence(UserList[_Element]):
 
         Other than that, it is based on :meth:`concatenate`.
         """
-        copy = deepcopy(self)
+        copy = self.copy()
         copy <<= other
         return copy
 
@@ -153,7 +152,7 @@ class PulseSequence(UserList[_Element]):
 
         Other than that, it is based on :meth:`concatenate`.
         """
-        copy = deepcopy(self)
+        copy = self.copy()
         copy |= other
         return copy
 
