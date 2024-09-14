@@ -44,9 +44,13 @@ class Instrument(Model, ABC):
     def disconnect(self):
         """Close connection to the physical instrument."""
 
-    @abstractmethod
     def setup(self, *args, **kwargs):
-        """Set instrument settings."""
+        """Set instrument settings.
+
+        Used primarily by non-controller instruments, to upload settings
+        (like LO frequency and power) to the instrument after
+        connecting.
+        """
 
 
 class Controller(Instrument):

@@ -44,9 +44,6 @@ class TemperatureController(Instrument):
             self.client_socket.close()
             self._is_connected = False
 
-    def setup(self):
-        """Required by parent class, but not used here."""
-
     def get_data(self) -> dict[str, dict[str, float]]:
         """Connect to the socket and get temperature data.
 

@@ -78,9 +78,6 @@ class DummyInstrument(Controller):
     def disconnect(self):
         log.info(f"Disconnecting dummy instrument.")
 
-    def setup(self, *args, **kwargs):
-        log.info(f"Setting up dummy instrument.")
-
     def values(self, options: ExecutionParameters, shape: tuple[int, ...]):
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
             if options.averaging_mode is AveragingMode.SINGLESHOT:

@@ -24,12 +24,11 @@ Add an instrument
 The base of an instrument is :class:`qibolab.instruments.abstract.Instrument`,
 which is a pydantic ``Model``.
 To accomodate different kind of instruments, a flexible interface is implemented
-with three abstract methods that are required to be implemented in the child
-instrument:
-
-* ``connect()``
-* ``setup()``
-* ``disconnect()``
+with two abstract methods (``connect()`` and ``disconnect()``) that are required
+to be implemented in the child instrument.
+Optionally, a ``setup()`` method can also be implemented to upload settings, such
+as local oscillator frequency or power, to the instrument after connection.
+If ``setup()`` is not implemented it will be an empty function.
 
 In the execution of an experiment these functions are called sequentially, so
 first a connection is established, the instrument is set up with the required
@@ -106,9 +105,6 @@ Let's see a minimal example:
 
         def disconnect(self):
             self.device.disconnect()
-
-        def setup(self):
-            """Empty method to comply with Instrument interface."""
 
         def play(
                 self,
