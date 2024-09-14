@@ -8,10 +8,10 @@ from qibolab.qubits import Qubit
 bare_resonator_frequency = 5.045e9
 nshots = 100
 
-SNR = 40 # dB
+SNR = 40  # dB
 READOUT_AMPLITUDE = 1
-NOISE_AMP = np.power(10, -SNR/20)
-AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t))*4.5e1
+NOISE_AMP = np.power(10, -SNR / 20)
+AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 4.5e1
 
 qb = Qubit(
     0,
@@ -29,11 +29,11 @@ readout = ReadoutSimulator(
 )
 
 
-#demonstrates effect of state dependent dispersive shift on amplitude of reflected microwave from resonator; 
-#we first prepare a centre frequency for frequency sweeping, which may be modified during analysis, to search for the dispersive shift 
-#note that dispersive shift and lamb shift depends on detuning(i.e.: drive_frequency - bare_resonator_frequency)
-#lamb shifted frequncy would then be shifted dispersively depending on ground_state or excited state of qubit
-#fitting of |S21| is discussed here: https://github.com/qiboteam/qibocal/pull/917
+# demonstrates effect of state dependent dispersive shift on amplitude of reflected microwave from resonator;
+# we first prepare a centre frequency for frequency sweeping, which may be modified during analysis, to search for the dispersive shift
+# note that dispersive shift and lamb shift depends on detuning(i.e.: drive_frequency - bare_resonator_frequency)
+# lamb shifted frequncy would then be shifted dispersively depending on ground_state or excited state of qubit
+# fitting of |S21| is discussed here: https://github.com/qiboteam/qibocal/pull/917
 span = 1e6
 center_frequency = bare_resonator_frequency
 freq_sweep = np.linspace(center_frequency - span / 2, center_frequency + span / 2, 1000)
@@ -54,12 +54,11 @@ plt.show()
 freq_sweep *= 1e9
 
 
-
-#demonstrates effect of state dependent dispersive shift on phase of reflected microwave from resonator; (for codomain of [-pi/2,pi/2])
-#note that we can always shift the phase/angle by pi, as a result of arctan(), as there are two angles resulting in the same tan() value
-#this means that we can shift the positive angles downwards by subtracting them with pi, resulting in codomain of [0,-2pi]
-#for a clearer picture (using codomain of [0,-2pi] @see https://arxiv.org/pdf/1904.06560), we can see that 
-#the phase response of resonator shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
+# demonstrates effect of state dependent dispersive shift on phase of reflected microwave from resonator; (for codomain of [-pi/2,pi/2])
+# note that we can always shift the phase/angle by pi, as a result of arctan(), as there are two angles resulting in the same tan() value
+# this means that we can shift the positive angles downwards by subtracting them with pi, resulting in codomain of [0,-2pi]
+# for a clearer picture (using codomain of [0,-2pi] @see https://arxiv.org/pdf/1904.06560), we can see that
+# the phase response of resonator shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
 y_gnd1 = np.angle(readout.ground_s21(freq_sweep))
 y_exc1 = np.angle(readout.excited_s21(freq_sweep))
 freq_sweep /= 1e9
@@ -74,12 +73,11 @@ plt.tight_layout()
 plt.show()
 
 
-
-#demonstrates the separation of V_I/V_Q data of reflected microwave on V_I/V_Q plane
-#we prepare a lambshifted readout pulse frequency according to the first and second demonstration, 
-#so that we can inspect the phase response of resonator (being plotted on V_I/V_Q plane),
-#which shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
-#in other words, the data probed from resonator for particular qubit states should be well separated as demonstrated previously
+# demonstrates the separation of V_I/V_Q data of reflected microwave on V_I/V_Q plane
+# we prepare a lambshifted readout pulse frequency according to the first and second demonstration,
+# so that we can inspect the phase response of resonator (being plotted on V_I/V_Q plane),
+# which shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
+# in other words, the data probed from resonator for particular qubit states should be well separated as demonstrated previously
 ro_frequency = 5.0450e9 + readout.lambshift
 ro_pulse = ReadoutPulse(
     start=0,
@@ -95,7 +93,7 @@ rexc = [readout.simulate_excited_state_iq(ro_pulse) for k in range(nshots)]
 plt.scatter(np.real(rgnd), np.imag(rgnd), label=r"$|0\rangle$")
 plt.scatter(np.real(rexc), np.imag(rexc), label=r"$|1\rangle$")
 # when we set NOISE_AMP to zero, using the follow axes limits allow us to see the maximally separated data
-# plt.xlim([0,1])       
+# plt.xlim([0,1])
 # plt.ylim([-1,1])
 plt.xlabel(r"$V_I$")
 plt.ylabel(r"$V_Q$")
