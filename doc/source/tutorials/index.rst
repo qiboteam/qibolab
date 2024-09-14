@@ -12,5 +12,4 @@ In this section we present code examples from basic to advanced features impleme
     pulses
     circuits
     calibration
-    compiler
     instrument
