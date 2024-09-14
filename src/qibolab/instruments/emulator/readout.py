@@ -20,8 +20,9 @@ def lamb_shift(g, delta):
     return g * g / delta
 
 def dispersive_shift(g, delta, alpha):
-    """Calculates the dispersive shift of the readout resonator for depending on state of the qubit
-    @see https://arxiv.org/pdf/1904.06560, equation 146, we omit the negative sign as we included it in our definition of delta
+    """Calculates the dispersive shift of the readout resonator for depending on the state of the qubit
+    @see https://arxiv.org/pdf/1904.06560, equation 146, negative sign is omitted as it is included in the definition of delta
+    a factor of two is added for better approximation of raw data, comparing with equation 35 from https://arxiv.org/pdf/2106.06173 
 
     Args:
         g (float): Coupling strength between readout resonator and qubit in Hz.
@@ -31,7 +32,7 @@ def dispersive_shift(g, delta, alpha):
     Returns:
         chi (float): Dispersive shift in Hz.
     """
-    return g *g /delta *(1/(1+(delta/alpha)))
+    return 2 * g *g /delta *(1/(1+(delta/alpha)))
 
 
 def s21_function(resonator_frequency, total_Q, coupling_Q):
@@ -65,12 +66,11 @@ class ReadoutSimulator:
             sampling_rate (float): Sampling rate of the ADC/digitizer.
         """
         #maintaining the definition of |0> = |e> = (1 0) with the JC Hamiltonian model
+        #ground_state_frequency = dressed resonator frequency when qubit is in ground state (vice versa for excited_state_frequency)
         delta = qubit.drive_frequency - qubit.bare_resonator_frequency
-        dressed_frequency = qubit.bare_resonator_frequency - lamb_shift(g,delta)
-        ground_state_frequency = dressed_frequency - dispersive_shift(g, delta, qubit.anharmonicity)
-        excited_state_frequency = dressed_frequency + dispersive_shift(g, delta, qubit.anharmonicity)
-        # print(f"ground_state_frequency= {ground_state_frequency}; excited_state_frequency= {excited_state_frequency}")
-
+        ground_state_frequency = qubit.bare_resonator_frequency - lamb_shift(g,delta) - dispersive_shift(g, delta, qubit.anharmonicity)    
+        excited_state_frequency = qubit.bare_resonator_frequency - lamb_shift(g,delta) + dispersive_shift(g, delta, qubit.anharmonicity)
+        
         self.lambshift = -lamb_shift(g,delta)
         self.noise_model = noise_model
         self.sampling_rate = sampling_rate
@@ -119,12 +119,11 @@ class ReadoutSimulator:
         t = np.arange(start, start + len(env_I)) / self.sampling_rate       #t_n  
      
         #Low-pass filtered I-component (with intermediate frequency = carrier frequency)
-        I_filtered = reflected_amplitude*np.cos(2*np.pi*t*pulse.frequency+ pulse.relative_phase + reflected_phase) + self.noise_model(t)
-
+        i_filtered = reflected_amplitude*np.cos(2*np.pi*t*pulse.frequency+ pulse.relative_phase + reflected_phase) + self.noise_model(t)
         #Low-pass filtered Q-component 
-        Q_filtered = reflected_amplitude*np.sin(2*np.pi*t*pulse.frequency+ pulse.relative_phase + reflected_phase) + self.noise_model(t)
+        q_filtered = reflected_amplitude*np.sin(2*np.pi*t*pulse.frequency+ pulse.relative_phase + reflected_phase) + self.noise_model(t)
 
-        z = I_filtered+1j*Q_filtered 
+        z = i_filtered+1j*q_filtered 
         z *= np.exp(-1j*2*np.pi*t*pulse.frequency)
         z = np.sum(z)/len(t)
 
