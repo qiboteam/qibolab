@@ -1,8 +1,9 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from qibolab.qubits import Qubit
+import numpy as np
+
 from qibolab.instruments.emulator.readout import ReadoutSimulator
 from qibolab.pulses import ReadoutPulse
+from qibolab.qubits import Qubit
 
 bare_resonator_frequency = 5.045e9
 nshots = 100
@@ -12,8 +13,20 @@ READOUT_AMPLITUDE = 1
 NOISE_AMP = np.power(10, -SNR/20)
 AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t))*4.5e1
 
-qb = Qubit(0, bare_resonator_frequency=bare_resonator_frequency, drive_frequency=3.99e9, anharmonicity=-263e6)
-readout = ReadoutSimulator(qubit=qb, g=10e6, noise_model=AWGN, internal_Q=2.5e6, coupling_Q=6e4, sampling_rate=1966.08e6)
+qb = Qubit(
+    0,
+    bare_resonator_frequency=bare_resonator_frequency,
+    drive_frequency=3.99e9,
+    anharmonicity=-263e6,
+)
+readout = ReadoutSimulator(
+    qubit=qb,
+    g=10e6,
+    noise_model=AWGN,
+    internal_Q=2.5e6,
+    coupling_Q=6e4,
+    sampling_rate=1966.08e6,
+)
 
 
 #demonstrates effect of state dependent dispersive shift on amplitude of reflected microwave from resonator; 
@@ -22,7 +35,7 @@ readout = ReadoutSimulator(qubit=qb, g=10e6, noise_model=AWGN, internal_Q=2.5e6,
 #lamb shifted frequncy would then be shifted dispersively depending on ground_state or excited state of qubit
 #fitting of |S21| is discussed here: https://github.com/qiboteam/qibocal/pull/917
 span = 1e6
-center_frequency = bare_resonator_frequency 
+center_frequency = bare_resonator_frequency
 freq_sweep = np.linspace(center_frequency - span / 2, center_frequency + span / 2, 1000)
 y_gnd = np.abs(readout.ground_s21(freq_sweep))
 y_exc = np.abs(readout.excited_s21(freq_sweep))
@@ -68,7 +81,14 @@ plt.show()
 #which shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
 #in other words, the data probed from resonator for particular qubit states should be well separated as demonstrated previously
 ro_frequency = 5.0450e9 + readout.lambshift
-ro_pulse = ReadoutPulse(start=0, duration=1000, amplitude=READOUT_AMPLITUDE, frequency=ro_frequency, shape="Rectangular()", relative_phase=0)
+ro_pulse = ReadoutPulse(
+    start=0,
+    duration=1000,
+    amplitude=READOUT_AMPLITUDE,
+    frequency=ro_frequency,
+    shape="Rectangular()",
+    relative_phase=0,
+)
 
 rgnd = [readout.simulate_ground_state_iq(ro_pulse) for k in range(nshots)]
 rexc = [readout.simulate_excited_state_iq(ro_pulse) for k in range(nshots)]
@@ -83,8 +103,3 @@ plt.legend()
 plt.tight_layout()
 plt.savefig("IQ.png", dpi=300)
 plt.show()
-
-
-
-
-

@@ -19,6 +19,7 @@ def lamb_shift(g, delta):
     """
     return g * g / delta
 
+
 def dispersive_shift(g, delta, alpha):
     """Calculates the dispersive shift of the readout resonator for depending on the state of the qubit
     @see https://arxiv.org/pdf/1904.06560, equation 146, negative sign is omitted as it is included in the definition of delta
@@ -86,8 +87,8 @@ class ReadoutSimulator:
         Args:
             pulse (qibolab.pulses.ReadoutPulse): Qibolab readout pulse.
         """
-        s21 = self.ground_s21(pulse.frequency)        
-        return self.simulate_and_demodulate(s21,pulse)
+        s21 = self.ground_s21(pulse.frequency)
+        return self.simulate_and_demodulate(s21, pulse)
 
     def simulate_excited_state_iq(self, pulse: ReadoutPulse):
         """Simulates the IQ result for a given readout pulse when the qubit is
@@ -96,12 +97,12 @@ class ReadoutSimulator:
         Args:
             pulse (qibolab.pulses.ReadoutPulse): Qibolab readout pulse.
         """
-        s21 = self.excited_s21(pulse.frequency)        
+        s21 = self.excited_s21(pulse.frequency)
         return self.simulate_and_demodulate(s21, pulse)
 
-    def simulate_and_demodulate(self, s21: complex,  pulse: ReadoutPulse):
-        """Simulates the readout pulse for a given S21-parameter and
-        homodyne demodulation/2nd stage of heterodyne demodulation.
+    def simulate_and_demodulate(self, s21: complex, pulse: ReadoutPulse):
+        """Simulates the readout pulse for a given S21-parameter and homodyne
+        demodulation/2nd stage of heterodyne demodulation.
 
         Args:
             s21 (complex): Complex S21 parameter.
@@ -112,8 +113,10 @@ class ReadoutSimulator:
         """
         reflected_amplitude = np.abs(s21)
         reflected_phase = np.angle(s21)
-        
-        env_I, env_Q = pulse.envelope_waveforms(self.sampling_rate / 1e9)   #Gigasample per second
+
+        env_I, env_Q = pulse.envelope_waveforms(
+            self.sampling_rate / 1e9
+        )  # Gigasample per second
 
         start = int(pulse.start * 1e-9 * self.sampling_rate)                #n = gigasample index 
         t = np.arange(start, start + len(env_I)) / self.sampling_rate       #t_n  
@@ -128,4 +131,3 @@ class ReadoutSimulator:
         z = np.sum(z)/len(t)
 
         return z
-    
