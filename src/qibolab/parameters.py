@@ -1,7 +1,7 @@
 """Helper methods for (de)serializing parameters.
 
-The format is explained in the :ref:`Using parameters <using_runcards>`
-example.
+The format is explained in the :ref:`Loading platform parameters from
+JSON <parameters_json>` example.
 """
 
 from collections.abc import Callable, Iterable

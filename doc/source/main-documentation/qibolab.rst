@@ -5,7 +5,8 @@ Platforms
 
 Qibolab provides support to different quantum laboratories.
 
-Each lab configuration is implemented using a :class:`qibolab.platform.Platform` object which orchestrates instruments, qubits and channels and provides the basic features for executing pulses.
+Each lab configuration is implemented using a :class:`qibolab.platform.Platform` object which orchestrates instruments,
+qubits and channels and provides the basic features for executing pulses.
 Therefore, the ``Platform`` enables the user to interface with all
 the required lab instruments at the same time with minimum effort.
 
@@ -13,11 +14,12 @@ The API reference section provides a description of all the attributes and metho
 
 In the platform, the main methods can be divided in different sections:
 
-- functions save and change qubit parameters (``dump``, ``update``)
-- functions to coordinate the instruments (``connect``, ``setup``, ``disconnect``)
+- functions to coordinate the instruments (``connect``, ``disconnect``)
 - a unique interface to execute experiments (``execute``)
+- functions save parameters (``dump``)
 
-The idea of the ``Platform`` is to serve as the only object exposed to the user,  so that we can deploy experiments, without any need of going into the low-level instrument-specific code.
+The idea of the ``Platform`` is to serve as the only object exposed to the user, so that we can deploy experiments,
+without any need of going into the low-level instrument-specific code.
 
 For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/tutorials/lab`:
 
@@ -50,7 +52,7 @@ We can easily access the names of channels and other components, and based on th
         print(f"Drive channel {drive_channel_id} does not use an LO.")
     else:
         print(f"Name of LO for channel {drive_channel_id} is {drive_lo}")
-        print(f"LO frequency: {platform.config(str(drive_lo)).frequency}")
+        print(f"LO frequency: {platform.config(drive_lo).frequency}")
 
 .. testoutput:: python
     :hide:
@@ -59,7 +61,8 @@ We can easily access the names of channels and other components, and based on th
     Drive frequency: 4000000000.0
     Drive channel 0/drive does not use an LO.
 
-Now we can create a simple sequence (again, without explicitly giving any qubit specific parameter, as these are loaded automatically from the platform, as defined in the runcard):
+Now we can create a simple sequence without explicitly giving any qubit specific parameter,
+as these are loaded automatically from the platform, as defined in the corresponding ``parameters.json``:
 
 .. testcode::  python
 
@@ -70,10 +73,10 @@ Now we can create a simple sequence (again, without explicitly giving any qubit 
    ps = PulseSequence()
    qubit = platform.qubits[0]
    natives = platform.natives.single_qubit[0]
-   ps.concatenate(natives.RX.create_sequence())
-   ps.concatenate(natives.RX.create_sequence(phi=np.pi / 2))
+   ps.concatenate(natives.RX())
+   ps.concatenate(natives.RX(phi=np.pi / 2))
    ps.append((qubit.probe, Delay(duration=200)))
-   ps.concatenate(natives.MZ.create_sequence())
+   ps.concatenate(natives.MZ())
 
 Now we can execute the sequence on hardware:
 
@@ -119,13 +122,40 @@ This instrument is also part of the dummy platform which is defined in :py:mod:`
 This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
 It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
 
-.. testcode::  python
 
-    from qibolab import create_platform
+.. _main_doc_channels:
 
-    platform = create_platform("dummy")
+Channels
+--------
 
-will create a dummy platform that also has coupler qubits.
+Channels play a pivotal role in connecting the quantum system to the control infrastructure.
+Various types of channels are typically present in a quantum laboratory setup, including:
+
+- the probe line (from device to qubit)
+- the acquire line (from qubit to device)
+- the drive line
+- the flux line
+- the TWPA pump line
+
+Qibolab provides a general :class:`qibolab.components.channels.Channel` object, as well as specializations depending on the channel role.
+A channel is typically associated with a specific port on a control instrument, with port-specific properties like "attenuation" and "gain" that can be managed using provided getter and setter methods.
+Channels are uniquely identified within the platform through their id.
+
+The idea of channels is to streamline the pulse execution process.
+The :class:`qibolab.sequence.PulseSequence` is a list of ``(channel_id, pulse)`` tuples, so that the platform identifies the channel that every pulse plays
+and directs it to the appropriate port on the control instrument.
+
+In setups involving frequency-specific pulses, a local oscillator (LO) might be required for up-conversion.
+Although logically distinct from the qubit, the LO's frequency must align with the pulse requirements.
+Qibolab accommodates this by enabling the assignment of a :class:`qibolab.instruments.oscillator.LocalOscillator` object
+to the relevant channel :class:`qibolab.components.channels.IqChannel`.
+The controller's driver ensures the correct pulse frequency is set based on the LO's configuration.
+
+Each channel has a :class:`qibolab.components.configs.Config` associated to it, which is a container of parameters related to the channel.
+Configs also have different specializations that correspond to different channel types.
+The platform holds default config parameters for all its channels, however the user is able to alter them by passing a config updates dictionary
+when calling :meth:`qibolab.platform.Platform.execute`.
+The final configs are then sent to the controller instrument, which matches them to channels via their ids and ensures they are uploaded to the proper electronics.
 
 
 .. _main_doc_qubits:
@@ -133,69 +163,20 @@ will create a dummy platform that also has coupler qubits.
 Qubits
 ------
 
-The :class:`qibolab.qubits.Qubit` class serves as a comprehensive representation of a physical qubit within the Qibolab framework.
-It encapsulates three fundamental elements crucial to qubit control and operation:
+The :class:`qibolab.qubits.Qubit` class serves as a container for the channels that are used to control the corresponding physical qubit.
+These channels encompass distinct types, each serving a specific purpose:
 
-- :ref:`Channels <main_doc_channels>`: Physical Connections
-- :class:`Parameters <qibolab.qubits.Qubit>`: Configurable Properties
-- :ref:`Native Gates <main_doc_native>`: Quantum Operations
-
-Channels play a pivotal role in connecting the quantum system to the control infrastructure.
-They are optional and encompass distinct types, each serving a specific purpose:
-
-- measure (from controller device to the qubits)
-- acquisition (from qubits to controller)
+- probe (measurement probe from controller device to the qubits)
+- acquisition (measurement acquisition from qubits to controller)
 - drive
 - flux
+- drive_qudits (additional drive channels at different frequencies used to probe higher-level transition)
 
-The Qubit class allows you to set and manage several key parameters that influence qubit behavior.
-These parameters are typically extracted from the runcard during platform initialization.
+Some channel types are optional because not all hardware platforms require them.
+For example, flux channels are typically relevant only for flux tunable qubits.
 
-.. _main_doc_couplers:
+The :class:`qibolab.qubits.Qubit` class can also be used to represent coupler qubits, when these are available.
 
-Couplers
---------
-
-Instead of using a dedicated class, a :class:`qibolab.qubits.Qubit` object can also
-serve as a comprehensive representation of a physical coupler qubit within the Qibolab
-framework.
-Used like this, it would control couplers during 2q gate operation:
-
-- :ref:`Channels <main_doc_channels>`: Physical Connection
-- :class:`Parameters <qibolab.qubit.Qubit>`: Configurable Properties
-- :ref:`Qubits <main_doc_qubits>`: Qubits the coupler acts on
-
-We have a single required Channel for flux coupler control:
-
-- flux
-
-These instances allow us to handle 2q interactions in coupler based architectures
-in a simple way. They are usually associated with :class:`qibolab.qubits.QubitPair`
-and usually extracted from the runcard during platform initialization.
-
-.. _main_doc_channels:
-
-Channels
---------
-
-Various types of channels are typically present in a quantum laboratory setup, including:
-
-- the drive line
-- the readout line (from device to qubit)
-- the feedback line (from qubit to device)
-- the flux line
-- the TWPA pump line
-
-A channel is typically associated with a specific port on a control instrument, with port-specific properties like "attenuation" and "gain" that can be managed using provided getter and setter methods.
-
-The idea of channels is to streamline the pulse execution process.
-When initiating a pulse, the platform identifies the corresponding channel for the pulse type and directs it to the appropriate port on the control instrument.
-For instance, to deliver a drive pulse to a qubit, the platform references the qubit's associated channel and delivers the pulse to the designated port.
-
-In setups involving frequency-specific pulses, a local oscillator (LO) might be required for up-conversion.
-Although logically distinct from the qubit, the LO's frequency must align with the pulse requirements.
-Qibolab accommodates this by enabling the assignment of a :class:`qibolab.instruments.oscillator.LocalOscillator` object to the relevant channel.
-The controller's driver ensures the correct pulse frequency is set based on the LO's configuration.
 
 .. _main_doc_pulses:
 
@@ -203,54 +184,42 @@ Pulses
 ------
 
 In Qibolab, an extensive API is available for working with pulses and pulse sequences, a fundamental aspect of quantum experiments.
-At the heart of this API is the :class:`qibolab.pulses.Pulse` object, which empowers users to define and customize pulses with specific parameters.
+At the heart of this API is the :class:`qibolab.pulses.pulse.Pulse` object, which empowers users to define and customize pulses with specific parameters.
 
-Each pulse is associated with a channel and a qubit.
-Additionally, pulses are defined by a shape, represented by a subclass of :class:`qibolab.pulses.PulseShape`.
-Qibolab offers a range of pre-defined pulse shapes:
+Additionally, pulses are defined by an envelope shape, represented by a subclass of :class:`qibolab.pulses.envelope.BaseEnvelope`.
+Qibolab offers a range of pre-defined pulse shapes which can be found in :py:mod:`qibolab.pulses.envelope`.
 
-- Rectangular (:class:`qibolab.pulses.Rectangular`)
-- Exponential (:class:`qibolab.pulses.Exponential`)
-- Gaussian (:class:`qibolab.pulses.Gaussian`)
-- Drag (:class:`qibolab.pulses.Drag`)
-- IIR (:class:`qibolab.pulses.IIR`)
-- SNZ (:class:`qibolab.pulses.SNZ`)
-- eCap (:class:`qibolab.pulses.eCap`)
-- Custom (:class:`qibolab.pulses.Custom`)
+- Rectangular (:class:`qibolab.pulses.envelope.Rectangular`)
+- Exponential (:class:`qibolab.pulses.envelope.Exponential`)
+- Gaussian (:class:`qibolab.pulses.envelope.Gaussian`)
+- Drag (:class:`qibolab.pulses.envelope.Drag`)
+- IIR (:class:`qibolab.pulses.envelope.Iir`)
+- SNZ (:class:`qibolab.pulses.envelope.Snz`)
+- eCap (:class:`qibolab.pulses.envelope.ECap`)
+- Custom (:class:`qibolab.pulses.envelope.Custom`)
 
-To illustrate, here are some examples of single pulses using the Qibolab API:
-
-.. testcode:: python
-
-    from qibolab.pulses import Pulse, Rectangular
-
-    pulse = Pulse(
-        duration=40,  # Pulse duration in ns
-        amplitude=0.5,  # Amplitude relative to instrument range
-        relative_phase=0,  # Phase in radians
-        envelope=Rectangular(),
-    )
-
-In this way, we defined a rectangular drive pulse using the generic Pulse object.
-Alternatively, you can achieve the same result using the dedicated :class:`qibolab.pulses.Pulse` object:
+To illustrate, here is an examples of how to instantiate a pulse using the Qibolab API:
 
 .. testcode:: python
 
     from qibolab.pulses import Pulse, Rectangular
 
     pulse = Pulse(
-        duration=40,  # timing, in all qibolab, is expressed in ns
-        amplitude=0.5,  # this amplitude is relative to the range of the instrument
-        relative_phase=0,  # phases are in radians
+        duration=40.0,  # Pulse duration in ns
+        amplitude=0.5,  # Amplitude normalized to [-1, 1]
+        relative_phase=0.0,  # Phase in radians
         envelope=Rectangular(),
     )
+
+Here, we defined a rectangular drive pulse using the generic Pulse object.
 
 Both the Pulses objects and the PulseShape object have useful plot functions and several different various helper methods.
 
-To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
+To organize pulses into sequences, Qibolab provides the :class:`qibolab.sequence.PulseSequence` object. Here's an example of how you can create and manipulate a pulse sequence:
 
 .. testcode:: python
 
+    from qibolab.pulses import Pulse, Rectangular
     from qibolab.sequence import PulseSequence
 
 
@@ -278,7 +247,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.pulses.P
         relative_phase=0,  # phases are in radians
         envelope=Rectangular(),
     )
-    sequence = PulseSequence.load(
+    sequence = PulseSequence(
         [
             ("qubit/drive", pulse1),
             ("qubit/drive", pulse2),
@@ -300,7 +269,7 @@ When conducting experiments on quantum hardware, pulse sequences are vital. Assu
 
 .. testcode:: python
 
-    result = platform.execute([sequence], options=options)
+    result = platform.execute([sequence])
 
 Lastly, when conducting an experiment, it is not always required to define a pulse from scratch.
 Usual pulses, such as pi-pulses or measurements, are already defined in the platform runcard and can be easily initialized with platform methods.
@@ -313,21 +282,9 @@ Typical experiments may include both pre-defined pulses and new ones:
     from qibolab.identifier import ChannelId
 
     natives = platform.natives.single_qubit[0]
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.append(
-        (
-            "some/drive",
-            Pulse(duration=10, amplitude=0.5, relative_phase=0, envelope=Rectangular()),
-        )
-    )
-    sequence.concatenate(natives.MZ.create_sequence())
+    sequence = natives.RX() | natives.MZ()
 
-    results = platform.execute([sequence], options=options)
-
-.. note::
-
-   options is an :class:`qibolab.execution_parameters.ExecutionParameters` object, detailed in a separate section.
+    results = platform.execute([sequence])
 
 
 Sweepers
@@ -338,7 +295,7 @@ Sweeper objects, represented by the :class:`qibolab.sweeper.Sweeper` class, stan
 Consider a scenario where a resonator spectroscopy experiment is performed. This process involves a sequence of steps:
 
 1. Define a pulse sequence.
-2. Define a readout pulse with frequency A.
+2. Define a readout pulse with frequency :math:`A`.
 3. Execute the sequence.
 4. Define a new readout pulse with frequency :math:`A + \epsilon`.
 5. Execute the sequence again.
@@ -376,7 +333,7 @@ The ``values`` attribute comprises an array of numerical values that define the 
 
 Let's see some examples.
 Consider now a system with three qubits (qubit 0, qubit 1, qubit 2) with resonator frequency at 4 GHz, 5 GHz and 6 GHz.
-A tipical resonator spectroscopy experiment could be defined with:
+A typical resonator spectroscopy experiment could be defined with:
 
 .. testcode:: python
 
@@ -386,16 +343,11 @@ A tipical resonator spectroscopy experiment could be defined with:
 
     natives = platform.natives.single_qubit
 
-    sequence = PulseSequence()
-    sequence.concatenate(
-        natives[0].MZ.create_sequence()
-    )  # readout pulse for qubit 0 at 4 GHz
-    sequence.concatenate(
-        natives[1].MZ.create_sequence()
-    )  # readout pulse for qubit 1 at 5 GHz
-    sequence.concatenate(
-        natives[2].MZ.create_sequence()
-    )  # readout pulse for qubit 2 at 6 GHz
+    sequence = (
+        natives[0].MZ()  # readout pulse for qubit 0 at 4 GHz
+        | natives[1].MZ()  # readout pulse for qubit 1 at 5 GHz
+        | natives[2].MZ()  # readout pulse for qubit 2 at 6 GHz
+    )
 
     sweepers = [
         Sweeper(
@@ -418,31 +370,27 @@ In this way, we first define three parallel sweepers with an interval of 400 MHz
     - for qubit 1: [4.8 GHz, 5.2 GHz]
     - for qubit 2: [5.8 GHz, 6.2 GHz]
 
-It is possible to define and executes multiple sweepers at the same time.
+It is possible to define and executes multiple sweepers at the same time, in a nested loop style.
 For example:
 
 .. testcode:: python
 
-    from qibolab.pulses import Delay
-    from qibolab.sequence import PulseSequence
-
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe, Delay(duration=sequence.duration)))
-    sequence.concatenate(natives.MZ.create_sequence())
+    rx_sequence = natives.RX()
+    sequence = rx_sequence | natives.MZ()
 
-    f0 = platform.config(str(qubit.drive)).frequency
+    f0 = platform.config(qubit.drive).frequency
     sweeper_freq = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 10_000),
         channels=[qubit.drive],
     )
+    rx_pulse = rx_sequence[0][1]
     sweeper_amp = Sweeper(
         parameter=Parameter.amplitude,
         range=(0, 0.43, 0.3),
-        pulses=[next(iter(sequence.channel(qubit.drive)))],
+        pulses=[rx_pulse],
     )
 
     results = platform.execute([sequence], options, [[sweeper_freq], [sweeper_amp]])
@@ -451,6 +399,9 @@ Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an
 
 - amplitudes: [0, 0.03, 0.06, 0.09, 0.12, ..., 0.39, 0.42]
 - frequencies: [4.4999, 4.49991, 4.49992, ...., 4.50008, 4.50009] (GHz)
+
+Sweepers given in the same list will be applied in parallel, in a Python ``zip`` style,
+while different lists define nested loops, with the first list corresponding to the outer loop.
 
 .. warning::
 
@@ -499,36 +450,19 @@ Supported averaging modes, available through the :class:`qibolab.execution_param
 Results
 -------
 
-Within the Qibolab API, a variety of result types are available, contingent upon the chosen acquisition options. These results can be broadly classified into three main categories, based on the AcquisitionType:
+``platform.execute`` returns a dictionary, mapping the acquisition pulse id to the results of the corresponding measurements.
+The results of each measurement are a numpy array with dimension that depends on the number of shots, acquisition type,
+averaging mode and the number of swept points, if sweepers were used.
 
-- Integrated Results (:class:`qibolab.result.IntegratedResults`)
-- Raw Waveform Results (:class:`qibolab.result.RawWaveformResults`)
-- Sampled Results (:class:`qibolab.result.SampleResults`)
-
-Furthermore, depending on whether results are averaged or not, they can be presented in an averaged version (as seen in :class:`qibolab.results.AveragedIntegratedResults`).
-
-The result categories align as follows:
-
-- AveragingMode: cyclic or sequential ->
-    - AcquisitionType: integration -> :class:`qibolab.results.AveragedIntegratedResults`
-    - AcquisitionType: raw -> :class:`qibolab.results.AveragedRawWaveformResults`
-    - AcquisitionType: discrimination -> :class:`qibolab.results.AveragedSampleResults`
-- AveragingMode: singleshot ->
-    - AcquisitionType: integration -> :class:`qibolab.results.IntegratedResults`
-    - AcquisitionType: raw -> :class:`qibolab.results.RawWaveformResults`
-    - AcquisitionType: discrimination -> :class:`qibolab.results.SampleResults`
-
-Let's now delve into a typical use case for result objects within the qibolab framework:
+For example in
 
 .. testcode:: python
 
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
 
-    sequence = PulseSequence()
-    sequence.concatenate(natives.RX.create_sequence())
-    sequence.append((qubit.probe, Delay(duration=sequence.duration)))
-    sequence.concatenate(natives.MZ.create_sequence())
+    ro_sequence = natives.MZ()
+    sequence = natives.RX() | ro_sequence
 
     options = ExecutionParameters(
         nshots=1000,
@@ -538,20 +472,20 @@ Let's now delve into a typical use case for result objects within the qibolab fr
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    res = platform.execute([sequence], options=options)
+    ro_pulse = ro_sequence[0][1]
+    result = platform.execute([sequence], options=options)
 
-The ``res`` object will manifest as a dictionary, mapping the measurement pulse serial to its corresponding results.
 
-The values related to the results will be find in the ``voltages`` attribute for IntegratedResults and RawWaveformResults, while for SampleResults  the values are in ``samples``.
+``result`` will be a dictionary with a single key ``ro_pulse.id`` and an array of
+two elements, the averaged I and Q components of the integrated signal.
+If instead, ``(AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT)`` was used, the array would have shape ``(options.nshots, 2)``,
+while for ``(AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT)`` the shape would be ``(options.nshots,)`` with values 0 or 1.
 
-While for execution of sequences the results represent single measurements, but what happens for sweepers?
-the results will be upgraded: from values to arrays and from arrays to matrices.
-
-The shape of the values of an integreted acquisition with 2 sweepers will be:
+The shape of the values of an integrated acquisition with two sweepers will be:
 
 .. testcode:: python
 
-    f0 = platform.config(str(qubit.drive)).frequency
+    f0 = platform.config(qubit.drive).frequency
     sweeper1 = Sweeper(
         parameter=Parameter.frequency,
         range=(f0 - 100_000, f0 + 100_000, 1),
@@ -562,7 +496,7 @@ The shape of the values of an integreted acquisition with 2 sweepers will be:
         range=(f0 - 200_000, f0 + 200_000, 1),
         channels=[qubit.probe],
     )
-    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values))
+    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values), 2)
 
 .. _main_doc_compiler:
 
@@ -580,13 +514,13 @@ The transpiler is responsible for steps 1 and 2, while the compiler for step 3 o
 To be executed in Qibolab, a circuit should be already transpiled. It possible to use the transpilers provided by Qibo to do it. For more information, please refer the `examples in the Qibo documentation <https://qibo.science/qibo/stable/code-examples/advancedexamples.html#how-to-modify-the-transpiler>`_.
 On the other hand, the compilation process is taken care of automatically by the :class:`qibolab.backends.QibolabBackend`.
 
-Once a circuit has been compiled, it is converted to a :class:`qibolab.pulses.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
+Once a circuit has been compiled, it is converted to a :class:`qibolab.sequence.PulseSequence` by the :class:`qibolab.compilers.compiler.Compiler`.
 This is a container of rules which define how each native gate can be translated to pulses.
 A rule is a Python function that accepts a Qibo gate and a platform object and returns the :class:`qibolab.pulses.PulseSequence` implementing this gate and a dictionary with potential virtual-Z phases that need to be applied in later pulses.
 Examples of rules can be found on :py:mod:`qibolab.compilers.default`, which defines the default rules used by Qibolab.
 
 .. note::
-   Rules return a :class:`qibolab.pulses.PulseSequence` for each gate, instead of a single pulse, because some gates such as the U3 or two-qubit gates, require more than one pulses to be implemented.
+   Rules return a :class:`qibolab.sequence.PulseSequence` for each gate, instead of a single pulse, because some gates such as the U3 or two-qubit gates, require more than one pulses to be implemented.
 
 .. _main_doc_native:
 
@@ -594,16 +528,17 @@ Native
 ------
 
 Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated.
-If this set is universal any circuit can be transpiled and compiled to a pulse sequence which is then deployed in the given platform.
+If this set is universal any circuit can be transpiled and compiled to a pulse sequence which can then be deployed in the given platform.
 
 :py:mod:`qibolab.native` provides data containers for holding the pulse parameters required for implementing every native gate.
-Every :class:`qibolab.qubits.Qubit` object contains a :class:`qibolab.native.SingleQubitNatives` object which holds the parameters of its native single-qubit gates,
-while each :class:`qibolab.qubits.QubitPair` objects contains a :class:`qibolab.native.TwoQubitNatives` object which holds the parameters of the native two-qubit gates acting on the pair.
+The :class:`qibolab.platform.Platform` provides a natives property that returns the :class:`qibolab.native.SingleQubitNatives`
+which holds the single qubit native gates for every qubit and :class:`qibolab.native.TwoQubitNatives` for the two-qubit native gates of every qubit pair.
+Each native gate is represented by a :class:`qibolab.sequence.PulseSequence` which contains all the calibrated parameters.
 
-Each native gate is represented by a :class:`qibolab.pulses.Pulse` or :class:`qibolab.pulses.PulseSequence` which contain all the calibrated parameters.
-Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate, implemented via a pulse sent in the readout line followed by an acquisition.
-For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required, which is implemented by halving the amplitude of the calibrated pi-pulse.
-U3, the most general single-qubit gate can be implemented using two RX90 pi-pulses and some virtual Z-phases which are included in the phase of later pulses.
+Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate,
+implemented via a pulse sent in the readout line followed by an acquisition.
+For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required,
+which is implemented by halving the amplitude of the calibrated pi-pulse.
 
 Typical two-qubit native gates are the CZ and iSWAP, with their availability being platform dependent.
 These are implemented with a sequence of flux pulses, potentially to multiple qubits, and virtual Z-phases.
@@ -614,8 +549,8 @@ Depending on the platform and the quantum chip architecture, two-qubit gates may
 Instruments
 -----------
 
-One the key features of qibolab is its support for multiple different instruments.
-A list of all the supported instruments follows:
+One the key features of Qibolab is its support for multiple different electronics.
+A list of all the supported electronics follows:
 
 Controllers (subclasses of :class:`qibolab.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.dummy.DummyInstrument`
@@ -626,18 +561,13 @@ Other Instruments (subclasses of :class:`qibolab.instruments.abstract.Instrument
     - Erasynth++: :class:`qibolab.instruments.erasynth.ERA`
     - RohseSchwarz SGS100A: :class:`qibolab.instruments.rohde_schwarz.SGS100A`
 
-Instruments all implement a set of methods:
-
-- connect
-- setup
-- disconnect
-
-While the controllers, the main instruments in a typical setup, add another, i.e.
-execute.
+All instruments inherit the :class:`qibolab.instruments.abstract.Instrument` and implement methods for connecting and disconnecting.
+:class:`qibolab.instruments.abstract.Controller` is a special case of instruments that provides the :class:`qibolab.instruments.abstract.execute`
+method that deploys sequences on hardware.
 
 Some more detail on the interal functionalities of instruments is given in :doc:`/tutorials/instrument`
 
-The most important instruments are the controller, the following is a table of the current supported (or not supported) features, dev stands for `under development`:
+The following is a table of the currently supported or not supported features (dev stands for `under development`):
 
 .. csv-table:: Supported features
     :header: "Feature", "RFSoC", "Qblox", "QM", "ZH"

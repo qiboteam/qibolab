@@ -1,7 +1,10 @@
 import numpy as np
+from pydantic import Field
 from qibo.config import log
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab.components.channels import Channel
+from qibolab.identifier import ChannelId
 from qibolab.pulses.pulse import Acquisition
 from qibolab.sequence import PulseSequence
 from qibolab.sweeper import ParallelSweepers
@@ -63,6 +66,7 @@ class DummyInstrument(Controller):
 
     address: str
     bounds: str = "dummy/bounds"
+    channels: dict[ChannelId, Channel] = Field(default_factory=dict)
 
     @property
     def sampling_rate(self) -> int:
@@ -73,9 +77,6 @@ class DummyInstrument(Controller):
 
     def disconnect(self):
         log.info(f"Disconnecting dummy instrument.")
-
-    def setup(self, *args, **kwargs):
-        log.info(f"Setting up dummy instrument.")
 
     def values(self, options: ExecutionParameters, shape: tuple[int, ...]):
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
