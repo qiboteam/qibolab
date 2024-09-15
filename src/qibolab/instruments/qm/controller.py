@@ -415,6 +415,9 @@ class QmController(Controller):
             find_lo_frequencies(args, channels, configs, sweeper.values)
             for id in sweeper.channels:
                 args.parameters[id].element = probe_map.get(id, id)
+        for sweeper in find_sweepers(sweepers, Parameter.offset):
+            for id in sweeper.channels:
+                args.parameters[id].element = id
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
