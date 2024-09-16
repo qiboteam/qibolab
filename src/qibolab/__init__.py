@@ -1,5 +1,6 @@
 from . import (
     backends,
+    components,
     execution_parameters,
     platform,
     pulses,
@@ -17,6 +18,7 @@ from .version import *
 
 __all__ = []
 __all__ += backends.__all__
+__all__ += components.__all__
 __all__ += execution_parameters.__all__
 __all__ += platform.__all__
 __all__ += pulses.__all__
