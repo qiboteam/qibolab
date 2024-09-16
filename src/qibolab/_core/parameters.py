@@ -17,6 +17,8 @@ from .native import SingleQubitNatives, TwoQubitNatives
 from .serialize import Model, replace
 from .unrolling import Bounds
 
+__all__ = ["ConfigKinds"]
+
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
     """Apply updates to configs in place.

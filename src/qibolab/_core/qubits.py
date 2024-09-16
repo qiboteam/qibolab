@@ -8,6 +8,8 @@ from pydantic import ConfigDict, Field
 from .identifier import ChannelId, QubitId, QubitPairId, TransitionId  # noqa
 from .serialize import Model
 
+__all__ = ["Qubit"]
+
 DefaultChannelType = Annotated[Optional[ChannelId], True]
 """If ``True`` the channel is included in the default qubit constructor."""
 
