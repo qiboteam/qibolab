@@ -1,6 +1,8 @@
 import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
 
-from qibolab.instruments.oscillator import LocalOscillator
+from qibolab._core.instruments.oscillator import LocalOscillator
+
+__all__ = ["SGS100A"]
 
 
 class SGS100A(LocalOscillator):
