@@ -36,6 +36,7 @@ setuptools = { version = ">67.0.0", optional = true }
 laboneq = { version = "==2.25.0", optional = true }
 qibosoq = { version = ">=0.1.2,<0.2", python = "<3.12", optional = true }
 qutip = { version = "^5.0.2", optional = true }
+pyyaml = { version = "^6.0.2", optional = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -88,6 +89,7 @@ rfsoc = ["qibosoq"]
 los = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 twpa = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 emulator = ["qutip"]
+bluefors = ["pyyaml"]
 
 
 [tool.poe.tasks]
