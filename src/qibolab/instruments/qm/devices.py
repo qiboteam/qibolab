@@ -1,12 +1,14 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
-from typing import Dict
+from typing import Dict, Literal, Union
 
 from qibolab.instruments.abstract import Instrument
 
 from .ports import (
     OPXIQ,
+    FEMInput,
+    FEMOutput,
     OctaveInput,
     OctaveOutput,
     OPXInput,
@@ -95,12 +97,59 @@ class OPXplus(QMDevice):
 
 
 @dataclass
+class FEM:
+    """Device handling OPX1000 FEMs."""
+
+    name: int
+    type: Literal["LF", "MF"] = "LF"
+
+
+@dataclass
+class OPX1000(QMDevice):
+    """Device handling OPX1000 controllers."""
+
+    fems: Dict[int, FEM] = field(default_factory=dict)
+
+    def __post_init__(self):
+        def kwargs(fem):
+            return {"fem_number": fem, "fem_type": self.fems[fem].type}
+
+        self.outputs = PortsDefaultdict(
+            lambda fem, n: FEMOutput(self.name, n, **kwargs(fem))
+        )
+        self.inputs = PortsDefaultdict(
+            lambda fem, n: FEMInput(self.name, n, **kwargs(fem))
+        )
+
+    def ports(self, fem_number: int, number: int, output: bool = True):
+        ports_ = self.outputs if output else self.inputs
+        return ports_[(fem_number, number)]
+
+    def connectivity(self, fem_number: int) -> tuple["OPX1000", int]:
+        return (self, fem_number)
+
+    def setup(self, **kwargs):
+        for name, settings in kwargs.items():
+            fem, port = name.split("/")
+            fem = int(fem)
+            number = int(port[1:])
+            if port[0] == "o":
+                self.outputs[(fem, number)].setup(**settings)
+            elif port[0] == "i":
+                self.inputs[(fem, number)].setup(**settings)
+            else:
+                raise ValueError(
+                    f"Invalid port name {name} in instrument settings for {self.name}."
+                )
+
+
+@dataclass
 class Octave(QMDevice):
     """Device handling Octaves."""
 
     port: int
     """Network port of the Octave in the cluster configuration."""
-    connectivity: OPXplus
+    connectivity: Union[OPXplus, tuple[OPX1000, int]]
     """OPXplus that acts as the waveform generator for the Octave."""
 
     def __post_init__(self):
@@ -115,7 +164,12 @@ class Octave(QMDevice):
         """
         port = super().ports(number, output)
         if port.opx_port is None:
-            iport = self.connectivity.ports(2 * number - 1, output)
-            qport = self.connectivity.ports(2 * number, output)
+            if isinstance(self.connectivity, OPXplus):
+                iport = self.connectivity.ports(2 * number - 1, output)
+                qport = self.connectivity.ports(2 * number, output)
+            else:
+                opx, fem_number = self.connectivity
+                iport = opx.ports(fem_number, 2 * number - 1, output)
+                qport = opx.ports(fem_number, 2 * number, output)
             port.opx_port = OPXIQ(iport, qport)
         return port
