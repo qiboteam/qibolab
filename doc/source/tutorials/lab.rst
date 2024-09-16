@@ -21,19 +21,22 @@ using different Qibolab primitives.
 
 .. testcode::  python
 
-    from qibolab import Platform
-    from qibolab.sequence import PulseSequence
-    from qibolab.components import (
-        IqChannel,
+    from qibolab import (
+        Acquisition,
         AcquisitionChannel,
-        IqConfig,
-        AcquisitionConfig,
+        Gaussian,
+        IqChannel,
+        Platform,
+        PulseSequence,
+        Pulse,
+        Qubit,
+        Readout,
+        Rectangular,
     )
-    from qibolab.qubits import Qubit
-    from qibolab.pulses import Gaussian, Pulse, Rectangular, Readout, Acquisition
-    from qibolab.native import RxyFactory, FixedSequenceFactory, SingleQubitNatives
-    from qibolab.parameters import NativeGates, Parameters
-    from qibolab.instruments.dummy import DummyInstrument
+    from qibolab._core.components.configs import AcquisitionConfig, IqConfig
+    from qibolab._core.native import FixedSequenceFactory, RxyFactory
+    from qibolab._core.parameters import NativeGates, Parameters, SingleQubitNatives
+    from qibolab.instruments import DummyInstrument
 
 
     def create():
@@ -132,15 +135,25 @@ the native gates, but separately from the single-qubit ones.
 
 .. testcode::  python
 
-    from qibolab.components import IqChannel, AcquisitionChannel, DcChannel, IqConfig
-    from qibolab.qubits import Qubit
-    from qibolab.parameters import NativeGates, Parameters, TwoQubitContainer
-    from qibolab.pulses import Acquisition, Gaussian, Pulse, Readout, Rectangular
-    from qibolab.sequence import PulseSequence
-    from qibolab.native import (
-        RxyFactory,
-        FixedSequenceFactory,
+    from qibolab import (
+        Acquisition,
+        AcquisitionChannel,
+        DcChannel,
+        Gaussian,
+        IqChannel,
+        Pulse,
+        PulseSequence,
+        Qubit,
+        Readout,
+        Rectangular,
+    )
+    from qibolab._core.components.configs import AcquisitionConfig, IqConfig
+    from qibolab._core.native import FixedSequenceFactory, RxyFactory
+    from qibolab._core.parameters import (
+        NativeGates,
+        Parameters,
         SingleQubitNatives,
+        TwoQubitContainer,
         TwoQubitNatives,
     )
 
@@ -272,15 +285,15 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
 
 .. testcode::  python
 
-    from qibolab.components import DcChannel
-    from qibolab.qubits import Qubit
-    from qibolab.pulses import Pulse
-    from qibolab.sequence import PulseSequence
-    from qibolab.native import (
-        FixedSequenceFactory,
-        SingleQubitNatives,
-        TwoQubitNatives,
+    from qibolab import (
+        DcChannel,
+        Pulse,
+        PulseSequence,
+        Qubit,
+        Rectangular,
     )
+    from qibolab._core.parameters import TwoQubitContainer, TwoQubitNatives
+    from qibolab._core.native import FixedSequenceFactory
 
     # create the qubit and coupler objects
     coupler_01 = Qubit(flux="c01/flux")
@@ -539,17 +552,14 @@ Here is the ``create()`` method that loads the parameters from the JSON:
     # my_platform / platform.py
 
     from pathlib import Path
-    from qibolab.platform import Platform
-    from qibolab.qubits import Qubit
-    from qibolab.components import (
+    from qibolab import (
         AcquisitionChannel,
         DcChannel,
         IqChannel,
-        AcquisitionConfig,
-        DcConfig,
-        IqConfig,
+        Platform,
+        Qubit,
     )
-    from qibolab.instruments.dummy import DummyInstrument
+    from qibolab.instruments import DummyInstrument
 
 
     FOLDER = Path.cwd()
@@ -630,17 +640,14 @@ in this case ``"twpa_pump"``.
     # my_platform / platform.py
 
     from pathlib import Path
-    from qibolab.platform import Platform
-    from qibolab.qubits import Qubit
-    from qibolab.components import (
+    from qibolab import (
         AcquisitionChannel,
         DcChannel,
         IqChannel,
-        AcquisitionConfig,
-        DcConfig,
-        IqConfig,
+        Platform,
+        Qubit,
     )
-    from qibolab.instruments.dummy import DummyInstrument
+    from qibolab.instruments import DummyInstrument
 
 
     FOLDER = Path.cwd()

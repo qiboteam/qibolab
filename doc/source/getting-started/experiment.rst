@@ -28,13 +28,16 @@ although minimal changes are needed to use other devices.
 
     import pathlib
 
-    from qibolab.components import AcquisitionChannel, Channel, DcChannel, IqChannel
-    from qibolab.identifier import ChannelId
+    from qibolab import (
+        AcquisitionChannel,
+        Channel,
+        ConfigKinds,
+        DcChannel,
+        IqChannel,
+        Platform,
+        Qubit,
+    )
     from qibolab.instruments.qm import Octave, QmConfigs, QmController
-    from qibolab.parameters import ConfigKinds
-    from qibolab.platform import Platform
-    from qibolab.platform.platform import QubitMap
-    from qibolab.qubits import Qubit
 
     # folder containing runcard with calibration parameters
     FOLDER = pathlib.Path.cwd()
@@ -45,7 +48,7 @@ although minimal changes are needed to use other devices.
 
     def create():
         # Define qubit
-        qubits: QubitMap = {
+        qubits = {
             0: Qubit(
                 drive="0/drive",
                 probe="0/probe",
@@ -54,7 +57,7 @@ although minimal changes are needed to use other devices.
         }
 
         # Create channels and connect to instrument ports
-        channels: dict[ChannelId, Channel] = {}
+        channels = {}
         qubit = qubits[0]
         # Readout
         channels[qubit.probe] = IqChannel(
@@ -94,7 +97,7 @@ although minimal changes are needed to use other devices.
     .. code-block:: python
 
         import pathlib
-        from qibolab.platform import Platform
+        from qibolab import Platform
 
 
         def create() -> Platform:
@@ -212,13 +215,14 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     import numpy as np
     import matplotlib.pyplot as plt
 
-    from qibolab import create_platform
-    from qibolab.sequence import PulseSequence
-    from qibolab.sweeper import Sweeper, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
+    from qibolab import (
         AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+        Parameter,
+        PulseSequence,
+        Sweeper,
+        create_platform,
     )
 
     # load the platform from ``dummy.py`` and ``dummy.json``

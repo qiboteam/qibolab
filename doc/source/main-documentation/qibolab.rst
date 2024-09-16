@@ -66,8 +66,7 @@ as these are loaded automatically from the platform, as defined in the correspon
 
 .. testcode::  python
 
-   from qibolab.pulses import Delay
-   from qibolab.sequence import PulseSequence
+   from qibolab import Delay, PulseSequence
    import numpy as np
 
    ps = PulseSequence()
@@ -82,7 +81,7 @@ Now we can execute the sequence on hardware:
 
 .. testcode::  python
 
-    from qibolab.execution_parameters import (
+    from qibolab import (
         AcquisitionType,
         AveragingMode,
         ExecutionParameters,
@@ -202,7 +201,7 @@ To illustrate, here is an examples of how to instantiate a pulse using the Qibol
 
 .. testcode:: python
 
-    from qibolab.pulses import Pulse, Rectangular
+    from qibolab import Pulse, Rectangular
 
     pulse = Pulse(
         duration=40.0,  # Pulse duration in ns
@@ -219,8 +218,7 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.sequence
 
 .. testcode:: python
 
-    from qibolab.pulses import Pulse, Rectangular
-    from qibolab.sequence import PulseSequence
+    from qibolab import Pulse, PulseSequence, Rectangular
 
 
     pulse1 = Pulse(
@@ -278,8 +276,7 @@ Typical experiments may include both pre-defined pulses and new ones:
 
 .. testcode:: python
 
-    from qibolab.pulses import Rectangular
-    from qibolab.identifier import ChannelId
+    from qibolab import Rectangular
 
     natives = platform.natives.single_qubit[0]
     sequence = natives.RX() | natives.MZ()
@@ -339,7 +336,7 @@ A typical resonator spectroscopy experiment could be defined with:
 
     import numpy as np
 
-    from qibolab.sweeper import Parameter, Sweeper
+    from qibolab import Parameter, Sweeper
 
     natives = platform.natives.single_qubit
 
