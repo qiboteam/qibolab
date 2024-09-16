@@ -193,11 +193,14 @@ class OctaveOutput(QMOutput):
 
         Digital markers are used to switch LOs on in triggered mode.
         """
-        opx = self.opx_port.i.device
-        number = self.opx_port.i.number
+        opx_port = self.opx_port.i
+        if isinstance(opx_port, (FEMOutput, FEMInput)):
+            port = (opx_port.device, opx_port.fem_number, opx_port.number)
+        else:
+            port = (opx_port.device, opx_port.number)
         return {
             "output_switch": {
-                "port": (opx, number),
+                "port": port,
                 "delay": self.digital_delay,
                 "buffer": self.digital_buffer,
             }

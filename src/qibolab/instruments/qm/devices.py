@@ -45,6 +45,9 @@ class QMDevice(Instrument):
     inputs: Dict[int, QMInput] = field(init=False)
     """Dictionary containing the instrument's input ports."""
 
+    def __str__(self):
+        return self.name
+
     def ports(self, number, output=True):
         """Provides instrument's ports to the user.
 
@@ -115,10 +118,10 @@ class OPX1000(QMDevice):
             return {"fem_number": fem, "fem_type": self.fems[fem].type}
 
         self.outputs = PortsDefaultdict(
-            lambda fem, n: FEMOutput(self.name, n, **kwargs(fem))
+            lambda pair: FEMOutput(self.name, pair[1], **kwargs(pair[0]))
         )
         self.inputs = PortsDefaultdict(
-            lambda fem, n: FEMInput(self.name, n, **kwargs(fem))
+            lambda pair: FEMInput(self.name, pair[1], **kwargs(pair[0]))
         )
 
     def ports(self, fem_number: int, number: int, output: bool = True):
