@@ -6,7 +6,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qibolab.sequence import PulseSequence
+from qibolab._core.sequence import PulseSequence
 
 from .envelope import Waveform
 from .modulation import modulate

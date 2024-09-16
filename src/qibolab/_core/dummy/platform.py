@@ -1,9 +1,9 @@
 import pathlib
 
-from qibolab.components import AcquisitionChannel, DcChannel, IqChannel
-from qibolab.instruments.dummy import DummyInstrument, DummyLocalOscillator
-from qibolab.platform import Platform
-from qibolab.qubits import Qubit
+from qibolab._core.components import AcquisitionChannel, DcChannel, IqChannel
+from qibolab._core.instruments.dummy import DummyInstrument, DummyLocalOscillator
+from qibolab._core.platform import Platform
+from qibolab._core.qubits import Qubit
 
 FOLDER = pathlib.Path(__file__).parent
 
