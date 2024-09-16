@@ -4,7 +4,12 @@ import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibo.config import log
 
-from qibolab.instruments.oscillator import LocalOscillator, LocalOscillatorSettings
+from qibolab._core.instruments.oscillator import (
+    LocalOscillator,
+    LocalOscillatorSettings,
+)
+
+__all__ = ["ERASynth"]
 
 RECONNECTION_ATTEMPTS = 10
 """Number of times to attempt sending requests to the web server in case of
@@ -117,7 +122,7 @@ class ERASynthEthernet:
         self.off()
 
 
-class ERA(LocalOscillator):
+class ERASynth(LocalOscillator):
     """Driver to control the ERAsynth++ local oscillator.
 
     This driver is using:
