@@ -1,17 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qibolab.instruments.emulator.readout import ReadoutSimulator
+from qibolab.instruments.emulator.readout import ReadoutSimulator,lamb_shift
 from qibolab.pulses import ReadoutPulse
 from qibolab.qubits import Qubit
 
 bare_resonator_frequency = 5.045e9
 nshots = 100
 
-SNR = 40  # dB
+SNR = 30  # dB
 READOUT_AMPLITUDE = 1
 NOISE_AMP = np.power(10, -SNR / 20)
-AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 4.5e1
+AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
 
 qb = Qubit(
     0,
@@ -78,7 +78,8 @@ plt.show()
 # so that we can inspect the phase response of resonator (being plotted on V_I/V_Q plane),
 # which shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
 # in other words, the data probed from resonator for particular qubit states should be well separated as demonstrated previously
-ro_frequency = 5.0450e9 + readout.lambshift
+delta = qb.drive_frequency - qb.bare_resonator_frequency
+ro_frequency = 5.0450e9 - lamb_shift(g=10e6,delta=delta)
 ro_pulse = ReadoutPulse(
     start=0,
     duration=1000,
@@ -93,11 +94,11 @@ rexc = [readout.simulate_excited_state_iq(ro_pulse) for k in range(nshots)]
 plt.scatter(np.real(rgnd), np.imag(rgnd), label=r"$|0\rangle$")
 plt.scatter(np.real(rexc), np.imag(rexc), label=r"$|1\rangle$")
 # when we set NOISE_AMP to zero, using the follow axes limits allow us to see the maximally separated data
-# plt.xlim([0,1])
-# plt.ylim([-1,1])
-plt.xlabel(r"$V_I$")
-plt.ylabel(r"$V_Q$")
+# plt.xlim([0,250])
+# plt.ylim([-250,250])
+plt.xlabel(r"$V_I$ [a.u.]")
+plt.ylabel(r"$V_Q$ [a.u.]")
 plt.legend()
 plt.tight_layout()
-plt.savefig("IQ.png", dpi=300)
+# plt.savefig("IQ.png", dpi=300)
 plt.show()
