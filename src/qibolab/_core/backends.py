@@ -5,11 +5,12 @@ from qibo.config import raise_error
 from qibo.models import Circuit
 from qibo.result import MeasurementOutcomes
 
-from qibolab.compilers import Compiler
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.platform import Platform, create_platform
-from qibolab.platform.load import available_platforms
-from qibolab.version import __version__ as qibolab_version
+from qibolab._version import __version__ as qibolab_version
+
+from .compilers import Compiler
+from .execution_parameters import ExecutionParameters
+from .platform import Platform, create_platform
+from .platform.load import available_platforms
 
 __all__ = ["MetaBackend", "QibolabBackend"]
 

@@ -3,13 +3,13 @@ from typing import Optional
 
 from pydantic import ConfigDict, Field
 
-from qibolab.components import Config
-from qibolab.components.channels import Channel
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.identifier import ChannelId, Result
-from qibolab.sequence import PulseSequence
-from qibolab.serialize import Model
-from qibolab.sweeper import ParallelSweepers
+from ..components import Config
+from ..components.channels import Channel
+from ..execution_parameters import ExecutionParameters
+from ..identifier import ChannelId, Result
+from ..sequence import PulseSequence
+from ..serialize import Model
+from ..sweeper import ParallelSweepers
 
 InstrumentId = str
 

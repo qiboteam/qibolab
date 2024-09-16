@@ -1,1 +1,3 @@
-from qibolab.compilers.compiler import Compiler
+from .compiler import Compiler
+
+__all__ = ["Compiler"]

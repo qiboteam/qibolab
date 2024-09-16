@@ -9,8 +9,7 @@ from typing import Annotated, Literal
 
 from pydantic.fields import FieldInfo
 
-from qibolab.components.configs import Config
-
+from .components.configs import Config
 from .pulses import Delay, Pulse
 from .pulses.envelope import Rectangular
 from .sequence import PulseSequence

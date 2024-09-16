@@ -9,7 +9,7 @@ from pydantic import Field
 from scipy.signal import lfilter
 from scipy.signal.windows import gaussian
 
-from qibolab.serialize import Model, NdArray, eq
+from ..serialize import Model, NdArray, eq
 
 __all__ = [
     "Waveform",

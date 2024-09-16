@@ -6,15 +6,16 @@ from . import (
     pulses,
     sequence,
     sweeper,
-    version,
 )
 from .backends import *
+from .components import *
 from .execution_parameters import *
 from .platform import *
 from .pulses import *
 from .sequence import *
 from .sweeper import *
-from .version import *
+
+# from .version import *
 
 __all__ = []
 __all__ += backends.__all__
@@ -24,4 +25,4 @@ __all__ += platform.__all__
 __all__ += pulses.__all__
 __all__ += sequence.__all__
 __all__ += sweeper.__all__
-__all__ += version.__all__
+# __all__ += version.__all__

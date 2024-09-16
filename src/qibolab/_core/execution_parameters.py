@@ -1,8 +1,8 @@
 from enum import Enum, auto
 from typing import Any, Optional
 
-from qibolab.serialize import Model
-from qibolab.sweeper import ParallelSweepers
+from .serialize import Model
+from .sweeper import ParallelSweepers
 
 __all__ = ["AcquisitionType", "AveragingMode", "ExecutionParameters"]
 

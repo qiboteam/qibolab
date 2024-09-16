@@ -7,17 +7,17 @@ from typing import Literal, Optional, TypeVar
 
 from qibo.config import log, raise_error
 
-from qibolab.components import Config
-from qibolab.components.channels import Channel
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.identifier import ChannelId, QubitId, QubitPairId, Result
-from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.parameters import NativeGates, Parameters, Settings, update_configs
-from qibolab.pulses import PulseId
-from qibolab.qubits import Qubit
-from qibolab.sequence import PulseSequence
-from qibolab.sweeper import ParallelSweepers
-from qibolab.unrolling import Bounds, batch
+from ..components import Config
+from ..components.channels import Channel
+from ..execution_parameters import ExecutionParameters
+from ..identifier import ChannelId, QubitId, QubitPairId, Result
+from ..instruments.abstract import Controller, Instrument, InstrumentId
+from ..parameters import NativeGates, Parameters, Settings, update_configs
+from ..pulses import PulseId
+from ..qubits import Qubit
+from ..sequence import PulseSequence
+from ..sweeper import ParallelSweepers
+from ..unrolling import Bounds, batch
 
 QubitMap = dict[QubitId, Qubit]
 QubitPairMap = list[QubitPairId]

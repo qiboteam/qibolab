@@ -4,7 +4,11 @@ from dataclasses import dataclass, field
 
 from qibo import Circuit, gates
 
-from qibolab.compilers.default import (
+from ..identifier import ChannelId, QubitId
+from ..platform import Platform
+from ..pulses import Delay
+from ..sequence import PulseSequence
+from .default import (
     align_rule,
     cnot_rule,
     cz_rule,
@@ -15,10 +19,6 @@ from qibolab.compilers.default import (
     rz_rule,
     z_rule,
 )
-from qibolab.identifier import ChannelId, QubitId
-from qibolab.platform import Platform
-from qibolab.pulses import Delay
-from qibolab.sequence import PulseSequence
 
 Rule = Callable[..., PulseSequence]
 """Compiler rule."""

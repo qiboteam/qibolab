@@ -5,8 +5,7 @@ from typing import Annotated, Literal, Union
 import numpy as np
 from pydantic import Field
 
-from qibolab.serialize import Model
-
+from ..serialize import Model
 from .envelope import Envelope, IqWaveform, Waveform
 
 __all__ = [

@@ -20,8 +20,8 @@ share a component, because channels will refer to the same name for the componen
 
 from typing import Optional
 
-from qibolab.identifier import ChannelId
-from qibolab.serialize import Model
+from ..identifier import ChannelId
+from ..serialize import Model
 
 __all__ = ["Channel", "DcChannel", "IqChannel", "AcquisitionChannel"]
 

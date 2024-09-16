@@ -10,12 +10,12 @@ from typing import Annotated, Any, Union
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab.components import ChannelConfig, Config
-from qibolab.execution_parameters import ConfigUpdate, ExecutionParameters
-from qibolab.identifier import QubitId, QubitPairId
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.serialize import Model, replace
-from qibolab.unrolling import Bounds
+from .components import ChannelConfig, Config
+from .execution_parameters import ConfigUpdate, ExecutionParameters
+from .identifier import QubitId, QubitPairId
+from .native import SingleQubitNatives, TwoQubitNatives
+from .serialize import Model, replace
+from .unrolling import Bounds
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
