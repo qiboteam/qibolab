@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab.instruments.rohde_schwarz import SGS100A
+from qibolab._core.instruments.rohde_schwarz import SGS100A
 
 from .conftest import get_instrument
 

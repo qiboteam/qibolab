@@ -1,9 +1,9 @@
 import pathlib
 
-from qibolab.channel import Channel, ChannelMap
-from qibolab.instruments.dummy import DummyLocalOscillator as LocalOscillator
-from qibolab.instruments.qm import Octave, OPXplus, QMController
-from qibolab.platform import Platform
+from qibolab._core.channel import Channel, ChannelMap
+from qibolab._core.instruments.dummy import DummyLocalOscillator as LocalOscillator
+from qibolab._core.instruments.qm import Octave, OPXplus, QMController
+from qibolab._core.platform import Platform
 
 RUNCARD = pathlib.Path(__file__).parent
 

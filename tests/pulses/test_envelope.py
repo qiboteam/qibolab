@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab.pulses import (
+from qibolab._core.pulses import (
     Drag,
     ECap,
     Gaussian,

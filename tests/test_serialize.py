@@ -1,7 +1,7 @@
 import numpy as np
 from pydantic import BaseModel, ConfigDict
 
-from qibolab.serialize import NdArray, eq
+from qibolab._core.serialize import NdArray, eq
 
 
 class ArrayModel(BaseModel):

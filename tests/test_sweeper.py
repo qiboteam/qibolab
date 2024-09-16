@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from qibolab.pulses import Pulse, Rectangular
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab._core.pulses import Pulse, Rectangular
+from qibolab._core.sweeper import Parameter, Sweeper
 
 
 @pytest.mark.parametrize("parameter", Parameter)

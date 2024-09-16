@@ -1,6 +1,6 @@
 import pytest
 
-from qibolab.instruments.dummy import DummyDevice, DummyLocalOscillator
+from qibolab._core.instruments.dummy import DummyDevice, DummyLocalOscillator
 
 
 @pytest.fixture

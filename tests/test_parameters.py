@@ -2,9 +2,9 @@ from typing import Literal
 
 import pytest
 
-from qibolab.components.configs import Config
-from qibolab.native import FixedSequenceFactory, TwoQubitNatives
-from qibolab.parameters import ConfigKinds, Parameters, TwoQubitContainer
+from qibolab._core.components.configs import Config
+from qibolab._core.native import FixedSequenceFactory, TwoQubitNatives
+from qibolab._core.parameters import ConfigKinds, Parameters, TwoQubitContainer
 
 
 def test_two_qubit_container():

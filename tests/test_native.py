@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from pydantic import TypeAdapter
 
-from qibolab.native import FixedSequenceFactory, RxyFactory, TwoQubitNatives
-from qibolab.pulses import (
+from qibolab._core.native import FixedSequenceFactory, RxyFactory, TwoQubitNatives
+from qibolab._core.pulses import (
     Drag,
     Exponential,
     Gaussian,
@@ -13,7 +13,7 @@ from qibolab.pulses import (
     Pulse,
     Rectangular,
 )
-from qibolab.sequence import PulseSequence
+from qibolab._core.sequence import PulseSequence
 
 
 def test_fixed_sequence_factory():

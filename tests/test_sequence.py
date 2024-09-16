@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from pydantic import TypeAdapter
 
-from qibolab.pulses import (
+from qibolab._core.pulses import (
     Acquisition,
     Delay,
     Drag,
@@ -12,7 +12,7 @@ from qibolab.pulses import (
     Rectangular,
     VirtualZ,
 )
-from qibolab.sequence import PulseSequence
+from qibolab._core.sequence import PulseSequence
 
 
 def test_init():

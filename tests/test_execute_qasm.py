@@ -1,6 +1,6 @@
 from qibo import Circuit, __version__
 
-from qibolab.backends import QibolabBackend, execute_qasm
+from qibolab._core.backends import QibolabBackend, execute_qasm
 
 
 def test_execute_qasm():

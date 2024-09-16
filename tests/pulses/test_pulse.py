@@ -3,8 +3,8 @@
 import numpy as np
 from pytest import approx, raises
 
-from qibolab.pulses import Acquisition, Custom, Pulse, Rectangular, VirtualZ
-from qibolab.pulses.pulse import Readout
+from qibolab._core.pulses import Acquisition, Custom, Pulse, Rectangular, VirtualZ
+from qibolab._core.pulses.pulse import Readout
 
 
 def test_virtual_z():

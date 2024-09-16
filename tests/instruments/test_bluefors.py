@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 import yaml
 
-from qibolab.instruments.bluefors import TemperatureController
+from qibolab._core.instruments.bluefors import TemperatureController
 
 messages = [
     "4K-flange: {'temperature':3.065067, 'timestamp':1710912431.128234}",
