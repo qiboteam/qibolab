@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import ClassVar, Dict, Optional, Union
+from typing import ClassVar, Dict, Literal, Optional, Union
 
 DIGITAL_DELAY = 57
 DIGITAL_BUFFER = 18
@@ -129,6 +129,34 @@ class OPXIQ:
     """Port implementing the I-component of the signal."""
     q: Union[OPXOutput, OPXInput]
     """Port implementing the Q-component of the signal."""
+
+
+@dataclass
+class FEMOutput(OPXOutput):
+    fem_number: int = 0
+    fem_type: Literal["LF", "MF"] = "LF"
+
+    @property
+    def name(self):
+        return f"{self.fem_number}/o{self.number}"
+
+    @property
+    def pair(self):
+        return (self.device, self.fem_number, self.number)
+
+
+@dataclass
+class FEMInput(OPXInput):
+    fem_number: int = 0
+    fem_type: Literal["LF", "MF"] = "LF"
+
+    @property
+    def name(self):
+        return f"{self.fem_number}/i{self.number}"
+
+    @property
+    def pair(self):
+        return (self.device, self.fem_number, self.number)
 
 
 @dataclass

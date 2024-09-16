@@ -6,7 +6,7 @@ from qibo.config import raise_error
 
 from qibolab.pulses import PulseType, Rectangular
 
-from .ports import OPXIQ, OctaveInput, OctaveOutput, OPXOutput
+from .ports import OPXIQ, FEMInput, FEMOutput, OctaveInput, OctaveOutput, OPXOutput
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
@@ -48,17 +48,31 @@ class QMConfig:
             self.register_port(port.q)
         else:
             is_octave = isinstance(port, (OctaveOutput, OctaveInput))
+            is_fem = isinstance(port, (FEMOutput, FEMInput))
             controllers = self.octaves if is_octave else self.controllers
             if port.device not in controllers:
                 if is_octave:
                     controllers[port.device] = {}
+                elif is_fem:
+                    controllers[port.device] = {"type": "opx1000", "fems": {}}
                 else:
                     controllers[port.device] = {
                         "analog_inputs": DEFAULT_INPUTS,
                         "digital_outputs": {},
                     }
 
-            device = controllers[port.device]
+            if is_fem:
+                fems = controllers[port.device]["fems"]
+                if port.fem_number not in fems:
+                    fems[port.fem_number] = {
+                        "type": port.fem_type,
+                        "analog_inputs": DEFAULT_INPUTS,
+                        "digital_outputs": {},
+                    }
+                device = fems[port.fem_number]
+            else:
+                device = controllers[port.device]
+
             if port.key in device:
                 device[port.key].update(port.config)
             else:
