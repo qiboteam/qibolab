@@ -28,8 +28,6 @@ def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
     Returns:
         ``MeasurementOutcomes`` object containing the results acquired from the execution.
     """
-    from qibolab.backends import QibolabBackend
-
     circuit = Circuit.from_qasm(circuit)
     return QibolabBackend(platform).execute_circuit(
         circuit, initial_state=initial_state, nshots=nshots
