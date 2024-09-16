@@ -3,9 +3,9 @@ import numpy.typing as npt
 from qm import qua
 from qm.qua._dsl import _Variable  # for type declaration only
 
-from qibolab.components import Channel, Config
-from qibolab.identifier import ChannelId
-from qibolab.sweeper import Parameter
+from qibolab._core.components import Channel, Config
+from qibolab._core.identifier import ChannelId
+from qibolab._core.sweeper import Parameter
 
 from .arguments import ExecutionArguments, Parameters
 

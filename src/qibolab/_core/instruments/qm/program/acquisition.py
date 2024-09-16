@@ -9,7 +9,7 @@ from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
 from qualang_tools.addons.variables import assign_variables_to_element
 from qualang_tools.units import unit
 
-from qibolab.execution_parameters import (
+from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,

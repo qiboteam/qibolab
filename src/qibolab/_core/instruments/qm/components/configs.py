@@ -2,7 +2,7 @@ from typing import Literal, Union
 
 from pydantic import Field
 
-from qibolab.components import AcquisitionConfig, DcConfig
+from qibolab._core.components import AcquisitionConfig, DcConfig
 
 __all__ = ["OpxOutputConfig", "QmAcquisitionConfig", "QmConfigs"]
 

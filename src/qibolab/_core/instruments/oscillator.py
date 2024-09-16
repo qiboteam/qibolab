@@ -3,7 +3,7 @@ from typing import Any, Optional, Protocol, runtime_checkable
 
 from pydantic import Field
 
-from qibolab.instruments.abstract import Instrument, InstrumentSettings
+from .abstract import Instrument, InstrumentSettings
 
 RECONNECTION_ATTEMPTS = 3
 """Number of times to attempt connecting to instrument in case of failure."""

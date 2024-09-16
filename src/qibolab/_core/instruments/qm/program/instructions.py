@@ -4,9 +4,9 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 from qualang_tools.loops import from_array
 
-from qibolab.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab.pulses import Align, Delay, Pulse, Readout, VirtualZ
-from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
+from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.pulses import Align, Delay, Pulse, Readout, VirtualZ
+from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
 from ..config import operation
 from .acquisition import Acquisition

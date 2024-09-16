@@ -4,9 +4,9 @@ from typing import Optional, Union
 
 from qm.qua._dsl import _Variable  # for type declaration only
 
-from qibolab.identifier import ChannelId
-from qibolab.pulses import Pulse
-from qibolab.sequence import PulseSequence
+from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses import Pulse
+from qibolab._core.sequence import PulseSequence
 
 from .acquisition import Acquisitions
 

@@ -13,19 +13,19 @@ from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 from qualang_tools.simulator_tools import create_simulator_controller_connections
 
-from qibolab.components import AcquisitionChannel, Config, DcChannel, IqChannel
-from qibolab.components.configs import IqConfig, OscillatorConfig
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.identifier import ChannelId
-from qibolab.instruments.abstract import Controller
-from qibolab.instruments.qm.components.configs import (
+from qibolab._core.components import AcquisitionChannel, Config, DcChannel, IqChannel
+from qibolab._core.components.configs import IqConfig, OscillatorConfig
+from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.identifier import ChannelId
+from qibolab._core.instruments.abstract import Controller
+from qibolab._core.instruments.qm.components.configs import (
     OpxOutputConfig,
     QmAcquisitionConfig,
 )
-from qibolab.pulses import Acquisition, Align, Delay, Pulse, Readout
-from qibolab.sequence import PulseSequence
-from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
-from qibolab.unrolling import Bounds, unroll_sequences
+from qibolab._core.pulses import Acquisition, Align, Delay, Pulse, Readout
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
+from qibolab._core.unrolling import Bounds, unroll_sequences
 
 from .config import SAMPLING_RATE, Configuration, operation
 from .program import ExecutionArguments, create_acquisition, program

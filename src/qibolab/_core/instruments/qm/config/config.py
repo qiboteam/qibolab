@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
-from qibolab.components.channels import AcquisitionChannel, DcChannel, IqChannel
-from qibolab.components.configs import IqConfig, OscillatorConfig
-from qibolab.identifier import ChannelId
-from qibolab.pulses import Pulse
-from qibolab.pulses.pulse import Readout
+from qibolab._core.components.channels import AcquisitionChannel, DcChannel, IqChannel
+from qibolab._core.components.configs import IqConfig, OscillatorConfig
+from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses import Pulse
+from qibolab._core.pulses.pulse import Readout
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 from .devices import AnalogOutput, Controller, Octave, OctaveInput, OctaveOutput
