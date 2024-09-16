@@ -96,7 +96,7 @@ class ReadoutSimulator:
         """
         if LO_frequency:
             intermediate_frequency = np.abs(pulse.frequency - LO_frequency)
-        else: 
+        else:
             intermediate_frequency = pulse.frequency
 
         s21 = self.ground_s21(intermediate_frequency)
@@ -111,13 +111,15 @@ class ReadoutSimulator:
         """
         if LO_frequency:
             intermediate_frequency = np.abs(pulse.frequency - LO_frequency)
-        else: 
+        else:
             intermediate_frequency = pulse.frequency
-        
+
         s21 = self.excited_s21(intermediate_frequency)
         return self.simulate_and_demodulate(s21, pulse, intermediate_frequency)
 
-    def simulate_and_demodulate(self, s21: complex, pulse: ReadoutPulse, intermediate_frequency=None):
+    def simulate_and_demodulate(
+        self, s21: complex, pulse: ReadoutPulse, intermediate_frequency=None
+    ):
         """Simulates the readout pulse for a given S21-parameter and homodyne
         demodulation/2nd stage of heterodyne demodulation.
 
@@ -139,38 +141,41 @@ class ReadoutSimulator:
         t = np.arange(start, start + len(env_I)) / self.sampling_rate  # t_n
 
         reference_signal_I = np.sin(
-            2 * np.pi * intermediate_frequency * t + pulse.relative_phase)
+            2 * np.pi * intermediate_frequency * t + pulse.relative_phase
+        )
         reference_signal_Q = np.cos(
-            2 * np.pi * intermediate_frequency * t + pulse.relative_phase)
+            2 * np.pi * intermediate_frequency * t + pulse.relative_phase
+        )
         envelope_waveform = (
             reflected_amplitude
             * pulse.amplitude
             * (
                 env_I.data
                 * np.cos(pulse.relative_phase + reflected_phase)
-                * np.sin(2 * np.pi * intermediate_frequency* t)
+                * np.sin(2 * np.pi * intermediate_frequency * t)
                 + env_Q.data
                 * np.sin(pulse.relative_phase + reflected_phase)
                 * np.cos(2 * np.pi * intermediate_frequency * t)
-            ))
+            )
+        )
         i_envelope = np.dot(envelope_waveform, reference_signal_I)
         q_envelope = np.dot(envelope_waveform, reference_signal_Q)
 
-
         # Low-pass filtered I-component (with intermediate frequency = pulse frequency if LO is absent)
-        i_filtered = i_envelope* np.cos(
-            2 * np.pi * t * intermediate_frequency + pulse.relative_phase + reflected_phase
+        i_filtered = i_envelope * np.cos(
+            2 * np.pi * t * intermediate_frequency
+            + pulse.relative_phase
+            + reflected_phase
         ) + self.noise_model(t)
         # Low-pass filtered Q-component
-        q_filtered = q_envelope* np.sin(
-            2 * np.pi * t * intermediate_frequency + pulse.relative_phase + reflected_phase
+        q_filtered = q_envelope * np.sin(
+            2 * np.pi * t * intermediate_frequency
+            + pulse.relative_phase
+            + reflected_phase
         ) + self.noise_model(t)
 
-        
         z = i_filtered + 1j * q_filtered
         z *= np.exp(-1j * 2 * np.pi * t * intermediate_frequency)
         z = np.sum(z) / len(t)
 
         return z
-
-        

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from qibolab.instruments.emulator.readout import ReadoutSimulator,lamb_shift
+from qibolab.instruments.emulator.readout import ReadoutSimulator, lamb_shift
 from qibolab.pulses import ReadoutPulse
 from qibolab.qubits import Qubit
 
@@ -79,7 +79,7 @@ plt.show()
 # which shall be maximally separated when resonator is probed just in-between two qubit-state dependent resonance frequencies.
 # in other words, the data probed from resonator for particular qubit states should be well separated as demonstrated previously
 delta = qb.drive_frequency - qb.bare_resonator_frequency
-ro_frequency = 5.0450e9 - lamb_shift(g=10e6,delta=delta)
+ro_frequency = 5.0450e9 - lamb_shift(g=10e6, delta=delta)
 ro_pulse = ReadoutPulse(
     start=0,
     duration=1000,
