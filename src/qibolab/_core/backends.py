@@ -176,8 +176,6 @@ class MetaBackend:
         Returns:
             qibo.backends.abstract.Backend: The loaded backend.
         """
-        from qibolab.backends import QibolabBackend
-
         return QibolabBackend(platform=platform)
 
     def list_available(self) -> dict:
