@@ -2,13 +2,13 @@ import numpy as np
 from pydantic import Field
 from qibo.config import log
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.components.channels import Channel
-from qibolab.identifier import ChannelId
-from qibolab.pulses.pulse import Acquisition
-from qibolab.sequence import PulseSequence
-from qibolab.sweeper import ParallelSweepers
-from qibolab.unrolling import Bounds
+from qibolab._core import AcquisitionType, AveragingMode, ExecutionParameters
+from qibolab._core.components.channels import Channel
+from qibolab._core.identifier import ChannelId
+from qibolab._core.pulses.pulse import Acquisition
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import ParallelSweepers
+from qibolab._core.unrolling import Bounds
 
 from ..components import Config
 from .abstract import Controller
@@ -16,6 +16,9 @@ from .oscillator import LocalOscillator
 
 SAMPLING_RATE = 1
 BOUNDS = Bounds(waveforms=1, readout=1, instructions=1)
+
+
+__all__ = ["DummyLocalOscillator", "DummyInstrument"]
 
 
 class DummyDevice:
