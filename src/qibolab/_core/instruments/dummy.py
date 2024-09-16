@@ -2,8 +2,12 @@ import numpy as np
 from pydantic import Field
 from qibo.config import log
 
-from qibolab._core import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab._core.components.channels import Channel
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses.pulse import Acquisition
 from qibolab._core.sequence import PulseSequence

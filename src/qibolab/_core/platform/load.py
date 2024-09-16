@@ -4,8 +4,6 @@ from pathlib import Path
 
 from qibo.config import raise_error
 
-from qibolab._core.dummy import create_dummy
-
 from .platform import Platform
 
 PLATFORM = "platform.py"
@@ -58,6 +56,8 @@ def create_platform(name: str) -> Platform:
         The plaform class.
     """
     if name == "dummy":
+        from qibolab._core.dummy import create_dummy
+
         return create_dummy()
 
     return _load(_search(name, _platforms_paths()))
