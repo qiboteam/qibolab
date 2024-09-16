@@ -4,7 +4,9 @@ import yaml
 from pydantic import Field
 from qibo.config import log
 
-from qibolab.instruments.abstract import Instrument
+from qibolab._core.instruments.abstract import Instrument
+
+__all__ = ["TemperatureController"]
 
 
 class TemperatureController(Instrument):
