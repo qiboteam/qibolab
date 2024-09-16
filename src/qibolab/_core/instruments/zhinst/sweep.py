@@ -5,9 +5,9 @@ from copy import copy
 
 import laboneq.simple as laboneq
 
-from qibolab.components import Config
-from qibolab.pulses import Pulse
-from qibolab.sweeper import Parameter, Sweeper
+from qibolab._core.components import Config
+from qibolab._core.pulses import Pulse
+from qibolab._core.sweeper import Parameter, Sweeper
 
 from . import ZiChannel
 from .constants import NANO_TO_SECONDS

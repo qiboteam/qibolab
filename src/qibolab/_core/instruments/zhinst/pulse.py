@@ -7,7 +7,7 @@ from laboneq.dsl.experiment.pulse_library import (
     sampled_pulse_real,
 )
 
-from qibolab.pulses import Drag, Gaussian, GaussianSquare, Pulse, Rectangular
+from qibolab._core.pulses import Drag, Gaussian, GaussianSquare, Pulse, Rectangular
 
 from .constants import NANO_TO_SECONDS, SAMPLING_RATE
 

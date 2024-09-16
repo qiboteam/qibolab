@@ -8,12 +8,16 @@ import laboneq.simple as laboneq
 import numpy as np
 from laboneq.dsl.device import create_connection
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.instruments.abstract import Controller
-from qibolab.pulses import Delay, Pulse
-from qibolab.sequence import PulseSequence
-from qibolab.sweeper import Parameter, Sweeper
-from qibolab.unrolling import Bounds
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
+from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses import Delay, Pulse
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import Parameter, Sweeper
+from qibolab._core.unrolling import Bounds
 
 from ...components import AcquisitionChannel, Config, DcChannel, IqChannel
 from .components import ZiChannel

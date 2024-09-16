@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from qibolab.components import Channel
+from qibolab._core.components import Channel
 
 __all__ = [
     "ZiChannel",

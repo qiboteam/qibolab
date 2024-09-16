@@ -1,4 +1,4 @@
-from qibolab.components import AcquisitionConfig, DcConfig, IqConfig
+from qibolab._core.components import AcquisitionConfig, DcConfig, IqConfig
 
 __all__ = [
     "ZiDcConfig",

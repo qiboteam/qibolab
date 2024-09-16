@@ -21,9 +21,9 @@ import qibolab
 # TODO: the following is a workaround for Sphinx doctest, cf.
 # - https://github.com/qiboteam/qibolab/commit/e04a6ab
 # - https://github.com/pydantic/pydantic/discussions/7763
-import qibolab.instruments.dummy
-import qibolab.instruments.oscillator
-import qibolab.instruments.zhinst
+import qibolab._core.instruments.dummy
+import qibolab._core.instruments.oscillator
+import qibolab._core.instruments.zhinst
 
 # -- Project information -----------------------------------------------------
 
