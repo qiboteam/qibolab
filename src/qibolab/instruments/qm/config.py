@@ -79,11 +79,19 @@ class QMConfig:
                 device[port.key] = port.config
 
             if is_octave:
-                con = port.opx_port.i.device
-                number = port.opx_port.i.number
-                device["connectivity"] = con
                 self.register_port(port.opx_port)
-                self.controllers[con]["digital_outputs"][number] = {}
+                subport = port.opx_port.i
+                if isinstance(subport, (FEMOutput, FEMInput)):
+                    con = subport.device
+                    fem = subport.fem_number
+                    number = subport.number
+                    device["connectivity"] = (con, fem)
+                    self.controllers[con]["fems"][fem]["digital_outputs"][number] = {}
+                else:
+                    con = subport.device
+                    number = subport.number
+                    device["connectivity"] = con
+                    self.controllers[con]["digital_outputs"][number] = {}
 
     @staticmethod
     def iq_imbalance(g, phi):
@@ -289,10 +297,6 @@ class QMConfig:
                     "waveforms": {"I": serial_i, "Q": serial_q},
                     "digital_marker": "ON",
                 }
-                # register drive pulse in elements
-                self.elements[qmpulse.element]["operations"][
-                    qmpulse.operation
-                ] = qmpulse.operation
 
             elif pulse.type is PulseType.FLUX:
                 serial = self.register_waveform(pulse)
@@ -303,10 +307,6 @@ class QMConfig:
                         "single": serial,
                     },
                 }
-                # register flux pulse in elements
-                self.elements[qmpulse.element]["operations"][
-                    qmpulse.operation
-                ] = qmpulse.operation
 
             elif pulse.type is PulseType.READOUT:
                 serial_i = self.register_waveform(pulse, "i")
@@ -326,13 +326,13 @@ class QMConfig:
                     },
                     "digital_marker": "ON",
                 }
-                # register readout pulse in elements
-                self.elements[qmpulse.element]["operations"][
-                    qmpulse.operation
-                ] = qmpulse.operation
 
             else:
                 raise_error(TypeError, f"Unknown pulse type {pulse.type.name}.")
+
+        self.elements[qmpulse.element]["operations"][
+            qmpulse.operation
+        ] = qmpulse.operation
 
     def register_waveform(self, pulse, mode="i"):
         """Registers waveforms in QM config.
