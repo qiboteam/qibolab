@@ -15,10 +15,9 @@ have unique names, and in any relevant context can be referred to by
 their name.
 """
 
-from . import channels, configs
+from . import channels
 from .channels import *
 from .configs import *
 
 __all__ = []
 __all__ += channels.__all__
-__all__ += configs.__all__
