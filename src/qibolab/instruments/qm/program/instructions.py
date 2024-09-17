@@ -87,7 +87,7 @@ def play(args: ExecutionArguments):
     for channel_id, pulse in args.sequence:
         element = str(channel_id)
         op = operation(pulse)
-        params = args.parameters[op]
+        params = args.parameters[pulse.id]
         if isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, Pulse):
@@ -111,8 +111,13 @@ def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
     if parameter not in SWEEPER_METHODS:
         raise NotImplementedError(f"Sweeper for {parameter} is not implemented.")
 
-    variable = declare(int) if parameter in INT_TYPE else declare(fixed)
-    values = sweeper.values
+    if parameter in INT_TYPE:
+        variable = declare(int)
+        values = sweeper.values.astype(int)
+    else:
+        variable = declare(fixed)
+        values = sweeper.values
+
     if parameter is Parameter.frequency:
         lo_frequency = args.parameters[sweeper.channels[0]].lo_frequency
         values = NORMALIZERS[parameter](values, lo_frequency)
@@ -148,7 +153,7 @@ def sweep(
                 method = SWEEPER_METHODS[sweeper.parameter]
                 if sweeper.pulses is not None:
                     for pulse in sweeper.pulses:
-                        params = args.parameters[operation(pulse)]
+                        params = args.parameters[pulse.id]
                         method(variable, params)
                 else:
                     for channel in sweeper.channels:
