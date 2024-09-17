@@ -4,15 +4,15 @@ How to connect Qibolab to your lab?
 In this section we will show how to let Qibolab communicate with your lab's
 instruments and run an experiment.
 
-The main required object, in this case, is the :class:`qibolab.platform.Platform`.
+The main required object, in this case, is the :class:`qibolab.Platform`.
 A Platform is defined as a QPU (quantum processing unit with one or more qubits)
 controlled by one ore more instruments.
 
 How to define a platform for a self-hosted QPU?
 -----------------------------------------------
 
-The :class:`qibolab.platform.Platform` object holds all the information required
-to execute programs, and in particular :class:`qibolab.pulses.PulseSequence` in
+The :class:`qibolab.Platform` object holds all the information required
+to execute programs, and in particular :class:`qibolab.PulseSequence` in
 a real QPU. It is comprised by different objects that contain information about
 the native gates and the lab's instrumentation.
 
@@ -120,10 +120,10 @@ using different Qibolab primitives.
 
 
 This code creates a platform with a single qubit that is controlled by the
-:class:`qibolab.instruments.dummy.DummyInstrument`. In real applications, if
+:class:`qibolab.instruments.DummyInstrument`. In real applications, if
 Qibolab provides drivers for the instruments in the lab, these can be directly
 used in place of the ``DummyInstrument`` above, otherwise new drivers need to be
-coded following the abstract :class:`qibolab.instruments.abstract.Instrument`
+coded following the abstract :class:`qibolab._core.instruments.abstract.Instrument`
 interface.
 
 Furthermore, above we defined three channels that connect the qubit to the
@@ -324,11 +324,12 @@ will take them into account when calling :class:`qibolab.native.TwoQubitNatives`
     )
 
 Couplers also need to be passed in a different dictionary than the qubits,
-when instantiating the :class:`qibolab.platform.platform.Platform`
+when instantiating the :class:`qibolab.Platform`
 
 .. note::
 
-    The platform automatically creates the connectivity graph of the given chip,    using the keys of :class:`qibolab.parameters.TwoQubitContainer` map.
+    The platform automatically creates the connectivity graph of the given chip,
+    using the keys of :class:`qibolab._core.parameters.TwoQubitContainer` map.
 
 
 Registering platforms
@@ -364,7 +365,7 @@ since ``create()`` is part of a Python module, is is possible to load parameters
 from an external file or database.
 
 Qibolab provides some utility functions, accessible through
-:py:mod:`qibolab.parameters`, for loading calibration parameters stored in a JSON
+:py:mod:`qibolab._core.parameters`, for loading calibration parameters stored in a JSON
 file with a specific format. Here is an example
 
 .. code-block::  json
@@ -542,7 +543,7 @@ single and two-qubit gates.
 Note that such parameters may slightly differ depending on the QPU architecture.
 
 Providing the above JSON is not sufficient to instantiate a
-:class:`qibolab.platform.Platform`. This should still be done using a
+:class:`qibolab.Platform`. This should still be done using a
 ``create()`` method. The ``create()`` method should be put in a
 file named ``platform.py`` inside the ``my_platform`` directory.
 Here is the ``create()`` method that loads the parameters from the JSON:
@@ -632,7 +633,7 @@ The parameters JSON can contain such parameters in the ``configs`` section:
 
 
 Note that the key used in the JSON should be the same with the instrument name used
-in the instrument dictionary when instantiating the :class:`qibolab.platform.platform.Platform`,
+in the instrument dictionary when instantiating the :class:`qibolab.Platform`,
 in this case ``"twpa_pump"``.
 
 .. testcode::  python

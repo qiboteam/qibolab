@@ -21,7 +21,7 @@ For example, a local oscillator is just an instrument, while Quantum Machines is
 Add an instrument
 -----------------
 
-The base of an instrument is :class:`qibolab.instruments.abstract.Instrument`,
+The base of an instrument is :class:`qibolab._core.instruments.abstract.Instrument`,
 which is a pydantic ``Model``.
 To accomodate different kind of instruments, a flexible interface is implemented
 with two abstract methods (``connect()`` and ``disconnect()``) that are required
@@ -79,7 +79,7 @@ Add a controller
 
 The controller is an instrument that has the additional method ``play``,
 which allows it to execute arbitrary pulse sequences and perform sweeps.
-Its abstract implementation can be found in :class:`qibolab.instruments.abstract.Controller`.
+Its abstract implementation can be found in :class:`qibolab._core.instruments.abstract.Controller`.
 
 Let's see a minimal example:
 

@@ -2,8 +2,8 @@ Pulses execution
 ================
 
 We can create pulse sequence using the Qibolab pulse API directly,
-defining a :class:`qibolab.sequence.PulseSequence` object and adding different
-pulses (:class:`qibolab.pulses.Pulse`) using the :func:`qibolab.pulses.PulseSequence.append()` method:
+defining a :class:`qibolab.PulseSequence` object and adding different
+pulses (:class:`qibolab.Pulse`) using the :func:`qibolab.PulseSequence.append()` method:
 
 .. testcode::  python
 
