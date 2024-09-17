@@ -343,7 +343,7 @@ class QmController(Controller):
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
-            for value in sweeper.values:
+            for value in sweeper.values.astype(int):
                 sweep_pulse = original_pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(ids[0], sweep_pulse)
                 params.duration_ops.append((value, sweep_op))
