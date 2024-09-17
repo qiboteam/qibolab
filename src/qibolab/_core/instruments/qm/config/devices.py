@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 
-from qibolab._core.components.configs import OscillatorConfig
+from qibolab._core.components import OscillatorConfig
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 

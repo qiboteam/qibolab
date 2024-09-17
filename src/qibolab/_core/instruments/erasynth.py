@@ -4,10 +4,7 @@ import requests
 from qcodes_contrib_drivers.drivers.ERAInstruments import ERASynthPlusPlus
 from qibo.config import log
 
-from qibolab._core.instruments.oscillator import (
-    LocalOscillator,
-    LocalOscillatorSettings,
-)
+from .oscillator import LocalOscillator, LocalOscillatorSettings
 
 __all__ = ["ERASynth"]
 

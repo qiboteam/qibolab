@@ -3,8 +3,7 @@ from typing import Optional
 
 from pydantic import ConfigDict, Field
 
-from ..components import Config
-from ..components.channels import Channel
+from ..components import Channel, Config
 from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, Result
 from ..sequence import PulseSequence

@@ -3,7 +3,7 @@ from typing import Union
 
 import numpy as np
 
-from qibolab._core.components.channels import Channel
+from qibolab._core.components import Channel
 
 __all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
 
