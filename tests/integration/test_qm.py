@@ -72,30 +72,14 @@ def test_qubit_flux(dummy_qrc):
     ro0 = operation(sequence.acquisitions[0][1])
     ro1 = operation(sequence.acquisitions[1][1])
     with qua.program() as target_experiment:
-        v1 = declare(
-            int,
-        )
-        v2 = declare(
-            fixed,
-        )
-        v3 = declare(
-            fixed,
-        )
-        v4 = declare(
-            fixed,
-        )
-        v5 = declare(
-            fixed,
-        )
-        v6 = declare(
-            fixed,
-        )
-        v7 = declare(
-            int,
-        )
-        v8 = declare(
-            int,
-        )
+        v1 = declare(int)
+        v2 = declare(fixed)
+        v3 = declare(fixed)
+        v4 = declare(fixed)
+        v5 = declare(fixed)
+        v6 = declare(fixed)
+        v7 = declare(int)
+        v8 = declare(int)
         a1 = declare(
             int,
             value=[
