@@ -30,7 +30,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import Bounds, unroll_sequences
 
 from .components import OpxOutputConfig, QmAcquisitionConfig
-from .config import SAMPLING_RATE, Configuration, operation
+from .config import SAMPLING_RATE, Configuration
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
@@ -338,7 +338,7 @@ class QmController(Controller):
             if isinstance(pulse, (Align, Delay)):
                 continue
 
-            params = args.parameters[operation(pulse)]
+            params = args.parameters[pulse.id]
             ids = args.sequence.pulse_channels(pulse.id)
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
@@ -360,7 +360,7 @@ class QmController(Controller):
         for pulse in sweeper.pulses:
             sweep_pulse = pulse.model_copy(update={"amplitude": amplitude})
             ids = args.sequence.pulse_channels(pulse.id)
-            params = args.parameters[operation(pulse)]
+            params = args.parameters[pulse.id]
             params.amplitude_pulse = sweep_pulse
             params.amplitude_op = self.register_pulse(ids[0], sweep_pulse)
 
