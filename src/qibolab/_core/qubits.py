@@ -2,10 +2,7 @@ from typing import Annotated, Optional
 
 from pydantic import ConfigDict, Field
 
-# TODO: the unused import are there because Qibocal is still importing them from here
-# since the export scheme will be reviewed, it should be changed at that time, removing
-# the unused ones from here
-from .identifier import ChannelId, QubitId, QubitPairId, TransitionId  # noqa
+from .identifier import ChannelId, QubitId, TransitionId
 from .serialize import Model
 
 __all__ = ["Qubit"]
@@ -19,7 +16,7 @@ class Qubit(Model):
 
     Contains the channel ids used to control the qubit and is instantiated
     in the function that creates the corresponding
-    :class:`qibolab.platforms.platform.Platform`
+    :class:`qibolab.Platform`
     """
 
     model_config = ConfigDict(frozen=False)
