@@ -87,7 +87,7 @@ def play(args: ExecutionArguments):
     for channel_id, pulse in args.sequence:
         element = str(channel_id)
         op = operation(pulse)
-        params = args.parameters[op]
+        params = args.parameters[pulse.id]
         if isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, Pulse):
@@ -153,7 +153,7 @@ def sweep(
                 method = SWEEPER_METHODS[sweeper.parameter]
                 if sweeper.pulses is not None:
                     for pulse in sweeper.pulses:
-                        params = args.parameters[operation(pulse)]
+                        params = args.parameters[pulse.id]
                         method(variable, params)
                 else:
                     for channel in sweeper.channels:
