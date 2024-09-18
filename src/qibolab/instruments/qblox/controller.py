@@ -11,7 +11,7 @@ from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import Custom, PulseSequence, PulseType, ReadoutPulse
 from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
@@ -280,6 +280,43 @@ class QbloxController(Controller):
                 )
             )
 
+        serial_map = {p.serial: p.serial for p in sequence_copy.ro_pulses}
+        for sweeper in sweepers_copy:
+            if sweeper.parameter is Parameter.start and not any(
+                pulse.type is PulseType.READOUT for pulse in sweeper.pulses
+            ):
+                for pulse in sequence_copy:
+                    if pulse.type is PulseType.READOUT:
+                        idx = sequence_copy.index(pulse)
+                        padded_pulse = ReadoutPulse(
+                            start=0,
+                            duration=pulse.start + pulse.duration,
+                            amplitude=pulse.amplitude,
+                            frequency=pulse.frequency,
+                            relative_phase=pulse.relative_phase,
+                            shape=Custom(
+                                envelope_i=np.concatenate(
+                                    (
+                                        np.zeros(pulse.start),
+                                        pulse.envelope_waveform_i().data
+                                        / pulse.amplitude,
+                                    )
+                                ),
+                                envelope_q=np.concatenate(
+                                    (
+                                        np.zeros(pulse.start),
+                                        pulse.envelope_waveform_q().data
+                                        / pulse.amplitude,
+                                    )
+                                ),
+                            ),
+                            channel=pulse.channel,
+                            qubit=pulse.qubit,
+                        )
+                        serial_map[padded_pulse.serial] = pulse.serial
+                        sequence_copy[idx] = padded_pulse
+                        sweeper.pulses.append(padded_pulse)
+
         # reverse sweepers exept for res punchout att
         contains_attenuation_frequency = any(
             sweepers_copy[i].parameter == Parameter.attenuation
@@ -309,7 +346,7 @@ class QbloxController(Controller):
         # return the results using the original serials
         serial_results = {}
         for pulse in sequence_copy.ro_pulses:
-            serial_results[map_id_serial[pulse.id]] = id_results[pulse.id]
+            serial_results[serial_map[map_id_serial[pulse.id]]] = id_results[pulse.id]
             serial_results[pulse.qubit] = id_results[pulse.id]
         return serial_results
 
