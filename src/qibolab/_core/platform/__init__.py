@@ -1,4 +1,7 @@
-from .load import create_platform
-from .platform import Platform
+from . import load, platform
+from .load import *
+from .platform import *
 
-__all__ = ["Platform", "create_platform"]
+__all__ = []
+__all__ += load.__all__
+__all__ += platform.__all__

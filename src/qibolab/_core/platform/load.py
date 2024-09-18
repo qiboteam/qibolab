@@ -1,10 +1,13 @@
 import importlib.util
 import os
 from pathlib import Path
+from typing import Optional
 
 from qibo.config import raise_error
 
 from .platform import Platform
+
+__all__ = ["create_platform", "locate_platform"]
 
 PLATFORM = "platform.py"
 PLATFORMS = "QIBOLAB_PLATFORMS"
@@ -24,7 +27,7 @@ def _platforms_paths() -> list[Path]:
 
 def _search(name: str, paths: list[Path]) -> Path:
     """Search paths for given platform name."""
-    for path in _platforms_paths():
+    for path in paths:
         platform = path / name
         if platform.exists():
             return platform
@@ -42,6 +45,20 @@ def _load(platform: Path) -> Platform:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.create()
+
+
+def locate_platform(name: str, paths: Optional[list[Path]] = None) -> Path:
+    """Locate platform's path.
+
+    The ``name`` corresponds to the name of the folder in which the platform is defined,
+    i.e. the one containing the ``platform.py`` file.
+
+    If ``paths`` are specified, the environment is ignored, and the folder search
+    happens only in the specified paths.
+    """
+    if paths is None:
+        paths = _platforms_paths()
+    return _search(name, paths)
 
 
 def create_platform(name: str) -> Platform:

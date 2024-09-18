@@ -19,6 +19,8 @@ from ..sequence import PulseSequence
 from ..sweeper import ParallelSweepers
 from ..unrolling import Bounds, batch
 
+__all__ = ["Platform"]
+
 QubitMap = dict[QubitId, Qubit]
 QubitPairMap = list[QubitPairId]
 InstrumentMap = dict[InstrumentId, Instrument]
