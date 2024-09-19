@@ -3,7 +3,7 @@ from typing import Literal
 import pytest
 
 from qibolab._core.components.configs import Config
-from qibolab._core.native import FixedSequenceFactory, TwoQubitNatives
+from qibolab._core.native import Native, TwoQubitNatives
 from qibolab._core.parameters import ConfigKinds, Parameters, TwoQubitContainer
 
 
@@ -13,12 +13,10 @@ def test_two_qubit_container():
     Swapped indexing is working (only with getitem, not other dict
     methods) if all the registered natives are symmetric.
     """
-    symmetric = TwoQubitContainer({(0, 1): TwoQubitNatives(CZ=FixedSequenceFactory())})
+    symmetric = TwoQubitContainer({(0, 1): TwoQubitNatives(CZ=Native())})
     assert symmetric[1, 0].CZ is not None
 
-    asymmetric = TwoQubitContainer(
-        {(0, 1): TwoQubitNatives(CNOT=FixedSequenceFactory())}
-    )
+    asymmetric = TwoQubitContainer({(0, 1): TwoQubitNatives(CNOT=Native())})
     with pytest.raises(KeyError):
         asymmetric[(1, 0)]
 

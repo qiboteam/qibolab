@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibolab import create_platform
 from qibolab._core.compilers import Compiler
 from qibolab._core.identifier import ChannelId
-from qibolab._core.native import FixedSequenceFactory, TwoQubitNatives
+from qibolab._core.native import Native, TwoQubitNatives
 from qibolab._core.platform import Platform
 from qibolab._core.pulses import Delay, Pulse
 from qibolab._core.pulses.envelope import Rectangular
@@ -99,7 +99,7 @@ def test_gpi_to_sequence(platform: Platform):
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
-    rx_seq = natives.single_qubit[0].RX.create_sequence(phi=0.2)
+    rx_seq = natives.single_qubit[0].R(phi=0.2)
 
     np.testing.assert_allclose(sequence.duration, rx_seq.duration)
 
@@ -112,7 +112,7 @@ def test_gpi2_to_sequence(platform: Platform):
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
-    rx90_seq = natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2)
+    rx90_seq = natives.single_qubit[0].R(theta=np.pi / 2, phi=0.2)
 
     np.testing.assert_allclose(sequence.duration, rx90_seq.duration)
     assert sequence == rx90_seq
@@ -157,8 +157,8 @@ def test_add_measurement_to_sequence(platform: Platform):
     assert len(list(sequence.channel(qubit.acquisition))) == 2  # include delay
 
     s = PulseSequence()
-    s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.1))
-    s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2))
+    s.concatenate(natives.single_qubit[0].R(theta=np.pi / 2, phi=0.1))
+    s.concatenate(natives.single_qubit[0].R(theta=np.pi / 2, phi=0.2))
     s.append((qubit.acquisition, Delay(duration=s.duration)))
     s.concatenate(natives.single_qubit[0].MZ.create_sequence())
 
@@ -221,7 +221,7 @@ def test_inactive_qubits(platform: Platform, joint: bool):
         circuit.add(gates.M(coupled))
 
     natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
-        CZ=FixedSequenceFactory([])
+        CZ=Native([])
     )
     assert natives.CZ is not None
     natives.CZ.clear()
