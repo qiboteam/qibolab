@@ -29,7 +29,9 @@ def _normalize_angles(theta, phi):
     return theta, phi
 
 
-def rxy(seq: PulseSequence, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
+def rotation(
+    seq: PulseSequence, theta: float = np.pi, phi: float = 0.0
+) -> PulseSequence:
     """Create a sequence for single-qubit rotation.
 
     ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
@@ -77,7 +79,7 @@ class SingleQubitNatives(NativeContainer):
         ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
         """
         assert self.RX is not None
-        return rxy(self.RX, theta, phi)
+        return rotation(self.RX, theta, phi)
 
 
 class TwoQubitNatives(NativeContainer):

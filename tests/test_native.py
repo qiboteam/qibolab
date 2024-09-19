@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab._core.native import Native, TwoQubitNatives, rxy
+from qibolab._core.native import Native, TwoQubitNatives, rotation
 from qibolab._core.pulses import Drag, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
 
@@ -55,7 +55,7 @@ def test_fixed_sequence_factory():
         ({"phi": 7.5 * np.pi}, 1.0, 1.5 * np.pi),
     ],
 )
-def test_rxy(args, amplitude, phase):
+def test_rotation(args, amplitude, phase):
     seq = PulseSequence(
         [
             (
@@ -65,8 +65,8 @@ def test_rxy(args, amplitude, phase):
         ]
     )
 
-    fseq1 = rxy(seq, **args)
-    fseq2 = rxy(seq, **args)
+    fseq1 = rotation(seq, **args)
+    fseq2 = rotation(seq, **args)
     assert fseq1 == fseq2
     np = "new/probe"
     fseq2.append((np, Pulse(duration=56, amplitude=0.43, envelope=Rectangular())))
