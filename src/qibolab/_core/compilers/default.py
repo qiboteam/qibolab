@@ -31,7 +31,7 @@ def identity_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
 
 def gpi2_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
     """Rule for GPI2."""
-    return natives.ensure("RX").create_sequence(theta=np.pi / 2, phi=gate.parameters[0])
+    return natives.RXY(theta=np.pi / 2, phi=gate.parameters[0])
 
 
 def gpi_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
@@ -40,7 +40,7 @@ def gpi_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
     # to the matrix representation. See
     # https://github.com/qiboteam/qibolab/pull/804#pullrequestreview-1890205509
     # for more detail.
-    return natives.ensure("RX").create_sequence(theta=np.pi, phi=gate.parameters[0])
+    return natives.RXY(theta=np.pi, phi=gate.parameters[0])
 
 
 def cz_rule(gate: Gate, natives: TwoQubitNatives) -> PulseSequence:

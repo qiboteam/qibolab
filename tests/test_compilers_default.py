@@ -99,7 +99,7 @@ def test_gpi_to_sequence(platform: Platform):
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
-    rx_seq = natives.single_qubit[0].RX.create_sequence(phi=0.2)
+    rx_seq = natives.single_qubit[0].RXY(phi=0.2)
 
     np.testing.assert_allclose(sequence.duration, rx_seq.duration)
 
@@ -112,7 +112,7 @@ def test_gpi2_to_sequence(platform: Platform):
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
-    rx90_seq = natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2)
+    rx90_seq = natives.single_qubit[0].RXY(theta=np.pi / 2, phi=0.2)
 
     np.testing.assert_allclose(sequence.duration, rx90_seq.duration)
     assert sequence == rx90_seq
@@ -157,8 +157,8 @@ def test_add_measurement_to_sequence(platform: Platform):
     assert len(list(sequence.channel(qubit.acquisition))) == 2  # include delay
 
     s = PulseSequence()
-    s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.1))
-    s.concatenate(natives.single_qubit[0].RX.create_sequence(theta=np.pi / 2, phi=0.2))
+    s.concatenate(natives.single_qubit[0].RXY(theta=np.pi / 2, phi=0.1))
+    s.concatenate(natives.single_qubit[0].RXY(theta=np.pi / 2, phi=0.2))
     s.append((qubit.acquisition, Delay(duration=s.duration)))
     s.concatenate(natives.single_qubit[0].MZ.create_sequence())
 
