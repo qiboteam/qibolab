@@ -8,7 +8,6 @@ from qibo.result import MeasurementOutcomes
 from qibolab._version import __version__ as qibolab_version
 
 from .compilers import Compiler
-from .execution_parameters import ExecutionParameters
 from .platform import Platform, create_platform
 from .platform.load import available_platforms
 
@@ -103,10 +102,7 @@ class QibolabBackend(NumpyBackend):
 
         self.platform.connect()
 
-        readout_ = self.platform.execute(
-            [sequence],
-            ExecutionParameters(nshots=nshots),
-        )
+        readout_ = self.platform.execute([sequence], nshots=nshots)
         readout = {k: v for k, v in readout_.items()}
 
         self.platform.disconnect()
@@ -148,7 +144,7 @@ class QibolabBackend(NumpyBackend):
 
         self.platform.connect()
 
-        readout = self.platform.execute(sequences, ExecutionParameters(nshots=nshots))
+        readout = self.platform.execute(sequences, nshots=nshots)
 
         self.platform.disconnect()
 
