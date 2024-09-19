@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import Annotated, Optional
 
@@ -9,25 +8,25 @@ from .sequence import PulseSequence
 from .serialize import Model, replace
 
 
+class Native(PulseSequence):
+    def create_sequence(self) -> PulseSequence:
+        """Create the sequence associated to the gate."""
+        return deepcopy(self)
+
+    def __call__(self, *args, **kwargs) -> PulseSequence:
+        """Create the sequence associated to the gate.
+
+        Alias to :meth:`create_sequence`.
+        """
+        return self.create_sequence(*args, **kwargs)
+
+
 def _normalize_angles(theta, phi):
     """Normalize theta to (-pi, pi], and phi to [0, 2*pi)."""
     theta = theta % (2 * np.pi)
     theta = theta - 2 * np.pi * (theta > np.pi)
     phi = phi % (2 * np.pi)
     return theta, phi
-
-
-class Native(ABC, PulseSequence):
-    @abstractmethod
-    def create_sequence(self, *args, **kwargs) -> PulseSequence:
-        """Create a sequence for single-qubit rotation."""
-
-    def __call__(self, *args, **kwargs) -> PulseSequence:
-        """Create a sequence for single-qubit rotation.
-
-        Alias to :meth:`create_sequence`.
-        """
-        return self.create_sequence(*args, **kwargs)
 
 
 def rxy(seq: PulseSequence, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
@@ -42,13 +41,6 @@ def rxy(seq: PulseSequence, theta: float = np.pi, phi: float = 0.0) -> PulseSequ
     return PulseSequence(
         [(ch, replace(pulse, amplitude=new_amplitude, relative_phase=phi))]
     )
-
-
-class FixedSequenceFactory(Native):
-    """Simple factory for a fixed arbitrary sequence."""
-
-    def create_sequence(self) -> PulseSequence:
-        return deepcopy(self)
 
 
 class MissingNative(RuntimeError):
@@ -70,13 +62,13 @@ class SingleQubitNatives(NativeContainer):
     """Container with the native single-qubit gates acting on a specific
     qubit."""
 
-    RX: Optional[FixedSequenceFactory] = None
+    RX: Optional[Native] = None
     """Pulse to drive the qubit from state 0 to state 1."""
-    RX12: Optional[FixedSequenceFactory] = None
+    RX12: Optional[Native] = None
     """Pulse to drive to qubit from state 1 to state 2."""
-    MZ: Optional[FixedSequenceFactory] = None
+    MZ: Optional[Native] = None
     """Measurement pulse."""
-    CP: Optional[FixedSequenceFactory] = None
+    CP: Optional[Native] = None
     """Pulse to activate coupler."""
 
     def RXY(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
@@ -92,9 +84,9 @@ class TwoQubitNatives(NativeContainer):
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
-    CNOT: Annotated[Optional[FixedSequenceFactory], {"symmetric": False}] = None
-    iSWAP: Annotated[Optional[FixedSequenceFactory], {"symmetric": True}] = None
+    CZ: Annotated[Optional[Native], {"symmetric": True}] = None
+    CNOT: Annotated[Optional[Native], {"symmetric": False}] = None
+    iSWAP: Annotated[Optional[Native], {"symmetric": True}] = None
 
     @property
     def symmetric(self):
