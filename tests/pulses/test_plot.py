@@ -3,7 +3,7 @@ import pathlib
 
 import numpy as np
 
-from qibolab.pulses import (
+from qibolab._core.pulses import (
     Drag,
     ECap,
     Gaussian,
@@ -14,8 +14,8 @@ from qibolab.pulses import (
     Snz,
     plot,
 )
-from qibolab.pulses.modulation import modulate
-from qibolab.sequence import PulseSequence
+from qibolab._core.pulses.modulation import modulate
+from qibolab._core.sequence import PulseSequence
 
 HERE = pathlib.Path(__file__).parent
 SAMPLING_RATE = 1

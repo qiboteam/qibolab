@@ -1,17 +1,10 @@
-import qcodes.instrument_drivers.rohde_schwarz.SGS100A as LO_SGS100A
+"""Rohde & Schwarz drivers.
 
-from qibolab.instruments.oscillator import LocalOscillator
+https://www.rohde-schwarz.com/
+"""
 
+from qibolab._core.instruments import rohde_schwarz
+from qibolab._core.instruments.rohde_schwarz import *  # noqa: F403
 
-class SGS100A(LocalOscillator):
-    """Driver to control the Rohde-Schwarz SGS100A local oscillator.
-
-    This driver is using:
-    https://qcodes.github.io/Qcodes/api/generated/qcodes.instrument_drivers.rohde_schwarz.html#module-qcodes.instrument_drivers.rohde_schwarz.SGS100A
-    """
-
-    def create(self):
-        name = f"{type(self).__name__}{id(self)}"
-        return LO_SGS100A.RohdeSchwarz_SGS100A(
-            name, f"TCPIP0::{self.address}::5025::SOCKET"
-        )
+__all__ = []
+__all__ += rohde_schwarz.__all__

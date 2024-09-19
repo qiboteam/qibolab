@@ -34,7 +34,6 @@ repos:
       - id: pycln
         args:
           - --config=pyproject.toml
-          - --all
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.18.0
     hooks:

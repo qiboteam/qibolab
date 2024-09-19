@@ -150,11 +150,11 @@ Qibolab also supports the execution of circuits starting from a QASM string. The
    measure q[0] -> a[0];
    measure q[2] -> a[1];"""
 
-can be executed by passing it together with the platform name to the :func:`qibolab.execute_qasm` function:
+can be executed by passing it together with the platform name to the :func:`qibolab._core.backends.execute_qasm` function:
 
 .. testcode::
 
-   from qibolab import execute_qasm
+   from qibolab._core.backends import execute_qasm
 
    result = execute_qasm(circuit, platform="dummy")
 

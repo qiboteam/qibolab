@@ -5,13 +5,13 @@ from qibo.backends import NumpyBackend
 from qibo.models import Circuit
 
 from qibolab import create_platform
-from qibolab.compilers import Compiler
-from qibolab.identifier import ChannelId
-from qibolab.native import FixedSequenceFactory, TwoQubitNatives
-from qibolab.platform import Platform
-from qibolab.pulses import Delay, Pulse
-from qibolab.pulses.envelope import Rectangular
-from qibolab.sequence import PulseSequence
+from qibolab._core.compilers import Compiler
+from qibolab._core.identifier import ChannelId
+from qibolab._core.native import FixedSequenceFactory, TwoQubitNatives
+from qibolab._core.platform import Platform
+from qibolab._core.pulses import Delay, Pulse
+from qibolab._core.pulses.envelope import Rectangular
+from qibolab._core.sequence import PulseSequence
 
 
 def generate_circuit_with_gate(nqubits: int, gate, *params, **kwargs):

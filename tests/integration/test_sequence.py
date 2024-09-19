@@ -1,6 +1,6 @@
 from qibolab import create_platform
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.pulses import Delay
+from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.pulses import Delay
 
 
 def test_sequence_creation():

@@ -2,13 +2,12 @@ Pulses execution
 ================
 
 We can create pulse sequence using the Qibolab pulse API directly,
-defining a :class:`qibolab.sequence.PulseSequence` object and adding different
-pulses (:class:`qibolab.pulses.Pulse`) using the :func:`qibolab.pulses.PulseSequence.append()` method:
+defining a :class:`qibolab.PulseSequence` object and adding different
+pulses (:class:`qibolab.Pulse`) using the :func:`qibolab.PulseSequence.append()` method:
 
 .. testcode::  python
 
-    from qibolab.pulses import Pulse, Rectangular, Gaussian, Delay
-    from qibolab.sequence import PulseSequence
+    from qibolab import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 
     # Define PulseSequence
     sequence = PulseSequence.load(
@@ -45,8 +44,7 @@ we can execute the previously defined sequence using the ``execute`` method:
 
 .. testcode::  python
 
-    from qibolab import create_platform
-    from qibolab.execution_parameters import ExecutionParameters
+    from qibolab import ExecutionParameters, create_platform
 
     # Define platform and load specific runcard
     platform = create_platform("dummy")
@@ -73,9 +71,7 @@ Alternatively, instead of using the pulse API directly, one can use the native g
 
     import numpy as np
 
-    from qibolab.pulses import Pulse, Rectangular, Gaussian, Delay
-    from qibolab.sequence import PulseSequence
-    from qibolab import create_platform
+    from qibolab import Delay, Gaussian, Pulse, PulseSequence, Rectangular, create_platform
 
     platform = create_platform("dummy")
     q0 = platform.natives.single_qubit[0]

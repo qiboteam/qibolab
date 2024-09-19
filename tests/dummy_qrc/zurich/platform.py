@@ -5,21 +5,21 @@ from laboneq.dsl.device.instruments import HDAWG, PQSC, SHFQC
 from laboneq.simple import DeviceSetup
 
 from qibolab import Platform
-from qibolab.components import (
+from qibolab._core.components import (
     AcquisitionChannel,
     DcChannel,
     IqChannel,
     OscillatorConfig,
 )
-from qibolab.instruments.zhinst import (
+from qibolab._core.instruments.zhinst import (
     ZiAcquisitionConfig,
     ZiChannel,
     ZiDcConfig,
     ZiIqConfig,
     Zurich,
 )
-from qibolab.kernels import Kernels
-from qibolab.parameters import Parameters
+from qibolab._core.kernels import Kernels
+from qibolab._core.parameters import Parameters
 
 FOLDER = pathlib.Path(__file__).parent
 

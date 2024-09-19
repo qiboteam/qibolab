@@ -2,11 +2,11 @@
 
 import pytest
 
-from qibolab.platform import Platform
-from qibolab.pulses import Delay, Drag, Pulse, Rectangular
-from qibolab.pulses.pulse import Acquisition
-from qibolab.sequence import PulseSequence
-from qibolab.unrolling import Bounds, batch, unroll_sequences
+from qibolab._core.platform import Platform
+from qibolab._core.pulses import Delay, Drag, Pulse, Rectangular
+from qibolab._core.pulses.pulse import Acquisition
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.unrolling import Bounds, batch, unroll_sequences
 
 
 def test_bounds_update():

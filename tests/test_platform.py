@@ -13,19 +13,19 @@ from qibo.models import Circuit
 from qibo.result import CircuitResult
 
 from qibolab import create_platform
-from qibolab.backends import QibolabBackend
-from qibolab.components import AcquisitionConfig, IqConfig, OscillatorConfig
-from qibolab.dummy import create_dummy
-from qibolab.dummy.platform import FOLDER
-from qibolab.execution_parameters import ExecutionParameters
-from qibolab.native import SingleQubitNatives, TwoQubitNatives
-from qibolab.parameters import NativeGates, Parameters, update_configs
-from qibolab.platform import Platform
-from qibolab.platform.load import PLATFORM, PLATFORMS
-from qibolab.platform.platform import PARAMETERS
-from qibolab.pulses import Delay, Gaussian, Pulse, Rectangular
-from qibolab.sequence import PulseSequence
-from qibolab.serialize import replace
+from qibolab._core.backends import QibolabBackend
+from qibolab._core.components import AcquisitionConfig, IqConfig, OscillatorConfig
+from qibolab._core.dummy import create_dummy
+from qibolab._core.dummy.platform import FOLDER
+from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
+from qibolab._core.parameters import NativeGates, Parameters, update_configs
+from qibolab._core.platform import Platform
+from qibolab._core.platform.load import PLATFORM, PLATFORMS, locate_platform
+from qibolab._core.platform.platform import PARAMETERS
+from qibolab._core.pulses import Delay, Gaussian, Pulse, Rectangular
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import replace
 
 nshots = 1024
 
@@ -67,6 +67,24 @@ def test_platform_basics():
     assert (1, 6) in platform2.pairs
 
 
+def test_locate_platform(tmp_path: Path):
+    some = tmp_path / "some"
+    some.mkdir()
+
+    for p in [some / "platform0", some / "platform1"]:
+        p.mkdir()
+        (p / PLATFORM).write_text("'Ciao'")
+
+    assert locate_platform("platform0", [some]) == some / "platform0"
+
+    with pytest.raises(ValueError):
+        locate_platform("platform3")
+
+    os.environ[PLATFORMS] = str(some)
+
+    assert locate_platform("platform1") == some / "platform1"
+
+
 def test_create_platform_multipath(tmp_path: Path):
     some = tmp_path / "some"
     others = tmp_path / "others"
@@ -83,7 +101,7 @@ def test_create_platform_multipath(tmp_path: Path):
         (p / PLATFORM).write_text(
             inspect.cleandoc(
                 f"""
-                from qibolab.platform import Platform
+                from qibolab._core.platform import Platform
 
                 def create():
                     return Platform("{p.parent.name}-{p.name}", {{}}, {{}}, {{}}, {{}})

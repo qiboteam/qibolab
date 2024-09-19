@@ -1,13 +1,13 @@
 import pytest
 
-from qibolab.instruments.erasynth import ERA
+from qibolab._core.instruments.erasynth import ERASynth
 
 from .conftest import get_instrument
 
 
 @pytest.fixture(scope="module")
 def era(connected_platform):
-    return get_instrument(connected_platform, ERA)
+    return get_instrument(connected_platform, ERASynth)
 
 
 @pytest.mark.qpu

@@ -13,9 +13,9 @@ from qibolab import (
     Platform,
     create_platform,
 )
-from qibolab.platform.load import PLATFORMS
-from qibolab.sequence import PulseSequence
-from qibolab.sweeper import ParallelSweepers, Parameter, Sweeper
+from qibolab._core.platform.load import PLATFORMS
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 TESTING_PLATFORM_NAMES = ["dummy"]

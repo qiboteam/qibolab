@@ -1,7 +1,7 @@
 # This file is part of
 from cqibolab import ffi
 
-from qibolab import execute_qasm as py_execute_qasm
+from qibolab._core.backends import execute_qasm as py_execute_qasm
 
 
 @ffi.def_extern()

@@ -1,9 +1,9 @@
 import pytest
 
 from qibolab import AcquisitionType, ExecutionParameters, create_platform
-from qibolab.platform.platform import Platform
-from qibolab.pulses import Delay, GaussianSquare, Pulse
-from qibolab.sequence import PulseSequence
+from qibolab._core.platform.platform import Platform
+from qibolab._core.pulses import Delay, GaussianSquare, Pulse
+from qibolab._core.sequence import PulseSequence
 
 SWEPT_POINTS = 5
 

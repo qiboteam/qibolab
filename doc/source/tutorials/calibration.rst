@@ -31,13 +31,14 @@ This is done in the following script:
 
     import numpy as np
     import matplotlib.pyplot as plt
-    from qibolab import create_platform
-    from qibolab.sequence import PulseSequence
-    from qibolab.sweeper import Sweeper, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
+    from qibolab import (
         AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+        Parameter,
+        PulseSequence,
+        Sweeper,
+        create_platform,
     )
 
     # allocate platform
@@ -102,13 +103,14 @@ complex pulse sequence. Therefore with start with that:
 
     import numpy as np
     import matplotlib.pyplot as plt
-    from qibolab import create_platform
-    from qibolab.sequence import PulseSequence
-    from qibolab.sweeper import Sweeper, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
+    from qibolab import (
         AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+        Parameter,
+        PulseSequence,
+        Sweeper,
+        create_platform,
     )
 
     # allocate platform
@@ -193,12 +195,13 @@ and its impact on qubit states in the IQ plane.
 
     import numpy as np
     import matplotlib.pyplot as plt
-    from qibolab import create_platform
-    from qibolab.sweeper import Sweeper, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
+    from qibolab import (
         AcquisitionType,
+        AveragingMode,
+        ExecutionParameters,
+        Parameter,
+        Sweeper,
+        create_platform,
     )
 
     # allocate platform

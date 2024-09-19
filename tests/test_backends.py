@@ -8,8 +8,8 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab import MetaBackend, create_platform
-from qibolab.backends import QibolabBackend
-from qibolab.platform.platform import Platform
+from qibolab._core.backends import QibolabBackend
+from qibolab._core.platform.platform import Platform
 
 
 def generate_circuit_with_gate(nqubits, gate, **kwargs):

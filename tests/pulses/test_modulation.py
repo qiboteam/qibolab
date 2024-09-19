@@ -1,7 +1,7 @@
 import numpy as np
 
-from qibolab.pulses import Gaussian, IqWaveform, Rectangular
-from qibolab.pulses.modulation import demodulate, modulate
+from qibolab._core.pulses import Gaussian, IqWaveform, Rectangular
+from qibolab._core.pulses.modulation import demodulate, modulate
 
 
 def test_modulation():
