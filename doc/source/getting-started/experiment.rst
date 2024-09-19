@@ -218,7 +218,6 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     from qibolab import (
         AcquisitionType,
         AveragingMode,
-        ExecutionParameters,
         Parameter,
         PulseSequence,
         Sweeper,
@@ -242,14 +241,14 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     )
 
     # perform the experiment using specific options
-    options = ExecutionParameters(
+    results = platform.execute(
+        [sequence],
+        [[sweeper]],
         nshots=1000,
         relaxation_time=50,
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.INTEGRATION,
     )
-
-    results = platform.execute([sequence], options, [[sweeper]])
     _, acq = next(iter(sequence.acquisitions))
 
     # plot the results
