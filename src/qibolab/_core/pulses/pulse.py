@@ -47,11 +47,7 @@ class Pulse(_PulseLike):
     Pulse amplitudes are normalised between -1 and 1.
     """
     envelope: Envelope
-    """The pulse envelope shape.
-
-    See
-    :class:`qibolab.pulses.envelope.Envelopes` for list of available shapes.
-    """
+    """The pulse envelope shape."""
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
 

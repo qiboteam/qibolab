@@ -251,14 +251,8 @@ def create_acquisition(
     """Create container for the variables used for saving acquisition in the
     QUA program.
 
-    Args:
-        operation (str):
-        element (str):
-        options (:class:`qibolab.execution_parameters.ExecutionParameters`): Execution
-            options containing acquisition type and averaging mode.
-
     Returns:
-        :class:`qibolab.instruments.qm.acquisition.Acquisition` object containing acquisition variables.
+        ``Acquisition`` object containing acquisition variables.
     """
     average = options.averaging_mode is AveragingMode.CYCLIC
     kwargs = {}

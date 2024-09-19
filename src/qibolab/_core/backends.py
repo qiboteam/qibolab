@@ -58,12 +58,12 @@ class QibolabBackend(NumpyBackend):
         """Assigning measurement outcomes to
         :class:`qibo.states.MeasurementResult` for each gate.
 
-        This allows properly obtaining the measured shots from the :class:`qibolab.pulses.ReadoutPulse` object obtaned after pulse sequence execution.
+        This allows properly obtaining the measured shots from the :class:`qibolab.Readout` object obtaned after pulse sequence execution.
 
         Args:
             measurement_map (dict): Map from each measurement gate to the sequence of
                 readout pulses implementing it.
-            readout (:class:`qibolab.pulses.ReadoutPulse`): Readout result object
+            readout (:class:`qibolab.Readout`): Readout result object
                 containing the readout measurement shots. This is created in ``execute_circuit``.
         """
         for gate, sequence in measurement_map.items():
