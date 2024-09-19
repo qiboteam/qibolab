@@ -10,9 +10,9 @@ the automatic deployment of quantum circuits on quantum hardware.
 Some of the key features of Qibolab are:
 
 - Deploy Qibo models on quantum hardware easily.
-- Create custom experimental drivers for custom lab setup.
+- Create experimental drivers for custom lab setup.
 - Support multiple heterogeneous platforms.
-- Use existing calibration procedures for experimentalists.
+- Use calibration procedures from [Qibocal](https://github.com/qiboteam/qibocal).
 
 ## Documentation
 
@@ -26,42 +26,13 @@ A simple example on how to connect to a platform and use it execute a pulse sequ
 
 ```python
 from qibolab import create_platform, ExecutionParameters
-from qibolab.pulses import Pulse, Delay, PulseType
-
-# Define PulseSequence
-sequence = PulseSequence()
-# Add some pulses to the pulse sequence
-sequence.append(
-    Pulse(
-        amplitude=0.3,
-        duration=4000,
-        frequency=200_000_000,
-        relative_phase=0,
-        shape="Gaussian(5)",  # Gaussian shape with std = duration / 5
-        type=PulseType.DRIVE,
-        channel=1,
-    )
-)
-sequence.append(
-    Delay(
-        duration=4000,
-        channel=2,
-    )
-)
-sequence.append(
-    ReadoutPulse(
-        amplitude=0.9,
-        duration=2000,
-        frequency=20_000_000,
-        relative_phase=0,
-        shape="Rectangular",
-        type=PulseType.READOUT,
-        channel=2,
-    )
-)
 
 # Define platform and load specific runcard
 platform = create_platform("my_platform")
+
+# Create a pulse sequence based on native gates of qubit 0
+natives = platform.natives.single_qubit[0]
+sequence = natives.RX() | natives.MZ()
 
 # Connects to lab instruments using the details specified in the calibration settings.
 platform.connect()
@@ -71,38 +42,74 @@ options = ExecutionParameters(nshots=1000)
 results = platform.execute([sequence], options)
 
 # Print the acquired shots
-print(results.samples)
+readout_id = sequence.acquisitions[0][1].id
+print(results[readout_id])
 
 # Disconnect from the instruments
 platform.disconnect()
 ```
 
+Arbitrary pulse sequences can also be created using the pulse API:
+
+```python
+from qibolab import (
+    Acquisition,
+    Delay,
+    Gaussian,
+    Pulse,
+    PulseSequence,
+    Readout,
+    Rectangular,
+)
+
+# Crete some pulses
+pulse = Pulse(
+    amplitude=0.3,
+    duration=40,
+    relative_phase=0,
+    envelope=Gaussian(rel_sigma=0.2),  # Gaussian shape with std = 0.2 * duration
+)
+delay = Delay(duration=40)
+readout = Readout(
+    acquisition=Acquisition(duration=2000),
+    probe=Pulse(
+        amplitude=0.9,
+        duration=2000,
+        envelope=Rectangular(),
+        relative_phase=0,
+    ),
+)
+
+# Add them to a PulseSequence
+sequence = PulseSequence(
+    [
+        (1, pulse),  # pulse plays on channel 1
+        (2, delay),  # delay and readout plays on channel 2
+        (2, readout),
+    ]
+)
+```
+
 Here is another example on how to execute circuits:
 
 ```python
-import qibo
-from qibo import gates, models
+from qibo import gates, models, set_backend
 
-
-# Create circuit and add gates
+# Create circuit and add native gates
 c = models.Circuit(1)
-c.add(gates.H(0))
-c.add(gates.RX(0, theta=0.2))
-c.add(gates.X(0))
+c.add(gates.GPI2(0, phi=0.2))
 c.add(gates.M(0))
 
 
 # Simulate the circuit using numpy
-qibo.set_backend("numpy")
-for _ in range(5):
-    result = c(nshots=1024)
-    print(result.probabilities())
+set_backend("numpy")
+result = c(nshots=1024)
+print(result.probabilities())
 
 # Execute the circuit on hardware
-qibo.set_backend("qibolab", platform="my_platform")
-for _ in range(5):
-    result = c(nshots=1024)
-    print(result.probabilities())
+set_backend("qibolab", platform="my_platform")
+result = c(nshots=1024)
+print(result.probabilities())
 ```
 
 ## Citation policy
