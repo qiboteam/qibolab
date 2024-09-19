@@ -1,5 +1,4 @@
 from qibolab import create_platform
-from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.pulses import Delay
 
 
@@ -33,7 +32,7 @@ def test_sequence_creation():
     # ----------------------------------------------------
 
     nshots = 17
-    res = platform.execute([seq], ExecutionParameters(nshots=nshots))
+    res = platform.execute([seq], nshots=nshots)
 
     for r in res.values():
         assert r.shape == (nshots,)

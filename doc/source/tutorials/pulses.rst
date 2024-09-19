@@ -44,7 +44,7 @@ we can execute the previously defined sequence using the ``execute`` method:
 
 .. testcode::  python
 
-    from qibolab import ExecutionParameters, create_platform
+    from qibolab import create_platform
 
     # Define platform and load specific runcard
     platform = create_platform("dummy")
@@ -53,8 +53,7 @@ we can execute the previously defined sequence using the ``execute`` method:
     platform.connect()
 
     # Executes a pulse sequence.
-    options = ExecutionParameters(nshots=1000, relaxation_time=100)
-    results = platform.execute([sequence], options=options)
+    results = platform.execute([sequence], nshots=1000, relaxation_time=100)
 
     # Disconnect from the instruments
     platform.disconnect()

@@ -227,8 +227,8 @@ class Platform:
     def execute(
         self,
         sequences: list[PulseSequence],
-        options: Optional[ExecutionParameters] = None,
         sweepers: Optional[list[ParallelSweepers]] = None,
+        **options,
     ) -> dict[PulseId, Result]:
         """Execute pulse sequences.
 
@@ -241,7 +241,7 @@ class Platform:
             .. testcode::
 
                 import numpy as np
-                from qibolab import ExecutionParameters, Parameter, PulseSequence, Sweeper, create_dummy
+                from qibolab import Parameter, PulseSequence, Sweeper, create_dummy
 
 
                 platform = create_dummy()
@@ -256,7 +256,7 @@ class Platform:
                         channels=[qubit.probe],
                     )
                 ]
-                platform.execute([sequence], ExecutionParameters(), [sweeper])
+                platform.execute([sequence], [sweeper])
         """
         if sweepers is None:
             sweepers = []
@@ -265,9 +265,7 @@ class Platform:
                 "The acquisitions' identifiers have to be unique across all sequences."
             )
 
-        if options is None:
-            options = ExecutionParameters()
-        options = self.settings.fill(options)
+        options = self.settings.fill(ExecutionParameters(**options))
 
         time = estimate_duration(sequences, options, sweepers)
         log.info(f"Minimal execution time: {time}")

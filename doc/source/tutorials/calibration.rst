@@ -34,7 +34,6 @@ This is done in the following script:
     from qibolab import (
         AcquisitionType,
         AveragingMode,
-        ExecutionParameters,
         Parameter,
         PulseSequence,
         Sweeper,
@@ -56,14 +55,14 @@ This is done in the following script:
         channels=[qubit.probe],
     )
 
-    options = ExecutionParameters(
+    results = platform.execute(
+        [sequence],
+        [[sweeper]],
         nshots=1000,
         relaxation_time=50,
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.INTEGRATION,
     )
-
-    results = platform.execute([sequence], options, [[sweeper]])
 
     acq = sequence.acquisitions[0][1]
     signal = results[acq.id]
@@ -106,7 +105,6 @@ complex pulse sequence. Therefore with start with that:
     from qibolab import (
         AcquisitionType,
         AveragingMode,
-        ExecutionParameters,
         Parameter,
         PulseSequence,
         Sweeper,
@@ -130,14 +128,14 @@ complex pulse sequence. Therefore with start with that:
         channels=[qubit.drive],
     )
 
-    options = ExecutionParameters(
+    results = platform.execute(
+        [sequence],
+        [[sweeper]],
         nshots=1000,
         relaxation_time=50,
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.INTEGRATION,
     )
-
-    results = platform.execute([sequence], options, [[sweeper]])
 
     acq = sequence.acquisitions[0][1]
     signal = results[acq.id]
@@ -198,7 +196,6 @@ and its impact on qubit states in the IQ plane.
     from qibolab import (
         AcquisitionType,
         AveragingMode,
-        ExecutionParameters,
         Parameter,
         Sweeper,
         create_platform,
@@ -216,14 +213,13 @@ and its impact on qubit states in the IQ plane.
     # create pulse sequence 2
     one_sequence = natives.RX() | natives.MZ()
 
-    options = ExecutionParameters(
+    results = platform.execute(
+        [zero_sequence, one_sequence],
         nshots=1000,
         relaxation_time=50_000,
         averaging_mode=AveragingMode.SINGLESHOT,
         acquisition_type=AcquisitionType.INTEGRATION,
     )
-
-    results = platform.execute([zero_sequence, one_sequence], options)
 
     acq0 = zero_sequence.acquisitions[0][1]
     acq1 = one_sequence.acquisitions[0][1]

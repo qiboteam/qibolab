@@ -4,7 +4,7 @@ from typing import Any, Optional
 from .serialize import Model
 from .sweeper import ParallelSweepers
 
-__all__ = ["AcquisitionType", "AveragingMode", "ExecutionParameters"]
+__all__ = ["AcquisitionType", "AveragingMode"]
 
 
 class AcquisitionType(Enum):

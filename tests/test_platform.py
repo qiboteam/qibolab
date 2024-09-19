@@ -17,7 +17,6 @@ from qibolab._core.backends import QibolabBackend
 from qibolab._core.components import AcquisitionConfig, IqConfig, OscillatorConfig
 from qibolab._core.dummy import create_dummy
 from qibolab._core.dummy.platform import FOLDER
-from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
 from qibolab._core.parameters import NativeGates, Parameters, update_configs
 from qibolab._core.platform import Platform
@@ -135,9 +134,8 @@ def test_duplicated_acquisition():
     platform = create_platform("dummy")
     sequence = platform.natives.single_qubit[0].MZ.create_sequence()
 
-    options = ExecutionParameters(nshots=None)
     with pytest.raises(ValueError, match="unique"):
-        _ = platform.execute([sequence, sequence.copy()], options)
+        _ = platform.execute([sequence, sequence.copy()])
 
 
 def test_update_configs(platform):
@@ -246,9 +244,7 @@ def test_platform_execute_empty(qpu_platform):
     # an empty pulse sequence
     platform = qpu_platform
     sequence = PulseSequence()
-    result = platform.execute_pulse_sequence(
-        sequence, ExecutionParameters(nshots=nshots)
-    )
+    result = platform.execute([sequence], nshots=nshots)
     assert result is not None
 
 
@@ -265,9 +261,7 @@ def test_platform_execute_one_drive_pulse(qpu_platform):
             )
         ]
     )
-    result = platform.execute_pulse_sequence(
-        sequence, ExecutionParameters(nshots=nshots)
-    )
+    result = platform.execute([sequence], nshots=nshots)
     assert result is not None
 
 
@@ -286,9 +280,7 @@ def test_platform_execute_one_coupler_pulse(qpu_platform):
             )
         ]
     )
-    result = platform.execute_pulse_sequence(
-        sequence, ExecutionParameters(nshots=nshots)
-    )
+    result = platform.execute([sequence], nshots=nshots)
     assert result is not None
 
 
@@ -305,9 +297,7 @@ def test_platform_execute_one_flux_pulse(qpu_platform):
             )
         ]
     )
-    result = platform.execute_pulse_sequence(
-        sequence, ExecutionParameters(nshots=nshots)
-    )
+    result = platform.execute([sequence], nshots=nshots)
     assert result is not None
 
 
@@ -318,8 +308,7 @@ def test_platform_execute_one_long_drive_pulse(qpu_platform):
     qubit = next(iter(platform.qubits.values()))
     pulse = Pulse(duration=8192 + 200, amplitude=0.12, envelope=Gaussian(5))
     sequence = PulseSequence([(qubit.drive, pulse)])
-    options = ExecutionParameters(nshots=nshots)
-    platform.execute_pulse_sequence(sequence, options)
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.qpu
@@ -329,8 +318,7 @@ def test_platform_execute_one_extralong_drive_pulse(qpu_platform):
     qubit = next(iter(platform.qubits.values()))
     pulse = Pulse(duration=2 * 8192 + 200, amplitude=0.12, envelope=Gaussian(0.2))
     sequence = PulseSequence([(qubit.drive, pulse)])
-    options = ExecutionParameters(nshots=nshots)
-    platform.execute_pulse_sequence(sequence, options)
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.qpu
@@ -342,7 +330,7 @@ def test_platform_execute_one_drive_one_readout(qpu_platform):
     sequence.concatenate(platform.create_RX_pulse(qubit_id))
     sequence.append((qubit.probe, Delay(duration=200)))
     sequence.concatenate(platform.create_MZ_pulse(qubit_id))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.qpu
@@ -358,7 +346,7 @@ def test_platform_execute_multiple_drive_pulses_one_readout(qpu_platform):
     sequence.concatenate(platform.create_RX_pulse(qubit_id))
     sequence.append((qubit.probe, Delay(duration=808)))
     sequence.concatenate(platform.create_MZ_pulse(qubit_id))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.qpu
@@ -375,7 +363,7 @@ def test_platform_execute_multiple_drive_pulses_one_readout_no_spacing(
     sequence.concatenate(platform.create_RX_pulse(qubit_id))
     sequence.append((qubit.probe, Delay(duration=800)))
     sequence.concatenate(platform.create_MZ_pulse(qubit_id))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.qpu
@@ -394,7 +382,7 @@ def test_platform_execute_multiple_overlaping_drive_pulses_one_readout(
         ]
     )
     sequence.concatenate(platform.create_MZ_pulse(qubit_id))
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.qpu
@@ -414,7 +402,7 @@ def test_platform_execute_multiple_readout_pulses(qpu_platform):
     sequence.concatenate(qd_seq2)
     sequence.append((qubit.probe, Delay(duration=qd_seq2.duration)))
     sequence.concatenate(ro_seq2)
-    platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=nshots))
+    platform.execute([sequence], nshots=nshots)
 
 
 @pytest.mark.skip(reason="no way of currently testing this")
@@ -430,7 +418,7 @@ def test_excited_state_probabilities_pulses(qpu_platform):
         sequence.concatenate(platform.create_RX_pulse(qubit_id))
         sequence.append((qubit.probe, Delay(duration=sequence.duration)))
         sequence.concatenate(platform.create_MZ_pulse(qubit_id))
-    result = platform.execute([sequence], ExecutionParameters(nshots=5000))
+    result = platform.execute([sequence], nshots=5000)
 
     nqubits = len(platform.qubits)
     cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)
@@ -465,7 +453,7 @@ def test_ground_state_probabilities_pulses(qpu_platform, start_zero):
                 )
             )
         sequence.concatenate(platform.create_MZ_pulse(qubit_id))
-    result = platform.execute_pulse_sequence(sequence, ExecutionParameters(nshots=5000))
+    result = platform.execute([sequence], nshots=5000)
 
     nqubits = len(platform.qubits)
     cr = CircuitResult(backend, Circuit(nqubits), result, nshots=5000)

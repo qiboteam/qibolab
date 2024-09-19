@@ -6,13 +6,7 @@ from typing import Optional
 import numpy.typing as npt
 import pytest
 
-from qibolab import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-    Platform,
-    create_platform,
-)
+from qibolab import AcquisitionType, AveragingMode, Platform, create_platform
 from qibolab._core.platform.load import PLATFORMS
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
@@ -114,7 +108,7 @@ def execute(connected_platform: Platform) -> Execution:
         sequence: Optional[PulseSequence] = None,
         target: Optional[int] = None,
     ) -> npt.NDArray:
-        options = ExecutionParameters(
+        options = dict(
             nshots=nshots,
             acquisition_type=acquisition_type,
             averaging_mode=averaging_mode,
@@ -124,8 +118,8 @@ def execute(connected_platform: Platform) -> Execution:
         natives = connected_platform.natives.single_qubit[0]
 
         if sequence is None:
-            qd_seq = natives.RX.create_sequence()
-            probe_seq = natives.MZ.create_sequence()
+            qd_seq = natives.RX()
+            probe_seq = natives.MZ()
             probe_pulse = probe_seq[0][1].probe
             acq = probe_seq[0][1].acquisition
             wrapped.acquisition_duration = acq.duration
@@ -151,7 +145,7 @@ def execute(connected_platform: Platform) -> Execution:
         assert target is not None
         assert sweepers is not None
 
-        results = connected_platform.execute([sequence], options, sweepers)
+        results = connected_platform.execute([sequence], sweepers, **options)
         return results[target]
 
     return wrapped
