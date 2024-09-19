@@ -54,7 +54,7 @@ class Sweeper(Model):
         .. testcode::
 
             import numpy as np
-            from qibolab import ExecutionParameters, Parameter, PulseSequence, Sweeper, create_dummy
+            from qibolab import Parameter, PulseSequence, Sweeper, create_dummy
 
 
             platform = create_dummy()
@@ -65,7 +65,7 @@ class Sweeper(Model):
             sweeper = Sweeper(
                 parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe]
             )
-            platform.execute([sequence], ExecutionParameters(), [[sweeper]])
+            platform.execute([sequence], [[sweeper]])
 
     Args:
         parameter: parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.

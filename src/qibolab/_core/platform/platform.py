@@ -241,7 +241,7 @@ class Platform:
             .. testcode::
 
                 import numpy as np
-                from qibolab import ExecutionParameters, Parameter, PulseSequence, Sweeper, create_dummy
+                from qibolab import Parameter, PulseSequence, Sweeper, create_dummy
 
 
                 platform = create_dummy()
@@ -256,7 +256,7 @@ class Platform:
                         channels=[qubit.probe],
                     )
                 ]
-                platform.execute([sequence], ExecutionParameters(), [sweeper])
+                platform.execute([sequence], [sweeper])
         """
         if sweepers is None:
             sweepers = []
