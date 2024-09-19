@@ -84,17 +84,16 @@ Now we can execute the sequence on hardware:
     from qibolab import (
         AcquisitionType,
         AveragingMode,
-        ExecutionParameters,
     )
 
-    options = ExecutionParameters(
+    options = dict(
         nshots=1000,
         relaxation_time=10,
         fast_reset=False,
         acquisition_type=AcquisitionType.INTEGRATION,
         averaging_mode=AveragingMode.CYCLIC,
     )
-    results = platform.execute([ps], options=options)
+    results = platform.execute([ps], **options)
 
 Finally, we can stop instruments and close connections.
 
@@ -356,11 +355,7 @@ A typical resonator spectroscopy experiment could be defined with:
         for qubit in platform.qubits.values()
     ]
 
-    results = platform.execute([sequence], options, [sweepers])
-
-.. note::
-
-   options is an :class:`qibolab.ExecutionParameters` object, detailed in a separate section.
+    results = platform.execute([sequence], [sweepers], **options)
 
 In this way, we first define three parallel sweepers with an interval of 400 MHz (-200 MHz --- 200 MHz). The resulting probed frequency will then be:
     - for qubit 0: [3.8 GHz, 4.2 GHz]
@@ -390,7 +385,7 @@ For example:
         pulses=[rx_pulse],
     )
 
-    results = platform.execute([sequence], options, [[sweeper_freq], [sweeper_amp]])
+    results = platform.execute([sequence], [[sweeper_freq], [sweeper_amp]], **options)
 
 Let's say that the RX pulse has, from the runcard, a frequency of 4.5 GHz and an amplitude of 0.3, the parameter space probed will be:
 
@@ -408,15 +403,16 @@ while different lists define nested loops, with the first list corresponding to 
 Execution Parameters
 --------------------
 
-In the course of several examples, you've encountered the ``options`` argument in function calls like:
+In the course of several examples, you've encountered the ``**options`` argument in function calls like:
 
 .. testcode:: python
 
-   res = platform.execute([sequence], options=options)
+   res = platform.execute([sequence], **options)
 
-Let's now delve into the details of the ``options`` parameter and understand its components.
+Let's now delve into the details of the ``options`` and understand its parts.
 
-The ``options`` parameter, represented by the :class:`qibolab.ExecutionParameters` class, is a vital element for every hardware execution. It encompasses essential information that tailors the execution to specific requirements:
+The ``options`` extra arguments, is a vital element for every hardware execution.
+It encompasses essential information that tailors the execution to specific requirements:
 
 - ``nshots``: Specifies the number of experiment repetitions.
 - ``relaxation_time``: Introduces a wait time between repetitions, measured in nanoseconds (ns).
@@ -461,7 +457,10 @@ For example in
     ro_sequence = natives.MZ()
     sequence = natives.RX() | ro_sequence
 
-    options = ExecutionParameters(
+
+    ro_pulse = ro_sequence[0][1]
+    result = platform.execute(
+        [sequence],
         nshots=1000,
         relaxation_time=10,
         fast_reset=False,
@@ -469,14 +468,11 @@ For example in
         averaging_mode=AveragingMode.CYCLIC,
     )
 
-    ro_pulse = ro_sequence[0][1]
-    result = platform.execute([sequence], options=options)
-
 
 ``result`` will be a dictionary with a single key ``ro_pulse.id`` and an array of
 two elements, the averaged I and Q components of the integrated signal.
-If instead, ``(AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT)`` was used, the array would have shape ``(options.nshots, 2)``,
-while for ``(AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT)`` the shape would be ``(options.nshots,)`` with values 0 or 1.
+If instead, ``(AcquisitionType.INTEGRATION, AveragingMode.SINGLESHOT)`` was used, the array would have shape ``(options["nshots"], 2)``,
+while for ``(AcquisitionType.DISCRIMINATION, AveragingMode.SINGLESHOT)`` the shape would be ``(options["nshots"],)`` with values 0 or 1.
 
 The shape of the values of an integrated acquisition with two sweepers will be:
 
@@ -493,7 +489,7 @@ The shape of the values of an integrated acquisition with two sweepers will be:
         range=(f0 - 200_000, f0 + 200_000, 1),
         channels=[qubit.probe],
     )
-    shape = (options.nshots, len(sweeper1.values), len(sweeper2.values), 2)
+    shape = (options["nshots"], len(sweeper1.values), len(sweeper2.values), 2)
 
 .. _main_doc_compiler:
 
