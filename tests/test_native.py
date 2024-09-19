@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from pydantic import TypeAdapter
 
-from qibolab._core.native import FixedSequenceFactory, RxyFactory, TwoQubitNatives
+from qibolab._core.native import Native, RxyFactory, TwoQubitNatives
 from qibolab._core.pulses import (
     Drag,
     Exponential,
@@ -29,7 +29,7 @@ def test_fixed_sequence_factory():
             ),
         ]
     )
-    factory = FixedSequenceFactory(seq)
+    factory = Native(seq)
 
     fseq1 = factory.create_sequence()
     fseq2 = factory.create_sequence()
@@ -150,41 +150,41 @@ def test_rxy_rotation_factory_envelopes(envelope):
 
 def test_two_qubit_natives_symmetric():
     natives = TwoQubitNatives(
-        CZ=FixedSequenceFactory(PulseSequence()),
-        CNOT=FixedSequenceFactory(PulseSequence()),
-        iSWAP=FixedSequenceFactory(PulseSequence()),
+        CZ=Native(PulseSequence()),
+        CNOT=Native(PulseSequence()),
+        iSWAP=Native(PulseSequence()),
     )
     assert natives.symmetric is False
 
     natives = TwoQubitNatives(
-        CZ=FixedSequenceFactory(PulseSequence()),
-        iSWAP=FixedSequenceFactory(PulseSequence()),
+        CZ=Native(PulseSequence()),
+        iSWAP=Native(PulseSequence()),
     )
     assert natives.symmetric is True
 
     natives = TwoQubitNatives(
-        CZ=FixedSequenceFactory(PulseSequence()),
+        CZ=Native(PulseSequence()),
     )
     assert natives.symmetric is True
 
     natives = TwoQubitNatives(
-        iSWAP=FixedSequenceFactory(PulseSequence()),
+        iSWAP=Native(PulseSequence()),
     )
     assert natives.symmetric is True
 
     natives = TwoQubitNatives(
-        CNOT=FixedSequenceFactory(PulseSequence()),
+        CNOT=Native(PulseSequence()),
     )
     assert natives.symmetric is False
 
     natives = TwoQubitNatives(
-        CZ=FixedSequenceFactory(PulseSequence()),
-        CNOT=FixedSequenceFactory(PulseSequence()),
+        CZ=Native(PulseSequence()),
+        CNOT=Native(PulseSequence()),
     )
     assert natives.symmetric is False
 
     natives = TwoQubitNatives(
-        CNOT=FixedSequenceFactory(PulseSequence()),
-        iSWAP=FixedSequenceFactory(PulseSequence()),
+        CNOT=Native(PulseSequence()),
+        iSWAP=Native(PulseSequence()),
     )
     assert natives.symmetric is False

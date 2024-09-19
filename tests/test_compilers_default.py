@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibolab import create_platform
 from qibolab._core.compilers import Compiler
 from qibolab._core.identifier import ChannelId
-from qibolab._core.native import FixedSequenceFactory, TwoQubitNatives
+from qibolab._core.native import Native, TwoQubitNatives
 from qibolab._core.platform import Platform
 from qibolab._core.pulses import Delay, Pulse
 from qibolab._core.pulses.envelope import Rectangular
@@ -221,7 +221,7 @@ def test_inactive_qubits(platform: Platform, joint: bool):
         circuit.add(gates.M(coupled))
 
     natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
-        CZ=FixedSequenceFactory([])
+        CZ=Native([])
     )
     assert natives.CZ is not None
     natives.CZ.clear()
