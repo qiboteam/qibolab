@@ -1,6 +1,6 @@
 import pytest
 
-from qibolab import AcquisitionType, ExecutionParameters, create_platform
+from qibolab import AcquisitionType, create_platform
 from qibolab._core.platform.platform import Platform
 from qibolab._core.pulses import Delay, GaussianSquare, Pulse
 from qibolab._core.sequence import PulseSequence
@@ -29,8 +29,7 @@ def test_dummy_execute_coupler_pulse(platform: Platform):
     )
     sequence.append((channel, pulse))
 
-    options = ExecutionParameters(nshots=None)
-    _ = platform.execute([sequence], options)
+    _ = platform.execute([sequence], nshots=None)
 
 
 def test_dummy_execute_pulse_sequence_couplers():
@@ -38,15 +37,14 @@ def test_dummy_execute_pulse_sequence_couplers():
     sequence = PulseSequence()
 
     natives = platform.natives
-    cz = natives.two_qubit[(1, 2)].CZ.create_sequence()
+    cz = natives.two_qubit[(1, 2)].CZ()
 
     sequence.concatenate(cz)
     sequence.append((platform.qubits[0].probe, Delay(duration=40)))
     sequence.append((platform.qubits[2].probe, Delay(duration=40)))
-    sequence.concatenate(natives.single_qubit[0].MZ.create_sequence())
-    sequence.concatenate(natives.single_qubit[2].MZ.create_sequence())
-    options = ExecutionParameters(nshots=None)
-    _ = platform.execute([sequence], options)
+    sequence.concatenate(natives.single_qubit[0].MZ())
+    sequence.concatenate(natives.single_qubit[2].MZ())
+    _ = platform.execute([sequence], nshots=None)
 
 
 @pytest.mark.parametrize(
@@ -61,9 +59,8 @@ def test_dummy_execute_pulse_sequence_unrolling(
     natives = platform.natives
     sequences = []
     for _ in range(nsequences):
-        sequences.append(natives.single_qubit[0].MZ.create_sequence())
-    options = ExecutionParameters(nshots=nshots, acquisition_type=acquisition)
-    result = platform.execute(sequences, options)
+        sequences.append(natives.single_qubit[0].MZ())
+    result = platform.execute(sequences, nshots=nshots, acquisition_type=acquisition)
     assert len(next(iter(result.values()))) == nshots
     for r in result.values():
         if acquisition is AcquisitionType.INTEGRATION:
