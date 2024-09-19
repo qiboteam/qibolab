@@ -73,7 +73,7 @@ as these are loaded automatically from the platform, as defined in the correspon
    qubit = platform.qubits[0]
    natives = platform.natives.single_qubit[0]
    ps.concatenate(natives.RX())
-   ps.concatenate(natives.RX(phi=np.pi / 2))
+   ps.concatenate(natives.RXY(phi=np.pi / 2))
    ps.append((qubit.probe, Delay(duration=200)))
    ps.concatenate(natives.MZ())
 
