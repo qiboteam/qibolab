@@ -21,7 +21,7 @@ from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
 from qibolab._core.parameters import NativeGates, Parameters, update_configs
 from qibolab._core.platform import Platform
-from qibolab._core.platform.load import PLATFORM, PLATFORMS
+from qibolab._core.platform.load import PLATFORM, PLATFORMS, locate_platform
 from qibolab._core.platform.platform import PARAMETERS
 from qibolab._core.pulses import Delay, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
@@ -65,6 +65,24 @@ def test_platform_basics():
     )
     assert str(platform2) == "come va?"
     assert (1, 6) in platform2.pairs
+
+
+def test_locate_platform(tmp_path: Path):
+    some = tmp_path / "some"
+    some.mkdir()
+
+    for p in [some / "platform0", some / "platform1"]:
+        p.mkdir()
+        (p / PLATFORM).write_text("'Ciao'")
+
+    assert locate_platform("platform0", [some]) == some / "platform0"
+
+    with pytest.raises(ValueError):
+        locate_platform("platform3")
+
+    os.environ[PLATFORMS] = str(some)
+
+    assert locate_platform("platform1") == some / "platform1"
 
 
 def test_create_platform_multipath(tmp_path: Path):
