@@ -71,7 +71,7 @@ class SingleQubitNatives(NativeContainer):
     CP: Optional[Native] = None
     """Pulse to activate coupler."""
 
-    def RXY(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
+    def R(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
         """Create a sequence for single-qubit rotation.
 
         ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
