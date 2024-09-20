@@ -8,7 +8,8 @@ from qibo import gates
 from qibo.models import Circuit
 
 from qibolab import MetaBackend, create_platform
-from qibolab.backends import QibolabBackend
+from qibolab._core.backends import QibolabBackend
+from qibolab._core.platform.platform import Platform
 
 
 def generate_circuit_with_gate(nqubits, gate, **kwargs):
@@ -43,7 +44,6 @@ def test_execute_circuit_initial_state():
         (gates.Z, {}),
         (gates.GPI, {"phi": np.pi / 8}),
         (gates.GPI2, {"phi": np.pi / 8}),
-        (gates.U3, {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
     ],
 )
 def test_execute_circuit(gate, kwargs):
@@ -107,12 +107,21 @@ def test_multiple_measurements():
 def dummy_string_qubit_names():
     """Create dummy platform with string-named qubits."""
     platform = create_platform("dummy")
-    for q, qubit in platform.qubits.items():
-        qubit.name = f"A{q}"
-    platform.qubits = {qubit.name: qubit for qubit in platform.qubits.values()}
-    platform.pairs = {
-        (f"A{q0}", f"A{q1}"): pair for (q0, q1), pair in platform.pairs.items()
-    }
+    for q, qubit in platform.qubits.copy().items():
+        name = f"A{q}"
+        platform.qubits[name] = qubit
+        del platform.qubits[q]
+        platform.natives.single_qubit[name] = platform.natives.single_qubit[q]
+        del platform.natives.single_qubit[q]
+    for q0, q1 in platform.pairs:
+        name = (f"A{q0}", f"A{q1}")
+        try:
+            platform.natives.two_qubit[name] = platform.natives.two_qubit[(q0, q1)]
+            del platform.natives.two_qubit[(q0, q1)]
+        except KeyError:
+            # the symmetrized pair is only present in pairs, not in the natives
+            pass
+
     return platform
 
 
@@ -132,7 +141,7 @@ def test_execute_circuit_str_qubit_names():
 @pytest.mark.xfail(
     raises=AssertionError, reason="Probabilities are not well calibrated"
 )
-def test_ground_state_probabilities_circuit(connected_backend):
+def test_ground_state_probabilities_circuit(connected_backend: QibolabBackend):
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
@@ -150,7 +159,7 @@ def test_ground_state_probabilities_circuit(connected_backend):
 @pytest.mark.xfail(
     raises=AssertionError, reason="Probabilities are not well calibrated"
 )
-def test_excited_state_probabilities_circuit(connected_backend):
+def test_excited_state_probabilities_circuit(connected_backend: QibolabBackend):
     nshots = 5000
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
@@ -169,7 +178,7 @@ def test_excited_state_probabilities_circuit(connected_backend):
 @pytest.mark.xfail(
     raises=AssertionError, reason="Probabilities are not well calibrated"
 )
-def test_superposition_for_all_qubits(connected_backend):
+def test_superposition_for_all_qubits(connected_backend: QibolabBackend):
     """Applies an H gate to each qubit of the circuit and measures the
     probabilities."""
     nshots = 5000
@@ -196,21 +205,20 @@ def test_superposition_for_all_qubits(connected_backend):
 # TODO: test_circuit_result_representation
 
 
-def test_metabackend_load(dummy_qrc):
-    for platform in Path("tests/dummy_qrc/").iterdir():
-        backend = MetaBackend.load(platform.name)
-        assert isinstance(backend, QibolabBackend)
-        assert Path(backend.platform.name).name == platform.name
+def test_metabackend_load(platform: Platform):
+    backend = MetaBackend.load(platform.name)
+    assert isinstance(backend, QibolabBackend)
+    assert backend.platform.name == platform.name
 
 
-def test_metabackend_list_available(tmpdir):
+def test_metabackend_list_available(tmp_path: Path):
     for platform in (
         "valid_platform/platform.py",
         "invalid_platform/invalid_platform.py",
     ):
-        path = Path(tmpdir / platform)
+        path = tmp_path / platform
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
-    os.environ["QIBOLAB_PLATFORMS"] = str(tmpdir)
+    os.environ["QIBOLAB_PLATFORMS"] = str(tmp_path)
     available_platforms = {"valid_platform": True}
     assert MetaBackend().list_available() == available_platforms

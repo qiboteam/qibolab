@@ -12,27 +12,20 @@ Qibolab is the dedicated `Qibo <https://github.com/qiboteam/qibo>`_ backend for
 quantum hardware control. This module automates the implementation of quantum
 circuits on quantum hardware. Qibolab includes:
 
-1. :ref:`Platform API <main_doc_platform>`: support custom allocation of quantum hardware platforms / lab setup.
-2. :ref:`Drivers <main_doc_instruments>`: supports commercial and open-source firmware for hardware control.
-3. :ref:`Arbitrary pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
-4. :ref:`Compiler <main_doc_compiler>`: compiles quantum circuits into pulse sequences.
-5. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on quantum hardware.
-5. :ref:`Emulator <tutorials_emulator>`: seamless emulation of quantum hardware based on a emulator backend equipped with various quantum dynamics simulation engines.
+#. :ref:`Platform API <main_doc_platform>`: support custom allocation of quantum hardware platforms and lab setup.
+#. :ref:`Pulse API <main_doc_pulses>`: provide a library of custom pulses for execution through instruments.
+#. :ref:`Drivers <main_doc_instruments>`: supports commercial and open-source firmware for hardware control.
+#. :ref:`Compiler <main_doc_compiler>`: compiles quantum circuits into pulse sequences.
+#. :ref:`Quantum Circuit Deployment <tutorials_circuits>`: seamlessly deploys quantum circuit models on quantum hardware.
 
-Components
-----------
-
-The main components of Qibolab are presented in :doc:`main-documentation/index`
-
-.. image:: /main-documentation/platform.svg
 
 Key features
 ------------
 
 * Deploy Qibo models on quantum hardware easily.
-* Create custom experimental drivers for custom lab setup.
+* Create experimental drivers for custom lab setup.
 * Support multiple heterogeneous platforms.
-* Use existing calibration procedures for experimentalists.
+* Use calibration procedures from `Qibocal <https://github.com/qiboteam/qibocal>`_.
 
 How to Use the Documentation
 ============================

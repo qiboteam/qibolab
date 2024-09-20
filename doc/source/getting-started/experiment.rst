@@ -12,16 +12,15 @@ To define a platform the user needs to provide a folder with the following struc
     my_platform/
         platform.py
         parameters.json
-        kernels.npz # (optional)
 
-where ``platform.py`` contains instruments information, ``parameters.json``
-includes calibration parameters and ``kernels.npz`` is an optional
-file with additional calibration parameters.
+where ``platform.py`` contains instruments information and ``parameters.json`` includes calibration parameters.
 
-More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found at `TII dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
+More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found
+at the `TII QRC lab dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 For a first experiment, let's define a single qubit platform at the path previously specified.
-For simplicity, the qubit will be controlled by a RFSoC-based system, althought minimal changes are needed to use other devices.
+In this example, the qubit is controlled by a Quantum Machines cluster that contains Octaves,
+although minimal changes are needed to use other devices.
 
 .. testcode:: python
 
@@ -29,41 +28,67 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
 
     import pathlib
 
-    from qibolab.channels import Channel, ChannelMap
-    from qibolab.instruments.rfsoc import RFSoC
-    from qibolab.instruments.rohde_schwarz import SGS100A as LocalOscillator
-    from qibolab.platform import Platform
-    from qibolab.serialize import load_qubits, load_runcard, load_settings
-
-    NAME = "my_platform"  # name of the platform
-    ADDRESS = "192.168.0.1"  # ip address of the controller
-    PORT = 6000  # port of the controller
+    from qibolab import (
+        AcquisitionChannel,
+        Channel,
+        ConfigKinds,
+        DcChannel,
+        IqChannel,
+        Platform,
+        Qubit,
+    )
+    from qibolab.instruments.qm import Octave, QmConfigs, QmController
 
     # folder containing runcard with calibration parameters
     FOLDER = pathlib.Path.cwd()
 
+    # Register QM-specific configurations for parameters loading
+    ConfigKinds.extend([QmConfigs])
+
 
     def create():
-        # Instantiate controller instruments
-        controller = RFSoC(NAME, ADDRESS, PORT)
+        # Define qubit
+        qubits = {
+            0: Qubit(
+                drive="0/drive",
+                probe="0/probe",
+                acquisition="0/acquisition",
+            )
+        }
 
-        # Create channel objects and port assignment
-        channels = ChannelMap()
-        channels |= Channel("readout", port=controller[1])
-        channels |= Channel("feedback", port=controller[0])
-        channels |= Channel("drive", port=controller[0])
+        # Create channels and connect to instrument ports
+        channels = {}
+        qubit = qubits[0]
+        # Readout
+        channels[qubit.probe] = IqChannel(
+            device="octave1", path="1", mixer=None, lo="0/probe/lo"
+        )
+        # Acquire
+        channels[qubit.acquisition] = AcquisitionChannel(
+            device="octave1", path="1", probe=qubit.probe
+        )
+        # Drive
+        channels[qubit.drive] = IqChannel(
+            device="octave1", path="2", mixer=None, lo="0/drive/lo"
+        )
 
-        # create qubit objects
-        runcard = load_runcard(FOLDER)
-        qubits, pairs = load_qubits(runcard)
-        # assign channels to qubits
-        qubits[0].readout = channels["L3-22_ro"]
-        qubits[0].feedback = channels["L1-2-RO"]
-        qubits[0].drive = channels["L3-22_qd"]
+        # Define Quantum Machines instruments
+        octaves = {
+            "octave1": Octave("octave5", port=101, connectivity="con1"),
+        }
+        controller = QmController(
+            name="qm",
+            address="192.168.0.101:80",
+            octaves=octaves,
+            channels=channels,
+            calibration_path=FOLDER,
+        )
 
-        instruments = {controller.name: controller}
-        settings = load_settings(runcard)
-        return Platform(NAME, qubits, pairs, instruments, settings, resonator_type="3D")
+        # Define and return platform
+        return Platform.load(
+            path=FOLDER, instruments=[controller], qubits=qubits, resonator_type="3D"
+        )
+
 
 .. note::
 
@@ -72,7 +97,7 @@ For simplicity, the qubit will be controlled by a RFSoC-based system, althought 
     .. code-block:: python
 
         import pathlib
-        from qibolab.platform import Platform
+        from qibolab import Platform
 
 
         def create() -> Platform:
@@ -83,65 +108,76 @@ And the we can define the runcard ``my_platform/parameters.json``:
 .. code-block:: json
 
     {
-    "nqubits": 1,
-    "qubits": [
-        0
-    ],
-    "topology": [],
-    "settings": {
-        "nshots": 1024,
-        "relaxation_time": 70000,
-        "sampling_rate": 9830400000
-    },
-    "native_gates": {
-        "single_qubit": {
-            "0": {
-                "RX": {
-                    "duration": 40,
-                    "amplitude": 0.5,
-                    "frequency": 5500000000,
-                    "shape": "Gaussian(3)",
-                    "type": "qd",
-                    "start": 0,
-                    "phase": 0
-                },
-                "MZ": {
-                    "duration": 2000,
-                    "amplitude": 0.02,
-                    "frequency": 7370000000,
-                    "shape": "Rectangular()",
-                    "type": "ro",
-                    "start": 0,
-                    "phase": 0
-                }
+        "settings": {
+            "nshots": 1024,
+            "relaxation_time": 70000
+        },
+        "configs": {
+            "0/drive": {
+                "kind": "iq",
+                "frequency": 4833726197
+            },
+            "0/drive/lo": {
+                "kind": "oscillator",
+                "frequency": 5200000000,
+                "power": 0
+            },
+            "0/probe": {
+                "kind": "iq",
+                "frequency": 7320000000
+            },
+            "0/probe/lo": {
+                "kind": "oscillator",
+                "frequency": 7300000000,
+                "power": 0
+            },
+            "0/acquisition": {
+                "kind": "qm-acquisition",
+                "delay": 224,
+                "smearing": 0,
+                "threshold": 0.002100861788865835,
+                "iq_angle": -0.7669877581038627,
+                "gain": 10,
+                "offset": 0.0
             }
         },
-        "two_qubits": {}
-    },
-    "characterization": {
-        "single_qubit": {
-            "0": {
-                "readout_frequency": 7370000000,
-                "drive_frequency": 5500000000,
-                "anharmonicity": 0,
-                "Ec": 0,
-                "Ej": 0,
-                "g": 0,
-                "T1": 0.0,
-                "T2": 0.0,
-                "threshold": 0.0,
-                "iq_angle": 0.0,
-                "mean_gnd_states": [
-                    0.0,
-                    0.0
-                ],
-                "mean_exc_states": [
-                    0.0,
-                    0.0
-                ]
-            }
+        "native_gates": {
+            "single_qubit": {
+                "0": {
+                    "RX": {
+                        "0/drive": [
+                            {
+                                "duration": 40,
+                                "amplitude": 0.5,
+                                "envelope": { "kind": "gaussian", "rel_sigma": 3.0 },
+                                "type": "qd"
+                            }
+                        ]
+                    },
+                    "MZ": [
+                        [
+                            "0/acquisition",
+                            {
+                                "kind": "readout",
+                                "acquisition": {
+                                    "kind": "acquisition",
+                                    "duration": 2000.0
+                                },
+                                "probe": {
+                                    "kind": "pulse",
+                                    "duration": 2000.0,
+                                    "amplitude": 0.003,
+                                    "envelope": {
+                                        "kind": "rectangular"
+                                    }
+                                }
+                            }
+                        ]
+                    ]
+                }
+            },
+            "two_qubit": {}
         }
-    }
     }
 
 
@@ -163,7 +199,7 @@ for Windows:
 
     $env:QIBOLAB_PLATFORMS="<path-to-platform-folders>"
 
-To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives as ``.zshrc``).
+To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives such as ``.zshrc``).
 
 
 Run the experiment
@@ -179,44 +215,46 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
     import numpy as np
     import matplotlib.pyplot as plt
 
-    from qibolab import create_platform
-    from qibolab.pulses import PulseSequence
-    from qibolab.sweeper import Sweeper, SweeperType, Parameter
-    from qibolab.execution_parameters import (
-        ExecutionParameters,
-        AveragingMode,
+    from qibolab import (
         AcquisitionType,
+        AveragingMode,
+        Parameter,
+        PulseSequence,
+        Sweeper,
+        create_platform,
     )
 
     # load the platform from ``dummy.py`` and ``dummy.json``
     platform = create_platform("dummy")
 
+    qubit = platform.qubits[0]
+    natives = platform.natives.single_qubit[0]
     # define the pulse sequence
-    sequence = PulseSequence()
-    ro_pulse = platform.create_MZ_pulse(qubit=0, start=0)
-    sequence.add(ro_pulse)
+    sequence = natives.MZ.create_sequence()
 
     # define a sweeper for a frequency scan
+    f0 = platform.config(qubit.probe).frequency  # center frequency
     sweeper = Sweeper(
         parameter=Parameter.frequency,
-        values=np.arange(-2e8, +2e8, 1e6),
-        pulses=[ro_pulse],
-        type=SweeperType.OFFSET,
+        range=(f0 - 2e8, f0 + 2e8, 1e6),
+        channels=[qubit.probe],
     )
 
     # perform the experiment using specific options
-    options = ExecutionParameters(
+    results = platform.execute(
+        [sequence],
+        [[sweeper]],
         nshots=1000,
         relaxation_time=50,
         averaging_mode=AveragingMode.CYCLIC,
         acquisition_type=AcquisitionType.INTEGRATION,
     )
-
-    results = platform.sweep(sequence, options, sweeper)
+    _, acq = next(iter(sequence.acquisitions))
 
     # plot the results
-    amplitudes = results[ro_pulse.serial].magnitude
-    frequencies = np.arange(-2e8, +2e8, 1e6) + ro_pulse.frequency
+    signal = results[acq.id]
+    amplitudes = signal[..., 0] + 1j * signal[..., 1]
+    frequencies = sweeper.values
 
     plt.title("Resonator Spectroscopy")
     plt.xlabel("Frequencies [Hz]")

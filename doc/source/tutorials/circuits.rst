@@ -40,8 +40,8 @@ circuits definition that we leave to the `Qibo
     simulation = simulation_result.probabilities(qubits=(0,))
 
 
-In this snippet, we first define a single-qubit circuit containing a single Hadamard gate and a measurement.
-We then proceed to define the qibo backend as ``qibolab`` using the ``tii1q_b1`` platform.
+In this snippet, we first define a single-qubit circuit containing a single GPI2 gate and a measurement.
+We then proceed to define the qibo backend as ``qibolab`` using the ``dummy`` platform.
 Finally, we change the backend to ``numpy``, a simulation one, to compare the results with ideality.
 After executing the script we can print our results that will appear more or less as:
 
@@ -92,7 +92,7 @@ results:
             circuit.set_parameters([angle])
 
             # execute circuit
-            result = circuit.execute(nshots=4000)
+            result = circuit(nshots=4000)
 	    freq = result.frequencies()
 	    p0 = freq['0'] / 4000 if '0' in freq else 0
 	    p1 = freq['1'] / 4000 if '1' in freq else 0
@@ -129,8 +129,8 @@ Returns the following plot:
    :class: only-dark
 
 .. note::
-   Executing circuits using the Qibolab backend results to automatic application of the compilation pipeline (:ref:`main_doc_compiler`) which convert the circuit to a pulse sequence that is executed by the given platform.
-   It is possible to modify these pipelines following the instructions in the :ref:`tutorials_compiler` example.
+   Executing circuits using the Qibolab backend results to automatic application of the compilation pipeline (:ref:`main_doc_compiler`)
+   which converts the circuit to a pulse sequence that is executed by the given platform.
 
 QASM Execution
 --------------
@@ -150,11 +150,11 @@ Qibolab also supports the execution of circuits starting from a QASM string. The
    measure q[0] -> a[0];
    measure q[2] -> a[1];"""
 
-can be executed by passing it together with the platform name to the :func:`qibolab.execute_qasm` function:
+can be executed by passing it together with the platform name to the :func:`qibolab._core.backends.execute_qasm` function:
 
 .. testcode::
 
-   from qibolab import execute_qasm
+   from qibolab._core.backends import execute_qasm
 
    result = execute_qasm(circuit, platform="dummy")
 

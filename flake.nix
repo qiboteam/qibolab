@@ -2,14 +2,17 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default";
-    devenv.url = "github:cachix/devenv";
-    nixpkgs-python = {
-      url = "github:cachix/nixpkgs-python";
+    devenv = {
+      url = "github:cachix/devenv";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixpkgs-python = {
+      url = "github:cachix/nixpkgs-python";
+      inputs = {nixpkgs.follows = "nixpkgs";};
     };
   };
 
@@ -35,17 +38,22 @@
       forEachSystem
       (system: let
         pkgs = nixpkgs.legacyPackages.${system};
-        pwd = builtins.getEnv "PWD";
-        platforms = builtins.toPath "${pwd}/../qibolab_platforms_qrc/";
       in {
         default = devenv.lib.mkShell {
           inherit inputs pkgs;
 
           modules = [
-            ({lib, ...}: {
+            ({
+              lib,
+              pkgs,
+              config,
+              ...
+            }: {
               packages = with pkgs; [pre-commit poethepoet jupyter];
 
-              env.QIBOLAB_PLATFORMS = platforms;
+              env = {
+                QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
+              };
 
               languages.c = {
                 enable = true;
@@ -57,11 +65,13 @@
 
               languages.python = {
                 enable = true;
+                libraries = with pkgs; [zlib];
+                version = "3.11";
                 poetry = {
                   enable = true;
                   install = {
                     enable = true;
-                    groups = ["dev" "tests"];
+                    groups = ["dev" "analysis" "tests"];
                     extras = [
                       (lib.strings.concatStrings
                         (lib.strings.intersperse " -E "
@@ -69,7 +79,6 @@
                     ];
                   };
                 };
-                version = "3.11";
               };
 
               languages.rust = {

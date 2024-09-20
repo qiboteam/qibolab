@@ -1,15 +1,12 @@
 How to add a new instrument in Qibolab?
 =======================================
 
-Currently, Qibolab support various instruments:
-as **controller**:
+Currently, Qibolab supports various **controller** instruments:
 
 * Quantum Machines
-* QBlox
 * Zurich instruments
-* Xilinx RFSoCs
 
-and as **local oscillators**:
+and the following **local oscillators**:
 
 * Rhode&Schwartz
 * Erasynth++
@@ -17,22 +14,21 @@ and as **local oscillators**:
 If you need to add a new driver, to support a new instruments in your setup, we encourage you to have a look at ``qibolab.instruments`` for complete examples.
 In this section, anyway, a basic example will be given.
 
-For clarity, we divide the instruments in two different groups: the **controllers** and the standard **instruments**, where the controller is an instrument that can execute pulse sequences.
-For example, a local oscillator is just an instrument, while QBlox is a controller.
+For clarity, we divide the instruments in two different groups: the **controllers** and the standard **instruments**,
+where the controller is an instrument that can execute pulse sequences.
+For example, a local oscillator is just an instrument, while Quantum Machines is a controller.
 
 Add an instrument
 -----------------
 
-The base of an instrument is :class:`qibolab.instruments.abstract.Instrument`.
+The base of an instrument is :class:`qibolab._core.instruments.abstract.Instrument`,
+which is a pydantic ``Model``.
 To accomodate different kind of instruments, a flexible interface is implemented
-with four abstract methods that are required to be implemented in the child
-instrument:
-
-* ``connect()``
-* ``setup()``
-* ``start()``
-* ``stop()``
-* ``disconnect()``
+with two abstract methods (``connect()`` and ``disconnect()``) that are required
+to be implemented in the child instrument.
+Optionally, a ``setup()`` method can also be implemented to upload settings, such
+as local oscillator frequency or power, to the instrument after connection.
+If ``setup()`` is not implemented it will be an empty function.
 
 In the execution of an experiment these functions are called sequentially, so
 first a connection is established, the instrument is set up with the required
@@ -40,168 +36,99 @@ parameters, the instrument starts operating, then stops and gets disconnected.
 Note that it's perfectly fine to leave the majority of these functions empty if
 not needed.
 
-Moreover, it's important call the ``super.__init__(self, name, address)`` since
-it initialize the folders eventually required to store temporary files.
-
-A good example of a instrument driver is the
-:class:`qibolab.instruments.rohde_schwarz.SGS100A` driver.
-
 Here, let's write a basic example of instrument whose job is to deliver a fixed bias for the duration of the experiment:
 
 .. code-block::  python
 
-    from qibolab.instruments.abstract import Instrument
+    from typing import Optional
 
-    # let's suppose that there is already avaiable a base driver for connection
-    # and control of the device
-    from proprietary_instruments import biaser_driver
+    # let's suppose that there is already available a base driver for connection
+    # and control of the device, provided by the following library
+    from proprietary_instruments import BiaserType, biaser_driver
+
+    from qibolab.instruments.abstract import Instrument
 
 
     class Biaser(Instrument):
         """An instrument that delivers constand biases."""
+        name: str
+        address: str
+        min_value: float = -1.0
+        max_value: float = 1.0
+        bias: float = 0.0
+        device: Optional[BiaserType] = None
 
-        def __init__(self, name, address, min_value=-1, max_value=1):
-            super().__init__(name, address)
-            self.max_value: float = (
-                max_value  # attribute example, maximum value of voltage allowed
-            )
-            self.min_value: float = (
-                min_value  # attribute example, minimum value of voltage allowed
-            )
-            self.bias: float = 0
-
-            self.device = biaser_driver(address)
 
         def connect(self):
             """Check if a connection is avaiable."""
-            if not self.device.is_connected:
-                raise ConnectionError("Biaser not connected")
+            if self.device is None:
+                self.device = biaser_driver(self.address)
+            self.device.on(self.bias)
 
         def disconnect(self):
-            """Method not used."""
+            self.device.off(self.bias)
+            self.device.disconnect()
 
         def setup(self):
             """Set biaser parameters."""
             self.device.set_range(self.min_value, self.max_value)
 
-        def start(self):
-            """Start biasing."""
-            self.device.on(bias)
-
-        def stop(self):
-            """Stop biasing."""
-            self.device.off(bias)
-
 
 Add a controller
 ----------------
 
-The controller is an instrument that has some additional methods, its abstract
-implementation can be found in :class:`qibolab.instruments.abstract.Controller`.
-
-The additional methods required are:
-
-* ``play()``
-* ``play_sequences()``
-* ``sweep()``
-
-The simplest real example is the RFSoCs driver in
-:class:`qibolab.instruments.rfsoc.driver.RFSoC`, but still the code is much more
-complex than the local oscillator ones.
+The controller is an instrument that has the additional method ``play``,
+which allows it to execute arbitrary pulse sequences and perform sweeps.
+Its abstract implementation can be found in :class:`qibolab._core.instruments.abstract.Controller`.
 
 Let's see a minimal example:
 
 .. code-block::  python
 
-    from qibolab.instruments.abstract import Controller
-    from proprietary_instruments import controller_driver
+    from typing import Optional
+
+    from proprietary_instruments import ControllerType, controller_driver
+
+    from qibolab._core.components import Config
+    from qibolab._core.execution_parameters import ExecutionParameters
+    from qibolab._core.identifier import Result
+    from qibolab._core.sequence import PulseSequence
+    from qibolab._core.sweeper import ParallelSweepers
+    from qibolab._core.instruments.abstract import Controller
 
 
     class MyController(Controller):
-        def __init__(self, name, address):
-            self.device = controller_driver(address)
-            super().__init__(name, address)
 
         def connect(self):
-            """Empty method to comply with Instrument interface."""
-
-        def start(self):
-            """Empty method to comply with Instrument interface."""
-
-        def stop(self):
-            """Empty method to comply with Instrument interface."""
+            if self.device is None:
+                self.device = controller_driver(address)
 
         def disconnect(self):
-            """Empty method to comply with Instrument interface."""
-
-        def setup(self):
-            """Empty method to comply with Instrument interface."""
+            self.device.disconnect()
 
         def play(
-            self,
-            qubits: dict[int, Qubit],
-            sequence: PulseSequence,
-            execution_parameters: ExecutionParameters,
-        ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+                self,
+                configs: dict[str, Config],
+                sequences: list[PulseSequence],
+                options: ExecutionParameters,
+                sweepers: list[ParallelSweepers],
+            ) -> dict[int, Result]:
             """Executes a PulseSequence."""
+            if len(sweepers) > 0:
+                raise NotImplementedError("MyController does not support sweeps.")
 
-            # usually, some modification on the qubit objects, sequences or
-            # parameters is needed so that the qibolab interface comply with the one
-            # of the device here these are equal
-            results = self.device.run_experiment(qubits, sequence, execution_parameters)
+            if len(sequences) == 0:
+                return {}
+            elif len(sequences) == 1:
+                sequence = sequences[0]
+            else:
+                sequence, _ = unroll_sequences(sequences, options.relaxation_time)
 
-            # also the results are, in qibolab, specific objects that need some kind
-            # of conversion. Refer to the results section in the documentation.
-            return results
-
-        def sweep(
-            self,
-            qubits: dict[int, Qubit],
-            sequence: PulseSequence,
-            execution_parameters: ExecutionParameters,
-            *sweepers: Sweeper,
-        ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-            # usually, some modification on the qubit objects, sequences or
-            # parameters is needed so that the qibolab interface comply with the one
-            # of the device here these are equal
-            results = self.device.run_scan(qubits, sequence, sweepers, execution_parameters)
+            # usually, some modification on the sequence, channel configs, or
+            # parameters is needed so that the qibolab interface comply with the
+            # interface of the device. Here these are assumed to be equal for simplicity.
+            results = self.device.run_experiment(qubits, sequence, options)
 
             # also the results are, in qibolab, specific objects that need some kind
             # of conversion. Refer to the results section in the documentation.
             return results
-
-        def play_sequences(
-            self,
-            qubits: dict[int, Qubit],
-            sequences: List[PulseSequence],
-            execution_parameters: ExecutionParameters,
-        ) -> dict[str, Union[IntegratedResults, SampleResults]]:
-            """This method is used for sequence unrolling sweeps. Here not implemented."""
-            raise NotImplementedError
-
-As we saw in :doc:`lab`, to instantiate a platform at some point you have to
-write something like this:
-
-.. testcode:: python
-
-    from qibolab.channels import Channel, ChannelMap
-    from qibolab.instruments.dummy import DummyInstrument
-
-    instrument = DummyInstrument("my_instrument", "0.0.0.0:0")
-    channels = ChannelMap()
-    channels |= Channel("ch1out", port=instrument.ports("o1"))
-
-
-The interesting part of this section is the ``port`` parameter that works as an
-attribute of the controller. A :class:`qibolab.instruments.port.Port` object
-describes the physical connections that a device may have. A Controller has, by
-default, ports characterized just by ``port_name`` (see also
-:class:`qibolab.instruments.abstract.Controller`), but different devices may
-need to add attributes and methods to the ports. This can be done by defining in
-the new controller a new port type. See, for example, the already implemented
-ports:
-
-* :class:`qibolab.instruments.rfsoc.driver.RFSoCPort`
-* :class:`qibolab.instruments.qm.ports.QMPort`
-* :class:`qibolab.instruments.zhinst.ZhPort`
-* :class:`qibolab.instruments.qblox.port`

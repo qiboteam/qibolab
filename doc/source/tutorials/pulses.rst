@@ -1,47 +1,36 @@
 Pulses execution
 ================
 
-First, we create the pulse sequence that will be executed. We can do this by
-defining a :class:`qibolab.pulses.PulseSequence` object and adding different
-pulses (:class:`qibolab.pulses.Pulse`) through the
-:func:`qibolab.pulses.PulseSequence.add()` method:
+We can create pulse sequence using the Qibolab pulse API directly,
+defining a :class:`qibolab.PulseSequence` object and adding different
+pulses (:class:`qibolab.Pulse`) using the :func:`qibolab.PulseSequence.append()` method:
 
 .. testcode::  python
 
-    from qibolab.pulses import (
-        DrivePulse,
-        ReadoutPulse,
-        PulseSequence,
-        Rectangular,
-        Gaussian,
-    )
+    from qibolab import Delay, Gaussian, Pulse, PulseSequence, Rectangular
 
     # Define PulseSequence
-    sequence = PulseSequence()
+    sequence = PulseSequence.load(
+        [
+            (
+                "0/drive",
+                Pulse(
+                    amplitude=0.3,
+                    duration=60,
+                    relative_phase=0,
+                    envelope=Gaussian(rel_sigma=0.2),
+                ),
+            ),
+            ("1/drive", Delay(duration=100)),
+            (
+                "1/drive",
+                Pulse(
+                    amplitude=0.5, duration=3000, relative_phase=0, envelope=Rectangular()
+                ),
+            ),
+        ]
+    )
 
-    # Add some pulses to the pulse sequence
-    sequence.add(
-        DrivePulse(
-            start=0,
-            frequency=200000000,
-            amplitude=0.3,
-            duration=60,
-            relative_phase=0,
-            shape=Gaussian(5),
-            qubit=0,
-        )
-    )
-    sequence.add(
-        ReadoutPulse(
-            start=70,
-            frequency=20000000.0,
-            amplitude=0.5,
-            duration=3000,
-            relative_phase=0,
-            shape=Rectangular(),
-            qubit=0,
-        )
-    )
 
 The next step consists in connecting to a specific lab in which the pulse
 sequence will be executed. In order to do this we allocate a platform  object
@@ -50,15 +39,12 @@ the platform that will be used. The ``Platform`` constructor also takes care of
 loading the runcard containing all the calibration settings for that specific
 platform.
 
-After connecting and setting up the platform's instruments using the
-``connect()`` and ``setup()`` methods, the ``start`` method will turn on the
-local oscillators and the ``execute`` method will execute the previous defined
-pulse sequence according to the number of shots ``nshots`` specified.
+After connecting to the platform's instruments using the ``connect()``,
+we can execute the previously defined sequence using the ``execute`` method:
 
 .. testcode::  python
 
     from qibolab import create_platform
-    from qibolab.execution_parameters import ExecutionParameters
 
     # Define platform and load specific runcard
     platform = create_platform("dummy")
@@ -67,11 +53,25 @@ pulse sequence according to the number of shots ``nshots`` specified.
     platform.connect()
 
     # Executes a pulse sequence.
-    options = ExecutionParameters(nshots=1000, relaxation_time=100)
-    results = platform.execute_pulse_sequence(sequence, options=options)
+    results = platform.execute([sequence], nshots=1000, relaxation_time=100)
 
     # Disconnect from the instruments
     platform.disconnect()
 
-Remember to turn off the instruments and disconnect from the lab using the
-``stop()`` and ``disconnect()`` methods of the platform.
+Remember to turn off and disconnect from the instruments using the
+``disconnect()`` methods of the platform.
+
+.. note::
+    Calling ``platform.connect()`` automatically turns on auxilliary instruments such as local oscillators.
+
+Alternatively, instead of using the pulse API directly, one can use the native gate data structures to write a pulse sequence:
+
+.. testcode::  python
+
+    import numpy as np
+
+    from qibolab import Delay, Gaussian, Pulse, PulseSequence, Rectangular, create_platform
+
+    platform = create_platform("dummy")
+    q0 = platform.natives.single_qubit[0]
+    sequence = q0.R(theta=np.pi / 2) | q0.MZ()
