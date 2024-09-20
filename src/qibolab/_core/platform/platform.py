@@ -171,14 +171,13 @@ class Platform:
     def connect(self):
         """Connect to all instruments."""
         if not self.is_connected:
-            for instrument in self.instruments.values():
+            for name, instrument in self.instruments.items():
                 try:
-                    log.info(f"Connecting to instrument {instrument}.")
                     instrument.connect()
                 except Exception as exception:
                     raise_error(
                         RuntimeError,
-                        f"Cannot establish connection to {instrument} instruments. Error captured: '{exception}'",
+                        f"Cannot establish connection to instrument {name}. Error captured: '{exception}'",
                     )
         self.is_connected = True
 
