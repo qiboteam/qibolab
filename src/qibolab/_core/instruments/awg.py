@@ -4,7 +4,11 @@ from collections.abc import Iterable
 import numpy as np
 
 from qibolab._core.components import AcquisitionChannel, Config, DcChannel, IqChannel
-from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import PulseLike, Waveform
@@ -104,9 +108,12 @@ class AWG(Controller):
             elif pulse.kind == "delay":
                 stopwatch += pulse.duration
 
+            elif pulse.kind == "acquisition":
+                pass
+
             else:
                 if pulse.kind == "readout":
-                    pulse = pulse.acquisition
+                    pulse = pulse.probe
 
                 i_envelope, q_envelope = pulse.envelopes(sampling_rate)
                 num_pulse_samples = len(i_envelope)
@@ -133,7 +140,10 @@ class AWG(Controller):
 
         Modify if device/channel implements a certain sweeper type
         """
+        if options.acquisition_type is AcquisitionType.RAW:
+            raise RuntimeError("Sweeper with raw acquisition type unsupported")
 
+        result_shape = options.results_shape(sweepers)
         parallel_sweeper = sweepers.pop(0)
 
         # Ensure that parallel sweepers have equal length
@@ -142,9 +152,10 @@ class AWG(Controller):
             if len(sweeper.values) != sweeper_length:
                 raise ValueError("Parallel sweepers have unequal length")
 
-        accumulated_results = {}
+        outer_results = {}
         # Iterate across the sweeper and play on hardware
         for idx in range(sweeper_length):
+            # First adjust the pulse sequence or channels according to the sweeper
             for sweeper in parallel_sweeper:
                 value = sweeper.values[idx]
 
@@ -165,11 +176,24 @@ class AWG(Controller):
                         "Sweeper parameter not supported", sweeper.parameter.name
                     )
 
-            accumulated_results = merge_results(
-                accumulated_results, self.play(configs, sequences, options, sweepers)
-            )
+            # Next, we play the modified pulse sequence or move to an inner sweeper
+            inner_results = self.play(configs, sequences, options, sweepers)
 
-        return accumulated_results
+            # Finally, we accumulate the results
+            # We can have either (nshots x sweeper_length x (inner_results.shape))
+            # or (sweeper_length x inner_results.shape) depending on the averaging mode
+            # Hence, we set the array per key accordingly
+            if len(outer_results) == 0:
+                outer_results = {
+                    key: np.zeros(result_shape) for key in inner_results.keys()
+                }
+
+            if options.averaging_mode is AveragingMode.SINGLESHOT:
+                outer_results[:, idx] = inner_results
+            else:
+                outer_results[idx] = inner_results
+
+        return outer_results
 
     @abstractmethod
     def play(
@@ -187,29 +211,11 @@ class AWG(Controller):
         Returns a mapping with the id of the probe pulses used to acquired data.
         """
 
+        # As the AWG does not support hardware sweepers, we recursively sweep the sweepers and modify the sequence in-place
         if len(sweepers) != 0:
             return self.recursive_sweep(configs, sequences, options, sweepers)
 
+        # When we finally reach the innermost regime, we can play the pulse sequences
         for sequence in sequences:
             channel_waveform_map = self.generate_waveforms(sequence, configs)
             # Upload waveforms to instrument and play pulse sequence
-
-
-def merge_results(result_a: dict[int, Result], result_b: dict[int, Result]):
-    """Merge two dictionaries mapping acquisition ids to Result numpy arrays.
-
-    If dict_b has a key (serial) that dict_a does not have, simply add it,
-    otherwise concatenate the two arrays
-
-    Args:
-        dict_a (dict): dict mapping acquisition ids to Result numpy arrays.
-        dict_b (dict): dict mapping acquisition ids to Result numpy arrays.
-    Returns:
-        A dict mapping acquisition ids to Result numpy arrays.
-    """
-    for key, value in result_b.items():
-        if key in result_a:
-            result_a[key] = np.concatenate(result_a[key], value)
-        else:
-            result_a[key] = value
-    return result_a
