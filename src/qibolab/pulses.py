@@ -748,12 +748,12 @@ class Custom(PulseShape):
 
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            if len(self.envelope_i) != num_samples:
+            if len(self.envelope_i) < num_samples:
                 raise ValueError(
-                    "Length of envelope_i must be equal to pulse duration in samples"
+                    "Length of envelope_i must not be shorter than pulse duration in samples"
                 )
 
-            waveform = Waveform(self.envelope_i * self.pulse.amplitude)
+            waveform = Waveform(self.envelope_i[:num_samples] * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
@@ -763,12 +763,12 @@ class Custom(PulseShape):
 
         if self.pulse:
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
-            if len(self.envelope_q) != num_samples:
+            if len(self.envelope_q) < num_samples:
                 raise ValueError(
-                    "Length of envelope_q must be equal to pulse duration in samples"
+                    "Length of envelope_q must not be shorter than pulse duration in samples"
                 )
 
-            waveform = Waveform(self.envelope_q * self.pulse.amplitude)
+            waveform = Waveform(self.envelope_q[:num_samples] * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
