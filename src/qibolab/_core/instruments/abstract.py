@@ -75,7 +75,7 @@ class Controller(Instrument):
     ) -> dict[int, Result]:
         """Play a pulse sequence and retrieve feedback.
 
-        If :class:`qibolab.sweeper.Sweeper` objects are passed as arguments, they are
+        If :class:`qibolab.Sweeper` objects are passed as arguments, they are
         executed in real-time. If not possible, an error is raised.
 
         Returns a mapping with the id of the probe pulses used to acquired data.

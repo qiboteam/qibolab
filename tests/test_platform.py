@@ -1,6 +1,3 @@
-"""Tests :class:`qibolab.platforms.multiqubit.MultiqubitPlatform` and
-:class:`qibolab.platforms.platform.DesignPlatform`."""
-
 import inspect
 import os
 import pathlib

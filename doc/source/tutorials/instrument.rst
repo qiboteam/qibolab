@@ -89,12 +89,12 @@ Let's see a minimal example:
 
     from proprietary_instruments import ControllerType, controller_driver
 
-    from qibolab.components import Config
-    from qibolab.execution_parameters import ExecutionParameters
-    from qibolab.identifier import Result
-    from qibolab.sequence import PulseSequence
-    from qibolab.sweeper import ParallelSweepers
-    from qibolab.instruments.abstract import Controller
+    from qibolab._core.components import Config
+    from qibolab._core.execution_parameters import ExecutionParameters
+    from qibolab._core.identifier import Result
+    from qibolab._core.sequence import PulseSequence
+    from qibolab._core.sweeper import ParallelSweepers
+    from qibolab._core.instruments.abstract import Controller
 
 
     class MyController(Controller):

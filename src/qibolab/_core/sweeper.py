@@ -46,9 +46,9 @@ def _alternative_fields(a: _Field, b: _Field):
 class Sweeper(Model):
     """Data structure for Sweeper object.
 
-    This object is passed as an argument to the method :func:`qibolab.platforms.platform.Platform.execute`
+    This object is passed as an argument to the method :func:`qibolab.Platform.execute`
     which enables the user to sweep a specific parameter for one or more pulses. For information on how to
-    perform sweeps see :func:`qibolab.platforms.platform.Platform.execute`.
+    perform sweeps see :func:`qibolab.Platform.execute`.
 
     Example:
         .. testcode::
@@ -72,7 +72,7 @@ class Sweeper(Model):
         values: array of parameter values to sweep over.
         range: tuple of ``(start, stop, step)`` to sweep over the array ``np.arange(start, stop, step)``.
             Can be provided instead of ``values`` for more efficient sweeps on some instruments.
-        pulses : list of `qibolab.pulses.Pulse` to be swept.
+        pulses : list of `qibolab.Pulse` to be swept.
         channels: list of channel names for which the parameter should be swept.
     """
 
