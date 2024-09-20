@@ -25,7 +25,7 @@ The qibolab backend documentation is available at [https://qibo.science/qibolab/
 A simple example on how to connect to a platform and use it execute a pulse sequence:
 
 ```python
-from qibolab import create_platform, ExecutionParameters
+from qibolab import create_platform
 
 # Define platform and load specific runcard
 platform = create_platform("my_platform")
@@ -38,8 +38,7 @@ sequence = natives.RX() | natives.MZ()
 platform.connect()
 
 # Execute a pulse sequence
-options = ExecutionParameters(nshots=1000)
-results = platform.execute([sequence], options)
+results = platform.execute([sequence], nshots=1000)
 
 # Print the acquired shots
 readout_id = sequence.acquisitions[0][1].id
