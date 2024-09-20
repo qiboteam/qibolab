@@ -282,11 +282,19 @@ class QbloxController(Controller):
 
         serial_map = {p.serial: p.serial for p in sequence_copy.ro_pulses}
         for sweeper in sweepers_copy:
-            if sweeper.parameter is Parameter.start and not any(
+            if sweeper.parameter in (Parameter.duration, Parameter.start) and not any(
                 pulse.type is PulseType.READOUT for pulse in sweeper.pulses
             ):
-                for pulse in sequence_copy:
-                    if pulse.type is PulseType.READOUT:
+                for pulse in sequence_copy.ro_pulses:
+                    current_serial = pulse.serial
+                    if sweeper.parameter is Parameter.duration:
+                        sweep_values = sweeper.get_values(sweeper.pulses[0].duration)
+                        if (
+                            max_finish := sweeper.pulses[0].start + np.max(sweep_values)
+                        ) > pulse.start:
+                            pulse.start = max_finish
+                            serial_map[pulse.serial] = current_serial
+                    if sweeper.parameter is Parameter.start:
                         idx = sequence_copy.index(pulse)
                         padded_pulse = ReadoutPulse(
                             start=0,
@@ -313,7 +321,7 @@ class QbloxController(Controller):
                             channel=pulse.channel,
                             qubit=pulse.qubit,
                         )
-                        serial_map[padded_pulse.serial] = pulse.serial
+                        serial_map[padded_pulse.serial] = current_serial
                         sequence_copy[idx] = padded_pulse
                         sweeper.pulses.append(padded_pulse)
 
