@@ -23,9 +23,9 @@ Key features
 ------------
 
 * Deploy Qibo models on quantum hardware easily.
-* Create custom experimental drivers for custom lab setup.
+* Create experimental drivers for custom lab setup.
 * Support multiple heterogeneous platforms.
-* Use existing calibration procedures for experimentalists.
+* Use calibration procedures from `Qibocal <https://github.com/qiboteam/qibocal>`_.
 
 How to Use the Documentation
 ============================
