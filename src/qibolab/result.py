@@ -38,7 +38,7 @@ class IntegratedResults:
     @cached_property
     def phase(self):
         """Signal phase in radians."""
-        return np.unwrap(np.arctan2(self.voltage_i, self.voltage_q))
+        return np.unwrap(np.arctan2(self.voltage_q, self.voltage_i))
 
     @cached_property
     def phase_std(self):
@@ -95,7 +95,7 @@ class AveragedIntegratedResults(IntegratedResults):
     @cached_property
     def phase(self):
         """Phase not unwrapped because it is a single value."""
-        return np.arctan2(self.voltage_i, self.voltage_q)
+        return np.arctan2(self.voltage_q, self.voltage_i)
 
 
 class RawWaveformResults(IntegratedResults):
