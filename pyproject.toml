@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibolab"
-version = "0.2.0"
+version = "0.2.1"
 description = "Quantum hardware module and drivers for Qibo"
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
