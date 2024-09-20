@@ -30,7 +30,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import Bounds, unroll_sequences
 
 from .components import OpxOutputConfig, QmAcquisitionConfig
-from .config import SAMPLING_RATE, Configuration, operation
+from .config import SAMPLING_RATE, Configuration
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
@@ -338,12 +338,12 @@ class QmController(Controller):
             if isinstance(pulse, (Align, Delay)):
                 continue
 
-            params = args.parameters[operation(pulse)]
+            params = args.parameters[pulse.id]
             ids = args.sequence.pulse_channels(pulse.id)
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
-            for value in sweeper.values:
+            for value in sweeper.values.astype(int):
                 sweep_pulse = original_pulse.model_copy(update={"duration": value})
                 sweep_op = self.register_pulse(ids[0], sweep_pulse)
                 params.duration_ops.append((value, sweep_op))
@@ -360,7 +360,7 @@ class QmController(Controller):
         for pulse in sweeper.pulses:
             sweep_pulse = pulse.model_copy(update={"amplitude": amplitude})
             ids = args.sequence.pulse_channels(pulse.id)
-            params = args.parameters[operation(pulse)]
+            params = args.parameters[pulse.id]
             params.amplitude_pulse = sweep_pulse
             params.amplitude_op = self.register_pulse(ids[0], sweep_pulse)
 
@@ -418,6 +418,9 @@ class QmController(Controller):
             find_lo_frequencies(args, channels, configs, sweeper.values)
             for id in sweeper.channels:
                 args.parameters[id].element = probe_map.get(id, id)
+        for sweeper in find_sweepers(sweepers, Parameter.offset):
+            for id in sweeper.channels:
+                args.parameters[id].element = id
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
