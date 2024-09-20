@@ -40,7 +40,11 @@ platform.connect()
 # Execute a pulse sequence
 results = platform.execute([sequence], nshots=1000)
 
-# Print the acquired shots
+# Grab the acquired shots corresponding to
+# the measurement using its pulse id.
+# The ``PulseSequence`` structure is list[tuple[ChannelId, Pulse]]
+# thererefore we need to index it appropriately
+# to get the acquisition pulse
 readout_id = sequence.acquisitions[0][1].id
 print(results[readout_id])
 
