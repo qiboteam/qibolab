@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 from pydantic import model_validator
 
-from qibolab.serialize_ import Model
+from ...serialize import Model
 
 Register = str
 Immediate = int
