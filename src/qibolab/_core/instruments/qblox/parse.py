@@ -27,5 +27,6 @@ class ToAst(Transformer):
 
 
 def parse(code: str) -> Program:
+    """Parse Q1ASM representation."""
     tree = parser.parse(code)
     return Program.from_elements(ToAst().transform(tree).children)
