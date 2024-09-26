@@ -38,7 +38,7 @@ class QbloxOutputPort(Port):
     def __init__(self, module, port_number: int, port_name: str = None):
         self.name = port_name
         self.module = module
-        self.sequencer_number: int = port_number
+        self.sequencer_number: int = module.DEFAULT_SEQUENCERS[port_name]
         self.port_number: int = port_number
         self._settings = QbloxOutputPort_Settings()
 
