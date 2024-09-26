@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from qibolab.instruments.neoqblox.ast_ import Program
-from qibolab.instruments.neoqblox.parse import parse
+from qibolab._core.instruments.qblox.ast_ import Program
+from qibolab._core.instruments.qblox.parse import parse
 
 PROGRAMS = Path(__file__).parent / "q1asm"
 
