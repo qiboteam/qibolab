@@ -72,7 +72,11 @@
                   install = {
                     enable = true;
                     groups = ["dev" "analysis" "tests"];
-                    allExtras = true;
+                    extras = [
+                      (lib.strings.concatStrings
+                        (lib.strings.intersperse " -E "
+                          ["qblox" "qm" "zh" "rfsoc" "los"]))
+                    ];
                   };
                 };
               };
