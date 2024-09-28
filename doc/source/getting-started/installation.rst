@@ -19,17 +19,6 @@ After updating ``pip``, if needed, install Qibolab with:
 
     Remember that Qibolab is compatible with Pyhon >= 3.9 and < 3.12.
 
-Installing with conda
-"""""""""""""""""""""
-
-We provide conda packages for ``qibolab`` through the `conda-forge
-<https://anaconda.org/conda-forge>`_ channel.
-
-To install the package with conda run:
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibolab
 
 Installing from source
 """"""""""""""""""""""
