@@ -22,7 +22,7 @@ def z_rule(gate, platform):
 def rz_rule(gate, platform):
     """RZ gate applied virtually."""
     qubit = list(platform.qubits)[gate.target_qubits[0]]
-    return PulseSequence(), {qubit: gate.parameters[0]}
+    return PulseSequence(), {qubit: -gate.parameters[0]}
 
 
 def gpi2_rule(gate, platform):
