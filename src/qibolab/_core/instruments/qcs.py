@@ -1,6 +1,6 @@
 """Qibolab driver for Keysight QCS instrument set."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import keysight.qcs as qcs  # pylint: disable=E0401
 import numpy as np
@@ -46,11 +46,11 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
 
 
 def generate_qcs_rfwaveform(
-    duration: float | qcs.Scalar,
+    duration: Union[float, qcs.Scalar],
     envelope: Envelope,
-    amplitude: float | qcs.Scalar,
-    frequency: float | qcs.Scalar,
-    phase: float | qcs.Scalar,
+    amplitude: Union[float, qcs.Scalar],
+    frequency: Union[float, qcs.Scalar],
+    phase: Union[float, qcs.Scalar],
 ) -> qcs.RFWaveform:
 
     return qcs.RFWaveform(
@@ -306,6 +306,8 @@ class KeysightQCS(Controller):
                 elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     classifier = self.classifier_map[channel]
                     raw = results.get_classified(channel, averaging, classifier)
+                else:
+                    raise ValueError("Acquisition type unrecognized")
 
                 for result, input_op in zip(raw.values(), input_ops):
                     if options.acquisition_type is AcquisitionType.INTEGRATION:
