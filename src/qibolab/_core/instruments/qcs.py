@@ -13,12 +13,11 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import Drag, Envelope, Gaussian, Pulse, PulseId, Rectangular
+from qibolab._core.pulses import Drag, Envelope, Gaussian, PulseId, Rectangular
 from qibolab._core.sequence import InputOps, PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 from qibolab._core.unrolling import Bounds
 
-SWEEPER_PARAMETER_MAP = {Parameter.relative_phase: "instantaneous_phase"}
 NANOSECONDS = 1e-9
 
 BOUNDS = Bounds(
@@ -30,7 +29,7 @@ BOUNDS = Bounds(
 __all__ = ["KeysightQCS"]
 
 
-def generate_qcs_envelope(shape: Envelope, num_samples: int) -> qcs.Envelope:
+def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
     """Converts a Qibolab pulse envelope to a QCS Envelope object."""
     if isinstance(shape, Rectangular):
         return qcs.ConstantEnvelope()
@@ -39,22 +38,27 @@ def generate_qcs_envelope(shape: Envelope, num_samples: int) -> qcs.Envelope:
         return qcs.GaussianEnvelope(shape.rel_sigma)
 
     else:
-        raw_envelope = shape.i(num_samples) + 1j * shape.q(num_samples)
-        return qcs.ArbitraryEnvelope(
-            times=np.linspace(0, 1, num_samples), amplitudes=raw_envelope
-        )
+        # raw_envelope = shape.i(num_samples) + 1j * shape.q(num_samples)
+        # return qcs.ArbitraryEnvelope(
+        #    times=np.linspace(0, 1, num_samples), amplitudes=raw_envelope
+        # )
+        raise Exception("Envelope not supported")
 
 
 def generate_qcs_rfwaveform(
-    pulse: Pulse, sample_rate: float, frequency: float, phase: float = 0
+    duration: float | qcs.Scalar,
+    envelope: Envelope,
+    amplitude: float | qcs.Scalar,
+    frequency: float | qcs.Scalar,
+    phase: float | qcs.Scalar,
 ) -> qcs.RFWaveform:
-    duration = pulse.duration * NANOSECONDS
+
     return qcs.RFWaveform(
         duration=duration,
-        envelope=generate_qcs_envelope(pulse.envelope, round(duration * sample_rate)),
-        amplitude=pulse.amplitude,
+        envelope=generate_qcs_envelope(envelope),
+        amplitude=amplitude,
         rf_frequency=frequency,
-        instantaneous_phase=pulse.relative_phase + phase,
+        instantaneous_phase=phase,
     )
 
 
@@ -71,7 +75,7 @@ class KeysightQCS(Controller):
     classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = None
 
     def connect(self):
-        self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=True)
+        self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=False)
         self.backend.is_system_ready()
 
     @property
@@ -83,14 +87,16 @@ class KeysightQCS(Controller):
         sequence: PulseSequence,
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
+        num_shots: int,
     ) -> qcs.Program:
         program = qcs.Program()
 
         # SWEEPER MANAGEMENT
         # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
-        sweeper_pulse_map: dict[PulseId, tuple[qcs.Scalar, Parameter]] = {}
+        sweeper_pulse_map: dict[PulseId, dict[str, qcs.Scalar]] = {}
         # Mapper for channels with frequency controlled by a sweeper
         sweeper_channel_map: dict[ChannelId, qcs.Scalar] = {}
+        hw_demod = True
 
         for idx, parallel_sweeper in enumerate(sweepers):
             sweep_values = []
@@ -105,13 +111,25 @@ class KeysightQCS(Controller):
                 if sweeper.parameter is Parameter.frequency:
                     for channel_id in sweeper.channels:
                         sweeper_channel_map[channel_id] = qcs_variable
+                        # Ignore hardware sweeping if frequency on readout is swept
+                        if "readout" in self.virtual_channel_map[channel_id].name:
+                            program = program.n_shots(num_shots)
+                            hw_demod = False
                 elif sweeper.parameter in [
                     Parameter.amplitude,
-                    Parameter.frequency,
                     Parameter.duration,
+                    Parameter.relative_phase,
                 ]:
+                    # Ignore hardware sweeping if duration is swept
+                    if sweeper.parameter is Parameter.duration:
+                        program = program.n_shots(num_shots)
+                        hw_demod = False
                     for pulse in sweeper.pulses:
-                        sweeper_pulse_map[pulse.id] = (qcs_variable, sweeper.parameter)
+                        if pulse.id not in sweeper_pulse_map:
+                            sweeper_pulse_map[pulse.id] = {}
+                        sweeper_pulse_map[pulse.id][
+                            sweeper.parameter.name
+                        ] = qcs_variable
                 else:
                     raise ValueError(
                         "Sweeper parameter not supported", sweeper.parameter.name
@@ -136,55 +154,47 @@ class KeysightQCS(Controller):
         for channel_id in sequence.channels:
             channel = self.channels[channel_id]
             virtual_channel = self.virtual_channel_map[channel_id]
-            sample_rate = self.qcs_channel_map.get_physical_channels(virtual_channel)[
-                0
-            ].sample_rate
 
             if isinstance(channel, AcquisitionChannel):
                 probe_channel_id = channel.probe
                 probe_virtual_channel = self.virtual_channel_map[probe_channel_id]
-                sample_rate = self.qcs_channel_map.get_physical_channels(
-                    probe_virtual_channel
-                )[0].sample_rate
-
-                if channel_id in sweeper_channel_map:
+                if probe_channel_id in sweeper_channel_map:
                     frequency = sweeper_channel_map[probe_channel_id]
                 else:
                     frequency = configs[probe_channel_id].frequency
-
                 for pulse in sequence.channel(channel_id):
+                    sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
+
                     if pulse.kind == "delay":
-                        qcs_pulse = qcs.Delay(pulse.duration * NANOSECONDS)
-                        if pulse.id in sweeper_pulse_map:
-                            qcs_variable, parameter = sweeper_pulse_map[pulse.id]
-                            setattr(
-                                qcs_pulse,
-                                SWEEPER_PARAMETER_MAP.get(parameter, parameter.name),
-                                qcs_variable,
+                        qcs_pulse = qcs.Delay(
+                            sweep_param_map.get(
+                                "duration", pulse.duration * NANOSECONDS
                             )
+                        )
                         program.add_waveform(qcs_pulse, virtual_channel)
                         program.add_waveform(qcs_pulse, probe_virtual_channel)
 
                     elif pulse.kind == "acquisition":
-                        duration = pulse.duration
-                        if pulse.id in sweeper_pulse_map:
-                            qcs_variable, parameter = sweeper_pulse_map[pulse.id]
-                            # Sanity check, but the only parameter for an acquisition operation is the duration
-                            if parameter is Parameter.duration:
-                                duration = qcs_variable
+                        duration = sweep_param_map.get(
+                            "duration", pulse.duration * NANOSECONDS
+                        )
                         program.add_acquisition(duration, virtual_channel)
 
                     elif pulse.kind == "readout":
+                        sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
                         qcs_pulse = generate_qcs_rfwaveform(
-                            pulse.probe, sample_rate, frequency
+                            duration=sweep_param_map.get(
+                                "duration", pulse.probe.duration * NANOSECONDS
+                            ),
+                            envelope=pulse.probe.envelope,
+                            amplitude=sweep_param_map.get(
+                                "amplitude", pulse.probe.amplitude
+                            ),
+                            frequency=frequency,
+                            phase=sweep_param_map.get(
+                                "relative_phase", pulse.probe.relative_phase
+                            ),
                         )
-                        if pulse.probe.id in sweeper_pulse_map:
-                            qcs_variable, parameter = sweeper_pulse_map[pulse.probe.id]
-                            setattr(
-                                qcs_pulse,
-                                SWEEPER_PARAMETER_MAP.get(parameter, parameter.name),
-                                qcs_variable,
-                            )
                         integration_filter = qcs.IntegrationFilter(qcs_pulse)
                         program.add_waveform(qcs_pulse, probe_virtual_channel)
                         program.add_acquisition(integration_filter, virtual_channel)
@@ -200,28 +210,33 @@ class KeysightQCS(Controller):
                 vz_phase = 0
 
                 for pulse in sequence.channel(channel_id):
+                    sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
+
                     if pulse.kind == "delay":
-                        qcs_pulse = qcs.Delay(pulse.duration * NANOSECONDS)
+                        qcs_pulse = qcs.Delay(
+                            sweep_param_map.get(
+                                "duration", pulse.duration * NANOSECONDS
+                            )
+                        )
                     elif pulse.kind == "virtualz":
                         vz_phase += pulse.phase
                     elif pulse.kind == "pulse":
                         qcs_pulse = generate_qcs_rfwaveform(
-                            pulse, sample_rate, frequency, vz_phase
+                            duration=sweep_param_map.get(
+                                "duration", pulse.duration * NANOSECONDS
+                            ),
+                            envelope=pulse.envelope,
+                            amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
+                            frequency=frequency,
+                            phase=sweep_param_map.get(
+                                "relative_phase", pulse.relative_phase
+                            )
+                            + float(vz_phase),
                         )
                         if pulse.envelope.kind == "drag":
                             qcs_pulse = qcs_pulse.drag(coeff=pulse.envelope.beta)
                     else:
                         raise ValueError("Unrecognized pulse type", pulse.kind)
-
-                    if pulse.id in sweeper_pulse_map:
-                        qcs_variable, parameter = sweeper_pulse_map[pulse.id]
-                        if parameter is Parameter.relative_phase:
-                            qcs_variable += float(vz_phase)
-                        setattr(
-                            qcs_pulse,
-                            SWEEPER_PARAMETER_MAP.get(parameter, parameter.name),
-                            qcs_variable,
-                        )
 
                     pulses.append(qcs_pulse)
 
@@ -230,30 +245,29 @@ class KeysightQCS(Controller):
             elif isinstance(channel, DcChannel):
 
                 pulses = []
+                sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
+
                 for pulse in sequence.channel(channel_id):
                     if pulse.kind == "delay":
-                        qcs_pulse = qcs.Delay(pulse.duration * NANOSECONDS)
-                    elif pulse.kind == "pulse":
-                        duration = pulse.duration * NANOSECONDS
-                        qcs_pulse = qcs.DCWaveform(
-                            duration=duration,
-                            envelope=generate_qcs_envelope(
-                                pulse.envelope, round(sample_rate * duration)
+                        duration = (
+                            sweep_param_map.get(
+                                "duration", pulse.duration * NANOSECONDS
                             ),
-                            amplitude=pulse.amplitude,
+                        )
+                    elif pulse.kind == "pulse":
+                        qcs_pulse = qcs.DCWaveform(
+                            duration=sweep_param_map.get(
+                                "duration", pulse.duration * NANOSECONDS
+                            ),
+                            envelope=generate_qcs_envelope(pulse.envelope),
+                            amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
                         )
                     else:
                         raise ValueError("Unrecognized pulse type", pulse.kind)
 
-                    if pulse.id in sweeper_pulse_map:
-                        qcs_variable, parameter = sweeper_pulse_map[pulse.id]
-                        setattr(
-                            qcs_pulse,
-                            SWEEPER_PARAMETER_MAP.get(parameter, parameter.name),
-                            qcs_variable,
-                        )
                 program.add_waveform(pulses, virtual_channel)
-
+        if hw_demod:
+            program = program.n_shots(num_shots)
         return program
 
     def play(
@@ -271,8 +285,8 @@ class KeysightQCS(Controller):
         for sequence in sequences:
             results = self.backend.apply(
                 self.create_program(
-                    sequence.align_to_delays(), configs, sweepers
-                ).n_shots(options.nshots)
+                    sequence.align_to_delays(), configs, sweepers, options.nshots
+                )
             ).results
             acquisitions = sequence.acquisitions
             acquisition_map: dict[qcs.Channels, list[InputOps]] = {}
