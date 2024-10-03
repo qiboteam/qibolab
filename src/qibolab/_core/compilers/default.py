@@ -21,7 +21,7 @@ def z_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
 
 def rz_rule(gate: Gate, qubit: Qubit) -> PulseSequence:
     """RZ gate applied virtually."""
-    return PulseSequence([(qubit.drive, VirtualZ(phase=gate.parameters[0]))])
+    return PulseSequence([(qubit.drive, VirtualZ(phase=-gate.parameters[0]))])
 
 
 def identity_rule(gate: Gate, natives: SingleQubitNatives) -> PulseSequence:
