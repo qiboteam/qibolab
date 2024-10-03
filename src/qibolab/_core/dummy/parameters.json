@@ -159,11 +159,11 @@
           [
             "0/drive",
             {
-              "duration": 40.0,
+              "duration": 22.3453,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian",
-                "rel_sigma": 5.0
+                "rel_sigma": 0.2
               },
               "relative_phase": 0.0,
               "kind": "pulse"
@@ -178,7 +178,7 @@
               "amplitude": 0.005,
               "envelope": {
                 "kind": "gaussian",
-                "rel_sigma": 5.0
+                "rel_sigma": 0.2
               },
               "relative_phase": 0.0,
               "kind": "pulse"
@@ -199,7 +199,7 @@
                 "amplitude": 0.1,
                 "envelope": {
                   "kind": "gaussian_square",
-                  "rel_sigma": 5.0,
+                  "rel_sigma": 0.2,
                   "width": 0.75
                 },
                 "relative_phase": 0.0,
@@ -219,7 +219,7 @@
               "amplitude": 0.3,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -235,7 +235,7 @@
               "amplitude": 0.0484,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -257,7 +257,7 @@
                 "amplitude": 0.1,
                 "envelope": {
                   "kind": "gaussian_square",
-                  "rel_sigma": 5.0,
+                  "rel_sigma": 0.2,
                   "width": 0.75
                 },
                 "relative_phase": 0.0,
@@ -277,7 +277,7 @@
               "amplitude": 0.3,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -293,7 +293,7 @@
               "amplitude": 0.005,
               "envelope": {
                 "kind": "gaussian",
-                "rel_sigma": 5.0
+                "rel_sigma": 0.2
               },
               "relative_phase": 0.0,
               "kind": "pulse"
@@ -314,7 +314,7 @@
                 "amplitude": 0.1,
                 "envelope": {
                   "kind": "gaussian_square",
-                  "rel_sigma": 5.0,
+                  "rel_sigma": 0.2,
                   "width": 0.75
                 },
                 "relative_phase": 0.0,
@@ -334,7 +334,7 @@
               "amplitude": 0.3,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -350,7 +350,7 @@
               "amplitude": 0.0484,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -372,7 +372,7 @@
                 "amplitude": 0.1,
                 "envelope": {
                   "kind": "gaussian_square",
-                  "rel_sigma": 5.0,
+                  "rel_sigma": 0.2,
                   "width": 0.75
                 },
                 "relative_phase": 0.0,
@@ -392,7 +392,7 @@
               "amplitude": 0.3,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -408,7 +408,7 @@
               "amplitude": 0.0484,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -430,7 +430,7 @@
                 "amplitude": 0.1,
                 "envelope": {
                   "kind": "gaussian_square",
-                  "rel_sigma": 5.0,
+                  "rel_sigma": 0.2,
                   "width": 0.75
                 },
                 "relative_phase": 0.0,
@@ -455,7 +455,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -476,7 +476,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -497,7 +497,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -518,7 +518,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -538,7 +538,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -566,7 +566,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -583,7 +583,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -611,7 +611,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -629,7 +629,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -657,7 +657,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -674,7 +674,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -702,7 +702,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -720,7 +720,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -750,7 +750,7 @@
               "amplitude": 0.3,
               "envelope": {
                 "kind": "drag",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "beta": 0.02
               },
               "relative_phase": 0.0,
@@ -766,7 +766,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -798,7 +798,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -819,7 +819,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -836,7 +836,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
@@ -864,7 +864,7 @@
               "amplitude": 0.05,
               "envelope": {
                 "kind": "gaussian_square",
-                "rel_sigma": 5.0,
+                "rel_sigma": 0.2,
                 "width": 0.75
               },
               "relative_phase": 0.0,
