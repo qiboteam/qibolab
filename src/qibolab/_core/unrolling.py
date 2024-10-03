@@ -45,7 +45,7 @@ class Bounds(Config):
 
     kind: Literal["bounds"] = "bounds"
 
-    waveforms: Annotated[int, {"count": _waveform}]
+    waveforms: Annotated[float, {"count": _waveform}]
     """Waveforms estimated size."""
     readout: Annotated[int, {"count": _readout}]
     """Number of readouts."""
