@@ -159,7 +159,7 @@
           [
             "0/drive",
             {
-              "duration": 40.0,
+              "duration": 22.3453,
               "amplitude": 0.1,
               "envelope": {
                 "kind": "gaussian",
