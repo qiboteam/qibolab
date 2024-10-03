@@ -75,7 +75,7 @@ class KeysightQCS(Controller):
     classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = None
 
     def connect(self):
-        self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=False)
+        self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=True)
         self.backend.is_system_ready()
 
     @property
@@ -112,7 +112,11 @@ class KeysightQCS(Controller):
                     for channel_id in sweeper.channels:
                         sweeper_channel_map[channel_id] = qcs_variable
                         # Ignore hardware sweeping if frequency on readout is swept
-                        if "readout" in self.virtual_channel_map[channel_id].name:
+                        # TODO: Find better way of determining if channel is readout probe
+                        if (
+                            "readout" in self.virtual_channel_map[channel_id].name
+                            and hw_demod
+                        ):
                             program = program.n_shots(num_shots)
                             hw_demod = False
                 elif sweeper.parameter in [
@@ -121,7 +125,7 @@ class KeysightQCS(Controller):
                     Parameter.relative_phase,
                 ]:
                     # Ignore hardware sweeping if duration is swept
-                    if sweeper.parameter is Parameter.duration:
+                    if sweeper.parameter is Parameter.duration and hw_demod:
                         program = program.n_shots(num_shots)
                         hw_demod = False
                     for pulse in sweeper.pulses:
@@ -141,7 +145,7 @@ class KeysightQCS(Controller):
                         name=f"A{idx}_{idx2}",
                         value=(
                             sweeper.values * NANOSECONDS
-                            if Parameter is Parameter.duration
+                            if sweeper.parameter is Parameter.duration
                             else sweeper.values
                         ),
                         dtype=float,
@@ -310,10 +314,26 @@ class KeysightQCS(Controller):
                     raise ValueError("Acquisition type unrecognized")
 
                 for result, input_op in zip(raw.values(), input_ops):
-                    if options.acquisition_type is AcquisitionType.INTEGRATION:
+                    # For single shot, qibolab expects result format (nshots, ...)
+                    # QCS returns (..., nshots), so we need to shuffle the arrays
+                    if (
+                        options.averaging_mode is AveragingMode.SINGLESHOT
+                        and len(sweepers) > 0
+                    ):
+                        tmp = np.zeros(options.results_shape(sweepers))
+                        if options.acquisition_type is AcquisitionType.INTEGRATION:
+                            for k in range(options.nshots):
+                                tmp[k, ..., 0] = np.real(result[..., k])
+                                tmp[k, ..., 1] = np.imag(result[..., k])
+                        else:
+                            for k in range(options.nshots):
+                                tmp[k, ...] = result[..., k]
+                        result = tmp
+
+                    elif options.acquisition_type is AcquisitionType.INTEGRATION:
                         tmp = np.zeros(result.shape + (2,))
-                        tmp[:, 0] = np.real(result)
-                        tmp[:, 1] = np.imag(result)
+                        tmp[..., 0] = np.real(result)
+                        tmp[..., 1] = np.imag(result)
                         result = tmp
                     ret[input_op.id] = result
 
