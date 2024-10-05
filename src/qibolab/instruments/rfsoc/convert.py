@@ -75,6 +75,18 @@ def convert_units_sweeper(
     return sweeper
 
 
+def parse_port_name(element, port_name):
+    if not element in ["DCO", "RFO", "RFI"]:
+        raise ValueError(f"port name {port_name} is not valid.")
+    import re
+    
+    match = re.search(f'{element}_(\\d+)', port_name)
+    if match:
+        return int(match.group(1))
+    else:
+        return None
+        
+
 @singledispatch
 def convert(*args):
     """Convert from qibolab obj to qibosoq obj, overloaded."""
@@ -86,7 +98,7 @@ def _(qubit: Qubit) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to
     `qibosoq.abstract.Qubit`."""
     if qubit.flux:
-        return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
+        return rfsoc.Qubit(qubit.flux.offset, parse_port_name("DCO", qubit.flux.port.name))
     return rfsoc.Qubit(0.0, None)
 
 
@@ -112,8 +124,8 @@ def _(
 ) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
-    dac = getattr(qubits[pulse.qubit], pulse_type).port.name
-    adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
+    dac = parse_port_name("RFO", getattr(qubits[pulse.qubit], pulse_type).port.name)
+    adc = parse_port_name("RFI", qubits[pulse.qubit].feedback.port.name) if pulse_type == "readout" else None
     lo_frequency = pulse_lo_frequency(pulse, qubits)
 
     rfsoc_pulse = rfsoc_pulses.Pulse(
