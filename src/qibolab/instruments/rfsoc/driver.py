@@ -455,7 +455,7 @@ class RFSoC(Controller):
             if all(
                 parameter is rfsoc.Parameter.BIAS for parameter in sweeper.parameters
             ):
-                continue
+                return True
             if all(
                 parameter is rfsoc.Parameter.DELAY for parameter in sweeper.parameters
             ):
