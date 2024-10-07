@@ -136,7 +136,7 @@ class FEMOutput(OPXOutput):
     fem_number: int = 0
     fem_type: Literal["LF", "MF"] = "LF"
     output_mode: Literal["direct", "amplified"] = field(
-        default="direct", metadata={"config": "output_mode"}
+        default="direct", metadata={"config": "output_mode", "settings": True}
     )
 
     @property
