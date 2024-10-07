@@ -375,6 +375,10 @@ class QMController(Controller):
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)
+            for qubit in qubits.values():
+                if qubit.flux:
+                    qua.set_dc_offset(qubit.flux.name, "single", qubit.sweetspot)
+
             acquisitions = declare_acquisitions(ro_pulses, qubits, options)
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(
