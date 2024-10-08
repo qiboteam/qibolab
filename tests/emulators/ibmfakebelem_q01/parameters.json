@@ -66,6 +66,13 @@
                 "waveforms": 1,
                 "readout": 1,
                 "instructions": 1
+            },
+            "readout_simulator_config": {
+                "g": 10e6,
+                "noise_model": 0,
+                "internal_Q": 2.5e6,
+                "coupling_Q": 6e4,
+                "sampling_rate": 1966.08e6
             }
         }
     },

@@ -73,21 +73,6 @@ class ExecutionParameters:
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
 
-    readout_simulator_config: Optional[dict] = None
-    """Dict(g=, noise_model=, internal_Q=, coupling_Q=, sampling_rate=)
-    Additional parameters needed for ReadoutSimulator for demodulation
-    emulation.
-
-    Example of noise_model:
-    SNR = 30  # dB
-    NOISE_AMP = np.power(10, -SNR / 20)
-    AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
-
-    noise_model = AWGN
-
-    **initialize scale=0 if noise_model is not needed
-    """
-
     @property
     def results_type(self):
         """Returns corresponding results class."""
