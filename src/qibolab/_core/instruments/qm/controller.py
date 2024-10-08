@@ -30,7 +30,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import Bounds, unroll_sequences
 
 from .components import OpxOutputConfig, QmAcquisitionConfig
-from .config import SAMPLING_RATE, Configuration
+from .config import SAMPLING_RATE, Configuration, ControllerId
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
@@ -54,7 +54,7 @@ class Octave:
     """Name of the device."""
     port: int
     """Network port of the Octave in the cluster configuration."""
-    connectivity: str
+    connectivity: ControllerId
     """OPXplus that acts as the waveform generator for the Octave."""
 
 

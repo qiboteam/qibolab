@@ -1,11 +1,17 @@
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Literal, Union
 
 import numpy as np
 
 from qibolab._core.components import Channel
 
 __all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
+
+
+StandardInOutType = tuple[str, int]
+FemInOutType = tuple[str, int, int]
+InOutType = Union[StandardInOutType, FemInOutType]
+Port = Literal["port"]
 
 
 def iq_imbalance(g, phi):
@@ -30,7 +36,7 @@ def iq_imbalance(g, phi):
 
 @dataclass(frozen=True)
 class OutputSwitch:
-    port: tuple[str, int]
+    port: InOutType
     delay: int = 57
     buffer: int = 18
     """Default calibration parameters for digital pulses.
@@ -41,9 +47,19 @@ class OutputSwitch:
     """
 
 
-def _to_port(channel: Channel) -> dict[str, tuple[str, int]]:
-    """Convert a channel to the port dictionary required for the QUA config."""
-    return {"port": (channel.device, channel.port)}
+def _to_port(channel: Channel) -> dict[Port, InOutType]:
+    """Convert a channel to the port dictionary required for the QUA config.
+
+    The following syntax is assumed for ``channel.device``:
+    * For OPX+ clusters: string with the device name (eg. 'con1')
+    * For OPX1000 clusters: string of '{device_name}/{fem_number}'
+    """
+    if "/" not in channel.device:
+        port = (channel.device, channel.port)
+    else:
+        con, fem = channel.device.split("/")
+        port = (con, int(fem), channel.port)
+    return {"port": port}
 
 
 def output_switch(opx: str, port: int):
@@ -53,7 +69,7 @@ def output_switch(opx: str, port: int):
 
 @dataclass
 class DcElement:
-    singleInput: dict[str, tuple[str, int]]
+    singleInput: dict[Port, InOutType]
     intermediate_frequency: int = 0
     operations: dict[str, str] = field(default_factory=dict)
 
@@ -64,8 +80,8 @@ class DcElement:
 
 @dataclass
 class RfOctaveElement:
-    RF_inputs: dict[str, tuple[str, int]]
-    digitalInputs: dict[str, OutputSwitch]
+    RF_inputs: dict[Port, StandardInOutType]
+    digitalInputs: dict[Literal["output_switch"], OutputSwitch]
     intermediate_frequency: int
     operations: dict[str, str] = field(default_factory=dict)
 
@@ -82,9 +98,9 @@ class RfOctaveElement:
 
 @dataclass
 class AcquireOctaveElement:
-    RF_inputs: dict[str, tuple[str, int]]
-    RF_outputs: dict[str, tuple[str, int]]
-    digitalInputs: dict[str, OutputSwitch]
+    RF_inputs: dict[Port, StandardInOutType]
+    RF_outputs: dict[Port, StandardInOutType]
+    digitalInputs: dict[Literal["output_switch"], OutputSwitch]
     intermediate_frequency: int
     time_of_flight: int = 24
     smearing: int = 0

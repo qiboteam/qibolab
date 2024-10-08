@@ -12,7 +12,15 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Pulse, Readout
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
-from .devices import AnalogOutput, Controller, Octave, OctaveInput, OctaveOutput
+from .devices import (
+    AnalogOutput,
+    Controller,
+    ControllerId,
+    Controllers,
+    Octave,
+    OctaveInput,
+    OctaveOutput,
+)
 from .elements import AcquireOctaveElement, DcElement, Element, RfOctaveElement
 from .pulses import (
     QmAcquisition,
@@ -42,7 +50,7 @@ class Configuration:
     """
 
     version: int = 1
-    controllers: dict[str, Controller] = field(default_factory=dict)
+    controllers: Controllers = field(default_factory=Controllers)
     octaves: dict[str, Octave] = field(default_factory=dict)
     elements: dict[str, Element] = field(default_factory=dict)
     pulses: dict[str, Union[QmPulse, QmAcquisition]] = field(default_factory=dict)
@@ -53,11 +61,11 @@ class Configuration:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def add_controller(self, device: str):
+    def add_controller(self, device: ControllerId):
         if device not in self.controllers:
             self.controllers[device] = Controller()
 
-    def add_octave(self, device: str, connectivity: str):
+    def add_octave(self, device: str, connectivity: ControllerId):
         if device not in self.octaves:
             self.add_controller(connectivity)
             self.octaves[device] = Octave(connectivity)

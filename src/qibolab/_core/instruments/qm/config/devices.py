@@ -1,11 +1,19 @@
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
+from typing import Generic, Literal, TypeVar, Union
 
 from qibolab._core.components import OscillatorConfig
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
 
-__all__ = ["AnalogOutput", "OctaveOutput", "OctaveInput", "Controller", "Octave"]
+__all__ = [
+    "AnalogOutput",
+    "OctaveOutput",
+    "OctaveInput",
+    "Controller",
+    "Octave",
+    "ControllerId",
+    "Controllers",
+]
 
 
 DEFAULT_INPUTS = {"1": {}, "2": {}}
@@ -25,7 +33,7 @@ class PortDict(Generic[V], dict[str, V]):
     in the QUA config.
     """
 
-    def __setitem__(self, key: Any, value: V):
+    def __setitem__(self, key: Union[str, int], value: V):
         super().__setitem__(str(key), value)
 
 
@@ -53,8 +61,10 @@ class AnalogInput:
 class OctaveOutput:
     LO_frequency: int
     gain: int = 0
-    LO_source: str = "internal"
-    output_mode: str = "triggered"
+    LO_source: Literal["internal", "external"] = "internal"
+    output_mode: Literal[
+        "always_on", "always_off", "triggered", "triggered_reversed"
+    ] = "triggered"
 
     @classmethod
     def from_config(cls, config: OscillatorConfig):
@@ -64,13 +74,15 @@ class OctaveOutput:
 @dataclass(frozen=True)
 class OctaveInput:
     LO_frequency: int
-    LO_source: str = "internal"
-    IF_mode_I: str = "direct"
-    IF_mode_Q: str = "direct"
+    LO_source: Literal["internal", "external"] = "internal"
+    IF_mode_I: Literal["direct", "envelop", "mixer"] = "direct"
+    IF_mode_Q: Literal["direct", "envelop", "mixer"] = "direct"
 
 
 @dataclass
 class Controller:
+    type: Literal["opx1", "LF", "MW"] = "opx1"
+    """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
     analog_outputs: PortDict[dict[str, AnalogOutput]] = field(default_factory=PortDict)
     digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
     analog_inputs: PortDict[dict[str, AnalogInput]] = field(
@@ -91,7 +103,55 @@ class Controller:
 
 
 @dataclass
+class Opx1000:
+    type: Literal["opx1000"] = "opx1000"
+    fems: dict[str, Controller] = field(default_factory=PortDict)
+
+
+ControllerId = str
+"""Controller identifier.
+
+Single string name for OPX+ clusters, or
+'{controller_name}/{fem_number}' for OPX1000 clusters.
+"""
+
+
+@dataclass
 class Octave:
-    connectivity: str
+    connectivity: Union[str, tuple[str, int]]
     RF_outputs: PortDict[dict[str, OctaveOutput]] = field(default_factory=PortDict)
     RF_inputs: PortDict[dict[str, OctaveInput]] = field(default_factory=PortDict)
+
+    def __post_init__(self):
+        if "/" in self.connectivity:
+            con, fem = self.connectivity.split("/")
+            self.connectivity = (con, int(fem))
+
+
+class Controllers(dict[str, Union[Controller, Opx1000]]):
+    """Dictionary of controllers compatible with both OPX+ and OPX1000
+    clusters."""
+
+    def __getitem__(self, key: ControllerId) -> Controller:
+        if not isinstance(key, tuple) and "/" not in key:
+            return super().__getitem__(key)
+
+        if isinstance(key, tuple):
+            con, fem = key
+            fem = str(fem)
+        else:
+            con, fem = key.split("/")
+        return super().__getitem__(con).fems[str(fem)]
+
+    def __setitem__(self, key: ControllerId, value: Controller):
+        if not isinstance(key, tuple) and "/" not in key:
+            super().__setitem__(key, value)
+        else:
+            if isinstance(key, tuple):
+                con, fem = key
+                fem = str(fem)
+            else:
+                con, fem = key.split("/")
+            if con not in self:
+                super().__setitem__(con, Opx1000())
+            self[con].fems[fem] = value
