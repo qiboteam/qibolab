@@ -81,15 +81,13 @@ class QMConfig:
             if is_octave:
                 self.register_port(port.opx_port)
                 subport = port.opx_port.i
+                con = subport.device
+                number = subport.number
                 if isinstance(subport, (FEMOutput, FEMInput)):
-                    con = subport.device
                     fem = subport.fem_number
-                    number = subport.number
                     device["connectivity"] = (con, fem)
                     self.controllers[con]["fems"][fem]["digital_outputs"][number] = {}
                 else:
-                    con = subport.device
-                    number = subport.number
                     device["connectivity"] = con
                     self.controllers[con]["digital_outputs"][number] = {}
 
