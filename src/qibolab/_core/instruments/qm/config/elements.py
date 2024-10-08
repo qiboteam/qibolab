@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Literal, Union
 
-import numpy as np
-
 from qibolab._core.components import Channel
 
 __all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
@@ -12,26 +10,6 @@ StandardInOutType = tuple[str, int]
 FemInOutType = tuple[str, int, int]
 InOutType = Union[StandardInOutType, FemInOutType]
 Port = Literal["port"]
-
-
-def iq_imbalance(g, phi):
-    """Create the correction matrix for the mixer imbalance.
-
-    Mixer imbalance is caused by the gain and phase imbalances.
-
-    More information here:
-    https://docs.qualang.io/libs/examples/mixer-calibration/#non-ideal-mixer
-
-    Args:
-        g (float): relative gain imbalance between the I & Q ports (unit-less).
-            Set to 0 for no gain imbalance.
-        phi (float): relative phase imbalance between the I & Q ports (radians).
-            Set to 0 for no phase imbalance.
-    """
-    c = np.cos(phi)
-    s = np.sin(phi)
-    N = 1 / ((1 - g**2) * (2 * c**2 - 1))
-    return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
 
 
 @dataclass(frozen=True)
