@@ -12,6 +12,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
+from qibolab.instruments.emulator.readout import ReadoutSimulator
 from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
@@ -180,7 +181,69 @@ class PulseSimulator(Controller):
             "output_states": output_states,
         }
 
+        results["demodulation"] = {}
+
+        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+            if execution_parameters.readout_simulator_config:
+                for index, ro_pulse in enumerate(ro_pulse_list):
+                    # obtain qubit with its qubitID
+                    qubit = qubits[self.get_qubit(ro_pulse.qubit, qubits)]
+                    # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
+                    # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
+                    # solve quadratic equation for bare_resonator frequency
+                    g = execution_parameters.readout_simulator_config["g"]
+                    noise_model = execution_parameters.readout_simulator_config[
+                        "noise_model"
+                    ]
+                    internal_Q = execution_parameters.readout_simulator_config[
+                        "internal_Q"
+                    ]
+                    coupling_Q = execution_parameters.readout_simulator_config[
+                        "coupling_Q"
+                    ]
+                    sampling_rate = execution_parameters.readout_simulator_config[
+                        "sampling_rate"
+                    ]
+                    readout = ReadoutSimulator(
+                        qubit=qubit,
+                        g=g,
+                        noise_model=noise_model,
+                        internal_Q=internal_Q,
+                        coupling_Q=coupling_Q,
+                        sampling_rate=sampling_rate,
+                    )
+
+                    values = np.array(samples[ro_pulse.qubit])
+                    for i in range(len(values)):
+                        values = values.astype(np.complex128)
+                        if values[i] == 0:
+                            values[i] = readout.simulate_ground_state_iq(ro_pulse)
+                        elif values[i] == 1:
+                            values[i] = readout.simulate_excited_state_iq(ro_pulse)
+                        else:
+                            raise ValueError("measurement output is not 0 or 1")
+
+                    # z is the complex readout wave with z = i_filtered + 1j * q_filtered
+                    # i is the index of readout pulse, e.g.: first or second readout in a single shot
+                    results["demodulation"][index] = {
+                        "z": values,
+                        "i": np.real(values),
+                        "q": np.imag(values),
+                    }
+
         return results
+
+    def get_qubit(self, target_qubit, qubits):
+        """Return the name of target physical qubit (qubitID) corresponding to
+        a logical qubit.
+
+        Temporary fix for the compiler to work for platforms where the
+        qubits are not named as 0, 1, 2, ...
+        """
+        try:
+            return qubits[target_qubit].name
+        except KeyError:
+            return list(qubits.keys())[target_qubit]
 
     ### sweeper adapted from icarusqfpga ###
     def sweep(
