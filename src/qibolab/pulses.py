@@ -1584,11 +1584,12 @@ class PulseSequence:
         return overlaps
 
     def separate_overlapping_pulses(self):  # -> dict((int,int): PulseSequence):
-        """Separates a sequence of overlapping pulses into a list of non-overlapping sequences."""
+        """Separates a sequence of overlapping pulses into a list of non-
+        overlapping sequences."""
 
-        # This routine separates the pulses of a sequence into sets of different frequecy, non-overlapping 
+        # This routine separates the pulses of a sequence into sets of different frequecy, non-overlapping
         # pulses
-        
+
         freqs = set()
         for pulse in self.pulses:
             freqs |= {pulse.frequency}
@@ -1607,7 +1608,10 @@ class PulseSequence:
                 for ps in separated_pulses[freq]:
                     overlaps = False
                     for existing_pulse in ps:
-                        if new_pulse.start < existing_pulse.finish and new_pulse.finish > existing_pulse.start:
+                        if (
+                            new_pulse.start < existing_pulse.finish
+                            and new_pulse.finish > existing_pulse.start
+                        ):
                             overlaps = True
                             break
                     if not overlaps:
@@ -1616,7 +1620,7 @@ class PulseSequence:
                         break
                 if not stored:
                     separated_pulses[freq].append(PulseSequence(new_pulse))
-        print('---------------------')
+        print("---------------------")
         print(separated_pulses)
         return [ps for freq in freqs for ps in separated_pulses[freq]]
 
