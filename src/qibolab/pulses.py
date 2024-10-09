@@ -1595,7 +1595,6 @@ class PulseSequence:
             freqs |= {pulse.frequency}
         PS_freq = {}
         separated_pulses = {}
-        print(freqs)
         for freq in freqs:
             PS_freq[freq] = PulseSequence()
             separated_pulses[freq] = []
@@ -1620,8 +1619,6 @@ class PulseSequence:
                         break
                 if not stored:
                     separated_pulses[freq].append(PulseSequence(new_pulse))
-        print("---------------------")
-        print(separated_pulses)
         return [ps for freq in freqs for ps in separated_pulses[freq]]
 
     @property

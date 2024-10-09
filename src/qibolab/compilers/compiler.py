@@ -167,5 +167,4 @@ class Compiler:
                 # properly map acquisition results to measurement gates
                 if isinstance(gate, gates.M):
                     measurement_map[gate] = gate_sequence
-        print(sequence)
         return sequence, measurement_map
