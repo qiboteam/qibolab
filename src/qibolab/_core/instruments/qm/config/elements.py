@@ -10,6 +10,7 @@ StandardInOutType = tuple[str, int]
 FemInOutType = tuple[str, int, int]
 InOutType = Union[StandardInOutType, FemInOutType]
 Port = Literal["port"]
+ConnectivityType = Union[str, tuple[str, int]]
 
 
 @dataclass(frozen=True)
@@ -40,9 +41,13 @@ def _to_port(channel: Channel) -> dict[Port, InOutType]:
     return {"port": port}
 
 
-def output_switch(opx: str, port: int):
+def output_switch(connectivity: ConnectivityType, port: int):
     """Create output switch section."""
-    return {"output_switch": OutputSwitch((opx, 2 * port - 1))}
+    if isinstance(connectivity, tuple):
+        args = connectivity + (2 * port - 1,)
+    else:
+        args = (connectivity, 2 * port - 1)
+    return {"output_switch": OutputSwitch(args)}
 
 
 @dataclass
@@ -65,7 +70,10 @@ class RfOctaveElement:
 
     @classmethod
     def from_channel(
-        cls, channel: Channel, connectivity: str, intermediate_frequency: int
+        cls,
+        channel: Channel,
+        connectivity: ConnectivityType,
+        intermediate_frequency: int,
     ):
         return cls(
             _to_port(channel),
@@ -89,7 +97,7 @@ class AcquireOctaveElement:
         cls,
         probe_channel: Channel,
         acquire_channel: Channel,
-        connectivity: str,
+        connectivity: ConnectivityType,
         intermediate_frequency: int,
         time_of_flight: int,
         smearing: int,

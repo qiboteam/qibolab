@@ -13,6 +13,7 @@ from ..components import (
 __all__ = [
     "AnalogOutput",
     "FemAnalogOutput",
+    "ModuleTypes",
     "OctaveOutput",
     "OctaveInput",
     "Controller",
@@ -97,15 +98,18 @@ class OctaveInput:
     IF_mode_Q: Literal["direct", "envelop", "mixer"] = "direct"
 
 
+ModuleTypes = Literal["opx1", "LF", "MW"]
+
+
 @dataclass
 class Controller:
-    type: Literal["opx1", "LF", "MW"] = "opx1"
+    type: ModuleTypes = "opx1"
     """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
     analog_outputs: PortDict[dict[str, AnalogOutput]] = field(default_factory=PortDict)
     digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
-    analog_inputs: PortDict[dict[str, AnalogInput]] = field(
-        default_factory=lambda: PortDict(DEFAULT_INPUTS)
-    )
+    analog_inputs: PortDict[dict[str, AnalogInput]] = field(default_factory=PortDict)
+    # default_factory=lambda: PortDict(DEFAULT_INPUTS)
+    # )
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
@@ -126,14 +130,6 @@ class Opx1000:
     fems: dict[str, Controller] = field(default_factory=PortDict)
 
 
-ControllerId = str
-"""Controller identifier.
-
-Single string name for OPX+ clusters, or
-'{controller_name}/{fem_number}' for OPX1000 clusters.
-"""
-
-
 @dataclass
 class Octave:
     connectivity: Union[str, tuple[str, int]]
@@ -146,30 +142,48 @@ class Octave:
             self.connectivity = (con, int(fem))
 
 
+ControllerId = Union[str, tuple[str, int]]
+
+
+def process_controller_id(id: ControllerId):
+    """Convert controller identifier depending on cluster type.
+
+    For OPX+ clusters ``id`` is just the controller name (eg. 'con1').
+    For OPX1000 clusters ``id`` has the format
+    '{controller_name}/{fem_number}' (eg. 'con1/4').
+    In that case ``id`` may also be a ``tuple``
+    `(controller_name, fem_number)`
+    """
+    if isinstance(id, tuple):
+        con, fem = id
+        return con, str(fem)
+    if "/" in id:
+        return id.split("/")
+    return id, None
+
+
 class Controllers(dict[str, Union[Controller, Opx1000]]):
-    """Dictionary of controllers compatible with both OPX+ and OPX1000
-    clusters."""
+    """Dictionary of controllers compatible with OPX+ and OPX1000."""
+
+    def __contains__(self, key: ControllerId) -> bool:
+        con, fem = process_controller_id(key)
+        contains = super().__contains__(con)
+        if fem is None:
+            return contains
+        return contains and fem in self[con].fems
 
     def __getitem__(self, key: ControllerId) -> Controller:
-        if not isinstance(key, tuple) and "/" not in key:
-            return super().__getitem__(key)
-
-        if isinstance(key, tuple):
-            con, fem = key
-            fem = str(fem)
-        else:
-            con, fem = key.split("/")
-        return super().__getitem__(con).fems[str(fem)]
+        con, fem = process_controller_id(key)
+        value = super().__getitem__(con)
+        if fem is None:
+            return value
+        return value.fems[fem]
 
     def __setitem__(self, key: ControllerId, value: Controller):
-        if not isinstance(key, tuple) and "/" not in key:
+        con, fem = process_controller_id(key)
+        if fem is None:
             super().__setitem__(key, value)
         else:
-            if isinstance(key, tuple):
-                con, fem = key
-                fem = str(fem)
-            else:
-                con, fem = key.split("/")
             if con not in self:
                 super().__setitem__(con, Opx1000())
             self[con].fems[fem] = value

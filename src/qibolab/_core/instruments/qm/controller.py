@@ -30,7 +30,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import Bounds, unroll_sequences
 
 from .components import OpxOutputConfig, QmAcquisitionConfig
-from .config import SAMPLING_RATE, Configuration, ControllerId
+from .config import SAMPLING_RATE, Configuration, ControllerId, ModuleTypes
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
@@ -133,9 +133,15 @@ class QmController(Controller):
     """
 
     octaves: dict[str, Octave] = Field(default_factory=dict)
-    """Dictionary containing the
-    :class:`qibolab.instruments.qm.controller.Octave` instruments being
-    used."""
+    """Dictionary containing the Octaves used."""
+    fems: dict[str, ModuleTypes] = Field(
+        default_factory=lambda: defaultdict(lambda: "opx1")
+    )
+    """Dictionary containing the FEM types (for OPX1000 clusters).
+
+    Defaults to 'opx1' type to maintain original behavior for OPX+ clusters
+    where ``fems`` are not given.
+    """
 
     bounds: str = "qm/bounds"
     """Maximum bounds used for batching in sequence unrolling."""
@@ -229,9 +235,9 @@ class QmController(Controller):
     def configure_device(self, device: str):
         """Add device in the ``config``."""
         if "octave" in device:
-            self.config.add_octave(device, self.octaves[device].connectivity)
+            self.config.add_octave(device, self.octaves[device].connectivity, self.fems)
         else:
-            self.config.add_controller(device)
+            self.config.add_controller(device, self.fems)
 
     def configure_channel(
         self, channel: ChannelId, configs: dict[str, Config]

@@ -18,6 +18,7 @@ from .devices import (
     ControllerId,
     Controllers,
     FemAnalogOutput,
+    ModuleTypes,
     Octave,
     OctaveInput,
     OctaveOutput,
@@ -62,13 +63,15 @@ class Configuration:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def add_controller(self, device: ControllerId):
+    def add_controller(self, device: ControllerId, modules: dict[str, ModuleTypes]):
         if device not in self.controllers:
-            self.controllers[device] = Controller()
+            self.controllers[device] = Controller(type=modules[device])
 
-    def add_octave(self, device: str, connectivity: ControllerId):
+    def add_octave(
+        self, device: str, connectivity: ControllerId, modules: dict[str, ModuleTypes]
+    ):
         if device not in self.octaves:
-            self.add_controller(connectivity)
+            self.add_controller(connectivity, modules)
             self.octaves[device] = Octave(connectivity)
 
     def configure_dc_line(
