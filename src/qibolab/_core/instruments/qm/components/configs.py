@@ -25,6 +25,7 @@ class OpxOutputConfig(DcConfig):
     for more details.
     Changing the filters affects the calibration of single shot discrimination (threshold and angle).
     """
+    output_mode: Literal["direct", "amplified"] = "direct"
 
 
 class QmAcquisitionConfig(AcquisitionConfig):

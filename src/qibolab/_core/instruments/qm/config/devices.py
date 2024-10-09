@@ -41,10 +41,13 @@ class PortDict(Generic[V], dict[str, V]):
 class AnalogOutput:
     offset: float = 0.0
     filter: dict[str, float] = field(default_factory=dict)
+    output_mode: Literal["direct", "amplified"] = "direct"
 
     @classmethod
     def from_config(cls, config: OpxOutputConfig):
-        return cls(offset=config.offset, filter=config.filter)
+        return cls(
+            offset=config.offset, filter=config.filter, output_mode=config.output_mode
+        )
 
 
 @dataclass(frozen=True)
