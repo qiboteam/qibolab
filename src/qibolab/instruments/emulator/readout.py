@@ -54,7 +54,14 @@ class ReadoutSimulator:
     """Module for simulating a readout event based on simulated qubit state."""
 
     def __init__(
-        self, qubit: Qubit, g, noise_model, internal_Q, coupling_Q, sampling_rate=1e9
+        self,
+        qubit: Qubit,
+        g,
+        noise_model,
+        internal_Q,
+        coupling_Q,
+        sampling_rate=1e9,
+        **kwargs
     ):
         """Initalizer for the readout simulator.
 
@@ -80,6 +87,7 @@ class ReadoutSimulator:
             + dispersive_shift(g, delta, qubit.anharmonicity)
         )
 
+        self.lo_frequency = kwargs.get("LO_frequency", None)
         self.noise_model = noise_model
         self.sampling_rate = sampling_rate
 
@@ -87,30 +95,30 @@ class ReadoutSimulator:
         self.ground_s21 = s21_function(ground_state_frequency, total_Q, coupling_Q)
         self.excited_s21 = s21_function(excited_state_frequency, total_Q, coupling_Q)
 
-    def simulate_ground_state_iq(self, pulse: ReadoutPulse, LO_frequency=None):
+    def simulate_ground_state_iq(self, pulse: ReadoutPulse):
         """Simulates the IQ result for a given readout pulse when the qubit is
         in the ground state.
 
         Args:
             pulse (qibolab.pulses.ReadoutPulse): Qibolab readout pulse.
         """
-        if LO_frequency:
-            intermediate_frequency = np.abs(pulse.frequency - LO_frequency)
+        if self.lo_frequency is not None:
+            intermediate_frequency = np.abs(pulse.frequency - self.lo_frequency)
         else:
             intermediate_frequency = pulse.frequency
 
         s21 = self.ground_s21(intermediate_frequency)
         return self.simulate_and_demodulate(s21, pulse, intermediate_frequency)
 
-    def simulate_excited_state_iq(self, pulse: ReadoutPulse, LO_frequency=None):
+    def simulate_excited_state_iq(self, pulse: ReadoutPulse):
         """Simulates the IQ result for a given readout pulse when the qubit is
         in the excited state.
 
         Args:
             pulse (qibolab.pulses.ReadoutPulse): Qibolab readout pulse.
         """
-        if LO_frequency:
-            intermediate_frequency = np.abs(pulse.frequency - LO_frequency)
+        if self.lo_frequency is not None:
+            intermediate_frequency = np.abs(pulse.frequency - self.lo_frequency)
         else:
             intermediate_frequency = pulse.frequency
 
