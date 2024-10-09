@@ -12,6 +12,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
+from qibolab.instruments.emulator.readout import ReadoutSimulator
 from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
@@ -86,6 +87,21 @@ class PulseSimulator(Controller):
         }
         self.simulate_dissipation = simulation_config["simulate_dissipation"]
         self.output_state_history = simulation_config["output_state_history"]
+
+        self.readout_simulator_config = kwargs.get("readout_simulator_config", None)
+        """readout_simulator_config = Dict(g=, noise_model=, internal_Q=,
+        coupling_Q=, sampling_rate=) Additional parameters needed for
+        ReadoutSimulator for demodulation emulation.
+
+        Example of calibrated noise_model (found in examples/emulator
+        readout in readout_example.ipynb or readout_example.py): SNR =
+        30  # dB NOISE_AMP = np.power(10, -SNR / 20) AWGN = lambda t:
+        np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
+
+        noise_model = AWGN
+
+        **initialize scale=0 if noise_model is not needed
+        """
 
     def connect(self):
         pass
@@ -179,6 +195,29 @@ class PulseSimulator(Controller):
             "simulation_time": times_dict["simulation_time"],
             "output_states": output_states,
         }
+
+        if (
+            execution_parameters.acquisition_type is AcquisitionType.INTEGRATION
+            and self.readout_simulator_config is not None
+        ):
+            for ro_pulse in ro_pulse_list:
+                # obtain qubit with its qubitID
+                qubit = qubits[get_qubit(ro_pulse.qubit, qubits)]
+                # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
+                # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
+                # solve quadratic equation for bare_resonator frequency
+                readout = ReadoutSimulator(qubit=qubit, **self.readout_simulator_config)
+                values = np.array(samples[ro_pulse.qubit]).astype(np.complex128)
+                for i in range(len(values)):
+                    if values[i] == 0:
+                        values[i] = readout.simulate_ground_state_iq(ro_pulse)
+                    elif values[i] == 1:
+                        values[i] = readout.simulate_excited_state_iq(ro_pulse)
+                    else:
+                        raise ValueError("measurement output is not 0 or 1")
+
+                processed_values = IntegratedResults(values)
+                results[ro_pulse.qubit] = results[ro_pulse.serial] = processed_values
 
         return results
 
@@ -408,6 +447,19 @@ _sweeper_operation = {
     SweeperType.OFFSET: operator.add,
     SweeperType.FACTOR: operator.mul,
 }
+
+
+def get_qubit(target_qubit, qubits):
+    """Return the name of target physical qubit (qubitID) corresponding to a
+    logical qubit.
+
+    Temporary fix for the compiler to work for platforms where the
+    qubits are not named as 0, 1, 2, ...
+    """
+    try:
+        return qubits[target_qubit].name
+    except KeyError:
+        return list(qubits.keys())[target_qubit]
 
 
 def ps_to_waveform_dict(

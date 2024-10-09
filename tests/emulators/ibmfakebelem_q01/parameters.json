@@ -66,6 +66,13 @@
                 "waveforms": 1,
                 "readout": 1,
                 "instructions": 1
+            },
+            "readout_simulator_config": {
+                "g": 10e6,
+                "noise_model": 0,
+                "internal_Q": 2.5e6,
+                "coupling_Q": 6e4,
+                "sampling_rate": 1966.08e6
             }
         }
     },
@@ -252,6 +259,7 @@
     "characterization": {
         "single_qubit": {
             "0": {
+                "bare_resonator_frequency": 7301616604.7871,
                 "readout_frequency": 7301661824.000001,
                 "drive_frequency": 5090167234.445013,
                 "anharmonicity": -336123005.1821652,
@@ -267,6 +275,7 @@
                 "iq_angle": 2.602
             },
             "1": {
+                "bare_resonator_frequency": 7393381494,
                 "readout_frequency": 7393428047.0,
                 "drive_frequency": 5245306068.285917,
                 "anharmonicity": -316572131.412737,
