@@ -17,6 +17,7 @@ from .devices import (
     Controller,
     ControllerId,
     Controllers,
+    FemAnalogOutput,
     Octave,
     OctaveInput,
     OctaveOutput,
@@ -74,7 +75,12 @@ class Configuration:
         self, id: ChannelId, channel: DcChannel, config: OpxOutputConfig
     ):
         controller = self.controllers[channel.device]
-        controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
+        if controller.type == "opx1":
+            controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
+        else:
+            controller.analog_outputs[channel.port] = FemAnalogOutput.from_config(
+                config
+            )
         self.elements[id] = DcElement.from_channel(channel)
 
     def configure_iq_line(

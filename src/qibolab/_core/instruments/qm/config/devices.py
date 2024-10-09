@@ -12,6 +12,7 @@ from ..components import (
 
 __all__ = [
     "AnalogOutput",
+    "FemAnalogOutput",
     "OctaveOutput",
     "OctaveInput",
     "Controller",
@@ -46,6 +47,14 @@ class PortDict(Generic[V], dict[str, V]):
 class AnalogOutput:
     offset: float = 0.0
     filter: dict[str, float] = field(default_factory=dict)
+
+    @classmethod
+    def from_config(cls, config: OpxOutputConfig):
+        return cls(offset=config.offset, filter=config.filter)
+
+
+@dataclass(frozen=True)
+class FemAnalogOutput(AnalogOutput):
     output_mode: Literal["direct", "amplified"] = "direct"
 
     @classmethod
