@@ -2,9 +2,19 @@ from typing import Literal, Union
 
 from pydantic import Field
 
-from qibolab._core.components import AcquisitionConfig, DcConfig
+from qibolab._core.components import AcquisitionConfig, DcConfig, OscillatorConfig
 
-__all__ = ["OpxOutputConfig", "QmAcquisitionConfig", "QmConfigs"]
+__all__ = [
+    "OpxOutputConfig",
+    "QmAcquisitionConfig",
+    "QmConfigs",
+    "OctaveOscillatorConfig",
+    "OctaveOutputModes",
+]
+
+OctaveOutputModes = Literal[
+    "always_on", "always_off", "triggered", "triggered_reversed"
+]
 
 
 class OpxOutputConfig(DcConfig):
@@ -28,6 +38,14 @@ class OpxOutputConfig(DcConfig):
     output_mode: Literal["direct", "amplified"] = "direct"
 
 
+class OctaveOscillatorConfig(OscillatorConfig):
+    """Oscillator confing that allows switching the output mode."""
+
+    kind: Literal["octave-oscillator"] = "octave-oscillator"
+
+    output_mode: OctaveOutputModes = "triggered"
+
+
 class QmAcquisitionConfig(AcquisitionConfig):
     """Acquisition config for QM OPX+."""
 
@@ -42,4 +60,4 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """Constant voltage to be applied on the input."""
 
 
-QmConfigs = Union[OpxOutputConfig, QmAcquisitionConfig]
+QmConfigs = Union[OpxOutputConfig, OctaveOscillatorConfig, QmAcquisitionConfig]

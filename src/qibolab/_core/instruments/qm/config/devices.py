@@ -3,7 +3,12 @@ from typing import Generic, Literal, TypeVar, Union
 
 from qibolab._core.components import OscillatorConfig
 
-from ..components import OpxOutputConfig, QmAcquisitionConfig
+from ..components import (
+    OctaveOscillatorConfig,
+    OctaveOutputModes,
+    OpxOutputConfig,
+    QmAcquisitionConfig,
+)
 
 __all__ = [
     "AnalogOutput",
@@ -65,13 +70,14 @@ class OctaveOutput:
     LO_frequency: int
     gain: int = 0
     LO_source: Literal["internal", "external"] = "internal"
-    output_mode: Literal[
-        "always_on", "always_off", "triggered", "triggered_reversed"
-    ] = "triggered"
+    output_mode: OctaveOutputModes = "triggered"
 
     @classmethod
-    def from_config(cls, config: OscillatorConfig):
-        return cls(LO_frequency=config.frequency, gain=config.power)
+    def from_config(cls, config: Union[OscillatorConfig, OctaveOscillatorConfig]):
+        kwargs = dict(LO_frequency=config.frequency, gain=config.power)
+        if isinstance(config, OctaveOscillatorConfig):
+            kwargs["output_mode"] = config.output_mode
+        return cls(**kwargs)
 
 
 @dataclass(frozen=True)
