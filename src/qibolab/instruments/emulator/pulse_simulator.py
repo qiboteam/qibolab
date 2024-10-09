@@ -36,11 +36,6 @@ MODELS = {
 
 GHZ = 1e9
 
-# noise_model
-SNR = 30  # dB
-NOISE_AMP = np.power(10, -SNR / 20)
-AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
-
 
 class PulseSimulator(Controller):
     """Runs quantum dynamics simulation of model of device.
@@ -93,20 +88,15 @@ class PulseSimulator(Controller):
         self.simulate_dissipation = simulation_config["simulate_dissipation"]
         self.output_state_history = simulation_config["output_state_history"]
 
-        try:
-            readout_simulator_config = kwargs["readout_simulator_config"]
-            readout_simulator_config["noise_model"] = AWGN
-            self.readout_simulator_config = readout_simulator_config
-        except KeyError:
-            self.readout_simulator_config = None
-        """readout_simulator_config = Dict(g=, noise_model=, internal_Q=, coupling_Q=, sampling_rate=)
-        Additional parameters needed for ReadoutSimulator for demodulation
-        emulation.
+        self.readout_simulator_config = kwargs.get("readout_simulator_config", None)
+        """readout_simulator_config = Dict(g=, noise_model=, internal_Q=,
+        coupling_Q=, sampling_rate=) Additional parameters needed for
+        ReadoutSimulator for demodulation emulation.
 
-        Example of calibrated noise_model (found in examples/emulator readout in readout_example.ipynb or readout_example.py):
-        SNR = 30  # dB
-        NOISE_AMP = np.power(10, -SNR / 20)
-        AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
+        Example of calibrated noise_model (found in examples/emulator
+        readout in readout_example.ipynb or readout_example.py): SNR =
+        30  # dB NOISE_AMP = np.power(10, -SNR / 20) AWGN = lambda t:
+        np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
 
         noise_model = AWGN
 
@@ -206,31 +196,28 @@ class PulseSimulator(Controller):
             "output_states": output_states,
         }
 
-        if execution_parameters.acquisition_type is AcquisitionType.INTEGRATION:
-            if self.readout_simulator_config is not None:
-                for index, ro_pulse in enumerate(ro_pulse_list):
-                    # obtain qubit with its qubitID
-                    qubit = qubits[get_qubit(ro_pulse.qubit, qubits)]
-                    # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
-                    # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
-                    # solve quadratic equation for bare_resonator frequency
-                    readout = ReadoutSimulator(
-                        qubit=qubit, **self.readout_simulator_config
-                    )
-                    values = np.array(samples[ro_pulse.qubit])
-                    for i in range(len(values)):
-                        values = values.astype(np.complex128)
-                        if values[i] == 0:
-                            values[i] = readout.simulate_ground_state_iq(ro_pulse)
-                        elif values[i] == 1:
-                            values[i] = readout.simulate_excited_state_iq(ro_pulse)
-                        else:
-                            raise ValueError("measurement output is not 0 or 1")
+        if (
+            execution_parameters.acquisition_type is AcquisitionType.INTEGRATION
+            and self.readout_simulator_config is not None
+        ):
+            for ro_pulse in ro_pulse_list:
+                # obtain qubit with its qubitID
+                qubit = qubits[get_qubit(ro_pulse.qubit, qubits)]
+                # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
+                # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
+                # solve quadratic equation for bare_resonator frequency
+                readout = ReadoutSimulator(qubit=qubit, **self.readout_simulator_config)
+                values = np.array(samples[ro_pulse.qubit]).astype(np.complex128)
+                for i in range(len(values)):
+                    if values[i] == 0:
+                        values[i] = readout.simulate_ground_state_iq(ro_pulse)
+                    elif values[i] == 1:
+                        values[i] = readout.simulate_excited_state_iq(ro_pulse)
+                    else:
+                        raise ValueError("measurement output is not 0 or 1")
 
-                    processed_values = IntegratedResults(values)
-                    results[ro_pulse.qubit] = results[ro_pulse.serial] = (
-                        processed_values
-                    )
+                processed_values = IntegratedResults(values)
+                results[ro_pulse.qubit] = results[ro_pulse.serial] = processed_values
 
         return results
 

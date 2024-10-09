@@ -1,5 +1,7 @@
 import pathlib
 
+import numpy as np
+
 from qibolab.channels import ChannelMap
 from qibolab.instruments.emulator.pulse_simulator import PulseSimulator
 from qibolab.platform import Platform
@@ -24,6 +26,14 @@ def create():
     pulse_simulator = PulseSimulator()
     instruments = {"pulse_simulator": pulse_simulator}
     instruments = load_instrument_settings(runcard, instruments)
+
+    # noise_model
+    SNR = 30  # dB
+    NOISE_AMP = np.power(10, -SNR / 20)
+    AWGN = lambda t: np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
+
+    if instruments["pulse_simulator"].readout_simulator_config is not None:
+        instruments["pulse_simulator"].readout_simulator_config["noise_model"] = AWGN
 
     # extract quantities from runcard for platform declaration
     qubits, couplers, pairs = load_qubits(runcard)
