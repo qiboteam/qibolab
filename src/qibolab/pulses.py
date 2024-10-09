@@ -19,6 +19,22 @@ a different value.
 """
 
 
+def _np_array_from_string_or_array_like(x) -> np.ndarray:
+    """Convert input into numpy array.
+
+    The input can be in one of these forms:
+        1. string in form '[1, 2, 3, ...]'
+        2. list, e.g. [1, 2, 3, ...]
+        3. numpy array. This will be identity conversion.
+    """
+    if isinstance(x, str):
+        return np.fromstring(x[1:-1], sep=",")
+    elif isinstance(x, (list, np.ndarray)):
+        return np.array(x)
+    else:
+        raise ValueError(f"Data in unrecognized format: {x}")
+
+
 class PulseType(Enum):
     """An enumeration to distinguish different types of pulses.
 
@@ -215,12 +231,19 @@ class PulseShape(ABC):
 
             To be replaced by proper serialization.
         """
-        shape_name = re.findall(r"(\w+)", value)[0]
-        if shape_name not in globals():
-            raise ValueError(f"shape {value} not found")
-        shape_parameters = re.findall(r"[-\w+\d\.\d]+", value)[1:]
-        # TODO: create multiple tests to prove regex working correctly
-        return globals()[shape_name](*shape_parameters)
+        match = re.fullmatch(r"(\w+)\((.*)\)", value)
+        shape_name, params = None, None
+        if match is not None:
+            shape_name, params = match.groups()
+        if match is None or shape_name not in globals():
+            raise ValueError(f"shape {value} not recognized")
+
+        single_item_pattern = r"[^,\s\[\]\(\)]+"
+        csv_items_pattern = rf"(?:{single_item_pattern}(?:,\s*)?)*"
+        param_pattern = (
+            rf"\[{csv_items_pattern}\]|\w+\({csv_items_pattern}\)|{single_item_pattern}"
+        )
+        return globals()[shape_name](*re.findall(param_pattern, params))
 
 
 class Rectangular(PulseShape):
@@ -509,12 +532,14 @@ class IIR(PulseShape):
     # p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
     # p = [b0, b1, a0, a1]
 
-    def __init__(self, b, a, target: PulseShape):
+    def __init__(self, b, a, target):
         self.name = "IIR"
-        self.target: PulseShape = target
+        self.target: PulseShape = (
+            PulseShape.eval(target) if isinstance(target, str) else target
+        )
         self._pulse: Pulse = None
-        self.a: np.ndarray = np.array(a)
-        self.b: np.ndarray = np.array(b)
+        self.a: np.ndarray = _np_array_from_string_or_array_like(a)
+        self.b: np.ndarray = _np_array_from_string_or_array_like(b)
         # Check len(a) = len(b) = 2
 
     def __eq__(self, item) -> bool:
@@ -596,8 +621,10 @@ class SNZ(PulseShape):
     def __init__(self, t_idling, b_amplitude=None):
         self.name = "SNZ"
         self.pulse: Pulse = None
-        self.t_idling: float = t_idling
-        self.b_amplitude = b_amplitude
+        self.t_idling: float = float(t_idling)
+        self.b_amplitude = (
+            float(b_amplitude) if b_amplitude is not None else b_amplitude
+        )
 
     def __eq__(self, item) -> bool:
         """Overloads == operator."""
@@ -705,11 +732,14 @@ class Custom(PulseShape):
     """Arbitrary shape."""
 
     def __init__(self, envelope_i, envelope_q=None):
+
         self.name = "Custom"
         self.pulse: Pulse = None
-        self.envelope_i: np.ndarray = np.array(envelope_i)
+        self.envelope_i: np.ndarray = _np_array_from_string_or_array_like(envelope_i)
         if envelope_q is not None:
-            self.envelope_q: np.ndarray = np.array(envelope_q)
+            self.envelope_q: np.ndarray = _np_array_from_string_or_array_like(
+                envelope_q
+            )
         else:
             self.envelope_q = self.envelope_i
 
@@ -717,11 +747,13 @@ class Custom(PulseShape):
         """The envelope waveform of the i component of the pulse."""
 
         if self.pulse:
-            if self.pulse.duration != len(self.envelope_i):
-                raise ValueError("Length of envelope_i must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+            if len(self.envelope_i) < num_samples:
+                raise ValueError(
+                    "Length of envelope_i must not be shorter than pulse duration in samples"
+                )
 
-            waveform = Waveform(self.envelope_i * self.pulse.amplitude)
+            waveform = Waveform(self.envelope_i[:num_samples] * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
@@ -730,17 +762,19 @@ class Custom(PulseShape):
         """The envelope waveform of the q component of the pulse."""
 
         if self.pulse:
-            if self.pulse.duration != len(self.envelope_q):
-                raise ValueError("Length of envelope_q must be equal to pulse duration")
             num_samples = int(np.rint(self.pulse.duration * sampling_rate))
+            if len(self.envelope_q) < num_samples:
+                raise ValueError(
+                    "Length of envelope_q must not be shorter than pulse duration in samples"
+                )
 
-            waveform = Waveform(self.envelope_q * self.pulse.amplitude)
+            waveform = Waveform(self.envelope_q[:num_samples] * self.pulse.amplitude)
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
 
     def __repr__(self):
-        return f"{self.name}({self.envelope_i[:3]}, ..., {self.envelope_q[:3]}, ...)"
+        return f"{self.name}({self.envelope_i[:3]}, {self.envelope_q[:3]})"
 
 
 @dataclass
@@ -922,6 +956,15 @@ class Pulse:
 
         elif type(self) == FluxPulse:
             return FluxPulse(
+                self.start,
+                self.duration,
+                self.amplitude,
+                self.shape,
+                self.channel,
+                self.qubit,
+            )
+        elif type(self) == CouplerFluxPulse:
+            return CouplerFluxPulse(
                 self.start,
                 self.duration,
                 self.amplitude,
@@ -1221,6 +1264,7 @@ class PulseConstructor(Enum):
     READOUT = ReadoutPulse
     DRIVE = DrivePulse
     FLUX = FluxPulse
+    COUPLERFLUX = CouplerFluxPulse
 
 
 class PulseSequence:
@@ -1543,30 +1587,39 @@ class PulseSequence:
         """Separates a sequence of overlapping pulses into a list of non-
         overlapping sequences."""
 
-        # This routine separates the pulses of a sequence into non-overlapping sets
-        # but it does not check if the frequencies of the pulses within a set have the same frequency
+        # This routine separates the pulses of a sequence into sets of different frequecy, non-overlapping
+        # pulses
 
-        separated_pulses = []
-        for new_pulse in self.pulses:
-            stored = False
-            for ps in separated_pulses:
-                overlaps = False
-                for existing_pulse in ps:
-                    if (
-                        new_pulse.start < existing_pulse.finish
-                        and new_pulse.finish > existing_pulse.start
-                    ):
-                        overlaps = True
+        freqs = set()
+        for pulse in self.pulses:
+            freqs |= {pulse.frequency}
+        PS_freq = {}
+        separated_pulses = {}
+        for freq in freqs:
+            PS_freq[freq] = PulseSequence()
+            separated_pulses[freq] = []
+            for pulse in self.pulses:
+                if pulse.frequency == freq:
+                    PS_freq[freq].add(pulse)
+
+            for new_pulse in PS_freq[freq]:
+                stored = False
+                for ps in separated_pulses[freq]:
+                    overlaps = False
+                    for existing_pulse in ps:
+                        if (
+                            new_pulse.start < existing_pulse.finish
+                            and new_pulse.finish > existing_pulse.start
+                        ):
+                            overlaps = True
+                            break
+                    if not overlaps:
+                        ps.add(new_pulse)
+                        stored = True
                         break
-                if not overlaps:
-                    ps.add(new_pulse)
-                    stored = True
-                    break
-            if not stored:
-                separated_pulses.append(PulseSequence(new_pulse))
-        return separated_pulses
-
-    # TODO: Implement separate_different_frequency_pulses()
+                if not stored:
+                    separated_pulses[freq].append(PulseSequence(new_pulse))
+        return [ps for freq in freqs for ps in separated_pulses[freq]]
 
     @property
     def pulses_overlap(self) -> bool:
