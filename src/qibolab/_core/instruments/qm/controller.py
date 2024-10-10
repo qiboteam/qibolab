@@ -229,7 +229,6 @@ class QmController(Controller):
         self._reset_temporary_calibration()
         if self.manager is not None:
             self.manager.close_all_quantum_machines()
-            self.manager.close()
             self.manager = None
 
     def configure_device(self, device: str):
