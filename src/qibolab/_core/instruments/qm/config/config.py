@@ -133,7 +133,11 @@ class Configuration:
         )
 
     def register_waveforms(
-        self, pulse: Pulse, element: Optional[str] = None, dc: bool = False
+        self,
+        pulse: Pulse,
+        max_voltage: float,
+        element: Optional[str] = None,
+        dc: bool = False,
     ):
         if dc:
             qmpulse = QmPulse.from_dc_pulse(pulse)
@@ -142,7 +146,7 @@ class Configuration:
                 qmpulse = QmPulse.from_pulse(pulse)
             else:
                 qmpulse = QmAcquisition.from_pulse(pulse, element)
-        waveforms = waveforms_from_pulse(pulse)
+        waveforms = waveforms_from_pulse(pulse, max_voltage)
         if dc:
             self.waveforms[qmpulse.waveforms["single"]] = waveforms["I"]
         else:
@@ -150,26 +154,30 @@ class Configuration:
                 self.waveforms[getattr(qmpulse.waveforms, mode)] = waveforms[mode]
         return qmpulse
 
-    def register_iq_pulse(self, element: str, pulse: Pulse):
+    def register_iq_pulse(self, element: str, pulse: Pulse, max_voltage: float):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse)
+            self.pulses[op] = self.register_waveforms(pulse, max_voltage)
         self.elements[element].operations[op] = op
         return op
 
-    def register_dc_pulse(self, element: str, pulse: Pulse):
+    def register_dc_pulse(self, element: str, pulse: Pulse, max_voltage: float):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse, dc=True)
+            self.pulses[op] = self.register_waveforms(pulse, max_voltage, dc=True)
         self.elements[element].operations[op] = op
         return op
 
-    def register_acquisition_pulse(self, element: str, readout: Readout):
+    def register_acquisition_pulse(
+        self, element: str, readout: Readout, max_voltage: float
+    ):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(readout)
         acquisition = f"{op}_{element}"
         if acquisition not in self.pulses:
-            self.pulses[acquisition] = self.register_waveforms(readout.probe, element)
+            self.pulses[acquisition] = self.register_waveforms(
+                readout.probe, max_voltage, element
+            )
         self.elements[element].operations[op] = acquisition
         return op
 

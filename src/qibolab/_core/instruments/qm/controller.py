@@ -27,7 +27,7 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Acquisition, Align, Delay, Pulse, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
-from qibolab._core.unrolling import Bounds, unroll_sequences
+from qibolab._core.unrolling import unroll_sequences
 
 from .components import OpxOutputConfig, QmAcquisitionConfig
 from .config import SAMPLING_RATE, Configuration, ControllerId, ModuleTypes
@@ -39,11 +39,18 @@ CALIBRATION_DB = "calibration_db.json"
 
 __all__ = ["QmController", "Octave"]
 
-BOUNDS = Bounds(
-    waveforms=int(4e4),
-    readout=30,
-    instructions=int(1e6),
-)
+MAX_VOLTAGE = 0.5
+"""Maximum output of Quantum Machines OPX+ in Volts."""
+MAX_VOLTAGE_AMPLIFIED = 2.5
+"""Maximum output of Quantum Machines OPX1000 FEMs in amplified mode in
+Volts."""
+
+
+def channel_max_voltage(config: Config):
+    """Find maximum voltage of a channel from the associated ``config``."""
+    if hasattr(config, "output_mode") and config.output_mode == "amplified":
+        return MAX_VOLTAGE_AMPLIFIED
+    return MAX_VOLTAGE
 
 
 @dataclass(frozen=True)
@@ -298,7 +305,9 @@ class QmController(Controller):
                 probe_map[probe] = id
         return probe_map
 
-    def register_pulse(self, channel: ChannelId, pulse: Union[Pulse, Readout]) -> str:
+    def register_pulse(
+        self, channel: ChannelId, pulse: Union[Pulse, Readout], max_voltage: float
+    ) -> str:
         """Add pulse in the QM ``config``.
 
         And return corresponding operation.
@@ -306,12 +315,12 @@ class QmController(Controller):
         ch = self.channels[channel]
         if isinstance(ch, DcChannel):
             assert isinstance(pulse, Pulse)
-            return self.config.register_dc_pulse(channel, pulse)
+            return self.config.register_dc_pulse(channel, pulse, max_voltage)
         if isinstance(ch, IqChannel):
             assert isinstance(pulse, Pulse)
-            return self.config.register_iq_pulse(channel, pulse)
+            return self.config.register_iq_pulse(channel, pulse, max_voltage)
         assert isinstance(pulse, Readout)
-        return self.config.register_acquisition_pulse(channel, pulse)
+        return self.config.register_acquisition_pulse(channel, pulse, max_voltage)
 
     def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
         """Adds all pulses except measurements of a given sequence in the QM
@@ -327,10 +336,11 @@ class QmController(Controller):
                     "Only integer duration in ns is supported."
                 )
 
+            max_voltage = channel_max_voltage(configs[id])
             if isinstance(pulse, Pulse):
-                self.register_pulse(id, pulse)
+                self.register_pulse(id, pulse, max_voltage)
             elif isinstance(pulse, Readout):
-                self.register_pulse(id, pulse)
+                self.register_pulse(id, pulse, max_voltage)
 
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, sweeper: Sweeper
@@ -390,7 +400,11 @@ class QmController(Controller):
                     "Quantum Machines does not support acquisition with different duration than probe."
                 )
 
-            op = self.config.register_acquisition_pulse(channel_id, readout)
+            probe_id = self.channels[channel_id].probe
+            max_voltage = channel_max_voltage(configs[probe_id])
+            op = self.config.register_acquisition_pulse(
+                channel_id, readout, max_voltage
+            )
 
             acq_config = configs[channel_id]
             assert isinstance(acq_config, QmAcquisitionConfig)
@@ -426,6 +440,7 @@ class QmController(Controller):
         for sweeper in find_sweepers(sweepers, Parameter.offset):
             for id in sweeper.channels:
                 args.parameters[id].element = id
+                args.parameters[id].max_offset = channel_max_voltage(configs[id])
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
