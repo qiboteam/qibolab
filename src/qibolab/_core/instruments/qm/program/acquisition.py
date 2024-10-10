@@ -56,7 +56,7 @@ class Acquisition(ABC):
     @property
     def name(self):
         """Identifier to download results from the instruments."""
-        return f"{self.operation}_{self.element}"
+        return f"{self.operation}_{self.element}".replace("/", "|")
 
     @property
     def npulses(self):
