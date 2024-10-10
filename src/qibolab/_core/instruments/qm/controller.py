@@ -306,13 +306,14 @@ class QmController(Controller):
         return probe_map
 
     def register_pulse(
-        self, channel: ChannelId, pulse: Union[Pulse, Readout], max_voltage: float
+        self, channel: ChannelId, config: Config, pulse: Union[Pulse, Readout]
     ) -> str:
         """Add pulse in the QM ``config``.
 
         And return corresponding operation.
         """
         ch = self.channels[channel]
+        max_voltage = channel_max_voltage(config)
         if isinstance(ch, DcChannel):
             assert isinstance(pulse, Pulse)
             return self.config.register_dc_pulse(channel, pulse, max_voltage)
@@ -335,15 +336,13 @@ class QmController(Controller):
                     f"Quantum Machines cannot play pulse with duration {pulse.duration}. "
                     "Only integer duration in ns is supported."
                 )
-
-            max_voltage = channel_max_voltage(configs[id])
             if isinstance(pulse, Pulse):
-                self.register_pulse(id, pulse, max_voltage)
+                self.register_pulse(id, configs[id], pulse)
             elif isinstance(pulse, Readout):
-                self.register_pulse(id, pulse, max_voltage)
+                self.register_pulse(id, configs[id], pulse)
 
     def register_duration_sweeper_pulses(
-        self, args: ExecutionArguments, sweeper: Sweeper
+        self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
     ):
         """Register pulse with many different durations.
 
@@ -360,11 +359,11 @@ class QmController(Controller):
             )
             for value in sweeper.values.astype(int):
                 sweep_pulse = original_pulse.model_copy(update={"duration": value})
-                sweep_op = self.register_pulse(ids[0], sweep_pulse)
+                sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
                 params.duration_ops.append((value, sweep_op))
 
     def register_amplitude_sweeper_pulses(
-        self, args: ExecutionArguments, sweeper: Sweeper
+        self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
     ):
         """Register pulse with different amplitude.
 
@@ -377,7 +376,9 @@ class QmController(Controller):
             ids = args.sequence.pulse_channels(pulse.id)
             params = args.parameters[pulse.id]
             params.amplitude_pulse = sweep_pulse
-            params.amplitude_op = self.register_pulse(ids[0], sweep_pulse)
+            params.amplitude_op = self.register_pulse(
+                ids[0], configs[ids[0]], sweep_pulse
+            )
 
     def register_acquisitions(
         self,
@@ -442,9 +443,9 @@ class QmController(Controller):
                 args.parameters[id].element = id
                 args.parameters[id].max_offset = channel_max_voltage(configs[id])
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
-            self.register_amplitude_sweeper_pulses(args, sweeper)
+            self.register_amplitude_sweeper_pulses(args, configs, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
-            self.register_duration_sweeper_pulses(args, sweeper)
+            self.register_duration_sweeper_pulses(args, configs, sweeper)
 
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language."""
