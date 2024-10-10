@@ -12,7 +12,17 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Pulse, Readout
 
 from ..components import OpxOutputConfig, QmAcquisitionConfig
-from .devices import AnalogOutput, Controller, Octave, OctaveInput, OctaveOutput
+from .devices import (
+    AnalogOutput,
+    Controller,
+    ControllerId,
+    Controllers,
+    FemAnalogOutput,
+    ModuleTypes,
+    Octave,
+    OctaveInput,
+    OctaveOutput,
+)
 from .elements import AcquireOctaveElement, DcElement, Element, RfOctaveElement
 from .pulses import (
     QmAcquisition,
@@ -42,7 +52,7 @@ class Configuration:
     """
 
     version: int = 1
-    controllers: dict[str, Controller] = field(default_factory=dict)
+    controllers: Controllers = field(default_factory=Controllers)
     octaves: dict[str, Octave] = field(default_factory=dict)
     elements: dict[str, Element] = field(default_factory=dict)
     pulses: dict[str, Union[QmPulse, QmAcquisition]] = field(default_factory=dict)
@@ -53,20 +63,27 @@ class Configuration:
     integration_weights: dict = field(default_factory=dict)
     mixers: dict = field(default_factory=dict)
 
-    def add_controller(self, device: str):
+    def add_controller(self, device: ControllerId, modules: dict[str, ModuleTypes]):
         if device not in self.controllers:
-            self.controllers[device] = Controller()
+            self.controllers[device] = Controller(type=modules[device])
 
-    def add_octave(self, device: str, connectivity: str):
+    def add_octave(
+        self, device: str, connectivity: ControllerId, modules: dict[str, ModuleTypes]
+    ):
         if device not in self.octaves:
-            self.add_controller(connectivity)
+            self.add_controller(connectivity, modules)
             self.octaves[device] = Octave(connectivity)
 
     def configure_dc_line(
         self, id: ChannelId, channel: DcChannel, config: OpxOutputConfig
     ):
         controller = self.controllers[channel.device]
-        controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
+        if controller.type == "opx1":
+            controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
+        else:
+            controller.analog_outputs[channel.port] = FemAnalogOutput.from_config(
+                config
+            )
         self.elements[id] = DcElement.from_channel(channel)
 
     def configure_iq_line(
@@ -116,7 +133,11 @@ class Configuration:
         )
 
     def register_waveforms(
-        self, pulse: Pulse, element: Optional[str] = None, dc: bool = False
+        self,
+        pulse: Pulse,
+        max_voltage: float,
+        element: Optional[str] = None,
+        dc: bool = False,
     ):
         if dc:
             qmpulse = QmPulse.from_dc_pulse(pulse)
@@ -125,7 +146,7 @@ class Configuration:
                 qmpulse = QmPulse.from_pulse(pulse)
             else:
                 qmpulse = QmAcquisition.from_pulse(pulse, element)
-        waveforms = waveforms_from_pulse(pulse)
+        waveforms = waveforms_from_pulse(pulse, max_voltage)
         if dc:
             self.waveforms[qmpulse.waveforms["single"]] = waveforms["I"]
         else:
@@ -133,26 +154,30 @@ class Configuration:
                 self.waveforms[getattr(qmpulse.waveforms, mode)] = waveforms[mode]
         return qmpulse
 
-    def register_iq_pulse(self, element: str, pulse: Pulse):
+    def register_iq_pulse(self, element: str, pulse: Pulse, max_voltage: float):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse)
+            self.pulses[op] = self.register_waveforms(pulse, max_voltage)
         self.elements[element].operations[op] = op
         return op
 
-    def register_dc_pulse(self, element: str, pulse: Pulse):
+    def register_dc_pulse(self, element: str, pulse: Pulse, max_voltage: float):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse, dc=True)
+            self.pulses[op] = self.register_waveforms(pulse, max_voltage, dc=True)
         self.elements[element].operations[op] = op
         return op
 
-    def register_acquisition_pulse(self, element: str, readout: Readout):
+    def register_acquisition_pulse(
+        self, element: str, readout: Readout, max_voltage: float
+    ):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(readout)
         acquisition = f"{op}_{element}"
         if acquisition not in self.pulses:
-            self.pulses[acquisition] = self.register_waveforms(readout.probe, element)
+            self.pulses[acquisition] = self.register_waveforms(
+                readout.probe, max_voltage, element
+            )
         self.elements[element].operations[op] = acquisition
         return op
 

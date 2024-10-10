@@ -27,6 +27,7 @@ class Parameters:
 
     element: Optional[str] = None
     lo_frequency: Optional[int] = None
+    max_offset: float = 0.5
 
 
 @dataclass
