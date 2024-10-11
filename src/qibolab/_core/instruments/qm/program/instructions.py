@@ -175,7 +175,7 @@ def program(
 ):
     """QUA program implementing the required experiment."""
     with qua.program() as experiment:
-        # force offset setting due to a bug in newer QUA versions and the OPX1000
+        # FIXME: force offset setting due to a bug in QUA 1.2.1a2 and OPX1000
         for channel_id, offset in offsets:
             qua.set_dc_offset(channel_id, "single", offset)
 
