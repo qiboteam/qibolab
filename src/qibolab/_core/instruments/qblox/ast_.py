@@ -352,3 +352,26 @@ class Program(Model):
             elements_.append(el)
 
         return cls(elements=elements_)
+
+    def asm(self, width: Optional[int] = None, comments: bool = True) -> str:
+        max_label_len = max(
+            len(line.label)
+            for line in self.elements
+            if isinstance(line, Line) and line.label is not None
+        )
+        max_instr_len = max(
+            len(line.instruction.asm)
+            for line in self.elements
+            if isinstance(line, Line)
+        )
+        code = "\n".join(
+            (
+                (el if comments else el.model_copy(update={"comment": None})).asm(
+                    width, label_width=max_label_len, instr_width=max_instr_len
+                )
+                if isinstance(el, Line)
+                else (el.asm(width) if comments else "")
+            )
+            for el in self.elements
+        )
+        return code if comments else re.sub("^\n*", "", re.sub("\n+", "\n", code))
