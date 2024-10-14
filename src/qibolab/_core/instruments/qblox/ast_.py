@@ -25,6 +25,13 @@ class Instr(Model):
     def args(self):
         return list(self.model_dump().values())
 
+    @property
+    def asm(self) -> str:
+        key = self.keyword()
+        args = self.args()
+        instr = " ".join([key] + [str(a) for a in args])
+        return instr
+
 
 class Illegal(Instr):
     """"""
@@ -287,10 +294,7 @@ class Line(Model):
 
     @property
     def asm(self):
-        key = self.instruction.keyword()
-        args = self.instruction.args()
-        instr = " ".join([key] + [str(a) for a in args])
-        return self.label, instr, self.comment
+        return self.label, self.instruction.asm, self.comment
 
 
 Element = Union[Line, Comment, "Block"]
