@@ -1,5 +1,6 @@
 import inspect
 import re
+import textwrap
 from typing import Optional, Union
 
 from pydantic import model_validator
@@ -278,8 +279,22 @@ INSTRUCTIONS = {
 }
 
 
+def _format_comment(text: str, width: Optional[int] = None) -> str:
+    lines = [""]
+    for block in text.splitlines():
+        lines.extend(
+            textwrap.wrap(
+                block, width=width - 2, break_long_words=False, break_on_hyphens=False
+            )
+            if width is not None
+            else [block]
+        )
+    return "\n# ".join(lines)[1:]
+
+
 class Comment(str):
-    pass
+    def asm(self, width: Optional[int] = None) -> str:
+        return _format_comment(self, width) + "\n"
 
 
 class Line(Model):
