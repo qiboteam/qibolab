@@ -307,11 +307,18 @@ class Line(Model):
         yield "label", self.label, None
         yield "comment", self.comment, None
 
-    @property
-    def asm(self):
-        return self.label, self.instruction.asm, self.comment
-
-
+    def asm(
+        self,
+        width: Optional[int] = None,
+        label_width: Optional[int] = None,
+        instr_width: Optional[int] = None,
+    ) -> str:
+        if label_width is None:
+            label_width = len(self.label) if self.label is not None else -1
+        label = self.label if self.label is not None else ""
+        if instr_width is None:
+            instr_width = len(self.instruction.asm)
+        return f"{label:{label_width+1}}{self.instruction.asm:{instr_width+1}}"
 
 
 Element = Union[Line, Comment]
