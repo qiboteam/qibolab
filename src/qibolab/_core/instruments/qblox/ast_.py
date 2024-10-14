@@ -312,11 +312,9 @@ class Line(Model):
         return self.label, self.instruction.asm, self.comment
 
 
-Element = Union[Line, Comment, "Block"]
 
 
-class Block(Model):
-    elements: list[Element]
+Element = Union[Line, Comment]
 
 
 class Program(Model):
