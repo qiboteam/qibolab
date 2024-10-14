@@ -318,7 +318,15 @@ class Line(Model):
         label = self.label if self.label is not None else ""
         if instr_width is None:
             instr_width = len(self.instruction.asm)
-        return f"{label:{label_width+1}}{self.instruction.asm:{instr_width+1}}"
+        code = f"{label:{label_width+1}}{self.instruction.asm:{instr_width+1}}"
+        if self.comment is None:
+            return code
+        comment = _format_comment(
+            self.comment, width - len(code) if width is not None else None
+        ).splitlines()
+        return "\n".join(
+            [code + comment[0]] + [" " * len(code) + c for c in comment[1:]]
+        )
 
 
 Element = Union[Line, Comment]
