@@ -281,7 +281,6 @@ class Line(Model):
     comment: Optional[str]
 
     def __rich_repr__(self):
-        print(self.asm)
         yield self.instruction
         yield "label", self.label, None
         yield "comment", self.comment, None
