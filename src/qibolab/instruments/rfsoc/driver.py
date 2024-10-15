@@ -19,7 +19,7 @@ from qibolab.qubits import Qubit
 from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResults
 from qibolab.sweeper import BIAS, Sweeper
 
-from .convert import convert, convert_units_sweeper
+from .convert import convert, convert_units_sweeper, parse_port_name
 
 HZ_TO_MHZ = 1e-6
 NS_TO_US = 1e-3
@@ -32,7 +32,21 @@ class RFSoCPort(Port):
     name: int
     """DAC number."""
     offset: float = 0.0
-    """Amplitude factor for biasing."""
+
+    # @property
+    # def offset(self) -> float:
+    #     """Amplitude factor for biasing."""
+    #     return self._offset
+
+    # @offset.setter
+    # def offset(self, value):
+    #     self._offset = value
+    #     dac = parse_port_name("DCO", self.name)
+    #     server_commands = {
+    #         "operation_code": rfsoc.OperationCode.SET_BIAS,
+    #         "dac_bias": {dac: value},
+    #     }
+    #     RFSoC._try_to_execute(server_commands, self.host, self.port)
 
 
 class RFSoC(Controller):
@@ -213,7 +227,38 @@ class RFSoC(Controller):
         }
         return self._try_to_execute(server_commands, self.host, self.port)
 
+
+
+        
+
+    def set_bias(self, qubits:dict[int, Qubit], mode: str = "sweetspot"):
+        dac_bias = {}
+        for qubit in qubits.values():
+            if qubit.flux:
+                dac =  parse_port_name("DCO", qubit.flux.port.name)
+                bias = qubit.flux.offset if mode == "sweetspot" else 0
+                dac_bias[dac] = bias
+        server_commands = {
+            "operation_code": rfsoc.OperationCode.SET_BIAS,
+            "dac_bias": dac_bias,
+        }
+        self._try_to_execute(server_commands, self.host, self.port)
+
+
     def play(
+        self,
+        qubits: dict[int, Qubit],
+        couplers: dict[int, Coupler],
+        sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        self.set_bias(qubits, "sweetspot")
+        results = self._play(qubits, couplers, sequence, execution_parameters)
+        self.set_bias(qubits, "zero")
+
+        return results
+
+    def _play(
         self,
         qubits: dict[int, Qubit],
         couplers: dict[int, Coupler],
@@ -327,7 +372,7 @@ class RFSoC(Controller):
         readout pulses serials and are convert to match the original
         sequence (of the sweep) and not the one just executed.
         """
-        res = self.play(qubits, couplers, sequence, execution_parameters)
+        res = self._play(qubits, couplers, sequence, execution_parameters)
         newres = {}
         serials = [pulse.serial for pulse in or_sequence.ro_pulses]
         for idx, key in enumerate(res):
@@ -398,7 +443,17 @@ class RFSoC(Controller):
             for jdx, kdx in enumerate(sweeper.indexes):
                 sweeper_parameter = sweeper.parameters[jdx]
                 if sweeper_parameter is rfsoc.Parameter.BIAS:
-                    qubits[list(qubits)[kdx]].flux.offset = values[jdx][idx]
+                    qubit = qubits[list(qubits)[kdx]]
+
+                    dac = parse_port_name("DCO", qubit.flux.port.name)
+                    bias = values[jdx][idx]
+                    qubit.flux.offset = bias
+                    server_commands = {
+                        "operation_code": rfsoc.OperationCode.SET_BIAS,
+                        "dac_bias": {dac: bias},
+                    }
+                    self._try_to_execute(server_commands, self.host, self.port)
+
                 elif sweeper_parameter in rfsoc.Parameter.variants(
                     {
                         "amplitude",
@@ -540,7 +595,7 @@ class RFSoC(Controller):
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
         return results
 
-    def sweep(
+    def _sweep(
         self,
         qubits: dict[int, Qubit],
         couplers: dict[int, Coupler],
@@ -608,3 +663,19 @@ class RFSoC(Controller):
                     qubit.flux.offset = initial_biases[idx]
 
         return self.reshape_sweep_results(results, sweepers, execution_parameters)
+
+
+
+    def sweep(
+        self,
+        qubits: dict[int, Qubit],
+        couplers: dict[int, Coupler],
+        sequence: PulseSequence,
+        execution_parameters: ExecutionParameters,
+        *sweepers: Sweeper,
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        self.set_bias(qubits, "sweetspot")
+        results = self._sweep(qubits, couplers, sequence, execution_parameters, *sweepers)
+        self.set_bias(qubits, "zero")
+
+        return results

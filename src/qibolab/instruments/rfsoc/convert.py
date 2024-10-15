@@ -98,7 +98,7 @@ def _(qubit: Qubit) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to
     `qibosoq.abstract.Qubit`."""
     if qubit.flux:
-        return rfsoc.Qubit(qubit.flux.offset, parse_port_name("DCO", qubit.flux.port.name))
+        return rfsoc.Qubit(qubit.flux.offset, parse_port_name("DCO", qubit.flux.port.name), parse_port_name("RFO", qubit.flux.port.name))
     return rfsoc.Qubit(0.0, None)
 
 
