@@ -1,13 +1,29 @@
 import inspect
 import re
 import textwrap
-from typing import Annotated, Optional, Union
+from typing import Annotated, Any, Optional, Union
 
-from pydantic import BeforeValidator, model_validator
+from pydantic import BeforeValidator, model_serializer, model_validator
 
 from ...serialize import Model
 
-Register = str
+
+class Register(Model):
+    number: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def load(cls, data: Any) -> Any:
+        assert data[0] == "R"
+        num = int(data[1:])
+        assert 0 <= num < 64
+        return {"number": num}
+
+    @model_serializer
+    def dump(self) -> str:
+        return f"R{self.number}"
+
+
 MultiBaseInt = Annotated[int, BeforeValidator(lambda n: int(n, 0))]
 Immediate = MultiBaseInt
 Value = Union[Register, Immediate]
