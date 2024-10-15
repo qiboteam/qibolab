@@ -24,22 +24,22 @@ class Register(Model):
         return f"R{self.number}"
 
 
-class Label(Model):
-    name: str
+class Reference(Model):
+    label: str
 
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
         assert data[0] == "@"
-        return {"name": data[1:]}
+        return {"label": data[1:]}
 
     @model_serializer
     def dump(self) -> str:
-        return f"@{self.name}"
+        return f"@{self.label}"
 
 
 MultiBaseInt = Annotated[int, BeforeValidator(lambda n: int(n, 0))]
-Immediate = Union[MultiBaseInt, Label]
+Immediate = Union[MultiBaseInt, Reference]
 Value = Union[Register, Immediate]
 
 CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
