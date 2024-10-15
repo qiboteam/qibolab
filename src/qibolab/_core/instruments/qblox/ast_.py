@@ -1,14 +1,15 @@
 import inspect
 import re
 import textwrap
-from typing import Optional, Union
+from typing import Annotated, Optional, Union
 
-from pydantic import model_validator
+from pydantic import BeforeValidator, model_validator
 
 from ...serialize import Model
 
 Register = str
-Immediate = int
+MultiBaseInt = Annotated[int, BeforeValidator(lambda n: int(n, 0))]
+Immediate = MultiBaseInt
 Value = Union[Register, Immediate]
 
 CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
