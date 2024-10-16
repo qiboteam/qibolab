@@ -8,7 +8,7 @@ Try to follow as close as possible [semver](https://semver.org/)
 
 I.e. whether things are private or public, including internal relations.
 
-Cf. [importing guidelines](./import.md)
+Cf. [importing guidelines](./visibility.md)
 
 ## APIs
 
