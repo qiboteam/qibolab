@@ -38,6 +38,7 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
         return qcs.GaussianEnvelope(shape.rel_sigma)
 
     else:
+        # TODO: Rework this code to support other Qibolab pulse envelopes
         # raw_envelope = shape.i(num_samples) + 1j * shape.q(num_samples)
         # return qcs.ArbitraryEnvelope(
         #    times=np.linspace(0, 1, num_samples), amplitudes=raw_envelope
@@ -211,8 +212,6 @@ class KeysightQCS(Controller):
                 else:
                     frequency = configs[channel_id].frequency
 
-                vz_phase = 0
-
                 for pulse in sequence.channel(channel_id):
                     sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
 
@@ -223,7 +222,9 @@ class KeysightQCS(Controller):
                             )
                         )
                     elif pulse.kind == "virtualz":
-                        vz_phase += pulse.phase
+                        qcs_pulse = qcs.PhaseIncrement(
+                            phase=sweep_param_map.get("relative_phase", pulse.phase)
+                        )
                     elif pulse.kind == "pulse":
                         qcs_pulse = generate_qcs_rfwaveform(
                             duration=sweep_param_map.get(
@@ -234,8 +235,7 @@ class KeysightQCS(Controller):
                             frequency=frequency,
                             phase=sweep_param_map.get(
                                 "relative_phase", pulse.relative_phase
-                            )
-                            + float(vz_phase),
+                            ),
                         )
                         if pulse.envelope.kind == "drag":
                             qcs_pulse = qcs_pulse.drag(coeff=pulse.envelope.beta)
