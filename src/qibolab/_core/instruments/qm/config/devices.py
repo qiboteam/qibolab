@@ -3,12 +3,8 @@ from typing import Generic, Literal, TypeVar, Union
 
 from qibolab._core.components import OscillatorConfig
 
-from ..components import (
-    OctaveOscillatorConfig,
-    OctaveOutputModes,
-    OpxOutputConfig,
-    QmAcquisitionConfig,
-)
+from ..components import OctaveOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
+from ..components.configs import OctaveOutputModes
 
 __all__ = [
     "AnalogOutput",

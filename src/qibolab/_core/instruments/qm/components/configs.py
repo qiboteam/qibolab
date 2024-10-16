@@ -9,7 +9,6 @@ __all__ = [
     "QmAcquisitionConfig",
     "QmConfigs",
     "OctaveOscillatorConfig",
-    "OctaveOutputModes",
 ]
 
 OctaveOutputModes = Literal[
