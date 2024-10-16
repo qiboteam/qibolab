@@ -90,6 +90,7 @@ class Nop(Instr):
 
 
 Control = Union[Illegal, Stop, Nop]
+"""Control instructions."""
 
 
 class Jmp(Instr):
@@ -137,6 +138,7 @@ class Loop(Instr):
 
 
 Jump = Union[Jmp, Jge, Jlt, Loop]
+"""Jump instructions."""
 
 
 class Move(Instr):
@@ -275,6 +277,7 @@ class Asr(Instr):
 
 
 Arithmetic = Union[Move, Not, Add, Sub, And, Or, Xor, Asl, Asr]
+"""Arithmetic instructions."""
 
 
 class SetMrk(Instr):
@@ -388,8 +391,26 @@ class SetAwgOffs(Instr):
 
 
 ParamOps = Union[SetMrk, SetFreq, ResetPh, SetPh, SetPhDelta, SetAwgGain, SetAwgOffs]
+"""Parameter operations.
+
+The parameters are latched and only updated when the ``upd_param``, ``play``, ``acquire``,
+``acquire_weighed`` or ``acquire_ttl`` instructions are executed.
+"""
 
 Q1Instr = Union[Control, Jump, Arithmetic, ParamOps]
+"""Q1 Instructions.
+
+These instructions are used to compose and manipulate the arguments of
+real-time instructions. They are always executed before the next real-
+time instruction, and therefore take zero wall-time.
+
+The sequencers for the QTM inherit many instructions from the QCM/QRM
+sequencers in the Control, Jump and Arithmetic categories. For other
+categories the QTM sequencers have a new set of instructions that are
+unique to the module and inherit only a select few instructions from the
+QCM/QRM sequencers. The instructions unique to the QTM are appended
+after the general QCM/QRM instructions.
+"""
 
 
 class SetCond(Instr):
