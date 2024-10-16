@@ -140,52 +140,135 @@ Jump = Union[Jmp, Jge, Jlt, Loop]
 
 
 class Move(Instr):
+    """Move value.
+
+    :attr:`source` is moved / copied to :attr:`destination`.
+
+    ::
+
+        destination = source
+    """
+
     source: Value
     destination: Register
 
 
 class Not(Instr):
+    """Bit-wise inversion.
+
+    Bit-wise invert :attr:`source` and move the result to :attr:`destination`.
+
+    ::
+
+        destination = ~source
+    """
+
     source: Value
     destination: Register
 
 
 class Add(Instr):
+    """Addition.
+
+    Add :attr:`b` to :attr:`a` and move the result to :attr:`destination`.
+
+    ::
+
+        destination = a + b
+    """
+
     a: Register
     b: Value
     destination: Register
 
 
 class Sub(Instr):
+    """Subtraction.
+
+    Subtract :attr:`b` from :attr:`a` and move the result to :attr:`destination`.
+
+    ::
+
+        destination = a - b
+    """
+
     a: Register
     b: Value
     destination: Register
 
 
 class And(Instr):
+    """Bit-wise conjuction.
+
+    Bit-wise AND :attr:`a` and :attr:`b` and move the result to :attr:`destination`.
+
+    ::
+
+        destination = a & b
+    """
+
     a: Register
     b: Value
     destination: Register
 
 
 class Or(Instr):
+    """Bit-wise disjuction.
+
+    Bit-wise OR :attr:`a` and :attr:`b` and move the result to :attr:`destination`.
+
+    ::
+
+        destination = a | b
+    """
+
     a: Register
     b: Value
     destination: Register
 
 
 class Xor(Instr):
+    """Bit-wise exclusive disjuction.
+
+    Bit-wise XOR :attr:`a` and :attr:`b` and move the result to :attr:`destination`.
+
+    ::
+
+        destination = a ^ b
+    """
+
     a: Register
     b: Value
     destination: Register
 
 
 class Asl(Instr):
+    """Bit-wise left-shift.
+
+    Bit-wise left-shift :attr:`a` by :attr:`b` number of bits and move the result to
+    :attr:`destination`.
+
+    ::
+
+        destination = a << b
+    """
+
     a: Register
     b: Value
     destination: Register
 
 
 class Asr(Instr):
+    """Bit-wise right-shift.
+
+    Bit-wise right-shift :attr:`a` by :attr:`b` number of bits and move the result to
+    :attr:`destination`.
+
+    ::
+
+        destination = a << b
+    """
+
     a: Register
     b: Value
     destination: Register
