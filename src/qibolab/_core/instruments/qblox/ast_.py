@@ -66,37 +66,72 @@ class Instr(Model):
 
 
 class Illegal(Instr):
-    """"""
+    """Illegal instruction.
+
+    Instruction that should not be executed. If it is executed, the
+    sequencer will stop with the illegal instruction flag set.
+    """
 
 
 class Stop(Instr):
-    """"""
+    """Stop the sequencer.
+
+    Instruction that stops the sequencer.
+    """
 
 
 class Nop(Instr):
-    """"""
+    """No operation.
+
+    No operation instruction, that does nothing. It is used to pass a
+    single cycle in the classic part of the sequencer without any
+    operations.
+    """
 
 
 Control = Union[Illegal, Stop, Nop]
 
 
 class Jmp(Instr):
+    """Jump.
+
+    Jump to the instruction indicated by :attr:`address`.
+    """
+
     address: Value
 
 
 class Jge(Instr):
+    """Jump if greater.
+
+    If :attr:`a` is greater than or equal to :attr:`b`, jump to the instruction
+    indicated by :attr:`address`.
+    """
+
     a: Register
     b: Immediate
     address: Value
 
 
 class Jlt(Instr):
+    """Jump if smaller.
+
+    If :attr:`a` is less than :attr:`b`, jump to the instruction indicated by
+    :attr:`address`.
+    """
+
     a: Register
     b: Immediate
     address: Value
 
 
 class Loop(Instr):
+    """Loop.
+
+    Decrement :attr:`a` by one and, if the result is non-zero, jump to the instruction
+    indicated by :attr:`address`.
+    """
+
     a: Register
     address: Value
 
