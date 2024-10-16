@@ -3,7 +3,7 @@ import re
 import textwrap
 from typing import Annotated, Any, Optional, Union
 
-from pydantic import BeforeValidator, model_serializer, model_validator
+from pydantic import BeforeValidator, field_validator, model_serializer, model_validator
 
 from ...serialize import Model
 
@@ -306,6 +306,13 @@ class SetAwgGain(Instr):
         assert type(self.value_0) == type(self.value_1)
         return self
 
+    @field_validator("value_0", "value_1")
+    @classmethod
+    def check_range(cls, v: Value) -> Value:
+        if isinstance(v, int):
+            assert -32_768 <= v <= 32_767
+        return v
+
 
 class SetAwgOffs(Instr):
     value_0: Value
@@ -315,6 +322,13 @@ class SetAwgOffs(Instr):
     def check_signature(self):
         assert type(self.value_0) == type(self.value_1)
         return self
+
+    @field_validator("value_0", "value_1")
+    @classmethod
+    def check_range(cls, v: Value) -> Value:
+        if isinstance(v, int):
+            assert -32_768 <= v <= 32_767
+        return v
 
 
 ParamOps = Union[SetMrk, SetFreq, ResetPh, SetPh, SetPhDelta, SetAwgGain, SetAwgOffs]
