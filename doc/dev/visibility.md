@@ -2,6 +2,9 @@
 
 Trying to establish some guidelines about importing and "exporting" things
 
+First and foremost, check PEP 8 [dedicated
+section](https://peps.python.org/pep-0008/#public-and-internal-interfaces).
+
 ## Internal imports
 
 1. never import from a place which is not supposed to export
