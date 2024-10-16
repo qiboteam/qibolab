@@ -403,17 +403,37 @@ Q1Instr = Union[Control, Jump, Arithmetic, ParamOps]
 These instructions are used to compose and manipulate the arguments of
 real-time instructions. They are always executed before the next real-
 time instruction, and therefore take zero wall-time.
-
-The sequencers for the QTM inherit many instructions from the QCM/QRM
-sequencers in the Control, Jump and Arithmetic categories. For other
-categories the QTM sequencers have a new set of instructions that are
-unique to the module and inherit only a select few instructions from the
-QCM/QRM sequencers. The instructions unique to the QTM are appended
-after the general QCM/QRM instructions.
 """
 
 
 class SetCond(Instr):
+    """Condition all subsequent instructions.
+
+    Enable/disable conditionality on all following real-time
+    instructions based on :attr:`enable`. The condition is based on the
+    trigger network address counters being thresholded based on the associated
+    counter threshold parameters set through QCoDeS.
+
+    The results are masked using :attr:`mask` (bits 0-14), where the bit
+    index plus one corresponds to the trigger address.
+
+    This creates a selection to include in the final logical operation
+    set using :attr:`operator`. Logical operators are OR, NOR, AND, NAND,
+    XOR, XNOR, where a value for operator of 0 is OR and 5 is XNOR
+    respectively.
+
+    The logical operation result (true/false) determines the condition.
+    If the condition is true upon evaluation, the next real-time
+    instruction is executed. Else the real-time path ignores the
+    instruction and waits for :attr:`else_duration` nanoseconds before
+    continuing to the next.
+
+    All following real-time instructions are subject to the same
+    condition, until either the conditionality is disabled or updated.
+    Disabling the conditionality does not affect the address counters
+    and does not trigger else_duration.
+    """
+
     enable: Value
     mask: Value
     operator: Value
@@ -427,13 +447,26 @@ class SetCond(Instr):
 
 
 Conditional = SetCond
+"""Conditional instructions."""
 
 
 class UpdParam(Instr):
+    """Update parameters.
+
+    Update the latched parameters, and then wait for :attr:`duration` nanoseconds.
+    """
+
     duration: Immediate
 
 
 class Play(Instr):
+    """Play waveforms.
+
+    Update the latched parameters, interrupt currently playing waves and
+    start playing AWG waveforms stored at indexes :attr:`wave_0` on path 0 and
+    :attr:`wave_1` on path 1.
+    """
+
     wave_0: Value
     wave_1: Value
     duration: Immediate
@@ -445,12 +478,32 @@ class Play(Instr):
 
 
 class Acquire(Instr):
+    """Start new acquisition.
+
+    Update the latched parameters, interrupt currently active
+    acquisitions and start the acquisition referred to using index
+    :attr:`acquisition` and store the bin data in :attr:`bin` index bin.
+
+    Integration is executed using a square weight with a preset length
+    through the associated QCoDeS parameter.
+    """
+
     acquisition: Immediate
     bin: Value
     duration: Immediate
 
 
 class AcquireWeighed(Instr):
+    """Start new acquisition with given weights.
+
+    Update the latched parameters, interrupt currently active
+    acquisitions and start the acquisition referred to using index
+    :attr:`acquisition` and store the bin data in :attr:`bin` index bin.
+
+    Integration is executed using weights stored at indices :attr:`weight_0` for
+    path 0 and :attr:`weight_1` for path 1.
+    """
+
     acquisition: Immediate
     bin: Value
     weight_0: Value
@@ -465,6 +518,16 @@ class AcquireWeighed(Instr):
 
 
 class AcquireTtl(Instr):
+    """Start TTL trigger acquisition.
+
+    Update the latched parameters, start the TTL trigger acquisition
+    referred to using index :attr:`acquisition` and store the bin data in bin
+    index :attr:`bin`. Enable the acquisition by writing 1 to :attr:`enable`.
+
+    The TTL trigger acquisition has to be actively disabled afterwards
+    by writing 0 to :attr:`enable`.
+    """
+
     acquisition: Immediate
     bin: Value
     enable: Immediate
@@ -472,25 +535,53 @@ class AcquireTtl(Instr):
 
 
 Io = Union[UpdParam, Play, Acquire, AcquireWeighed, AcquireTtl]
+"""Real-time IO operation instructions.
+
+The execution of any of these instructions will cause the latched
+parameters to be updated.
+"""
 
 
 class SetLatchEn(Instr):
+    """Toggle trigger counters.
+
+    Enable/disable all trigger network address counters. Once enabled,
+    the trigger network address counters will count all triggers on the
+    trigger network. When disabled, the counters hold their last values.
+    """
+
     enable: Value
     duration: Immediate
 
 
 class LatchRst(Instr):
+    """Reset trigger counters.
+
+    Reset all trigger network address counters back to 0.
+    """
+
     duration: Value
 
 
 Trigger = Union[SetLatchEn, LatchRst]
+"""Real-time trigger count control instructions."""
 
 
 class Wait(Instr):
+    """Wait.
+
+    Wait for :attr:`duration` nanoseconds.
+    """
+
     duration: Value
 
 
 class WaitTrigger(Instr):
+    """Wait trigger.
+
+    Wait for a trigger on the trigger network at the address set using :attr:`trigger`.
+    """
+
     trigger: Value
     duration: Value
 
@@ -501,13 +592,34 @@ class WaitTrigger(Instr):
 
 
 class WaitSync(Instr):
+    """Syncronization.
+
+    Wait for SYNQ to complete on all connected sequencers over all
+    connected instruments.
+    """
+
     duration: Value
 
 
 WaitOps = Union[Wait, WaitTrigger, WaitSync]
+"""Real-time wait operation instructions."""
 
 RealTimeInstr = Union[Conditional, Io, Trigger, WaitOps]
+"""Real-time instructions.
 
+These instructions have a duration argument, which corresponds to the
+wall-time of an experiment. The duration is counted from the beginning
+of an instruction. This is what enables e.g. parallel playback and
+acquisition. The duration can be set at a resolution of 1 ns, with a
+minimum of 4 ns.
+
+The real-time instructions to the pipeline form a time-line of real-time
+operations. To ensure deterministic behavior, this time-line cannot be
+interrupted/broken. As a result, once the real-time pipeline is started
+by the first real-time instruction in a sequence, it cannot be stalled.
+Therefore, the real-time pipeline will never wait for the Q1 processor.
+In case of a conflict, the sequencer will halt and raise an error flag.
+"""
 
 Instruction = Union[Q1Instr, RealTimeInstr]
 
