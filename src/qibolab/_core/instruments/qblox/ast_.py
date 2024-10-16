@@ -278,26 +278,76 @@ Arithmetic = Union[Move, Not, Add, Sub, And, Or, Xor, Asl, Asr]
 
 
 class SetMrk(Instr):
+    """Set marker.
+
+    Set marker output channels to ``val`` (bits 0-3), where the bit index
+    corresponds to the channel index for baseband modules.
+
+    For QCM-RF modules, bit indices 0 & 1 correspond to enabling output
+    1 and 2 switches respectively; indices 2 & 3 correspond to marker
+    output 2 and 1 (sic!) respectively.
+
+    For QRM-RF modules, bit index 0 is inactive, bit index 1 corresponds
+    to enabling output 1 switch; indices 2 & 3 correspond to marker
+    output 1 and 2 (sic!) respectively.
+
+    The values are OR'ed by that of other sequencers.
+    """
+
     mask: Value
 
 
 class SetFreq(Instr):
+    """Set frequency.
+
+    Set the frequency of the NCO used by the AWG and acquisition using
+    :attr:`value`.
+    The frequency is divided into 4e9 steps between -500 and 500 MHz and
+    expressed as an integer between -2e9 and 2e9 (e.g.1 MHz=4e6).
+    """
+
     value: Value
 
 
 class ResetPh(Instr):
-    """"""
+    """Phase reset.
+
+    Reset the absolute phase of the NCO used by the AWG and acquisition
+    to 0°. This also resets any relative phase offsets that were already
+    statically or dynamically set.
+    """
 
 
 class SetPh(Instr):
+    """Set absolute phase.
+
+    Set the absolute phase of the NCO used by the AWG and acquisition
+    using value. The phase is divided into 1e9 steps between 0° and
+    360°, expressed as an integer between 0 and 1e9 (e.g 45°=125e6).
+    """
+
     value: Value
 
 
 class SetPhDelta(Instr):
+    """Set phase offset.
+
+    Set an offset on top of the relative phase of the NCO used by the
+    AWG and acquisition. The offset is applied on top of the phase set
+    using ``set_ph``. See :class:`SetPh` for more details regarding the
+    argument.
+    """
+
     value: Value
 
 
 class SetAwgGain(Instr):
+    """Set AWG gain.
+
+    Set AWG gain for path 0 using :attr:`value_0` and path 1 using :attr:`value_1`.
+    Both are integers in ``[-32 768, 32 767]``.
+    """
+
     value_0: Value
     value_1: Value
 
@@ -315,6 +365,12 @@ class SetAwgGain(Instr):
 
 
 class SetAwgOffs(Instr):
+    """Set AWG offset.
+
+    Set AWG offset for path 0 using :attr:`value_0` and path 1 using :attr:`value_1`.
+    Both are integers in ``[-32 768, 32 767]``.
+    """
+
     value_0: Value
     value_1: Value
 
