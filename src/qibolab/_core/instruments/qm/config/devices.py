@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-DEFAULT_INPUTS = {"1": {}, "2": {}}
+DEFAULT_INPUTS = {"1": {"offset": 0}, "2": {"offset": 0}}
 """Default controller config section.
 
 Inputs are always registered to avoid issues with automatic mixer
@@ -103,9 +103,9 @@ class Controller:
     """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
     analog_outputs: PortDict[dict[str, AnalogOutput]] = field(default_factory=PortDict)
     digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
-    analog_inputs: PortDict[dict[str, AnalogInput]] = field(default_factory=PortDict)
-    # default_factory=lambda: PortDict(DEFAULT_INPUTS)
-    # )
+    analog_inputs: PortDict[dict[str, AnalogInput]] = field(
+        default_factory=lambda: PortDict(DEFAULT_INPUTS)
+    )
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
