@@ -1,15 +1,16 @@
 from dataclasses import dataclass, field
-from typing import Literal, Union
+from typing import Union
+
+from typing_extensions import TypedDict
 
 from qibolab._core.components import Channel
 
 __all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
 
 
-StandardInOutType = tuple[str, int]
-FemInOutType = tuple[str, int, int]
-InOutType = Union[StandardInOutType, FemInOutType]
-Port = Literal["port"]
+InOutType = Union[tuple[str, int], tuple[str, int, int]]
+OctavePort = TypedDict("OpxPlusPort", {"port": tuple[str, int]})
+Port = TypedDict("Port", {"port": InOutType})
 ConnectivityType = Union[str, tuple[str, int]]
 
 
@@ -26,7 +27,7 @@ class OutputSwitch:
     """
 
 
-def _to_port(channel: Channel) -> dict[Port, InOutType]:
+def _to_port(channel: Channel) -> Port:
     """Convert a channel to the port dictionary required for the QUA config.
 
     The following syntax is assumed for ``channel.device``:
@@ -52,7 +53,7 @@ def output_switch(connectivity: ConnectivityType, port: int):
 
 @dataclass
 class DcElement:
-    singleInput: dict[Port, InOutType]
+    singleInput: Port
     intermediate_frequency: int = 0
     operations: dict[str, str] = field(default_factory=dict)
 
@@ -61,10 +62,13 @@ class DcElement:
         return cls(_to_port(channel))
 
 
+DigitalInputs = TypedDict("digitalInputs", {"output_switch": OutputSwitch})
+
+
 @dataclass
 class RfOctaveElement:
-    RF_inputs: dict[Port, StandardInOutType]
-    digitalInputs: dict[Literal["output_switch"], OutputSwitch]
+    RF_inputs: OctavePort
+    digitalInputs: DigitalInputs
     intermediate_frequency: int
     operations: dict[str, str] = field(default_factory=dict)
 
@@ -84,9 +88,9 @@ class RfOctaveElement:
 
 @dataclass
 class AcquireOctaveElement:
-    RF_inputs: dict[Port, StandardInOutType]
-    RF_outputs: dict[Port, StandardInOutType]
-    digitalInputs: dict[Literal["output_switch"], OutputSwitch]
+    RF_inputs: OctavePort
+    RF_outputs: OctavePort
+    digitalInputs: DigitalInputs
     intermediate_frequency: int
     time_of_flight: int = 24
     smearing: int = 0
