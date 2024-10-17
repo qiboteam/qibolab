@@ -1,5 +1,6 @@
 """Qibolab driver for Keysight QCS instrument set."""
 
+from collections import defaultdict
 from typing import ClassVar, Optional, Union
 
 import keysight.qcs as qcs  # pylint: disable=E0401
@@ -286,13 +287,12 @@ class KeysightQCS(Controller):
                     sequence.align_to_delays(), configs, sweepers, options.nshots
                 )
             ).results
-            acquisitions = sequence.acquisitions
-            acquisition_map: dict[qcs.Channels, list[InputOps]] = {}
+            acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(
+                list
+            )
 
-            for channel_id, input_op in acquisitions:
+            for channel_id, input_op in sequence.acquisitions:
                 channel = self.virtual_channel_map[channel_id]
-                if channel not in acquisition_map:
-                    acquisition_map[channel] = []
                 acquisition_map[channel].append(input_op)
 
             averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
