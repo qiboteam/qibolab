@@ -262,6 +262,7 @@ class KeysightQCS(Controller):
                         )
                     else:
                         raise ValueError("Unrecognized pulse type", pulse.kind)
+                    pulses.append(qcs_pulse)
 
                 program.add_waveform(pulses, virtual_channel)
         if hw_demod:
