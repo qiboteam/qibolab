@@ -1,36 +1,22 @@
 from dataclasses import dataclass, field
 from typing import Union
 
-import numpy as np
+from typing_extensions import TypedDict
 
 from qibolab._core.components import Channel
 
 __all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
 
 
-def iq_imbalance(g, phi):
-    """Create the correction matrix for the mixer imbalance.
-
-    Mixer imbalance is caused by the gain and phase imbalances.
-
-    More information here:
-    https://docs.qualang.io/libs/examples/mixer-calibration/#non-ideal-mixer
-
-    Args:
-        g (float): relative gain imbalance between the I & Q ports (unit-less).
-            Set to 0 for no gain imbalance.
-        phi (float): relative phase imbalance between the I & Q ports (radians).
-            Set to 0 for no phase imbalance.
-    """
-    c = np.cos(phi)
-    s = np.sin(phi)
-    N = 1 / ((1 - g**2) * (2 * c**2 - 1))
-    return [float(N * x) for x in [(1 - g) * c, (1 + g) * s, (1 - g) * s, (1 + g) * c]]
+InOutType = Union[tuple[str, int], tuple[str, int, int]]
+OctavePort = TypedDict("OpxPlusPort", {"port": tuple[str, int]})
+Port = TypedDict("Port", {"port": InOutType})
+ConnectivityType = Union[str, tuple[str, int]]
 
 
 @dataclass(frozen=True)
 class OutputSwitch:
-    port: tuple[str, int]
+    port: InOutType
     delay: int = 57
     buffer: int = 18
     """Default calibration parameters for digital pulses.
@@ -41,19 +27,33 @@ class OutputSwitch:
     """
 
 
-def _to_port(channel: Channel) -> dict[str, tuple[str, int]]:
-    """Convert a channel to the port dictionary required for the QUA config."""
-    return {"port": (channel.device, channel.port)}
+def _to_port(channel: Channel) -> Port:
+    """Convert a channel to the port dictionary required for the QUA config.
+
+    The following syntax is assumed for ``channel.device``:
+    * For OPX+ clusters: string with the device name (eg. 'con1')
+    * For OPX1000 clusters: string of '{device_name}/{fem_number}'
+    """
+    if "/" not in channel.device:
+        port = (channel.device, channel.port)
+    else:
+        con, fem = channel.device.split("/")
+        port = (con, int(fem), channel.port)
+    return {"port": port}
 
 
-def output_switch(opx: str, port: int):
+def output_switch(connectivity: ConnectivityType, port: int):
     """Create output switch section."""
-    return {"output_switch": OutputSwitch((opx, 2 * port - 1))}
+    if isinstance(connectivity, tuple):
+        args = connectivity + (2 * port - 1,)
+    else:
+        args = (connectivity, 2 * port - 1)
+    return {"output_switch": OutputSwitch(args)}
 
 
 @dataclass
 class DcElement:
-    singleInput: dict[str, tuple[str, int]]
+    singleInput: Port
     intermediate_frequency: int = 0
     operations: dict[str, str] = field(default_factory=dict)
 
@@ -62,16 +62,22 @@ class DcElement:
         return cls(_to_port(channel))
 
 
+DigitalInputs = TypedDict("digitalInputs", {"output_switch": OutputSwitch})
+
+
 @dataclass
 class RfOctaveElement:
-    RF_inputs: dict[str, tuple[str, int]]
-    digitalInputs: dict[str, OutputSwitch]
+    RF_inputs: OctavePort
+    digitalInputs: DigitalInputs
     intermediate_frequency: int
     operations: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_channel(
-        cls, channel: Channel, connectivity: str, intermediate_frequency: int
+        cls,
+        channel: Channel,
+        connectivity: ConnectivityType,
+        intermediate_frequency: int,
     ):
         return cls(
             _to_port(channel),
@@ -82,9 +88,9 @@ class RfOctaveElement:
 
 @dataclass
 class AcquireOctaveElement:
-    RF_inputs: dict[str, tuple[str, int]]
-    RF_outputs: dict[str, tuple[str, int]]
-    digitalInputs: dict[str, OutputSwitch]
+    RF_inputs: OctavePort
+    RF_outputs: OctavePort
+    digitalInputs: DigitalInputs
     intermediate_frequency: int
     time_of_flight: int = 24
     smearing: int = 0
@@ -95,7 +101,7 @@ class AcquireOctaveElement:
         cls,
         probe_channel: Channel,
         acquire_channel: Channel,
-        connectivity: str,
+        connectivity: ConnectivityType,
         intermediate_frequency: int,
         time_of_flight: int,
         smearing: int,

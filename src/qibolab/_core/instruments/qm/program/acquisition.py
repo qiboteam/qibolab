@@ -56,7 +56,8 @@ class Acquisition(ABC):
     @property
     def name(self):
         """Identifier to download results from the instruments."""
-        return f"{self.operation}_{self.element}"
+        # FIXME: QUA 1.2.1a2 and OPX1000 don't like `/` character in stream processing ``save``
+        return f"{self.operation}_{self.element}".replace("/", "|")
 
     @property
     def npulses(self):

@@ -9,8 +9,6 @@ from qibolab._core.sweeper import Parameter
 
 from .arguments import ExecutionArguments, Parameters
 
-MAX_OFFSET = 0.5
-"""Maximum voltage supported by Quantum Machines OPX+ instrument in volts."""
 MAX_AMPLITUDE_FACTOR = 1.99
 """Maximum multiplication factor for ``qua.amp`` used when sweeping amplitude.
 
@@ -105,10 +103,10 @@ def _duration_interpolated(variable: _Variable, parameters: Parameters):
 
 
 def _offset(variable: _Variable, parameters: Parameters):
-    with qua.if_(variable >= MAX_OFFSET):
-        qua.set_dc_offset(parameters.element, "single", MAX_OFFSET)
-    with qua.elif_(variable <= -MAX_OFFSET):
-        qua.set_dc_offset(parameters.element, "single", -MAX_OFFSET)
+    with qua.if_(variable >= parameters.max_offset):
+        qua.set_dc_offset(parameters.element, "single", parameters.max_offset)
+    with qua.elif_(variable <= -parameters.max_offset):
+        qua.set_dc_offset(parameters.element, "single", -parameters.max_offset)
     with qua.else_():
         qua.set_dc_offset(parameters.element, "single", variable)
 
