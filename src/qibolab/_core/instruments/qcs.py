@@ -1,6 +1,6 @@
 """Qibolab driver for Keysight QCS instrument set."""
 
-from typing import Optional, Union
+from typing import ClassVar, Optional, Union
 
 import keysight.qcs as qcs  # pylint: disable=E0401
 import numpy as np
@@ -74,14 +74,13 @@ class KeysightQCS(Controller):
     virtual_channel_map: dict[ChannelId, qcs.Channels]
     # Map of QCS virtual acquisition channels to QCS state classifiers
     classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = None
+    sampling_rate: ClassVar[float] = (
+        qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * NS_TO_S
+    )
 
     def connect(self):
         self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=True)
         self.backend.is_system_ready()
-
-    @property
-    def sampling_rate(self):
-        return qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] / 1e9
 
     def create_program(
         self,
