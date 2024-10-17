@@ -18,7 +18,7 @@ from qibolab._core.sequence import InputOps, PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 from qibolab._core.unrolling import Bounds
 
-NANOSECONDS = 1e-9
+NS_TO_S  = 1e-9
 
 BOUNDS = Bounds(
     waveforms=1,
@@ -145,7 +145,7 @@ class KeysightQCS(Controller):
                     qcs.Array(
                         name=f"A{idx}_{idx2}",
                         value=(
-                            sweeper.values * NANOSECONDS
+                            sweeper.values * NS_TO_S 
                             if sweeper.parameter is Parameter.duration
                             else sweeper.values
                         ),
@@ -173,7 +173,7 @@ class KeysightQCS(Controller):
                     if pulse.kind == "delay":
                         qcs_pulse = qcs.Delay(
                             sweep_param_map.get(
-                                "duration", pulse.duration * NANOSECONDS
+                                "duration", pulse.duration * NS_TO_S 
                             )
                         )
                         program.add_waveform(qcs_pulse, virtual_channel)
@@ -181,7 +181,7 @@ class KeysightQCS(Controller):
 
                     elif pulse.kind == "acquisition":
                         duration = sweep_param_map.get(
-                            "duration", pulse.duration * NANOSECONDS
+                            "duration", pulse.duration * NS_TO_S 
                         )
                         program.add_acquisition(duration, virtual_channel)
 
@@ -189,7 +189,7 @@ class KeysightQCS(Controller):
                         sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
                         qcs_pulse = generate_qcs_rfwaveform(
                             duration=sweep_param_map.get(
-                                "duration", pulse.probe.duration * NANOSECONDS
+                                "duration", pulse.probe.duration * NS_TO_S 
                             ),
                             envelope=pulse.probe.envelope,
                             amplitude=sweep_param_map.get(
@@ -218,7 +218,7 @@ class KeysightQCS(Controller):
                     if pulse.kind == "delay":
                         qcs_pulse = qcs.Delay(
                             sweep_param_map.get(
-                                "duration", pulse.duration * NANOSECONDS
+                                "duration", pulse.duration * NS_TO_S 
                             )
                         )
                     elif pulse.kind == "virtualz":
@@ -228,7 +228,7 @@ class KeysightQCS(Controller):
                     elif pulse.kind == "pulse":
                         qcs_pulse = generate_qcs_rfwaveform(
                             duration=sweep_param_map.get(
-                                "duration", pulse.duration * NANOSECONDS
+                                "duration", pulse.duration * NS_TO_S 
                             ),
                             envelope=pulse.envelope,
                             amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
@@ -255,13 +255,13 @@ class KeysightQCS(Controller):
                     if pulse.kind == "delay":
                         duration = (
                             sweep_param_map.get(
-                                "duration", pulse.duration * NANOSECONDS
+                                "duration", pulse.duration * NS_TO_S 
                             ),
                         )
                     elif pulse.kind == "pulse":
                         qcs_pulse = qcs.DCWaveform(
                             duration=sweep_param_map.get(
-                                "duration", pulse.duration * NANOSECONDS
+                                "duration", pulse.duration * NS_TO_S 
                             ),
                             envelope=generate_qcs_envelope(pulse.envelope),
                             amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
