@@ -141,16 +141,18 @@ def _sweep_bias(sweepers, qubits, qmsequence, relaxation_time):
     for qubit in sweeper.qubits:
         b0 = qubit.flux.offset
         max_offset = qubit.flux.max_offset
+        if max_offset is None:
+            max_offset = 0.5
         max_value = maximum_sweep_value(sweeper.values, b0)
         check_max_offset(max_value, max_offset)
         offset0.append(declare(fixed, value=b0))
     b = declare(fixed)
     with for_(*from_array(b, sweeper.values)):
         for qubit, b0 in zip(sweeper.qubits, offset0):
-            with qua.if_((b + b0) >= 0.49):
-                qua.set_dc_offset(f"flux{qubit.name}", "single", 0.49)
-            with qua.elif_((b + b0) <= -0.49):
-                qua.set_dc_offset(f"flux{qubit.name}", "single", -0.49)
+            with qua.if_((b + b0) >= max_offset):
+                qua.set_dc_offset(f"flux{qubit.name}", "single", max_offset)
+            with qua.elif_((b + b0) <= -max_offset):
+                qua.set_dc_offset(f"flux{qubit.name}", "single", -max_offset)
             with qua.else_():
                 qua.set_dc_offset(f"flux{qubit.name}", "single", (b + b0))
 
