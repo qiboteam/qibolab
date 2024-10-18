@@ -109,6 +109,7 @@ class KeysightQCS(Controller):
                     virtual_channel=virtual_channel,
                     probe_virtual_channel=probe_virtual_channel,
                     sweeper_pulse_map=sweeper_pulse_map,
+                    classifier=self.classifier_map.get(virtual_channel, None),
                 )
 
             elif isinstance(channel, IqChannel):
@@ -164,7 +165,7 @@ class KeysightQCS(Controller):
                     channel=channel,
                     acquisition_type=options.acquisition_type,
                     averaging=averaging,
-                    classifier=self.classifier_map.get(channel, None),
+                    sweeper_swaps_required=sweeper_swaps_required,
                 )
 
                 for result, input_op in zip(raw.values(), input_ops):
