@@ -48,6 +48,29 @@ class QibolabBackend(NumpyBackend):
         }
         self.compiler = Compiler.default()
 
+    @property
+    def qubits(self) -> list[str | int]:
+        return list(self.platform.qubits.keys())
+
+    @property
+    def connectivity(self) -> list[tuple[str | int, str | int]]:
+        return self.platform.pairs
+
+    @property
+    def natives(self) -> list[str]:
+        native_gates = set()
+        for _, natives_s in self.platform.natives.single_qubit.items():
+            native_gates |= {k for k, v in natives_s.__dict__.items() if v is not None}
+        
+        for _, natives_c in self.platform.natives.coupler.items():
+            native_gates |= {k for k, v in natives_c.__dict__.items() if v is not None}
+
+        for _, natives_t in self.platform.natives.two_qubit.items():
+            native_gates |= {k for k, v in natives_t.__dict__.items() if v is not None}
+
+        return list(native_gates)
+
+
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
 
