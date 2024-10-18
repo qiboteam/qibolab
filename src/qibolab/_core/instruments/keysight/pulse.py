@@ -1,4 +1,4 @@
-"""Utils fo."""
+"""Utils for pulse handling."""
 
 from collections import defaultdict
 from collections.abc import Iterable

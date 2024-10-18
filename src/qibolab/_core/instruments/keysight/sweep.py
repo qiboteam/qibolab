@@ -1,4 +1,4 @@
-"""Utils fo."""
+"""Utils for sweeper management."""
 
 from collections import defaultdict
 
