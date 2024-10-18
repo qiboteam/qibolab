@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Union
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -49,6 +50,25 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
+
+    @property
+    def qubits(self) -> list[Union[str, int]]:
+        return list(self.platform.qubits.keys())
+
+    @property
+    def connectivity(self) -> list[tuple[Union[str, int], Union[str, int]]]:
+        return list(self.platform.pairs)
+
+    @property
+    def natives(self) -> list[str]:    
+        native_gates = set()
+        for _, q in self.platform.qubits.items():
+            native_gates |= {k for k, v in q.native_gates.__dict__.items() if v is not None}
+        
+        for _, p in self.platform.pairs.items():
+            native_gates |= {k for k, v in p.native_gates.__dict__.items() if v is not None}
+
+        return list(native_gates)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
