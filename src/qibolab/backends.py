@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Union
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -51,11 +52,11 @@ class QibolabBackend(NumpyBackend):
         self.compiler = Compiler.default()
 
     @property
-    def qubits(self) -> list[str | int]:
+    def qubits(self) -> list[Union[str, int]]:
         return list(self.platform.qubits.keys())
 
     @property
-    def connectivity(self) -> list[tuple[str | int, str | int]]:
+    def connectivity(self) -> list[tuple[Union[str, int], Union[str, int]]]:
         return list(self.platform.pairs)
 
     @property
