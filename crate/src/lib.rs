@@ -3,7 +3,7 @@ use numpy::PyArray2;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-pub fn execute_qasm(circuit: String, platform: String, nshots: u32) -> PyResult<Array2<i32>> {
+pub fn execute_qasm(circuit: String, platform: String, nshots: u32) -> PyResult<Array2<u32>> {
     Python::with_gil(|py| {
         let kwargs = PyDict::new(py);
         kwargs.set_item("circuit", circuit)?;
@@ -11,7 +11,7 @@ pub fn execute_qasm(circuit: String, platform: String, nshots: u32) -> PyResult<
         kwargs.set_item("nshots", nshots)?;
 
         let qibolab = PyModule::import(py, "qibolab")?;
-        let pyarray: &PyArray2<i32> = qibolab
+        let pyarray: &PyArray2<u32> = qibolab
             .getattr("execute_qasm")?
             .call((), Some(kwargs))?
             .call_method0("samples")?
