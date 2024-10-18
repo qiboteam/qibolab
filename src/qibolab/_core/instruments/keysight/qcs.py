@@ -25,6 +25,7 @@ from .pulse import (
     process_dc_channel_pulses,
     process_iq_channel_pulses,
 )
+from .results import fetch_result
 from .sweep import process_sweepers
 
 NS_TO_S = 1e-9
@@ -48,7 +49,7 @@ class KeysightQCS(Controller):
     # Map of Qibolab channel IDs to QCS virtual channels
     virtual_channel_map: dict[ChannelId, qcs.Channels]
     # Map of QCS virtual acquisition channels to QCS state classifiers
-    classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = None
+    classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = {}
     sampling_rate: ClassVar[float] = (
         qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * NS_TO_S
     )
@@ -158,20 +159,13 @@ class KeysightQCS(Controller):
 
             averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
             for channel, input_ops in acquisition_map.items():
-                if options.acquisition_type is AcquisitionType.RAW:
-                    raw = results.get_trace(channel, averaging)
-                elif options.acquisition_type is AcquisitionType.INTEGRATION:
-                    raw = results.get_iq(channel, averaging)
-                elif options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    classifier = self.classifier_map[channel]
-                    raw = results.get_classified(channel, averaging, classifier)
-                else:
-                    raise ValueError("Acquisition type unrecognized")
-
-                if len(sweeper_swaps_required) > 0:
-                    swap = lambda array, pair_indices: np.swapaxes(array, *pair_indices)
-                    for key, value in raw.items():
-                        raw[key] = reduce(swap, sweeper_swaps_required, value)
+                raw = fetch_result(
+                    results=results,
+                    channel=channel,
+                    acquisition_type=options.acquisition_type,
+                    averaging=averaging,
+                    classifier=self.classifier_map.get(channel, None),
+                )
 
                 for result, input_op in zip(raw.values(), input_ops):
                     # For single shot, qibolab expects result format (nshots, ...)
