@@ -8,11 +8,7 @@ import keysight.qcs as qcs  # pylint: disable=E0401
 import numpy as np
 
 from qibolab._core.components import AcquisitionChannel, Config, DcChannel, IqChannel
-from qibolab._core.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import PulseId
@@ -25,7 +21,7 @@ from .pulse import (
     process_dc_channel_pulses,
     process_iq_channel_pulses,
 )
-from .results import fetch_result
+from .results import fetch_result, parse_result
 from .sweep import process_sweepers
 
 NS_TO_S = 1e-9
@@ -99,7 +95,6 @@ class KeysightQCS(Controller):
 
             if isinstance(channel, AcquisitionChannel):
                 probe_channel_id = channel.probe
-                probe_virtual_channel = self.virtual_channel_map[probe_channel_id]
                 process_acquisition_channel_pulses(
                     program=program,
                     pulses=sequence.channel(channel_id),
@@ -107,7 +102,7 @@ class KeysightQCS(Controller):
                         probe_channel_id, configs[probe_channel_id].frequency
                     ),
                     virtual_channel=virtual_channel,
-                    probe_virtual_channel=probe_virtual_channel,
+                    probe_virtual_channel=self.virtual_channel_map[probe_channel_id],
                     sweeper_pulse_map=sweeper_pulse_map,
                     classifier=self.classifier_map.get(virtual_channel, None),
                 )
@@ -169,28 +164,8 @@ class KeysightQCS(Controller):
                 )
 
                 for result, input_op in zip(raw.values(), input_ops):
-                    # For single shot, qibolab expects result format (nshots, ...)
-                    # QCS returns (..., nshots), so we need to shuffle the arrays
-                    if (
-                        options.averaging_mode is AveragingMode.SINGLESHOT
-                        and len(sweepers) > 0
-                    ):
-                        tmp = np.zeros(options.results_shape(sweepers))
-                        if options.acquisition_type is AcquisitionType.INTEGRATION:
-                            for k in range(options.nshots):
-                                tmp[k, ..., 0] = np.real(result[..., k])
-                                tmp[k, ..., 1] = np.imag(result[..., k])
-                        else:
-                            for k in range(options.nshots):
-                                tmp[k, ...] = result[..., k]
-                        result = tmp
 
-                    elif options.acquisition_type is AcquisitionType.INTEGRATION:
-                        tmp = np.zeros(result.shape + (2,))
-                        tmp[..., 0] = np.real(result)
-                        tmp[..., 1] = np.imag(result)
-                        result = tmp
-                    ret[input_op.id] = result
+                    ret[input_op.id] = parse_result(result)
 
         return ret
 

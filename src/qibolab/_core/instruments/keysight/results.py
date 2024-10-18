@@ -5,9 +5,14 @@ from functools import reduce
 import keysight.qcs as qcs  # pylint: disable=E0401
 import numpy as np
 
-from qibolab._core.execution_parameters import AcquisitionType
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
+from qibolab._core.sweeper import ParallelSweepers
 
-__all__ = ["fetch_result"]
+__all__ = ["fetch_result", "parse_result"]
 
 
 def fetch_result(
@@ -44,3 +49,39 @@ def fetch_result(
             raw[key] = reduce(swap, sweeper_swaps_required, value)
 
     return raw
+
+
+def parse_result(
+    result: np.ndarray, options: ExecutionParameters, sweepers: list[ParallelSweepers]
+) -> np.ndarray:
+    """Parses resulting numpy array into Qibolab expected array shape.
+
+    Arguments:
+        result (np.ndarray): Result array from QCS.
+        options (ExecutionParameters): Execution settings.
+        sweepers (list[ParallelSweepers]): Array of array of sweepers.
+
+    Returns:
+        parsed_result (np.ndarray): Parsed numpy array.
+    """
+    # For single shot, qibolab expects result format (nshots, ...)
+    # QCS returns (..., nshots), so we need to shuffle the arrays
+    if options.averaging_mode is AveragingMode.SINGLESHOT and len(sweepers) > 0:
+        tmp = np.zeros(options.results_shape(sweepers))
+        # For IQ data, QCS results complex results
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            for k in range(options.nshots):
+                tmp[k, ..., 0] = np.real(result[..., k])
+                tmp[k, ..., 1] = np.imag(result[..., k])
+        else:
+            for k in range(options.nshots):
+                tmp[k, ...] = result[..., k]
+
+    # For IQ data, QCS results complex results
+    elif options.acquisition_type is AcquisitionType.INTEGRATION:
+        tmp = np.zeros(result.shape + (2,))
+        tmp[..., 0] = np.real(result)
+        tmp[..., 1] = np.imag(result)
+    else:
+        return result
+    return tmp
