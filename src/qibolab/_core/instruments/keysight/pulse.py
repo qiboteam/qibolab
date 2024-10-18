@@ -35,23 +35,6 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
         raise Exception("Envelope not supported")
 
 
-def generate_qcs_rfwaveform(
-    duration: Union[float, qcs.Scalar],
-    envelope: Envelope,
-    amplitude: Union[float, qcs.Scalar],
-    frequency: Union[float, qcs.Scalar],
-    phase: Union[float, qcs.Scalar],
-) -> qcs.RFWaveform:
-
-    return qcs.RFWaveform(
-        duration=duration,
-        envelope=generate_qcs_envelope(envelope),
-        amplitude=amplitude,
-        rf_frequency=frequency,
-        instantaneous_phase=phase,
-    )
-
-
 def process_acquisition_channel_pulses(
     program: qcs.Program,
     pulses: Iterable[PulseLike],
@@ -89,14 +72,16 @@ def process_acquisition_channel_pulses(
 
         elif pulse.kind == "readout":
             sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
-            qcs_pulse = generate_qcs_rfwaveform(
+            qcs_pulse = qcs.RFWaveform(
                 duration=sweep_param_map.get(
                     "duration", pulse.probe.duration * NS_TO_S
                 ),
                 envelope=pulse.probe.envelope,
                 amplitude=sweep_param_map.get("amplitude", pulse.probe.amplitude),
                 frequency=frequency,
-                phase=sweep_param_map.get("relative_phase", pulse.probe.relative_phase),
+                instantaneous_phase=sweep_param_map.get(
+                    "relative_phase", pulse.probe.relative_phase
+                ),
             )
             integration_filter = qcs.IntegrationFilter(qcs_pulse)
             program.add_waveform(qcs_pulse, probe_virtual_channel)
@@ -134,12 +119,14 @@ def process_iq_channel_pulses(
                 phase=sweep_param_map.get("relative_phase", pulse.phase)
             )
         elif pulse.kind == "pulse":
-            qcs_pulse = generate_qcs_rfwaveform(
+            qcs_pulse = qcs.RFWaveform(
                 duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
                 envelope=pulse.envelope,
                 amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
                 frequency=frequency,
-                phase=sweep_param_map.get("relative_phase", pulse.relative_phase),
+                instantaneous_phase=sweep_param_map.get(
+                    "relative_phase", pulse.relative_phase
+                ),
             )
             if pulse.envelope.kind == "drag":
                 qcs_pulse = qcs_pulse.drag(coeff=pulse.envelope.beta)
