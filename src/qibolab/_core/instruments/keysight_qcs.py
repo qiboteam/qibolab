@@ -65,6 +65,88 @@ def generate_qcs_rfwaveform(
     )
 
 
+def process_sweepers(
+    sweepers: list[ParallelSweepers], probe_channel_ids: set[ChannelId]
+):
+    hardware_sweepers = []
+    software_sweepers = []
+    hw_sweeper_order = []
+    sw_sweeper_order = []
+
+    # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
+    sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]] = defaultdict(dict)
+    # Mapper for channels with frequency controlled by a sweeper
+    sweeper_channel_map: dict[ChannelId, qcs.Scalar] = {}
+
+    for idx, parallel_sweeper in enumerate(sweepers):
+        sweep_values: list[qcs.Array] = []
+        sweep_variables: list[qcs.Variable] = []
+        # Currently nested hardware sweeping is not supported
+        hardware_sweeping = len(hardware_sweepers) == 0
+
+        for idx2, sweeper in enumerate(parallel_sweeper):
+            qcs_variable = qcs.Scalar(
+                name=f"V{idx}_{idx2}", value=sweeper.values[0], dtype=float
+            )
+
+            if sweeper.parameter is Parameter.frequency:
+                sweeper_channel_map.update(
+                    {channel_id: qcs_variable for channel_id in sweeper.channels}
+                )
+                # Readout frequency is not supported with hardware sweeping
+                if not probe_channel_ids.isdisjoint(sweeper.channels):
+                    hardware_sweeping = False
+            elif sweeper.parameter in [
+                Parameter.amplitude,
+                Parameter.duration,
+                Parameter.relative_phase,
+            ]:
+                # Duration is not supported with hardware sweeping
+                if sweeper.parameter is Parameter.duration:
+                    hardware_sweeping = False
+
+                for pulse in sweeper.pulses:
+                    sweeper_pulse_map[pulse.id][sweeper.parameter.name] = qcs_variable
+            else:
+                raise ValueError(
+                    "Sweeper parameter not supported", sweeper.parameter.name
+                )
+
+            sweep_variables.append(qcs_variable)
+            sweep_values.append(
+                qcs.Array(
+                    name=f"A{idx}_{idx2}",
+                    value=(
+                        sweeper.values * NS_TO_S
+                        if sweeper.parameter is Parameter.duration
+                        else sweeper.values
+                    ),
+                    dtype=float,
+                )
+            )
+        if hardware_sweeping:
+            hardware_sweepers.append((sweep_values, sweep_variables))
+            hw_sweeper_order.append(idx)
+        else:
+            software_sweepers.append((sweep_values, sweep_variables))
+            sw_sweeper_order.append(idx)
+
+    sweeper_swaps_required = [
+        (original_index, shifted_index)
+        for shifted_index, original_index in enumerate(
+            hw_sweeper_order + sw_sweeper_order
+        )
+        if original_index != shifted_index
+    ]
+    return (
+        hardware_sweepers,
+        software_sweepers,
+        sweeper_swaps_required,
+        sweeper_channel_map,
+        sweeper_pulse_map,
+    )
+
+
 class KeysightQCS(Controller):
     """Driver for interacting with QCS controller server."""
 
@@ -94,78 +176,19 @@ class KeysightQCS(Controller):
         program = qcs.Program()
 
         # SWEEPER MANAGEMENT
-        # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
-        sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]] = defaultdict(
-            dict
-        )
-        # Mapper for channels with frequency controlled by a sweeper
-        sweeper_channel_map: dict[ChannelId, qcs.Scalar] = {}
-        probe_channels = {
-                chan.probe
-                for chan in self.channels.values()
-                if isinstance(chan, AcquisitionChannel)
+        probe_channel_ids = {
+            chan.probe
+            for chan in self.channels.values()
+            if isinstance(chan, AcquisitionChannel)
         }
 
-        hardware_sweepers = []
-        software_sweepers = []
-        hw_sweeper_order = []
-        sw_sweeper_order = []
-
-        for idx, parallel_sweeper in enumerate(sweepers):
-            sweep_values: list[qcs.Array] = []
-            sweep_variables: list[qcs.Variable] = []
-            # Currently nested hardware sweeping is not supported
-            hardware_sweeping = len(hardware_sweepers) == 0
-
-            for idx2, sweeper in enumerate(parallel_sweeper):
-                qcs_variable = qcs.Scalar(
-                    name=f"V{idx}_{idx2}", value=sweeper.values[0], dtype=float
-                )
-
-                if sweeper.parameter is Parameter.frequency:
-                    sweeper_channel_map.update(
-                        {channel_id: qcs_variable for channel_id in sweeper.channels}
-                    )
-                    # Readout frequency is not supported with hardware sweeping
-                    if not probe_channels.isdisjoint(sweeper.channels):
-                        hardware_sweeping = False
-                elif sweeper.parameter in [
-                    Parameter.amplitude,
-                    Parameter.duration,
-                    Parameter.relative_phase,
-                ]:
-                    # Duration is not supported with hardware sweeping
-                    if sweeper.parameter is Parameter.duration:
-                        hardware_sweeping = False
-
-                    for pulse in sweeper.pulses:
-                        sweeper_pulse_map[pulse.id][
-                            sweeper.parameter.name
-                        ] = qcs_variable
-                else:
-                    raise ValueError(
-                        "Sweeper parameter not supported", sweeper.parameter.name
-                    )
-
-                sweep_variables.append(qcs_variable)
-                sweep_values.append(
-                    qcs.Array(
-                        name=f"A{idx}_{idx2}",
-                        value=(
-                            sweeper.values * NS_TO_S
-                            if sweeper.parameter is Parameter.duration
-                            else sweeper.values
-                        ),
-                        dtype=float,
-                    )
-                )
-            if hardware_sweeping:
-                hardware_sweepers.append((sweep_values, sweep_variables))
-                hw_sweeper_order.append(idx)
-            else:
-                software_sweepers.append((sweep_values, sweep_variables))
-                sw_sweeper_order.append(idx)
-
+        (
+            hardware_sweepers,
+            software_sweepers,
+            sweeper_swaps_required,
+            sweeper_channel_map,
+            sweeper_pulse_map,
+        ) = process_sweepers(sweepers, probe_channel_ids)
         # Here we are telling the program to run hardware sweepers first, then software sweepers
         # It is essential that we match the original sweeper order to the modified sweeper order
         # to reconcile the results at the end
@@ -175,13 +198,6 @@ class KeysightQCS(Controller):
             software_sweepers,
             reduce(sweep, hardware_sweepers, program).n_shots(num_shots),
         )
-        sweeper_swaps_required = [
-            (original_index, shifted_index)
-            for shifted_index, original_index in enumerate(
-                hw_sweeper_order + sw_sweeper_order
-            )
-            if original_index != shifted_index
-        ]
 
         # WAVEFORM COMPILATION
         # Iterate over channels and convert qubit pulses to QCS waveforms
