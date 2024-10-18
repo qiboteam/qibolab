@@ -1,6 +1,7 @@
 """Qibolab driver for Keysight QCS instrument set."""
 
 from collections import defaultdict
+from functools import reduce
 from typing import ClassVar, Optional, Union
 
 import keysight.qcs as qcs  # pylint: disable=E0401
@@ -89,49 +90,55 @@ class KeysightQCS(Controller):
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         num_shots: int,
-    ) -> qcs.Program:
+    ) -> tuple[qcs.Program, list[tuple[int, int]]]:
         program = qcs.Program()
 
         # SWEEPER MANAGEMENT
         # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
-        sweeper_pulse_map: dict[PulseId, dict[str, qcs.Scalar]] = {}
+        sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]] = defaultdict(
+            dict
+        )
         # Mapper for channels with frequency controlled by a sweeper
         sweeper_channel_map: dict[ChannelId, qcs.Scalar] = {}
-        hw_demod = True
+        probe_channels = {
+                chan.probe
+                for chan in self.channels.values()
+                if isinstance(chan, AcquisitionChannel)
+        }
+
+        hardware_sweepers = []
+        software_sweepers = []
+        hw_sweeper_order = []
+        sw_sweeper_order = []
 
         for idx, parallel_sweeper in enumerate(sweepers):
-            sweep_values = []
-            sweep_variables = []
+            sweep_values: list[qcs.Array] = []
+            sweep_variables: list[qcs.Variable] = []
+            # Currently nested hardware sweeping is not supported
+            hardware_sweeping = len(hardware_sweepers) == 0
 
             for idx2, sweeper in enumerate(parallel_sweeper):
-
                 qcs_variable = qcs.Scalar(
                     name=f"V{idx}_{idx2}", value=sweeper.values[0], dtype=float
                 )
 
                 if sweeper.parameter is Parameter.frequency:
-                    for channel_id in sweeper.channels:
-                        sweeper_channel_map[channel_id] = qcs_variable
-                        # Ignore hardware sweeping if frequency on readout is swept
-                        # TODO: Find better way of determining if channel is readout probe
-                        if (
-                            "readout" in self.virtual_channel_map[channel_id].name
-                            and hw_demod
-                        ):
-                            program = program.n_shots(num_shots)
-                            hw_demod = False
+                    sweeper_channel_map.update(
+                        {channel_id: qcs_variable for channel_id in sweeper.channels}
+                    )
+                    # Readout frequency is not supported with hardware sweeping
+                    if not probe_channels.isdisjoint(sweeper.channels):
+                        hardware_sweeping = False
                 elif sweeper.parameter in [
                     Parameter.amplitude,
                     Parameter.duration,
                     Parameter.relative_phase,
                 ]:
-                    # Ignore hardware sweeping if duration is swept
-                    if sweeper.parameter is Parameter.duration and hw_demod:
-                        program = program.n_shots(num_shots)
-                        hw_demod = False
+                    # Duration is not supported with hardware sweeping
+                    if sweeper.parameter is Parameter.duration:
+                        hardware_sweeping = False
+
                     for pulse in sweeper.pulses:
-                        if pulse.id not in sweeper_pulse_map:
-                            sweeper_pulse_map[pulse.id] = {}
                         sweeper_pulse_map[pulse.id][
                             sweeper.parameter.name
                         ] = qcs_variable
@@ -152,7 +159,29 @@ class KeysightQCS(Controller):
                         dtype=float,
                     )
                 )
-            program = program.sweep(sweep_values, sweep_variables)
+            if hardware_sweeping:
+                hardware_sweepers.append((sweep_values, sweep_variables))
+                hw_sweeper_order.append(idx)
+            else:
+                software_sweepers.append((sweep_values, sweep_variables))
+                sw_sweeper_order.append(idx)
+
+        # Here we are telling the program to run hardware sweepers first, then software sweepers
+        # It is essential that we match the original sweeper order to the modified sweeper order
+        # to reconcile the results at the end
+        sweep = lambda program, sweepers: program.sweep(*sweepers)
+        program = reduce(
+            sweep,
+            software_sweepers,
+            reduce(sweep, hardware_sweepers, program).n_shots(num_shots),
+        )
+        sweeper_swaps_required = [
+            (original_index, shifted_index)
+            for shifted_index, original_index in enumerate(
+                hw_sweeper_order + sw_sweeper_order
+            )
+            if original_index != shifted_index
+        ]
 
         # WAVEFORM COMPILATION
         # Iterate over channels and convert qubit pulses to QCS waveforms
@@ -265,9 +294,7 @@ class KeysightQCS(Controller):
                     pulses.append(qcs_pulse)
 
                 program.add_waveform(pulses, virtual_channel)
-        if hw_demod:
-            program = program.n_shots(num_shots)
-        return program
+        return program, sweeper_swaps_required
 
     def play(
         self,
@@ -282,11 +309,10 @@ class KeysightQCS(Controller):
 
         ret: dict[PulseId, np.ndarray] = {}
         for sequence in sequences:
-            results = self.backend.apply(
-                self.create_program(
-                    sequence.align_to_delays(), configs, sweepers, options.nshots
-                )
-            ).results
+            program, sweeper_swaps_required = self.create_program(
+                sequence.align_to_delays(), configs, sweepers, options.nshots
+            )
+            results = self.backend.apply(program).results
             acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(
                 list
             )
@@ -306,6 +332,11 @@ class KeysightQCS(Controller):
                     raw = results.get_classified(channel, averaging, classifier)
                 else:
                     raise ValueError("Acquisition type unrecognized")
+
+                if len(sweeper_swaps_required) > 0:
+                    swap = lambda array, pair_indices: np.swapaxes(array, *pair_indices)
+                    for key, value in raw.items():
+                        raw[key] = reduce(swap, sweeper_swaps_required, value)
 
                 for result, input_op in zip(raw.values(), input_ops):
                     # For single shot, qibolab expects result format (nshots, ...)
