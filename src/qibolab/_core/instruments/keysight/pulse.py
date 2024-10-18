@@ -42,6 +42,7 @@ def process_acquisition_channel_pulses(
     virtual_channel: qcs.Channels,
     probe_virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
+    classifier: qcs.Classifier = None,
 ):
     """Processes Qibolab pulses on the acquisition channel into QCS hardware
     instructions and adds it to the current program.
@@ -85,7 +86,7 @@ def process_acquisition_channel_pulses(
             )
             integration_filter = qcs.IntegrationFilter(qcs_pulse)
             program.add_waveform(qcs_pulse, probe_virtual_channel)
-            program.add_acquisition(integration_filter, virtual_channel)
+            program.add_acquisition(integration_filter, virtual_channel, classifier)
 
 
 def process_iq_channel_pulses(
