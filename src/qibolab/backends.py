@@ -1,4 +1,5 @@
 from collections import deque
+from dataclasses import fields
 from typing import Union
 
 import numpy as np
@@ -63,11 +64,18 @@ class QibolabBackend(NumpyBackend):
     def natives(self) -> list[str]:
         native_gates = set()
         for _, q in self.platform.qubits.items():
-            native_gates |= {k for k, v in asdict(q.native_gates).items() if v is not None}
-        
-        for _, p in self.platform.pairs.items():
-            native_gates |= {k for k, v in p.native_gates.__dict__.items() if v is not None}
+            native_gates |= {
+                fld.name
+                for fld in fields(q.native_gates)
+                if getattr(q.native_gates, fld.name) is not None
+            }
 
+        for _, p in self.platform.pairs.items():
+            native_gates |= {
+                fld.name
+                for fld in fields(p.native_gates)
+                if getattr(p.native_gates, fld.name) is not None
+            }
         return list(native_gates)
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
