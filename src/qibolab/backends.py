@@ -53,7 +53,7 @@ class QibolabBackend(NumpyBackend):
 
     @property
     def qubits(self) -> list[Union[str, int]]:
-        return list(self.platform.qubits.keys())
+        return list(self.platform.qubits)
 
     @property
     def connectivity(self) -> list[tuple[Union[str, int], Union[str, int]]]:
