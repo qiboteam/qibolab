@@ -63,7 +63,7 @@ class QibolabBackend(NumpyBackend):
     def natives(self) -> list[str]:
         native_gates = set()
         for _, q in self.platform.qubits.items():
-            native_gates |= {k for k, v in q.native_gates.__dict__.items() if v is not None}
+            native_gates |= {k for k, v in asdict(q.native_gates).items() if v is not None}
         
         for _, p in self.platform.pairs.items():
             native_gates |= {k for k, v in p.native_gates.__dict__.items() if v is not None}
