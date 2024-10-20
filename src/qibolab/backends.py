@@ -60,7 +60,7 @@ class QibolabBackend(NumpyBackend):
         return list(self.platform.pairs)
 
     @property
-    def natives(self) -> list[str]:    
+    def natives(self) -> list[str]:
         native_gates = set()
         for _, q in self.platform.qubits.items():
             native_gates |= {k for k, v in q.native_gates.__dict__.items() if v is not None}
