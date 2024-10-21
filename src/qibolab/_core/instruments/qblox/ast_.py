@@ -707,14 +707,20 @@ class Program(Model):
 
     def asm(self, width: Optional[int] = None, comments: bool = True) -> str:
         max_label_len = max(
-            len(line.label)
-            for line in self.elements
-            if isinstance(line, Line) and line.label is not None
+            (
+                len(line.label)
+                for line in self.elements
+                if isinstance(line, Line) and line.label is not None
+            ),
+            default=None,
         )
         max_instr_len = max(
-            len(line.instruction.asm)
-            for line in self.elements
-            if isinstance(line, Line)
+            (
+                len(line.instruction.asm)
+                for line in self.elements
+                if isinstance(line, Line)
+            ),
+            default=None,
         )
         code = "\n".join(
             (
