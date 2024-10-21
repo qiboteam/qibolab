@@ -1,0 +1,197 @@
+{
+    "device_name": "default_q01c0_flux",
+    "nqubits": 2,
+    "ncouplers": 1,
+    "description": "2 qubit 1 coupler test device with flux pulses and iSWAP",
+    "settings": {
+        "nshots": 4096,
+        "relaxation_time": 300000
+    },
+    "instruments": {
+        "pulse_simulator": {
+            "model_params": {
+                "model_name": "general_coupler_model",
+                "topology": [
+                    [0, 1]
+                ],
+                "nqubits": 2,
+                "ncouplers": 1,
+                "qubits_list": ["0", "1"],
+                "couplers_list": ["c0"],
+                "nlevels_q": [2, 2],
+                "nlevels_c": [2],
+                "readout_error": {
+                    "0": [0.01, 0.02],
+                    "1": [0.01, 0.02]
+                },
+                "drive_freq": {
+                    "0": 4.5545,
+                    "1": 4.62381,
+                    "c0": 6.4
+                },
+                "T1": {
+                    "0": 0.0,
+                    "1": 0.0,
+                    "c0": 0.0
+                },
+                "T2": {
+                    "0": 0.0,
+                    "1": 0.0,
+                    "c0": 0.0
+                },
+                "max_lo_freq": {
+                    "0": 4.5545,
+                    "1": 4.62381,
+                    "c0": 6.4
+                },
+                "flux_quanta": {
+                    "0": 0.3183098861837907,
+                    "1": 0.3183098861837907,
+                    "c0": 0.3183098861837907
+                },
+                "rabi_freq": {
+                    "0": 0.334,
+                    "1": 0.334,
+                    "c0": 0.0
+                },
+                "anharmonicity": {
+                    "0": -0.3,
+                    "1": -0.31,
+                    "c0": 0.0
+                },
+                "coupling_strength": {
+                    "1_0": 0.0066,
+                    "1_c0": 0.0855,
+                    "0_c0": 0.0897
+                }
+            },
+            "simulation_config": {
+                "simulation_engine_name": "Qutip",
+                "sampling_rate": 5.0,
+                "sim_sampling_boost": 1,
+                "runcard_duration_in_dt_units": false,
+                "instant_measurement": true,
+                "simulate_dissipation": true,
+                "output_state_history": true
+            },
+            "sim_opts": null,
+            "bounds": {
+                "waveforms": 1,
+                "readout": 1,
+                "instructions": 1
+            }
+        }
+    },
+    "qubits": [0, 1],
+    "couplers": [0],
+    "topology": {
+        "0": [0, 1]
+    },
+    "native_gates": {
+        "single_qubit": {
+            "0": {
+                "RX": {
+                    "duration": 24.967,
+                    "amplitude": 0.1,
+                    "frequency": 4554500000.0,
+                    "shape": "Drag(4, -2.4305800297101414)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 22400,
+                    "amplitude": 0.03,
+                    "frequency": 7301661824.000001,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": 1.5636758979377372
+                }
+            },
+            "1": {
+                "RX": {
+                    "duration": 25.078,
+                    "amplitude": 0.1,
+                    "frequency": 4623810000.0,
+                    "shape": "Drag(4, 0.6571522139248822)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 22400,
+                    "amplitude": 0.056500000000000015,
+                    "frequency": 7393428047.0,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": -3.022547221302854
+                }
+            }
+        },
+        "coupler": {
+            "0": {
+                "CP": {
+                    "type": "coupler",
+                    "duration": 0,
+                    "amplitude": 0,
+                    "shape": "Rectangular()",
+                    "coupler": 0,
+                    "relative_start": 0
+                }
+            }
+        },
+        "two_qubit": {
+            "0-1": {
+                "iSWAP": [
+                    {
+                        "duration": 41.131,
+                        "amplitude": 0.1337,
+                        "shape": "Rectangular()",
+                        "qubit": 0,
+                        "type": "qf",
+                        "start": 0
+                    }
+                ]
+            }
+        }
+    },
+    "characterization": {
+        "single_qubit": {
+            "0": {
+                "readout_frequency": 7301661824.000001,
+                "drive_frequency": 4554500000.0,
+                "anharmonicity": -300000000.0,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "T1": 0.0,
+                "T2": 0.0,
+                "sweetspot": 0,
+                "mean_gnd_states": "1.5417+0.1817j",
+                "mean_exc_states": "2.5332-0.5914j",
+                "threshold": 1.5435,
+                "iq_angle": 2.602
+            },
+            "1": {
+                "readout_frequency": 7393428047.0,
+                "drive_frequency": 4623810000.0,
+                "anharmonicity": -310000000.0,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "T1": 0.0,
+                "T2": 0.0,
+                "sweetspot": 0,
+                "mean_gnd_states": "(0+0j)",
+                "mean_exc_states": "(0+0j)"
+            }
+        },
+        "coupler": {
+            "0": {
+                "sweetspot": 0.0
+            }
+        }
+    }
+}
