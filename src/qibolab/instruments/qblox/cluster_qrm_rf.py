@@ -213,6 +213,10 @@ class QrmRf(ClusterModule):
                         self._ports["o1"].lo_frequency = self.settings["o1"][
                             "lo_frequency"
                         ]
+                    if "mixer_calibration" in self.settings["o1"]:
+                        self._ports["o1"].mixer_calibration = self.settings["o1"][
+                            "mixer_calibration"
+                        ]
                     self._ports["o1"].hardware_mod_en = True
                     self._ports["o1"].nco_freq = 0
                     self._ports["o1"].nco_phase_offs = 0
@@ -337,6 +341,7 @@ class QrmRf(ClusterModule):
     def process_pulse_sequence(
         self,
         qubits: dict,
+        couplers: dict,
         instrument_pulses: PulseSequence,
         navgs: int,
         nshots: int,
@@ -740,7 +745,10 @@ class QrmRf(ClusterModule):
                             and pulses[n].sweeper.type == QbloxSweeperType.duration
                         ):
                             RI = pulses[n].sweeper.register
-                            if pulses[n].type == PulseType.FLUX:
+                            if pulses[n].type in (
+                                PulseType.FLUX,
+                                PulseType.COUPLERFLUX,
+                            ):
                                 RQ = pulses[n].sweeper.register
                             else:
                                 RQ = pulses[n].sweeper.aux_register
@@ -787,7 +795,10 @@ class QrmRf(ClusterModule):
                             and pulses[n].sweeper.type == QbloxSweeperType.duration
                         ):
                             RI = pulses[n].sweeper.register
-                            if pulses[n].type == PulseType.FLUX:
+                            if pulses[n].type in (
+                                PulseType.FLUX,
+                                PulseType.COUPLERFLUX,
+                            ):
                                 RQ = pulses[n].sweeper.register
                             else:
                                 RQ = pulses[n].sweeper.aux_register
