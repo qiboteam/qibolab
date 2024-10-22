@@ -2,15 +2,13 @@
 
 from collections import defaultdict
 
-import keysight.qcs as qcs  # pylint: disable=E0401
+from keysight import qcs
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import PulseId
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 NS_TO_S = 1e-9
-
-__all__ = ["process_sweepers"]
 
 
 def process_sweepers(

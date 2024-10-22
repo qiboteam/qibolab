@@ -4,18 +4,12 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import Union
 
-import keysight.qcs as qcs  # pylint: disable=E0401
+from keysight import qcs
 
 from qibolab._core.pulses import Drag, Envelope, Gaussian, PulseId, Rectangular
 from qibolab._core.pulses.pulse import PulseLike
 
 NS_TO_S = 1e-9
-
-__all__ = [
-    "process_acquisition_channel_pulses",
-    "process_iq_channel_pulses",
-    "process_dc_channel_pulses",
-]
 
 
 def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:

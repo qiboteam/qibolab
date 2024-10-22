@@ -2,8 +2,8 @@
 
 from functools import reduce
 
-import keysight.qcs as qcs  # pylint: disable=E0401
 import numpy as np
+from keysight import qcs
 
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -11,8 +11,6 @@ from qibolab._core.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab._core.sweeper import ParallelSweepers
-
-__all__ = ["fetch_result", "parse_result"]
 
 
 def fetch_result(
