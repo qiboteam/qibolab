@@ -66,7 +66,7 @@ def parse_result(
     # QCS returns (..., nshots), so we need to shuffle the arrays
     if options.averaging_mode is AveragingMode.SINGLESHOT and len(sweepers) > 0:
         tmp = np.zeros(options.results_shape(sweepers))
-        # For IQ data, QCS results complex results
+        # For IQ data, QCS returns complex results
         if options.acquisition_type is AcquisitionType.INTEGRATION:
             for k in range(options.nshots):
                 tmp[k, ..., 0] = np.real(result[..., k])
@@ -75,7 +75,7 @@ def parse_result(
             for k in range(options.nshots):
                 tmp[k, ...] = result[..., k]
 
-    # For IQ data, QCS results complex results
+    # For IQ data, QCS returns complex results
     elif options.acquisition_type is AcquisitionType.INTEGRATION:
         tmp = np.zeros(result.shape + (2,))
         tmp[..., 0] = np.real(result)
