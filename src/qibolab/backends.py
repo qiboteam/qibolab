@@ -76,7 +76,25 @@ class QibolabBackend(NumpyBackend):
                 for fld in fields(p.native_gates)
                 if getattr(p.native_gates, fld.name) is not None
             }
-        return list(native_gates)
+
+        return self._rename_gates(list(native_gates))
+
+    def _rename_gates(self, natives: list[str]):
+        gates = []
+        for native in natives:
+            if native == "RX12":
+                pass
+            elif native == "RX":
+                gates.append("RX")
+            elif native == "CZ":
+                gates.append("CZ")
+            elif native == "iSWAP":
+                gates.append("iSWAP")
+            elif native == "MZ":
+                gates.append("M")
+            elif native == "CNOT":
+                gates.append("CNOT")
+        return gates
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
