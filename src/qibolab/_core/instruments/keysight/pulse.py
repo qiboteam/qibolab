@@ -77,9 +77,9 @@ def process_acquisition_channel_pulses(
                 duration=sweep_param_map.get(
                     "duration", pulse.probe.duration * NS_TO_S
                 ),
-                envelope=pulse.probe.envelope,
+                envelope=generate_qcs_envelope(pulse.probe.envelope),
                 amplitude=sweep_param_map.get("amplitude", pulse.probe.amplitude),
-                frequency=frequency,
+                rf_frequency=frequency,
                 instantaneous_phase=sweep_param_map.get(
                     "relative_phase", pulse.probe.relative_phase
                 ),
@@ -122,9 +122,9 @@ def process_iq_channel_pulses(
         elif pulse.kind == "pulse":
             qcs_pulse = qcs.RFWaveform(
                 duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
-                envelope=pulse.envelope,
+                envelope=generate_qcs_envelope(pulse.envelope),
                 amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
-                frequency=frequency,
+                rf_frequency=frequency,
                 instantaneous_phase=sweep_param_map.get(
                     "relative_phase", pulse.relative_phase
                 ),
