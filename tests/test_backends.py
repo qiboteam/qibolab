@@ -22,20 +22,44 @@ def generate_circuit_with_gate(nqubits, gate, **kwargs):
 def connected_backend(connected_platform):
     yield QibolabBackend(connected_platform)
 
+
 def test_qubits():
     backend = QibolabBackend("dummy")
     assert isinstance(backend.qubits, list)
-    assert set(backend.qubits) == set([0, 1, 2, 3, 4])
+    assert set(backend.qubits) == {0, 1, 2, 3, 4}
+
 
 def test_connectivity():
     backend = QibolabBackend("dummy")
     assert isinstance(backend.connectivity, list)
-    assert set(backend.connectivity) == set([(0, 2), (2, 0), (1, 2), (2, 1), (2, 3), (3, 2), (2, 4), (4, 2)])
+    assert set(backend.connectivity) == {
+        (0, 2),
+        (2, 0),
+        (1, 2),
+        (2, 1),
+        (2, 3),
+        (3, 2),
+        (2, 4),
+        (4, 2),
+    }
+
 
 def test_natives():
     backend = QibolabBackend("dummy")
     assert isinstance(backend.natives, list)
-    assert set(backend.natives) == set(['RX12', 'RX', 'CZ', 'iSWAP', 'MZ', 'CNOT'])
+    assert set(backend.natives) == {"RX", "CZ", "iSWAP", "M", "CNOT"}
+
+
+def test_rename_gates():
+    backend = QibolabBackend("dummy")
+    assert backend._rename_gates(["RX12", "RX", "CZ", "iSWAP", "MZ", "CNOT"]) == [
+        "RX",
+        "CZ",
+        "iSWAP",
+        "M",
+        "CNOT",
+    ]
+
 
 def test_execute_circuit_initial_state():
     backend = QibolabBackend("dummy")
