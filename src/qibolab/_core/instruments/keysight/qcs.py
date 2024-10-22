@@ -4,8 +4,8 @@ from collections import defaultdict
 from functools import reduce
 from typing import ClassVar, Optional
 
-import keysight.qcs as qcs  # pylint: disable=E0401
 import numpy as np
+from keysight import qcs
 
 from qibolab._core.components import AcquisitionChannel, Config, DcChannel, IqChannel
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters

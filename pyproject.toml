@@ -109,7 +109,7 @@ generated-members = [
 ]
 # TODO: restore analysis when the support will cover the entier Python range, i.e. it
 # will include py3.12 as well
-ignored-modules = ["qm", "qualang_tools", "qibosoq"]
+ignored-modules = ["qm", "qualang_tools", "qibosoq", "keysight"]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
