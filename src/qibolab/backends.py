@@ -1,9 +1,9 @@
 from collections import deque
-from dataclasses import fields
 from typing import Union
 
 import numpy as np
 from qibo import __version__ as qibo_version
+from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
@@ -54,47 +54,42 @@ class QibolabBackend(NumpyBackend):
 
     @property
     def qubits(self) -> list[Union[str, int]]:
+        """Returns the qubits in the platform."""
         return list(self.platform.qubits)
 
     @property
     def connectivity(self) -> list[tuple[Union[str, int], Union[str, int]]]:
+        """Returns the list of connected qubits."""
         return list(self.platform.pairs)
 
     @property
     def natives(self) -> list[str]:
-        native_gates = set()
-        for _, q in self.platform.qubits.items():
-            native_gates |= {
-                fld.name
-                for fld in fields(q.native_gates)
-                if getattr(q.native_gates, fld.name) is not None
-            }
+        """Returns the list of native gates supported by the platform."""
+        compiler = Compiler.default()
+        natives = [g.__name__ for g in list(compiler.rules)]
 
-        for _, p in self.platform.pairs.items():
-            native_gates |= {
-                fld.name
-                for fld in fields(p.native_gates)
-                if getattr(p.native_gates, fld.name) is not None
-            }
+        if "CZ" in natives and "CNOT" in natives:
+            for pair in self.connectivity:
+                cz = gates.CZ(*pair)
+                cnot = gates.CNOT(*pair)
 
-        return self._rename_gates(list(native_gates))
+                if not self._is_gate_calibrated(cz, compiler):
+                    natives.remove("CZ")
+                    break
 
-    def _rename_gates(self, natives: list[str]):
-        gates = []
-        for native in natives:
-            if native == "RX12":
-                pass
-            elif native == "RX":
-                gates.append("RX")
-            elif native == "CZ":
-                gates.append("CZ")
-            elif native == "iSWAP":
-                gates.append("iSWAP")
-            elif native == "MZ":
-                gates.append("M")
-            elif native == "CNOT":
-                gates.append("CNOT")
-        return gates
+                if not self._is_gate_calibrated(cnot, compiler):
+                    natives.remove("CNOT")
+                    break
+
+        return natives
+
+    def _is_gate_calibrated(self, gate, compiler) -> bool:
+        """Helper method to check if a gate is calibrated."""
+        try:
+            compiler[gate.__class__](gate, self.platform)
+            return True
+        except ValueError:
+            return False
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
