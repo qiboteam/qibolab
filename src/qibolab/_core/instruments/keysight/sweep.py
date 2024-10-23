@@ -42,7 +42,7 @@ def process_sweepers(
     # Mapper for channels with frequency controlled by a sweeper
     sweeper_channel_map: dict[ChannelId, qcs.Scalar] = {}
 
-    for idx, parallel_sweeper in enumerate(sweepers):
+    for idx, parallel_sweeper in enumerate(reversed(sweepers)):
         sweep_values: list[qcs.Array] = []
         sweep_variables: list[qcs.Variable] = []
         # Currently nested hardware sweeping is not supported
