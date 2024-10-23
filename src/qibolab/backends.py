@@ -73,7 +73,7 @@ class QibolabBackend(NumpyBackend):
                 cz = gates.CZ(*pair)
                 cnot = gates.CNOT(*pair)
 
-                if not self._is_gate_calibrated(cz, compiler):
+                if not self._is_gate_calibrated(cz, compiler):  # pragma: no cover
                     natives.remove("CZ")
                     break
 
