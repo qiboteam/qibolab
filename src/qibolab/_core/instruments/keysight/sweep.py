@@ -9,6 +9,12 @@ from qibolab._core.pulses import PulseId
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 NS_TO_S = 1e-9
+SUPPORTED_CHANNEL_SWEEPERS = [Parameter.frequency]
+SUPPORTED_PULSE_SWEEPERS = [
+    Parameter.amplitude,
+    Parameter.duration,
+    Parameter.relative_phase,
+]
 
 
 def process_sweepers(
@@ -50,18 +56,14 @@ def process_sweepers(
                 name=f"V{idx}_{idx2}", value=sweeper.values[0], dtype=float
             )
 
-            if sweeper.parameter is Parameter.frequency:
+            if sweeper.parameter in SUPPORTED_CHANNEL_SWEEPERS:
                 sweeper_channel_map.update(
                     {channel_id: qcs_variable for channel_id in sweeper.channels}
                 )
                 # Readout frequency is not supported with hardware sweeping
                 if not probe_channel_ids.isdisjoint(sweeper.channels):
                     hardware_sweeping = False
-            elif sweeper.parameter in [
-                Parameter.amplitude,
-                Parameter.duration,
-                Parameter.relative_phase,
-            ]:
+            elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
                 # Duration is not supported with hardware sweeping
                 if sweeper.parameter is Parameter.duration:
                     hardware_sweeping = False
