@@ -47,18 +47,16 @@ def test_connectivity():
 def test_natives():
     backend = QibolabBackend("dummy")
     assert isinstance(backend.natives, list)
-    assert set(backend.natives) == {"RX", "CZ", "iSWAP", "M", "CNOT"}
-
-
-def test_rename_gates():
-    backend = QibolabBackend("dummy")
-    assert backend._rename_gates(["RX12", "RX", "CZ", "iSWAP", "MZ", "CNOT"]) == [
-        "RX",
+    assert set(backend.natives) == {
+        "I",
+        "Z",
+        "RZ",
+        "U3",
         "CZ",
-        "iSWAP",
+        "GPI2",
+        "GPI",
         "M",
-        "CNOT",
-    ]
+    }
 
 
 def test_execute_circuit_initial_state():
