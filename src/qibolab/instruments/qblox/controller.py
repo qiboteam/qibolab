@@ -11,7 +11,7 @@ from qibolab.instruments.qblox.cluster_qcm_bb import QcmBb
 from qibolab.instruments.qblox.cluster_qcm_rf import QcmRf
 from qibolab.instruments.qblox.cluster_qrm_rf import QrmRf
 from qibolab.instruments.qblox.sequencer import SAMPLING_RATE
-from qibolab.pulses import PulseSequence, PulseType
+from qibolab.pulses import Custom, PulseSequence, PulseType, ReadoutPulse
 from qibolab.result import SampleResults
 from qibolab.sweeper import Parameter, Sweeper, SweeperType
 from qibolab.unrolling import Bounds
@@ -102,7 +102,7 @@ class QbloxController(Controller):
         log.warning("QbloxController: all modules are disconnected.")
         exit(0)
 
-    def _set_module_channel_map(self, module: QrmRf, qubits: dict):
+    def _set_module_channel_map(self, module: QrmRf, qubits: dict, couplers: dict):
         """Retrieve all the channels connected to a specific Qblox module.
 
         This method updates the `channel_port_map` attribute of the
@@ -115,11 +115,16 @@ class QbloxController(Controller):
             for channel in qubit.channels:
                 if channel.port and channel.port.module.name == module.name:
                     module.channel_map[channel.name] = channel
+        for coupler in couplers.values():
+            for channel in coupler.channels:
+                if channel.port and channel.port.module.name == module.name:
+                    module.channel_map[channel.name] = channel
         return list(module.channel_map)
 
     def _execute_pulse_sequence(
         self,
         qubits: dict,
+        couplers: dict,
         sequence: PulseSequence,
         options: ExecutionParameters,
         sweepers: list() = [],  # list(Sweeper) = []
@@ -172,12 +177,13 @@ class QbloxController(Controller):
         data = {}
         for name, module in self.modules.items():
             # from the pulse sequence, select those pulses to be synthesised by the module
-            module_channels = self._set_module_channel_map(module, qubits)
+            module_channels = self._set_module_channel_map(module, qubits, couplers)
             module_pulses[name] = sequence.get_channel_pulses(*module_channels)
 
             #  ask each module to generate waveforms & program and upload them to the device
             module.process_pulse_sequence(
                 qubits,
+                couplers,
                 module_pulses[name],
                 navgs,
                 nshots,
@@ -228,7 +234,7 @@ class QbloxController(Controller):
         return data
 
     def play(self, qubits, couplers, sequence, options):
-        return self._execute_pulse_sequence(qubits, sequence, options)
+        return self._execute_pulse_sequence(qubits, couplers, sequence, options)
 
     def sweep(
         self,
@@ -269,9 +275,55 @@ class QbloxController(Controller):
                     values=sweeper.values,
                     pulses=ps,
                     qubits=sweeper.qubits,
+                    couplers=sweeper.couplers,
                     type=sweeper.type,
                 )
             )
+
+        serial_map = {p.serial: p.serial for p in sequence_copy.ro_pulses}
+        for sweeper in sweepers_copy:
+            if sweeper.parameter in (Parameter.duration, Parameter.start) and not any(
+                pulse.type is PulseType.READOUT for pulse in sweeper.pulses
+            ):
+                for pulse in sequence_copy.ro_pulses:
+                    current_serial = pulse.serial
+                    if sweeper.parameter is Parameter.duration:
+                        sweep_values = sweeper.get_values(sweeper.pulses[0].duration)
+                        if (
+                            max_finish := sweeper.pulses[0].start + np.max(sweep_values)
+                        ) > pulse.start:
+                            pulse.start = max_finish
+                            serial_map[pulse.serial] = current_serial
+                    if sweeper.parameter is Parameter.start:
+                        idx = sequence_copy.index(pulse)
+                        padded_pulse = ReadoutPulse(
+                            start=0,
+                            duration=pulse.start + pulse.duration,
+                            amplitude=pulse.amplitude,
+                            frequency=pulse.frequency,
+                            relative_phase=pulse.relative_phase,
+                            shape=Custom(
+                                envelope_i=np.concatenate(
+                                    (
+                                        np.zeros(pulse.start),
+                                        pulse.envelope_waveform_i().data
+                                        / pulse.amplitude,
+                                    )
+                                ),
+                                envelope_q=np.concatenate(
+                                    (
+                                        np.zeros(pulse.start),
+                                        pulse.envelope_waveform_q().data
+                                        / pulse.amplitude,
+                                    )
+                                ),
+                            ),
+                            channel=pulse.channel,
+                            qubit=pulse.qubit,
+                        )
+                        serial_map[padded_pulse.serial] = current_serial
+                        sequence_copy[idx] = padded_pulse
+                        sweeper.pulses.append(padded_pulse)
 
         # reverse sweepers exept for res punchout att
         contains_attenuation_frequency = any(
@@ -292,6 +344,7 @@ class QbloxController(Controller):
         # execute the each sweeper recursively
         self._sweep_recursion(
             qubits,
+            couplers,
             sequence_copy,
             options,
             *tuple(sweepers_copy),
@@ -301,13 +354,14 @@ class QbloxController(Controller):
         # return the results using the original serials
         serial_results = {}
         for pulse in sequence_copy.ro_pulses:
-            serial_results[map_id_serial[pulse.id]] = id_results[pulse.id]
+            serial_results[serial_map[map_id_serial[pulse.id]]] = id_results[pulse.id]
             serial_results[pulse.qubit] = id_results[pulse.id]
         return serial_results
 
     def _sweep_recursion(
         self,
         qubits,
+        couplers,
         sequence,
         options: ExecutionParameters,
         *sweepers,
@@ -386,6 +440,7 @@ class QbloxController(Controller):
                 if len(sweepers) > 1:
                     self._sweep_recursion(
                         qubits,
+                        couplers,
                         sequence,
                         options,
                         *sweepers[1:],
@@ -393,7 +448,10 @@ class QbloxController(Controller):
                     )
                 else:
                     result = self._execute_pulse_sequence(
-                        qubits=qubits, sequence=sequence, options=options
+                        qubits=qubits,
+                        couplers=couplers,
+                        sequence=sequence,
+                        options=options,
                     )
                     for pulse in sequence.ro_pulses:
                         if results[pulse.id]:
@@ -437,9 +495,11 @@ class QbloxController(Controller):
                             values=_values,
                             pulses=sweeper.pulses,
                             qubits=sweeper.qubits,
+                            couplers=sweeper.couplers,
                         )
                         self._sweep_recursion(
                             qubits,
+                            couplers,
                             sequence,
                             options,
                             *((split_sweeper,) + sweepers[1:]),
@@ -486,7 +546,7 @@ class QbloxController(Controller):
                     #                 qubits[pulse.qubit].drive.gain = 1
 
                     result = self._execute_pulse_sequence(
-                        qubits, sequence, options, sweepers
+                        qubits, couplers, sequence, options, sweepers
                     )
                     self._add_to_results(sequence, results, result)
                 else:
@@ -509,6 +569,7 @@ class QbloxController(Controller):
 
                         res = self._execute_pulse_sequence(
                             qubits,
+                            couplers,
                             sequence,
                             replace(options, nshots=_nshots),
                             sweepers,

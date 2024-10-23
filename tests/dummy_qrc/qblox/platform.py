@@ -30,6 +30,7 @@ def create():
     modules = {
         "qcm_bb0": QcmBb("qcm_bb0", f"{ADDRESS}:2"),
         "qcm_bb1": QcmBb("qcm_bb1", f"{ADDRESS}:4"),
+        "qcm_bb2": QcmBb("qcm_bb2", f"{ADDRESS}:3"),
         "qcm_rf0": QcmRf("qcm_rf0", f"{ADDRESS}:6"),
         "qcm_rf1": QcmRf("qcm_rf1", f"{ADDRESS}:8"),
         "qcm_rf2": QcmRf("qcm_rf2", f"{ADDRESS}:10"),
@@ -61,12 +62,17 @@ def create():
     channels |= Channel(name="L3-12", port=modules["qcm_rf1"].ports("o1"))
     channels |= Channel(name="L3-13", port=modules["qcm_rf1"].ports("o2"))
     channels |= Channel(name="L3-14", port=modules["qcm_rf2"].ports("o1"))
-    # Flux
+    # Qubit flux
     channels |= Channel(name="L4-5", port=modules["qcm_bb0"].ports("o1"))
     channels |= Channel(name="L4-1", port=modules["qcm_bb0"].ports("o2"))
     channels |= Channel(name="L4-2", port=modules["qcm_bb0"].ports("o3"))
     channels |= Channel(name="L4-3", port=modules["qcm_bb0"].ports("o4"))
     channels |= Channel(name="L4-4", port=modules["qcm_bb1"].ports("o1"))
+    # Coupler flux
+    channels |= Channel(name="L4-12", port=modules["qcm_bb1"].ports("o2"))
+    channels |= Channel(name="L4-13", port=modules["qcm_bb1"].ports("o3"))
+    channels |= Channel(name="L4-14", port=modules["qcm_bb1"].ports("o4"))
+    channels |= Channel(name="L4-5", port=modules["qcm_bb2"].ports("o1"))
     # TWPA
     channels |= Channel(name="L3-28", port=None)
     channels["L3-28"].local_oscillator = twpa_pump
@@ -98,8 +104,20 @@ def create():
     for q in range(5):
         qubits[q].flux.max_bias = 2.5
 
+    for i, coupler in enumerate(couplers):
+        couplers[coupler].flux = (
+            channels[f"L4-{11 + i}"] if i > 0 else channels[f"L4-5"]
+        )
+        couplers[coupler].flux.max_bias = 2.5
+
     settings = load_settings(runcard)
 
     return Platform(
-        str(FOLDER), qubits, pairs, instruments, settings, resonator_type="2D"
+        str(FOLDER),
+        qubits,
+        pairs,
+        instruments,
+        settings,
+        resonator_type="2D",
+        couplers=couplers,
     )

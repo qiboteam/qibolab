@@ -71,7 +71,7 @@ def test_integrated_result_properties(result):
         np.sqrt(results.voltage_i**2 + results.voltage_q**2), results.magnitude
     )
     np.testing.assert_equal(
-        np.unwrap(np.arctan2(results.voltage_i, results.voltage_q)), results.phase
+        np.unwrap(np.arctan2(results.voltage_q, results.voltage_i)), results.phase
     )
 
 
@@ -119,7 +119,7 @@ def test_serialize(average, result):
             "MSR[V]": np.sqrt(avg.voltage_i**2 + avg.voltage_q**2),
             "i[V]": avg.voltage_i,
             "q[V]": avg.voltage_q,
-            "phase[rad]": np.unwrap(np.arctan2(avg.voltage_i, avg.voltage_q)),
+            "phase[rad]": np.unwrap(np.arctan2(avg.voltage_q, avg.voltage_i)),
         }
         assert avg.serialize.keys() == target_dict.keys()
         for key in output:
@@ -155,7 +155,7 @@ def test_serialize_averaged_iq_results(result):
         "MSR[V]": np.sqrt(results.voltage_i**2 + results.voltage_q**2),
         "i[V]": results.voltage_i,
         "q[V]": results.voltage_q,
-        "phase[rad]": np.unwrap(np.arctan2(results.voltage_i, results.voltage_q)),
+        "phase[rad]": np.unwrap(np.arctan2(results.voltage_q, results.voltage_i)),
     }
     assert output.keys() == target_dict.keys()
     for key in output:

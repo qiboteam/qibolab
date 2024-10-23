@@ -197,6 +197,10 @@ class QcmRf(ClusterModule):
                         self._ports[port].lo_frequency = self.settings[port][
                             "lo_frequency"
                         ]
+                    if "mixer_calibration" in self.settings[port]:
+                        self._ports[port].mixer_calibration = self.settings[port][
+                            "mixer_calibration"
+                        ]
                     self._ports[port].attenuation = self.settings[port]["attenuation"]
                     self._ports[port].hardware_mod_en = True
                     self._ports[port].nco_freq = 0
@@ -289,6 +293,7 @@ class QcmRf(ClusterModule):
     def process_pulse_sequence(
         self,
         qubits: dict,
+        couplers: dict,
         instrument_pulses: PulseSequence,
         navgs: int,
         nshots: int,
@@ -610,7 +615,7 @@ class QcmRf(ClusterModule):
                         and pulses[n].sweeper.type == QbloxSweeperType.duration
                     ):
                         RI = pulses[n].sweeper.register
-                        if pulses[n].type == PulseType.FLUX:
+                        if pulses[n].type in (PulseType.FLUX, PulseType.COUPLERFLUX):
                             RQ = pulses[n].sweeper.register
                         else:
                             RQ = pulses[n].sweeper.aux_register
