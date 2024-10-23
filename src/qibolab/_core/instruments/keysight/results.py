@@ -1,7 +1,5 @@
 """Utils for result management."""
 
-from functools import reduce
-
 import numpy as np
 from keysight import qcs
 
@@ -18,7 +16,6 @@ def fetch_result(
     channel: qcs.Channels,
     acquisition_type: AcquisitionType,
     averaging: bool,
-    sweeper_swaps_required: list[tuple[int, int]],
 ) -> dict[qcs.Channels, np.ndarray]:
     """Processes the QCS result object to return the appropiate results.
 
@@ -40,12 +37,6 @@ def fetch_result(
         raw = results.get_classified(channel, averaging)
     else:
         raise ValueError("Acquisition type unrecognized")
-
-    if len(sweeper_swaps_required) > 0:
-        swap = lambda array, pair_indices: np.swapaxes(array, *pair_indices)
-        for key, value in raw.items():
-            raw[key] = reduce(swap, sweeper_swaps_required, value)
-
     return raw
 
 

@@ -30,15 +30,12 @@ def process_sweepers(
     Returns:
         hardware_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of hardware-based QCS sweepers.
         software_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of software-based QCS sweepers.
-        sweeper_swaps_required (list[tuple[int, int]]): Array of corresponding axes to be swapped in results.
         sweeper_channel_map (dict[ChannelId, qcs.Scalar]): Map of channel ID to frequency to be swept.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.
     """
     hardware_sweepers: list[tuple[list[qcs.Array], list[qcs.Scalar]]] = []
     software_sweepers: list[tuple[list[qcs.Array], list[qcs.Scalar]]] = []
-    hw_sweeper_order = []
-    sw_sweeper_order = []
 
     # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]] = defaultdict(dict)
@@ -49,7 +46,7 @@ def process_sweepers(
         sweep_values: list[qcs.Array] = []
         sweep_variables: list[qcs.Variable] = []
         # Currently nested hardware sweeping is not supported
-        hardware_sweeping = len(hardware_sweepers) == 0
+        hardware_sweeping = len(hardware_sweepers + software_sweepers) == 0
 
         for idx2, sweeper in enumerate(parallel_sweeper):
             qcs_variable = qcs.Scalar(
@@ -89,22 +86,12 @@ def process_sweepers(
             )
         if hardware_sweeping:
             hardware_sweepers.append((sweep_values, sweep_variables))
-            hw_sweeper_order.append(idx)
         else:
             software_sweepers.append((sweep_values, sweep_variables))
-            sw_sweeper_order.append(idx)
 
-    sweeper_swaps_required = [
-        (original_index, shifted_index)
-        for shifted_index, original_index in enumerate(
-            hw_sweeper_order + sw_sweeper_order
-        )
-        if original_index != shifted_index
-    ]
     return (
         hardware_sweepers,
         software_sweepers,
-        sweeper_swaps_required,
         sweeper_channel_map,
         sweeper_pulse_map,
     )

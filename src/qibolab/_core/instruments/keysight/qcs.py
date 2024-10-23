@@ -73,7 +73,6 @@ class KeysightQCS(Controller):
         (
             hardware_sweepers,
             software_sweepers,
-            sweeper_swaps_required,
             sweeper_channel_map,
             sweeper_pulse_map,
         ) = process_sweepers(sweepers, probe_channel_ids)
@@ -126,7 +125,7 @@ class KeysightQCS(Controller):
                     sweeper_pulse_map=sweeper_pulse_map,
                 )
 
-        return program, sweeper_swaps_required
+        return program
 
     def play(
         self,
@@ -141,10 +140,11 @@ class KeysightQCS(Controller):
 
         ret: dict[PulseId, np.ndarray] = {}
         for sequence in sequences:
-            program, sweeper_swaps_required = self.create_program(
-                sequence.align_to_delays(), configs, sweepers, options.nshots
-            )
-            results = self.backend.apply(program).results
+            results = self.backend.apply(
+                self.create_program(
+                    sequence.align_to_delays(), configs, sweepers, options.nshots
+                )
+            ).results
             acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(
                 list
             )
@@ -160,7 +160,6 @@ class KeysightQCS(Controller):
                     channel=channel,
                     acquisition_type=options.acquisition_type,
                     averaging=averaging,
-                    sweeper_swaps_required=sweeper_swaps_required,
                 )
 
                 for result, input_op in zip(raw.values(), input_ops):
