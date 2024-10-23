@@ -68,7 +68,7 @@ def parse_result(
 
     # For IQ data, QCS returns complex results
     elif options.acquisition_type is AcquisitionType.INTEGRATION:
-        tmp = np.zeros(result.shape + (2,))
+        tmp = np.zeros(options.results_shape(sweepers))
         tmp[..., 0] = np.real(result)
         tmp[..., 1] = np.imag(result)
     else:
