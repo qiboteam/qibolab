@@ -8,7 +8,6 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.sweeper import ParallelSweepers
 
 
 def fetch_result(
@@ -40,9 +39,7 @@ def fetch_result(
     return raw
 
 
-def parse_result(
-    result: np.ndarray, options: ExecutionParameters, sweepers: list[ParallelSweepers]
-) -> np.ndarray:
+def parse_result(result: np.ndarray, options: ExecutionParameters) -> np.ndarray:
     """Parses resulting numpy array into Qibolab expected array shape.
 
     Arguments:
@@ -55,22 +52,16 @@ def parse_result(
     """
     # For single shot, qibolab expects result format (nshots, ...)
     # QCS returns (..., nshots), so we need to shuffle the arrays
-    if options.averaging_mode is AveragingMode.SINGLESHOT and len(sweepers) > 0:
-        tmp = np.zeros(options.results_shape(sweepers))
-        # For IQ data, QCS returns complex results
-        if options.acquisition_type is AcquisitionType.INTEGRATION:
-            for k in range(options.nshots):
-                tmp[k, ..., 0] = np.real(result[..., k])
-                tmp[k, ..., 1] = np.imag(result[..., k])
-        else:
-            for k in range(options.nshots):
-                tmp[k, ...] = result[..., k]
-
-    # For IQ data, QCS returns complex results
-    elif options.acquisition_type is AcquisitionType.INTEGRATION:
-        tmp = np.zeros(options.results_shape(sweepers))
-        tmp[..., 0] = np.real(result)
-        tmp[..., 1] = np.imag(result)
-    else:
+    if (
+        options.averaging_mode is not AveragingMode.SINGLESHOT
+        and options.acquisition_type is not AcquisitionType.INTEGRATION
+    ):
         return result
-    return tmp
+    # For single shot, qibolab expects result format (nshots, ...)
+    # QCS returns (..., nshots), so we need to shuffle the arrays
+    if options.averaging_mode is AveragingMode.SINGLESHOT:
+        result = np.moveaxis(result, -1, 0)
+    # For IQ data, QCS returns complex results
+    if options.acquisition_type is not AcquisitionType.INTEGRATION:
+        return result
+    return np.moveaxis(np.stack([np.real(result), np.imag(result)]), 0, -1)
