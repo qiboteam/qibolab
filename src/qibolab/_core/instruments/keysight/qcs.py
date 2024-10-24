@@ -164,7 +164,7 @@ class KeysightQCS(Controller):
 
                 for result, input_op in zip(raw.values(), input_ops):
 
-                    ret[input_op.id] = parse_result(result, options, sweepers)
+                    ret[input_op.id] = parse_result(result, options)
 
         return ret
 
