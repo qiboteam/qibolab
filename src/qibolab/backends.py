@@ -68,25 +68,19 @@ class QibolabBackend(NumpyBackend):
         compiler = Compiler.default()
         natives = [g.__name__ for g in list(compiler.rules)]
 
-        if "CZ" in natives and "CNOT" in natives:
-            for pair in self.connectivity:
-                cz = gates.CZ(*pair)
-                cnot = gates.CNOT(*pair)
-
-                if not self._is_gate_calibrated(cz, compiler):  # pragma: no cover
-                    natives.remove("CZ")
-                    break
-
-                if not self._is_gate_calibrated(cnot, compiler):
-                    natives.remove("CNOT")
-                    break
-
+        check_2q = ["CZ", "CNOT"]
+        for gate in check_2q:
+            if gate in natives and any(
+                not self._is_gate_calibrated(getattr(gates, gate)(*pair), compiler)
+                for pair in self.connectivity
+            ):
+                natives.remove(gate)
         return natives
 
     def _is_gate_calibrated(self, gate, compiler) -> bool:
         """Helper method to check if a gate is calibrated."""
         try:
-            compiler[gate.__class__](gate, self.platform)
+            compiler[type(gate)](gate, self.platform)
             return True
         except ValueError:
             return False
