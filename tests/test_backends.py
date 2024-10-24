@@ -53,6 +53,7 @@ def test_natives():
         "RZ",
         "U3",
         "CZ",
+        "CNOT",
         "GPI2",
         "GPI",
         "M",

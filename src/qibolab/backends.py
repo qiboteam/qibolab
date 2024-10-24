@@ -62,6 +62,20 @@ class QibolabBackend(NumpyBackend):
         """Returns the list of connected qubits."""
         return list(self.platform.pairs)
 
+    # @property
+    # def natives(self) -> list[str]:
+    #     """Returns the list of native gates supported by the platform."""
+    #     compiler = Compiler.default()
+    #     natives = [g.__name__ for g in list(compiler.rules)]
+
+    #     check_2q = ["CZ", "CNOT"]
+    #     for gate in check_2q:
+    #         if gate in natives and any(
+    #             not self._is_gate_calibrated(getattr(gates, gate)(*pair), compiler)
+    #             for pair in self.connectivity
+    #         ):
+    #             natives.remove(gate)
+    #     return natives
     @property
     def natives(self) -> list[str]:
         """Returns the list of native gates supported by the platform."""
@@ -70,11 +84,15 @@ class QibolabBackend(NumpyBackend):
 
         check_2q = ["CZ", "CNOT"]
         for gate in check_2q:
-            if gate in natives and any(
-                not self._is_gate_calibrated(getattr(gates, gate)(*pair), compiler)
-                for pair in self.connectivity
-            ):
-                natives.remove(gate)
+            if gate in natives:
+                for pair in self.connectivity:
+                    logical_pair = [list(self.platform.qubits).index(q) for q in pair]
+                    if self._is_gate_calibrated(
+                        getattr(gates, gate)(*logical_pair), compiler
+                    ):
+                        break
+                else:
+                    natives.remove(gate)
         return natives
 
     def _is_gate_calibrated(self, gate, compiler) -> bool:
