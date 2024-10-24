@@ -1,7 +1,9 @@
 from collections import deque
+from typing import Union
 
 import numpy as np
 from qibo import __version__ as qibo_version
+from qibo import gates
 from qibo.backends import NumpyBackend
 from qibo.config import raise_error
 from qibo.models import Circuit
@@ -49,6 +51,43 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
+
+    @property
+    def qubits(self) -> list[Union[str, int]]:
+        """Returns the qubits in the platform."""
+        return list(self.platform.qubits)
+
+    @property
+    def connectivity(self) -> list[tuple[Union[str, int], Union[str, int]]]:
+        """Returns the list of connected qubits."""
+        return list(self.platform.pairs)
+
+    @property
+    def natives(self) -> list[str]:
+        """Returns the list of native gates supported by the platform."""
+        compiler = Compiler.default()
+        natives = [g.__name__ for g in list(compiler.rules)]
+
+        check_2q = ["CZ", "CNOT"]
+        for gate in check_2q:
+            if gate in natives:
+                for pair in self.connectivity:
+                    logical_pair = [list(self.platform.qubits).index(q) for q in pair]
+                    if self._is_gate_calibrated(
+                        getattr(gates, gate)(*logical_pair), compiler
+                    ):
+                        break
+                else:
+                    natives.remove(gate)
+        return natives
+
+    def _is_gate_calibrated(self, gate, compiler) -> bool:
+        """Helper method to check if a gate is calibrated."""
+        try:
+            compiler[type(gate)](gate, self.platform)
+            return True
+        except ValueError:
+            return False
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
