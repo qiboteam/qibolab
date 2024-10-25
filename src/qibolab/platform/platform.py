@@ -10,7 +10,14 @@ from qibo.config import log, raise_error
 from qibolab.couplers import Coupler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.instruments.abstract import Controller, Instrument, InstrumentId
-from qibolab.pulses import Drag, FluxPulse, PulseSequence, ReadoutPulse
+from qibolab.pulses import (
+    CouplerFluxPulse,
+    Drag,
+    FluxPulse,
+    PulseSequence,
+    ReadoutPulse,
+    Rectangular,
+)
 from qibolab.qubits import Qubit, QubitId, QubitPair, QubitPairId
 from qibolab.sweeper import Sweeper
 from qibolab.unrolling import batch
@@ -385,26 +392,45 @@ class Platform:
         qubit = self.get_qubit(qubit)
         return self.create_MZ_pulse(qubit, start)
 
-    def create_qubit_flux_pulse(self, qubit, start, duration, amplitude=1):
+    def create_qubit_flux_pulse(self, qubit, start, duration, amplitude=1, shape=None):
         qubit = self.get_qubit(qubit)
+        if shape is None:
+            shape = Rectangular()
         pulse = FluxPulse(
             start=start,
             duration=duration,
             amplitude=amplitude,
-            shape="Rectangular",
+            shape=shape,
             channel=self.qubits[qubit].flux.name,
             qubit=qubit,
         )
         pulse.duration = duration
         return pulse
 
-    def create_coupler_pulse(self, coupler, start, duration=None, amplitude=None):
+    def create_coupler_pulse(
+        self, coupler, start, duration=None, amplitude=None, shape=None
+    ):
         coupler = self.get_coupler(coupler)
-        pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
-        if duration is not None:
+        native_pulse = self.couplers[coupler].native_pulse.CP.pulse(start)
+
+        if duration is None:
+            duration = native_pulse.duration
+        if amplitude is None:
+            amplitude = native_pulse.amplitude
+
+        if shape is None:
+            pulse = native_pulse
             pulse.duration = duration
-        if amplitude is not None:
             pulse.amplitude = amplitude
+        else:
+            pulse = CouplerFluxPulse(
+                start=start,
+                duration=duration,
+                amplitude=amplitude,
+                shape=shape,
+                channel=self.qubits[coupler].flux.name,
+                qubit=coupler,
+            )
         return pulse
 
     # TODO Remove RX90_drag_pulse and RX_drag_pulse, replace them with create_qubit_drive_pulse
