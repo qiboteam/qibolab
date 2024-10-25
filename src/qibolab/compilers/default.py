@@ -85,21 +85,18 @@ def cz_rule(gate, platform):
     Applying the CZ gate may involve sending pulses on qubits that the
     gate is not directly acting on.
     """
-    qubits = tuple(platform.get_qubit(q) for q in gate.qubits)
-    return platform.create_CZ_pulse_sequence(qubits)
+    return platform.create_CZ_pulse_sequence(gate.qubits)
 
 
 def cnot_rule(gate, platform):
     """CNOT applied as defined in the platform runcard."""
-    qubits = tuple(platform.get_qubit(q) for q in gate.qubits)
-    return platform.create_CNOT_pulse_sequence(qubits)
+    return platform.create_CNOT_pulse_sequence(gate.qubits)
 
 
 def measurement_rule(gate, platform):
     """Measurement gate applied using the platform readout pulse."""
     sequence = PulseSequence()
     for qubit in gate.target_qubits:
-        qubit = platform.get_qubit(qubit)
         MZ_pulse = platform.create_MZ_pulse(qubit, start=0)
         sequence.add(MZ_pulse)
     return sequence, {}
