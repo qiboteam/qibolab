@@ -675,7 +675,7 @@ class Line(Model):
         label = f"{self.label}:" if self.label is not None else ""
         if instr_width is None:
             instr_width = len(self.instruction.asm)
-        code = f"{label:{label_width+1}}{self.instruction.asm:{instr_width+1}}"
+        code = f"{label:<{label_width+1}}{self.instruction.asm:<{instr_width+1}}"
         if self.comment is None:
             return code
         comment = _format_comment(
