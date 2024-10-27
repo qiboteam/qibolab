@@ -53,7 +53,7 @@ CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
 
 class Instr(Model):
     @classmethod
-    def keyword(cls):
+    def keyword(cls) -> str:
         return CAMEL_TO_SNAKE.sub("_", cls.__name__).lower()
 
     @classmethod
@@ -61,7 +61,7 @@ class Instr(Model):
         return cls(**dict(zip(cls.model_fields.keys(), args)))
 
     @property
-    def args(self):
+    def args(self) -> list:
         return list(self.model_dump().values())
 
     def asm(self, key_width: Optional[int] = None) -> str:
