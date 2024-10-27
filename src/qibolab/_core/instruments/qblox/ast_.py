@@ -666,7 +666,7 @@ class Line(Model):
     ) -> str:
         if label_width is None:
             label_width = len(self.label) if self.label is not None else -1
-        label = self.label if self.label is not None else ""
+        label = f"{self.label}:" if self.label is not None else ""
         if instr_width is None:
             instr_width = len(self.instruction.asm)
         code = f"{label:{label_width+1}}{self.instruction.asm:{instr_width+1}}"
