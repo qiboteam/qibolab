@@ -61,8 +61,7 @@ class Instr(Model):
     def asm(self) -> str:
         key = self.keyword()
         args = self.args()
-        instr = " ".join([key] + [str(a) for a in args])
-        return instr
+        return (f"{key} " + ",".join([str(a) for a in args])).strip()
 
 
 class Illegal(Instr):
