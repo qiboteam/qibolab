@@ -732,4 +732,6 @@ class Program(Model):
             )
             for el in self.elements
         )
-        return code if comments else re.sub("^\n*", "", re.sub("\n+", "\n", code))
+        return (
+            code if comments else re.sub("^\n*", "", re.sub("\n+", "\n", code))
+        ) + "\n"
