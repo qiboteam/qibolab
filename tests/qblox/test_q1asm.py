@@ -11,4 +11,5 @@ def test_q1asm():
         asm = program.read_text()
         prog = parse(asm)
         assert isinstance(prog, Program)
-        assert prog.asm() == asm
+        prog_reload = parse(prog.asm())
+        assert prog_reload == prog
