@@ -363,7 +363,7 @@ class SetAwgGain(Instr):
 
     @model_validator(mode="after")
     def check_signature(self):
-        assert type(self.value_0) == type(self.value_1)
+        assert type(self.value_0) is type(self.value_1)
         return self
 
     @field_validator("value_0", "value_1")
@@ -386,7 +386,7 @@ class SetAwgOffs(Instr):
 
     @model_validator(mode="after")
     def check_signature(self):
-        assert type(self.value_0) == type(self.value_1)
+        assert type(self.value_0) is type(self.value_1)
         return self
 
     @field_validator("value_0", "value_1")
@@ -448,8 +448,8 @@ class SetCond(Instr):
 
     @model_validator(mode="after")
     def check_signature(self):
-        assert type(self.enable) == type(self.mask)
-        assert type(self.enable) == type(self.operator)
+        assert type(self.enable) is type(self.mask)
+        assert type(self.enable) is type(self.operator)
         return self
 
 
@@ -480,7 +480,7 @@ class Play(Instr):
 
     @model_validator(mode="after")
     def check_signature(self):
-        assert type(self.wave_0) == type(self.wave_1)
+        assert type(self.wave_0) is type(self.wave_1)
         return self
 
 
@@ -519,8 +519,8 @@ class AcquireWeighed(Instr):
 
     @model_validator(mode="after")
     def check_signature(self):
-        assert type(self.bin) == type(self.weight_0)
-        assert type(self.bin) == type(self.weight_1)
+        assert type(self.bin) is type(self.weight_0)
+        assert type(self.bin) is type(self.weight_1)
         return self
 
 
@@ -594,7 +594,7 @@ class WaitTrigger(Instr):
 
     @model_validator(mode="after")
     def check_signature(self):
-        assert type(self.trigger) == type(self.duration)
+        assert type(self.trigger) is type(self.duration)
         return self
 
 
