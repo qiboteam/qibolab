@@ -3,7 +3,13 @@ import re
 import textwrap
 from typing import Annotated, Any, Optional, Union
 
-from pydantic import BeforeValidator, field_validator, model_serializer, model_validator
+from pydantic import (
+    AfterValidator,
+    BeforeValidator,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from ...serialize import Model
 
@@ -651,7 +657,7 @@ class Comment(str):
 class Line(Model):
     instruction: Instruction
     label: Optional[str]
-    comment: Optional[str]
+    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]]
 
     def __rich_repr__(self):
         yield self.instruction
