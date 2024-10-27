@@ -60,14 +60,16 @@ class Instr(Model):
     def from_args(cls, *args):
         return cls(**dict(zip(cls.model_fields.keys(), args)))
 
+    @property
     def args(self):
         return list(self.model_dump().values())
 
-    @property
-    def asm(self) -> str:
+    def asm(self, key_width: Optional[int] = None) -> str:
         key = self.keyword()
-        args = self.args()
-        return (f"{key} " + ",".join([str(a) for a in args])).strip()
+        if key_width is None:
+            key_width = len(key)
+        instr = f"{key:<{key_width+1}}"
+        return (instr + ",".join([str(a) for a in self.args])).strip()
 
 
 class Illegal(Instr):
@@ -668,14 +670,17 @@ class Line(Model):
         self,
         width: Optional[int] = None,
         label_width: Optional[int] = None,
+        instr_name_width: Optional[int] = None,
         instr_width: Optional[int] = None,
     ) -> str:
         if label_width is None:
-            label_width = len(self.label) if self.label is not None else -1
+            label_width = len(self.label) if self.label is not None else -2
         label = f"{self.label}:" if self.label is not None else ""
+        if instr_name_width is None:
+            instr_name_width = len(self.instruction.keyword())
         if instr_width is None:
-            instr_width = len(self.instruction.asm)
-        code = f"{label:<{label_width+1}}{self.instruction.asm:<{instr_width+1}}"
+            instr_width = len(self.instruction.asm(instr_name_width))
+        code = f"{label:<{label_width+2}}{self.instruction.asm(instr_name_width):<{instr_width+1}}"
         if self.comment is None:
             return code
         comment = _format_comment(
@@ -719,9 +724,17 @@ class Program(Model):
             ),
             default=None,
         )
+        max_instr_name_len = max(
+            (
+                len(line.instruction.keyword())
+                for line in self.elements
+                if isinstance(line, Line)
+            ),
+            default=None,
+        )
         max_instr_len = max(
             (
-                len(line.instruction.asm)
+                len(line.instruction.asm(max_instr_name_len))
                 for line in self.elements
                 if isinstance(line, Line)
             ),
@@ -730,7 +743,10 @@ class Program(Model):
         code = "\n".join(
             (
                 (el if comments else el.model_copy(update={"comment": None})).asm(
-                    width, label_width=max_label_len, instr_width=max_instr_len
+                    width,
+                    label_width=max_label_len,
+                    instr_name_width=max_instr_name_len,
+                    instr_width=max_instr_len,
                 )
                 if isinstance(el, Line)
                 else (el.asm(width) if comments else "")
