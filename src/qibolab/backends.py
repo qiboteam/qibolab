@@ -125,6 +125,18 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
+        if not all(q in circuit.wire_names for q in self.platform.qubits):
+            # This should be done in qibo side
+            # raise_error(
+            #     ValueError,
+            #     "Circuit qubits do not match the platform qubits.",
+            # )
+
+            # Temporary fix: overwrite the wire names
+            circuit._wire_names = self.qubits
+
+        self.platform.wire_names = circuit.wire_names
+
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
         if not self.platform.is_connected:
