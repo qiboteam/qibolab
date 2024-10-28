@@ -72,9 +72,9 @@ def test_natives_no_cz_cnot():
         "GPI",
         "M",
         "CZ",
-        "CNOT"
+        "CNOT",
     }
-    
+
     for gate in ["CZ", "CNOT"]:
         for p in platform.pairs:
             setattr(platform.pairs[p].native_gates, gate, None)

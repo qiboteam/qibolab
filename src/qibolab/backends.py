@@ -1,5 +1,4 @@
 from collections import deque
-from typing import Union
 
 import numpy as np
 from qibo import __version__ as qibo_version
@@ -12,8 +11,8 @@ from qibolab.compilers import Compiler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.platform import Platform, create_platform
 from qibolab.platform.load import available_platforms
-from qibolab.version import __version__ as qibolab_version
 from qibolab.qubits import QubitId, QubitPairId
+from qibolab.version import __version__ as qibolab_version
 
 
 def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
