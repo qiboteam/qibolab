@@ -13,6 +13,7 @@ from qibolab.execution_parameters import ExecutionParameters
 from qibolab.platform import Platform, create_platform
 from qibolab.platform.load import available_platforms
 from qibolab.version import __version__ as qibolab_version
+from qibolab.qubits import QubitId, QubitPairId
 
 
 def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
@@ -52,12 +53,12 @@ class QibolabBackend(NumpyBackend):
         self.compiler = Compiler.default()
 
     @property
-    def qubits(self) -> list[Union[str, int]]:
+    def qubits(self) -> list[QubitId]:
         """Returns the qubits in the platform."""
         return list(self.platform.qubits)
 
     @property
-    def connectivity(self) -> list[tuple[Union[str, int], Union[str, int]]]:
+    def connectivity(self) -> list[QubitPairId]:
         """Returns the list of connected qubits."""
         return list(self.platform.pairs)
 
