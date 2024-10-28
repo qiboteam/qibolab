@@ -125,14 +125,9 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
+        # This should be done in qibo side
+        # Temporary fix: overwrite the wire names
         if not all(q in circuit.wire_names for q in self.platform.qubits):
-            # This should be done in qibo side
-            # raise_error(
-            #     ValueError,
-            #     "Circuit qubits do not match the platform qubits.",
-            # )
-
-            # Temporary fix: overwrite the wire names
             circuit._wire_names = self.qubits
 
         self.platform.wire_names = circuit.wire_names
@@ -178,6 +173,12 @@ class QibolabBackend(NumpyBackend):
                 ValueError,
                 "Hardware backend only supports circuits as initial states.",
             )
+
+        # This should be done in qibo side
+        # Temporary fix: overwrite the wire names
+        for circuit in circuits:
+            if not all(q in circuit.wire_names for q in self.platform.qubits):
+                circuit._wire_names = self.qubits
 
         # TODO: Maybe these loops can be parallelized
         sequences, measurement_maps = zip(
