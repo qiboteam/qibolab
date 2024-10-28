@@ -130,8 +130,6 @@ class QibolabBackend(NumpyBackend):
         if not all(q in circuit.wire_names for q in self.platform.qubits):
             circuit._wire_names = self.qubits
 
-        self.platform.wire_names = circuit.wire_names
-
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
         if not self.platform.is_connected:
