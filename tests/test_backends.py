@@ -63,10 +63,6 @@ def test_natives():
 
 def test_natives_no_cz_cnot():
     platform = create_platform("dummy")
-    for p in platform.pairs:
-        platform.pairs[p].native_gates.CZ = None
-        platform.pairs[p].native_gates.CNOT = None
-
     backend = QibolabBackend(platform)
     assert set(backend.natives) == {
         "I",
@@ -76,7 +72,14 @@ def test_natives_no_cz_cnot():
         "GPI2",
         "GPI",
         "M",
+        "CZ",
+        "CNOT",
     }
+
+    for gate in ["CZ", "CNOT"]:
+        for p in platform.pairs:
+            setattr(platform.pairs[p].native_gates, gate, None)
+        assert gate not in set(backend.natives)
 
 
 def test_execute_circuit_initial_state():
