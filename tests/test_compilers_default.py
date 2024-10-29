@@ -14,8 +14,9 @@ from qibolab._core.pulses.envelope import Rectangular
 from qibolab._core.sequence import PulseSequence
 
 
-def generate_circuit_with_gate(nqubits: int, gate, *params, **kwargs):
+def generate_circuit_with_gate(nqubits: int, wire_names, gate, *params, **kwargs):
     circuit = Circuit(nqubits)
+    circuit._wire_names = wire_names
     circuit.add(gate(q, *params, **kwargs) for q in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
     return circuit
@@ -52,7 +53,7 @@ def compile_circuit(circuit: Circuit, platform: Platform) -> PulseSequence:
 )
 def test_compile(platform: Platform, gateargs):
     nqubits = platform.nqubits
-    circuit = generate_circuit_with_gate(nqubits, *gateargs)
+    circuit = generate_circuit_with_gate(nqubits, list(range(nqubits)), *gateargs)
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == nqubits * int(gateargs[0] != gates.I) + nqubits * 1
 
@@ -62,6 +63,7 @@ def test_compile_two_gates(platform: Platform):
     circuit.add(gates.GPI2(0, phi=0.1))
     circuit.add(gates.GPI(0, 0.2))
     circuit.add(gates.M(0))
+    circuit._wire_names = list(platform.qubits)[:1]
 
     sequence = compile_circuit(circuit, platform)
 
@@ -74,8 +76,9 @@ def test_compile_two_gates(platform: Platform):
 def test_measurement(platform: Platform):
     nqubits = platform.nqubits
     circuit = Circuit(nqubits)
-    qubits = [qubit for qubit in range(nqubits)]
+    qubits = list(range(nqubits))
     circuit.add(gates.M(*qubits))
+    circuit._wire_names = list(platform.qubits)[:nqubits]
     sequence = compile_circuit(circuit, platform)
 
     assert len(sequence.channels) == 1 * nqubits
@@ -86,6 +89,7 @@ def test_rz_to_sequence(platform: Platform):
     circuit = Circuit(1)
     circuit.add(gates.RZ(0, theta=0.2))
     circuit.add(gates.Z(0))
+    circuit._wire_names = list(platform.qubits)[:1]
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
     assert len(sequence) == 2
@@ -96,6 +100,7 @@ def test_gpi_to_sequence(platform: Platform):
 
     circuit = Circuit(1)
     circuit.add(gates.GPI(0, phi=0.2))
+    circuit._wire_names = list(platform.qubits)[:1]
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
@@ -109,6 +114,7 @@ def test_gpi2_to_sequence(platform: Platform):
 
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0.2))
+    circuit._wire_names = list(platform.qubits)[:1]
     sequence = compile_circuit(circuit, platform)
     assert len(sequence.channels) == 1
 
@@ -124,6 +130,7 @@ def test_cz_to_sequence():
 
     circuit = Circuit(3)
     circuit.add(gates.CZ(1, 2))
+    circuit._wire_names = list(platform.qubits)[:3]
 
     sequence = compile_circuit(circuit, platform)
     test_sequence = natives.two_qubit[(2, 1)].CZ.create_sequence()
@@ -148,6 +155,7 @@ def test_cnot_to_sequence():
 
     circuit = Circuit(4)
     circuit.add(gates.CNOT(2, 3))
+    circuit._wire_names = list(platform.qubits)[:4]
 
     sequence = compile_circuit(circuit, platform)
     test_sequence = natives.two_qubit[(2, 3)].CNOT.create_sequence()
@@ -161,6 +169,7 @@ def test_add_measurement_to_sequence(platform: Platform):
     circuit.add(gates.GPI2(0, 0.1))
     circuit.add(gates.GPI2(0, 0.2))
     circuit.add(gates.M(0))
+    circuit._wire_names = list(platform.qubits)[:1]
 
     sequence = compile_circuit(circuit, platform)
     qubit = platform.qubits[0]
@@ -193,6 +202,7 @@ def test_align_delay_measurement(platform: Platform, delay):
     circuit = Circuit(1)
     circuit.add(gates.Align(0, delay=delay))
     circuit.add(gates.M(0))
+    circuit._wire_names = list(platform.qubits)[:1]
     sequence = compile_circuit(circuit, platform)
 
     target_sequence = PulseSequence()
@@ -209,6 +219,7 @@ def test_align_multiqubit(platform: Platform):
     circuit.add(gates.GPI2(main, phi=0.2))
     circuit.add(gates.CZ(main, coupled))
     circuit.add(gates.M(main, coupled))
+    circuit._wire_names = list(platform.qubits)[:3]
 
     sequence = compile_circuit(circuit, platform)
     qubits = platform.qubits
@@ -231,6 +242,7 @@ def test_inactive_qubits(platform: Platform, joint: bool):
     else:
         circuit.add(gates.M(main))
         circuit.add(gates.M(coupled))
+    circuit._wire_names = list(platform.qubits)[:2]
 
     natives = platform.natives.two_qubit[(main, coupled)] = TwoQubitNatives(
         CZ=Native([])
@@ -287,13 +299,18 @@ def test_joint_split_equivalence(platform: Platform):
     joint = Circuit(3)
     joint.add(gates.M(0, 2))
 
-    joint_seq = compile_circuit(circuit + joint, platform)
+    # TODO: bug in circuit addition, the wire names are not updated
+    cj = circuit + joint
+    cj._wire_names = list(platform.qubits)[:3]
+    joint_seq = compile_circuit(cj, platform)
 
     split = Circuit(3)
     split.add(gates.M(0))
     split.add(gates.M(2))
 
-    split_seq = compile_circuit(circuit + split, platform)
+    cs = circuit + split
+    cs._wire_names = list(platform.qubits)[:3]
+    split_seq = compile_circuit(cs, platform)
 
     # the inter-channel sorting is unreliable, and mostly irrelevant (unless align
     # instructions are involved, which is not the case)
