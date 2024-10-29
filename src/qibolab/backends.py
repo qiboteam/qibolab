@@ -127,7 +127,7 @@ class QibolabBackend(NumpyBackend):
 
         # This should be done in qibo side
         # Temporary fix: overwrite the wire names
-        if not all(q in circuit.wire_names for q in self.platform.qubits):
+        if not all(q in circuit.wire_names for q in self.qubits):
             circuit._wire_names = self.qubits
 
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
@@ -175,7 +175,7 @@ class QibolabBackend(NumpyBackend):
         # This should be done in qibo side
         # Temporary fix: overwrite the wire names
         for circuit in circuits:
-            if not all(q in circuit.wire_names for q in self.platform.qubits):
+            if not all(q in circuit.wire_names for q in self.qubits):
                 circuit._wire_names = self.qubits
 
         # TODO: Maybe these loops can be parallelized
