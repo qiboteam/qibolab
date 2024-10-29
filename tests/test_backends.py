@@ -23,6 +23,64 @@ def connected_backend(connected_platform):
     yield QibolabBackend(connected_platform)
 
 
+def test_qubits():
+    backend = QibolabBackend("dummy")
+    assert isinstance(backend.qubits, list)
+    assert set(backend.qubits) == {0, 1, 2, 3, 4}
+
+
+def test_connectivity():
+    backend = QibolabBackend("dummy")
+    assert isinstance(backend.connectivity, list)
+    assert set(backend.connectivity) == {
+        (0, 2),
+        (2, 0),
+        (1, 2),
+        (2, 1),
+        (2, 3),
+        (3, 2),
+        (2, 4),
+        (4, 2),
+    }
+
+
+def test_natives():
+    backend = QibolabBackend("dummy")
+    assert isinstance(backend.natives, list)
+    assert set(backend.natives) == {
+        "I",
+        "Z",
+        "RZ",
+        "U3",
+        "CZ",
+        "CNOT",
+        "GPI2",
+        "GPI",
+        "M",
+    }
+
+
+def test_natives_no_cz_cnot():
+    platform = create_platform("dummy")
+    backend = QibolabBackend(platform)
+    assert set(backend.natives) == {
+        "I",
+        "Z",
+        "RZ",
+        "U3",
+        "GPI2",
+        "GPI",
+        "M",
+        "CZ",
+        "CNOT",
+    }
+
+    for gate in ["CZ", "CNOT"]:
+        for p in platform.pairs:
+            setattr(platform.pairs[p].native_gates, gate, None)
+        assert gate not in set(backend.natives)
+
+
 def test_execute_circuit_initial_state():
     backend = QibolabBackend("dummy")
     circuit = Circuit(1)
