@@ -172,8 +172,8 @@ def _dump_configs(obj: dict[ComponentId, Config]) -> dict[str, dict]:
 def _setvalue(d: dict, path: str, val: Any):
     steps = path.split(".")
     current = d
-    for acc in steps[:-1]:
-        current = current[acc]
+    for step in steps[:-1]:
+        current = current[step if isinstance(current, dict) else int(step)]
 
     current[steps[-1]] = val
 
