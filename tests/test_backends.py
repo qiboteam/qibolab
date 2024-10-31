@@ -11,10 +11,11 @@ from qibolab import MetaBackend, create_platform
 from qibolab.backends import QibolabBackend
 
 
-def generate_circuit_with_gate(nqubits, gate, **kwargs):
+def generate_circuit_with_gate(nqubits, gate, names, **kwargs):
     circuit = Circuit(nqubits)
     circuit.add(gate(qubit, **kwargs) for qubit in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
+    circuit._wire_names = names
     return circuit
 
 
@@ -86,6 +87,7 @@ def test_execute_circuit_initial_state():
     circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=0))
     circuit.add(gates.M(0))
+    circuit._wire_names = [0]
     with pytest.raises(ValueError):
         backend.execute_circuit(circuit, initial_state=np.ones(2))
 
@@ -107,7 +109,7 @@ def test_execute_circuit_initial_state():
 def test_execute_circuit(gate, kwargs):
     backend = QibolabBackend("dummy")
     nqubits = backend.platform.nqubits
-    circuit = generate_circuit_with_gate(nqubits, gate, **kwargs)
+    circuit = generate_circuit_with_gate(nqubits, gate, list(range(nqubits)), **kwargs)
     result = backend.execute_circuit(circuit, nshots=100)
 
 
@@ -117,12 +119,14 @@ def test_measurement_samples():
 
     circuit = Circuit(nqubits)
     circuit.add(gates.M(*range(nqubits)))
+    circuit._wire_names = list(range(nqubits))
     result = backend.execute_circuit(circuit, nshots=100)
     assert result.samples().shape == (100, nqubits)
     assert sum(result.frequencies().values()) == 100
 
     circuit = Circuit(nqubits)
     circuit.add(gates.M(0, 2))
+    circuit._wire_names = list(range(nqubits))
     result = backend.execute_circuit(circuit, nshots=100)
     assert result.samples().shape == (100, 2)
     assert sum(result.frequencies().values()) == 100
@@ -135,6 +139,7 @@ def test_execute_circuits():
     circuit = Circuit(3)
     circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(3))
     circuit.add(gates.M(0, 1, 2))
+    circuit._wire_names = list(range(3))
 
     results = backend.execute_circuits(
         5 * [circuit], initial_states=initial_state_circuit, nshots=100
@@ -151,6 +156,7 @@ def test_multiple_measurements():
     circuit = Circuit(4)
     circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(2))
     circuit.add(gates.CZ(1, 2))
+    circuit._wire_names = list(range(4))
     res0 = circuit.add(gates.M(0))
     res1 = circuit.add(gates.M(3))
     res2 = circuit.add(gates.M(1))
@@ -171,6 +177,7 @@ def dummy_string_qubit_names():
     platform.pairs = {
         (f"A{q0}", f"A{q1}"): pair for (q0, q1), pair in platform.pairs.items()
     }
+    platform.wire_names = [f"A{q}" for q in range(platform.nqubits)]
     return platform
 
 
@@ -182,6 +189,7 @@ def test_execute_circuit_str_qubit_names():
     circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(2))
     circuit.add(gates.CZ(1, 2))
     circuit.add(gates.M(0, 1))
+    circuit._wire_names = ["A0", "A1", "A2"]
     result = backend.execute_circuit(circuit, nshots=20)
     assert result.samples().shape == (20, 2)
 
@@ -195,6 +203,7 @@ def test_ground_state_probabilities_circuit(connected_backend):
     nqubits = connected_backend.platform.nqubits
     circuit = Circuit(nqubits)
     circuit.add(gates.M(*range(nqubits)))
+    circuit._wire_names = list(range(nqubits))
     result = connected_backend.execute_circuit(circuit, nshots=nshots)
     freqs = result.frequencies(binary=False)
     probs = [freqs[i] / nshots for i in range(2**nqubits)]
@@ -214,6 +223,7 @@ def test_excited_state_probabilities_circuit(connected_backend):
     circuit = Circuit(nqubits)
     circuit.add(gates.X(q) for q in range(nqubits))
     circuit.add(gates.M(*range(nqubits)))
+    circuit._wire_names = list(range(nqubits))
     result = connected_backend.execute_circuit(circuit, nshots=nshots)
     freqs = result.frequencies(binary=False)
     probs = [freqs[i] / nshots for i in range(2**nqubits)]
@@ -237,6 +247,7 @@ def test_superposition_for_all_qubits(connected_backend):
         circuit = Circuit(nqubits)
         circuit.add(gates.GPI2(q=q, phi=np.pi / 2))
         circuit.add(gates.M(q))
+        circuit._wire_names = list(range(nqubits))
         freqs = connected_backend.execute_circuit(circuit, nshots=nshots).frequencies(
             binary=False
         )

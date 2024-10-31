@@ -99,12 +99,24 @@ class Compiler:
         return inner
 
     def _compile_gate(
-        self, gate, platform, sequence, virtual_z_phases, moment_start, delays
+        self,
+        gate,
+        platform,
+        sequence,
+        virtual_z_phases,
+        moment_start,
+        delays,
+        wire_names,
     ):
         """Adds a single gate to the pulse sequence."""
         rule = self[gate.__class__]
+
         # get local sequence and phases for the current gate
-        gate_sequence, gate_phases = rule(gate, platform)
+        qubits_ids = (
+            [wire_names[qubit] for qubit in gate.control_qubits],
+            [wire_names[qubit] for qubit in gate.target_qubits],
+        )
+        gate_sequence, gate_phases = rule(qubits_ids, platform, gate.parameters)
 
         # update global pulse sequence
         # determine the right start time based on the availability of the qubits involved
@@ -154,7 +166,13 @@ class Compiler:
                         delays[qubit] += gate.delay
                     continue
                 gate_sequence, gate_phases = self._compile_gate(
-                    gate, platform, sequence, virtual_z_phases, moment_start, delays
+                    gate,
+                    platform,
+                    sequence,
+                    virtual_z_phases,
+                    moment_start,
+                    delays,
+                    circuit.wire_names,
                 )
                 for qubit in gate.qubits:
                     delays[qubit] = 0

@@ -32,6 +32,8 @@ def test_u3_sim_agreement():
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
     compiler = Compiler.default()
+    # Temporary fix: overwrite the wire names
+    circuit._wire_names = list(platform.qubits)
     sequence, _ = compiler.compile(circuit, platform)
     return sequence
 

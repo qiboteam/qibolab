@@ -80,11 +80,10 @@ The following example shows how to modify the compiler in order to execute a cir
 
 
     # define a compiler rule that translates X to the pi-pulse
-    def x_rule(gate, platform):
+    def x_rule(qubits_ids, platform, parameters=None):
         """X gate applied with a single pi-pulse."""
-        qubit = gate.target_qubits[0]
         sequence = PulseSequence()
-        sequence.add(platform.create_RX_pulse(qubit, start=0))
+        sequence.add(platform.create_RX_pulse(qubits_ids[1][0], start=0))
         return sequence, {}
 
 
