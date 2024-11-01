@@ -14,7 +14,6 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import InputOps, PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
-from qibolab._core.unrolling import Bounds
 
 from .pulse import (
     process_acquisition_channel_pulses,
@@ -25,12 +24,6 @@ from .results import fetch_result, parse_result
 from .sweep import process_sweepers
 
 NS_TO_S = 1e-9
-
-BOUNDS = Bounds(
-    waveforms=1,
-    readout=1,
-    instructions=1,
-)
 
 __all__ = ["KeysightQCS"]
 

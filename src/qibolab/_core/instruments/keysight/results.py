@@ -50,8 +50,6 @@ def parse_result(result: np.ndarray, options: ExecutionParameters) -> np.ndarray
     Returns:
         parsed_result (np.ndarray): Parsed numpy array.
     """
-    # For single shot, qibolab expects result format (nshots, ...)
-    # QCS returns (..., nshots), so we need to shuffle the arrays
     if (
         options.averaging_mode is not AveragingMode.SINGLESHOT
         and options.acquisition_type is not AcquisitionType.INTEGRATION
