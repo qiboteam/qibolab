@@ -33,7 +33,14 @@ NdArray = Annotated[
     PlainValidator(ndarray_deserialize),
     PlainSerializer(ndarray_serialize, return_type=str),
 ]
-"""Pydantic-compatible array representation."""
+"""Bytes-based array representation."""
+
+ArrayList = Annotated[
+    npt.NDArray,
+    PlainValidator(np.array),
+    PlainSerializer(lambda a: a.tolist(), return_type=list),
+]
+"""Array representation based on list serialization."""
 
 
 def eq(obj1: BaseModel, obj2: BaseModel) -> bool:
