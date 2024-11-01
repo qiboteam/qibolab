@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import PlainSerializer, PlainValidator
+from pydantic import AfterValidator, PlainSerializer, PlainValidator
 
 from qibolab._core.serialize import ArrayList, Model
 
@@ -11,7 +11,7 @@ __all__ = []
 
 
 class Waveform(Model):
-    data: ArrayList
+    data: Annotated[ArrayList, AfterValidator(lambda a: a.astype(float))]
     index: int
 
 
