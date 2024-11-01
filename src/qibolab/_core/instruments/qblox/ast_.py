@@ -13,6 +13,8 @@ from pydantic import (
 
 from ...serialize import Model
 
+__all__ = []
+
 
 class Register(Model):
     number: int
