@@ -54,7 +54,6 @@ class KeysightQCS(Controller):
         sweepers: list[ParallelSweepers],
         num_shots: int,
     ) -> tuple[qcs.Program, list[tuple[int, int]]]:
-        program = qcs.Program()
 
         # SWEEPER MANAGEMENT
         probe_channel_ids = {
@@ -76,7 +75,7 @@ class KeysightQCS(Controller):
         program = reduce(
             sweep,
             software_sweepers,
-            reduce(sweep, hardware_sweepers, program).n_shots(num_shots),
+            reduce(sweep, hardware_sweepers, qcs.Program()).n_shots(num_shots),
         )
 
         # WAVEFORM COMPILATION
