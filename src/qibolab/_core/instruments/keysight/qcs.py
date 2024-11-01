@@ -33,12 +33,12 @@ class KeysightQCS(Controller):
 
     bounds: str = "qcs/bounds"
 
-    # Map of QCS virtual channels to QCS physical channels
     qcs_channel_map: qcs.ChannelMapper
-    # Map of Qibolab channel IDs to QCS virtual channels
+    """Map of QCS virtual channels to QCS physical channels."""
     virtual_channel_map: dict[ChannelId, qcs.Channels]
-    # Map of QCS virtual acquisition channels to QCS state classifiers
+    """Map of Qibolab channel IDs to QCS virtual channels."""
     classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = {}
+    """Map of QCS virtual acquisition channels to QCS state classifiers."""
     sampling_rate: ClassVar[float] = (
         qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * NS_TO_S
     )
