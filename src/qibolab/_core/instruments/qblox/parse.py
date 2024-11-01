@@ -4,6 +4,8 @@ from lark import Lark, Transformer
 
 from .ast_ import INSTRUCTIONS, Comment, Line, Program
 
+__all__ = []
+
 GRAMMAR_FILE = Path(__file__).parent / "q1asm.lark"
 GRAMMAR = GRAMMAR_FILE.read_text()
 
