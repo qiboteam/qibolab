@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from functools import reduce
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import numpy as np
 from keysight import qcs
@@ -37,8 +37,6 @@ class KeysightQCS(Controller):
     """Map of QCS virtual channels to QCS physical channels."""
     virtual_channel_map: dict[ChannelId, qcs.Channels]
     """Map of Qibolab channel IDs to QCS virtual channels."""
-    classifier_map: Optional[dict[qcs.Channels, qcs.MinimumDistanceClassifier]] = {}
-    """Map of QCS virtual acquisition channels to QCS state classifiers."""
     sampling_rate: ClassVar[float] = (
         qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * NS_TO_S
     )
@@ -86,6 +84,7 @@ class KeysightQCS(Controller):
 
             if isinstance(channel, AcquisitionChannel):
                 probe_channel_id = channel.probe
+                classifier_reference = configs[channel_id].state_iq_values
                 process_acquisition_channel_pulses(
                     program=program,
                     pulses=sequence.channel(channel_id),
@@ -95,7 +94,11 @@ class KeysightQCS(Controller):
                     virtual_channel=virtual_channel,
                     probe_virtual_channel=self.virtual_channel_map[probe_channel_id],
                     sweeper_pulse_map=sweeper_pulse_map,
-                    classifier=self.classifier_map.get(virtual_channel, None),
+                    classifier=(
+                        None
+                        if classifier_reference is None
+                        else qcs.MinimumDistanceClassifier(classifier_reference)
+                    ),
                 )
 
             elif isinstance(channel, IqChannel):
