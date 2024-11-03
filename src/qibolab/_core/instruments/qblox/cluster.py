@@ -3,14 +3,36 @@ from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers
 
-__all__ = []
+from .sequence import Sequence
 
-SAMPLING_RATE = 0
+__all__ = ["Cluster"]
+
+SAMPLING_RATE = 1
+
+
+class PortAddress(Model):
+    module: int
+    port: int
+    input: bool = False
+
+    @classmethod
+    def from_path(cls, path: str):
+        """Load address from :attr:`qibolab.Channel.path`."""
+        els = path.split("/")
+        assert len(els) == 2
+        return cls(module=int(els[0]), port=int(els[1][1:]), input=els[1][0] == "i")
 
 
 class Cluster(Controller):
+    name: str
+    """Device name.
+
+    As described in:
+    https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
+    """
     bounds: str = "qblox/bounds"
 
     def connect(self):
@@ -30,4 +52,11 @@ class Cluster(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
+        results = {}
+        for ps in sequences:
+            seq = Sequence.from_pulses(ps, sweepers, options)
+            results |= self._execute([seq])
+        return results
+
+    def _execute(self, sequences: list[Sequence]) -> dict:
         return {}
