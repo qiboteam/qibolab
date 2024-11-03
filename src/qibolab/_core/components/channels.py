@@ -46,13 +46,13 @@ class DcChannel(Channel):
 class IqChannel(Channel):
     """Channel that can be used to send IQ pulses."""
 
-    mixer: Optional[str]
+    mixer: Optional[str] = None
     """Name of the IQ mixer component corresponding to this channel.
 
     None, if the channel does not have a mixer, or it does not need
     configuration.
     """
-    lo: Optional[str]
+    lo: Optional[str] = None
     """Name of the local oscillator component corresponding to this channel.
 
     None, if the channel does not have an LO, or it is not configurable.
@@ -60,7 +60,7 @@ class IqChannel(Channel):
 
 
 class AcquisitionChannel(Channel):
-    twpa_pump: Optional[str]
+    twpa_pump: Optional[str] = None
     """Name of the TWPA pump component.
 
     None, if there is no TWPA, or it is not configurable.
