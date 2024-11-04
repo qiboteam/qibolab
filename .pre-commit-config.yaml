@@ -19,7 +19,7 @@ repos:
       - id: isort
         args: ["--profile", "black"]
   - repo: https://github.com/PyCQA/docformatter
-    rev: master
+    rev: v1.7.5
     hooks:
       - id: docformatter
         additional_dependencies: [tomli]
