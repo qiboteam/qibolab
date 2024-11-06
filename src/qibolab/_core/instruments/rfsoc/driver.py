@@ -1,7 +1,7 @@
 """RFSoC FPGA driver."""
 
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Union
 
 import numpy as np
@@ -10,29 +10,21 @@ import qibosoq.components.base as rfsoc
 from qibo.config import log
 from qibosoq import client
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import Coupler
-from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
-from qibolab.pulses import PulseSequence, PulseType
-from qibolab.qubits import Qubit
-from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResults
-from qibolab.sweeper import BIAS, Sweeper
+from qibolab._core import AcquisitionType, AveragingMode
+from qibolab._core.couplers import Coupler
+from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses import PulseType
+from qibolab._core.qubits import Qubit
+from qibolab._core.result import AveragedSampleResults, IntegratedResults, SampleResults
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import BIAS, Sweeper
 
+from .constants import NS_TO_US, SAMPLING_RATE
 from .convert import convert, convert_units_sweeper
 
-HZ_TO_MHZ = 1e-6
-NS_TO_US = 1e-3
-
-
-@dataclass
-class RFSoCPort(Port):
-    """Port object of the RFSoC."""
-
-    name: int
-    """DAC number."""
-    offset: float = 0.0
-    """Amplitude factor for biasing."""
+# update docstring
+# self.host -> self.address
 
 
 class RFSoC(Controller):
@@ -46,31 +38,38 @@ class RFSoC(Controller):
         cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
     """
 
-    PortType = RFSoCPort
+    ### 1
+    # Instrument
+    #     name: str -> deprecated
+    #     address: str
+    #     settings: Optional[InstrumentSettings] = None
+    # Controller
+    #     bounds: str
+    #     channels: dict[ChannelId, Channel] = Field(default_factory=dict)
+    # RFSoC
+    #     cfg: rfsoc.Config
+    #     host: str                                 -> remove / use self.address
+    #     port: int
+    #     sampling_rate: float = SAMPLING_RATE
 
-    def __init__(self, name: str, address: str, port: int, sampling_rate: float = 1.0):
-        """Set server information and base configuration.
-
-        Args:
-            name (str): Name of the instrument instance.
-            address (str): IP and port of the server (ex. 192.168.0.10)
-            port (int): Port of the server (ex.6000)
-        """
-        super().__init__(name, address=address)
-        self.host = address
-        self.port = port
-        self.cfg = rfsoc.Config()
-        self._sampling_rate = sampling_rate
+    port: int
+    """Port of the server (ex.6000)"""
+    cfg: rfsoc.Config = rfsoc.Config()
+    """Configuration dataclass required for pulse execution."""
+    bounds: str = "rfsoc/bounds"
+    """Maximum bounds used for batching in sequence unrolling."""
 
     @property
     def sampling_rate(self):
-        return self._sampling_rate
+        return SAMPLING_RATE
 
     def connect(self):
         """Empty method to comply with Instrument interface."""
 
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
+
+    # ========================================================================
 
     @staticmethod
     def _try_to_execute(server_commands, host, port):
@@ -99,6 +98,8 @@ class RFSoC(Controller):
             result = execution_parameters.results_type(discriminated_shots)
         return result
 
+    ### 1
+    # sequence.ro_pulses -> sequence.acquisitions
     @staticmethod
     def validate_input_command(
         sequence: PulseSequence, execution_parameters: ExecutionParameters, sweep: bool
@@ -109,7 +110,7 @@ class RFSoC(Controller):
                 raise NotImplementedError(
                     "Raw data acquisition is not compatible with sweepers"
                 )
-            if len(sequence.ro_pulses) != 1:
+            if len(sequence.acquisitions) != 1:
                 raise NotImplementedError(
                     "Raw data acquisition is compatible only with a single readout"
                 )
@@ -184,7 +185,7 @@ class RFSoC(Controller):
             "sequence": convert(sequence, qubits, self.sampling_rate),
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
         }
-        return self._try_to_execute(server_commands, self.host, self.port)
+        return self._try_to_execute(server_commands, self.address, self.port)
 
     def _execute_sweeps(
         self,
@@ -211,8 +212,18 @@ class RFSoC(Controller):
             "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
             "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
         }
-        return self._try_to_execute(server_commands, self.host, self.port)
+        return self._try_to_execute(server_commands, self.address, self.port)
 
+    ###
+    # def play(
+    #     self,
+    #     configs: dict[str, Config],
+    #     sequences: list[PulseSequence],
+    #     options: ExecutionParameters,
+    #     sweepers: list[ParallelSweepers],
+    # ) -> dict[int, Result]:
+    #     pass
+    # execution_parameters -> options
     def play(
         self,
         qubits: dict[int, Qubit],
