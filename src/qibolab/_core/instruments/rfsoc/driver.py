@@ -11,14 +11,16 @@ from qibo.config import log
 from qibosoq import client
 
 from qibolab._core import AcquisitionType, AveragingMode
+from qibolab._core.components import Config
 from qibolab._core.couplers import Coupler
 from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import PulseType
 from qibolab._core.qubits import Qubit
 from qibolab._core.result import AveragedSampleResults, IntegratedResults, SampleResults
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import BIAS, Sweeper
+from qibolab._core.sweeper import BIAS, ParallelSweepers, Sweeper
 
 from .constants import NS_TO_US, SAMPLING_RATE
 from .convert import convert, convert_units_sweeper
@@ -215,22 +217,21 @@ class RFSoC(Controller):
         return self._try_to_execute(server_commands, self.address, self.port)
 
     ###
+    # execution_parameters -> options
     # def play(
     #     self,
-    #     configs: dict[str, Config],
-    #     sequences: list[PulseSequence],
-    #     options: ExecutionParameters,
-    #     sweepers: list[ParallelSweepers],
-    # ) -> dict[int, Result]:
-    #     pass
-    # execution_parameters -> options
+    #     qubits: dict[int, Qubit],
+    #     couplers: dict[int, Coupler],
+    #     sequence: PulseSequence,
+    #     execution_parameters: ExecutionParameters,
+    # ) -> dict[str, Union[IntegratedResults, SampleResults]]:
     def play(
         self,
-        qubits: dict[int, Qubit],
-        couplers: dict[int, Coupler],
-        sequence: PulseSequence,
-        execution_parameters: ExecutionParameters,
-    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        configs: dict[str, Config],
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[int, Result]:
         """Execute the sequence of instructions and retrieves readout results.
 
         Each readout pulse generates a separate acquisition.
@@ -254,7 +255,7 @@ class RFSoC(Controller):
                 "The RFSoC driver currently does not support couplers."
             )
 
-        self.validate_input_command(sequence, execution_parameters, sweep=False)
+        self.validate_input_command(sequences, options, sweep=(len(sweepers) != 0))
         self.update_cfg(execution_parameters)
 
         if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
