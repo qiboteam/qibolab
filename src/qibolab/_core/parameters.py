@@ -192,7 +192,7 @@ class Parameters(Model):
     ] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
 
-    def update(self, update: Update) -> "Parameters":
+    def replace(self, update: Update) -> "Parameters":
         """Update parameters' values."""
         d = self.model_dump()
         for path, val in update.items():
