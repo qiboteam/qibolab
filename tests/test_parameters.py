@@ -5,6 +5,8 @@ import pytest
 from qibolab._core.components.configs import Config
 from qibolab._core.native import Native, TwoQubitNatives
 from qibolab._core.parameters import ConfigKinds, Parameters, TwoQubitContainer
+from qibolab._core.platform.load import create_platform
+from qibolab._core.pulses.pulse import Pulse
 
 
 def test_two_qubit_container():
@@ -77,3 +79,12 @@ class TestConfigKinds:
 
         reloaded = Parameters.model_validate(dump)
         assert reloaded == pars
+
+
+def test_update():
+    dummy = create_platform("dummy")
+    dummy.update({})
+
+    assert isinstance(dummy.parameters.native_gates.single_qubit[1].RX[0][1], Pulse)
+    assert dummy.parameters.native_gates.single_qubit[1].RX[0][1].amplitude > 0
+    dummy.update({"native_gates.single_qubit.1.RX.0.1.amplitude": -0.5})
