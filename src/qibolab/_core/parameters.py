@@ -173,7 +173,10 @@ def _setvalue(d: dict, path: str, val: Any):
     steps = path.split(".")
     current = d
     for step in steps[:-1]:
-        current = current[step if isinstance(current, dict) else int(step)]
+        try:
+            current = current[int(step)]
+        except ValueError:
+            current = current[step]
 
     current[steps[-1]] = val
 
