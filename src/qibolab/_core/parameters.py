@@ -169,6 +169,21 @@ def _dump_configs(obj: dict[ComponentId, Config]) -> dict[str, dict]:
     return {k: a.dump_python(v) for k, v in obj.items()}
 
 
+def _setvalue(d: dict, path: str, val: Any):
+    steps = path.split(".")
+    current = d
+    for step in steps[:-1]:
+        try:
+            current = current[int(step)]
+        except ValueError:
+            current = current[step]
+
+    current[steps[-1]] = val
+
+
+Update = dict[str, Any]
+
+
 class Parameters(Model):
     """Serializable parameters."""
 
@@ -179,3 +194,11 @@ class Parameters(Model):
         PlainSerializer(_dump_configs),
     ] = Field(default_factory=dict)
     native_gates: NativeGates = Field(default_factory=NativeGates)
+
+    def replace(self, update: Update) -> "Parameters":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+
+        return self.model_validate(d)

@@ -12,7 +12,7 @@ from ..components.channels import Channel
 from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, QubitId, QubitPairId, Result
 from ..instruments.abstract import Controller, Instrument, InstrumentId
-from ..parameters import NativeGates, Parameters, Settings, update_configs
+from ..parameters import NativeGates, Parameters, Settings, Update, update_configs
 from ..pulses import PulseId
 from ..qubits import Qubit
 from ..sequence import PulseSequence
@@ -167,6 +167,10 @@ class Platform:
         """Returns configuration of given component."""
         # pylint: disable=unsubscriptable-object
         return self.parameters.configs[name]
+
+    def update(self, update: Update):
+        """Update platform's parameters."""
+        self.parameters = self.parameters.replace(update)
 
     def connect(self):
         """Connect to all instruments."""
