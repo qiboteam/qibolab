@@ -68,11 +68,21 @@
                 "instructions": 1
             },
             "readout_simulator_config": {
-                "g": 10e6,
-                "noise_model": 0,
-                "internal_Q": 2.5e6,
-                "coupling_Q": 6e4,
-                "sampling_rate": 1966.08e6
+                "sampling_rate": 1966.08e6,
+                "0":{
+                    "g": 10e6,
+                    "noise_model": "AWGN",
+                    "SNR": 30 ,
+                    "internal_Q": 2.5e6,
+                    "coupling_Q": 6e4
+                },
+                "1":{
+                    "g": 10e6,
+                    "noise_model": "AWGN",
+                    "SNR": 30 ,
+                    "internal_Q": 2.5e6,
+                    "coupling_Q": 6e4
+                }
             }
         }
     },

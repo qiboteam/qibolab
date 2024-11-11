@@ -206,7 +206,13 @@ class PulseSimulator(Controller):
                 # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
                 # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
                 # solve quadratic equation for bare_resonator frequency
-                readout = ReadoutSimulator(qubit=qubit, **self.readout_simulator_config)
+                sampling_rate = self.readout_simulator_config["sampling_rate"]
+                readout_parameters = self.readout_simulator_config[
+                    str(get_qubit(ro_pulse.qubit, qubits))
+                ]
+                readout = ReadoutSimulator(
+                    qubit=qubit, sampling_rate=sampling_rate, **readout_parameters
+                )
                 values = np.array(samples[ro_pulse.qubit]).astype(np.complex128)
                 for i in range(len(values)):
                     if values[i] == 0:

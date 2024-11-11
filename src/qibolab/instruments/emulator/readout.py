@@ -54,24 +54,20 @@ class ReadoutSimulator:
     """Module for simulating a readout event based on simulated qubit state."""
 
     def __init__(
-        self,
-        qubit: Qubit,
-        g,
-        noise_model,
-        internal_Q,
-        coupling_Q,
-        sampling_rate=1e9,
-        **kwargs
+        self, qubit: Qubit, g, internal_Q, coupling_Q, sampling_rate=1e9, **kwargs
     ):
         """Initalizer for the readout simulator.
 
         Args:
             qubit (qibolab.qubits.Qubit): Qibolab qubit object.
             g (float): Coupling strength between readout resonator and qubit in Hz.
-            noise_model (function): Time (in)dependent function that models the signal noise.
             internal_Q (float): Internal Q factor of the readout resonator.
             coupling_Q (float): Coupling/external Q factor of the readout resonator.
             sampling_rate (float): Sampling rate of the ADC/digitizer.
+
+        kwargs:
+            noise_model (function): Time (in)dependent function that models the signal noise.
+            SNR: signal-to-noise ratio
         """
         # maintaining the definition of |0> = |e> = (1 0) with the JC Hamiltonian model
         # ground_state_frequency = dressed resonator frequency when qubit is in ground state (vice versa for excited_state_frequency)
@@ -87,8 +83,13 @@ class ReadoutSimulator:
             + dispersive_shift(g, delta, qubit.anharmonicity)
         )
 
+        self.noise_model = kwargs.get("noise_model", "AWGN")
+        # if noise_model was not user-defined via readout.py, AWGN will be used by default
+        if self.noise_model.upper() == "AWGN":
+            self.noise_model = self.AWGN
+
+        self.SNR = kwargs.get("SNR", 30)
         self.lo_frequency = kwargs.get("LO_frequency", None)
-        self.noise_model = noise_model
         self.sampling_rate = sampling_rate
 
         total_Q = 1 / (1 / internal_Q + 1 / coupling_Q)
@@ -187,3 +188,9 @@ class ReadoutSimulator:
         z = np.sum(z) / len(t)
 
         return z
+
+    def AWGN(self, t):  # noise model
+        SNR = self.SNR
+        NOISE_AMP = NOISE_AMP = np.power(10, -SNR / 20)
+        noise = np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
+        return noise
