@@ -22,11 +22,15 @@ from qibolab._core.result import AveragedSampleResults, IntegratedResults, Sampl
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import BIAS, ParallelSweepers, Sweeper
 
-from .constants import NS_TO_US, SAMPLING_RATE
 from .convert import convert, convert_units_sweeper
 
 # update docstring
-# self.host -> self.address
+
+__all__ = ["RFSoC"]
+SAMPLING_RATE = 9.8304
+NANO_TO_SECONDS = 1e-9
+HZ_TO_MHZ = 1e-6
+NS_TO_US = 1e-3
 
 
 class RFSoC(Controller):
@@ -72,6 +76,9 @@ class RFSoC(Controller):
         """Empty method to comply with Instrument interface."""
 
     # ========================================================================
+
+    # def configure_channel(self, channel, config):
+    #     pass
 
     @staticmethod
     def _try_to_execute(server_commands, host, port):

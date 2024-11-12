@@ -1,3 +1,7 @@
 """RFSoC module driver for qibosoq."""
 
-from .driver import RFSoC
+from . import driver
+from .driver import *
+
+__all__ = []
+__all__ += driver.__all__
