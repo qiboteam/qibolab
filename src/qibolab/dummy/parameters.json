@@ -309,12 +309,12 @@
                     },
                     {
                         "type": "virtual_z",
-                        "phase": 0.0,
+                        "phase": 0.1,
                         "qubit": 1
                     },
                     {
                         "type": "virtual_z",
-                        "phase": 0.0,
+                        "phase": 0.2,
                         "qubit": 2
                     },
                     {

@@ -185,6 +185,21 @@ def test_cz_to_sequence(platform):
     assert sequence == test_sequence
 
 
+def test_twocz_to_sequence(platform):
+    if (1, 2) not in platform.pairs:
+        pytest.skip(
+            f"Skipping CZ test for {platform} because pair (1, 2) is not available."
+        )
+
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.CZ(1, 2))
+
+    sequence = compile_circuit(circuit, platform)
+    assert sequence[0].relative_phase == 0
+    assert sequence[1].relative_phase == 0
+
+
 def test_cnot_to_sequence():
     platform = create_platform("dummy")
     circuit = Circuit(4)
