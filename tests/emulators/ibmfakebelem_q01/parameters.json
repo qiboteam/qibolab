@@ -70,14 +70,14 @@
             "readout_simulator_config": {
                 "sampling_rate": 1966.08e6,
                 "0":{
-                    "g": 10e6,
+                    "g": 24e6,
                     "noise_model": "AWGN",
                     "SNR": 30 ,
                     "internal_Q": 2.5e6,
                     "coupling_Q": 6e4
                 },
                 "1":{
-                    "g": 10e6,
+                    "g": 20e6,
                     "noise_model": "AWGN",
                     "SNR": 30 ,
                     "internal_Q": 2.5e6,
@@ -106,7 +106,7 @@
                 "MZ": {
                     "duration": 22400,
                     "amplitude": 0.03,
-                    "frequency": 7301661824.000001,
+                    "frequency": 7301877067.453677,
                     "shape": "Rectangular()",
                     "type": "ro",
                     "start": 0,
@@ -126,7 +126,7 @@
                 "MZ": {
                     "duration": 22400,
                     "amplitude": 0.056500000000000015,
-                    "frequency": 7393428047.0,
+                    "frequency": 7393567707.200529,
                     "shape": "Rectangular()",
                     "type": "ro",
                     "start": 0,
@@ -270,7 +270,7 @@
         "single_qubit": {
             "0": {
                 "bare_resonator_frequency": 7301616604.7871,
-                "readout_frequency": 7301661824.000001,
+                "readout_frequency": 7301877067.453677,
                 "drive_frequency": 5090167234.445013,
                 "anharmonicity": -336123005.1821652,
                 "Ec": 0,
@@ -286,7 +286,7 @@
             },
             "1": {
                 "bare_resonator_frequency": 7393381494,
-                "readout_frequency": 7393428047.0,
+                "readout_frequency": 7393567707.200529,
                 "drive_frequency": 5245306068.285917,
                 "anharmonicity": -316572131.412737,
                 "Ec": 0,

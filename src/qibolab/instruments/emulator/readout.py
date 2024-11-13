@@ -84,7 +84,7 @@ class ReadoutSimulator:
         )
 
         self.noise_model = kwargs.get("noise_model", "AWGN")
-        # if noise_model was not user-defined via readout.py, AWGN will be used by default
+        # if noise_model is not user-defined via readout.py, AWGN will be used by default
         if self.noise_model.upper() == "AWGN":
             self.noise_model = self.AWGN
 
@@ -192,5 +192,5 @@ class ReadoutSimulator:
     def AWGN(self, t):  # noise model
         SNR = self.SNR
         NOISE_AMP = NOISE_AMP = np.power(10, -SNR / 20)
-        noise = np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
+        noise = np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 4e3
         return noise
