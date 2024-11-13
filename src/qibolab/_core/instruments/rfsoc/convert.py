@@ -11,10 +11,9 @@ import qibosoq.components.pulses as rfsoc_pulses
 from qibolab._core.pulses import Pulse
 from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import BIAS, DURATION, START, Parameter, Sweeper
+from qibolab._core.sweeper import Parameter, Sweeper  # , BIAS, DURATION, START
 
-HZ_TO_MHZ = 1e-6
-NS_TO_US = 1e-3
+from .constants import HZ_TO_MHZ, NS_TO_US
 
 
 def replace_pulse_shape(
@@ -108,11 +107,10 @@ def _(
 
 
 @convert.register
-def _(
-    pulse: Pulse, qubits: dict[int, Qubit], start_delay: float, sampling_rate: float
-) -> rfsoc_pulses.Pulse:
+def _(pulse: Pulse, start_delay: float, sampling_rate: float) -> rfsoc_pulses.Pulse:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
     pulse_type = pulse.type.name.lower()
+    # remove qubit, use channel instead
     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
     adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
     lo_frequency = pulse_lo_frequency(pulse, qubits)

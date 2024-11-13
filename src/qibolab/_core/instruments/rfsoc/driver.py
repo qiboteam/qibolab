@@ -22,15 +22,12 @@ from qibolab._core.result import AveragedSampleResults, IntegratedResults, Sampl
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import BIAS, ParallelSweepers, Sweeper
 
+from .constants import NS_TO_US, SAMPLING_RATE
 from .convert import convert, convert_units_sweeper
 
 # update docstring
 
 __all__ = ["RFSoC"]
-SAMPLING_RATE = 9.8304
-NANO_TO_SECONDS = 1e-9
-HZ_TO_MHZ = 1e-6
-NS_TO_US = 1e-3
 
 
 class RFSoC(Controller):
@@ -188,6 +185,9 @@ class RFSoC(Controller):
         Returns:
             Lists of I and Q value measured
         """
+
+        # TODO: pulse conversion
+
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
@@ -257,26 +257,30 @@ class RFSoC(Controller):
             A dictionary mapping the readout pulses serial and respective qubits to
             qibolab results objects
         """
-        if couplers != {}:
-            raise NotImplementedError(
-                "The RFSoC driver currently does not support couplers."
-            )
 
+        # coupler check?
+        # if couplers != {}:
+        #     raise NotImplementedError(
+        #         "The RFSoC driver currently does not support couplers."
+        #     )
+
+        # sequence -> sequences
+        # execution_parameters -> options
         self.validate_input_command(sequences, options, sweep=(len(sweepers) != 0))
-        self.update_cfg(execution_parameters)
+        self.update_cfg(options)
 
-        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
             self.cfg.average = False
         else:
-            self.cfg.average = (
-                execution_parameters.averaging_mode is AveragingMode.CYCLIC
-            )
+            self.cfg.average = options.averaging_mode is AveragingMode.CYCLIC
 
-        if execution_parameters.acquisition_type is AcquisitionType.RAW:
+        if options.acquisition_type is AcquisitionType.RAW:
             opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
         else:
             opcode = rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
-        toti, totq = self._execute_pulse_sequence(sequence, qubits, opcode)
+
+        #
+        toti, totq = self._execute_pulse_sequence(sequences, qubits, opcode)
 
         results = {}
         probed_qubits = np.unique([p.qubit for p in sequence.ro_pulses])
@@ -286,28 +290,27 @@ class RFSoC(Controller):
                 i_pulse = np.array(toti[j][i])
                 q_pulse = np.array(totq[j][i])
 
-                if (
-                    execution_parameters.acquisition_type
-                    is AcquisitionType.DISCRIMINATION
-                ):
+                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     discriminated_shots = self.classify_shots(
                         i_pulse, q_pulse, qubits[ro_pulse.qubit]
                     )
                     result = self.convert_and_discriminate_samples(
-                        discriminated_shots, execution_parameters
+                        discriminated_shots, options
                     )
                 else:
-                    result = execution_parameters.results_type(i_pulse + 1j * q_pulse)
+                    result = options.results_type(i_pulse + 1j * q_pulse)
                 results[ro_pulse.qubit] = results[ro_pulse.serial] = result
 
         return results
 
-    def update_cfg(self, execution_parameters: ExecutionParameters):
+    ### 1
+    # execution_parameters -> options
+    def update_cfg(self, options: ExecutionParameters):
         """Update rfsoc.Config object with new parameters."""
-        if execution_parameters.nshots is not None:
-            self.cfg.reps = execution_parameters.nshots
-        if execution_parameters.relaxation_time is not None:
-            self.cfg.relaxation_time = execution_parameters.relaxation_time * NS_TO_US
+        if options.nshots is not None:
+            self.cfg.reps = options.nshots
+        if options.relaxation_time is not None:
+            self.cfg.relaxation_time = options.relaxation_time * NS_TO_US
 
     def classify_shots(
         self,

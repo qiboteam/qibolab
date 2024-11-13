@@ -1,0 +1,96 @@
+{
+    "settings": {
+        "nshots": 1024,
+        "relaxation_time": 100000
+    },
+
+    "configs": {
+        "tii_rfsoc4x2": {
+            "kind": "bounds",
+            "waveforms": 0,
+            "readout": 0,
+            "instructions": 0
+        },
+        "twpa_a": {
+            "kind": "oscillator",
+            "frequency": 6200000000,
+            "power": -1
+        },
+        "ErasynthLO": {
+            "kind": "oscillator",
+            "frequency": 0,
+            "power": 0
+        },
+        "0/L3-18_ro": {
+            "kind": "iq",
+            "frequency": 7371258599
+        },
+        "0/L2-RO": {
+            "kind": "acquisition",
+            "delay": 0,
+            "smearing": 0.0,
+            "threshold": -0.8981346462690887,
+            "iq_angle": -1.2621946150226666
+        },
+        "0/L3-18_qd": {
+            "kind": "iq",
+            "frequency": 5542341844
+        }
+    },
+
+    "native_gates": {
+        "single_qubit": {
+            "0": {
+                "RX": [
+                    [
+                        "0/L3-18_qd",
+                        {
+                            "kind": "pulse",
+                            "duration": 30,
+                            "amplitude": 0.05284168507293318,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 0.0
+                        }
+                    ]
+                ],
+                "RX12": [
+                    [
+                        "0/L3-18_qd",
+                        {
+                            "kind": "pulse",
+                            "duration": 30,
+                            "amplitude": 0.05284168507293318,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 0.0
+                        }
+                    ]
+                ],
+                "MZ": [
+                    [
+                        "0/L2-RO",
+                        {
+                            "kind": "readout",
+                            "acquisition": {
+                                "kind": "acquisition",
+                                "duration": 600
+                            },
+                            "probe": {
+                                "kind": "pulse",
+                                "duration": 600,
+                                "amplitude": 0.03,
+                                "envelope": {
+                                    "kind": "rectangular"
+                                },
+                                "relative_phase": 0.0
+                            }
+                        }
+                    ]
+                ]
+            }
+        }
+    }
+}
