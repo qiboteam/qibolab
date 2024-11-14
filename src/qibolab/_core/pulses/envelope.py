@@ -337,8 +337,8 @@ class Custom(BaseEnvelope):
 
     kind: Literal["custom"] = "custom"
 
-    i_: npt.NDArray
-    q_: npt.NDArray
+    i_: NdArray
+    q_: NdArray
 
     def i(self, samples: int) -> Waveform:
         """I.
