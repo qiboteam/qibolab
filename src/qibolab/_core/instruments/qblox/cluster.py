@@ -1,3 +1,9 @@
+from typing import Optional
+
+import qblox_instruments as qblox
+from qblox_instruments.qcodes_drivers.module import Module
+from qcodes.instrument import find_or_create_instrument
+
 from qibolab._core.components.configs import Config
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import Result
@@ -34,16 +40,33 @@ class Cluster(Controller):
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
     bounds: str = "qblox/bounds"
-
-    def connect(self):
-        pass
-
-    def disconnect(self):
-        pass
+    _cluster: Optional[qblox.Cluster] = None
 
     @property
     def sampling_rate(self) -> int:
         return SAMPLING_RATE
+
+    def connect(self):
+        self._cluster = find_or_create_instrument(
+            qblox.Cluster, recreate=True, name=self.name, identifier=self.address
+        )
+
+    @property
+    def is_connected(self) -> bool:
+        return self._cluster is not None
+
+    def disconnect(self):
+        assert self._cluster is not None
+
+        for module in self.modules.values():
+            module.stop_sequencer()
+        self._cluster.reset()
+        self._cluster = None
+
+    @property
+    def modules(self) -> dict[int, Module]:
+        assert self._cluster is not None
+        return {mod.slot_idx: mod for mod in self._cluster.modules if mod.present()}
 
     def play(
         self,
