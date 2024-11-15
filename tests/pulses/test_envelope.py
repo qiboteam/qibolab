@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from qibolab._core.pulses import (
+    Custom,
     Drag,
     ECap,
     Gaussian,
@@ -216,3 +217,13 @@ def test_eq():
     shape3 = ECap(alpha=5)
     assert shape1 == shape2
     assert not shape1 == shape3
+
+
+def test_hash_custom():
+    """Testing __hash__ for Custom."""
+
+    shape1 = Custom(i_=np.ones(10), q_=np.ones(10))
+    shape2 = Custom(i_=np.ones(10), q_=np.ones(10))
+    shape3 = Custom(i_=np.ones(10), q_=np.zeros(10))
+    assert hash(shape1) == hash(shape2)
+    assert hash(shape1) != hash(shape3)

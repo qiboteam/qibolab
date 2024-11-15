@@ -373,6 +373,9 @@ class Custom(BaseEnvelope):
         """
         return eq(self, other)
 
+    def __hash__(self):
+        return hash(np.concatenate([self.i_, self.q_]).tobytes())
+
 
 Envelope = Annotated[
     Union[
