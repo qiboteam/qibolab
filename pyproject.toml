@@ -62,10 +62,8 @@ pytest = ">=7.2.2"
 pytest-cov = "^4.0.0"
 pytest-env = ">=0.8.1"
 pytest-mock = ">=3.10.0"
-lark = "^1.1.9"
 qcodes = "^0.52.0"
 qcodes_contrib_drivers = "^0.23.0"
-pyvisa-py = "^0.5.3"
 requests = "^2.32.0"
 
 [tool.poetry.group.analysis]
