@@ -132,6 +132,8 @@ class QibolabBackend(NumpyBackend):
 
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
+        print(sequence)
+
         if not self.platform.is_connected:
             self.platform.connect()
 
