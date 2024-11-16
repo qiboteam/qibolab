@@ -90,6 +90,9 @@ class Cluster(Controller):
         return SAMPLING_RATE
 
     def connect(self):
+        if self.is_connected:
+            return
+
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
