@@ -12,6 +12,7 @@ from qibolab.couplers import Coupler
 from qibolab.instruments.abstract import Controller
 from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import general_no_coupler_model
+from qibolab.instruments.emulator.readout import ReadoutSimulator
 from qibolab.pulses import PulseSequence, PulseType, ReadoutPulse
 from qibolab.qubits import Qubit, QubitId
 from qibolab.result import IntegratedResults, SampleResults
@@ -87,6 +88,22 @@ class PulseSimulator(Controller):
         self.simulate_dissipation = simulation_config["simulate_dissipation"]
         self.output_state_history = simulation_config["output_state_history"]
 
+        self.readout_simulator_config = kwargs.get("readout_simulator_config", None)
+        self.sweep_readout = False  # no readout is carried out in sweeping by default
+        """readout_simulator_config = Dict(g=, noise_model=, internal_Q=,
+        coupling_Q=, sampling_rate=) Additional parameters needed for
+        ReadoutSimulator for demodulation emulation.
+
+        Example of calibrated noise_model (found in examples/emulator
+        readout in readout_example.ipynb or readout_example.py): SNR =
+        30  # dB NOISE_AMP = np.power(10, -SNR / 20) AWGN = lambda t:
+        np.random.normal(loc=0, scale=NOISE_AMP, size=len(t)) * 3e4
+
+        noise_model = AWGN
+
+        **initialize scale=0 if noise_model is not needed
+        """
+
     def connect(self):
         pass
 
@@ -154,6 +171,7 @@ class PulseSimulator(Controller):
             dict: A dictionary mapping the readout pulses serial and respective qubits to
             Qibolab results object, as well as simulation-related time and states data.
         """
+        self.qubits = qubits
         nshots = execution_parameters.nshots
         ro_pulse_list = sequence.ro_pulses
         times_dict, output_states, ro_reduced_dm, rdm_qubit_list = (
@@ -172,7 +190,9 @@ class PulseSimulator(Controller):
         if self.readout_error is not None:
             samples = apply_readout_noise(samples, self.readout_error)
         # generate result object
-        results = get_results_from_samples(ro_pulse_list, samples, execution_parameters)
+        results = self.get_results_from_samples(
+            ro_pulse_list, samples, execution_parameters
+        )
         results["simulation"] = {
             "sequence_duration": times_dict["sequence_duration"],
             "simulation_dt": times_dict["simulation_dt"],
@@ -212,6 +232,7 @@ class PulseSimulator(Controller):
         Raises:
             NotImplementedError: If sweep.parameter is not in AVAILABLE_SWEEP_PARAMETERS.
         """
+        self.qubits = qubits
         sweeper_shape = [len(sweep.values) for sweep in sweeper]
 
         # Record pulse values before sweeper modification
@@ -249,7 +270,7 @@ class PulseSimulator(Controller):
         simulation_time_array = np.array(simulation_time_array).reshape(sweeper_shape)
 
         # reshape and reformat samples to results format
-        results = get_results_from_samples(
+        results = self.get_results_from_samples(
             sequence.ro_pulses, sweep_samples, execution_parameters, sweeper_shape
         )
 
@@ -316,6 +337,8 @@ class PulseSimulator(Controller):
         sweep = sweeper[0]
         param = sweep.parameter
         param_name = param.name.lower()
+        if param == Parameter.frequency and len(sweep.pulses.ro_pulses) != 0:
+            self.sweep_readout = True
 
         base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
         sweeper_op = _sweeper_operation.get(sweep.type)
@@ -376,7 +399,118 @@ class PulseSimulator(Controller):
         if self.readout_error is not None:
             samples = apply_readout_noise(samples, self.readout_error)
 
+        #qubit readout for sweeping
+        if (
+            execution_parameters.acquisition_type is AcquisitionType.INTEGRATION
+            and self.readout_simulator_config is not None
+            and self.sweep_readout == True
+        ):
+            for ro_pulse in ro_pulse_list:
+                # obtain qubit with its qubitID
+                qubit = qubits[get_qubit(ro_pulse.qubit, qubits)]
+                # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
+                # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
+                # solve quadratic equation for bare_resonator frequency
+                sampling_rate = self.readout_simulator_config["sampling_rate"]
+                readout_parameters = self.readout_simulator_config[
+                    str(get_qubit(ro_pulse.qubit, qubits))
+                ]
+                readout = ReadoutSimulator(
+                    qubit=qubit, sampling_rate=sampling_rate, **readout_parameters
+                )
+                values = np.array(samples[ro_pulse.qubit]).astype(np.complex128)
+                for i in range(len(values)):
+                    if values[i] == 0:
+                        values[i] = readout.simulate_ground_state_iq(ro_pulse)
+                    elif values[i] == 1:
+                        values[i] = readout.simulate_excited_state_iq(ro_pulse)
+                    else:
+                        raise ValueError("measurement output is not 0 or 1")
+
+                samples[ro_pulse.qubit] = list(values)
+
         return times_dict, state_history, samples
+
+    def get_results_from_samples(
+        self,
+        ro_pulse_list: list,
+        samples: dict[Union[str, int], list],
+        execution_parameters: ExecutionParameters,
+        prepend_to_shape: list = [],
+    ) -> dict[str, Union[IntegratedResults, SampleResults]]:
+        """Converts samples into Qibolab results format.
+
+        Args:
+            ro_pulse_list (list): List of readout pulse sequences.
+            samples (dict): Samples generated by get_samples.
+            append_to_shape (list): Specifies additional dimensions for the shape of the results. Defaults to empty list.
+            execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
+                                                        relaxation_time,
+                                                        fast_reset,
+                                                        acquisition_type,
+                                                        averaging_mode)
+
+        Returns:
+            dict: Qibolab result data.
+
+        Raises:
+            ValueError: If execution_parameters.acquisition_type is not supported.
+        """
+        shape = prepend_to_shape + [execution_parameters.nshots]
+        tshape = [-1] + list(range(len(prepend_to_shape)))
+
+        results = {}
+        for ro_pulse in ro_pulse_list:
+            values = np.array(samples[ro_pulse.qubit]).reshape(shape).transpose(tshape)
+
+            if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
+                processed_values = SampleResults(values)
+
+            elif execution_parameters.acquisition_type is AcquisitionType.INTEGRATION:
+                processed_values = IntegratedResults(values.astype(np.complex128))
+                if (
+                    self.readout_simulator_config is not None
+                    and self.sweep_readout == False       
+                    #qubit readout for sweeping is carried out individually after each sweep, due to variability of sweeping
+                ):
+                    # obtain qubit with its qubitID
+                    qubit = self.qubits[get_qubit(ro_pulse.qubit, self.qubits)]
+                    # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
+                    # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
+                    # solve quadratic equation for bare_resonator frequency
+                    sampling_rate = self.readout_simulator_config["sampling_rate"]
+                    readout_parameters = self.readout_simulator_config[
+                        str(get_qubit(ro_pulse.qubit, self.qubits))
+                    ]
+                    readout = ReadoutSimulator(
+                        qubit=qubit, sampling_rate=sampling_rate, **readout_parameters
+                    )
+                    values = np.array(samples[ro_pulse.qubit]).astype(np.complex128)
+                    for i in range(len(values)):
+                        if values[i] == 0:
+                            values[i] = readout.simulate_ground_state_iq(ro_pulse)
+                        elif values[i] == 1:
+                            values[i] = readout.simulate_excited_state_iq(ro_pulse)
+                        else:
+                            raise ValueError("Measurement output is not 0 or 1")
+
+                    values = (
+                        np.array(values).reshape(shape).transpose(tshape)
+                    )  # converts samples into Qibolab results format
+                    processed_values = IntegratedResults(values)
+
+            else:
+                raise ValueError(
+                    f"Current emulator does not support requested AcquisitionType {execution_parameters.acquisition_type}"
+                )
+
+            if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
+                processed_values = (
+                    processed_values.average
+                )  # generates AveragedSampleResults
+
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = processed_values
+        return results
 
     @staticmethod
     def merge_sweep_results(
@@ -408,6 +542,19 @@ _sweeper_operation = {
     SweeperType.OFFSET: operator.add,
     SweeperType.FACTOR: operator.mul,
 }
+
+
+def get_qubit(target_qubit, qubits):
+    """Return the name of target physical qubit (qubitID) corresponding to a
+    logical qubit.
+
+    Temporary fix for the compiler to work for platforms where the
+    qubits are not named as 0, 1, 2, ...
+    """
+    try:
+        return qubits[target_qubit].name
+    except KeyError:
+        return list(qubits.keys())[target_qubit]
 
 
 def ps_to_waveform_dict(
@@ -640,57 +787,6 @@ def make_array_index_list(array_shape: list):
     """Generates all indices of an array of arbitrary shape in ascending
     order."""
     return np.indices(array_shape).reshape(len(array_shape), -1).T
-
-
-def get_results_from_samples(
-    ro_pulse_list: list,
-    samples: dict[Union[str, int], list],
-    execution_parameters: ExecutionParameters,
-    prepend_to_shape: list = [],
-) -> dict[str, Union[IntegratedResults, SampleResults]]:
-    """Converts samples into Qibolab results format.
-
-    Args:
-        ro_pulse_list (list): List of readout pulse sequences.
-        samples (dict): Samples generated by get_samples.
-        append_to_shape (list): Specifies additional dimensions for the shape of the results. Defaults to empty list.
-        execution_parameters (`qibolab.ExecutionParameters`): Parameters (nshots,
-                                                    relaxation_time,
-                                                    fast_reset,
-                                                    acquisition_type,
-                                                    averaging_mode)
-
-    Returns:
-        dict: Qibolab result data.
-
-    Raises:
-        ValueError: If execution_parameters.acquisition_type is not supported.
-    """
-    shape = prepend_to_shape + [execution_parameters.nshots]
-    tshape = [-1] + list(range(len(prepend_to_shape)))
-
-    results = {}
-    for ro_pulse in ro_pulse_list:
-        values = np.array(samples[ro_pulse.qubit]).reshape(shape).transpose(tshape)
-
-        if execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION:
-            processed_values = SampleResults(values)
-
-        elif execution_parameters.acquisition_type is AcquisitionType.INTEGRATION:
-            processed_values = IntegratedResults(values.astype(np.complex128))
-
-        else:
-            raise ValueError(
-                f"Current emulator does not support requested AcquisitionType {execution_parameters.acquisition_type}"
-            )
-
-        if execution_parameters.averaging_mode is AveragingMode.CYCLIC:
-            processed_values = (
-                processed_values.average
-            )  # generates AveragedSampleResults
-
-        results[ro_pulse.qubit] = results[ro_pulse.serial] = processed_values
-    return results
 
 
 def get_samples(
