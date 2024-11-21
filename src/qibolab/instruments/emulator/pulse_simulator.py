@@ -89,6 +89,7 @@ class PulseSimulator(Controller):
         self.output_state_history = simulation_config["output_state_history"]
 
         self.readout_simulator_config = kwargs.get("readout_simulator_config", None)
+        self.sweep_readout = False  # no readout is carried out in sweeping by default
         """readout_simulator_config = Dict(g=, noise_model=, internal_Q=,
         coupling_Q=, sampling_rate=) Additional parameters needed for
         ReadoutSimulator for demodulation emulation.
@@ -336,6 +337,8 @@ class PulseSimulator(Controller):
         sweep = sweeper[0]
         param = sweep.parameter
         param_name = param.name.lower()
+        if param == Parameter.frequency and len(sweep.pulses.ro_pulses) != 0:
+            self.sweep_readout = True
 
         base_sweeper_values = [getattr(pulse, param_name) for pulse in sweep.pulses]
         sweeper_op = _sweeper_operation.get(sweep.type)
@@ -396,6 +399,36 @@ class PulseSimulator(Controller):
         if self.readout_error is not None:
             samples = apply_readout_noise(samples, self.readout_error)
 
+        #qubit readout for sweeping
+        if (
+            execution_parameters.acquisition_type is AcquisitionType.INTEGRATION
+            and self.readout_simulator_config is not None
+            and self.sweep_readout == True
+        ):
+            for ro_pulse in ro_pulse_list:
+                # obtain qubit with its qubitID
+                qubit = qubits[get_qubit(ro_pulse.qubit, qubits)]
+                # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
+                # such that the V_I/V_Q are maximally seperated (i.e.: bare_resonator_frequency = lambshifted readout pulse frequency + lamb shift)
+                # solve quadratic equation for bare_resonator frequency
+                sampling_rate = self.readout_simulator_config["sampling_rate"]
+                readout_parameters = self.readout_simulator_config[
+                    str(get_qubit(ro_pulse.qubit, qubits))
+                ]
+                readout = ReadoutSimulator(
+                    qubit=qubit, sampling_rate=sampling_rate, **readout_parameters
+                )
+                values = np.array(samples[ro_pulse.qubit]).astype(np.complex128)
+                for i in range(len(values)):
+                    if values[i] == 0:
+                        values[i] = readout.simulate_ground_state_iq(ro_pulse)
+                    elif values[i] == 1:
+                        values[i] = readout.simulate_excited_state_iq(ro_pulse)
+                    else:
+                        raise ValueError("measurement output is not 0 or 1")
+
+                samples[ro_pulse.qubit] = list(values)
+
         return times_dict, state_history, samples
 
     def get_results_from_samples(
@@ -435,7 +468,11 @@ class PulseSimulator(Controller):
 
             elif execution_parameters.acquisition_type is AcquisitionType.INTEGRATION:
                 processed_values = IntegratedResults(values.astype(np.complex128))
-                if self.readout_simulator_config is not None:
+                if (
+                    self.readout_simulator_config is not None
+                    and self.sweep_readout == False       
+                    #qubit readout for sweeping is carried out individually after each sweep, due to variability of sweeping
+                ):
                     # obtain qubit with its qubitID
                     qubit = self.qubits[get_qubit(ro_pulse.qubit, self.qubits)]
                     # bare_resonator_frequency is prepared considering readout pulse frequency = lambshifted readout pulse frequency,
