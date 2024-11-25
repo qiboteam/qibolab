@@ -93,7 +93,8 @@ def test_execute_circuit_initial_state():
 
     initial_circuit = Circuit(1)
     circuit.add(gates.GPI2(0, phi=np.pi / 2))
-    backend.execute_circuit(circuit, initial_state=initial_circuit)
+    with pytest.raises(ValueError):
+        backend.execute_circuit(circuit, initial_state=initial_circuit)
 
 
 @pytest.mark.parametrize(
@@ -140,10 +141,9 @@ def test_execute_circuits():
     circuit.add(gates.GPI2(i, phi=np.pi / 2) for i in range(3))
     circuit.add(gates.M(0, 1, 2))
     circuit._wire_names = list(range(3))
+    circuit = initial_state_circuit + circuit
 
-    results = backend.execute_circuits(
-        5 * [circuit], initial_states=initial_state_circuit, nshots=100
-    )
+    results = backend.execute_circuits(5 * [circuit], nshots=100)
     assert len(results) == 5
     for result in results:
         assert result.samples().shape == (100, 3)

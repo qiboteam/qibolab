@@ -107,22 +107,16 @@ class QibolabBackend(NumpyBackend):
 
         Args:
             circuit (:class:`qibo.models.circuit.Circuit`): Circuit to execute.
-            initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
-                If ``None`` the default ``|00...0>`` state is used.
+            initial_state (None): Must be ``None`` as qibolab backend does not support initial state preparation.
             nshots (int): Number of shots to sample from the experiment.
 
         Returns:
             ``MeasurementOutcomes`` object containing the results acquired from the execution.
         """
-        if isinstance(initial_state, Circuit):
-            return self.execute_circuit(
-                circuit=initial_state + circuit,
-                nshots=nshots,
-            )
         if initial_state is not None:
             raise_error(
                 ValueError,
-                "Hardware backend only supports circuits as initial states.",
+                "Hardware backend does not support initial states.",
             )
 
         # This should be done in qibo side
@@ -154,22 +148,16 @@ class QibolabBackend(NumpyBackend):
 
         Args:
             circuits (list): List of circuits to execute.
-            initial_states (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
-                If ``None`` the default ``|00...0>`` state is used.
+            initial_states (None): Must be ``None`` as qibolab backend does not support initial state preparation.
             nshots (int): Number of shots to sample from the experiment.
 
         Returns:
             List of ``MeasurementOutcomes`` objects containing the results acquired from the execution of each circuit.
         """
-        if isinstance(initial_states, Circuit):
-            return self.execute_circuits(
-                circuits=[initial_states + circuit for circuit in circuits],
-                nshots=nshots,
-            )
         if initial_states is not None:
             raise_error(
                 ValueError,
-                "Hardware backend only supports circuits as initial states.",
+                "Hardware backend does not support initial states.",
             )
 
         # This should be done in qibo side
