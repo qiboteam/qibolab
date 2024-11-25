@@ -132,9 +132,16 @@ class QibolabBackend(NumpyBackend):
 
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
-        print(sequence)
+        if str(nshots)[0] == "1":
+            print(circuit.wire_names)
 
-        if nshots == 1234:
+        if str(nshots)[1] == "1":
+            circuit.draw()
+
+        if str(nshots)[2] == "1":
+            print(sequence)
+
+        if str(nshots)[3] == "1":
             return None
 
         if not self.platform.is_connected:
