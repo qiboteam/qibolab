@@ -82,9 +82,8 @@ class SingleQubitNatives(NativeContainer):
         """
         if self.RX90 != None:
             return rotation(self.RX, 2 * theta, phi)
-        else:
-            assert self.RX is not None
-            return rotation(self.RX, theta, phi)
+        assert self.RX is not None
+        return rotation(self.RX, theta, phi)
 
 
 class TwoQubitNatives(NativeContainer):
