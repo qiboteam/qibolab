@@ -258,6 +258,7 @@ class QMController(Controller):
         self._reset_temporary_calibration()
         if self.manager is not None:
             self.manager.close_all_quantum_machines()
+            self.manager = None
             self.is_connected = False
 
     def calibrate_mixers(self, qubits):
