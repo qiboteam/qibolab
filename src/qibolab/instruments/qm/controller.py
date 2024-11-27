@@ -288,6 +288,10 @@ class QMController(Controller):
         Args:
             program: QUA program.
         """
+        if self.manager is None:
+            raise RuntimeError(
+                "Quantum Machines are not connected. Please use ``platform.connect()``."
+            )
         machine = self.manager.open_qm(self.config.__dict__)
         return machine.execute(program)
 
