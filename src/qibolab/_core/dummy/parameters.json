@@ -170,6 +170,21 @@
             }
           ]
         ],
+        "RX90": [
+          [
+            "0/drive",
+            {
+              "duration": 22.3453,
+              "amplitude": 0.1,
+              "envelope": {
+                "kind": "gaussian",
+                "rel_sigma": 0.2
+              },
+              "relative_phase": 0.0,
+              "kind": "pulse"
+            }
+          ]
+        ],
         "RX12": [
           [
             "0/drive12",
@@ -212,6 +227,22 @@
       },
       "1": {
         "RX": [
+          [
+            "1/drive",
+            {
+              "duration": 40.0,
+              "amplitude": 0.3,
+              "envelope": {
+                "kind": "drag",
+                "rel_sigma": 0.2,
+                "beta": 0.02
+              },
+              "relative_phase": 0.0,
+              "kind": "pulse"
+            }
+          ]
+        ],
+        "RX90": [
           [
             "1/drive",
             {
@@ -285,6 +316,21 @@
             }
           ]
         ],
+        "RX90": [
+          [
+            "0/drive",
+            {
+              "duration": 22.3453,
+              "amplitude": 0.1,
+              "envelope": {
+                "kind": "gaussian",
+                "rel_sigma": 0.2
+              },
+              "relative_phase": 0.0,
+              "kind": "pulse"
+            }
+          ]
+        ],
         "RX12": [
           [
             "2/drive12",
@@ -342,6 +388,21 @@
             }
           ]
         ],
+        "RX90": [
+          [
+            "0/drive",
+            {
+              "duration": 22.3453,
+              "amplitude": 0.1,
+              "envelope": {
+                "kind": "gaussian",
+                "rel_sigma": 0.2
+              },
+              "relative_phase": 0.0,
+              "kind": "pulse"
+            }
+          ]
+        ],
         "RX12": [
           [
             "3/drive12",
@@ -385,6 +446,22 @@
       },
       "4": {
         "RX": [
+          [
+            "4/drive",
+            {
+              "duration": 40.0,
+              "amplitude": 0.3,
+              "envelope": {
+                "kind": "drag",
+                "rel_sigma": 0.2,
+                "beta": 0.02
+              },
+              "relative_phase": 0.0,
+              "kind": "pulse"
+            }
+          ]
+        ],
+        "RX90": [
           [
             "4/drive",
             {
