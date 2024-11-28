@@ -318,7 +318,7 @@
         ],
         "RX90": [
           [
-            "0/drive",
+            "2/drive",
             {
               "duration": 22.3453,
               "amplitude": 0.1,
@@ -390,7 +390,7 @@
         ],
         "RX90": [
           [
-            "0/drive",
+            "3/drive",
             {
               "duration": 22.3453,
               "amplitude": 0.1,
