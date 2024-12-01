@@ -258,6 +258,7 @@ class QMController(Controller):
         self._reset_temporary_calibration()
         if self.manager is not None:
             self.manager.close_all_quantum_machines()
+            self.manager = None
             self.is_connected = False
 
     def calibrate_mixers(self, qubits):
@@ -287,6 +288,10 @@ class QMController(Controller):
         Args:
             program: QUA program.
         """
+        if self.manager is None:
+            raise RuntimeError(
+                "Quantum Machines are not connected. Please use ``platform.connect()``."
+            )
         machine = self.manager.open_qm(self.config.__dict__)
         return machine.execute(program)
 
