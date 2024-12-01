@@ -120,7 +120,6 @@ class Platform:
     def __post_init__(self):
         signal.signal(signal.SIGTERM, self.termination_handler)
         signal.signal(signal.SIGINT, self.termination_handler)
-        log.info("signals registered")
 
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
