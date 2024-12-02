@@ -104,7 +104,6 @@ class Compiler:
         platform,
         sequence,
         virtual_z_phases,
-        moment_start,
         delays,
         wire_names,
     ):
@@ -120,13 +119,12 @@ class Compiler:
 
         # update global pulse sequence
         # determine the right start time based on the availability of the qubits involved
-        all_qubits = {*gate_sequence.qubits, *gate.qubits}
+        all_qubits = {*gate_sequence.qubits, *gate.qubits, *gate_phases.keys()}
         start = max(
-            *[
+            [
                 sequence.get_qubit_pulses(qubit).finish + delays[qubit]
                 for qubit in all_qubits
-            ],
-            moment_start,
+            ]
         )
         # shift start time and phase according to the global sequence
         for pulse in gate_sequence:
@@ -159,7 +157,6 @@ class Compiler:
         # process circuit gates
         delays = defaultdict(int)
         for moment in circuit.queue.moments:
-            moment_start = sequence.finish
             for gate in set(filter(lambda x: x is not None, moment)):
                 if isinstance(gate, gates.Align):
                     for qubit in gate.qubits:
@@ -170,7 +167,6 @@ class Compiler:
                     platform,
                     sequence,
                     virtual_z_phases,
-                    moment_start,
                     delays,
                     circuit.wire_names,
                 )
