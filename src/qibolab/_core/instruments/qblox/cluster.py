@@ -127,9 +127,8 @@ class Cluster(Controller):
     def _upload(
         self, sequences: dict[ChannelId, Sequence]
     ) -> dict[SlotId, dict[ChannelId, SequencerId]]:
-        channels_by_module = _channels_by_module()
         sequencers = defaultdict(dict)
-        for mod, chs in channels_by_module.items():
+        for mod, chs in _channels_by_module().items():
             module = self._modules[mod]
             assert len(module.sequencers) > len(chs)
             # Map sequencers to specific outputs (but first disable all sequencer connections)
@@ -166,10 +165,10 @@ def _prepare(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
 ) -> dict[ChannelId, Sequence]:
-    sequences = {}
-    for channel in sequence.channels:
-        filtered = PulseSequence((ch, pulse) for ch, pulse in sequence if ch == channel)
-        seq = Sequence.from_pulses(filtered, sweepers, options)
-        sequences[channel] = seq
+    def ch_pulses(channel: ChannelId):
+        return PulseSequence((ch, pulse) for ch, pulse in sequence if ch == channel)
 
-    return sequences
+    return {
+        channel: Sequence.from_pulses(ch_pulses(channel), sweepers, options)
+        for channel in sequence.channels
+    }
