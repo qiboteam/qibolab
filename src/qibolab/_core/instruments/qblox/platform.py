@@ -11,10 +11,6 @@ from qibolab._core.components.channels import (
 __all__ = ["map_ports"]
 
 
-def _eltype(el: str):
-    return "qubits" if el[0] == "q" else "couplers"
-
-
 def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
     if mod.startswith("qcm_rf"):
         return "drive", IqChannel
@@ -39,17 +35,13 @@ def _port_channels(mod: str, port: Union[int, str], slot: int) -> dict:
 
 
 def _premap(cluster: dict):
-    d = {
-        "qubits": defaultdict(lambda: defaultdict(dict)),
-        "couplers": defaultdict(lambda: defaultdict(dict)),
-    }
+    d = defaultdict(lambda: defaultdict(dict))
 
     for mod, props in cluster.items():
         slot = props[0]
         for port, els in props[1].items():
             for el in els:
-                nel = el[1:]
-                d[_eltype(el)][nel] |= _port_channels(mod, port, slot)
+                d[el] |= _port_channels(mod, port, slot)
 
     return d
 
@@ -86,12 +78,13 @@ def map_ports(cluster: dict, qubits: dict, couplers: Optional[dict] = None) -> d
     premap = _premap(cluster)
 
     channels = {}
-    for kind, elements in [("qubits", qubits), ("couplers", couplers)]:
-        for name, el in elements.items():
-            for chname, ch in premap[kind][name].items():
-                channels[getattr(el, chname)] = ch
-            if kind == "qubits":
-                channels[el.acquisition] = channels[el.acquisition].model_copy(
-                    update={"probe": el.probe}
-                )
+    for name, el in (qubits | couplers).items():
+        for chname, ch in premap[name].items():
+            channels[getattr(el, chname)] = ch
+        try:
+            channels[el.acquisition] = channels[el.acquisition].model_copy(
+                update={"probe": el.probe}
+            )
+        except KeyError:
+            pass
     return channels
