@@ -88,7 +88,7 @@ def test_dummy_execute_pulse_sequence_couplers():
     result = platform.execute_pulse_sequence(sequence, options)
 
     test_pulses = "PulseSequence\nFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux-2, 2)\nCouplerFluxPulse(0, 30, 0.05, GaussianSquare(5, 0.75), flux_coupler-1, 1)"
-    test_phases = {1: 0.0, 2: 0.0}
+    test_phases = {1: 0.1, 2: 0.2}
 
     assert test_pulses == cz.serial
     assert test_phases == cz_phases
