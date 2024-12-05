@@ -31,7 +31,9 @@ class Sequence(Model):
     weights: dict[str, Weight]
     acquisitions: dict[str, Acquisition]
     program: Annotated[
-        Program, PlainSerializer(lambda p: p.asm()), PlainValidator(parse)
+        Program,
+        PlainSerializer(lambda p: p.asm()),
+        PlainValidator(lambda p: p if isinstance(p, Program) else parse(p)),
     ]
 
     @classmethod
@@ -41,4 +43,6 @@ class Sequence(Model):
         sweepers: list[ParallelSweepers],
         options: ExecutionParameters,
     ):
-        return cls(waveforms={}, weights={}, acquisitions={}, program="")
+        return cls(
+            waveforms={}, weights={}, acquisitions={}, program=Program(elements=[])
+        )
