@@ -41,6 +41,4 @@ class Sequence(Model):
         sweepers: list[ParallelSweepers],
         options: ExecutionParameters,
     ):
-        return cls(
-            waveforms={}, weights={}, acquisitions={}, program=Program(elements=[])
-        )
+        return cls(waveforms={}, weights={}, acquisitions={}, program="")
