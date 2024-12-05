@@ -660,8 +660,8 @@ class Comment(str):
 
 class Line(Model):
     instruction: Instruction
-    label: Optional[str]
-    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]]
+    label: Optional[str] = None
+    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]] = None
 
     def __rich_repr__(self):
         yield self.instruction
