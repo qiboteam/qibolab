@@ -1,5 +1,6 @@
 """A platform for executing quantum algorithms."""
 
+import signal
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Tuple
@@ -117,6 +118,9 @@ class Platform:
     """Graph representing the qubit connectivity in the quantum chip."""
 
     def __post_init__(self):
+        signal.signal(signal.SIGTERM, self.termination_handler)
+        signal.signal(signal.SIGINT, self.termination_handler)
+
         log.info("Loading platform %s", self.name)
         if self.resonator_type is None:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
@@ -167,6 +171,12 @@ class Platform:
             for instrument in self.instruments.values():
                 instrument.disconnect()
         self.is_connected = False
+
+    def termination_handler(self, signum, frame):
+        self.disconnect()
+        raise RuntimeError(
+            f"Platform {self.name} disconnected because job was cancelled. Signal type: {signum}."
+        )
 
     def _execute(self, sequence, options, **kwargs):
         """Executes sequence on the controllers."""
