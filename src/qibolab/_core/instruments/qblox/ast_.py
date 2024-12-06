@@ -46,7 +46,9 @@ class Reference(Model):
         return f"@{self.label}"
 
 
-MultiBaseInt = Annotated[int, BeforeValidator(lambda n: int(n, 0))]
+MultiBaseInt = Annotated[
+    int, BeforeValidator(lambda n: int(n, 0) if isinstance(n, str) else n)
+]
 Immediate = Union[MultiBaseInt, Reference]
 Value = Union[Register, Immediate]
 
