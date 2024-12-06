@@ -52,7 +52,10 @@ def _play_single_waveform(
     if acquisition is not None:
         acquisition.measure(op)
     else:
-        qua.play(op, element, duration=parameters.duration)
+        if parameters.duration is not None:
+            qua.play(parameters.interpolated_op, element, duration=parameters.duration)
+        else:
+            qua.play(op, element)
 
 
 def _play(
