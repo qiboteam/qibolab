@@ -42,12 +42,8 @@ class ConstantWaveform:
 
     @classmethod
     def from_pulse(cls, pulse: Pulse, max_voltage: float) -> dict[str, "Waveform"]:
-        phase = wrap_phase(pulse.relative_phase)
         voltage_amp = pulse.amplitude * max_voltage
-        return {
-            "I": cls(voltage_amp * np.cos(phase)),
-            "Q": cls(voltage_amp * np.sin(phase)),
-        }
+        return {"I": cls(voltage_amp), "Q": cls(0)}
 
 
 @dataclass(frozen=True)
@@ -58,10 +54,9 @@ class ArbitraryWaveform:
     @classmethod
     def from_pulse(cls, pulse: Pulse, max_voltage: float) -> dict[str, "Waveform"]:
         original_waveforms = pulse.envelopes(SAMPLING_RATE) * max_voltage
-        rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
         new_duration = baked_duration(pulse.duration)
         pad_len = new_duration - int(pulse.duration)
-        baked_waveforms = np.pad(rotated_waveforms, ((0, 0), (0, pad_len)))
+        baked_waveforms = np.pad(original_waveforms, ((0, 0), (0, pad_len)))
         return {
             "I": cls(baked_waveforms[0]),
             "Q": cls(baked_waveforms[1]),
