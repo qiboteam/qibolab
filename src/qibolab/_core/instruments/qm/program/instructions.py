@@ -101,6 +101,8 @@ def play(args: ExecutionArguments):
         if isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, Pulse):
+            if pulse.relative_phase != 0 and params.phase is None:
+                params.phase = normalize_phase(pulse.relative_phase)
             _play(op, element, params)
         elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
