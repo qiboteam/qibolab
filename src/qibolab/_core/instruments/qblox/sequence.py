@@ -10,7 +10,7 @@ from qibolab._core.sweeper import ParallelSweepers
 
 from .ast_ import Program
 from .parse import parse
-from .program import program, ComponentId, pulse_uid, WaveformIndices
+from .program import ComponentId, WaveformIndices, program, pulse_uid
 
 __all__ = []
 
