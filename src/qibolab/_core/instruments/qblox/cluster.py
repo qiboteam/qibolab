@@ -121,7 +121,7 @@ class Cluster(Controller):
     ) -> dict[int, Result]:
         results = {}
         for ps in sequences:
-            sequences_ = _prepare(ps, sweepers, options)
+            sequences_ = _prepare(ps, sweepers, options, self.sampling_rate)
             sequencers = self._upload(sequences_)
             results |= self._execute(sequencers)
         return results
@@ -166,11 +166,14 @@ def _prepare(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
+    sampling_rate: float,
 ) -> dict[ChannelId, Sequence]:
     def ch_pulses(channel: ChannelId):
         return PulseSequence((ch, pulse) for ch, pulse in sequence if ch == channel)
 
     return {
-        channel: Sequence.from_pulses(ch_pulses(channel), sweepers, options)
+        channel: Sequence.from_pulses(
+            ch_pulses(channel), sweepers, options, sampling_rate
+        )
         for channel in sequence.channels
     }
