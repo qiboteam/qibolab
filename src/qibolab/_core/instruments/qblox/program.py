@@ -3,7 +3,6 @@ from qibolab._core.sequence import PulseSequence
 
 from .ast_ import Line, Play, Program
 
-
 ComponentId = tuple[str, int]
 WaveformIndices = dict[ComponentId, int]
 
