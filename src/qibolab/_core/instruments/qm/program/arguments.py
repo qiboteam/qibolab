@@ -24,6 +24,7 @@ class Parameters:
     duration: Optional[_Variable] = None
     duration_ops: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
+    interpolated_op: Optional[str] = None
 
     element: Optional[str] = None
     lo_frequency: Optional[int] = None
