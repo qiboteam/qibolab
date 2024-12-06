@@ -4,7 +4,6 @@ from typing import Union
 import numpy as np
 
 from qibolab._core.pulses import Pulse, Rectangular
-from qibolab._core.pulses.modulation import rotate, wrap_phase
 
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX+ in GSps."""
