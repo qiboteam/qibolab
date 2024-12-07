@@ -22,7 +22,7 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
         duration = max(int(pulse.duration) // 4 + 1, 4)
         qua.wait(duration, element)
     elif parameters.interpolated:
-        duration = parameters.duration + 1
+        duration = parameters.duration
         qua.wait(duration, element)
     else:
         duration = parameters.duration / 4
@@ -79,7 +79,7 @@ def _play(
         _play_single_waveform(op, element, parameters, acquisition)
 
     if parameters.phase is not None:
-        qua.reset_frame(element)
+        qua.frame_rotation_2pi(-parameters.phase, element)
 
 
 def play(args: ExecutionArguments):
