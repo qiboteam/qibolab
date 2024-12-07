@@ -13,6 +13,8 @@ from pydantic import (
 
 from ...serialize import Model
 
+__all__ = []
+
 
 class Register(Model):
     number: int
@@ -20,7 +22,10 @@ class Register(Model):
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
-        assert data[0] == "R"
+        try:
+            assert data[0] == "R"
+        except TypeError:
+            raise ValueError("Register representation is not a string")
         num = int(data[1:])
         assert 0 <= num < 64
         return {"number": num}
@@ -44,7 +49,9 @@ class Reference(Model):
         return f"@{self.label}"
 
 
-MultiBaseInt = Annotated[int, BeforeValidator(lambda n: int(n, 0))]
+MultiBaseInt = Annotated[
+    int, BeforeValidator(lambda n: int(n, 0) if isinstance(n, str) else n)
+]
 Immediate = Union[MultiBaseInt, Reference]
 Value = Union[Register, Immediate]
 
@@ -658,8 +665,8 @@ class Comment(str):
 
 class Line(Model):
     instruction: Instruction
-    label: Optional[str]
-    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]]
+    label: Optional[str] = None
+    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]] = None
 
     def __rich_repr__(self):
         yield self.instruction
