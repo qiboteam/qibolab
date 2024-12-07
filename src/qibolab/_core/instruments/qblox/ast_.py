@@ -22,7 +22,10 @@ class Register(Model):
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
-        assert data[0] == "R"
+        try:
+            assert data[0] == "R"
+        except TypeError:
+            raise ValueError("Register representation is not a string")
         num = int(data[1:])
         assert 0 <= num < 64
         return {"number": num}
