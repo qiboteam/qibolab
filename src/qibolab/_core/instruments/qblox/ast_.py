@@ -6,6 +6,7 @@ from typing import Annotated, Any, Optional, Union
 from pydantic import (
     AfterValidator,
     BeforeValidator,
+    computed_field,
     field_validator,
     model_serializer,
     model_validator,
@@ -59,6 +60,11 @@ CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
 
 
 class Instr(Model):
+    @computed_field
+    @property
+    def instr(self) -> str:
+        return self.keyword()
+
     @classmethod
     def keyword(cls) -> str:
         return CAMEL_TO_SNAKE.sub("_", cls.__name__).lower()
@@ -69,7 +75,9 @@ class Instr(Model):
 
     @property
     def args(self) -> list:
-        return list(self.model_dump().values())
+        return list(
+            {k: v for k, v in self.model_dump().items() if k != "instr"}.values()
+        )
 
     def asm(self, key_width: Optional[int] = None) -> str:
         key = self.keyword()
