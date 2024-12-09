@@ -68,5 +68,6 @@ comment: COMMENT NEWLINE
 
 %import common.ESCAPED_STRING
 %import common (INT, HEXDIGIT)
-%import common (NEWLINE, WS)
+%import common (NEWLINE, WS, WS_INLINE)
 %ignore WS
+%ignore WS_INLINE
