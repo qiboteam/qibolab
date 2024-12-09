@@ -12,7 +12,6 @@ def pulse_uid(pulse: Pulse) -> str:
 
 
 def instructions(pulse: PulseLike, waveforms: WaveformIndices) -> list:
-    breakpoint()
     return (
         [
             Line(
