@@ -6,6 +6,7 @@ from typing import Annotated, Any, Optional, Union
 from pydantic import (
     AfterValidator,
     BeforeValidator,
+    ConfigDict,
     computed_field,
     field_validator,
     model_serializer,
@@ -60,9 +61,32 @@ CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
 
 
 class Instr(Model):
+    model_config = ConfigDict(extra="ignore")
+
+    @model_validator(mode="before")
+    @classmethod
+    def load(cls, data: Any) -> Any:
+        """Leverage automated tagging to resolve conflicts.
+
+        This is required to unambiguously deserialize the instruction. Cf.
+        :meth:`instr`.
+
+        It is kind of surrogate of Pyantic's discriminated unions, without the need of
+        manually labeling each class, since the label is derived from the type.
+        """
+        if "instr" in data:
+            assert data["instr"] == cls.keyword()
+        return data
+
     @computed_field
     @property
     def instr(self) -> str:
+        """Store instruction information in the serialization.
+
+        The instruction is non-uniquely identified by the attributes
+        structure, thus logging its identity is required, but the
+        information at runtime is only contained in the model's type.
+        """
         return self.keyword()
 
     @classmethod
