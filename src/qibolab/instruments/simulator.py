@@ -2,7 +2,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-import numpy as np
 from qibo import Circuit, gates
 from qibo.config import log
 
@@ -15,7 +14,7 @@ from qibolab.execution_parameters import (
 from qibolab.native import SingleQubitNatives, TwoQubitNatives
 from qibolab.pulses import Pulse, PulseSequence, PulseType
 from qibolab.qubits import Qubit, QubitId, QubitPairId
-from qibolab.result import SampleResults
+from qibolab.result import AveragedSampleResults, SampleResults
 from qibolab.sweeper import Sweeper
 from qibolab.unrolling import Bounds
 
@@ -54,14 +53,20 @@ def pulse_to_gate(
         return gates.M(qubit)
 
     assert pulse.type is PulseType.DRIVE
+    # if is_equal(pulse, natives.RX.pulse(start=0)):
+    #    return gates.RX(qubit, theta=np.pi)
+    # if is_equal(pulse, natives.RX90.pulse(start=0)):
+    #    return gates.RX(qubit, theta=np.pi / 2)
+    # if is_equal(pulse, natives.RX.pulse(start=0, relative_phase=np.pi / 2)):
+    #    return gates.RY(qubit, theta=np.pi)
+    # if is_equal(pulse, natives.RX90.pulse(start=0, relative_phase=np.pi / 2)):
+    #    return gates.RY(qubit, theta=np.pi / 2)
+    phase = pulse.relative_phase
+    pulse.relative_phase = 0
     if is_equal(pulse, natives.RX.pulse(start=0)):
-        return gates.RX(qubit, theta=np.pi)
+        return gates.GPI(0, phi=phase)
     if is_equal(pulse, natives.RX90.pulse(start=0)):
-        return gates.RX(qubit, theta=np.pi / 2)
-    if is_equal(pulse, natives.RX.pulse(start=0, relative_phase=np.pi / 2)):
-        return gates.RY(qubit, theta=np.pi)
-    if is_equal(pulse, natives.RX90.pulse(start=0, relative_phase=np.pi / 2)):
-        return gates.RY(qubit, theta=np.pi / 2)
+        return gates.GPI2(0, phi=phase)
     raise ValueError(f"Unsupported pulse: {pulse}")
 
 
@@ -85,8 +90,7 @@ def flux_pulse_to_gate(
     raise ValueError(f"Unsupported pulse: {pulse}")
 
 
-def sequence_to_circuit(sequence: PulseSequence, qubits, two_qubit_natives, qubit_map):
-    """Convert sequence to Qibo circuit."""
+def _sequence_to_gates(sequence: PulseSequence, qubits, two_qubit_natives, qubit_map):
     clock = defaultdict(int)
     all_gates = []
     for pulse in sorted(sequence.pulses, key=lambda p: p.start):
@@ -102,8 +106,31 @@ def sequence_to_circuit(sequence: PulseSequence, qubits, two_qubit_natives, qubi
             clock[qubit] = pulse.start + pulse.duration
 
         all_gates.append(gate)
+    return all_gates, max(clock.keys()) + 1
 
-    circuit = Circuit(max(clock.keys()) + 1)
+
+def sequence_to_circuit(
+    sequence: PulseSequence, qubits, two_qubit_natives, qubit_map, noise: bool = False
+):
+    """Convert sequence to Qibo circuit."""
+    all_gates, nqubits = _sequence_to_gates(
+        sequence, qubits, two_qubit_natives, qubit_map
+    )
+
+    if noise:
+        circuit = Circuit(nqubits, density_matrix=True)
+        for gate in all_gates:
+            circuit.add(gate)
+            if not isinstance(gate, gates.M):
+                for q in gate.qubits:
+                    t1, t2 = 30000, 5000
+                    t = 40
+                    excited = 0.01
+                    circuit.add(gates.ThermalRelaxationChannel(q, [t1, t2, t, excited]))
+                    circuit.add(gates.DepolarizingChannel(q, lam=0.01))
+        return circuit
+
+    circuit = Circuit(nqubits)
     circuit.add(all_gates)
     return circuit
 
@@ -132,23 +159,6 @@ class SimulatorInstrument(Controller):
     def setup(self, *args, **kwargs):
         log.info(f"Setting up {self.name} instrument.")
 
-    def get_values(self, options, ro_pulse, shape):
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            if options.averaging_mode is AveragingMode.SINGLESHOT:
-                values = np.random.randint(2, size=shape)
-            elif options.averaging_mode is AveragingMode.CYCLIC:
-                values = np.random.rand(*shape)
-        elif options.acquisition_type is AcquisitionType.RAW:
-            samples = int(ro_pulse.duration * SAMPLING_RATE)
-            waveform_shape = tuple(samples * dim for dim in shape)
-            values = (
-                np.random.rand(*waveform_shape) * 100
-                + 1j * np.random.rand(*waveform_shape) * 100
-            )
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            values = np.random.rand(*shape) * 100 + 1j * np.random.rand(*shape) * 100
-        return values
-
     def play(
         self,
         qubits: Dict[QubitId, Qubit],
@@ -158,11 +168,9 @@ class SimulatorInstrument(Controller):
     ):
         if options.acquisition_type is not AcquisitionType.DISCRIMINATION:
             raise NotImplementedError("Only DISCRIMINATION acquisition is supported.")
-        if options.averaging_mode is not AveragingMode.SINGLESHOT:
-            raise NotImplementedError("Only SINGLESHOT averaging mode is supported.")
 
         circuit = sequence_to_circuit(
-            sequence, qubits, self.two_qubit_natives, self.qubit_map
+            sequence, qubits, self.two_qubit_natives, self.qubit_map, noise=True
         )
 
         result = circuit(nshots=options.nshots)
@@ -171,9 +179,12 @@ class SimulatorInstrument(Controller):
         results = {}
         for ro_pulse in sequence.ro_pulses:
             q = self.qubit_map.get(ro_pulse.qubit, ro_pulse.qubit)
-            results[ro_pulse.qubit] = results[ro_pulse.serial] = SampleResults(
-                samples[:, q]
-            )
+            if options.averaging_mode is AveragingMode.SINGLESHOT:
+                r = SampleResults(samples[:, q])
+            else:
+                r = AveragedSampleResults(samples[:, q].mean())
+
+            results[ro_pulse.qubit] = results[ro_pulse.serial] = r
 
         return results
 
