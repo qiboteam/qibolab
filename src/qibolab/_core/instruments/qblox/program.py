@@ -1,8 +1,10 @@
-from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.pulses.pulse import Pulse, PulseLike
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import ParallelSweepers
 
 from .ast_ import (
+    Instruction,
     Line,
     Loop,
     Move,
@@ -12,6 +14,7 @@ from .ast_ import (
     Reference,
     Register,
     Stop,
+    Wait,
     WaitSync,
 )
 
@@ -42,14 +45,33 @@ def execution(sequence: PulseSequence, waveforms: WaveformIndices) -> list[Line]
     ]
 
 
-def loop(sweepers, experiment: list[Line]):
+def loop(
+    sweepers: list, experiment: list[Line], relaxation_time: int, outer_shots: bool
+):
+    shots = (0, [Nop()])
+    sweep = [
+        (i, parameters_update(parsweep)) for i, parsweep in enumerate(sweepers, start=1)
+    ]
+    loops = [shots] + sweep if outer_shots else sweep + [shots]
+
     return (
-        [Line(instruction=Nop(), label="shots")]
+        [
+            inst
+            for lp in loops
+            for inst in (
+                [Line(instruction=lp[1][0], label=f"l{lp[0]}")]
+                + [Line(instruction=inst_) for inst_ in lp[1][1:]]
+            )
+        ]
         + experiment
+        + [Line(instruction=Wait(duration=relaxation_time))]
         + [
             Line(
-                instruction=Loop(a=Register(number=0), address=Reference(label="shots"))
+                instruction=Loop(
+                    a=Register(number=lp[0]), address=Reference(label=f"l{lp[0]}")
+                )
             )
+            for lp in loops
         ]
     )
 
@@ -57,6 +79,10 @@ def loop(sweepers, experiment: list[Line]):
 def finalization() -> list:
     """Finalize."""
     return [Line(instruction=Stop())]
+
+
+def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
+    return [Nop()]
 
 
 def play(pulse: PulseLike, waveforms: WaveformIndices) -> list[Line]:
@@ -77,11 +103,19 @@ def play(pulse: PulseLike, waveforms: WaveformIndices) -> list[Line]:
 
 
 def program(
-    sequence: PulseSequence, waveforms: WaveformIndices, options: ExecutionParameters
+    sequence: PulseSequence,
+    waveforms: WaveformIndices,
+    options: ExecutionParameters,
+    sweepers: list[ParallelSweepers],
 ):
     return Program(
         elements=initialization(options.nshots)
         + setup()
-        + loop([], execution(sequence, waveforms))
+        + loop(
+            sweepers,
+            execution(sequence, waveforms),
+            relaxation_time=options.relaxation_time,
+            outer_shots=options.averaging_mode is not AveragingMode.SEQUENTIAL,
+        )
         + finalization()
     )
