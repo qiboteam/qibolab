@@ -26,3 +26,8 @@ def test_dump(asm):
 def test_roundtrip(asm):
     prog = parse(asm)
     assert prog == parse(prog.asm())
+
+
+def test_serialization(asm):
+    prog = parse(asm)
+    assert prog == Program.model_validate(prog.model_dump())
