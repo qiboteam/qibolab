@@ -39,7 +39,9 @@ class AveragingMode(Enum):
         return self is not AveragingMode.SINGLESHOT
 
 
-ConfigUpdate = dict[str, dict[str, Any]]
+Update = dict[str, Any]
+
+ConfigUpdate = dict[str, Update]
 """Update for component configs.
 
 Maps component name to corresponding update, which in turn is a map from

@@ -11,30 +11,13 @@ from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
 
 from .components import ChannelConfig, Config
-from .execution_parameters import ConfigUpdate, ExecutionParameters
+from .execution_parameters import ConfigUpdate, ExecutionParameters, Update
 from .identifier import QubitId, QubitPairId
 from .native import SingleQubitNatives, TwoQubitNatives
 from .serialize import Model, replace
 from .unrolling import Bounds
 
 __all__ = ["ConfigKinds"]
-
-
-def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
-    """Apply updates to configs in place.
-
-    Args:
-        configs: configs to update. Maps component name to respective config.
-        updates: list of config updates. Later entries in the list take precedence over earlier entries
-                 (if they happen to update the same thing).
-    """
-    for update in updates:
-        for name, changes in update.items():
-            if name not in configs:
-                raise ValueError(
-                    f"Cannot update configuration for unknown component {name}"
-                )
-            configs[name] = replace(configs[name], **changes)
 
 
 class Settings(Model):
@@ -181,9 +164,6 @@ def _setvalue(d: dict, path: str, val: Any):
     current[steps[-1]] = val
 
 
-Update = dict[str, Any]
-
-
 class Parameters(Model):
     """Serializable parameters."""
 
@@ -202,3 +182,19 @@ class Parameters(Model):
             _setvalue(d, path, val)
 
         return self.model_validate(d)
+
+
+def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
+    """Apply updates to configs in place.
+
+    Args:
+        configs: configs to update. Maps component name to respective config.
+        updates: list of config updates. Later entries in the list take precedence over earlier entries
+                 (if they happen to update the same thing).
+    """
+    a = ConfigKinds.adapted()
+    for update in updates:
+        for name, changes in update.items():
+            if name not in configs:
+                configs[name] = a.validate_python(changes)
+            configs[name] = replace(configs[name], **changes)
