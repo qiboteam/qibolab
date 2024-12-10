@@ -64,9 +64,9 @@ def pulse_to_gate(
     phase = pulse.relative_phase
     pulse.relative_phase = 0
     if is_equal(pulse, natives.RX.pulse(start=0)):
-        return gates.GPI(0, phi=phase)
+        return gates.GPI(qubit, phi=phase)
     if is_equal(pulse, natives.RX90.pulse(start=0)):
-        return gates.GPI2(0, phi=phase)
+        return gates.GPI2(qubit, phi=phase)
     raise ValueError(f"Unsupported pulse: {pulse}")
 
 
@@ -102,7 +102,7 @@ def _sequence_to_gates(sequence: PulseSequence, qubits, two_qubit_natives, qubit
 
         for qubit in gate.qubits:
             if pulse.start < clock[qubit]:
-                raise ValueError("Overlapping pulses.")
+                raise ValueError(f"Overlapping pulses in sequence:\n{sequence}")
             clock[qubit] = pulse.start + pulse.duration
 
         all_gates.append(gate)
