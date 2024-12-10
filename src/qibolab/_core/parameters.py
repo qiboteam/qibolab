@@ -23,7 +23,7 @@ from .components import (
     IqMixerConfig,
     OscillatorConfig,
 )
-from .execution_parameters import ConfigUpdate, ExecutionParameters
+from .execution_parameters import ConfigUpdate, ExecutionParameters, Update
 from .identifier import ChannelId, QubitId, QubitPairId
 from .instruments.abstract import Instrument, InstrumentId
 from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
@@ -49,12 +49,11 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
         updates: list of config updates. Later entries in the list take precedence over earlier entries
                  (if they happen to update the same thing).
     """
+    a = ConfigKinds.adapted()
     for update in updates:
         for name, changes in update.items():
             if name not in configs:
-                raise ValueError(
-                    f"Cannot update configuration for unknown component {name}"
-                )
+                configs[name] = a.validate_python(changes)
             configs[name] = replace(configs[name], **changes)
 
 
@@ -200,9 +199,6 @@ def _setvalue(d: dict, path: str, val: Any):
             current = current[step]
 
     current[steps[-1]] = val
-
-
-Update = dict[str, Any]
 
 
 class Parameters(Model):
