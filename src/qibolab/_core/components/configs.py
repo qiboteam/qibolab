@@ -22,6 +22,7 @@ __all__ = [
     "OscillatorConfig",
     "Config",
     "ChannelConfig",
+    "LogConfig",
 ]
 
 
