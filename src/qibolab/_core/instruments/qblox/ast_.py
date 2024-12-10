@@ -24,11 +24,17 @@ class Register(Model):
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
-        try:
-            assert data[0] == "R"
-        except TypeError:
-            raise ValueError("Register representation is not a string")
-        num = int(data[1:])
+        if isinstance(data, str):
+            try:
+                assert data[0] == "R"
+            except TypeError:
+                raise ValueError("Register representation is not a string")
+            num = int(data[1:])
+        elif isinstance(data, dict):
+            num = data["number"]
+        else:
+            raise ValueError(f"Register not recognized '{data}'")
+
         assert 0 <= num < 64
         return {"number": num}
 
@@ -43,8 +49,12 @@ class Reference(Model):
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
-        assert data[0] == "@"
-        return {"label": data[1:]}
+        if isinstance(data, str):
+            assert data[0] == "@"
+            return {"label": data[1:]}
+        if isinstance(data, dict):
+            return data
+        raise ValueError(f"Reference not recognized '{data}'")
 
     @model_serializer
     def dump(self) -> str:
