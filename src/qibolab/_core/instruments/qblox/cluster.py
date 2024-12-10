@@ -1,5 +1,6 @@
 from collections import defaultdict
 from functools import cached_property
+from pathlib import Path
 from typing import Optional
 
 import qblox_instruments as qblox
@@ -122,6 +123,8 @@ class Cluster(Controller):
         results = {}
         for ps in sequences:
             sequences_ = _prepare(ps, sweepers, options, self.sampling_rate)
+            if "log" in configs:
+                _dump_sequences(configs["log"].path, sequences_)
             sequencers = self._upload(sequences_)
             results |= self._execute(sequencers)
         return results
@@ -177,3 +180,8 @@ def _prepare(
         )
         for channel in sequence.channels
     }
+
+
+def _dump_sequences(log: Path, sequences: dict[ChannelId, Sequence]):
+    for ch, seq in sequences.items():
+        (log / f"{ch}.json".replace("/", "-")).write_text(seq.model_dump_json())
