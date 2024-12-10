@@ -1,6 +1,8 @@
 from enum import Enum, auto
 from typing import Any, Optional
 
+from pydantic import Field
+
 from .serialize import Model
 from .sweeper import ParallelSweepers
 
@@ -65,7 +67,7 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    updates: list[ConfigUpdate] = []
+    updates: list[ConfigUpdate] = Field(default_factory=list)
     """List of updates for component configs.
 
     Later entries in the list take precedence over earlier ones (if they
