@@ -7,7 +7,13 @@ JSON <parameters_json>` example.
 from collections.abc import Callable, Iterable
 from typing import Annotated, Any, Optional, Union
 
-from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    TypeAdapter,
+    ValidationError,
+)
 from pydantic_core import core_schema
 
 from .components import (
