@@ -33,6 +33,8 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
 
 def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
+    assert not parameters.interpolated
+    assert parameters.interpolated_op is None
     with qua.switch_(parameters.duration, unsafe=True):
         for value, sweep_op in parameters.duration_ops:
             if parameters.amplitude is not None:
@@ -53,6 +55,9 @@ def _play_single_waveform(
         acquisition.measure(op)
     else:
         if parameters.duration is not None:
+            # sweeping duration using interpolation
+            # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
+            assert len(parameters.duration_ops) == 0
             qua.play(parameters.interpolated_op, element, duration=parameters.duration)
         else:
             qua.play(op, element)
