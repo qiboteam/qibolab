@@ -715,6 +715,11 @@ class Line(Model):
         yield "label", self.label, None
         yield "comment", self.comment, None
 
+    @classmethod
+    def instr(cls, instruction: Instruction):
+        """Shortcut for simple lines instantiation."""
+        return cls(instruction=instruction)
+
     def asm(
         self,
         width: Optional[int] = None,
