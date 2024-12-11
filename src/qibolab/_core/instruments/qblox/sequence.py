@@ -81,5 +81,7 @@ class Sequence(Model):
             waveforms=waveforms_,
             weights={},
             acquisitions={},
-            program=program(sequence, waveform_indices(waveforms_), options, sweepers),
+            program=program(
+                sequence, waveform_indices(waveforms_), options, sweepers, sampling_rate
+            ),
         )
