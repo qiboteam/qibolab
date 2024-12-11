@@ -1,7 +1,15 @@
 import numpy as np
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
-from qibolab._core.pulses.pulse import Delay, Pulse, PulseLike, VirtualZ
+from qibolab._core.pulses.pulse import (
+    Acquisition,
+    Align,
+    Delay,
+    Pulse,
+    PulseLike,
+    Readout,
+    VirtualZ,
+)
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -117,6 +125,11 @@ def play(
     pulse: PulseLike, waveforms: WaveformIndices, sampling_rate: float
 ) -> list[Line]:
     """Process the individual pulse in experiment."""
+    if isinstance(pulse, Align):
+        raise NotImplementedError("Align operation is not supported by Qblox.")
+    # TODO:
+    if isinstance(pulse, (Readout, Acquisition)):
+        raise NotImplementedError
     return (
         [
             Line.instr(
