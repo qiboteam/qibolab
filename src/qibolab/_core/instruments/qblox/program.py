@@ -3,7 +3,7 @@ import numpy as np
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.pulses.pulse import Delay, Pulse, PulseLike, VirtualZ
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers
+from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 from .ast_ import (
     Instruction,
@@ -15,6 +15,10 @@ from .ast_ import (
     Program,
     Reference,
     Register,
+    SetAwgGain,
+    SetAwgOffs,
+    SetFreq,
+    SetPhDelta,
     Stop,
     Wait,
     WaitSync,
@@ -47,6 +51,27 @@ def execution(
         for block in (play(pulse, waveforms, sampling_rate) for _, pulse in sequence)
         for el in block
     ]
+
+
+SWEEPERS = {
+    Parameter.frequency: lambda v, o: ([SetFreq(value=v)], [SetFreq(value=o)]),
+    Parameter.amplitude: lambda v, o: (
+        [SetAwgGain(value_0=v, value_1=v)],
+        [SetAwgGain(value_0=o, value_1=o)],
+    ),
+    Parameter.relative_phase: lambda v, o: (
+        [SetPhDelta(value=v)],
+        [SetPhDelta(value=-v)],
+    ),
+    Parameter.offset: lambda v, o: (
+        [SetAwgOffs(value_0=v, value_1=v)],
+        [SetAwgOffs(value_0=o, value_1=o)],
+    ),
+}
+
+
+def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
+    return [Nop()]
 
 
 def loop(
@@ -103,11 +128,15 @@ def play(
             )
         ]
         if isinstance(pulse, Pulse)
-        else [Line.instr(Wait(duration=int(pulse.duration * sampling_rate)))]
-        if isinstance(pulse, Delay)
-        else [Line.instr(SetPhDelta(value=int(pulse.phase * PHASE_FACTOR)))]
-        if isinstance(pulse, VirtualZ)
-        else []
+        else (
+            [Line.instr(Wait(duration=int(pulse.duration * sampling_rate)))]
+            if isinstance(pulse, Delay)
+            else (
+                [Line.instr(SetPhDelta(value=int(pulse.phase * PHASE_FACTOR)))]
+                if isinstance(pulse, VirtualZ)
+                else []
+            )
+        )
     )
 
 
