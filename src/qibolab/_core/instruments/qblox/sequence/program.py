@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from enum import Enum
+from typing import Union
 
 import numpy as np
 
@@ -18,6 +19,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
 
 from ..ast_ import (
     Acquire,
+    Add,
     Instruction,
     Line,
     Loop,
@@ -44,23 +46,30 @@ class Registers(Enum):
     shots = Register(number=1)
 
 
-Loops = list[tuple[Register, int]]
+Loops = list[tuple[Register, int, bool]]
 
 
 def loops(sweepers: list, nshots: int, inner_shots: bool) -> Loops:
-    shots = (Registers.shots.value, nshots)
+    shots = (Registers.shots.value, nshots, True)
     sweep = [
-        (Register(number=i), iteration_length(parsweep))
+        (Register(number=i), iteration_length(parsweep), False)
         for i, parsweep in enumerate(sweepers, start=2)
     ]
     return [shots] + sweep if inner_shots else sweep + [shots]
 
 
-def setup(loops: Loops) -> Sequence[Instruction]:
+def setup(loops: Loops) -> Sequence[Union[Line, Instruction]]:
     """Set up."""
-    return [Move(source=lp[1], destination=lp[0]) for lp in loops] + [
-        WaitSync(duration=4)
-    ]
+    return (
+        [
+            Line(
+                instruction=Move(source=0, destination=Registers.bin.value),
+                comment="init bin counter",
+            )
+        ]
+        + [Move(source=lp[1], destination=lp[0]) for lp in loops]
+        + [WaitSync(duration=4)]
+    )
 
 
 def execution(
@@ -105,16 +114,27 @@ START = "start"
 
 def loop(
     loops: Loops, experiment: list[Instruction], relaxation_time: int
-) -> list[Line]:
+) -> Sequence[Union[Line, Instruction]]:
     return (
         [Line(instruction=experiment[0], label=START)]
-        + [Line.instr(i_) for i_ in experiment[1:]]
-        + [Line.instr(Wait(duration=relaxation_time))]
+        + experiment[1:]
         + [
-            Line.instr(i_)
+            Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
+            Line(
+                instruction=Add(
+                    a=Registers.bin.value, b=1, destination=Registers.bin.value
+                ),
+                comment="bin increment",
+            ),
+        ]
+        + [
+            i_
             for lp in loops
             for i_ in [
-                Loop(a=lp[0], address=Reference(label=START)),
+                Line(
+                    instruction=Loop(a=lp[0], address=Reference(label=START)),
+                    comment="loop over shots" if lp[2] else None,
+                ),
                 Move(source=lp[1], destination=lp[0]),
             ]
         ][:-1]
