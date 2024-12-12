@@ -35,18 +35,12 @@ from ..ast_ import (
     WaitSync,
 )
 from .acquisition import Acquisitions
-from .waveforms import WaveformIndices
-
-ComponentId = tuple[str, int]
+from .waveforms import WaveformIndices, pulse_uid
 
 
 class Registers(Enum):
     bin = Register(number=0)
     shots = Register(number=1)
-
-
-def pulse_uid(pulse: Pulse) -> str:
-    return str(hash(pulse))
 
 
 def initialization(nshots: int) -> list:
@@ -68,7 +62,9 @@ def execution(
     """The representation of the actual experiment to be executed."""
     return [
         Line.instr(i_)
-        for block in (play(pulse, waveforms, sampling_rate) for _, pulse in sequence)
+        for block in (
+            play(pulse, waveforms, acquisitions, sampling_rate) for _, pulse in sequence
+        )
         for i_ in block
     ]
 
@@ -99,7 +95,8 @@ def loop(
 ):
     shots = (Registers.shots.value, [Nop()])
     sweep = [
-        (i, parameters_update(parsweep)) for i, parsweep in enumerate(sweepers, start=2)
+        (Register(number=i), parameters_update(parsweep))
+        for i, parsweep in enumerate(sweepers, start=2)
     ]
     loops = [shots] + sweep if outer_shots else sweep + [shots]
 
@@ -108,18 +105,14 @@ def loop(
             inst
             for lp in loops
             for inst in (
-                [Line(instruction=lp[1][0], label=f"l{lp[0]}")]
+                [Line(instruction=lp[1][0], label=f"l{lp[0].number}")]
                 + [Line(instruction=inst_) for inst_ in lp[1][1:]]
             )
         ]
         + experiment
         + [Line(instruction=Wait(duration=relaxation_time))]
         + [
-            Line(
-                instruction=Loop(
-                    a=Register(number=lp[0]), address=Reference(label=f"l{lp[0]}")
-                )
-            )
+            Line(instruction=Loop(a=lp[0], address=Reference(label=f"l{lp[0].number}")))
             for lp in loops
         ]
     )
