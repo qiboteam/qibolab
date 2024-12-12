@@ -77,20 +77,24 @@ class ExecutionParameters(Model):
     top of platform defaults.
     """
 
-    def results_shape(
-        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
-    ) -> tuple[int, ...]:
-        """Compute the expected shape for collected data."""
-
+    def bins(self, sweepers: list[ParallelSweepers]) -> tuple[int, ...]:
+        assert self.nshots is not None
         shots = (
             (self.nshots,) if self.averaging_mode is AveragingMode.SINGLESHOT else ()
         )
         sweeps = tuple(
             min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
         )
+        return shots + sweeps
+
+    def results_shape(
+        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
+    ) -> tuple[int, ...]:
+        """Compute the expected shape for collected data."""
+
         inner = {
             AcquisitionType.DISCRIMINATION: (),
             AcquisitionType.INTEGRATION: (2,),
             AcquisitionType.RAW: (samples, 2),
         }[self.acquisition_type]
-        return shots + sweeps + inner
+        return self.bins(sweepers) + inner
