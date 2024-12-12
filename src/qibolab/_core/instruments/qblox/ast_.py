@@ -740,6 +740,8 @@ class Line(Model):
         comment = _format_comment(
             self.comment, width - len(code) if width is not None else None
         ).splitlines()
+        if len(comment) == 0:
+            return code
         return "\n".join(
             [code + comment[0]] + [" " * len(code) + c for c in comment[1:]]
         )
