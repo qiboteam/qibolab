@@ -1,3 +1,5 @@
+from enum import Enum
+
 import numpy as np
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
@@ -13,7 +15,8 @@ from qibolab._core.pulses.pulse import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
-from .ast_ import (
+from ..ast_ import (
+    Acquire,
     Instruction,
     Line,
     Loop,
@@ -31,9 +34,15 @@ from .ast_ import (
     Wait,
     WaitSync,
 )
+from .acquisition import Acquisitions
+from .waveforms import WaveformIndices
 
 ComponentId = tuple[str, int]
-WaveformIndices = dict[ComponentId, int]
+
+
+class Registers(Enum):
+    bin = Register(number=0)
+    shots = Register(number=1)
 
 
 def pulse_uid(pulse: Pulse) -> str:
@@ -51,13 +60,16 @@ def setup() -> list:
 
 
 def execution(
-    sequence: PulseSequence, waveforms: WaveformIndices, sampling_rate: float
+    sequence: PulseSequence,
+    waveforms: WaveformIndices,
+    acquisitions: Acquisitions,
+    sampling_rate: float,
 ) -> list[Line]:
     """The representation of the actual experiment to be executed."""
     return [
-        el
+        Line.instr(i_)
         for block in (play(pulse, waveforms, sampling_rate) for _, pulse in sequence)
-        for el in block
+        for i_ in block
     ]
 
 
@@ -85,9 +97,9 @@ def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
 def loop(
     sweepers: list, experiment: list[Line], relaxation_time: int, outer_shots: bool
 ):
-    shots = (0, [Nop()])
+    shots = (Registers.shots.value, [Nop()])
     sweep = [
-        (i, parameters_update(parsweep)) for i, parsweep in enumerate(sweepers, start=1)
+        (i, parameters_update(parsweep)) for i, parsweep in enumerate(sweepers, start=2)
     ]
     loops = [shots] + sweep if outer_shots else sweep + [shots]
 
@@ -122,32 +134,43 @@ PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
 def play(
-    pulse: PulseLike, waveforms: WaveformIndices, sampling_rate: float
-) -> list[Line]:
+    pulse: PulseLike,
+    waveforms: WaveformIndices,
+    acquisitions: Acquisitions,
+    sampling_rate: float,
+) -> list[Instruction]:
     """Process the individual pulse in experiment."""
     if isinstance(pulse, Align):
-        raise NotImplementedError("Align operation is not supported by Qblox.")
-    # TODO:
-    if isinstance(pulse, (Readout, Acquisition)):
-        raise NotImplementedError
+        raise NotImplementedError("Align operation not yet supported by Qblox driver.")
+    if isinstance(pulse, Readout):
+        raise NotImplementedError(
+            "Readout unsupported for Qblox - the operation should be unpacked in Pulse and Acquisition"
+        )
+
+    def _play(pulse: Pulse) -> Play:
+        uid = pulse_uid(pulse)
+        return Play(wave_0=waveforms[(uid, 0)], wave_1=waveforms[(uid, 1)], duration=0)
+
     return (
-        [
-            Line.instr(
-                Play(
-                    wave_0=waveforms[(pulse_uid(pulse), 0)],
-                    wave_1=waveforms[(pulse_uid(pulse), 1)],
-                    duration=0,
-                )
-            )
-        ]
+        [_play(pulse)]
         if isinstance(pulse, Pulse)
         else (
-            [Line.instr(Wait(duration=int(pulse.duration * sampling_rate)))]
+            [Wait(duration=int(pulse.duration * sampling_rate))]
             if isinstance(pulse, Delay)
             else (
-                [Line.instr(SetPhDelta(value=int(pulse.phase * PHASE_FACTOR)))]
+                [SetPhDelta(value=int(pulse.phase * PHASE_FACTOR))]
                 if isinstance(pulse, VirtualZ)
-                else []
+                else (
+                    [
+                        Acquire(
+                            acquisition=acquisitions[str(pulse.id)].index,
+                            bin=Registers.bin.value,
+                            duration=0,
+                        )
+                    ]
+                    if isinstance(pulse, Acquisition)
+                    else []
+                )
             )
         )
     )
@@ -156,16 +179,20 @@ def play(
 def program(
     sequence: PulseSequence,
     waveforms: WaveformIndices,
+    acquisitions: Acquisitions,
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     sampling_rate: float,
 ):
+    assert options.nshots is not None
+    assert options.relaxation_time is not None
+
     return Program(
         elements=initialization(options.nshots)
         + setup()
         + loop(
             sweepers,
-            execution(sequence, waveforms, sampling_rate),
+            execution(sequence, waveforms, acquisitions, sampling_rate),
             relaxation_time=options.relaxation_time,
             outer_shots=options.averaging_mode is not AveragingMode.SEQUENTIAL,
         )
