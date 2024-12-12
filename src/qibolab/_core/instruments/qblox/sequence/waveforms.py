@@ -6,9 +6,12 @@ from qibolab._core.pulses import Pulse, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import ArrayList, Model
 
-from .program import ComponentId, pulse_uid
-
+ComponentId = tuple[str, int]
 WaveformIndices = dict[ComponentId, int]
+
+
+def pulse_uid(pulse: Pulse) -> str:
+    return str(hash(pulse))
 
 
 class Waveform(Model):
