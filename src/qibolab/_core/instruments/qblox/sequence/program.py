@@ -13,7 +13,7 @@ from qibolab._core.pulses.pulse import (
     VirtualZ,
 )
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers, Parameter
+from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
 
 from ..ast_ import (
     Acquire,
@@ -58,10 +58,10 @@ def execution(
     waveforms: WaveformIndices,
     acquisitions: Acquisitions,
     sampling_rate: float,
-) -> list[Line]:
+) -> list[Instruction]:
     """The representation of the actual experiment to be executed."""
     return [
-        Line.instr(i_)
+        i_
         for block in (
             play(pulse, waveforms, acquisitions, sampling_rate) for _, pulse in sequence
         )
@@ -90,31 +90,36 @@ def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
     return [Nop()]
 
 
+START = "start"
+
+
 def loop(
-    sweepers: list, experiment: list[Line], relaxation_time: int, outer_shots: bool
-):
-    shots = (Registers.shots.value, [Nop()])
+    sweepers: list,
+    experiment: list[Instruction],
+    nshots: int,
+    relaxation_time: int,
+    outer_shots: bool,
+) -> list[Line]:
+    shots = (Registers.shots.value, nshots)
     sweep = [
-        (Register(number=i), parameters_update(parsweep))
+        (Register(number=i), iteration_length(parsweep))
         for i, parsweep in enumerate(sweepers, start=2)
     ]
     loops = [shots] + sweep if outer_shots else sweep + [shots]
 
     return (
-        [
-            inst
-            for lp in loops
-            for inst in (
-                [Line(instruction=lp[1][0], label=f"l{lp[0].number}")]
-                + [Line(instruction=inst_) for inst_ in lp[1][1:]]
-            )
-        ]
-        + experiment
-        + [Line(instruction=Wait(duration=relaxation_time))]
+        [Line(instruction=Move(source=lp[1], destination=lp[0])) for lp in loops]
+        + [Line(instruction=experiment[0], label=START)]
+        + [Line.instr(i_) for i_ in experiment[1:]]
+        + [Line.instr(Wait(duration=relaxation_time))]
         + [
-            Line(instruction=Loop(a=lp[0], address=Reference(label=f"l{lp[0].number}")))
+            Line.instr(i_)
             for lp in loops
-        ]
+            for i_ in [
+                Loop(a=lp[0], address=Reference(label=START)),
+                Move(source=lp[1], destination=lp[0]),
+            ]
+        ][:-1]
     )
 
 
@@ -134,7 +139,7 @@ def play(
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
     if isinstance(pulse, Align):
-        raise NotImplementedError("Align operation not yet supported by Qblox driver.")
+        raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
         raise NotImplementedError(
             "Readout unsupported for Qblox - the operation should be unpacked in Pulse and Acquisition"
@@ -186,6 +191,7 @@ def program(
         + loop(
             sweepers,
             execution(sequence, waveforms, acquisitions, sampling_rate),
+            nshots=options.nshots,
             relaxation_time=options.relaxation_time,
             outer_shots=options.averaging_mode is not AveragingMode.SEQUENTIAL,
         )
