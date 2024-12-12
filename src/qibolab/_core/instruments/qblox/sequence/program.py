@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from enum import Enum
 
 import numpy as np
@@ -43,14 +44,23 @@ class Registers(Enum):
     shots = Register(number=1)
 
 
-def initialization(nshots: int) -> list:
-    """Initialize registers."""
-    return [Line(instruction=Move(source=nshots, destination=Register(number=0)))]
+Loops = list[tuple[Register, int]]
 
 
-def setup() -> list:
+def loops(sweepers: list, nshots: int, inner_shots: bool) -> Loops:
+    shots = (Registers.shots.value, nshots)
+    sweep = [
+        (Register(number=i), iteration_length(parsweep))
+        for i, parsweep in enumerate(sweepers, start=2)
+    ]
+    return [shots] + sweep if inner_shots else sweep + [shots]
+
+
+def setup(loops: Loops) -> Sequence[Instruction]:
     """Set up."""
-    return [Line(instruction=WaitSync(duration=4))]
+    return [Move(source=lp[1], destination=lp[0]) for lp in loops] + [
+        WaitSync(duration=4)
+    ]
 
 
 def execution(
@@ -94,22 +104,10 @@ START = "start"
 
 
 def loop(
-    sweepers: list,
-    experiment: list[Instruction],
-    nshots: int,
-    relaxation_time: int,
-    outer_shots: bool,
+    loops: Loops, experiment: list[Instruction], relaxation_time: int
 ) -> list[Line]:
-    shots = (Registers.shots.value, nshots)
-    sweep = [
-        (Register(number=i), iteration_length(parsweep))
-        for i, parsweep in enumerate(sweepers, start=2)
-    ]
-    loops = [shots] + sweep if outer_shots else sweep + [shots]
-
     return (
-        [Line(instruction=Move(source=lp[1], destination=lp[0])) for lp in loops]
-        + [Line(instruction=experiment[0], label=START)]
+        [Line(instruction=experiment[0], label=START)]
         + [Line.instr(i_) for i_ in experiment[1:]]
         + [Line.instr(Wait(duration=relaxation_time))]
         + [
@@ -123,9 +121,9 @@ def loop(
     )
 
 
-def finalization() -> list:
+def finalization() -> list[Instruction]:
     """Finalize."""
-    return [Line(instruction=Stop())]
+    return [Stop()]
 
 
 PHASE_FACTOR = 1e9 / (2 * np.pi)
@@ -185,15 +183,24 @@ def program(
     assert options.nshots is not None
     assert options.relaxation_time is not None
 
+    loops_ = loops(
+        sweepers,
+        options.nshots,
+        inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
+    )
+
     return Program(
-        elements=initialization(options.nshots)
-        + setup()
-        + loop(
-            sweepers,
-            execution(sequence, waveforms, acquisitions, sampling_rate),
-            nshots=options.nshots,
-            relaxation_time=options.relaxation_time,
-            outer_shots=options.averaging_mode is not AveragingMode.SEQUENTIAL,
-        )
-        + finalization()
+        elements=[
+            el if isinstance(el, Line) else Line.instr(el)
+            for block in [
+                setup(loops_),
+                loop(
+                    loops_,
+                    execution(sequence, waveforms, acquisitions, sampling_rate),
+                    options.relaxation_time,
+                ),
+                finalization(),
+            ]
+            for el in block
+        ]
     )
