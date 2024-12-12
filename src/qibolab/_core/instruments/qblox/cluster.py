@@ -10,7 +10,7 @@ from qibolab._core.components.configs import Config, LogConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses.pulse import PulseLike, Readout
+from qibolab._core.pulses import PulseId, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers
@@ -151,7 +151,9 @@ class Cluster(Controller):
 
         return sequencers
 
-    def _execute(self, sequencers: dict[SlotId, dict[ChannelId, SequencerId]]) -> dict:
+    def _execute(
+        self, sequencers: dict[SlotId, dict[ChannelId, SequencerId]]
+    ) -> dict[PulseId, Result]:
         # TODO: implement
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
