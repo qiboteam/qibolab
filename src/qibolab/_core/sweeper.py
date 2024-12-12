@@ -106,6 +106,14 @@ class Sweeper(Model):
 
         return self
 
+    def __len__(self) -> int:
+        assert self.values is not None
+        return len(self.values)
+
 
 ParallelSweepers = list[Sweeper]
 """Sweepers that should be iterated in parallel."""
+
+
+def iteration_length(sweepers: ParallelSweepers) -> int:
+    return min(len(s) for s in sweepers)
