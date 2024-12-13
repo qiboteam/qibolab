@@ -43,7 +43,8 @@ from .waveforms import WaveformIndices, pulse_uid
 
 class Registers(Enum):
     bin = Register(number=0)
-    shots = Register(number=1)
+    bin_reset = Register(number=1)
+    shots = Register(number=2)
 
 
 Loops = list[tuple[Register, int, bool]]
@@ -51,9 +52,10 @@ Loops = list[tuple[Register, int, bool]]
 
 def loops(sweepers: list, nshots: int, inner_shots: bool) -> Loops:
     shots = (Registers.shots.value, nshots, True)
+    first_sweeper = max(r.value.number for r in Registers) + 1
     sweep = [
         (Register(number=i), iteration_length(parsweep), False)
-        for i, parsweep in enumerate(sweepers, start=2)
+        for i, parsweep in enumerate(sweepers, start=first_sweeper)
     ]
     return [shots] + sweep if inner_shots else sweep + [shots]
 
@@ -65,7 +67,11 @@ def setup(loops: Loops) -> Sequence[Union[Line, Instruction]]:
             Line(
                 instruction=Move(source=0, destination=Registers.bin.value),
                 comment="init bin counter",
-            )
+            ),
+            Line(
+                instruction=Move(source=0, destination=Registers.bin_reset.value),
+                comment="init bin reset",
+            ),
         ]
         + [Move(source=lp[1], destination=lp[0]) for lp in loops]
         + [WaitSync(duration=4)]
