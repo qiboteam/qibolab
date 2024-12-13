@@ -137,10 +137,19 @@ def loop_machinery(loops: Loops):
         for lp in loops
         for i_ in (
             [
-                Move(
-                    source=Registers.bin.value,
-                    destination=Registers.bin_reset.value,
-                )
+                Line(
+                    instruction=Jge(
+                        a=Registers.shots.value, b=1, address=Reference(label=SHOTS)
+                    ),
+                    comment="skip bin reset - advance both counters",
+                ),
+                Line(
+                    instruction=Move(
+                        source=Registers.bin_reset.value,
+                        destination=Registers.bin.value,
+                    ),
+                    comment="shots average: reset bin counter",
+                ),
             ]
             if lp[2]
             else []
