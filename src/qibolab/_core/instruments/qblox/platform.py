@@ -27,7 +27,7 @@ def _port_channels(mod: str, port: Union[int, str], slot: int) -> dict:
     if isinstance(port, str) and port.startswith("io"):
         return {
             "probe": IqChannel(path=f"{slot}/o{port[2:]}"),
-            "acquisition": AcquisitionChannel(path=f"{slot}/o{port[2:]}"),
+            "acquisition": AcquisitionChannel(path=f"{slot}/i{port[2:]}"),
         }
     port = f"o{port}" if isinstance(port, int) else port
     name, cls = _chtype(mod, port[0] == "i")
