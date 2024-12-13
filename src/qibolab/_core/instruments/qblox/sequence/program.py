@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from enum import Enum
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -21,6 +21,7 @@ from ..ast_ import (
     Acquire,
     Add,
     Instruction,
+    Jge,
     Line,
     Loop,
     Move,
@@ -47,15 +48,19 @@ class Registers(Enum):
     shots = Register(number=2)
 
 
-Loops = list[tuple[Register, int, bool]]
+Loops = Sequence[tuple[Register, int, Optional[str]]]
 
 
-def loops(sweepers: list, nshots: int, inner_shots: bool) -> Loops:
-    shots = (Registers.shots.value, nshots, True)
+def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> Loops:
+    shots = (Registers.shots.value, nshots, None)
     first_sweeper = max(r.value.number for r in Registers) + 1
     sweep = [
-        (Register(number=i), iteration_length(parsweep), False)
-        for i, parsweep in enumerate(sweepers, start=first_sweeper)
+        (
+            Register(number=i + first_sweeper),
+            iteration_length(parsweep),
+            f"{i+1}th sweeper",
+        )
+        for i, parsweep in enumerate(sweepers)
     ]
     return [shots] + sweep if inner_shots else sweep + [shots]
 
@@ -73,7 +78,13 @@ def setup(loops: Loops) -> Sequence[Union[Line, Instruction]]:
                 comment="init bin reset",
             ),
         ]
-        + [Move(source=lp[1], destination=lp[0]) for lp in loops]
+        + [
+            Line(
+                instruction=Move(source=lp[1], destination=lp[0]),
+                comment="init " + ("shots" if lp[2] is None else lp[2]) + " counter",
+            )
+            for lp in loops
+        ]
         + [WaitSync(duration=4)]
     )
 
@@ -131,7 +142,10 @@ def loop_conclusion(relaxation_time: int):
     ]
 
 
-def loop_machinery(loops: Loops):
+def loop_machinery(loops: Loops, singleshot: bool):
+    def shots(marker: Optional[str]):
+        return marker is None and not singleshot
+
     return [
         i_
         for lp in loops
@@ -151,14 +165,14 @@ def loop_machinery(loops: Loops):
                     comment="shots average: reset bin counter",
                 ),
             ]
-            if lp[2]
+            if shots(lp[2])
             else []
         )
         + [
             Line(
                 instruction=Loop(a=lp[0], address=Reference(label=START)),
-                comment="loop over shots" if lp[2] else None,
-                label=SHOTS if lp[2] else None,
+                comment="loop over " + ("shots" if lp[2] is None else lp[2]),
+                label=SHOTS if shots(lp[2]) else None,
             ),
             Move(source=lp[1], destination=lp[0]),
         ]
@@ -166,10 +180,10 @@ def loop_machinery(loops: Loops):
 
 
 def loop(
-    loops: Loops, experiment: list[Instruction], relaxation_time: int
+    loops: Loops, experiment: list[Instruction], relaxation_time: int, singleshot: bool
 ) -> Sequence[Union[Line, Instruction]]:
     conclusion = loop_conclusion(relaxation_time)
-    machinery = loop_machinery(loops)
+    machinery = loop_machinery(loops, singleshot)
     main = experiment + conclusion + machinery
 
     return [
@@ -260,6 +274,7 @@ def program(
                     loops_,
                     execution(sequence, waveforms, acquisitions, sampling_rate),
                     options.relaxation_time,
+                    options.averaging_mode is AveragingMode.SINGLESHOT,
                 ),
                 finalization(),
             ]
