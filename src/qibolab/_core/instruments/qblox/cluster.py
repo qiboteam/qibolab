@@ -7,7 +7,6 @@ from typing import Optional
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 
-from qibolab._core.components.channels import Channel
 from qibolab._core.components.configs import Config, LogConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
@@ -91,6 +90,21 @@ class Cluster(Controller):
         assert self._cluster is not None
         return {mod.slot_idx: mod for mod in self._cluster.modules if mod.present()}
 
+    @cached_property
+    def _channels_by_module(self) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
+        addresses = {
+            name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
+        }
+        return {
+            k: [el[1] for el in g]
+            for k, g in groupby(
+                sorted(
+                    (address.slot, (ch, address)) for ch, address in addresses.items()
+                ),
+                key=lambda el: el[0],
+            )
+        }
+
     @property
     def sampling_rate(self) -> int:
         return SAMPLING_RATE
@@ -137,7 +151,7 @@ class Cluster(Controller):
         self, sequences: dict[ChannelId, Sequence]
     ) -> dict[SlotId, dict[ChannelId, SequencerId]]:
         sequencers = defaultdict(dict)
-        for mod, chs in _channels_by_module(self.channels).items():
+        for mod, chs in self._channels_by_module.items():
             module = self._modules[mod]
             assert len(module.sequencers) > len(chs)
             # Map sequencers to specific outputs (but first disable all sequencer connections)
@@ -164,19 +178,6 @@ class Cluster(Controller):
             module.start_sequencer()
 
         return {}
-
-
-def _channels_by_module(
-    channels: dict[ChannelId, Channel],
-) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
-    addresses = {name: PortAddress.from_path(ch.path) for name, ch in channels.items()}
-    return {
-        k: [el[1] for el in g]
-        for k, g in groupby(
-            sorted((address.slot, (ch, address)) for ch, address in addresses.items()),
-            key=lambda el: el[0],
-        )
-    }
 
 
 def _split_channels(sequence: PulseSequence) -> dict[ChannelId, PulseSequence]:
