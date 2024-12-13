@@ -212,40 +212,31 @@ def play(
     sampling_rate: float,
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
+
+    if isinstance(pulse, Pulse):
+        uid = pulse_uid(pulse)
+        return [
+            Play(wave_0=waveforms[(uid, 0)], wave_1=waveforms[(uid, 1)], duration=0)
+        ]
+    if isinstance(pulse, Delay):
+        return [Wait(duration=int(pulse.duration * sampling_rate))]
+    if isinstance(pulse, VirtualZ):
+        return [SetPhDelta(value=int(pulse.phase * PHASE_FACTOR))]
+    if isinstance(pulse, Acquisition):
+        return [
+            Acquire(
+                acquisition=acquisitions[str(pulse.id)].index,
+                bin=Registers.bin.value,
+                duration=0,
+            )
+        ]
     if isinstance(pulse, Align):
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
         raise NotImplementedError(
             "Readout unsupported for Qblox - the operation should be unpacked in Pulse and Acquisition"
         )
-
-    def _play(pulse: Pulse) -> Play:
-        uid = pulse_uid(pulse)
-        return Play(wave_0=waveforms[(uid, 0)], wave_1=waveforms[(uid, 1)], duration=0)
-
-    return (
-        [_play(pulse)]
-        if isinstance(pulse, Pulse)
-        else (
-            [Wait(duration=int(pulse.duration * sampling_rate))]
-            if isinstance(pulse, Delay)
-            else (
-                [SetPhDelta(value=int(pulse.phase * PHASE_FACTOR))]
-                if isinstance(pulse, VirtualZ)
-                else (
-                    [
-                        Acquire(
-                            acquisition=acquisitions[str(pulse.id)].index,
-                            bin=Registers.bin.value,
-                            duration=0,
-                        )
-                    ]
-                    if isinstance(pulse, Acquisition)
-                    else []
-                )
-            )
-        )
-    )
+    raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
 
 
 def program(
