@@ -1,11 +1,13 @@
 from collections import defaultdict
 from functools import cached_property
+from itertools import groupby
 from pathlib import Path
 from typing import Optional
 
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 
+from qibolab._core.components.channels import Channel
 from qibolab._core.components.configs import Config, LogConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
@@ -135,19 +137,19 @@ class Cluster(Controller):
         self, sequences: dict[ChannelId, Sequence]
     ) -> dict[SlotId, dict[ChannelId, SequencerId]]:
         sequencers = defaultdict(dict)
-        for mod, chs in _channels_by_module().items():
+        for mod, chs in _channels_by_module(self.channels).items():
             module = self._modules[mod]
             assert len(module.sequencers) > len(chs)
             # Map sequencers to specific outputs (but first disable all sequencer connections)
             module.disconnect_outputs()
-            for idx, (ch, sequencer) in enumerate(zip(chs, module.sequencers)):
+            for idx, ((ch, address), sequencer) in enumerate(
+                zip(chs, module.sequencers)
+            ):
                 sequencers[mod][ch] = idx
                 sequencer.sequence(sequences[ch].model_dump())
                 # Configure the sequencers to synchronize
                 sequencer.sync_en(True)
-                sequencer.connect_sequencer(
-                    PortAddress.from_path(self.channels[ch].path).local_address
-                )
+                sequencer.connect_sequencer(address.local_address)
 
         return sequencers
 
@@ -164,9 +166,17 @@ class Cluster(Controller):
         return {}
 
 
-def _channels_by_module() -> dict[SlotId, list[ChannelId]]:
-    # TODO: implement
-    return {}
+def _channels_by_module(
+    channels: dict[ChannelId, Channel],
+) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
+    addresses = {name: PortAddress.from_path(ch.path) for name, ch in channels.items()}
+    return {
+        k: [el[1] for el in g]
+        for k, g in groupby(
+            sorted((address.slot, (ch, address)) for ch, address in addresses.items()),
+            key=lambda el: el[0],
+        )
+    }
 
 
 def _split_channels(sequence: PulseSequence) -> dict[ChannelId, PulseSequence]:
