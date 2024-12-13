@@ -116,35 +116,62 @@ def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
 
 
 START = "start"
+SHOTS = "shots"
+
+
+def loop_conclusion(relaxation_time: int):
+    return [
+        Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
+        Line(
+            instruction=Add(
+                a=Registers.bin.value, b=1, destination=Registers.bin.value
+            ),
+            comment="bin increment",
+        ),
+    ]
+
+
+def loop_machinery(loops: Loops):
+    return [
+        i_
+        for lp in loops
+        for i_ in (
+            [
+                Move(
+                    source=Registers.bin.value,
+                    destination=Registers.bin_reset.value,
+                )
+            ]
+            if lp[2]
+            else []
+        )
+        + [
+            Line(
+                instruction=Loop(a=lp[0], address=Reference(label=START)),
+                comment="loop over shots" if lp[2] else None,
+                label=SHOTS if lp[2] else None,
+            ),
+            Move(source=lp[1], destination=lp[0]),
+        ]
+    ][:-1]
 
 
 def loop(
     loops: Loops, experiment: list[Instruction], relaxation_time: int
 ) -> Sequence[Union[Line, Instruction]]:
-    return (
-        [Line(instruction=experiment[0], label=START)]
-        + experiment[1:]
-        + [
-            Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
-            Line(
-                instruction=Add(
-                    a=Registers.bin.value, b=1, destination=Registers.bin.value
-                ),
-                comment="bin increment",
-            ),
-        ]
-        + [
-            i_
-            for lp in loops
-            for i_ in [
-                Line(
-                    instruction=Loop(a=lp[0], address=Reference(label=START)),
-                    comment="loop over shots" if lp[2] else None,
-                ),
-                Move(source=lp[1], destination=lp[0]),
-            ]
-        ][:-1]
-    )
+    conclusion = loop_conclusion(relaxation_time)
+    machinery = loop_machinery(loops)
+    main = experiment + conclusion + machinery
+
+    return [
+        (
+            Line(instruction=main[0], label=START)
+            if isinstance(main[0], Instruction)
+            else Line(
+                instruction=main[0].instruction, comment=main[0].comment, label=START
+            )
+        )
+    ] + main[1:]
 
 
 def finalization() -> list[Instruction]:
