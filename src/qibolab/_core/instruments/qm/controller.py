@@ -346,9 +346,16 @@ class QmController(Controller):
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
     ):
-        """Register pulse with many different durations.
+        """Register pulses needed to implement a duration sweep.
 
-        Needed when sweeping duration.
+        For standard (non-interpolated) duration sweeps, we need to
+        upload distinct waveforms for every different duration.
+
+        When interpolation is used, we need to upload a single pulse
+        with the minimum duration of the sweeper, because the QM real-
+        time interpolation can only stretch and not compress arbitrary
+        waveforms, as documented in
+        https://docs.quantum-machines.co/latest/docs/Guides/features/?h=interpo#dynamic-pulse-duration
         """
         for pulse in sweeper.pulses:
             if isinstance(pulse, (Align, Delay)):
@@ -359,10 +366,20 @@ class QmController(Controller):
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
-            for value in sweeper.values.astype(int):
-                sweep_pulse = original_pulse.model_copy(update={"duration": value})
-                sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
-                params.duration_ops.append((value, sweep_op))
+            values = sweeper.values.astype(int)
+            if sweeper.parameter is Parameter.duration_interpolated:
+                sweep_pulse = original_pulse.model_copy(
+                    update={"duration": min(values)}
+                )
+                params.interpolated_op = self.register_pulse(
+                    ids[0], configs[ids[0]], sweep_pulse
+                )
+            else:
+                assert sweeper.parameter is Parameter.duration
+                for value in values:
+                    sweep_pulse = original_pulse.model_copy(update={"duration": value})
+                    sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
+                    params.duration_ops.append((value, sweep_op))
 
     def register_amplitude_sweeper_pulses(
         self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
@@ -447,6 +464,8 @@ class QmController(Controller):
         for sweeper in find_sweepers(sweepers, Parameter.amplitude):
             self.register_amplitude_sweeper_pulses(args, configs, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
+            self.register_duration_sweeper_pulses(args, configs, sweeper)
+        for sweeper in find_sweepers(sweepers, Parameter.duration_interpolated):
             self.register_duration_sweeper_pulses(args, configs, sweeper)
 
     def execute_program(self, program):
