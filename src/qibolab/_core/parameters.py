@@ -16,6 +16,7 @@ from .execution_parameters import ConfigUpdate, ExecutionParameters
 from .identifier import QubitId, QubitPairId
 from .instruments.abstract import Instrument, InstrumentId
 from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
+from .pulses import Acquisition, Pulse, Readout, Rectangular
 from .qubits import Qubit
 from .serialize import Model, replace
 from .unrolling import Bounds
@@ -212,21 +213,70 @@ InstrumentMap = dict[InstrumentId, Instrument]
 
 
 class Hardware(TypedDict):
+    """Part of the platform that specifies the hardware configuration."""
+
     instruments: InstrumentMap
     qubits: QubitMap
     couplers: NotRequired[QubitMap]
 
 
-def _native_builder(cls, natives: set[str]) -> NativeContainer:
-    return cls(**{gate: Native() for gate in cls.model_fields.keys() & natives})
+def _gate_channel(qubit: Qubit, gate: str) -> str:
+    """Default channel that a native gate plays on."""
+    if gate in ("RX", "RX90", "CNOT"):
+        return qubit.drive
+    if gate == "RX12":
+        return qubit.drive_qudits[(1, 2)]
+    if gate == "MZ":
+        return qubit.acquisition
+    if gate in ("CP", "CZ", "iSWAP"):
+        return qubit.flux
+
+
+def _gate_sequence(qubit: Qubit, gate: str) -> Native:
+    """Default sequence corresponding to a native gate."""
+    channel = _gate_channel(qubit, gate)
+    pulse = Pulse(duration=0, amplitude=0, envelope=Rectangular())
+    if gate != "MZ":
+        return Native([(channel, pulse)])
+
+    return Native(
+        [(channel, Readout(acquisition=Acquisition(duration=0), probe=pulse))]
+    )
+
+
+def _pair_to_qubit(pair: str, qubits: QubitMap) -> Qubit:
+    """Get first qubit of a pair given in ``{q0}-{q1}`` format."""
+    q = tuple(pair.split("-"))[0]
+    try:
+        return qubits[q]
+    except KeyError:
+        return qubits[int(q)]
+
+
+def _native_builder(cls, qubit: Qubit, natives: set[str]) -> NativeContainer:
+    """Build default native gates for a given qubit or pair.
+
+    In case of pair, ``qubit`` is assumed to be the first qubit of the pair,
+    and a default pulse is added on that qubit, because at this stage we don't
+    know which qubit is the high frequency one.
+    """
+    return cls(
+        **{
+            gate: _gate_sequence(qubit, gate)
+            for gate in cls.model_fields.keys() & natives
+        }
+    )
 
 
 class ParametersBuilder(Model):
+    """Generates default ``Parameters`` for a given platform hardware
+    configuration."""
+
     hardware: Hardware
     natives: set[str] = Field(default_factory=set)
     pairs: list[str] = Field(default_factory=list)
 
-    def build(self):
+    def build(self) -> Parameters:
         settings = Settings()
 
         configs = {}
@@ -237,16 +287,20 @@ class ParametersBuilder(Model):
                     for id, channel in instrument.channels.items()
                 }
 
+        qubits = self.hardware.get("qubits", {})
         single_qubit = {
-            q: _native_builder(SingleQubitNatives, self.natives - {"CP"})
-            for q in self.hardware.get("qubits", {})
+            q: _native_builder(SingleQubitNatives, qubit, self.natives - {"CP"})
+            for q, qubit in qubits.items()
         }
         coupler = {
-            q: _native_builder(SingleQubitNatives, self.natives & {"CP"})
-            for q in self.hardware.get("couplers", {})
+            q: _native_builder(SingleQubitNatives, qubit, self.natives & {"CP"})
+            for q, qubit in self.hardware.get("couplers", {}).items()
         }
         two_qubit = {
-            p: _native_builder(TwoQubitNatives, self.natives) for p in self.pairs
+            pair: _native_builder(
+                TwoQubitNatives, _pair_to_qubit(pair, qubits), self.natives
+            )
+            for pair in self.pairs
         }
         native_gates = NativeGates(
             single_qubit=single_qubit, coupler=coupler, two_qubit=two_qubit

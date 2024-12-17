@@ -11,7 +11,7 @@ from qibolab._core.parameters import (
     TwoQubitContainer,
 )
 from qibolab._core.platform.load import create_platform
-from qibolab._core.pulses.pulse import Pulse
+from qibolab._core.pulses.pulse import Pulse, Readout
 
 
 def test_two_qubit_container():
@@ -119,7 +119,9 @@ def test_builder():
         "qubits": dummy.qubits,
         "couplers": dummy.couplers,
     }
-    builder = ParametersBuilder(hardware=hardware, pairs=["0-2"])
+    builder = ParametersBuilder(
+        hardware=hardware, natives=["RX", "MZ", "CZ"], pairs=["0-2"]
+    )
     parameters = builder.build()
 
     for q in dummy.qubits:
@@ -133,3 +135,12 @@ def test_builder():
         assert c in parameters.native_gates.coupler
 
     assert list(parameters.native_gates.two_qubit) == [(0, 2)]
+    sequence = parameters.native_gates.two_qubit[(0, 2)].CZ
+    assert sequence[0][0] == "0/flux"
+    assert isinstance(sequence[0][1], Pulse)
+    sequence = parameters.native_gates.single_qubit[0].RX
+    assert sequence[0][0] == "0/drive"
+    assert isinstance(sequence[0][1], Pulse)
+    sequence = parameters.native_gates.single_qubit[2].MZ
+    assert sequence[0][0] == "2/acquisition"
+    assert isinstance(sequence[0][1], Readout)
