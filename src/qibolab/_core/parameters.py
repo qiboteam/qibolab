@@ -9,15 +9,31 @@ from typing import Annotated, Any, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
+from typing_extensions import NotRequired, TypedDict
 
-from .components import ChannelConfig, Config
+from .components import (
+    AcquisitionChannel,
+    AcquisitionConfig,
+    Channel,
+    ChannelConfig,
+    Config,
+    DcChannel,
+    DcConfig,
+    IqChannel,
+    IqConfig,
+    IqMixerConfig,
+    OscillatorConfig,
+)
 from .execution_parameters import ConfigUpdate, ExecutionParameters
-from .identifier import QubitId, QubitPairId
-from .native import SingleQubitNatives, TwoQubitNatives
+from .identifier import ChannelId, QubitId, QubitPairId
+from .instruments.abstract import Instrument, InstrumentId
+from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
+from .pulses import Acquisition, Pulse, Readout, Rectangular
+from .qubits import Qubit
 from .serialize import Model, replace
 from .unrolling import Bounds
 
-__all__ = ["ConfigKinds"]
+__all__ = ["ConfigKinds", "QubitMap", "InstrumentMap", "Hardware", "ParametersBuilder"]
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -202,3 +218,118 @@ class Parameters(Model):
             _setvalue(d, path, val)
 
         return self.model_validate(d)
+
+
+QubitMap = dict[QubitId, Qubit]
+InstrumentMap = dict[InstrumentId, Instrument]
+
+
+class Hardware(TypedDict):
+    """Part of the platform that specifies the hardware configuration."""
+
+    instruments: InstrumentMap
+    qubits: QubitMap
+    couplers: NotRequired[QubitMap]
+
+
+def _gate_channel(qubit: Qubit, gate: str) -> str:
+    """Default channel that a native gate plays on."""
+    if gate in ("RX", "RX90", "CNOT"):
+        return qubit.drive
+    if gate == "RX12":
+        return qubit.drive_qudits[(1, 2)]
+    if gate == "MZ":
+        return qubit.acquisition
+    if gate in ("CP", "CZ", "iSWAP"):
+        return qubit.flux
+
+
+def _gate_sequence(qubit: Qubit, gate: str) -> Native:
+    """Default sequence corresponding to a native gate."""
+    channel = _gate_channel(qubit, gate)
+    pulse = Pulse(duration=0, amplitude=0, envelope=Rectangular())
+    if gate != "MZ":
+        return Native([(channel, pulse)])
+
+    return Native(
+        [(channel, Readout(acquisition=Acquisition(duration=0), probe=pulse))]
+    )
+
+
+def _pair_to_qubit(pair: str, qubits: QubitMap) -> Qubit:
+    """Get first qubit of a pair given in ``{q0}-{q1}`` format."""
+    q = tuple(pair.split("-"))[0]
+    try:
+        return qubits[q]
+    except KeyError:
+        return qubits[int(q)]
+
+
+def _native_builder(cls, qubit: Qubit, natives: set[str]) -> NativeContainer:
+    """Build default native gates for a given qubit or pair.
+
+    In case of pair, ``qubit`` is assumed to be the first qubit of the pair,
+    and a default pulse is added on that qubit, because at this stage we don't
+    know which qubit is the high frequency one.
+    """
+    return cls(
+        **{
+            gate: _gate_sequence(qubit, gate)
+            for gate in cls.model_fields.keys() & natives
+        }
+    )
+
+
+def _channel_config(id: ChannelId, channel: Channel) -> dict[ChannelId, Config]:
+    """Default configs correspondign to a channel."""
+    if isinstance(channel, DcChannel):
+        return {id: DcConfig(offset=0)}
+    if isinstance(channel, AcquisitionChannel):
+        return {id: AcquisitionConfig(delay=0, smearing=0)}
+    if isinstance(channel, IqChannel):
+        configs = {id: IqConfig(frequency=0)}
+        if channel.lo is not None:
+            configs[channel.lo] = OscillatorConfig(frequency=0, power=0)
+        if channel.mixer is not None:
+            configs[channel.mixer] = IqMixerConfig(frequency=0, power=0)
+        return configs
+    return {id: Config()}
+
+
+class ParametersBuilder(Model):
+    """Generates default ``Parameters`` for a given platform hardware
+    configuration."""
+
+    hardware: Hardware
+    natives: set[str] = Field(default_factory=set)
+    pairs: list[str] = Field(default_factory=list)
+
+    def build(self) -> Parameters:
+        settings = Settings()
+
+        configs = {}
+        for instrument in self.hardware.get("instruments", {}).values():
+            if hasattr(instrument, "channels"):
+                for id, channel in instrument.channels.items():
+                    configs |= _channel_config(id, channel)
+
+        qubits = self.hardware.get("qubits", {})
+        single_qubit = {
+            q: _native_builder(SingleQubitNatives, qubit, self.natives - {"CP"})
+            for q, qubit in qubits.items()
+        }
+        coupler = {
+            q: _native_builder(SingleQubitNatives, qubit, self.natives & {"CP"})
+            for q, qubit in self.hardware.get("couplers", {}).items()
+        }
+        two_qubit = {
+            pair: _native_builder(
+                TwoQubitNatives, _pair_to_qubit(pair, qubits), self.natives
+            )
+            for pair in self.pairs
+        }
+        native_gates = NativeGates(
+            single_qubit=single_qubit, coupler=coupler, two_qubit=two_qubit
+        )
+
+        return Parameters(settings=settings, configs=configs, native_gates=native_gates)

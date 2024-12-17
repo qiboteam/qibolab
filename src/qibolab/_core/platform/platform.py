@@ -11,8 +11,17 @@ from ..components import Config
 from ..components.channels import Channel
 from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, QubitId, QubitPairId, Result
-from ..instruments.abstract import Controller, Instrument, InstrumentId
-from ..parameters import NativeGates, Parameters, Settings, Update, update_configs
+from ..instruments.abstract import Controller
+from ..parameters import (
+    InstrumentMap,
+    NativeGates,
+    Parameters,
+    ParametersBuilder,
+    QubitMap,
+    Settings,
+    Update,
+    update_configs,
+)
 from ..pulses import PulseId
 from ..qubits import Qubit
 from ..sequence import PulseSequence
@@ -20,10 +29,6 @@ from ..sweeper import ParallelSweepers
 from ..unrolling import Bounds, batch
 
 __all__ = ["Platform"]
-
-QubitMap = dict[QubitId, Qubit]
-QubitPairMap = list[QubitPairId]
-InstrumentMap = dict[InstrumentId, Instrument]
 
 NS_TO_SEC = 1e-9
 PARAMETERS = "parameters.json"
@@ -306,13 +311,13 @@ class Platform:
         if couplers is None:
             couplers = {}
 
-        return cls(
-            name=name,
-            parameters=Parameters.model_validate_json((path / PARAMETERS).read_text()),
-            instruments=instruments,
-            qubits=qubits,
-            couplers=couplers,
-        )
+        hardware = {"instruments": instruments, "qubits": qubits, "couplers": couplers}
+        try:
+            parameters = Parameters.model_validate_json((path / PARAMETERS).read_text())
+        except FileNotFoundError:
+            parameters = ParametersBuilder(hardware=hardware).build()
+
+        return cls(name=name, parameters=parameters, **hardware)
 
     def dump(self, path: Path):
         """Dump platform."""
