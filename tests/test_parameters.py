@@ -4,7 +4,12 @@ import pytest
 
 from qibolab._core.components.configs import Config
 from qibolab._core.native import Native, TwoQubitNatives
-from qibolab._core.parameters import ConfigKinds, Parameters, TwoQubitContainer
+from qibolab._core.parameters import (
+    ConfigKinds,
+    Parameters,
+    ParametersBuilder,
+    TwoQubitContainer,
+)
 from qibolab._core.platform.load import create_platform
 from qibolab._core.pulses.pulse import Pulse
 
@@ -104,3 +109,27 @@ def test_update():
     assert dummy.settings.nshots == 42
     assert dummy.natives.single_qubit[1].RX[0][1].amplitude == -0.123
     assert dummy.natives.single_qubit[1].RX[0][1].duration == 456.7
+
+
+def test_builder():
+    dummy = create_platform("dummy")
+
+    hardware = {
+        "instruments": dummy.instruments,
+        "qubits": dummy.qubits,
+        "couplers": dummy.couplers,
+    }
+    builder = ParametersBuilder(hardware=hardware, pairs=["0-2"])
+    parameters = builder.build()
+
+    for q in dummy.qubits:
+        assert f"{q}/drive" in parameters.configs
+        assert f"{q}/probe" in parameters.configs
+        assert f"{q}/acquisition" in parameters.configs
+        assert f"{q}/drive12" in parameters.configs
+        assert q in parameters.native_gates.single_qubit
+    for c in dummy.couplers:
+        assert f"coupler_{c}/flux" in parameters.configs
+        assert c in parameters.native_gates.coupler
+
+    assert list(parameters.native_gates.two_qubit) == [(0, 2)]

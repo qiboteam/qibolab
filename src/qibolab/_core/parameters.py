@@ -9,15 +9,18 @@ from typing import Annotated, Any, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
+from typing_extensions import NotRequired, TypedDict
 
-from .components import ChannelConfig, Config
+from .components import ChannelConfig, Config, channel_to_config
 from .execution_parameters import ConfigUpdate, ExecutionParameters
 from .identifier import QubitId, QubitPairId
-from .native import SingleQubitNatives, TwoQubitNatives
+from .instruments.abstract import Instrument, InstrumentId
+from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
+from .qubits import Qubit
 from .serialize import Model, replace
 from .unrolling import Bounds
 
-__all__ = ["ConfigKinds"]
+__all__ = ["ConfigKinds", "QubitMap", "InstrumentMap", "Hardware", "ParametersBuilder"]
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -202,3 +205,51 @@ class Parameters(Model):
             _setvalue(d, path, val)
 
         return self.model_validate(d)
+
+
+QubitMap = dict[QubitId, Qubit]
+InstrumentMap = dict[InstrumentId, Instrument]
+
+
+class Hardware(TypedDict):
+    instruments: InstrumentMap
+    qubits: QubitMap
+    couplers: NotRequired[QubitMap]
+
+
+def _native_builder(cls, natives: set[str]) -> NativeContainer:
+    return cls(**{gate: Native() for gate in cls.model_fields.keys() & natives})
+
+
+class ParametersBuilder(Model):
+    hardware: Hardware
+    natives: set[str] = Field(default_factory=set)
+    pairs: list[str] = Field(default_factory=list)
+
+    def build(self):
+        settings = Settings()
+
+        configs = {}
+        for instrument in self.hardware.get("instruments", {}).values():
+            if hasattr(instrument, "channels"):
+                configs |= {
+                    id: channel_to_config(channel)
+                    for id, channel in instrument.channels.items()
+                }
+
+        single_qubit = {
+            q: _native_builder(SingleQubitNatives, self.natives - {"CP"})
+            for q in self.hardware.get("qubits", {})
+        }
+        coupler = {
+            q: _native_builder(SingleQubitNatives, self.natives & {"CP"})
+            for q in self.hardware.get("couplers", {})
+        }
+        two_qubit = {
+            p: _native_builder(TwoQubitNatives, self.natives) for p in self.pairs
+        }
+        native_gates = NativeGates(
+            single_qubit=single_qubit, coupler=coupler, two_qubit=two_qubit
+        )
+
+        return Parameters(settings=settings, configs=configs, native_gates=native_gates)
