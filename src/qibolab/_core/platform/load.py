@@ -62,7 +62,7 @@ def locate_platform(name: str, paths: Optional[list[Path]] = None) -> Path:
     return _search(name, paths)
 
 
-def create_platform(name: str, params: Optional[dict] = None) -> Platform:
+def create_platform(name: str, parameters: Optional[Parameters] = None) -> Platform:
     """A platform for executing quantum algorithms.
 
     It consists of a quantum processor QPU and a set of controlling instruments.
@@ -83,10 +83,10 @@ def create_platform(name: str, params: Optional[dict] = None) -> Platform:
     if isinstance(hardware, Platform):
         return hardware
 
-    if params is None:
+    if parameters is None:
         return Platform.load(path, **hardware)
 
-    return Platform(**hardware, parameters=Parameters(**params))
+    return Platform(**hardware, parameters=parameters)
 
 
 def available_platforms() -> list[str]:
