@@ -11,9 +11,21 @@ from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
 from typing_extensions import NotRequired, TypedDict
 
-from .components import ChannelConfig, Config, channel_to_config
+from .components import (
+    AcquisitionChannel,
+    AcquisitionConfig,
+    Channel,
+    ChannelConfig,
+    Config,
+    DcChannel,
+    DcConfig,
+    IqChannel,
+    IqConfig,
+    IqMixerConfig,
+    OscillatorConfig,
+)
 from .execution_parameters import ConfigUpdate, ExecutionParameters
-from .identifier import QubitId, QubitPairId
+from .identifier import ChannelId, QubitId, QubitPairId
 from .instruments.abstract import Instrument, InstrumentId
 from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
 from .pulses import Acquisition, Pulse, Readout, Rectangular
@@ -268,6 +280,22 @@ def _native_builder(cls, qubit: Qubit, natives: set[str]) -> NativeContainer:
     )
 
 
+def _channel_config(id: ChannelId, channel: Channel) -> dict[ChannelId, Config]:
+    """Default configs correspondign to a channel."""
+    if isinstance(channel, DcChannel):
+        return {id: DcConfig(offset=0)}
+    if isinstance(channel, AcquisitionChannel):
+        return {id: AcquisitionConfig(delay=0, smearing=0)}
+    if isinstance(channel, IqChannel):
+        configs = {id: IqConfig(frequency=0)}
+        if channel.lo is not None:
+            configs[channel.lo] = OscillatorConfig(frequency=0, power=0)
+        if channel.mixer is not None:
+            configs[channel.mixer] = IqMixerConfig(frequency=0, power=0)
+        return configs
+    return {id: Config()}
+
+
 class ParametersBuilder(Model):
     """Generates default ``Parameters`` for a given platform hardware
     configuration."""
@@ -282,10 +310,8 @@ class ParametersBuilder(Model):
         configs = {}
         for instrument in self.hardware.get("instruments", {}).values():
             if hasattr(instrument, "channels"):
-                configs |= {
-                    id: channel_to_config(channel)
-                    for id, channel in instrument.channels.items()
-                }
+                for id, channel in instrument.channels.items():
+                    configs |= _channel_config(id, channel)
 
         qubits = self.hardware.get("qubits", {})
         single_qubit = {

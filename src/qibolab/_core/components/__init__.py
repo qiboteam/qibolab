@@ -18,7 +18,6 @@ their name.
 from . import channels
 from .channels import *
 from .configs import *
-from .default import *
 
 __all__ = []
 __all__ += channels.__all__
