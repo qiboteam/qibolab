@@ -1,13 +1,12 @@
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
-from pathlib import Path
 from typing import Optional
 
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 
-from qibolab._core.components.configs import Config, LogConfig
+from qibolab._core.components.configs import Config
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
@@ -17,6 +16,7 @@ from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers
 
 from .sequence import Sequence
+from .log import Logger
 
 # from qcodes.instrument import find_or_create_instrument
 
@@ -138,12 +138,13 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
         results = {}
+        log = Logger(configs)
+
         for ps in sequences:
-            sequences_ = _prepare(ps, sweepers, options, self.sampling_rate)
-            if "log" in configs:
-                assert isinstance(configs["log"], LogConfig)
-                _dump_sequences(configs["log"].path, sequences_)
-            sequencers = self._upload(sequences_)
+            sequences_ = compile(ps, sweepers, options, self.sampling_rate)
+            log.sequences(sequences_)
+            sequencers = self._prepare(sequences_)
+            log.sequencers(sequencers, self._cluster)
             results |= self._execute(sequencers)
         return results
 
@@ -227,6 +228,3 @@ def _prepare(
     }
 
 
-def _dump_sequences(log: Path, sequences: dict[ChannelId, Sequence]):
-    for ch, seq in sequences.items():
-        (log / f"{ch}.json".replace("/", "-")).write_text(seq.model_dump_json())
