@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
@@ -97,7 +98,9 @@ class Cluster(Controller):
             log.sequences(sequences_)
             sequencers = self._prepare(sequences_, options.acquisition_type)
             log.sequencers(sequencers, self._cluster)
-            results |= self._execute(sequencers)
+            results |= self._execute(
+                sequencers, options.estimate_duration([ps], sweepers)
+            )
         return results
 
     def _prepare(
@@ -116,7 +119,9 @@ class Cluster(Controller):
 
         return sequencers
 
-    def _execute(self, sequencers: SeqeuencerMap) -> dict[PulseId, Result]:
+    def _execute(
+        self, sequencers: SeqeuencerMap, duration: float
+    ) -> dict[PulseId, Result]:
         # TODO: implement
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
@@ -124,4 +129,5 @@ class Cluster(Controller):
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
+        time.sleep(duration + 1)
         return {}
