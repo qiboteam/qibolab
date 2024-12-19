@@ -39,10 +39,14 @@ class Cluster(Controller):
     bounds: str = "qblox/bounds"
     _cluster: Optional[qblox.Cluster] = None
 
+    @property
+    def cluster(self) -> qblox.Cluster:
+        assert self._cluster is not None
+        return self._cluster
+
     @cached_property
     def _modules(self) -> dict[SlotId, Module]:
-        assert self._cluster is not None
-        return {mod.slot_idx: mod for mod in self._cluster.modules if mod.present()}
+        return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
 
     @cached_property
     def _channels_by_module(self) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
@@ -98,7 +102,7 @@ class Cluster(Controller):
             sequences_ = compile(ps, sweepers, options, self.sampling_rate)
             log.sequences(sequences_)
             sequencers = self._prepare(sequences_, options.acquisition_type)
-            log.sequencers(sequencers, self._cluster)
+            log.status(self.cluster, sequencers)
             data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
             log.data(data)
             results |= _extract(data)
@@ -136,7 +140,7 @@ class Cluster(Controller):
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 self.cluster.get_acquisition_status(slot, seq, timeout=10)
-                acquisitions[ch] = self._cluster.get_acquisitions(slot, seq)
+                acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
 
