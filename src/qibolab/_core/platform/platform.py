@@ -1,7 +1,6 @@
 """A platform for executing quantum algorithms."""
 
 from dataclasses import dataclass, field
-from math import prod
 from pathlib import Path
 from typing import Literal, Optional, TypeVar
 
@@ -29,39 +28,15 @@ from ..unrolling import Bounds, batch
 
 __all__ = ["Platform"]
 
-NS_TO_SEC = 1e-9
 PARAMETERS = "parameters.json"
 
 # TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
 T = TypeVar("T")
 
 
-# TODO: lift for general usage in Qibolab
-def default(value: Optional[T], default: T) -> T:
-    """None replacement shortcut."""
-    return value if value is not None else default
-
-
 def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
     """Map channel names to element (qubit or coupler)."""
     return {ch: id for id, el in elements.items() for ch in el.channels}
-
-
-def estimate_duration(
-    sequences: list[PulseSequence],
-    options: ExecutionParameters,
-    sweepers: list[ParallelSweepers],
-) -> float:
-    """Estimate experiment duration."""
-    duration = sum(seq.duration for seq in sequences)
-    relaxation = default(options.relaxation_time, 0)
-    nshots = default(options.nshots, 0)
-    return (
-        (duration + len(sequences) * relaxation)
-        * nshots
-        * NS_TO_SEC
-        * prod(len(s[0].values) for s in sweepers)
-    )
 
 
 def _unique_acquisitions(sequences: list[PulseSequence]) -> bool:
@@ -274,7 +249,7 @@ class Platform:
 
         options = self.settings.fill(ExecutionParameters(**options))
 
-        time = estimate_duration(sequences, options, sweepers)
+        time = options.estimate_duration(sequences, sweepers)
         log.info(f"Minimal execution time: {time}")
 
         configs = self.parameters.configs.copy()

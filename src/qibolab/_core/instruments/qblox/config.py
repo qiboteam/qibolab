@@ -9,6 +9,8 @@ from qibolab._core.serialize import Model
 
 from .sequence import Sequence
 
+__all__ = []
+
 SequencerId = int
 SlotId = int
 SeqeuencerMap = dict[SlotId, dict[ChannelId, SequencerId]]
