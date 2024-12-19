@@ -8,6 +8,7 @@ from qibolab._core.identifier import ChannelId
 
 from .config import SeqeuencerMap
 from .sequence import Sequence
+from .sequence.acquisition import AcquiredData
 
 __all__ = []
 
@@ -47,3 +48,6 @@ class Logger:
                 (status / _sanitize(f"{ch}.log")).write_text(
                     str(cluster.get_sequencer_status(slot, seq_idx))
                 )
+
+    def data(self, data: dict[ChannelId, AcquiredData]):
+        pass

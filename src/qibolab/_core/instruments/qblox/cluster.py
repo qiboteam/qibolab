@@ -19,6 +19,7 @@ from . import config
 from .config import PortAddress, SeqeuencerMap, SlotId
 from .log import Logger
 from .sequence import Sequence, compile
+from .sequence.acquisition import AcquiredData
 
 # from qcodes.instrument import find_or_create_instrument
 
@@ -98,30 +99,30 @@ class Cluster(Controller):
             log.sequences(sequences_)
             sequencers = self._prepare(sequences_, options.acquisition_type)
             log.sequencers(sequencers, self._cluster)
-            results |= self._execute(
-                sequencers, options.estimate_duration([ps], sweepers)
-            )
+            data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
+            log.data(data)
+            results |= _extract(data)
         return results
 
     def _prepare(
         self, sequences: dict[ChannelId, Sequence], acquisition: AcquisitionType
     ) -> SeqeuencerMap:
         sequencers = defaultdict(dict)
-        for mod, chs in self._channels_by_module.items():
-            module = self._modules[mod]
+        for slot, chs in self._channels_by_module.items():
+            module = self._modules[slot]
             assert len(module.sequencers) > len(chs)
             config.module(module)
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
-                sequencers[mod][ch] = idx
+                sequencers[slot][ch] = idx
                 config.sequencer(sequencer, address, sequences[ch], acquisition)
 
         return sequencers
 
     def _execute(
         self, sequencers: SeqeuencerMap, duration: float
-    ) -> dict[PulseId, Result]:
+    ) -> dict[ChannelId, AcquiredData]:
         # TODO: implement
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
@@ -130,4 +131,15 @@ class Cluster(Controller):
             module.start_sequencer()
 
         time.sleep(duration + 1)
-        return {}
+
+        acquisitions = {}
+        for slot, seqs in sequencers.items():
+            for ch, seq in seqs.items():
+                self.cluster.get_acquisition_status(slot, seq, timeout=10)
+                acquisitions[ch] = self._cluster.get_acquisitions(slot, seq)
+
+        return acquisitions
+
+
+def _extract(acquisitions: dict[ChannelId, dict]) -> dict[PulseId, Result]:
+    return {}
