@@ -53,19 +53,14 @@
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
-              };
-
-              languages.c = {
-                enable = true;
-              };
-
-              languages.cplusplus = {
-                enable = true;
+                LD_LIBRARY_PATH = builtins.concatStringsSep ":" (map (p: "${p}/lib") (with pkgs; [
+                  stdenv.cc.cc.lib
+                  zlib
+                ]));
               };
 
               languages.python = {
                 enable = true;
-                libraries = with pkgs; [zlib];
                 version = "3.11";
                 poetry = {
                   enable = true;
@@ -79,11 +74,6 @@
                     ];
                   };
                 };
-              };
-
-              languages.rust = {
-                enable = true;
-                channel = "stable";
               };
             })
           ];
