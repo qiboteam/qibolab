@@ -12,10 +12,10 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import PulseId, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers
 
-from .sequence import Sequence
+from . import config
+from .config import PortAddress, SeqeuencerMap, SlotId
 from .log import Logger
 
 # from qcodes.instrument import find_or_create_instrument
@@ -24,55 +24,6 @@ from .log import Logger
 __all__ = ["Cluster"]
 
 SAMPLING_RATE = 1
-
-
-SlotId = int
-SequencerId = int
-
-
-class PortAddress(Model):
-    slot: SlotId
-    ports: tuple[int, Optional[int]]
-    input: bool = False
-
-    @classmethod
-    def from_path(cls, path: str):
-        """Load address from :attr:`qibolab.Channel.path`."""
-        els = path.split("/")
-        assert len(els) == 2
-        ports = els[1][1:].split("_")
-        assert 1 <= len(ports) <= 2
-        return cls(
-            slot=int(els[0]),
-            ports=(int(ports[0]), int(ports[1]) if len(ports) == 2 else None),
-            input=els[1][0] == "i",
-        )
-
-    @property
-    def local_address(self):
-        """Physical address within the module.
-
-        It will generate a string in the format ``<direction><channel>`` or
-        ``<direction><I-channel>_<Q-channel>``.
-        ``<direction>`` is ``in`` for a connection between an input and the acquisition
-        path, ``out`` for a connection from the waveform generator to an output, or
-        ``io`` to do both.
-        The channels must be integer channel indices.
-        Only one channel is present for a real mode operating sequencer; two channels
-        are used for complex mode.
-
-        .. note::
-
-            Description adapted from
-            https://docs.qblox.com/en/main/api_reference/cluster.html#qblox_instruments.Cluster.connect_sequencer
-        """
-        direction = "in" if self.input else "out"
-        channels = (
-            str(self.ports[0])
-            if self.ports[1] is None
-            else f"{self.ports[0]}_{self.ports[1]}"
-        )
-        return f"{direction}{channels}"
 
 
 class Cluster(Controller):
@@ -148,29 +99,21 @@ class Cluster(Controller):
             results |= self._execute(sequencers)
         return results
 
-    def _upload(
-        self, sequences: dict[ChannelId, Sequence]
-    ) -> dict[SlotId, dict[ChannelId, SequencerId]]:
+    def _prepare(self, sequences: dict[ChannelId, Sequence]) -> SeqeuencerMap:
         sequencers = defaultdict(dict)
         for mod, chs in self._channels_by_module.items():
             module = self._modules[mod]
             assert len(module.sequencers) > len(chs)
-            # Map sequencers to specific outputs (but first disable all sequencer connections)
-            module.disconnect_outputs()
+            config.module(module)
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
                 sequencers[mod][ch] = idx
-                sequencer.sequence(sequences[ch].model_dump())
-                # Configure the sequencers to synchronize
-                sequencer.sync_en(True)
-                sequencer.connect_sequencer(address.local_address)
+                config.sequencer(sequencer, address, sequences[ch])
 
         return sequencers
 
-    def _execute(
-        self, sequencers: dict[SlotId, dict[ChannelId, SequencerId]]
-    ) -> dict[PulseId, Result]:
+    def _execute(self, sequencers: SeqeuencerMap) -> dict[PulseId, Result]:
         # TODO: implement
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
