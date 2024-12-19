@@ -21,6 +21,7 @@ __all__ = [
     "IqMixerConfig",
     "OscillatorConfig",
     "Config",
+    "Configs",
     "ChannelConfig",
     "LogConfig",
 ]
@@ -28,6 +29,10 @@ __all__ = [
 
 class Config(Model):
     """Configuration values depot."""
+
+
+Configs = dict[str, Config]
+"""Configuration database."""
 
 
 class DcConfig(Config):
