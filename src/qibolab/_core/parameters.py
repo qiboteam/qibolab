@@ -7,7 +7,13 @@ JSON <parameters_json>` example.
 from collections.abc import Callable, Iterable
 from typing import Annotated, Any, Optional, Union
 
-from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    TypeAdapter,
+    ValidationError,
+)
 from pydantic_core import core_schema
 
 from .components import (
@@ -53,7 +59,12 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
     for update in updates:
         for name, changes in update.items():
             if name not in configs:
-                configs[name] = a.validate_python(changes)
+                try:
+                    configs[name] = a.validate_python(changes)
+                except ValidationError:
+                    raise ValueError(
+                        f"Cannot update configuration for unknown component {name}"
+                    )
             configs[name] = replace(configs[name], **changes)
 
 
