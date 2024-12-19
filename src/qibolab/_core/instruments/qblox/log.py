@@ -6,8 +6,8 @@ from qblox_instruments import Cluster
 from qibolab._core.components.configs import Configs, LogConfig
 from qibolab._core.identifier import ChannelId
 
-from .sequence import Sequence
 from .config import SeqeuencerMap
+from .sequence import Sequence
 
 __all__ = []
 
