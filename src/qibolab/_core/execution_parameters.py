@@ -1,6 +1,8 @@
 from enum import Enum, auto
 from typing import Any, Optional
 
+from pydantic import Field
+
 from .serialize import Model
 from .sweeper import ParallelSweepers
 
@@ -37,7 +39,9 @@ class AveragingMode(Enum):
         return self is not AveragingMode.SINGLESHOT
 
 
-ConfigUpdate = dict[str, dict[str, Any]]
+Update = dict[str, Any]
+
+ConfigUpdate = dict[str, Update]
 """Update for component configs.
 
 Maps component name to corresponding update, which in turn is a map from
@@ -65,7 +69,7 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    updates: list[ConfigUpdate] = []
+    updates: list[ConfigUpdate] = Field(default_factory=list)
     """List of updates for component configs.
 
     Later entries in the list take precedence over earlier ones (if they
@@ -73,20 +77,24 @@ class ExecutionParameters(Model):
     top of platform defaults.
     """
 
-    def results_shape(
-        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
-    ) -> tuple[int, ...]:
-        """Compute the expected shape for collected data."""
-
+    def bins(self, sweepers: list[ParallelSweepers]) -> tuple[int, ...]:
+        assert self.nshots is not None
         shots = (
             (self.nshots,) if self.averaging_mode is AveragingMode.SINGLESHOT else ()
         )
         sweeps = tuple(
             min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
         )
+        return shots + sweeps
+
+    def results_shape(
+        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
+    ) -> tuple[int, ...]:
+        """Compute the expected shape for collected data."""
+
         inner = {
             AcquisitionType.DISCRIMINATION: (),
             AcquisitionType.INTEGRATION: (2,),
             AcquisitionType.RAW: (samples, 2),
         }[self.acquisition_type]
-        return shots + sweeps + inner
+        return self.bins(sweepers) + inner

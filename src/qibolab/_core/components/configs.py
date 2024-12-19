@@ -7,6 +7,7 @@ users, but in general any user tool should try to depend only on the
 configuration defined by these classes.
 """
 
+from pathlib import Path
 from typing import Annotated, Literal, Optional, Union
 
 from pydantic import Field
@@ -20,12 +21,18 @@ __all__ = [
     "IqMixerConfig",
     "OscillatorConfig",
     "Config",
+    "Configs",
     "ChannelConfig",
+    "LogConfig",
 ]
 
 
 class Config(Model):
     """Configuration values depot."""
+
+
+Configs = dict[str, Config]
+"""Configuration database."""
 
 
 class DcConfig(Config):
@@ -120,6 +127,14 @@ class AcquisitionConfig(Config):
         )
 
 
+class LogConfig(Config):
+    """Configuration for logging."""
+
+    kind: Literal["log"] = "log"
+
+    path: Path
+
+
 ChannelConfig = Union[
-    DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig
+    DcConfig, IqMixerConfig, OscillatorConfig, IqConfig, AcquisitionConfig, LogConfig
 ]
