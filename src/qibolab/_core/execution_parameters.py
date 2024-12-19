@@ -1,12 +1,17 @@
 from enum import Enum, auto
+from math import prod
 from typing import Any, Optional
 
 from pydantic import Field
+
+from qibolab._core.sequence import PulseSequence
 
 from .serialize import Model
 from .sweeper import ParallelSweepers
 
 __all__ = ["AcquisitionType", "AveragingMode"]
+
+NS_TO_SEC = 1e-9
 
 
 class AcquisitionType(Enum):
@@ -47,6 +52,12 @@ ConfigUpdate = dict[str, Update]
 Maps component name to corresponding update, which in turn is a map from
 config property name that needs an update to its new value.
 """
+
+
+# TODO: lift for general usage in Qibolab
+def default(value: Optional[T], default: T) -> T:
+    """None replacement shortcut."""
+    return value if value is not None else default
 
 
 class ExecutionParameters(Model):
@@ -98,3 +109,19 @@ class ExecutionParameters(Model):
             AcquisitionType.RAW: (samples, 2),
         }[self.acquisition_type]
         return self.bins(sweepers) + inner
+
+    def estimate_duration(
+        self,
+        sequences: list[PulseSequence],
+        sweepers: list[ParallelSweepers],
+    ) -> float:
+        """Estimate experiment duration."""
+        duration = sum(seq.duration for seq in sequences)
+        relaxation = default(self.relaxation_time, 0)
+        nshots = default(self.nshots, 0)
+        return (
+            (duration + len(sequences) * relaxation)
+            * nshots
+            * NS_TO_SEC
+            * prod(len(s[0]) for s in sweepers)
+        )
