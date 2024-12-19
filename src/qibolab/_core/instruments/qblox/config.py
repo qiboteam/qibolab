@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, cast
 
 from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
+from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
@@ -59,12 +60,43 @@ class PortAddress(Model):
 
 
 def module(mod: Module):
-    # Map sequencers to specific outputs (but first disable all sequencer connections)
+    # map sequencers to specific outputs (but first disable all sequencer connections)
     mod.disconnect_outputs()
 
+    if mod.is_qrm_type:
+        # we do not currently support acquisition on external digital trigger
+        mod.scope_acq_trigger_mode_path0("sequencer")
+        mod.scope_acq_trigger_mode_path1("sequencer")
 
-def sequencer(seq: Sequencer, address: PortAddress, sequence: Sequence):
+
+def sequencer(
+    seq: Sequencer,
+    address: PortAddress,
+    sequence: Sequence,
+    acquisition: AcquisitionType,
+):
+    # upload sequence
     seq.sequence(sequence.model_dump())
-    # Configure the sequencers to synchronize
+
+    # configure the sequencers to synchronize
     seq.sync_en(True)
+
+    # set parameters
+    # TODO: read values from configs
+    # offsets
+    seq.offset_awg_path0(0.0)
+    seq.offset_awg_path1(0.0)
+    # modulation, only disable for QCM - always used for flux pulses
+    mod = cast(Module, seq.ancestors[1])
+    seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+    # acquisition
+    if address.input:
+        seq.integration_length_acq(1000)
+        # discrimination
+        seq.thresholded_acq_rotation(0.0)
+        seq.thresholded_acq_threshold(0.0)
+        # demodulation
+        seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
+
+    # connect to physical address
     seq.connect_sequencer(address.local_address)
