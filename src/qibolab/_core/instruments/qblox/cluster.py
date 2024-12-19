@@ -7,7 +7,7 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components.configs import Config
-from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import PulseId
@@ -95,12 +95,14 @@ class Cluster(Controller):
         for ps in sequences:
             sequences_ = compile(ps, sweepers, options, self.sampling_rate)
             log.sequences(sequences_)
-            sequencers = self._prepare(sequences_)
+            sequencers = self._prepare(sequences_, options.acquisition_type)
             log.sequencers(sequencers, self._cluster)
             results |= self._execute(sequencers)
         return results
 
-    def _prepare(self, sequences: dict[ChannelId, Sequence]) -> SeqeuencerMap:
+    def _prepare(
+        self, sequences: dict[ChannelId, Sequence], acquisition: AcquisitionType
+    ) -> SeqeuencerMap:
         sequencers = defaultdict(dict)
         for mod, chs in self._channels_by_module.items():
             module = self._modules[mod]
@@ -110,7 +112,7 @@ class Cluster(Controller):
                 zip(chs, module.sequencers)
             ):
                 sequencers[mod][ch] = idx
-                config.sequencer(sequencer, address, sequences[ch])
+                config.sequencer(sequencer, address, sequences[ch], acquisition)
 
         return sequencers
 
