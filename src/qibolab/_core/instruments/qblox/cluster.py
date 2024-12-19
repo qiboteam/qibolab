@@ -10,13 +10,14 @@ from qibolab._core.components.configs import Config
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import PulseId, PulseLike, Readout
+from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from . import config
 from .config import PortAddress, SeqeuencerMap, SlotId
 from .log import Logger
+from .sequence import Sequence, compile
 
 # from qcodes.instrument import find_or_create_instrument
 
@@ -122,52 +123,3 @@ class Cluster(Controller):
             module.start_sequencer()
 
         return {}
-
-
-def _split_channels(sequence: PulseSequence) -> dict[ChannelId, PulseSequence]:
-    def unwrap(pulse: PulseLike, output: bool) -> PulseLike:
-        return (
-            pulse
-            if not isinstance(pulse, Readout)
-            else pulse.probe if output else pulse.acquisition
-        )
-
-    def unwrap_seq(seq: PulseSequence, output: bool) -> PulseSequence:
-        return PulseSequence((ch, unwrap(p, output)) for ch, p in seq)
-
-    def ch_pulses(channel: ChannelId) -> PulseSequence:
-        return PulseSequence((ch, pulse) for ch, pulse in sequence if ch == channel)
-
-    def probe(channel: ChannelId) -> ChannelId:
-        return channel.split("/")[0] + "/probe"
-
-    def split(channel: ChannelId) -> dict[ChannelId, PulseSequence]:
-        seq = ch_pulses(channel)
-        readouts = any(isinstance(p, Readout) for _, p in seq)
-        assert not readouts or probe(channel) not in sequence.channels
-        return (
-            {channel: seq}
-            if not readouts
-            else {
-                channel: unwrap_seq(seq, output=False),
-                probe(channel): unwrap_seq(seq, output=True),
-            }
-        )
-
-    return {
-        ch: seq for channel in sequence.channels for ch, seq in split(channel).items()
-    }
-
-
-def _prepare(
-    sequence: PulseSequence,
-    sweepers: list[ParallelSweepers],
-    options: ExecutionParameters,
-    sampling_rate: float,
-) -> dict[ChannelId, Sequence]:
-    return {
-        ch: Sequence.from_pulses(seq, sweepers, options, sampling_rate)
-        for ch, seq in _split_channels(sequence).items()
-    }
-
-

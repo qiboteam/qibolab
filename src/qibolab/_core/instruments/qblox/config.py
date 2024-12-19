@@ -1,10 +1,10 @@
 from typing import Optional
 
-from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 from qblox_instruments.qcodes_drivers.module import Module
+from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
-from qibolab._core.serialize import Model
 from qibolab._core.identifier import ChannelId
+from qibolab._core.serialize import Model
 
 from .sequence import Sequence
 
