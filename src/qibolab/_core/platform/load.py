@@ -1,10 +1,11 @@
 import importlib.util
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from qibo.config import raise_error
 
+from ..parameters import Hardware
 from .platform import Platform
 
 __all__ = ["create_platform", "locate_platform"]
@@ -38,7 +39,7 @@ def _search(name: str, paths: list[Path]) -> Path:
     )
 
 
-def _load(platform: Path) -> Platform:
+def _load(platform: Path) -> Union[Platform, Hardware]:
     """Load the platform module."""
     module_name = "platform"
     spec = importlib.util.spec_from_file_location(module_name, platform / PLATFORM)
@@ -77,11 +78,12 @@ def create_platform(name: str) -> Platform:
         return create_dummy()
 
     path = _search(name, _platforms_paths())
+
     hardware = _load(path)
     if isinstance(hardware, Platform):
         return hardware
 
-    return Platform.load(path, **hardware)
+    return Platform.load(path, **hardware.model_dump())
 
 
 def available_platforms() -> list[str]:
