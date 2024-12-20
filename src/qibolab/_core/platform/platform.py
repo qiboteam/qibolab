@@ -16,7 +16,6 @@ from ..parameters import (
     InstrumentMap,
     NativeGates,
     Parameters,
-    ParametersBuilder,
     QubitMap,
     Settings,
     Update,
@@ -306,18 +305,14 @@ class Platform:
         name: Optional[str] = None,
     ) -> "Platform":
         """Dump platform."""
-        if name is None:
-            name = path.name
-        if couplers is None:
-            couplers = {}
-
-        hardware = {"instruments": instruments, "qubits": qubits, "couplers": couplers}
-        try:
-            parameters = Parameters.model_validate_json((path / PARAMETERS).read_text())
-        except FileNotFoundError:
-            parameters = ParametersBuilder(hardware=hardware).build()
-
-        return cls(name=name, parameters=parameters, **hardware)
+        parameters = Parameters.model_validate_json((path / PARAMETERS).read_text())
+        return cls(
+            name=name if name is not None else path.name,
+            parameters=parameters,
+            instruments=instruments,
+            qubits=qubits,
+            couplers=couplers if couplers is not None else {},
+        )
 
     def dump(self, path: Path):
         """Dump platform."""
