@@ -6,6 +6,7 @@ from qibolab._core.components.configs import Config
 from qibolab._core.native import Native, TwoQubitNatives
 from qibolab._core.parameters import (
     ConfigKinds,
+    Hardware,
     Parameters,
     TwoQubitContainer,
     initialize_parameters,
@@ -114,11 +115,11 @@ def test_update():
 def test_builder():
     dummy = create_platform("dummy")
 
-    hardware = {
-        "instruments": dummy.instruments,
-        "qubits": dummy.qubits,
-        "couplers": dummy.couplers,
-    }
+    hardware = Hardware(
+        instruments=dummy.instruments,
+        qubits=dummy.qubits,
+        couplers=dummy.couplers,
+    )
     parameters = initialize_parameters(
         hardware=hardware, natives=["RX", "MZ", "CZ"], pairs=["0-2"]
     )

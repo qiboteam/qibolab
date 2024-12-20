@@ -9,7 +9,6 @@ from typing import Annotated, Any, Optional, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
-from typing_extensions import NotRequired, TypedDict
 
 from .components import (
     AcquisitionChannel,
@@ -230,12 +229,12 @@ QubitMap = dict[QubitId, Qubit]
 InstrumentMap = dict[InstrumentId, Instrument]
 
 
-class Hardware(TypedDict):
+class Hardware(Model):
     """Part of the platform that specifies the hardware configuration."""
 
     instruments: InstrumentMap
     qubits: QubitMap
-    couplers: NotRequired[QubitMap]
+    couplers: QubitMap = Field(default_factory=dict)
 
 
 def _gate_channel(qubit: Qubit, gate: str) -> str:
@@ -314,24 +313,23 @@ def initialize_parameters(
         natives = set(natives)
 
     configs = {}
-    for instrument in hardware.get("instruments", {}).values():
+    for instrument in hardware.instruments.values():
         if hasattr(instrument, "channels"):
             for id, channel in instrument.channels.items():
                 configs |= _channel_config(id, channel)
 
-    qubits = hardware.get("qubits", {})
     single_qubit = {
         q: _native_builder(SingleQubitNatives, qubit, natives - {"CP"})
-        for q, qubit in qubits.items()
+        for q, qubit in hardware.qubits.items()
     }
     coupler = {
         q: _native_builder(SingleQubitNatives, qubit, natives & {"CP"})
-        for q, qubit in hardware.get("couplers", {}).items()
+        for q, qubit in hardware.couplers.items()
     }
     if pairs is not None:
         two_qubit = {
             pair: _native_builder(
-                TwoQubitNatives, _pair_to_qubit(pair, qubits), natives
+                TwoQubitNatives, _pair_to_qubit(pair, hardware.qubits), natives
             )
             for pair in pairs
         }
