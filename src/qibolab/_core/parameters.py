@@ -5,7 +5,7 @@ JSON <parameters_json>` example.
 """
 
 from collections.abc import Callable, Iterable
-from typing import Annotated, Any, Union
+from typing import Annotated, Any, Optional, Union
 
 from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
 from pydantic_core import core_schema
@@ -33,7 +33,13 @@ from .qubits import Qubit
 from .serialize import Model, replace
 from .unrolling import Bounds
 
-__all__ = ["ConfigKinds", "QubitMap", "InstrumentMap", "Hardware", "ParametersBuilder"]
+__all__ = [
+    "ConfigKinds",
+    "QubitMap",
+    "InstrumentMap",
+    "Hardware",
+    "initialize_parameters",
+]
 
 
 def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
@@ -296,40 +302,44 @@ def _channel_config(id: ChannelId, channel: Channel) -> dict[ChannelId, Config]:
     return {id: Config()}
 
 
-class ParametersBuilder(Model):
-    """Generates default ``Parameters`` for a given platform hardware
-    configuration."""
+def initialize_parameters(
+    hardware: Hardware,
+    natives: Optional[set[str]] = None,
+    pairs: Optional[list[str]] = None,
+) -> Parameters:
+    """Generates default ``Parameters`` for a given hardware configuration."""
+    if natives is None:
+        natives = set()
+    else:
+        natives = set(natives)
 
-    hardware: Hardware
-    natives: set[str] = Field(default_factory=set)
-    pairs: list[str] = Field(default_factory=list)
+    configs = {}
+    for instrument in hardware.get("instruments", {}).values():
+        if hasattr(instrument, "channels"):
+            for id, channel in instrument.channels.items():
+                configs |= _channel_config(id, channel)
 
-    def build(self) -> Parameters:
-        settings = Settings()
-
-        configs = {}
-        for instrument in self.hardware.get("instruments", {}).values():
-            if hasattr(instrument, "channels"):
-                for id, channel in instrument.channels.items():
-                    configs |= _channel_config(id, channel)
-
-        qubits = self.hardware.get("qubits", {})
-        single_qubit = {
-            q: _native_builder(SingleQubitNatives, qubit, self.natives - {"CP"})
-            for q, qubit in qubits.items()
-        }
-        coupler = {
-            q: _native_builder(SingleQubitNatives, qubit, self.natives & {"CP"})
-            for q, qubit in self.hardware.get("couplers", {}).items()
-        }
+    qubits = hardware.get("qubits", {})
+    single_qubit = {
+        q: _native_builder(SingleQubitNatives, qubit, natives - {"CP"})
+        for q, qubit in qubits.items()
+    }
+    coupler = {
+        q: _native_builder(SingleQubitNatives, qubit, natives & {"CP"})
+        for q, qubit in hardware.get("couplers", {}).items()
+    }
+    if pairs is not None:
         two_qubit = {
             pair: _native_builder(
-                TwoQubitNatives, _pair_to_qubit(pair, qubits), self.natives
+                TwoQubitNatives, _pair_to_qubit(pair, qubits), natives
             )
-            for pair in self.pairs
+            for pair in pairs
         }
-        native_gates = NativeGates(
-            single_qubit=single_qubit, coupler=coupler, two_qubit=two_qubit
-        )
+    else:
+        two_qubit = {}
 
-        return Parameters(settings=settings, configs=configs, native_gates=native_gates)
+    native_gates = NativeGates(
+        single_qubit=single_qubit, coupler=coupler, two_qubit=two_qubit
+    )
+
+    return Parameters(settings=Settings(), configs=configs, native_gates=native_gates)

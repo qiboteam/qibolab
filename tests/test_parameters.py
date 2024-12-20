@@ -7,8 +7,8 @@ from qibolab._core.native import Native, TwoQubitNatives
 from qibolab._core.parameters import (
     ConfigKinds,
     Parameters,
-    ParametersBuilder,
     TwoQubitContainer,
+    initialize_parameters,
 )
 from qibolab._core.platform.load import create_platform
 from qibolab._core.pulses.pulse import Pulse, Readout
@@ -119,10 +119,9 @@ def test_builder():
         "qubits": dummy.qubits,
         "couplers": dummy.couplers,
     }
-    builder = ParametersBuilder(
+    parameters = initialize_parameters(
         hardware=hardware, natives=["RX", "MZ", "CZ"], pairs=["0-2"]
     )
-    parameters = builder.build()
 
     for q in dummy.qubits:
         assert f"{q}/drive" in parameters.configs
