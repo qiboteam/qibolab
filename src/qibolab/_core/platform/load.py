@@ -5,7 +5,6 @@ from typing import Optional
 
 from qibo.config import raise_error
 
-from ..parameters import Parameters
 from .platform import Platform
 
 __all__ = ["create_platform", "locate_platform"]
@@ -62,14 +61,13 @@ def locate_platform(name: str, paths: Optional[list[Path]] = None) -> Path:
     return _search(name, paths)
 
 
-def create_platform(name: str, parameters: Optional[Parameters] = None) -> Platform:
+def create_platform(name: str) -> Platform:
     """A platform for executing quantum algorithms.
 
     It consists of a quantum processor QPU and a set of controlling instruments.
 
     Args:
         name (str): name of the platform.
-        path (pathlib.Path): path with platform serialization
     Returns:
         The plaform class.
     """
@@ -83,10 +81,7 @@ def create_platform(name: str, parameters: Optional[Parameters] = None) -> Platf
     if isinstance(hardware, Platform):
         return hardware
 
-    if parameters is None:
-        return Platform.load(path, **hardware)
-
-    return Platform(**hardware, parameters=parameters)
+    return Platform.load(path, **hardware)
 
 
 def available_platforms() -> list[str]:
