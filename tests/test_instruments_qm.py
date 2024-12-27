@@ -158,7 +158,7 @@ def test_qm_register_port(qmcontroller, offset):
     controllers = qmcontroller.config.controllers
     assert controllers == {
         "con1": {
-            "analog_inputs": {1: {}, 2: {}},
+            "analog_inputs": {1: {"offset": 0}, 2: {"offset": 0}},
             "analog_outputs": {1: {"offset": offset, "filter": {}}},
             "digital_outputs": {},
         }
@@ -173,7 +173,7 @@ def test_qm_register_port_filter(qmcontroller):
     controllers = qmcontroller.config.controllers
     assert controllers == {
         "con1": {
-            "analog_inputs": {1: {}, 2: {}},
+            "analog_inputs": {1: {"offset": 0}, 2: {"offset": 0}},
             "analog_outputs": {
                 2: {
                     "filter": {"feedback": [0.95], "feedforward": [1, -1]},
