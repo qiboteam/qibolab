@@ -1,0 +1,109 @@
+{
+    "settings": {
+      "nshots": 1024,
+      "relaxation_time": 0
+    },
+    "configs": {
+      "emulator/bounds": {
+      "kind": "bounds",
+      "waveforms": 100000,
+      "readout": 10,
+      "instructions": 10
+    },
+    "0/hamiltonian":{
+      "kind": "qubit",
+      "frequency": 5
+    },
+      "0/drive": {
+        "kind": "iq",
+        "frequency": 5
+      },
+    "0/probe": {
+      "kind": "iq",
+      "frequency": 5200000000.0
+    },
+    "0/acquisition": {
+      "kind": "acquisition",
+      "delay": 0.0,
+      "smearing": 0.0,
+      "threshold": 0.0,
+      "iq_angle": 0.0,
+      "kernel": "k05VTVBZAQB2AHsnZGVzY3InOiAnPGY4JywgJ2ZvcnRyYW5fb3JkZXInOiBGYWxzZSwgJ3NoYXBlJzogKDEwLCksIH0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAp5sDfS7uHlP2DIMKNvnKc/gCqN8KV/pT94FQCYYJC3PzSbwfi/894/APwg6C61rj8MSN3blizAP2ha9unQYsM/+BFjHTxcwT+gXaJazvbpPw=="
+    }
+    },
+    "native_gates": {
+      "single_qubit": {
+        "0": {
+          "RX": [
+            [
+              "0/drive",
+              {
+                "duration": 200,
+                "amplitude": 0.4,
+                "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
+            ]
+          ],
+          "RX90": [
+            [
+              "0/drive",
+              {
+                "duration": 22.3453,
+                "amplitude": 0.1,
+                "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
+            ]
+          ],
+          "RX12": [
+            [
+              "0/drive12",
+              {
+                "duration": 40.0,
+                "amplitude": 0.005,
+                "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
+            ]
+          ],
+          "MZ": [
+            [
+              "0/acquisition",
+              {
+                "kind": "readout",
+                "acquisition": {
+                  "kind": "acquisition",
+                  "duration": 2000.0
+                },
+                "probe": {
+                  "duration": 2000.0,
+                  "amplitude": 0.1,
+                  "envelope": {
+                    "kind": "gaussian_square",
+                    "rel_sigma": 0.2,
+                    "width": 0.75
+                  },
+                  "relative_phase": 0.0,
+                  "kind": "pulse"
+                }
+              }
+            ]
+          ],
+          "CP": null
+        }
+      }
+      }
+    }
