@@ -53,7 +53,7 @@ class EmulatorController(Controller):
 
         hamiltonian = configs["hamiltonian"].hamiltonian
         hamiltonian += self.pulse_sequence_to_hamiltonian(sequence, configs, updates)
-        measurement, tlist = self.measurement(sequence, configs)
+        measurement, tlist = self.measurement(sequence, configs, updates)
 
         results = mesolve(
             hamiltonian, self.initial_state, tlist, [], [self.probability]
@@ -111,15 +111,20 @@ class EmulatorController(Controller):
                     a[key] = [a[key], value]
         return a
 
-    def measurement(self, sequence, configs):
+    def measurement(self, sequence, configs, updates=None):
         """Given sequence creates a dictionary of readout pulses and their
         sample index."""
         duration = 0
         pulses = {}
+        if updates is None:
+            updates = {}
+
         for channel, pulse in sequence:
             if isinstance(configs[channel], AcquisitionConfig):
                 if isinstance(pulse, Readout):
                     pulses[pulse.id] = int(duration)
+                if pulse.id in updates:
+                    pulse = pulse.model_copy(update=updates[pulse.id])
                 duration += pulse.duration
 
         tmax = int(max(pulses.values()) * self.sampling_rate)
@@ -132,7 +137,7 @@ class EmulatorController(Controller):
     def pulse_sequence_to_hamiltonian(
         self, sequence: PulseSequence, configs, updates=None
     ) -> dict[str, list]:
-        """Construct Hamiltonian dependent term for quitip simulation."""
+        """Construct Hamiltonian dependent term for qutip simulation."""
 
         hamiltonians = {}
         h_t = []
@@ -144,6 +149,7 @@ class EmulatorController(Controller):
                 if updates is None:
                     updates = {}
                 if pulse.id in updates:
+                    # FIXME: here we should only care about duration
                     pulse = pulse.model_copy(update=updates[pulse.id])
                 return QubitDrive(pulse=pulse, frequency=frequency)
 
