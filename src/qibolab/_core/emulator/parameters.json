@@ -10,9 +10,13 @@
       "readout": 10,
       "instructions": 10
     },
-    "0/hamiltonian":{
-      "kind": "qubit",
-      "frequency": 5
+    "hamiltonian":{
+      "single_qubit": {
+        "0": {
+          "frequency": 5
+        }
+      },
+      "kind": "hamiltonian"
     },
       "0/drive": {
         "kind": "iq",
@@ -39,7 +43,7 @@
               "0/drive",
               {
                 "duration": 200,
-                "amplitude": 0.4,
+                "amplitude": 0.14,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
