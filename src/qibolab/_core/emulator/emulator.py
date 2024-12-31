@@ -84,13 +84,18 @@ class EmulatorController(Controller):
             assert sweeper.parameter in [
                 Parameter.amplitude,
                 Parameter.duration,
-            ], "Emulator only supports amplitude or duration sweeps."
+                Parameter.frequency,
+            ], "Emulator only supports amplitude, duration or frequency sweeps."
             sequence = sequences[0]
             results = {}
             for value in sweeper.values:
                 updates = {}
-                for pulse in sweeper.pulses:
-                    updates[pulse.id] = {sweeper.parameter.name: value}
+                if sweeper.pulses is not None:
+                    for pulse in sweeper.pulses:
+                        updates[pulse.id] = {sweeper.parameter.name: value}
+                if sweeper.channels is not None:
+                    for channel in sweeper.channels:
+                        updates[channel] = {sweeper.parameter.name: value}
                 temp = self._play_sequence(sequence, configs, updates)
                 results = self.merge_results(results, temp)
         return results
@@ -145,9 +150,14 @@ class EmulatorController(Controller):
         def waveform(pulse, channel, configs, updates=None):
             """Convert pulse to hamiltonian."""
             if isinstance(configs[channel], IqConfig):
-                frequency = configs[channel].frequency
                 if updates is None:
                     updates = {}
+                if channel in updates:
+                    config = configs[channel].model_copy(update=updates[channel])
+                    frequency = config.frequency
+                else:
+                    frequency = configs[channel].frequency
+
                 if pulse.id in updates:
                     # FIXME: here we should only care about duration
                     pulse = pulse.model_copy(update=updates[pulse.id])
