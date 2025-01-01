@@ -42,7 +42,7 @@ class EmulatorController(Controller):
         """Probability of qubit in excited state."""
         return destroy(2).dag() * destroy(2)
 
-    def _play_sequence(self, sequence, configs, updates=None):
+    def _play_sequence(self, sequence, configs, options, updates=None):
         """Play sequence on emulator."""
 
         if updates is None:
@@ -58,10 +58,19 @@ class EmulatorController(Controller):
         results = mesolve(
             hamiltonian, self.initial_state, tlist, [], [self.probability]
         )
-        return {
+        averaged_results = {
             ro_pulse_id: results.expect[0][sample - 1]
             for ro_pulse_id, sample in measurement.items()
         }
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            results = {
+                ro_pulse_id: np.random.choice(
+                    [0, 1], size=options.nshots, p=[1 - prob1, prob1]
+                )
+                for ro_pulse_id, prob1 in averaged_results.items()
+            }
+            return results
+        return averaged_results
 
     def play(
         self,
@@ -72,15 +81,16 @@ class EmulatorController(Controller):
     ):
         assert len(sequences) == 1, "Emulator can only play one sequence at a time."
         assert len(sweepers) < 2, "Only up to 1 sweeper is supported."
-        assert (
-            options.averaging_mode == AveragingMode.CYCLIC
-        ), "Emulator only supports CYCLIC averaging mode."
+        # assert (
+        #     options.averaging_mode == AveragingMode.CYCLIC
+        # ), "Emulator only supports CYCLIC averaging mode."
         assert (
             options.acquisition_type == AcquisitionType.DISCRIMINATION
         ), "Emulator only supports DISCRIMINATION acquisition type."
 
         if len(sweepers) == 1:
             sweeper = sweepers[0][0]
+            # FIXME: relative phase should also work
             assert sweeper.parameter in [
                 Parameter.amplitude,
                 Parameter.duration,
@@ -96,25 +106,19 @@ class EmulatorController(Controller):
                 if sweeper.channels is not None:
                     for channel in sweeper.channels:
                         updates[channel] = {sweeper.parameter.name: value}
-                temp = self._play_sequence(sequence, configs, updates)
-                results = self.merge_results(results, temp)
+                temp = self._play_sequence(sequence, configs, options, updates)
+                results = merge_results(
+                    results,
+                    temp,
+                )
+            for key, value in results.items():
+                print(options.results_shape(sweepers))
+                assert results[key].shape == options.results_shape(
+                    sweepers
+                ), f"Results shape {results[key].shape} does not match expected shape {options.results_shape(sweepers)}"
+        else:
+            results = self._play_sequence(sequences[0], configs, options)
         return results
-
-    @staticmethod
-    def merge_results(a: dict, b: dict):
-        """Merge results together."""
-        # TODO: check shape of results
-        if len(a) == 0:
-            return b
-        if len(b) == 0:
-            return a
-        for key, value in b.items():
-            if key in a:
-                if isinstance(a[key], list):
-                    a[key].append(value)
-                else:
-                    a[key] = [a[key], value]
-        return a
 
     def measurement(self, sequence, configs, updates=None):
         """Given sequence creates a dictionary of readout pulses and their
@@ -147,23 +151,8 @@ class EmulatorController(Controller):
         hamiltonians = {}
         h_t = []
 
-        def waveform(pulse, channel, configs, updates=None):
-            """Convert pulse to hamiltonian."""
-            if isinstance(configs[channel], IqConfig):
-                if updates is None:
-                    updates = {}
-                if channel in updates:
-                    config = configs[channel].model_copy(update=updates[channel])
-                    frequency = config.frequency
-                else:
-                    frequency = configs[channel].frequency
-
-                if pulse.id in updates:
-                    # FIXME: here we should only care about duration
-                    pulse = pulse.model_copy(update=updates[pulse.id])
-                return QubitDrive(pulse=pulse, frequency=frequency)
-
         for channel, pulse in sequence:
+            # do not handle readout pulses
             if not isinstance(configs[channel], AcquisitionConfig):
                 signal = waveform(pulse, channel, configs, updates)
                 if channel in hamiltonians:
@@ -192,3 +181,30 @@ def find_sample_array(sample_index, *arrays):
             return arrays[i], int(sample_index - current_index)
         current_index += len(array)
     return None
+
+
+def waveform(pulse, channel, configs, updates=None):
+    """Convert pulse to hamiltonian."""
+    if updates is None:
+        updates = {}
+    # mapping IqConfig -> QubitDrive
+    if isinstance(configs[channel], IqConfig):
+        if channel in updates:
+            config = configs[channel].model_copy(update=updates[channel])
+            frequency = config.frequency
+        else:
+            frequency = configs[channel].frequency
+        if pulse.id in updates:
+            pulse = pulse.model_copy(update=updates[pulse.id])
+        return QubitDrive(pulse=pulse, frequency=frequency)
+
+
+def merge_results(a: dict, b: dict):
+    """Merge results together."""
+    if len(a) == 0:
+        return b
+    if len(b) == 0:
+        return a
+    for key, value in b.items():
+        a[key] = np.column_stack((a[key], value))
+    return a
