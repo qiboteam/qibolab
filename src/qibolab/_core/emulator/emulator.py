@@ -2,7 +2,7 @@ import numpy as np
 from qibo.config import log
 from qutip import basis, destroy, mesolve, tensor
 
-from qibolab import Parameter, Readout
+from qibolab import Readout
 from qibolab._core.components import AcquisitionConfig, Config, IqConfig
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -72,6 +72,40 @@ class EmulatorController(Controller):
             return results
         return averaged_results
 
+    def _sweep(self, sequence, configs, options, sweepers, updates=None):
+        """Sweep over sequence."""
+        results = {}
+        sweeper = sweepers[0][0]
+        if updates is None:
+            updates = {}
+        for value in sweeper.values:
+            if sweeper.pulses is not None:
+                for pulse in sweeper.pulses:
+                    try:
+                        updates[pulse.id].update({sweeper.parameter.name: value})
+                    except KeyError:
+                        updates[pulse.id] = {sweeper.parameter.name: value}
+            if sweeper.channels is not None:
+                for channel in sweeper.channels:
+                    try:
+                        updates[channel].update({sweeper.parameter.name: value})
+                    except KeyError:
+                        updates[channel] = {sweeper.parameter.name: value}
+            if len(sweepers) > 1:
+                temp = self._sweep(sequence, configs, options, sweepers[1:], updates)
+            else:
+                temp = self._play_sequence(sequence, configs, options, updates)
+
+            results = merge_results(
+                results,
+                temp,
+            )
+
+        # reshaping results
+        for key, value in results.items():
+            results[key] = results[key].reshape(options.results_shape(sweepers))
+        return results
+
     def play(
         self,
         configs: dict[str, Config],
@@ -80,42 +114,13 @@ class EmulatorController(Controller):
         sweepers: list = None,
     ):
         assert len(sequences) == 1, "Emulator can only play one sequence at a time."
-        assert len(sweepers) < 2, "Only up to 1 sweeper is supported."
-        # assert (
-        #     options.averaging_mode == AveragingMode.CYCLIC
-        # ), "Emulator only supports CYCLIC averaging mode."
         assert (
             options.acquisition_type == AcquisitionType.DISCRIMINATION
         ), "Emulator only supports DISCRIMINATION acquisition type."
 
-        if len(sweepers) == 1:
-            sweeper = sweepers[0][0]
-            # FIXME: relative phase should also work
-            assert sweeper.parameter in [
-                Parameter.amplitude,
-                Parameter.duration,
-                Parameter.frequency,
-            ], "Emulator only supports amplitude, duration or frequency sweeps."
+        if len(sweepers) > 0:
             sequence = sequences[0]
-            results = {}
-            for value in sweeper.values:
-                updates = {}
-                if sweeper.pulses is not None:
-                    for pulse in sweeper.pulses:
-                        updates[pulse.id] = {sweeper.parameter.name: value}
-                if sweeper.channels is not None:
-                    for channel in sweeper.channels:
-                        updates[channel] = {sweeper.parameter.name: value}
-                temp = self._play_sequence(sequence, configs, options, updates)
-                results = merge_results(
-                    results,
-                    temp,
-                )
-            for key, value in results.items():
-                print(options.results_shape(sweepers))
-                assert results[key].shape == options.results_shape(
-                    sweepers
-                ), f"Results shape {results[key].shape} does not match expected shape {options.results_shape(sweepers)}"
+            results = self._sweep(sequence, configs, options, sweepers)
         else:
             results = self._play_sequence(sequences[0], configs, options)
         return results
