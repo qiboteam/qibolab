@@ -13,14 +13,16 @@
     "hamiltonian":{
       "single_qubit": {
         "0": {
-          "frequency": 5
+          "frequency": 5000000000,
+          "t1": 1000,
+          "t2": 1500
         }
       },
       "kind": "hamiltonian"
     },
       "0/drive": {
         "kind": "iq",
-        "frequency": 5
+        "frequency": 5000000000
       },
     "0/probe": {
       "kind": "iq",
@@ -57,8 +59,8 @@
             [
               "0/drive",
               {
-                "duration": 22.3453,
-                "amplitude": 0.1,
+                "duration": 100,
+                "amplitude": 0.178,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2

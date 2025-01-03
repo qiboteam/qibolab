@@ -13,6 +13,7 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
 
 from .model import QubitDrive
+from .operators import HZ_TO_GHZ
 
 
 class EmulatorController(Controller):
@@ -56,7 +57,11 @@ class EmulatorController(Controller):
         measurement, tlist = self.measurement(sequence, configs, updates)
 
         results = mesolve(
-            hamiltonian, self.initial_state, tlist, [], [self.probability]
+            hamiltonian,
+            self.initial_state,
+            tlist,
+            configs["hamiltonian"].decoherence,
+            [self.probability],
         )
         averaged_results = {
             ro_pulse_id: results.expect[0][sample - 1]
@@ -75,6 +80,7 @@ class EmulatorController(Controller):
     def _sweep(self, sequence, configs, options, sweepers, updates=None):
         """Sweep over sequence."""
         results = {}
+        assert len(sweepers[0]) == 1, "Parallel sweepers not supported."
         sweeper = sweepers[0][0]
         if updates is None:
             updates = {}
@@ -201,7 +207,7 @@ def waveform(pulse, channel, configs, updates=None):
             frequency = configs[channel].frequency
         if pulse.id in updates:
             pulse = pulse.model_copy(update=updates[pulse.id])
-        return QubitDrive(pulse=pulse, frequency=frequency)
+        return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
 
 
 def merge_results(a: dict, b: dict):

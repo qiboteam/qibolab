@@ -7,7 +7,7 @@ from pydantic import Field
 from qibolab import Delay, Pulse
 from qibolab._core.components import Config
 
-from .operators import QUBIT_DRIVE, QUBIT_NUMBER
+from .operators import HZ_TO_GHZ, QUBIT_DESTROY, QUBIT_DRIVE, QUBIT_NUMBER, SIGMAZ
 
 
 class Qubit(Config):
@@ -15,11 +15,22 @@ class Qubit(Config):
 
     frequency: float = 0
     anharmonicity: float = 0
+    t1: float = 0
+    t2: float = 0
 
     @property
     def operator(self):
         # TODO: add anharmonicity
-        return 2 * np.pi * self.frequency * QUBIT_NUMBER
+        return 2 * np.pi * self.frequency * HZ_TO_GHZ * QUBIT_NUMBER
+
+    @property
+    def t_phi(self):
+        return 1 / (1 / self.t2 - 1 / self.t1 / 2)
+
+    @property
+    def decoherence(self):
+        assert self.t1 > 0 and self.t2 > 0
+        return np.sqrt(1 / self.t1) * QUBIT_DESTROY + np.sqrt(1 / self.t_phi) * SIGMAZ
 
 
 @dataclass
@@ -64,3 +75,13 @@ class HamiltonianConfig(Config):
     @property
     def hamiltonian(self):
         return [qubit.operator for qubit in self.single_qubit.values()]
+
+    @property
+    def decoherence(self):
+        ops = []
+        for qubit in self.single_qubit.values():
+            if isinstance(qubit, list):
+                continue
+            else:
+                ops.append(qubit.decoherence)
+        return ops
