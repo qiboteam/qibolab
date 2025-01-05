@@ -76,6 +76,10 @@ def create_platform(name: str) -> Platform:
         from qibolab._core.dummy import create_dummy
 
         return create_dummy()
+    elif name == "emulator":
+        from qibolab._core.emulator import create_emulator
+
+        return create_emulator()
 
     return _load(_search(name, _platforms_paths()))
 

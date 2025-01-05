@@ -23,7 +23,6 @@ def create_emulator() -> Platform:
             qubit.drive: IqChannel(mixer=None, lo=None),
         }
 
-    # need to pass physical information -> frequency of each qubit and anharmonicity
     # register the instruments
     instruments = {
         "dummy": EmulatorController(address="0.0.0.0", channels=channels),

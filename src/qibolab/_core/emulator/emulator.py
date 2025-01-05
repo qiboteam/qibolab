@@ -119,16 +119,16 @@ class EmulatorController(Controller):
         options: ExecutionParameters,
         sweepers: list = None,
     ):
-        assert len(sequences) == 1, "Emulator can only play one sequence at a time."
         assert (
             options.acquisition_type == AcquisitionType.DISCRIMINATION
         ), "Emulator only supports DISCRIMINATION acquisition type."
+        results = {}
 
-        if len(sweepers) > 0:
-            sequence = sequences[0]
-            results = self._sweep(sequence, configs, options, sweepers)
-        else:
-            results = self._play_sequence(sequences[0], configs, options)
+        for sequence in sequences:
+            if len(sweepers) > 0:
+                results.update(self._sweep(sequence, configs, options, sweepers))
+            else:
+                results.update(self._play_sequence(sequence, configs, options))
         return results
 
     def measurement(self, sequence, configs, updates=None):

@@ -6,9 +6,9 @@
     "configs": {
       "emulator/bounds": {
       "kind": "bounds",
-      "waveforms": 100000,
-      "readout": 10,
-      "instructions": 10
+      "waveforms": 1000000,
+      "readout": 50,
+      "instructions": 200
     },
     "hamiltonian":{
       "single_qubit": {
