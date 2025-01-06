@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Optional, TypeVar
+from typing import Literal, Optional
 
 from qibo.config import log, raise_error
 
@@ -29,9 +29,6 @@ from ..unrolling import Bounds, batch
 __all__ = ["Platform"]
 
 PARAMETERS = "parameters.json"
-
-# TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
-T = TypeVar("T")
 
 
 def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
