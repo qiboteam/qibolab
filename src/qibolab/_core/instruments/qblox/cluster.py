@@ -6,6 +6,7 @@ from typing import Optional
 
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
+from qcodes.instrument import find_or_create_instrument
 
 from qibolab._core.components.configs import Config
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
@@ -20,9 +21,6 @@ from .config import PortAddress, SeqeuencerMap, SlotId
 from .log import Logger
 from .sequence import Sequence, compile
 from .sequence.acquisition import AcquiredData
-
-# from qcodes.instrument import find_or_create_instrument
-
 
 __all__ = ["Cluster"]
 
@@ -71,10 +69,10 @@ class Cluster(Controller):
         if self.is_connected:
             return
 
-        # self._cluster = find_or_create_instrument(
-        #     qblox.Cluster, recreate=True, name=self.name, identifier=self.address
-        # )
-        # self._cluster.reset()
+        self._cluster = find_or_create_instrument(
+            qblox.Cluster, recreate=True, name=self.name, identifier=self.address
+        )
+        self._cluster.reset()
 
     @property
     def is_connected(self) -> bool:
