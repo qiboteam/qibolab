@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from math import prod
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 from pydantic import Field
 
@@ -50,6 +50,9 @@ ConfigUpdate = dict[str, Update]
 Maps component name to corresponding update, which in turn is a map from
 config property name that needs an update to its new value.
 """
+
+# TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
+T = TypeVar("T")
 
 
 # TODO: lift for general usage in Qibolab
