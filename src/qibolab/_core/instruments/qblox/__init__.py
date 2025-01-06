@@ -1,1 +1,3 @@
-__all__ = []
+from . import mock
+
+__all__ = ["mock"]
