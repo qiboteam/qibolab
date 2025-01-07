@@ -11,7 +11,7 @@ from .ports import OPXIQ, FEMInput, FEMOutput, OctaveInput, OctaveOutput, OPXOut
 SAMPLING_RATE = 1
 """Sampling rate of Quantum Machines OPX in GSps."""
 
-DEFAULT_INPUTS = {1: {}, 2: {}}
+DEFAULT_INPUTS = {1: {"offset": 0}, 2: {"offset": 0}}
 """Default controller config section.
 
 Inputs are always registered to avoid issues with automatic mixer
@@ -57,7 +57,7 @@ class QMConfig:
                     controllers[port.device] = {"type": "opx1000", "fems": {}}
                 else:
                     controllers[port.device] = {
-                        "analog_inputs": DEFAULT_INPUTS,
+                        "analog_inputs": DEFAULT_INPUTS.copy(),
                         "digital_outputs": {},
                     }
 
@@ -66,7 +66,7 @@ class QMConfig:
                 if port.fem_number not in fems:
                     fems[port.fem_number] = {
                         "type": port.fem_type,
-                        "analog_inputs": DEFAULT_INPUTS,
+                        "analog_inputs": DEFAULT_INPUTS.copy(),
                         "digital_outputs": {},
                     }
                 device = fems[port.fem_number]
