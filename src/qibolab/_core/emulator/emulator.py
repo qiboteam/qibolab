@@ -1,9 +1,11 @@
+"""Emulator controller."""
+
 import numpy as np
 from qibo.config import log
-from qutip import basis, destroy, mesolve, tensor
+from qutip import basis, mesolve, tensor
 
 from qibolab import Readout
-from qibolab._core.components import AcquisitionConfig, Config, IqConfig
+from qibolab._core.components import AcquisitionConfig, Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -12,8 +14,8 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
 
-from .model import QubitDrive
-from .operators import HZ_TO_GHZ
+from .hamiltonians import waveform
+from .utils import merge_results
 
 
 class EmulatorController(Controller):
@@ -30,60 +32,61 @@ class EmulatorController(Controller):
     @property
     def sampling_rate(self):
         """Sampling rate of emulator."""
+        # TODO: remove hardcoded sampling rate
         return 1
 
     @property
     def initial_state(self):
         """System in ground state."""
         # initial state: qubit in ground state
-        return tensor(basis(2, 0))
+        return tensor(basis(3, 0))
 
-    @property
-    def probability(self):
-        """Probability of qubit in excited state."""
-        return destroy(2).dag() * destroy(2)
+    def probability(self, state: int):
+        """Probability of qubit in state."""
+        return basis(3, state) * basis(3, state).dag()
 
     def _play_sequence(self, sequence, configs, options, updates=None):
-        """Play sequence on emulator."""
+        """Play single sequence on emulator."""
 
         if updates is None:
             updates = {}
 
-        if any(isinstance(pulse, (Readout)) for _, pulse in sequence):
-            print("Readout pulses parameter will be ignored except for duration.")
-
         hamiltonian = configs["hamiltonian"].hamiltonian
-        hamiltonian += self.pulse_sequence_to_hamiltonian(sequence, configs, updates)
-        measurement, tlist = self.measurement(sequence, configs, updates)
-
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
+        measurement, tlist = self._measurement(sequence, configs, updates)
         results = mesolve(
             hamiltonian,
             self.initial_state,
             tlist,
             configs["hamiltonian"].decoherence,
-            [self.probability],
+            [self.probability(0), self.probability(1)],
         )
         averaged_results = {
-            ro_pulse_id: results.expect[0][sample - 1]
+            ro_pulse_id: [results.expect[0][sample - 1], results.expect[1][sample - 1]]
             for ro_pulse_id, sample in measurement.items()
         }
+
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             results = {
                 ro_pulse_id: np.random.choice(
-                    [0, 1], size=options.nshots, p=[1 - prob1, prob1]
+                    [0, 1, 2],
+                    size=options.nshots,
+                    p=[max(prob[0], 0), max(prob[1], 0), max(0, 1 - prob[0] - prob[1])],
                 )
-                for ro_pulse_id, prob1 in averaged_results.items()
+                for ro_pulse_id, prob in averaged_results.items()
             }
             return results
-        return averaged_results
+
+        # dropping probability of 0 to keep compatibility with qibolab
+        return {pulse: prob[1] for pulse, prob in averaged_results.items()}
 
     def _sweep(self, sequence, configs, options, sweepers, updates=None):
         """Sweep over sequence."""
+        if updates is None:
+            updates = {}
         results = {}
         assert len(sweepers[0]) == 1, "Parallel sweepers not supported."
         sweeper = sweepers[0][0]
-        if updates is None:
-            updates = {}
         for value in sweeper.values:
             if sweeper.pulses is not None:
                 for pulse in sweeper.pulses:
@@ -131,7 +134,7 @@ class EmulatorController(Controller):
                 results.update(self._play_sequence(sequence, configs, options))
         return results
 
-    def measurement(self, sequence, configs, updates=None):
+    def _measurement(self, sequence, configs, updates=None):
         """Given sequence creates a dictionary of readout pulses and their
         sample index."""
         duration = 0
@@ -149,12 +152,13 @@ class EmulatorController(Controller):
 
         tmax = int(max(pulses.values()) * self.sampling_rate)
         if tmax > 0:
+            # TODO: less steps to speed up simulation
             tlist = np.arange(0, tmax)
         else:
             tlist = np.arange(0, 1)
         return pulses, tlist
 
-    def pulse_sequence_to_hamiltonian(
+    def _pulse_sequence_to_hamiltonian(
         self, sequence: PulseSequence, configs, updates=None
     ) -> dict[str, list]:
         """Construct Hamiltonian dependent term for qutip simulation."""
@@ -174,48 +178,15 @@ class EmulatorController(Controller):
         for channel, waveforms in hamiltonians.items():
 
             def time(t, args=None):
-                result = find_sample_array(t, *waveforms)
-                if result is None:
-                    return 0
-                waveform, sample = result
-                return waveform(t, sample)
+                cumulative_time = 0
+                for pulse in waveforms:
+                    pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
+                    if cumulative_time <= t < cumulative_time + pulse_duration:
+                        relative_time = t - cumulative_time
+                        index = int(relative_time // 1)  # TODO: pass sampling rate
+                        return pulse(t, index)
+                    cumulative_time += pulse_duration
+                return 0
 
             h_t.append([waveforms[0].operator, time])
         return h_t
-
-
-def find_sample_array(sample_index, *arrays):
-    """Basic function to recover array and sample index."""
-    current_index = 0
-    for i, array in enumerate(arrays):
-        if current_index <= sample_index < current_index + len(array):
-            return arrays[i], int(sample_index - current_index)
-        current_index += len(array)
-    return None
-
-
-def waveform(pulse, channel, configs, updates=None):
-    """Convert pulse to hamiltonian."""
-    if updates is None:
-        updates = {}
-    # mapping IqConfig -> QubitDrive
-    if isinstance(configs[channel], IqConfig):
-        if channel in updates:
-            config = configs[channel].model_copy(update=updates[channel])
-            frequency = config.frequency
-        else:
-            frequency = configs[channel].frequency
-        if pulse.id in updates:
-            pulse = pulse.model_copy(update=updates[pulse.id])
-        return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
-
-
-def merge_results(a: dict, b: dict):
-    """Merge results together."""
-    if len(a) == 0:
-        return b
-    if len(b) == 0:
-        return a
-    for key, value in b.items():
-        a[key] = np.column_stack((a[key], value))
-    return a

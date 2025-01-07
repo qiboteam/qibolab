@@ -3,9 +3,10 @@ import pathlib
 from qibolab import ConfigKinds
 from qibolab._core.components import IqChannel
 from qibolab._core.emulator.emulator import EmulatorController
-from qibolab._core.emulator.model import HamiltonianConfig
 from qibolab._core.platform import Platform
 from qibolab._core.qubits import Qubit
+
+from .hamiltonians import HamiltonianConfig
 
 FOLDER = pathlib.Path(__file__).parent
 

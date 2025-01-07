@@ -14,6 +14,7 @@
       "single_qubit": {
         "0": {
           "frequency": 5000000000,
+          "anharmonicity": -200000000,
           "t1": 1000,
           "t2": 1500
         }
@@ -44,8 +45,8 @@
             [
               "0/drive",
               {
-                "duration": 200,
-                "amplitude": 0.178,
+                "duration": 100,
+                "amplitude": 0.44,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2

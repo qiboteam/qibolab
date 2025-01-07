@@ -1,17 +1,23 @@
-from qutip import destroy, sigmaz
+from qutip import basis, destroy
 
-GHZ_TO_HZ = 1e9
-"""Converting GHz to Hz."""
-HZ_TO_GHZ = 1e-9
-"""Converting Hz to GHz."""
+STATE_0 = basis(3, 0)
+"""State 0."""
+STATE_1 = basis(3, 1)
+"""State 1."""
+STATE_2 = basis(3, 2)
+"""State 2."""
 
-QUBIT_DESTROY = destroy(2)
+QUBIT_DESTROY = destroy(3)
 """Qubit destruction operator."""
 QUBIT_CREATE = QUBIT_DESTROY.dag()
 """Qubit creation operator."""
 QUBIT_NUMBER = QUBIT_CREATE * QUBIT_DESTROY
 """Qubit number operator."""
-QUBIT_DRIVE = QUBIT_CREATE + QUBIT_DESTROY
+QUBIT_DRIVE = 1.0j * (QUBIT_CREATE - QUBIT_DESTROY)
 """Qubit drive term."""
-SIGMAZ = sigmaz()
-"""Sigma z operator."""
+
+# TODO: check these operators
+L1 = STATE_0 * STATE_1.dag() + STATE_0 * STATE_2.dag()
+"""Time relaxation operator."""
+L2 = STATE_1 * STATE_1.dag() - STATE_2 * STATE_2.dag()
+"""Dephasing operator."""
