@@ -79,10 +79,10 @@ class DummyInstrument(Controller):
         return SAMPLING_RATE
 
     def connect(self):
-        log.info(f"Connecting to dummy instrument.")
+        log.info("Connecting to dummy instrument.")
 
     def disconnect(self):
-        log.info(f"Disconnecting dummy instrument.")
+        log.info("Disconnecting dummy instrument.")
 
     def values(self, options: ExecutionParameters, shape: tuple[int, ...]):
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
