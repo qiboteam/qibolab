@@ -45,7 +45,7 @@ def create():
 
     parameters = Parameters.load(FOLDER)
     kernels = Kernels.load(FOLDER)
-    qubits, couplers, pairs = (
+    qubits, couplers, _ = (
         parameters.native_gates.single_qubit,
         parameters.native_gates.coupler,
         parameters.native_gates.two_qubit,
