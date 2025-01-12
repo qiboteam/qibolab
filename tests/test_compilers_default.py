@@ -32,6 +32,8 @@ def test_u3_sim_agreement():
 def compile_circuit(circuit, platform):
     """Compile a circuit to a pulse sequence."""
     compiler = Compiler.default()
+    # Temporary fix: overwrite the wire names
+    circuit._wire_names = list(platform.qubits)
     sequence, _ = compiler.compile(circuit, platform)
     return sequence
 
@@ -181,6 +183,21 @@ def test_cz_to_sequence(platform):
     sequence = compile_circuit(circuit, platform)
     test_sequence, virtual_z_phases = platform.create_CZ_pulse_sequence((2, 1))
     assert sequence == test_sequence
+
+
+def test_twocz_to_sequence(platform):
+    if (1, 2) not in platform.pairs:
+        pytest.skip(
+            f"Skipping CZ test for {platform} because pair (1, 2) is not available."
+        )
+
+    circuit = Circuit(3)
+    circuit.add(gates.CZ(1, 2))
+    circuit.add(gates.CZ(1, 2))
+
+    sequence = compile_circuit(circuit, platform)
+    assert sequence[0].relative_phase == 0
+    assert sequence[1].relative_phase == 0
 
 
 def test_cnot_to_sequence():

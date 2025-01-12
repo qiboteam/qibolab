@@ -61,6 +61,25 @@ def test_sweep_too_many_sweep_points(platform, controller):
         controller.sweep({0: qubit}, {}, PulseSequence(pulse), params, sweep)
 
 
+def test_sweep_coupler(platform, controller):
+    """Test that coupler related sweep is accepted."""
+    ro_pulse = platform.create_MZ_pulse(qubit=0, start=0)
+    sequence = PulseSequence(ro_pulse)
+
+    sweeper = Sweeper(Parameter.bias, np.random.rand(4), couplers=[0])
+    params = ExecutionParameters(
+        nshots=10, relaxation_time=1000, averaging_mode=AveragingMode.CYCLIC
+    )
+    mock_data = np.array([1, 2, 3, 4])
+    controller._execute_pulse_sequence = Mock(
+        return_value={ro_pulse.serial: IntegratedResults(mock_data)}
+    )
+    res = controller.sweep(
+        platform.qubits, platform.couplers, sequence, params, sweeper
+    )
+    assert np.array_equal(res[ro_pulse.serial].voltage, mock_data)
+
+
 @pytest.mark.qpu
 def connect(connected_controller: QbloxController):
     connected_controller.connect()

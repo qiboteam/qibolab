@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, fields
-from typing import ClassVar, Dict, Optional, Union
+from typing import ClassVar, Dict, Literal, Optional, Union
 
 DIGITAL_DELAY = 57
 DIGITAL_BUFFER = 18
@@ -132,6 +132,37 @@ class OPXIQ:
 
 
 @dataclass
+class FEMOutput(OPXOutput):
+    fem_number: int = 0
+    fem_type: Literal["LF", "MF"] = "LF"
+    output_mode: Literal["direct", "amplified"] = field(
+        default="direct", metadata={"config": "output_mode", "settings": True}
+    )
+
+    @property
+    def name(self):
+        return f"{self.fem_number}/o{self.number}"
+
+    @property
+    def pair(self):
+        return (self.device, self.fem_number, self.number)
+
+
+@dataclass
+class FEMInput(OPXInput):
+    fem_number: int = 0
+    fem_type: Literal["LF", "MF"] = "LF"
+
+    @property
+    def name(self):
+        return f"{self.fem_number}/i{self.number}"
+
+    @property
+    def pair(self):
+        return (self.device, self.fem_number, self.number)
+
+
+@dataclass
 class OctaveOutput(QMOutput):
     key: ClassVar[str] = "RF_outputs"
 
@@ -149,7 +180,7 @@ class OctaveOutput(QMOutput):
 
     Can be external or internal.
     """
-    output_mode: str = field(default="triggered", metadata={"config": "output_mode"})
+    output_mode: str = field(default="always_on", metadata={"config": "output_mode"})
     """Can be: "always_on" / "always_off"/ "triggered" / "triggered_reversed"."""
     digital_delay: int = DIGITAL_DELAY
     """Delay for digital output channel."""
@@ -165,11 +196,14 @@ class OctaveOutput(QMOutput):
 
         Digital markers are used to switch LOs on in triggered mode.
         """
-        opx = self.opx_port.i.device
-        number = self.opx_port.i.number
+        opx_port = self.opx_port.i
+        if isinstance(opx_port, (FEMOutput, FEMInput)):
+            port = (opx_port.device, opx_port.fem_number, opx_port.number)
+        else:
+            port = (opx_port.device, opx_port.number)
         return {
             "output_switch": {
-                "port": (opx, number),
+                "port": port,
                 "delay": self.digital_delay,
                 "buffer": self.digital_buffer,
             }

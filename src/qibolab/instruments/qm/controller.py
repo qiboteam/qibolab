@@ -189,6 +189,9 @@ class QMController(Controller):
             # convert simulation duration from ns to clock cycles
             self.simulation_duration //= 4
 
+    def __str__(self):
+        return self.name
+
     def ports(self, name, output=True):
         """Provides instrument ports to the user.
 
@@ -255,7 +258,7 @@ class QMController(Controller):
         self._reset_temporary_calibration()
         if self.manager is not None:
             self.manager.close_all_quantum_machines()
-            self.manager.close()
+            self.manager = None
             self.is_connected = False
 
     def calibrate_mixers(self, qubits):
@@ -285,6 +288,10 @@ class QMController(Controller):
         Args:
             program: QUA program.
         """
+        if self.manager is None:
+            raise RuntimeError(
+                "Quantum Machines are not connected. Please use ``platform.connect()``."
+            )
         machine = self.manager.open_qm(self.config.__dict__)
         return machine.execute(program)
 
@@ -373,6 +380,10 @@ class QMController(Controller):
         # play pulses using QUA
         with qua.program() as experiment:
             n = declare(int)
+            for qubit in qubits.values():
+                if qubit.flux:
+                    qua.set_dc_offset(qubit.flux.name, "single", qubit.sweetspot)
+
             acquisitions = declare_acquisitions(ro_pulses, qubits, options)
             with for_(n, 0, n < options.nshots, n + 1):
                 sweep(

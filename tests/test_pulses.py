@@ -12,6 +12,7 @@ from qibolab.pulses import (
     Custom,
     Drag,
     DrivePulse,
+    Exponential,
     FluxPulse,
     Gaussian,
     GaussianSquare,
@@ -275,8 +276,70 @@ def test_pulses_pulseshape_sampling_rate(shape):
 def test_pulseshape_eval():
     shape = PulseShape.eval("Rectangular()")
     assert isinstance(shape, Rectangular)
-    with pytest.raises(ValueError):
-        shape = PulseShape.eval("Ciao()")
+
+    shape = PulseShape.eval("Exponential(1, 2)")
+    assert isinstance(shape, Exponential)
+    assert shape.tau == 1
+    assert shape.upsilon == 2
+
+    shape = PulseShape.eval("Exponential(4, 5, 6)")
+    assert isinstance(shape, Exponential)
+    assert shape.tau == 4
+    assert shape.upsilon == 5
+    assert shape.g == 6
+
+    shape = PulseShape.eval("Gaussian(3.1)")
+    assert isinstance(shape, Gaussian)
+    assert shape.rel_sigma == 3.1
+
+    shape = PulseShape.eval("GaussianSquare(5, 78)")
+    assert isinstance(shape, GaussianSquare)
+    assert shape.rel_sigma == 5
+    assert shape.width == 78
+
+    shape = PulseShape.eval("Drag(4, 0.1)")
+    assert isinstance(shape, Drag)
+    assert shape.rel_sigma == 4
+    assert shape.beta == 0.1
+
+    shape = PulseShape.eval("IIR([1, 2, 3], [5], Drag(3, 0.2))")
+    assert isinstance(shape, IIR)
+    assert np.array_equal(shape.b, np.array([1, 2, 3]))
+    assert np.array_equal(shape.a, np.array([5]))
+    assert isinstance(shape.target, Drag)
+    assert shape.target.rel_sigma == 3
+    assert shape.target.beta == 0.2
+
+    shape = PulseShape.eval("SNZ(10, 20)")
+    assert isinstance(shape, SNZ)
+    assert shape.t_idling == 10
+    assert shape.b_amplitude == 20
+
+    shape = PulseShape.eval("eCap(3.14)")
+    assert isinstance(shape, eCap)
+    assert shape.alpha == 3.14
+
+    shape = PulseShape.eval("Custom([1, 2, 3], [4, 5, 6])")
+    assert isinstance(shape, Custom)
+    assert np.array_equal(shape.envelope_i, np.array([1, 2, 3]))
+    assert np.array_equal(shape.envelope_q, np.array([4, 5, 6]))
+
+    with pytest.raises(ValueError, match="shape .* not recognized"):
+        _ = PulseShape.eval("Ciao()")
+
+
+@pytest.mark.parametrize(
+    "value_str",
+    ["-0.1", "+0.1", "1.", "-3.", "+1.", "-0.1e2", "1e-2", "+1e3", "-3e-1", "-.4"],
+)
+def test_pulse_shape_eval_numeric_varieties(value_str):
+    shape = PulseShape.eval(f"Drag(1, {value_str})")
+    assert isinstance(shape, Drag)
+    assert shape.beta == float(value_str)
+
+    shape = PulseShape.eval(f"Custom([0.1, {value_str}])")
+    assert isinstance(shape, Custom)
+    assert np.array_equal(shape.envelope_i, np.array([0.1, float(value_str)]))
 
 
 @pytest.mark.parametrize("rel_sigma,beta", [(5, 1), (5, -1), (3, -0.03), (4, 0.02)])

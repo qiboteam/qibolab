@@ -11,6 +11,7 @@ from qibolab.compilers import Compiler
 from qibolab.execution_parameters import ExecutionParameters
 from qibolab.platform import Platform, create_platform
 from qibolab.platform.load import available_platforms
+from qibolab.qubits import QubitId, QubitPairId
 from qibolab.version import __version__ as qibolab_version
 
 
@@ -49,6 +50,33 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
+
+    @property
+    def qubits(self) -> list[QubitId]:
+        """Returns the qubits in the platform."""
+        return list(self.platform.qubits)
+
+    @property
+    def connectivity(self) -> list[QubitPairId]:
+        """Returns the list of connected qubits."""
+        return list(self.platform.pairs)
+
+    @property
+    def natives(self) -> list[str]:
+        """Returns the list of native gates supported by the platform."""
+        compiler = Compiler.default()
+        natives = [g.__name__ for g in list(compiler.rules)]
+        calibrated = self.platform.pairs
+
+        check_2q = ["CZ", "CNOT"]
+        for gate in check_2q:
+            if gate in natives and all(
+                getattr(calibrated[p].native_gates, gate) is None
+                for p in self.connectivity
+            ):
+                natives.remove(gate)
+
+        return natives
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -97,6 +125,11 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
+        # This should be done in qibo side
+        # Temporary fix: overwrite the wire names
+        if not all(q in self.qubits for q in circuit.wire_names):
+            circuit._wire_names = self.qubits[: circuit.nqubits]
+
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
         if not self.platform.is_connected:
@@ -138,6 +171,12 @@ class QibolabBackend(NumpyBackend):
                 ValueError,
                 "Hardware backend only supports circuits as initial states.",
             )
+
+        # This should be done in qibo side
+        # Temporary fix: overwrite the wire names
+        for circuit in circuits:
+            if not all(q in self.qubits for q in circuit.wire_names):
+                circuit._wire_names = self.qubits[: circuit.nqubits]
 
         # TODO: Maybe these loops can be parallelized
         sequences, measurement_maps = zip(

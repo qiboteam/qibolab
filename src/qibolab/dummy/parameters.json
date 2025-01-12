@@ -280,7 +280,7 @@
                     {
                         "type": "virtual_z",
                         "phase": 0.0,
-                        "qubit": 1
+                        "qubit": 0
                     },
                     {
                         "type": "virtual_z",
@@ -309,12 +309,12 @@
                     },
                     {
                         "type": "virtual_z",
-                        "phase": 0.0,
+                        "phase": 0.1,
                         "qubit": 1
                     },
                     {
                         "type": "virtual_z",
-                        "phase": 0.0,
+                        "phase": 0.2,
                         "qubit": 2
                     },
                     {
@@ -396,7 +396,7 @@
                     {
                         "type": "virtual_z",
                         "phase": 0.0,
-                        "qubit": 1
+                        "qubit": 3
                     },
                     {
                         "type": "virtual_z",
@@ -426,7 +426,7 @@
                     {
                         "type": "virtual_z",
                         "phase": 0.0,
-                        "qubit": 1
+                        "qubit": 3
                     },
                     {
                         "type": "virtual_z",
@@ -476,7 +476,7 @@
                     {
                         "type": "virtual_z",
                         "phase": 0.0,
-                        "qubit": 1
+                        "qubit": 4
                     },
                     {
                         "type": "virtual_z",
