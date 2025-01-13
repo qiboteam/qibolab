@@ -95,8 +95,12 @@ bluefors = ["pyyaml"]
 
 [tool.poe.tasks]
 test = "pytest"
-lint = "pylint src --errors-only"
-lint-warnings = "pylint src --exit-zero"
+lint = "ruff check"
+lint-warnings = """
+  ruff check --exit-zero \
+  --select F,E,W,C90,N,UP,BLE,FBT,B,A,C4,T10,EM,EXE,ISC,ICN,LOG,G,INP,PIE,T20,PT,Q,RSE,\
+           RET,SLF,SLOT,SIM,TC,INT,ARG,PTH,ERA,NPY,PERF,RUF
+"""
 docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
