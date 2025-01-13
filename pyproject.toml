@@ -105,17 +105,6 @@ docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
 
-[tool.pylint.master]
-output-format = "colorized"
-disable = ["E1123", "E1120", "C0301"]
-generated-members = [
-  "qibolab._core.native.RxyFactory",
-  "pydantic.fields.FieldInfo",
-]
-# TODO: restore analysis when the support will cover the entier Python range, i.e. it
-# will include py3.12 as well
-ignored-modules = ["qm", "qualang_tools", "qibosoq"]
-
 [tool.pytest.ini_options]
 testpaths = ['tests/']
 markers = ["qpu: mark tests that require qpu"]
