@@ -84,7 +84,7 @@ def waveforms_from_pulse(pulse: Pulse, max_voltage: float) -> dict[str, Waveform
 
 @dataclass(frozen=True)
 class Waveforms:
-    I: str
+    I: str  # noqa: E741
     Q: str
 
     @classmethod
