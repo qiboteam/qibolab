@@ -12,7 +12,7 @@ def era(connected_platform):
 
 @pytest.mark.qpu
 def test_instruments_erasynth_connect(era):
-    assert instrument.device is not None
+    assert era.device is not None
 
 
 @pytest.mark.qpu
