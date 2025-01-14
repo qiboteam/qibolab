@@ -307,11 +307,7 @@ def initialize_parameters(
     pairs: Optional[list[str]] = None,
 ) -> Parameters:
     """Generates default ``Parameters`` for a given hardware configuration."""
-    if natives is None:
-        natives = set()
-    else:
-        natives = set(natives)
-
+    natives = set(natives if natives is not None else ())
     configs = {}
     for instrument in hardware.instruments.values():
         if hasattr(instrument, "channels"):
@@ -326,15 +322,12 @@ def initialize_parameters(
         q: _native_builder(SingleQubitNatives, qubit, natives & {"CP"})
         for q, qubit in hardware.couplers.items()
     }
-    if pairs is not None:
-        two_qubit = {
-            pair: _native_builder(
-                TwoQubitNatives, _pair_to_qubit(pair, hardware.qubits), natives
-            )
-            for pair in pairs
-        }
-    else:
-        two_qubit = {}
+    two_qubit = {
+        pair: _native_builder(
+            TwoQubitNatives, _pair_to_qubit(pair, hardware.qubits), natives
+        )
+        for pair in (pairs if pairs is not None else ())
+    }
 
     native_gates = NativeGates(
         single_qubit=single_qubit, coupler=coupler, two_qubit=two_qubit
