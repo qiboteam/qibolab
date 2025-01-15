@@ -75,6 +75,8 @@ setuptools = ">67.0.0"
 pytest-cov = "^4.0.0"
 pytest-env = ">=0.8.1"
 pytest-mock = ">=3.10.0"
+# TODO: https://github.com/qiboteam/qibolab/pull/1128#issuecomment-2593208150
+dash = "^2.10.0"
 
 [tool.poetry.group.analysis]
 optional = true
