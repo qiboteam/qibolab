@@ -22,7 +22,6 @@ jobs:
     uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
     with:
       python-version: "3.11"
-      package-manager: "poetry"
       trigger-label: "${{needs.version.outputs.label}}"
       project: qibolab
       poetry-extras: --with docs --all-extras
