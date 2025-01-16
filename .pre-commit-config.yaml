@@ -21,11 +21,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.0
+    rev: v3.19.1
     hooks:
       - id: pyupgrade
   - repo: https://github.com/hadialqattan/pycln
-    rev: v2.4.0
+    rev: v2.5.0
     hooks:
       - id: pycln
         args:
