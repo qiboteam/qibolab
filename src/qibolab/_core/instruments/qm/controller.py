@@ -8,10 +8,9 @@ from pathlib import Path
 from typing import Optional, Union
 
 from pydantic import Field
-from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
+from qm import QuantumMachinesManager, generate_qua_script
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
-from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab._core.components import (
     AcquisitionChannel,
@@ -24,7 +23,7 @@ from qibolab._core.components import (
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import Acquisition, Align, Delay, Pulse, Readout
+from qibolab._core.pulses import Align, Delay, Pulse, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import unroll_sequences
@@ -194,8 +193,9 @@ class QmController(Controller):
 
     def model_post_init(self, __context):
         if self.simulation_duration is not None:
-            # convert simulation duration from ns to clock cycles
-            self.simulation_duration //= 4
+            raise NotImplementedError(
+                "Simulation is no longer supported by the QM driver."
+            )
 
     @property
     def sampling_rate(self):
@@ -473,16 +473,6 @@ class QmController(Controller):
         machine = self.manager.open_qm(asdict(self.config))
         return machine.execute(program)
 
-    def simulate_program(self, program):
-        """Simulates an arbitrary program written in QUA language."""
-        ncontrollers = len(self.config.controllers)
-        controller_connections = create_simulator_controller_connections(ncontrollers)
-        simulation_config = SimulationConfig(
-            duration=self.simulation_duration,
-            controller_connections=controller_connections,
-        )
-        return self.manager.simulate(asdict(self.config), program, simulation_config)
-
     def play(
         self,
         configs: dict[str, Config],
@@ -529,14 +519,6 @@ class QmController(Controller):
                 "Not connected to Quantum Machines. Returning program and config."
             )
             return {"program": experiment, "config": asdict(self.config)}
-
-        if self.simulation_duration is not None:
-            result = self.simulate_program(experiment)
-            results = {}
-            for _, pulse in sequence:
-                if isinstance(pulse, Acquisition):
-                    results[pulse.id] = result
-            return results
 
         result = self.execute_program(experiment)
         return fetch_results(result, acquisitions.values())
