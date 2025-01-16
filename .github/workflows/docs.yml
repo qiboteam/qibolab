@@ -28,11 +28,10 @@ jobs:
 
   deploy-docs:
     needs: [evaluate-label]
-    uses: qiboteam/workflows/.github/workflows/deploy-ghpages-latest-stable.yml@v1
+    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
     with:
-      python-version: '3.10'
+      python-version: "3.11"
       package-manager: "poetry"
-      dependency-path: "**/poetry.lock"
       trigger-label: "${{needs.evaluate-label.outputs.label}}"
       project: qibolab
       poetry-extras: --with docs --all-extras

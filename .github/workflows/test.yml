@@ -1,4 +1,3 @@
-# A single CI script with github workflow
 name: tests
 
 on:
@@ -13,10 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-    uses: qiboteam/workflows/.github/workflows/test.yml@analysis
+    uses: qiboteam/workflows/.github/workflows/test.yml@v2
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
-      doctests: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version != '3.12'}}
+      doctests: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version != '3.11'}}
       poetry-extras: "--with docs,tests,analysis --all-extras"
     secrets: inherit
