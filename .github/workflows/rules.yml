@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-    uses: qiboteam/workflows/.github/workflows/test.yml@to-actions
+    uses: qiboteam/workflows/.github/workflows/test.yml@analysis
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
