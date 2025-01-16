@@ -9,21 +9,17 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: debug-statements
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.2
     hooks:
-      - id: black
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black"]
-  - repo: https://github.com/PyCQA/docformatter
-    rev: master
-    hooks:
-      - id: docformatter
-        additional_dependencies: [tomli]
-        args: [--in-place, --config, ./pyproject.toml]
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
+      # Sort imports
+      - id: ruff
+        args: [--select, I, --fix]
+      # Run the formatter.
+      - id: ruff-format
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.19.0
     hooks:

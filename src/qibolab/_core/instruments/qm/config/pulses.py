@@ -84,7 +84,7 @@ def waveforms_from_pulse(pulse: Pulse, max_voltage: float) -> dict[str, Waveform
 
 @dataclass(frozen=True)
 class Waveforms:
-    I: str
+    I: str  # noqa: E741
     Q: str
 
     @classmethod
@@ -120,11 +120,15 @@ def integration_weights(element: str, readout_len: int, kernel=None, angle: floa
     """Create integration weights section for QM config."""
     cos, sin = np.cos(angle), np.sin(angle)
     if kernel is None:
-        convert = lambda x: [(x, readout_len)]
+
+        def convert(x):
+            return [(x, readout_len)]
     else:
         cos = kernel * cos
         sin = kernel * sin
-        convert = lambda x: x
+
+        def convert(x):
+            return x
 
     return {
         f"cosine_weights_{element}": {

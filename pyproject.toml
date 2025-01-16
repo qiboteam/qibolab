@@ -32,7 +32,6 @@ qcodes_contrib_drivers = { version = "0.18.0", optional = true }
 pyvisa-py = { version = "0.5.3", optional = true }
 qm-qua = { version = "==1.2.1", optional = true }
 qualang-tools = { version = "^0.15.0", python = "<3.12", optional = true }
-setuptools = { version = ">67.0.0", optional = true }
 laboneq = { version = "==2.25.0", optional = true }
 qibosoq = { version = ">=0.1.2,<0.2", python = "<3.12", optional = true }
 qutip = { version = "^5.0.2", optional = true }
@@ -75,12 +74,14 @@ setuptools = ">67.0.0"
 pytest-cov = "^4.0.0"
 pytest-env = ">=0.8.1"
 pytest-mock = ">=3.10.0"
+# TODO: https://github.com/qiboteam/qibolab/pull/1128#issuecomment-2593208150
+dash = "^2.10.0"
 
 [tool.poetry.group.analysis]
 optional = true
 
 [tool.poetry.group.analysis.dependencies]
-pylint = "3.1.0"
+ruff = "^0.9.1"
 
 [tool.poetry.extras]
 qblox = ["qblox-instruments", "qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
@@ -95,22 +96,15 @@ bluefors = ["pyyaml"]
 
 [tool.poe.tasks]
 test = "pytest"
-lint = "pylint src --errors-only"
-lint-warnings = "pylint src --exit-zero"
+lint = "ruff check"
+lint-warnings = """
+  ruff check --exit-zero \
+  --select F,E,W,C90,N,UP,BLE,FBT,B,A,C4,T10,EM,EXE,ISC,ICN,LOG,G,INP,PIE,T20,PT,Q,RSE,\
+           RET,SLF,SLOT,SIM,TC,INT,ARG,PTH,ERA,NPY,PERF,RUF
+"""
 docs = "make -C doc html"
 docs-clean = "make -C doc clean"
 test-docs = "make -C doc doctest"
-
-[tool.pylint.master]
-output-format = "colorized"
-disable = ["E1123", "E1120", "C0301"]
-generated-members = [
-  "qibolab._core.native.RxyFactory",
-  "pydantic.fields.FieldInfo",
-]
-# TODO: restore analysis when the support will cover the entier Python range, i.e. it
-# will include py3.12 as well
-ignored-modules = ["qm", "qualang_tools", "qibosoq"]
 
 [tool.pytest.ini_options]
 testpaths = ['tests/']
@@ -123,7 +117,7 @@ addopts = [
   '-k not emulator',
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F403"]
 
 [tool.pycln]
