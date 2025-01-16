@@ -17,11 +17,18 @@ jobs:
       - id: classify
         uses: qiboteam/workflows/actions/docs/version@evaluate-label
 
-  deploy-docs:
+  test:
+    runs-on: ubuntu-latest
     needs: [version]
-    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
-    with:
-      python-version: "3.11"
-      trigger-label: "${{needs.version.outputs.label}}"
-      project: qibolab
-      poetry-extras: --with docs --all-extras
+
+    steps:
+      - run: echo ${{needs.version.outputs.version}}
+
+  # deploy-docs:
+  #   needs: [version]
+  #   uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
+  #   with:
+  #     python-version: "3.11"
+  #     trigger-label: "${{needs.version.outputs.version}}"
+  #     project: qibolab
+  #     poetry-extras: --with docs --all-extras
