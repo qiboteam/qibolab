@@ -8,30 +8,21 @@ on:
       - "*"
 
 jobs:
-  evaluate-label:
+  version:
     runs-on: ubuntu-latest
     outputs:
-      label: ${{ steps.label_step.outputs.version}}
+      version: ${{ steps.classify.outputs.version}}
+
     steps:
-      - name: checks for the label
-        id: label_step
-        run: |
-          if [[ "${{ github.ref  }}" == "refs/heads/main" ]]; then
-                echo "version=latest" >> $GITHUB_OUTPUT
-          fi
-          if [[ "${{ github.ref_type }}" == "branch" ]] && [[ "${{ github.ref  }}" != "refs/heads/main" ]]; then
-                exit 1
-          fi
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-                echo "version=stable" >> $GITHUB_OUTPUT
-          fi
+      - id: classify
+        uses: qiboteam/workflows/actions/docs/version@evaluate-label
 
   deploy-docs:
-    needs: [evaluate-label]
+    needs: [version]
     uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
     with:
       python-version: "3.11"
       package-manager: "poetry"
-      trigger-label: "${{needs.evaluate-label.outputs.label}}"
+      trigger-label: "${{needs.version.outputs.label}}"
       project: qibolab
       poetry-extras: --with docs --all-extras
