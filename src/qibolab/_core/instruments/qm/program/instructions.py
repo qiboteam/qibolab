@@ -150,7 +150,7 @@ def _qua_for_loop(variables: list[Variable], values: list[npt.NDArray]):
 
     if len(array) == 0:
         raise ValueError("Sweeper values must have length > 0.")
-    elif len(array) == 1:
+    if len(array) == 1:
         return for_(var, array[0], var <= array[0], var + 1)
 
     if not isinstance(var, Variable):
