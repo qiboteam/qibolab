@@ -117,7 +117,7 @@ class Instr(Model):
         key = self.keyword()
         if key_width is None:
             key_width = len(key)
-        instr = f"{key:<{key_width+1}}"
+        instr = f"{key:<{key_width + 1}}"
         return (instr + ",".join([str(a) for a in self.args])).strip()
 
 
@@ -734,7 +734,7 @@ class Line(Model):
             instr_name_width = len(self.instruction.keyword())
         if instr_width is None:
             instr_width = len(self.instruction.asm(instr_name_width))
-        code = f"{label:<{label_width+2}}{self.instruction.asm(instr_name_width):<{instr_width+1}}"
+        code = f"{label:<{label_width + 2}}{self.instruction.asm(instr_name_width):<{instr_width + 1}}"
         if self.comment is None:
             return code
         comment = _format_comment(

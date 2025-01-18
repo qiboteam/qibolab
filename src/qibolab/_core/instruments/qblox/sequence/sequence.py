@@ -64,7 +64,9 @@ def _split_channels(sequence: PulseSequence) -> dict[ChannelId, PulseSequence]:
         return (
             pulse
             if not isinstance(pulse, Readout)
-            else pulse.probe if output else pulse.acquisition
+            else pulse.probe
+            if output
+            else pulse.acquisition
         )
 
     def unwrap_seq(seq: PulseSequence, output: bool) -> PulseSequence:

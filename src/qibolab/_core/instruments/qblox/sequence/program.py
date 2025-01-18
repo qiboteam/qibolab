@@ -58,7 +58,7 @@ def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> L
         (
             Register(number=i + first_sweeper),
             iteration_length(parsweep),
-            f"{i+1}th sweeper",
+            f"{i + 1}th sweeper",
         )
         for i, parsweep in enumerate(sweepers)
     ]

@@ -6,10 +6,6 @@
       url = "github:cachix/devenv";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     nixpkgs-python = {
       url = "github:cachix/nixpkgs-python";
       inputs = {nixpkgs.follows = "nixpkgs";};
