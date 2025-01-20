@@ -24,6 +24,7 @@ class MockModule:
     def __init__(self, slot: int) -> None:
         self.slot_idx = slot
         self.register = {}
+        self.sequencers = [MockSequencer(i, [self]) for i in range(10)]
 
     def present(self) -> bool:
         return True
@@ -32,12 +33,20 @@ class MockModule:
     def is_qrm_type(self) -> bool:
         return True
 
-    @property
-    def sequencers(self) -> list:
-        return [MockSequencer(i, [self]) for i in range(20)]
+    def snapshot(self) -> dict:
+        return self.register | {
+            "sequencers": {seq.idx: seq.register} for seq in self.sequencers
+        }
 
     def __getattribute__(self, name: str):
-        if name in ["slot_idx", "register", "present", "is_qrm_type", "sequencers"]:
+        if name in [
+            "slot_idx",
+            "register",
+            "sequencers",
+            "present",
+            "is_qrm_type",
+            "snapshot",
+        ]:
             return super().__getattribute__(name)
 
         log = {}
@@ -54,10 +63,15 @@ class MockCluster:
         self.args = args
         self.kwargs = kwargs
         self.resets: int = 0
-
-    @property
-    def modules(self) -> list:
-        return [MockModule(slot) for slot in range(21)]
+        self.modules = [MockModule(slot) for slot in range(21)]
 
     def reset(self) -> None:
         self.resets += 1
+
+    def snapshot(self) -> dict:
+        return {
+            "args": self.args,
+            "kwargs": self.kwargs,
+            "resets": self.resets,
+            "modules": {mod.slot_idx: mod.snapshot for mod in self.modules},
+        }
