@@ -58,6 +58,12 @@ class Sequence(Model):
             ),
         )
 
+    @classmethod
+    def empty(cls):
+        return cls(
+            waveforms={}, weights={}, acquisitions={}, program=Program(elements=[])
+        )
+
 
 def _split_channels(sequence: PulseSequence) -> dict[ChannelId, PulseSequence]:
     def unwrap(pulse: PulseLike, output: bool) -> PulseLike:
