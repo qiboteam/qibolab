@@ -118,7 +118,9 @@ class Cluster(Controller):
                 zip(chs, module.sequencers)
             ):
                 sequencers[slot][ch] = idx
-                config.sequencer(sequencer, address, sequences[ch], acquisition)
+                config.sequencer(
+                    sequencer, address, sequences.get(ch, Sequence.empty()), acquisition
+                )
 
         return sequencers
 
