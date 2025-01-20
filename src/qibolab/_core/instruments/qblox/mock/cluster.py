@@ -2,12 +2,13 @@ __all__ = []
 
 
 class MockSequencer:
-    def __init__(self, idx: int) -> None:
+    def __init__(self, idx: int, ancestors: list) -> None:
         self.idx = idx
         self.register = {}
+        self.ancestors = [self] + ancestors
 
     def __getattribute__(self, name: str):
-        if name in ["register", "idx"]:
+        if name in ["idx", "register", "ancestors"]:
             return super().__getattribute__(name)
 
         log = {}
@@ -32,7 +33,7 @@ class MockModule:
 
     @property
     def sequencers(self) -> list:
-        return [MockSequencer(i) for i in range(20)]
+        return [MockSequencer(i, [self]) for i in range(20)]
 
     def disconnect_outputs(self) -> None:
         pass
