@@ -23,6 +23,7 @@ class MockSequencer:
 class MockModule:
     def __init__(self, slot: int) -> None:
         self.slot_idx = slot
+        self.register = {}
 
     def present(self) -> bool:
         return True
@@ -35,14 +36,17 @@ class MockModule:
     def sequencers(self) -> list:
         return [MockSequencer(i, [self]) for i in range(20)]
 
-    def disconnect_outputs(self) -> None:
-        pass
+    def __getattribute__(self, name: str):
+        if name in ["slot_idx", "register", "present", "is_qrm_type", "sequencers"]:
+            return super().__getattribute__(name)
 
-    def scope_acq_trigger_mode_path0(self, mode: str) -> None:
-        pass
+        log = {}
+        self.register[name] = log
 
-    def scope_acq_trigger_mode_path1(self, mode: str) -> None:
-        pass
+        def wrapped(*args, **kwargs):
+            log["args"], log["kwargs"] = args, kwargs
+
+        return wrapped
 
 
 class MockCluster:
