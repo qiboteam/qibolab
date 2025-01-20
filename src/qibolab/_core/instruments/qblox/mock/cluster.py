@@ -1,16 +1,22 @@
 __all__ = []
 
 
-from ..sequence import Sequence
-
-
 class MockSequencer:
     def __init__(self, idx: int) -> None:
         self.idx = idx
         self.register = {}
 
-    def sequence(self, sequence: Sequence) -> None:
-        pass
+    def __getattribute__(self, name: str):
+        if name in ["register", "idx"]:
+            return super().__getattribute__(name)
+
+        log = {}
+        self.register[name] = log
+
+        def wrapped(*args, **kwargs):
+            log["args"], log["kwargs"] = args, kwargs
+
+        return wrapped
 
 
 class MockModule:
