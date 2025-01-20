@@ -1,3 +1,4 @@
+import json
 from typing import Optional, cast
 
 from qblox_instruments.qcodes_drivers.module import Module
@@ -78,7 +79,8 @@ def sequencer(
     acquisition: AcquisitionType,
 ):
     # upload sequence
-    seq.sequence(sequence.model_dump())
+    # - ensure JSON compatibility of the sent dictionary
+    seq.sequence(json.loads(sequence.model_dump_json()))
 
     # configure the sequencers to synchronize
     seq.sync_en(True)
