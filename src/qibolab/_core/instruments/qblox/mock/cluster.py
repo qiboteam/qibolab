@@ -1,6 +1,18 @@
 __all__ = []
 
 
+from ..sequence import Sequence
+
+
+class MockSequencer:
+    def __init__(self, idx: int) -> None:
+        self.idx = idx
+        self.register = {}
+
+    def sequence(self, sequence: Sequence) -> None:
+        pass
+
+
 class MockModule:
     def __init__(self, slot: int) -> None:
         self.slot_idx = slot
@@ -14,7 +26,7 @@ class MockModule:
 
     @property
     def sequencers(self) -> list:
-        return [None] * 20
+        return [MockSequencer(i) for i in range(20)]
 
     def disconnect_outputs(self) -> None:
         pass
