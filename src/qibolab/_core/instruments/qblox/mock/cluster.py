@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Optional
 
 __all__ = []
 
@@ -27,7 +27,7 @@ class MockModule:
     def __init__(self, slot: int) -> None:
         self.slot_idx = slot
         self.register = {"calls": []}
-        self.sequencers = [MockSequencer(i, [self]) for i in range(10)]
+        self.sequencers = [MockSequencer(i, [self]) for i in range(6)]
 
     def present(self) -> bool:
         return True
@@ -71,15 +71,45 @@ class MockCluster:
     def reset(self) -> None:
         self.resets += 1
 
+    @property
+    def records(self) -> dict:
+        return {
+            "args": self.args,
+            "kwargs": self.kwargs,
+            "resets": self.resets,
+            "modules": {mod.slot_idx: mod.snapshot() for mod in self.modules},
+        }
+
     def snapshot(self) -> str:
-        return json.dumps(
-            {
-                "args": self.args,
-                "kwargs": self.kwargs,
-                "resets": self.resets,
-                "modules": {mod.slot_idx: mod.snapshot() for mod in self.modules},
-            }
-        )
+        return json.dumps(self.records)
+
+    @property
+    def sequences(self) -> dict[tuple[int, int], Optional[dict]]:
+        return {
+            k: v
+            for k, v in {
+                (mod.slot_idx, seq.idx): next(
+                    iter(
+                        [
+                            call
+                            for call in seq.register["calls"]
+                            if call["name"] == "sequence"
+                        ]
+                    ),
+                    None,
+                )
+                for mod in self.modules
+                for seq in mod.sequencers
+            }.items()
+            if v is not None
+        }
+
+    @property
+    def programs(self) -> dict[tuple[int, int], Optional[dict]]:
+        return {
+            id_: seq["args"][0]["program"] if seq is not None else None
+            for id_, seq in self.sequences.items()
+        }
 
     def get_sequencer_status(self, slot: int, sequencer: int) -> str:
         return ""
