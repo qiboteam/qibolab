@@ -15,7 +15,7 @@ from pydantic import (
 
 from ...serialize import Model
 
-__all__ = []
+__all__ = ["Program"]
 
 
 class Register(Model):
