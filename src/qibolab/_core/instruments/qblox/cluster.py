@@ -112,7 +112,7 @@ class Cluster(Controller):
         sequencers = defaultdict(dict)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
-            assert len(module.sequencers) > len(chs)
+            assert len(module.sequencers) >= len(chs)
             config.module(module)
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
