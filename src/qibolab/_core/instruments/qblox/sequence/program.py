@@ -41,6 +41,8 @@ from ..ast_ import (
 from .acquisition import Acquisitions
 from .waveforms import WaveformIndices, pulse_uid
 
+__all__ = ["Program"]
+
 
 class Registers(Enum):
     bin = Register(number=0)
@@ -58,7 +60,7 @@ def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> L
         (
             Register(number=i + first_sweeper),
             iteration_length(parsweep),
-            f"{i + 1}th sweeper",
+            f"sweeper {i + 1}",
         )
         for i, parsweep in enumerate(sweepers)
     ]
@@ -246,7 +248,7 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     sampling_rate: float,
-):
+) -> Program:
     assert options.nshots is not None
     assert options.relaxation_time is not None
 
