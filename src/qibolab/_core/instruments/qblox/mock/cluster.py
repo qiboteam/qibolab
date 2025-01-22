@@ -91,7 +91,7 @@ class MockCluster:
                 (mod.slot_idx, seq.idx): next(
                     iter(
                         [
-                            call
+                            call["args"][0]
                             for call in seq.register["calls"]
                             if call["name"] == "sequence"
                         ]
@@ -107,7 +107,7 @@ class MockCluster:
     @property
     def programs(self) -> dict[tuple[int, int], Optional[dict]]:
         return {
-            id_: seq["args"][0]["program"] if seq is not None else None
+            id_: seq["program"] if seq is not None else None
             for id_, seq in self.sequences.items()
         }
 
