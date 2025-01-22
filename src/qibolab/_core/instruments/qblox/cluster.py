@@ -99,14 +99,14 @@ class Cluster(Controller):
         for ps in sequences:
             sequences_ = compile(ps, sweepers, options, self.sampling_rate)
             log.sequences(sequences_)
-            sequencers = self._prepare(sequences_, options.acquisition_type)
+            sequencers = self._configure(sequences_, options.acquisition_type)
             log.status(self.cluster, sequencers)
             data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
             log.data(data)
             results |= _extract(data)
         return results
 
-    def _prepare(
+    def _configure(
         self, sequences: dict[ChannelId, Sequence], acquisition: AcquisitionType
     ) -> SeqeuencerMap:
         sequencers = defaultdict(dict)
@@ -127,7 +127,6 @@ class Cluster(Controller):
     def _execute(
         self, sequencers: SeqeuencerMap, duration: float
     ) -> dict[ChannelId, AcquiredData]:
-        # TODO: implement
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
             for seq in seqs.values():
