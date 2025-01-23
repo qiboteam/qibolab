@@ -4,6 +4,8 @@ from typing import Optional, cast
 from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
+from qibolab._core.components.channels import Channel
+from qibolab._core.components.configs import AcquisitionConfig, Configs, DcConfig
 from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
@@ -76,6 +78,9 @@ def sequencer(
     seq: Sequencer,
     address: PortAddress,
     sequence: Sequence,
+    channel: ChannelId,
+    channels: dict[ChannelId, Channel],
+    configs: Configs,
     acquisition: AcquisitionType,
 ):
     # upload sequence
@@ -85,20 +90,22 @@ def sequencer(
     # configure the sequencers to synchronize
     seq.sync_en(True)
 
+    config = configs[channel]
+
     # set parameters
-    # TODO: read values from configs
     # offsets
-    seq.offset_awg_path0(0.0)
+    seq.offset_awg_path0(config.offset if isinstance(config, DcConfig) else 0.0)
     seq.offset_awg_path1(0.0)
     # modulation, only disable for QCM - always used for flux pulses
     mod = cast(Module, seq.ancestors[1])
     seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
     # acquisition
     if address.input:
+        assert isinstance(config, AcquisitionConfig)
         seq.integration_length_acq(1000)
         # discrimination
-        seq.thresholded_acq_rotation(0.0)
-        seq.thresholded_acq_threshold(0.0)
+        seq.thresholded_acq_rotation(config.iq_angle)
+        seq.thresholded_acq_threshold(config.threshold)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
 
