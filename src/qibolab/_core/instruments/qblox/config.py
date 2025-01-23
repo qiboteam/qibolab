@@ -4,8 +4,14 @@ from typing import Optional, cast
 from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
-from qibolab._core.components.channels import Channel
-from qibolab._core.components.configs import AcquisitionConfig, Configs, DcConfig
+from qibolab._core.components.channels import AcquisitionChannel, Channel, IqChannel
+from qibolab._core.components.configs import (
+    AcquisitionConfig,
+    Configs,
+    DcConfig,
+    IqConfig,
+    OscillatorConfig,
+)
 from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
@@ -74,11 +80,23 @@ def module(mod: Module):
         mod.scope_acq_trigger_mode_path1("sequencer")
 
 
+def _self_or_probe(channel: ChannelId) -> Optional[ChannelId]:
+    return (
+        channel
+        if isinstance(channel, IqConfig)
+        else (
+            channel.probe
+            if isinstance(channel, AcquisitionChannel) and channel.probe is not None
+            else None
+        )
+    )
+
+
 def sequencer(
     seq: Sequencer,
     address: PortAddress,
     sequence: Sequence,
-    channel: ChannelId,
+    channel_id: ChannelId,
     channels: dict[ChannelId, Channel],
     configs: Configs,
     acquisition: AcquisitionType,
@@ -90,7 +108,7 @@ def sequencer(
     # configure the sequencers to synchronize
     seq.sync_en(True)
 
-    config = configs[channel]
+    config = configs[channel_id]
 
     # set parameters
     # offsets
@@ -108,6 +126,14 @@ def sequencer(
         seq.thresholded_acq_threshold(config.threshold)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
+
+    probe = _self_or_probe(channel_id)
+    if probe is not None:
+        freq = cast(IqConfig, configs[probe]).frequency
+        lo = cast(IqChannel, channels[probe]).lo
+        assert lo is not None
+        lo_freq = cast(OscillatorConfig, channels[lo]).frequency
+        seq.nco_freq(freq - lo_freq)
 
     # connect to physical address
     seq.connect_sequencer(address.local_address)
