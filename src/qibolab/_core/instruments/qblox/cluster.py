@@ -8,7 +8,7 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
-from qibolab._core.components.configs import Config
+from qibolab._core.components.configs import Configs
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
@@ -88,7 +88,7 @@ class Cluster(Controller):
 
     def play(
         self,
-        configs: dict[str, Config],
+        configs: Configs,
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
@@ -99,7 +99,7 @@ class Cluster(Controller):
         for ps in sequences:
             sequences_ = compile(ps, sweepers, options, self.sampling_rate)
             log.sequences(sequences_)
-            sequencers = self._configure(sequences_, options.acquisition_type)
+            sequencers = self._configure(sequences_, configs, options.acquisition_type)
             log.status(self.cluster, sequencers)
             data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
             log.data(data)
@@ -107,7 +107,10 @@ class Cluster(Controller):
         return results
 
     def _configure(
-        self, sequences: dict[ChannelId, Sequence], acquisition: AcquisitionType
+        self,
+        sequences: dict[ChannelId, Sequence],
+        configs: Configs,
+        acquisition: AcquisitionType,
     ) -> SeqeuencerMap:
         sequencers = defaultdict(dict)
         for slot, chs in self._channels_by_module.items():
@@ -119,7 +122,13 @@ class Cluster(Controller):
             ):
                 sequencers[slot][ch] = idx
                 config.sequencer(
-                    sequencer, address, sequences.get(ch, Sequence.empty()), acquisition
+                    sequencer,
+                    address,
+                    sequences.get(ch, Sequence.empty()),
+                    ch,
+                    self.channels,
+                    configs,
+                    acquisition,
                 )
 
         return sequencers
