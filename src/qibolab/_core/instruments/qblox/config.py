@@ -70,7 +70,24 @@ class PortAddress(Model):
         return f"{direction}{channels}"
 
 
-def module(mod: Module):
+def _probe(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
+    return (
+        id_
+        if isinstance(channel, IqChannel)
+        else (
+            channel.probe
+            if isinstance(channel, AcquisitionChannel) and channel.probe is not None
+            else None
+        )
+    )
+
+
+def module(
+    mod: Module,
+    mod_channels: dict[ChannelId, PortAddress],
+    channels: dict[ChannelId, Channel],
+    configs: Configs,
+):
     # map sequencers to specific outputs (but first disable all sequencer connections)
     mod.disconnect_outputs()
 
@@ -79,17 +96,17 @@ def module(mod: Module):
         mod.scope_acq_trigger_mode_path0("sequencer")
         mod.scope_acq_trigger_mode_path1("sequencer")
 
-
-def _self_or_probe(channel: ChannelId) -> Optional[ChannelId]:
-    return (
-        channel
-        if isinstance(channel, IqConfig)
-        else (
-            channel.probe
-            if isinstance(channel, AcquisitionChannel) and channel.probe is not None
-            else None
-        )
-    )
+    # set lo frequencies
+    los = {
+        (probe, cast(IqChannel, channels[probe]).lo)
+        for probe in (_probe(ch, channels[ch]) for ch in mod_channels)
+        if probe is not None
+    }
+    for probe, lo in los:
+        if lo is None:
+            continue
+        n = mod_channels[probe].ports[0]  # TODO: check it is the correct path
+        getattr(mod, f"out{n}_lo_freq")(cast(OscillatorConfig, configs[lo]).frequency)
 
 
 def sequencer(
@@ -127,7 +144,7 @@ def sequencer(
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
 
-    probe = _self_or_probe(channel_id)
+    probe = _probe(channel_id, channels[channel_id])
     if probe is not None:
         freq = cast(IqConfig, configs[probe]).frequency
         lo = cast(IqChannel, channels[probe]).lo
