@@ -30,7 +30,6 @@ def generate_toeplitz(input_bits, extraction_ratio):
 
 def extractor(m1, input_bits, extraction_ratio):
     """Extract uniformly distributed integers from the device samples."""
-    m1 = np.delete(m1, np.where(m1 == 1535))  # why this number?
     m2 = unpackbits(m1, input_bits)
     m2 = np.flip(m2)
 
@@ -77,7 +76,6 @@ class QRNG(Instrument):
     """Number of bits of the raw sampled numbers following normal distribution."""
     extracted_bits: int = 4
     """Number of bits of the uniformly distributed extracted samples."""
-    add_batch_size: int = 20
 
     def connect(self):
         if self.port is None:
@@ -130,11 +128,7 @@ class QRNG(Instrument):
 
         samples = self.read(2 * n)
         extracted = self._extractor(samples)
-        # add more samples to reach the required size
-        while len(extracted) < n:
-            samples = self.read(self.add_batch_size)
-            extracted = np.concatenate([extracted, self._extractor(samples)])
-        return extracted[:n]
+        return extracted
 
     def random(
         self, size: Optional[Union[int, Iterable[int]]] = None, precision_bits: int = 32
