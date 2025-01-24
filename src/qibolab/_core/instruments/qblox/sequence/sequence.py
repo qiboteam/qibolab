@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 import numpy as np
 from pydantic import PlainSerializer, PlainValidator
@@ -12,19 +12,20 @@ from qibolab._core.sweeper import ParallelSweepers
 
 from ..ast_ import Program
 from ..parse import parse
-from .acquisition import Acquisitions, acquisitions
+from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
 from .program import program
-from .waveforms import Waveform, Waveforms, waveform_indices, waveforms
+from .waveforms import Waveforms, waveform_indices, waveforms
 
 __all__ = ["Sequence"]
 
 
-Weight = Waveform
+def _weight_len(w: Optional[Weight]) -> Optional[int]:
+    return len(w.data) if w is not None else None
 
 
 class Sequence(Model):
     waveforms: Waveforms
-    weights: dict[str, Weight]
+    weights: Weights
     acquisitions: Acquisitions
     program: Annotated[
         Program,
@@ -63,6 +64,19 @@ class Sequence(Model):
         return cls(
             waveforms={}, weights={}, acquisitions={}, program=Program(elements=[])
         )
+
+    @property
+    def integration_lengths(self) -> dict[MeasureId, Optional[int]]:
+        """Determine the integration lengths fixed by weights.
+
+        Returns ``None`` for those acquisitions which are non-weighted, since the length
+        is determined by a runtime configuration.
+
+        For those, cf.
+        https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.integration_length_acq
+        """
+
+        return {acq: _weight_len(self.weights.get(acq)) for acq in self.acquisitions}
 
 
 def _split_channels(sequence: PulseSequence) -> dict[ChannelId, PulseSequence]:
