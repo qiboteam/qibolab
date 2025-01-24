@@ -16,13 +16,10 @@ from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
+from .identifiers import SlotId
 from .sequence import Sequence
 
 __all__ = []
-
-SequencerId = int
-SlotId = int
-SeqeuencerMap = dict[SlotId, dict[ChannelId, SequencerId]]
 
 
 class PortAddress(Model):

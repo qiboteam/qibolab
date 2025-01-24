@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 from qibolab._core import pulses
 from qibolab._core.identifier import ChannelId, Result
@@ -6,9 +6,14 @@ from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 
+from ..identifiers import SequencerId, SlotId
+from .waveforms import Waveform
+
 __all__ = []
 
 MeasureId = str
+Weight = Waveform
+Weights = dict[str, Weight]
 
 
 class Acquisition(Model):
@@ -64,5 +69,17 @@ class IndexedData(TypedDict):
 AcquiredData = dict[MeasureId, IndexedData]
 
 
-def extract(acquisitions: dict[ChannelId, AcquiredData]) -> dict[PulseId, Result]:
+def integration_lengths(
+    weighted: dict[MeasureId, Optional[int]],
+    defaults: dict[tuple[SlotId, SequencerId], int],
+    locations: dict[MeasureId, tuple[SlotId, SequencerId]],
+) -> dict[MeasureId, int]:
+    return {
+        k: v if v is not None else defaults[locations[k]] for k, v in weighted.items()
+    }
+
+
+def extract(
+    acquisitions: dict[ChannelId, AcquiredData], lenghts: dict[MeasureId, int]
+) -> dict[PulseId, Result]:
     return {}
