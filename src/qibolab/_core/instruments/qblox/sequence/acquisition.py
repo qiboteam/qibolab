@@ -1,10 +1,14 @@
 from typing import TypedDict
 
 from qibolab._core import pulses
+from qibolab._core.identifier import ChannelId, Result
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 
 __all__ = []
+
+MeasureId = str
 
 
 class Acquisition(Model):
@@ -12,14 +16,14 @@ class Acquisition(Model):
     index: int
 
 
-Acquisitions = dict[str, Acquisition]
+Acquisitions = dict[MeasureId, Acquisition]
 
 
 def acquisitions(sequence: PulseSequence, num_bins: int) -> Acquisitions:
     return {
         str(acq.id): Acquisition(num_bins=num_bins, index=i)
         for i, acq in enumerate(
-            [p for _, p in sequence if isinstance(p, pulses.Acquisition)]
+            p for _, p in sequence if isinstance(p, pulses.Acquisition)
         )
     }
 
@@ -57,4 +61,8 @@ class IndexedData(TypedDict):
     acquisition: Data
 
 
-AcquiredData = dict[str, IndexedData]
+AcquiredData = dict[MeasureId, IndexedData]
+
+
+def extract(acquisitions: dict[ChannelId, AcquiredData]) -> dict[PulseId, Result]:
+    return {}
