@@ -16,7 +16,7 @@ from .acquisition import Acquisitions, acquisitions
 from .program import program
 from .waveforms import Waveform, Waveforms, waveform_indices, waveforms
 
-__all__ = ["Sequence", "compile"]
+__all__ = ["Sequence"]
 
 
 Weight = Waveform

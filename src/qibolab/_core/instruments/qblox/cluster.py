@@ -12,15 +12,13 @@ from qibolab._core.components.configs import Configs
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from . import config
 from .config import PortAddress, SeqeuencerMap, SlotId
 from .log import Logger
-from .sequence import Sequence, compile
-from .sequence.acquisition import AcquiredData
+from .sequence import Sequence, acquisition, compile
 
 __all__ = ["Cluster"]
 
@@ -103,7 +101,7 @@ class Cluster(Controller):
             log.status(self.cluster, sequencers)
             data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
             log.data(data)
-            results |= _extract(data)
+            results |= acquisition.extract(data)
         return results
 
     def _configure(
@@ -135,7 +133,7 @@ class Cluster(Controller):
 
     def _execute(
         self, sequencers: SeqeuencerMap, duration: float
-    ) -> dict[ChannelId, AcquiredData]:
+    ) -> dict[ChannelId, acquisition.AcquiredData]:
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
             for seq in seqs.values():
@@ -151,7 +149,3 @@ class Cluster(Controller):
                 acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
-
-
-def _extract(acquisitions: dict[ChannelId, dict]) -> dict[PulseId, Result]:
-    return {}
