@@ -2,6 +2,7 @@ from functools import reduce
 from operator import or_
 from typing import Optional, TypedDict
 
+import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.identifier import ChannelId, Result
@@ -82,8 +83,17 @@ class IndexedData(TypedDict):
 AcquiredData = dict[acquisition.MeasureId, IndexedData]
 
 
+def _extract(data: Integration, length: int) -> Result:
+    res = np.array([data["path0"], data["path1"]])
+    return np.moveaxis(res, 0, -1) / length
+
+
 def extract(
     acquisitions: dict[ChannelId, AcquiredData],
-    lenghts: dict[acquisition.MeasureId, int],
+    lengths: dict[acquisition.MeasureId, int],
 ) -> dict[PulseId, Result]:
-    return {}
+    return {
+        int(acq): _extract(idata["acquisition"]["bins"]["integration"], lengths[acq])
+        for data in acquisitions.values()
+        for acq, idata in data.items()
+    }
