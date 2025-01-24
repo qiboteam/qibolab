@@ -19,8 +19,8 @@ from . import config
 from .config import PortAddress, SlotId
 from .identifiers import SequencerMap
 from .log import Logger
-from .sequence import Sequence, acquisition, compile
-from .utils import integration_lenghts
+from .results import AcquiredData, extract, integration_lenghts
+from .sequence import Sequence, compile
 
 __all__ = ["Cluster"]
 
@@ -93,7 +93,7 @@ class Cluster(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
-        results = {}
+        results_ = {}
         log = Logger(configs)
 
         for ps in sequences:
@@ -104,8 +104,8 @@ class Cluster(Controller):
             data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
             log.data(data)
             lenghts = integration_lenghts(sequences_, sequencers, self._modules)
-            results |= acquisition.extract(data, lenghts)
-        return results
+            results_ |= extract(data, lenghts)
+        return results_
 
     def _configure(
         self,
@@ -136,7 +136,7 @@ class Cluster(Controller):
 
     def _execute(
         self, sequencers: SequencerMap, duration: float
-    ) -> dict[ChannelId, acquisition.AcquiredData]:
+    ) -> dict[ChannelId, AcquiredData]:
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
             for seq in seqs.values():
