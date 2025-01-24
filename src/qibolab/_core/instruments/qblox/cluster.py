@@ -16,9 +16,11 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from . import config
-from .config import PortAddress, SeqeuencerMap, SlotId
+from .config import PortAddress, SlotId
+from .identifiers import SequencerMap
 from .log import Logger
 from .sequence import Sequence, acquisition, compile
+from .utils import integration_lenghts
 
 __all__ = ["Cluster"]
 
@@ -101,7 +103,8 @@ class Cluster(Controller):
             log.status(self.cluster, sequencers)
             data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
             log.data(data)
-            results |= acquisition.extract(data)
+            lenghts = integration_lenghts(sequences_, sequencers, self._modules)
+            results |= acquisition.extract(data, lenghts)
         return results
 
     def _configure(
@@ -109,7 +112,7 @@ class Cluster(Controller):
         sequences: dict[ChannelId, Sequence],
         configs: Configs,
         acquisition: AcquisitionType,
-    ) -> SeqeuencerMap:
+    ) -> SequencerMap:
         sequencers = defaultdict(dict)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
@@ -132,7 +135,7 @@ class Cluster(Controller):
         return sequencers
 
     def _execute(
-        self, sequencers: SeqeuencerMap, duration: float
+        self, sequencers: SequencerMap, duration: float
     ) -> dict[ChannelId, acquisition.AcquiredData]:
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
