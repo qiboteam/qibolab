@@ -10,7 +10,7 @@ from .abstract import Instrument
 __all__ = ["QRNG"]
 
 
-def unpackbits(x, num_bits):
+def unpackbits(x: npt.NDArray, num_bits: int) -> npt.NDArray:
     if np.issubdtype(x.dtype, np.floating):
         raise ValueError("numpy data type needs to be int-like")
     xshape = list(x.shape)
@@ -19,7 +19,7 @@ def unpackbits(x, num_bits):
     return (x & mask).astype(bool).astype(int).reshape(xshape + [num_bits])
 
 
-def generate_toeplitz(input_bits, extraction_ratio):
+def generate_toeplitz(input_bits: int, extraction_ratio: int) -> npt.NDArray:
     """Generate a pseudo-random Toeplitz matrix of dimension ``(input_bits, extraction_ratio)``."""
     while True:
         c = np.mod(np.random.permutation(input_bits), 2)
@@ -28,7 +28,7 @@ def generate_toeplitz(input_bits, extraction_ratio):
             return toeplitz(c, r)
 
 
-def extractor(m1, input_bits, extraction_ratio):
+def extractor(m1: npt.NDArray, input_bits: int, extraction_ratio: int) -> npt.NDArray:
     """Extract uniformly distributed integers from the device samples."""
     m2 = unpackbits(m1, input_bits)
     m2 = np.flip(m2)
