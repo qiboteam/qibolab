@@ -10,12 +10,16 @@ P_VALUE_CUTOFF = 0.05
 
 
 @pytest.fixture
-def qrng():
+def qrng(mocker):
     qrng = QRNG(address="/dev/ttyACM0")
     try:
         qrng.connect()
     except SerialException:
-        pass
+
+        def extract(n):
+            return np.random.randint(0, 2**qrng.extracted_bits, size=(n,))
+
+        mocker.patch.object(qrng, "extract", side_effect=extract)
     return qrng
 
 
@@ -29,4 +33,4 @@ def test_random_chisquare(qrng):
     expected_frequency = len(data) / nbins
     expected_frequencies = np.full(nbins, expected_frequency)
     _, p_value = chisquare(observed_frequencies, expected_frequencies)
-    assert p_value > 0.05
+    assert p_value > P_VALUE_CUTOFF

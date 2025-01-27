@@ -59,11 +59,7 @@ def upscale(samples: npt.NDArray, input_bits=4, output_bits=32) -> npt.NDArray:
 
 
 class QRNG(Instrument):
-    """Driver to sample numbers from a Quantum Random Number Generator (QRNG).
-
-    Note that if we are not connected to a physical QRNG device, this will
-    return pseudo-random generated numbers using ``numpy.random``.
-    """
+    """Driver to sample numbers from a Quantum Random Number Generator (QRNG)."""
 
     address: str
     baudrate: int = 115200
@@ -123,9 +119,6 @@ class QRNG(Instrument):
         Args:
             n: Number of samples to retrieve.
         """
-        if self.port is None:
-            return np.random.randint(0, 2**self.extracted_bits, size=(n,))
-
         samples = self.read(2 * n)
         extracted = self._extractor(samples)
         return extracted
