@@ -10,7 +10,7 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.pulses.pulse import PulseId
 
 from .identifiers import SequencerId, SequencerMap, SlotId
-from .sequence import Sequence, acquisition
+from .sequence import Q1Sequence, acquisition
 
 __all__ = []
 
@@ -26,7 +26,7 @@ def _fill_empty_lenghts(
 
 
 def integration_lenghts(
-    sequences: dict[ChannelId, Sequence],
+    sequences: dict[ChannelId, Q1Sequence],
     sequencers: SequencerMap,
     modules: dict[SlotId, Module],
 ) -> dict[acquisition.MeasureId, int]:
