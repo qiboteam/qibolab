@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from qibolab._core.instruments.qblox.ast_ import Program
-from qibolab._core.instruments.qblox.parse import parse
+from qibolab._core.instruments.qblox.q1asm import Program, parse
 
 PROGRAMS = Path(__file__).parent / "q1asm"
 
