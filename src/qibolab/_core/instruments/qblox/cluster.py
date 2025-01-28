@@ -107,7 +107,7 @@ class Cluster(Controller):
             )
             log.data(data)
             lenghts = integration_lenghts(sequences_, sequencers, self._modules)
-            results_ |= extract(data, lenghts)
+            results_ |= extract(data, lenghts, options.acquisition_type)
         return results_
 
     def _configure(
