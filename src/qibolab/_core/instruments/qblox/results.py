@@ -92,6 +92,8 @@ def extract(
     acquisitions: dict[ChannelId, AcquiredData],
     lengths: dict[acquisition.MeasureId, int],
 ) -> dict[PulseId, Result]:
+    # TODO: check if the `lengths` info coincide with the
+    # idata["acquisition"]["bins"]["avg_cnt"]
     return {
         int(acq): _extract(idata["acquisition"]["bins"]["integration"], lengths[acq])
         for data in acquisitions.values()
