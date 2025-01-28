@@ -5,6 +5,7 @@ from typing import Optional, TypedDict
 import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 
+from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.pulses.pulse import PulseId
 
@@ -63,9 +64,12 @@ class Integration(TypedDict):
     path1: list[float]
 
 
+Thresholded = list[int]
+
+
 class BinData(TypedDict):
     integration: Integration
-    threshold: list[int]
+    threshold: Thresholded
     valid: list
     avg_cnt: list[int]
 
@@ -83,19 +87,37 @@ class IndexedData(TypedDict):
 AcquiredData = dict[acquisition.MeasureId, IndexedData]
 
 
-def _extract(data: Integration, length: int) -> Result:
+def _integration(data: Integration, length: int) -> Result:
     res = np.array([data["path0"], data["path1"]])
     return np.moveaxis(res, 0, -1) / length
+
+
+def _scope(data: ScopeData) -> Result:
+    res = np.array([data["path0"], data["path1"]])
+    return np.moveaxis(res, 0, -1)
+
+
+def _classification(data: Thresholded) -> Result:
+    return np.array(data)
 
 
 def extract(
     acquisitions: dict[ChannelId, AcquiredData],
     lengths: dict[acquisition.MeasureId, int],
+    acquisition: AcquisitionType,
 ) -> dict[PulseId, Result]:
     # TODO: check if the `lengths` info coincide with the
     # idata["acquisition"]["bins"]["avg_cnt"]
     return {
-        int(acq): _extract(idata["acquisition"]["bins"]["integration"], lengths[acq])
+        int(acq): (
+            _integration(idata["acquisition"]["bins"]["integration"], lengths[acq])
+            if acquisition is AcquisitionType.INTEGRATION
+            else _classification(idata["acquisition"]["bins"]["threshold"])
+            if acquisition is AcquisitionType.DISCRIMINATION
+            else _scope(idata["acquisition"]["scope"])
+            if acquisition is AcquisitionType.RAW
+            else np.array([])
+        )
         for data in acquisitions.values()
         for acq, idata in data.items()
     }
