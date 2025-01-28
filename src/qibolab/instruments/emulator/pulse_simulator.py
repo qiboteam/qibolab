@@ -96,11 +96,11 @@ class PulseSimulator(Controller):
             "runcard_duration_in_dt_units"
         ]
         self.instant_measurement = simulation_config["instant_measurement"]
-        self.platform_to_simulator_qubits = model_config[
-            "platform_to_simulator_qubits"
-        ]
-        self.simulator_to_platform_qubits = dict((v,int(k)) for k,v in self.platform_to_simulator_qubits.items())
-        
+        self.platform_to_simulator_qubits = model_config["platform_to_simulator_qubits"]
+        self.simulator_to_platform_qubits = {
+            v: int(k) for k, v in self.platform_to_simulator_qubits.items()
+        }
+
         self.platform_to_simulator_channels = model_config[
             "platform_to_simulator_channels"
         ]
@@ -108,8 +108,8 @@ class PulseSimulator(Controller):
         self.readout_error = {
             int(k): v for k, v in model_config["readout_error"].items()
         }
-        #self.readout_error = model_config["readout_error"]
-        
+        # self.readout_error = model_config["readout_error"]
+
         self.simulate_dissipation = simulation_config["simulate_dissipation"]
         self.output_state_history = simulation_config["output_state_history"]
 
@@ -506,20 +506,19 @@ def ps_to_waveform_dict(
                         pulse, sampling_rate, sim_sampling_boost
                     )
                     times_list.append(t)
-
-                    '''
+                    """
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
                     elif pulse.type.value == "qf":
                         platform_channel_name = f"flux-{qubit}"
-                    '''
+                    """
 
                     signals_list.append(pulse_signal)
 
                     emulator_channel_name_list.append(
-                        #channel_translator(platform_channel_name, pulse._if)
+                        # channel_translator(platform_channel_name, pulse._if)
                         channel_translator(channel, pulse._if)
                     )
 
@@ -535,18 +534,17 @@ def ps_to_waveform_dict(
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-
-                    '''
+                    """
                     if pulse.type.value == "cf":
                         platform_channel_name = f"flux-c{coupler}"
                     elif (
                         pulse.type.value == "cd"
                     ):  # when drive pulse for couplers are available
                         platform_channel_name = f"drive-{coupler}"
-                    '''
+                    """
 
                     emulator_channel_name_list.append(
-                        #channel_translator(platform_channel_name, pulse._if)
+                        # channel_translator(platform_channel_name, pulse._if)
                         channel_translator(channel_name, pulse._if)
                     )
 
@@ -572,18 +570,17 @@ def ps_to_waveform_dict(
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-                    
-                    '''
+                    """
                     if pulse.type.value == "qd":
                         platform_channel_name = f"drive-{qubit}"
                     elif pulse.type.value == "ro":
                         platform_channel_name = f"readout-{qubit}"
                     elif pulse.type.value == "qf":
                         platform_channel_name = f"flux-{qubit}"
-                    '''
+                    """
 
                     emulator_channel_name_list.append(
-                        #channel_translator(platform_channel_name, pulse._if)
+                        # channel_translator(platform_channel_name, pulse._if)
                         channel_translator(channel, pulse._if)
                     )
 
@@ -599,18 +596,17 @@ def ps_to_waveform_dict(
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-
-                    '''
+                    """
                     if pulse.type.value == "cf":
                         platform_channel_name = f"flux-c{coupler}"
                     elif (
                         pulse.type.value == "cd"
                     ):  # when drive pulse for couplers are available
                         platform_channel_name = f"drive-c{coupler}"
-                    '''
+                    """
 
                     emulator_channel_name_list.append(
-                        #channel_translator(platform_channel_name, pulse._if)
+                        # channel_translator(platform_channel_name, pulse._if)
                         channel_translator(channel, pulse._if)
                     )
 
@@ -843,7 +839,7 @@ def get_samples(
     ro_reduced_dm: np.ndarray,
     ro_qubit_list: list,
     qid_nlevels_map: dict[Union[int, str], int],
-    simulator_to_platform_qubits: dict=None,
+    simulator_to_platform_qubits: dict = None,
 ) -> dict[Union[str, int], list]:
     """Gets samples from the density matrix corresponding to the system or
     subsystem specified by the ordered qubit indices.
@@ -909,7 +905,7 @@ def truncate_ro_pulses(
     return sequence
 
 
-def extract_platform_data(platform: Platform, target_qubits: list=None) -> dict:
+def extract_platform_data(platform: Platform, target_qubits: list = None) -> dict:
     """Extracts platform data relevant for generating model parameters.
     Estimates rabi frequency from drive pulse for each qubit if not provided in
     qubit characterization.
@@ -921,9 +917,15 @@ def extract_platform_data(platform: Platform, target_qubits: list=None) -> dict:
         dict: Selected device platform data.
     """
     if target_qubits:
-        qubits = {qubit_name: platform.qubits[qubit_name] for qubit_name in target_qubits}
+        qubits = {
+            qubit_name: platform.qubits[qubit_name] for qubit_name in target_qubits
+        }
         couplers = platform.couplers
-        ordered_pairs = [pair for pair in platform.ordered_pairs if (pair[0] in target_qubits and pair[1] in target_qubits)]
+        ordered_pairs = [
+            pair
+            for pair in platform.ordered_pairs
+            if (pair[0] in target_qubits and pair[1] in target_qubits)
+        ]
     else:
         qubits = platform.qubits
         couplers = platform.couplers
@@ -985,8 +987,8 @@ def est_rabi(rx_pulse: DrivePulse, sampling_rate: int = 100) -> float:
 def make_emulator_runcard(
     platform: Platform,
     nlevels_q: Union[int, List[int]] = 3,
-    target_qubits: list=None,
-    relabel_qubits: bool=False,
+    target_qubits: list = None,
+    relabel_qubits: bool = False,
     model_name: str = "general_no_coupler_model",
     output_folder: Optional[str] = None,
 ) -> dict:
@@ -1033,7 +1035,7 @@ def make_emulator_runcard(
     # coupler_native_gates = {}
 
     emulator_qubits_list = []
-    for i,q in enumerate(qubits_list):
+    for i, q in enumerate(qubits_list):
         if relabel_qubits:
             i = str(i)
         else:
@@ -1067,7 +1069,9 @@ def make_emulator_runcard(
     runcard |= {"nqubits": len(qubits_list)}
     runcard |= {"ncouplers": 0}  # runcard |= {'ncouplers': len(couplers_list)}
     if relabel_qubits:
-        runcard |= {"description": f"Emulator for {platform.name} qubits {qubits_list} using {model_name}"}
+        runcard |= {
+            "description": f"Emulator for {platform.name} qubits {qubits_list} using {model_name}"
+        }
     else:
         runcard |= {"description": f"Emulator for {platform.name} using {model_name}"}
     runcard |= {"settings": settings_dict}
