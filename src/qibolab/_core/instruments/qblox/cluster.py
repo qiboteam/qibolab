@@ -20,7 +20,7 @@ from .config import PortAddress, SlotId
 from .identifiers import SequencerMap
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
-from .sequence import Sequence, compile
+from .sequence import Q1Sequence, compile
 
 __all__ = ["Cluster"]
 
@@ -112,7 +112,7 @@ class Cluster(Controller):
 
     def _configure(
         self,
-        sequences: dict[ChannelId, Sequence],
+        sequences: dict[ChannelId, Q1Sequence],
         configs: Configs,
         acquisition: AcquisitionType,
     ) -> SequencerMap:
@@ -128,7 +128,7 @@ class Cluster(Controller):
                 config.sequencer(
                     sequencer,
                     address,
-                    sequences.get(ch, Sequence.empty()),
+                    sequences.get(ch, Q1Sequence.empty()),
                     ch,
                     self.channels,
                     configs,
@@ -140,7 +140,7 @@ class Cluster(Controller):
     def _execute(
         self,
         sequencers: SequencerMap,
-        sequences: dict[ChannelId, Sequence],
+        sequences: dict[ChannelId, Q1Sequence],
         duration: float,
         acquisition: AcquisitionType,
     ) -> dict[ChannelId, AcquiredData]:
