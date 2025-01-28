@@ -15,14 +15,14 @@ from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
 from .program import program
 from .waveforms import Waveforms, waveform_indices, waveforms
 
-__all__ = ["Sequence"]
+__all__ = ["Q1Sequence"]
 
 
 def _weight_len(w: Optional[Weight]) -> Optional[int]:
     return len(w.data) if w is not None else None
 
 
-class Sequence(Model):
+class Q1Sequence(Model):
     waveforms: Waveforms
     weights: Weights
     acquisitions: Acquisitions
@@ -120,8 +120,8 @@ def compile(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
-) -> dict[ChannelId, Sequence]:
+) -> dict[ChannelId, Q1Sequence]:
     return {
-        ch: Sequence.from_pulses(seq, sweepers, options, sampling_rate)
+        ch: Q1Sequence.from_pulses(seq, sweepers, options, sampling_rate)
         for ch, seq in _split_channels(sequence).items()
     }
