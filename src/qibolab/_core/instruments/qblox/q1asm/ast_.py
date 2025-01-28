@@ -13,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from ...serialize import Model
+from ....serialize import Model
 
 __all__ = ["Program"]
 
