@@ -10,8 +10,7 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers
 
-from ..ast_ import Program
-from ..parse import parse
+from ..q1asm import Program, parse
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
 from .program import program
 from .waveforms import Waveforms, waveform_indices, waveforms
