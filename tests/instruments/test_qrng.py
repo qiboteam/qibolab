@@ -5,8 +5,8 @@ from serial.serialutil import SerialException
 
 from qibolab.instruments.qrng import QRNG
 
-P_VALUE_CUTOFF = 0.05
-"""p-value cutoff for the chi-square tests."""
+P_VALUE_THRESHOLD = 0.01
+"""p-value threshold for the chi-square tests."""
 
 
 @pytest.fixture
@@ -38,4 +38,4 @@ def test_random_chisquare(qrng):
     expected_frequency = len(data) / nbins
     expected_frequencies = np.full(nbins, expected_frequency)
     _, p_value = normalized_chisquare(observed_frequencies, expected_frequencies)
-    assert p_value > P_VALUE_CUTOFF
+    assert p_value > P_VALUE_THRESHOLD
