@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 import numpy as np
 
 from qibolab.instruments.emulator.models.methods import (
-    default_platform_to_simulator_channels,
+    default_platform_to_simulator_qubits, default_platform_to_simulator_channels,
 )
 
 GHZ = 1e9
@@ -65,12 +65,14 @@ def generate_default_params():
 def get_model_params(
     platform_data_dict: dict,
     nlevels_q: Union[int, List[int]],
+    relabel_qubits: bool=False,
 ) -> dict:
     """Generates the model paramters for the general no coupler model.
 
     Args:
         platform_data_dict(dict): Dictionary containing the device data extracted from a device platform.
         nlevels_q(int, list): Number of levels for each qubit. If int, the same value gets assigned to all qubits.
+        relabel_qubits(bool): Flag to relabel qubits to ascending integers. False by default.
 
     Returns:
         dict: Model parameters dictionary with all frequencies in GHz and times in ns that is required as an input to emulator runcards.
@@ -85,10 +87,52 @@ def get_model_params(
     characterization_dict = platform_data_dict["characterization"]
     qubit_characterization_dict = characterization_dict["qubits"]
 
+    drive_freq_dict = {}
+    T1_dict = {}
+    T2_dict = {}
+    max_lo_freq_dict = {}
+    flux_quanta_dict = {}
+    rabi_freq_dict = {}
+    anharmonicity_dict = {}
+    readout_error_dict = {}
+
+    relabelled_qubits_list = []
+    for i,q in enumerate(qubits_list):
+        if relabel_qubits:
+            i = str(i)
+        else:
+            i = str(q)
+        relabelled_qubits_list.append(i)
+
+        af = qubit_characterization_dict[q]["assignment_fidelity"]
+        if af == 0:
+            readout_error_dict |= {i: [0.0, 0.0]}
+        else:
+            if type(af) is float:
+                p0m1 = p1m0 = 1 - af
+            else:
+                p0m1, p1m0 = 1 - np.array(af)
+            readout_error_dict |= {i: [p0m1, p1m0]}
+        drive_freq_dict |= {
+            i: qubit_characterization_dict[q]["drive_frequency"] / GHZ
+        }
+        T1_dict |= {i: qubit_characterization_dict[q]["T1"]}
+        T2_dict |= {i: qubit_characterization_dict[q]["T2"]}
+        max_lo_freq_dict |= {
+            i: qubit_characterization_dict[q]["drive_frequency"] / GHZ
+        }
+        rabi_freq_dict |= {
+            i: qubit_characterization_dict[q]["rabi_frequency"] / GHZ
+        }
+        anharmonicity_dict |= {
+            i: qubit_characterization_dict[q]["anharmonicity"] / GHZ
+        }
+        # flux_quanta_dict |= {i: 0.1} # to be updated
+
     model_params_dict |= {"nqubits": len(qubits_list)}
     model_params_dict |= {"ncouplers": len(couplers_list)}
-    model_params_dict |= {"qubits_list": [str(q) for q in qubits_list]}
-    model_params_dict |= {"couplers_list": [str(c) for c in couplers_list]}
+    model_params_dict |= {"qubits_list": relabelled_qubits_list}
+    model_params_dict |= {"couplers_list": []}
 
     if type(nlevels_q) == int:
         model_params_dict |= {"nlevels_q": [nlevels_q for q in qubits_list]}
@@ -100,41 +144,6 @@ def get_model_params(
                 "Length of nlevels_q does not match number of qubits", len(qubits_list)
             )
     model_params_dict |= {"nlevels_c": []}
-
-    drive_freq_dict = {}
-    T1_dict = {}
-    T2_dict = {}
-    max_lo_freq_dict = {}
-    flux_quanta_dict = {}
-    rabi_freq_dict = {}
-    anharmonicity_dict = {}
-    readout_error_dict = {}
-
-    for q in qubits_list:
-        af = qubit_characterization_dict[q]["assignment_fidelity"]
-        if af == 0:
-            readout_error_dict |= {str(q): [0.0, 0.0]}
-        else:
-            if type(af) is float:
-                p0m1 = p1m0 = 1 - af
-            else:
-                p0m1, p1m0 = 1 - np.array(af)
-            readout_error_dict |= {str(q): [p0m1, p1m0]}
-        drive_freq_dict |= {
-            str(q): qubit_characterization_dict[q]["drive_frequency"] / GHZ
-        }
-        T1_dict |= {str(q): qubit_characterization_dict[q]["T1"]}
-        T2_dict |= {str(q): qubit_characterization_dict[q]["T2"]}
-        max_lo_freq_dict |= {
-            str(q): qubit_characterization_dict[q]["drive_frequency"] / GHZ
-        }
-        rabi_freq_dict |= {
-            str(q): qubit_characterization_dict[q]["rabi_frequency"] / GHZ
-        }
-        anharmonicity_dict |= {
-            str(q): qubit_characterization_dict[q]["anharmonicity"] / GHZ
-        }
-        # flux_quanta_dict |= {str(q): 0.1} # to be updated
 
     model_params_dict |= {"readout_error": readout_error_dict}
     model_params_dict |= {"drive_freq": drive_freq_dict}
@@ -173,8 +182,12 @@ def generate_model_config(
 
     model_name = model_params["model_name"]
     readout_error = model_params["readout_error"]
-    qubits_list = model_params["qubits_list"]
+    #qubits_list = model_params["qubits_list"]
+    device_qubits_list = model_params["qubits_list"]
 
+    platform_to_simulator_qubits = default_platform_to_simulator_qubits(device_qubits_list, couplers_list=[])
+    qubits_list = [platform_to_simulator_qubits[q] for q in device_qubits_list]
+    
     if nlevels_q is None:
         nlevels_q = model_params["nlevels_q"]
 
@@ -187,33 +200,45 @@ def generate_model_config(
 
     # generate instructions
     # single qubit terms
-    for i, q in enumerate(qubits_list):
+    #for i, q in enumerate(qubits_list):
+    for q in device_qubits_list:
+        ind = platform_to_simulator_qubits[q]
         # drift Hamiltonian terms (constant in time)
         drift_hamiltonian_dict["one_body"].append(
-            (2 * np.pi * model_params["drive_freq"][q], f"O_{q}", [q])
+            #(2 * np.pi * model_params["drive_freq"][q], f"O_{q}", [q])
+            (2 * np.pi * model_params["drive_freq"][q], f"O_{ind}", [ind])
         )
         drift_hamiltonian_dict["one_body"].append(
             (
                 np.pi * model_params["anharmonicity"][q],
-                f"O_{q} * O_{q} - O_{q}",
-                [q],
+                #f"O_{q} * O_{q} - O_{q}",
+                f"O_{ind} * O_{ind} - O_{ind}",
+                #[q],
+                [ind],
             )
         )
 
         # drive Hamiltonian terms (amplitude determined by pulse sequence)
-        drive_hamiltonian_dict.update({f"D-{qubits_list[i]}": []})
-        drive_hamiltonian_dict[f"D-{qubits_list[i]}"].append(
-            (2 * np.pi * model_params["rabi_freq"][q], f"X_{q}", [q])
+        #drive_hamiltonian_dict.update({f"D-{qubits_list[i]}": []})
+        drive_hamiltonian_dict.update({f"D-{ind}": []})
+        #drive_hamiltonian_dict[f"D-{qubits_list[i]}"].append(
+        #    (2 * np.pi * model_params["rabi_freq"][q], f"X_{q}", [q])
+        #)
+        drive_hamiltonian_dict[f"D-{ind}"].append(
+            (2 * np.pi * model_params["rabi_freq"][q], f"X_{ind}", [ind])
         )
 
         # flux Hamiltonian terms (amplitude determined by processed pulse sequence)
-        flux_hamiltonian_dict.update({f"F-{qubits_list[i]}": []})
-        flux_hamiltonian_dict[f"F-{qubits_list[i]}"].append((2 * np.pi, f"O_{q}", [q]))
+        #flux_hamiltonian_dict.update({f"F-{qubits_list[i]}": []})
+        flux_hamiltonian_dict.update({f"F-{ind}": []})
+        #flux_hamiltonian_dict[f"F-{qubits_list[i]}"].append((2 * np.pi, f"O_{q}", [q]))
+        flux_hamiltonian_dict[f"F-{ind}"].append((2 * np.pi, f"O_{ind}", [ind]))
 
         # flux detuning parameters:
         try:
             flux_params_dict |= {
-                q: {
+                #q: {
+                ind: {
                     "flux_quanta": model_params["flux_quanta"][q],
                     "max_frequency": model_params["max_lo_freq"][q],
                     "current_frequency": model_params["drive_freq"][q],
@@ -224,18 +249,25 @@ def generate_model_config(
 
         # dissipation terms (one qubit, constant in time)
         t1 = model_params["T1"][q]
-        g1 = 0 if t1 == 0 else 1.0 / t1 * 2 * np.pi
+        g1 = 0 if t1 == 0 else 1.0 / t1 #* 2 * np.pi
         t2 = model_params["T2"][q]
-        g2 = 0 if t1 == 0 else 1.0 / t2 * 2 * np.pi
+        g2 = 0 if t1 == 0 else 1.0 / t2 #* 2 * np.pi
 
-        dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{q}", [q]))
-        dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{q}", [q]))
+        #dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{q}", [q]))
+        #dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{q}", [q]))
+        #dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{ind}", [ind]))
+        #dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{ind}", [ind]))
+        dissipation_dict["t1"].append((np.sqrt(g1), f"sp01_{ind}", [ind]))
+        dissipation_dict["t2"].append((np.sqrt(g2), f"Z01_{ind}", [ind]))
 
     # two-body terms (couplings)
-    for key in list(model_params["coupling_strength"].keys()):
+    for key in list(model_params["coupling_strength"].keys()): # consistent with device_qubits_list
         ind2, ind1 = key.split(
             "_"
         )  # ind2 > ind1 with ind_qubit > ind_coupler as per Hilbert space ordering
+        ind1 = platform_to_simulator_qubits[ind1]
+        ind2 = platform_to_simulator_qubits[ind2]
+
         coupling = model_params["coupling_strength"][key]
         drift_hamiltonian_dict["two_body"].append(
             (
@@ -248,6 +280,8 @@ def generate_model_config(
     model_config = {
         "model_name": model_name,
         "topology": topology,
+        "device_qubits_list": device_qubits_list,
+        "device_couplers_list": [],
         "qubits_list": qubits_list,
         "nlevels_q": nlevels_q,
         "couplers_list": [],
@@ -259,9 +293,10 @@ def generate_model_config(
         "dissipation": dissipation_dict,
         "method": "master_equation",
         "readout_error": readout_error,
+        "platform_to_simulator_qubits": platform_to_simulator_qubits,
         # "platform_to_simulator_channels": default_noflux_platform_to_simulator_channels(
         "platform_to_simulator_channels": default_platform_to_simulator_channels(
-            qubits_list, couplers_list=[]
+            device_qubits_list, couplers_list=[]
         ),
     }
 

@@ -4,6 +4,25 @@ from functools import reduce
 import numpy as np
 
 
+def default_platform_to_simulator_qubits(
+    qubits_list: list, couplers_list: list
+) -> dict:
+    """Returns the default dictionary that maps platform qubit names to simulator qubit names.
+    Args:
+        qubits_list (list): List of qubit names to be included in the simulation.
+        couplers_list (list): List of coupler names to be included in the simulation.
+
+    Returns:
+        dict: Mapping between platform qubit/coupler names to simulator qubit/coupler names.
+    """
+    
+    return reduce(
+        operator.or_,
+        [{f"{q}": f"{i}"} for i,q in enumerate(qubits_list)]
+        + [{f"{c}": f"c{j}"} for j,c in enumerate(couplers_list)],
+    )
+
+
 def default_noflux_platform_to_simulator_channels(
     qubits_list: list, couplers_list: list
 ) -> dict:
@@ -13,12 +32,14 @@ def default_noflux_platform_to_simulator_channels(
         couplers_list (list): List of coupler names to be included in the simulation.
 
     Returns:
-        dict: Mapping between platform channel names to simulator chanel names.
+        dict: Mapping between platform channel names to simulator channel names.
     """
     return reduce(
         operator.or_,
-        [{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}"} for q in qubits_list]
-        + [{f"drive-{c}": f"D-{c}"} for c in couplers_list],
+        #[{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}"} for q in qubits_list]
+        #+ [{f"drive-{c}": f"D-{c}"} for c in couplers_list],
+        [{f"drive-{q}": f"D-{i}", f"readout-{q}": f"R-{i}"} for i,q in enumerate(qubits_list)]
+        + [{f"drive-{c}": f"D-c{j}"} for j,c in enumerate(couplers_list)],
     )
 
 
@@ -36,10 +57,13 @@ def default_platform_to_simulator_channels(
     return reduce(
         operator.or_,
         [
-            {f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}", f"flux-{q}": f"F-{q}"}
-            for q in qubits_list
+            #{f"drive-{q}": f"D-{q}", f"readout-{q}": f"R-{q}", f"flux-{q}": f"F-{q}"}
+            #for q in qubits_list
+            {f"drive-{q}": f"D-{i}", f"readout-{q}": f"R-{i}", f"flux-{q}": f"F-{i}"}
+            for i,q in enumerate(qubits_list)
         ]
-        + [{f"drive-{c}": f"D-{c}", f"flux-{c}": f"F-{c}"} for c in couplers_list],
+        #+ [{f"drive-{c}": f"D-{c}", f"flux-{c}": f"F-{c}"} for c in couplers_list],
+        + [{f"drive-{c}": f"D-c{j}", f"flux-{c}": f"F-c{j}"} for j,c in enumerate(couplers_list)],
     )
 
 
