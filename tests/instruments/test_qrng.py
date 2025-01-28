@@ -23,6 +23,11 @@ def qrng(mocker):
     return qrng
 
 
+def normalized_chisquare(x, y):
+    """Normalize frequency sums to avoid errors."""
+    return chisquare(x, np.sum(x) * y / np.sum(y))
+
+
 def test_random_chisquare(qrng):
     data = qrng.random(1000)
 
@@ -32,5 +37,5 @@ def test_random_chisquare(qrng):
 
     expected_frequency = len(data) / nbins
     expected_frequencies = np.full(nbins, expected_frequency)
-    _, p_value = chisquare(observed_frequencies, expected_frequencies)
+    _, p_value = normalized_chisquare(observed_frequencies, expected_frequencies)
     assert p_value > P_VALUE_CUTOFF
