@@ -101,7 +101,10 @@ class Cluster(Controller):
             log.sequences(sequences_)
             sequencers = self._configure(sequences_, configs, options.acquisition_type)
             log.status(self.cluster, sequencers)
-            data = self._execute(sequencers, options.estimate_duration([ps], sweepers))
+            duration = options.estimate_duration([ps], sweepers)
+            data = self._execute(
+                sequencers, sequences_, duration, options.acquisition_type
+            )
             log.data(data)
             lenghts = integration_lenghts(sequences_, sequencers, self._modules)
             results_ |= extract(data, lenghts)
@@ -135,7 +138,11 @@ class Cluster(Controller):
         return sequencers
 
     def _execute(
-        self, sequencers: SequencerMap, duration: float
+        self,
+        sequencers: SequencerMap,
+        sequences: dict[ChannelId, Sequence],
+        duration: float,
+        acquisition: AcquisitionType,
     ) -> dict[ChannelId, AcquiredData]:
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
@@ -148,7 +155,18 @@ class Cluster(Controller):
         acquisitions = {}
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
+                # wait all sequencers
+                status = self.cluster.get_sequencer_status(slot, seq, timeout=10)
+                if status.status is not qblox.SequencerStatuses.OKAY:
+                    raise RuntimeError(status)
+                seq_acqs = sequences[ch].acquisitions
+                if len(seq_acqs) == 0:
+                    # not an acquisition channel, or unused
+                    continue
                 self.cluster.get_acquisition_status(slot, seq, timeout=10)
+                if acquisition is AcquisitionType.RAW:
+                    for name in seq_acqs:
+                        self.cluster.store_scope_acquisition(slot, seq, name)
                 acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
