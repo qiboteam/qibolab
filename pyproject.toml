@@ -18,7 +18,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Physics",
 ]
 packages = [{ include = "qibolab", from = "src" }]
-include = ["*.out", "*.yml"]
+include = ["src/*.lark"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
