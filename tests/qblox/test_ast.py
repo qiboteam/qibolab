@@ -1,6 +1,6 @@
 from pydantic import TypeAdapter
 
-from qibolab._core.instruments.qblox.ast_ import Immediate, Value
+from qibolab._core.instruments.qblox.q1asm.ast_ import Immediate, Value
 
 
 def test_immediate_load():
