@@ -1,0 +1,68 @@
+# Advanced example from docs
+# https://docs.qblox.com/en/main/tutorials/q1asm_tutorials/intermediate/advanced_sequencing.html#Create-Q1ASM-program
+
+                  wait_sync    4                    #Wait for synchronization
+                  reset_ph                          #Reset absolute phase
+                  upd_param    4                    #Update all parameters and wait 4ns
+start:            move         4,R0                 #Init number of waveforms
+                  move         0,R1                 #Init waveform index
+
+mult_wave_loop:   move         166,R2               #Init number of single wave loops (increasing wait)
+                  move         166,R3               #Init number of single wave loops (decreasing wait)
+                  move         24,R4                #Init number of dynamic wait time (total of 4us)
+                  move         3976,R5              #Init number of dynamic wait time remainder
+                  move         32768,R6             #Init gain (Maximum gain)
+
+sngl_wave_loop_0: move         800,R7               #Init number of long wait loops (total of 40ms)
+                  set_mrk      15                   #Set marker to 0xF
+                  upd_param    4                    #Update all parameters and wait 4ns
+                  set_mrk      0                    #Set marker to 0
+                  upd_param    96                   #Update all parameters and wait 96ns
+
+                  wait         R4                   #Dynamic wait
+                  add          R4,24,R4             #Increase wait
+
+                  set_mrk      1                    #Set marker to 1
+                  play         R1,R1,996            #Play waveform and wait 996ns
+                  set_mrk      0                    #Set marker to 0
+                  upd_param    4                    #Update all parameters and wait for 4ns
+
+                  wait         R5                   #Compensate previous dynamic wait
+                  sub          R5,24,R5             #Decrease wait
+
+                  sub          R6,98,R6             #Decrease gain
+                  nop
+                  set_awg_gain R6,R6                #Set gain
+
+long_wait_loop_0: wait         50000                #Wait 50 us
+                  loop         R7,@long_wait_loop_0 #Wait total of 40ms
+                  loop         R2,@sngl_wave_loop_0 #Repeat single wave loop
+
+sngl_wave_loop_1: move         800,R7               #Init number of long wait loops (total of 40ms)
+                  set_mrk      15                   #Set marker to 0xF
+                  upd_param    8                    #Update all parameters and wait 8ns
+                  set_mrk      0                    #Set marker to 0
+                  upd_param    92                   #Update all parameters and wait 92ns
+
+                  wait         R4                   #Dynamic wait
+                  sub          R4,24,R4             #Decrease wait
+
+                  set_mrk      1                    #Set marker to 1
+                  play         R1,R1,996            #Play waveform and wait 996ns
+                  set_mrk      0                    #Set marker to 0
+                  upd_param    4                    #Update all parameters and wait 4ns
+
+                  wait         R5                   #Compensate previous dynamic wait
+                  add          R5,24,R5             #Increase wait
+
+                  sub          R6,98,R6             #Decrease gain
+                  nop
+                  set_awg_gain R6,R6                #Set gain
+
+long_wait_loop_1: wait         50000                #Wait for 50 us
+                  loop         R7,@long_wait_loop_1 #Wait total of 40ms
+                  loop         R3,@sngl_wave_loop_1 #Repeat single wave loop
+
+                  add          R1,1,R1              #Adjust waveform index
+                  loop         R0,@mult_wave_loop   #Repeat with next waveform envelope
+                  jmp          @start               #Repeat entire sequence
