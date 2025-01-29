@@ -146,7 +146,7 @@ def sequencer(
         freq = cast(IqConfig, configs[probe]).frequency
         lo = cast(IqChannel, channels[probe]).lo
         assert lo is not None
-        lo_freq = cast(OscillatorConfig, channels[lo]).frequency
+        lo_freq = cast(OscillatorConfig, configs[lo]).frequency
         seq.nco_freq(freq - lo_freq)
 
     # connect to physical address

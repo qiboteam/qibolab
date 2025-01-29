@@ -159,7 +159,10 @@ class Cluster(Controller):
                 status = self.cluster.get_sequencer_status(slot, seq, timeout=10)
                 if status.status is not qblox.SequencerStatuses.OKAY:
                     raise RuntimeError(status)
-                seq_acqs = sequences[ch].acquisitions
+                seq = sequences.get(ch)
+                if seq is None:
+                    continue
+                seq_acqs = seq.acquisitions
                 if len(seq_acqs) == 0:
                     # not an acquisition channel, or unused
                     continue
