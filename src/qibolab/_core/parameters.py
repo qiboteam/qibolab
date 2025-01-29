@@ -4,7 +4,7 @@ The format is explained in the :ref:`Loading platform parameters from
 JSON <parameters_json>` example.
 """
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from typing import Annotated, Any, Optional, Union
 
 from pydantic import (
@@ -232,8 +232,8 @@ class Parameters(Model):
         return self.model_validate(d)
 
 
-QubitMap = dict[QubitId, Qubit]
-InstrumentMap = dict[InstrumentId, Instrument]
+QubitMap = Mapping[QubitId, Qubit]
+InstrumentMap = Mapping[InstrumentId, Instrument]
 
 
 class Hardware(Model):
