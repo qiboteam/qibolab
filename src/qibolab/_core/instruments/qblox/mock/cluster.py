@@ -1,6 +1,8 @@
 import json
 from typing import Any, Optional
 
+from qblox_instruments import SequencerStatus, SequencerStatuses
+
 __all__ = []
 
 
@@ -111,8 +113,17 @@ class MockCluster:
             for id_, seq in self.sequences.items()
         }
 
-    def get_sequencer_status(self, slot: int, sequencer: int) -> str:
-        return ""
+    def get_sequencer_status(
+        self, slot: int, sequencer: int, *, timeout: int
+    ) -> SequencerStatus:
+        return SequencerStatus(
+            status=SequencerStatuses.OKAY,
+            state=None,
+            info_flags=None,
+            warn_flags=None,
+            err_flags=None,
+            log=None,
+        )
 
     def get_acquisition_status(self, slot: int, sequencer: int, *, timeout: int):
         pass
