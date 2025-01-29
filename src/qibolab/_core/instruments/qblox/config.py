@@ -17,7 +17,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
 from .identifiers import SlotId
-from .sequence import Sequence
+from .sequence import Q1Sequence
 
 __all__ = []
 
@@ -109,7 +109,7 @@ def module(
 def sequencer(
     seq: Sequencer,
     address: PortAddress,
-    sequence: Sequence,
+    sequence: Q1Sequence,
     channel_id: ChannelId,
     channels: dict[ChannelId, Channel],
     configs: Configs,

@@ -17,7 +17,7 @@ from qibolab._core.pulses.pulse import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
 
-from ..ast_ import (
+from ..q1asm.ast_ import (
     Acquire,
     Add,
     Instruction,
