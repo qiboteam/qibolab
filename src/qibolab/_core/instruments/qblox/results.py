@@ -36,9 +36,9 @@ def integration_lenghts(
     return _fill_empty_lenghts(
         reduce(or_, (seq.integration_lengths for seq in sequences.values())),
         {
-            (mod_id, seq): seq.integration_length_acq()
+            (mod_id, i): seq.integration_length_acq()
             for mod_id, mod in modules.items()
-            for seq in mod.sequencers
+            for i, seq in enumerate(mod.sequencers)
         },
         {
             acq: channels_to_sequencer[ch]
