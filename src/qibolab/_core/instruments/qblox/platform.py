@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from typing import Optional, Union
 
@@ -7,8 +8,9 @@ from qibolab._core.components.channels import (
     DcChannel,
     IqChannel,
 )
+from qibolab._core.identifier import QubitId
 
-__all__ = ["map_ports"]
+__all__ = ["infer_los", "map_ports"]
 
 
 def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
@@ -88,3 +90,40 @@ def map_ports(cluster: dict, qubits: dict, couplers: Optional[dict] = None) -> d
         except KeyError:
             pass
     return channels
+
+
+_PORT = re.compile(r"i?o?(.*)")
+
+
+def _qubit_id(string: str) -> QubitId:
+    try:
+        return int(string)
+    except ValueError:
+        return string
+
+
+def _digits(string: str) -> QubitId:
+    res = re.search(_PORT, string)
+    return _qubit_id(res[1]) if res is not None else ""
+
+
+def _out_port(port: Union[str, int]) -> QubitId:
+    return port if isinstance(port, int) else _digits(port)
+
+
+def infer_los(cluster: dict) -> dict[tuple[QubitId, bool], str]:
+    """Infer LOs names for output channels.
+
+    ``cluster`` should be a mapping compatible with the same input of :func:`map_ports`.
+
+    The result is a mapping from ``(qubit, channel)``, where ``qubit`` is the identifier,
+    and ``channel`` is a boolean toggle: ``True`` for probe channels, ``False`` for
+    drive.
+    """
+    return {
+        (q, "qrm" in mod): f"{mod}/o{_out_port(port)}/lo"
+        for mod, specs in cluster.items()
+        if "_rf" in mod
+        for port, qs in specs[1].items()
+        for q in qs
+    }
