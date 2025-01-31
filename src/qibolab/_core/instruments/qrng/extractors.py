@@ -115,8 +115,7 @@ class ShaExtractor:
             hash = hashlib.sha256(stream.encode("utf-8")).hexdigest()
             sha_bin = bin(int(hash, 16))[2:].zfill(256)
             for j in range(4):
-                uniform_int = int(
-                    sha_bin[53 * j : 53 * (j + 1)], 2
-                )  # Convert 53-bit chunk to integer
+                # Convert 53-bit chunk to integer
+                uniform_int = int(sha_bin[53 * j : 53 * (j + 1)], 2)
                 extracted.append(uniform_int / (2**53 - 1))
         return np.array(extracted)
