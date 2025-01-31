@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from qibolab._core.instruments.qblox.ast_ import Program
-from qibolab._core.instruments.qblox.parse import parse
+from qibolab._core.instruments.qblox.q1asm import Program, parse
 
 PROGRAMS = Path(__file__).parent / "q1asm"
 
@@ -26,3 +25,8 @@ def test_dump(asm):
 def test_roundtrip(asm):
     prog = parse(asm)
     assert prog == parse(prog.asm())
+
+
+def test_serialization(asm):
+    prog = parse(asm)
+    assert prog == Program.model_validate(prog.model_dump())
