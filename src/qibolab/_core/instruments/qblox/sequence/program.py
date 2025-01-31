@@ -52,7 +52,7 @@ class Registers(Enum):
     shots = Register(number=2)
 
 
-Loops = Sequence[tuple[Register, int, Optional[str]]]
+Loops = Sequence[tuple[Register, int, Optional[int]]]
 """Sequence of loop-characterizing tuples.
 
 These are produced by the :func:`loops` function, and consist of a:
@@ -60,7 +60,7 @@ These are produced by the :func:`loops` function, and consist of a:
 - :class:`Register`, which is used as a loop counter, or it is auxiliary to the
   iteration process
 - the iteration length
-- a textual description, used in some accompanying comments
+- the iteration index
 """
 
 
@@ -80,14 +80,21 @@ def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> L
         (
             Register(number=i + first_sweeper),
             iteration_length(parsweep),
-            f"sweeper {i + 1}",
+            i,
         )
         for i, parsweep in enumerate(sweepers)
     ]
     return [shots] + sweep if inner_shots else sweep + [shots]
 
 
-Params = Sequence[tuple[Register, int, int, Optional[PulseId], Optional[str]]]
+def sweep_desc(index: int) -> str:
+    """Sweeper textual description."""
+    return f"sweeper {index + 1}"
+
+
+Param = tuple[Register, int, int, Optional[PulseId], str]
+
+Params = Sequence[tuple[int, Param]]
 """Sequence of update parameters tuples.
 
 These are produced by the :func:`params` function, and consist of a:
@@ -95,6 +102,7 @@ These are produced by the :func:`params` function, and consist of a:
 - :class:`Register`, used for the parameter value
 - the initial value
 - the increment
+- the loop to which is associated
 - the :class:`PulseId` of the target pulse (if the sweeper targets pulses)
 - a textual description, used in some accompanying comments
 """
@@ -145,11 +153,14 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
     """
     return [
         (
-            Register(number=i + allocated),
-            start,
-            step,
-            pulse,
-            f"sweeper {j + 1} (pulse: {pulse})",
+            j,
+            (
+                Register(number=i + allocated + 1),
+                start,
+                step,
+                pulse,
+                f"sweeper {j + 1} (pulse: {pulse})",
+            ),
         )
         for i, (j, start, step, pulse) in enumerate(
             (
@@ -165,7 +176,7 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
     ]
 
 
-def setup(loops: Loops, params: Params) -> Sequence[Union[Line, Instruction]]:
+def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction]]:
     """Set up."""
     return (
         [
@@ -181,7 +192,9 @@ def setup(loops: Loops, params: Params) -> Sequence[Union[Line, Instruction]]:
         + [
             Line(
                 instruction=Move(source=lp[1], destination=lp[0]),
-                comment="init " + ("shots" if lp[2] is None else lp[2]) + " counter",
+                comment="init "
+                + ("shots" if lp[2] is None else sweep_desc(lp[2]))
+                + " counter",
             )
             for lp in loops
         ]
