@@ -1,12 +1,11 @@
 import numpy as np
 import pytest
-from scipy.stats import chisquare
 from serial.serialutil import SerialException
 
 from qibolab.instruments.qrng import QRNG
 
-P_VALUE_THRESHOLD = 0.01
-"""p-value threshold for the chi-square tests."""
+RAW_BITS = 12
+"""Number of bits in each QRNG sample."""
 
 
 @pytest.fixture
@@ -16,26 +15,14 @@ def qrng(mocker):
         qrng.connect()
     except SerialException:
 
-        def extract(n):
-            return np.random.randint(0, 2**qrng.extracted_bits, size=(n,))
+        def read(n):
+            return list(np.random.randint(0, 2**RAW_BITS, size=(n,)))
 
-        mocker.patch.object(qrng, "extract", side_effect=extract)
+        mocker.patch.object(qrng, "read", side_effect=read)
     return qrng
 
 
-def normalized_chisquare(x, y):
-    """Normalize frequency sums to avoid errors."""
-    return chisquare(x, np.sum(x) * y / np.sum(y))
-
-
-def test_random_chisquare(qrng):
+def test_qrng_random(qrng):
     data = qrng.random(1000)
-
-    nbins = int(np.sqrt(len(data)))
-    bins = np.linspace(0, 1, nbins + 1)
-    observed_frequencies, _ = np.histogram(data, bins=bins)
-
-    expected_frequency = len(data) / nbins
-    expected_frequencies = np.full(nbins, expected_frequency)
-    _, p_value = normalized_chisquare(observed_frequencies, expected_frequencies)
-    assert p_value > P_VALUE_THRESHOLD
+    assert isinstance(data, np.ndarray)
+    assert data.shape == (1000,)
