@@ -51,9 +51,27 @@ class Registers(Enum):
 
 
 Loops = Sequence[tuple[Register, int, Optional[str]]]
+"""Sequence of loop-characterizing tuples.
+
+These are produced by the :func:`loops` function, and consist of a:
+
+- :class:`Register`, which is used as a loop counter, or it is auxiliary to the
+  iteration process
+- the iteration length
+- a textual description, used in some accompanying comments
+"""
 
 
 def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> Loops:
+    """Initialize registers for loop counters.
+
+    The counters implement the ``length`` of the iteration, which, for a general
+    sweeper, is fully characterized by a ``(start, step, length)`` tuple.
+
+    Those related to :attr:`Registers.bin` and :attr:`Registers.bin_reset` are actually
+    not loop counter on their own, but they are required to properly store the
+    acquisitions in different bins.
+    """
     shots = (Registers.shots.value, nshots, None)
     first_sweeper = max(r.value.number for r in Registers) + 1
     sweep = [
