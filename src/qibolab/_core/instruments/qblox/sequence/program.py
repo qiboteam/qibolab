@@ -175,22 +175,6 @@ def setup(loops: Loops, params: Params) -> Sequence[Union[Line, Instruction]]:
     )
 
 
-def execution(
-    sequence: PulseSequence,
-    waveforms: WaveformIndices,
-    acquisitions: Acquisitions,
-    sampling_rate: float,
-) -> list[Instruction]:
-    """The representation of the actual experiment to be executed."""
-    return [
-        i_
-        for block in (
-            play(pulse, waveforms, acquisitions, sampling_rate) for _, pulse in sequence
-        )
-        for i_ in block
-    ]
-
-
 SWEEPERS = {
     Parameter.frequency: lambda v, o: ([SetFreq(value=v)], [SetFreq(value=o)]),
     Parameter.amplitude: lambda v, o: (
@@ -210,6 +194,30 @@ SWEEPERS = {
 
 def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
     return [Nop()]
+
+
+SweepSequence = list[PulseLike]
+
+
+def sweep_sequence(sequence: PulseSequence) -> SweepSequence:
+    """Wrap swept pulses with updates markers."""
+    return [p for _, p in sequence]
+
+
+def execution(
+    sequence: SweepSequence,
+    waveforms: WaveformIndices,
+    acquisitions: Acquisitions,
+    sampling_rate: float,
+) -> list[Instruction]:
+    """The representation of the actual experiment to be executed."""
+    return [
+        i_
+        for block in (
+            play(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
+        )
+        for i_ in block
+    ]
 
 
 START = "start"
@@ -342,6 +350,7 @@ def program(
         inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
     )
     params_ = params(sweepers, start=max(lp[0].number for lp in loops_))
+    sweepseq = sweep_sequence(sequence, params_)
 
     return Program(
         elements=[
@@ -350,7 +359,7 @@ def program(
                 setup(loops_, params_),
                 loop(
                     loops_,
-                    execution(sequence, waveforms, acquisitions, sampling_rate),
+                    execution(sweepseq, waveforms, acquisitions, sampling_rate),
                     options.relaxation_time,
                     options.averaging_mode is AveragingMode.SINGLESHOT,
                 ),
