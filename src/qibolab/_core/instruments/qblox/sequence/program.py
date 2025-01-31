@@ -1,6 +1,7 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from enum import Enum
-from typing import Optional, Union
+from itertools import groupby
+from typing import Optional, Union, cast
 
 import numpy as np
 
@@ -205,16 +206,38 @@ def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction
     )
 
 
+IndexedParams = dict[int, tuple[list[Param], list[Param]]]
 
 
+def _channels_pulses(
+    pars: Iterable[tuple[int, Param]],
+) -> tuple[list[Param], list[Param]]:
+    channels = []
+    pulses = []
+    for p in pars:
+        (channels if p[1][3] is None else pulses).append(p[1])
+    return channels, pulses
 
 
-SweepSequence = list[PulseLike]
+def params_reshape(params: Params) -> IndexedParams:
+    """Split parameters related to channels and pulses.
+
+    Moreover, it reorganize them by loop, to group the updates.
+    """
+
+    return {
+        key: _channels_pulses(pars) for key, pars in groupby(params, key=lambda t: t[0])
+    }
 
 
-def sweep_sequence(sequence: PulseSequence) -> SweepSequence:
+ParameterizedPulse = tuple[PulseLike, Optional[Param]]
+SweepSequence = list[ParameterizedPulse]
+
+
+def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequence:
     """Wrap swept pulses with updates markers."""
-    return [p for _, p in sequence]
+    parbyid = {p[3]: p for p in params}
+    return [(p, parbyid.get(p.id)) for _, p in sequence]
 
 
 def execution(
@@ -237,7 +260,7 @@ START = "start"
 SHOTS = "shots"
 
 
-def loop_conclusion(relaxation_time: int):
+def iteration_end(relaxation_time: int) -> Sequence[Line]:
     return [
         Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
         Line(instruction=ResetPh(), comment="phase reset"),
@@ -250,8 +273,10 @@ def loop_conclusion(relaxation_time: int):
     ]
 
 
-def loop_machinery(loops: Loops, singleshot: bool):
-    def shots(marker: Optional[str]):
+def loop_machinery(
+    loops: Loops, params: IndexedParams, singleshot: bool
+) -> Sequence[Union[Line, Instruction]]:
+    def shots(marker: Optional[int]) -> bool:
         return marker is None and not singleshot
 
     return [
@@ -277,9 +302,21 @@ def loop_machinery(loops: Loops, singleshot: bool):
             else []
         )
         + [
+            *(
+                (
+                    Line(
+                        instruction=Add(a=p[0], b=p[2], destination=p[0]),
+                        comment=f"increment {p[4]}",
+                    )
+                    for p in (params[lp[2]][0] + params[lp[2]][1])
+                )
+                if lp[2] is not None
+                else ()
+            ),
             Line(
                 instruction=Loop(a=lp[0], address=Reference(label=START)),
-                comment="loop over " + ("shots" if lp[2] is None else lp[2]),
+                comment="loop over "
+                + ("shots" if lp[2] is None else sweep_desc(lp[2])),
                 label=SHOTS if shots(lp[2]) else None,
             ),
             Move(source=lp[1], destination=lp[0]),
@@ -288,11 +325,15 @@ def loop_machinery(loops: Loops, singleshot: bool):
 
 
 def loop(
-    loops: Loops, experiment: list[Instruction], relaxation_time: int, singleshot: bool
+    loops: Loops,
+    params: IndexedParams,
+    experiment: list[Instruction],
+    relaxation_time: int,
+    singleshot: bool,
 ) -> Sequence[Union[Line, Instruction]]:
-    conclusion = loop_conclusion(relaxation_time)
-    machinery = loop_machinery(loops, singleshot)
-    main = experiment + conclusion + machinery
+    end = cast(list, iteration_end(relaxation_time))
+    machinery = cast(list, loop_machinery(loops, params, singleshot))
+    main = experiment + end + machinery
 
     return [
         (
@@ -314,12 +355,14 @@ PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
 def play(
-    pulse: PulseLike,
+    parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: Acquisitions,
     sampling_rate: float,
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
+    pulse = parpulse[0]
+    # param = parpulse[1]
 
     if isinstance(pulse, Pulse):
         uid = pulse_uid(pulse)
@@ -363,16 +406,20 @@ def program(
         options.nshots,
         inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
     )
-    params_ = params(sweepers, start=max(lp[0].number for lp in loops_))
-    sweepseq = sweep_sequence(sequence, params_)
+    params_ = params(sweepers, allocated=max(lp[0].number for lp in loops_))
+    indexed_params = params_reshape(params_)
+    sweepseq = sweep_sequence(
+        sequence, [p for v in indexed_params.values() for p in v[1]]
+    )
 
     return Program(
         elements=[
             el if isinstance(el, Line) else Line.instr(el)
             for block in [
-                setup(loops_, params_),
+                setup(loops_, [p for _, p in params_]),
                 loop(
                     loops_,
+                    indexed_params,
                     execution(sweepseq, waveforms, acquisitions, sampling_rate),
                     options.relaxation_time,
                     options.averaging_mode is AveragingMode.SINGLESHOT,
