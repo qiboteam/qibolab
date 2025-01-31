@@ -1,13 +1,30 @@
-from typing import Iterable, Optional, Union
+import hashlib
+from abc import ABC, abstractmethod
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
 from scipy.linalg import toeplitz
 from serial import Serial
 
+from ..serialize import Model
 from .abstract import Instrument
 
 __all__ = ["QRNG"]
+
+
+class Extractor(Model, ABC):
+    @abstractmethod
+    def num_raw_samples(self, n: int) -> int:
+        """Number of raw QRNG samples that are needed to reach the required random floats.
+
+        Args:
+            n (int): Number of required random floats.
+        """
+
+    @abstractmethod
+    def extract(self, raw: List[int]) -> npt.NDArray:
+        """Extract uniformly distributed integers from the device samples."""
 
 
 def unpackbits(x: npt.NDArray, num_bits: int) -> npt.NDArray:
@@ -28,8 +45,9 @@ def generate_toeplitz(input_bits: int, extraction_ratio: int) -> npt.NDArray:
             return toeplitz(c, r)
 
 
-def extractor(m1: npt.NDArray, input_bits: int, extraction_ratio: int) -> npt.NDArray:
-    """Extract uniformly distributed integers from the device samples."""
+def toeplitz_extract(
+    m1: npt.NDArray, input_bits: int, extraction_ratio: int
+) -> npt.NDArray:
     m2 = unpackbits(m1, input_bits)
     m2 = np.flip(m2)
 
@@ -58,20 +76,65 @@ def upscale(samples: npt.NDArray, input_bits=4, output_bits=32) -> npt.NDArray:
     return upscaled
 
 
+class ToeplitzExtractor(Extractor):
+    """https://arxiv.org/pdf/2402.09481 appendix A.5"""
+
+    input_bits: int = 12
+    """Number of bits of the raw numbers sampled from the QRNG."""
+    extraction_ratio: int = 4
+    """Number of bits of the uniformly distributed extracted output samples."""
+    precision_bits: int = 32
+
+    def __post_init__(self):
+        if self.precision_bits % self.extraction_ratio != 0:
+            raise ValueError(
+                f"Number of bits must be a multiple of the extracted bits {self.extraction_ratio}."
+            )
+
+    def num_raw_samples(self, n: int) -> int:
+        return 2 * n * (self.precision_bits // self.extraction_ratio)
+
+    def extract(self, raw: List[int]) -> npt.NDArray:
+        extracted = toeplitz_extract(
+            np.array(raw), self.input_bits, self.extraction_ratio
+        ).astype(int)
+        upscaled = upscale(extracted, self.extraction_ratio, self.precision_bits)
+        return upscaled.astype(float) / (2**self.precision_bits - 1)
+
+
+class ShaExtractor:
+    """Extractor based on the SHA-256 hash algorithm."""
+
+    def num_raw_samples(self, n: int) -> int:
+        return 22 * (n // 4 + 1)
+
+    def extract(self, raw: List[int]) -> npt.NDArray:
+        extracted = []
+        for i in range(len(raw) // 22):
+            stream = "".join(
+                format(sample, "012b") for sample in raw[22 * i : 22 * (i + 1)]
+            )
+            hash = hashlib.sha256(stream.encode("utf-8")).hexdigest()
+            sha_bin = bin(int(hash, 16))[2:].zfill(256)
+            for j in range(4):
+                uniform_int = int(
+                    sha_bin[53 * j : 53 * (j + 1)], 2
+                )  # Convert 53-bit chunk to integer
+                extracted.append(uniform_int / (2**53 - 1))
+        return np.array(extracted)
+
+
 class QRNG(Instrument):
     """Driver to sample numbers from a Quantum Random Number Generator (QRNG)."""
 
     address: str
     baudrate: int = 115200
+    extractor: Extractor = ShaExtractor()
 
     port: Optional[Serial] = None
 
     samples_per_number: int = 4
-    """Number of bytes to read from the device to generate a number."""
-    raw_dimension: int = 12
-    """Number of bits of the raw sampled numbers following normal distribution."""
-    extracted_bits: int = 4
-    """Number of bits of the uniformly distributed extracted samples."""
+    """Number of bytes to read from serial port to generate a raw sample."""
 
     def connect(self):
         if self.port is None:
@@ -94,7 +157,7 @@ class QRNG(Instrument):
         except ValueError:
             return None
 
-    def read(self, n: int = 1) -> npt.NDArray:
+    def read(self, n: int = 1) -> List[int]:
         """Read raw samples from the device serial output.
 
         In the entropy mode of the device, these typically follow a
@@ -108,37 +171,16 @@ class QRNG(Instrument):
             number = self._read()
             if number is not None:
                 samples.append(number)
-        return np.array(samples)
+        return samples
 
-    def _extractor(self, samples: npt.NDArray) -> npt.NDArray:
-        return extractor(samples, self.raw_dimension, self.extracted_bits)
-
-    def extract(self, n: int) -> npt.NDArray:
-        """Returns random ``extracted_bits``-bit integers following uniform distribution.
-
-        Args:
-            n: Number of samples to retrieve.
-        """
-        samples = self.read(2 * n)
-        extracted = self._extractor(samples)
-        return extracted
-
-    def random(
-        self, size: Optional[Union[int, Iterable[int]]] = None, precision_bits: int = 32
-    ) -> npt.NDArray:
+    def random(self, size: Optional[Union[int, Sequence[int]]] = None) -> npt.NDArray:
         """Returns random floats following uniform distribution in [0, 1].
 
         Args:
             size: Shape of the returned array (to behave similarly to ``np.random.random``).
-            precision_bits: Number of bits that is sampled to control precision.
         """
-        if precision_bits % self.extracted_bits != 0:
-            raise ValueError(
-                f"Number of bits must be a multiple of the extracted bits {self.extracted_bits}."
-            )
-
-        n = np.prod(size) * (precision_bits // self.extracted_bits)
-        samples = self.extract(n).astype(int)
-        upscaled = upscale(samples, self.extracted_bits, precision_bits)
-        upscaled = np.reshape(upscaled / (2**precision_bits - 1), size)
-        return upscaled.astype(f"float{precision_bits}")
+        n = np.prod(size)
+        nraw = self.extractor.num_raw_samples(n)
+        raw = self.read(nraw)
+        extracted = self.extractor.extract(raw)[:n]
+        return np.reshape(extracted, size)
