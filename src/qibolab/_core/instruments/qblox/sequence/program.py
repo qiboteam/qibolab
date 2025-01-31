@@ -10,6 +10,7 @@ from qibolab._core.pulses.pulse import (
     Align,
     Delay,
     Pulse,
+    PulseId,
     PulseLike,
     Readout,
     VirtualZ,
@@ -85,7 +86,65 @@ def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> L
     return [shots] + sweep if inner_shots else sweep + [shots]
 
 
-def setup(loops: Loops) -> Sequence[Union[Line, Instruction]]:
+Params = Sequence[tuple[Register, float, float, Optional[PulseId], Optional[str]]]
+"""Sequence of update parameters tuples.
+
+These are produced by the :func:`params` function, and consist of a:
+
+- :class:`Register`, used for the parameter value
+- the initial value
+- the increment
+- the :class:`PulseId` of the target pulse (if the sweeper targets pulses)
+- a textual description, used in some accompanying comments
+"""
+
+
+def convert(value: float, kind: Parameter) -> int:
+    """Convert sweeper value in assembly units."""
+    # TODO: a conversion is needed, for all parameters type - usually multiplying by a
+    # fraction of the maximum value
+    return int(value) if kind is Parameter.duration else int(value)
+
+
+def start(value: float, kind: Parameter) -> int:
+    """Convert sweeper start value in assembly units."""
+    return 0 if kind is Parameter.duration else convert(value, kind)
+
+
+def step(value: float, kind: Parameter) -> int:
+    """Convert sweeper start value in assembly units."""
+    return 0 if kind is Parameter.duration else convert(value, kind)
+
+
+def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
+    """Initialize parameters' registers.
+
+    `allocated` is the number of already allocated registers for loop counters, as
+    initialized by :func:`loops`.
+    """
+    return [
+        (
+            Register(number=i + allocated),
+            start,
+            step,
+            pulse,
+            f"sweeper {j + 1} (pulse: {pulse})",
+        )
+        for i, (j, start, step, pulse) in enumerate(
+            (
+                j,
+                start(sweep.irange[0], sweep.parameter),
+                step(sweep.irange[2], sweep.parameter),
+                pulse.id if pulse is not None else None,
+            )
+            for j, parsweep in enumerate(sweepers)
+            for sweep in parsweep
+            for pulse in (sweep.pulses if sweep.pulses is not None else [None])
+        )
+    ]
+
+
+def setup(loops: Loops, params: Params) -> Sequence[Union[Line, Instruction]]:
     """Set up."""
     return (
         [
@@ -104,6 +163,13 @@ def setup(loops: Loops) -> Sequence[Union[Line, Instruction]]:
                 comment="init " + ("shots" if lp[2] is None else lp[2]) + " counter",
             )
             for lp in loops
+        ]
+        + [
+            Line(
+                instruction=Move(source=p[1], destination=p[0]),
+                comment=f"init {p[4]}",
+            )
+            for p in params
         ]
         + [WaitSync(duration=4)]
     )
@@ -275,12 +341,13 @@ def program(
         options.nshots,
         inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
     )
+    params_ = params(sweepers, start=max(lp[0].number for lp in loops_))
 
     return Program(
         elements=[
             el if isinstance(el, Line) else Line.instr(el)
             for block in [
-                setup(loops_),
+                setup(loops_, params_),
                 loop(
                     loops_,
                     execution(sequence, waveforms, acquisitions, sampling_rate),
