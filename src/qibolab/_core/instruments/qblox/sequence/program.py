@@ -26,15 +26,11 @@ from ..q1asm.ast_ import (
     Line,
     Loop,
     Move,
-    Nop,
     Play,
     Program,
     Reference,
     Register,
     ResetPh,
-    SetAwgGain,
-    SetAwgOffs,
-    SetFreq,
     SetPhDelta,
     Stop,
     Wait,
@@ -209,25 +205,8 @@ def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction
     )
 
 
-SWEEPERS = {
-    Parameter.frequency: lambda v, o: ([SetFreq(value=v)], [SetFreq(value=o)]),
-    Parameter.amplitude: lambda v, o: (
-        [SetAwgGain(value_0=v, value_1=v)],
-        [SetAwgGain(value_0=o, value_1=o)],
-    ),
-    Parameter.relative_phase: lambda v, o: (
-        [SetPhDelta(value=v)],
-        [SetPhDelta(value=-v)],
-    ),
-    Parameter.offset: lambda v, o: (
-        [SetAwgOffs(value_0=v, value_1=v)],
-        [SetAwgOffs(value_0=o, value_1=o)],
-    ),
-}
 
 
-def parameters_update(sweepers: ParallelSweepers) -> list[Instruction]:
-    return [Nop()]
 
 
 SweepSequence = list[PulseLike]
@@ -244,7 +223,7 @@ def execution(
     acquisitions: Acquisitions,
     sampling_rate: float,
 ) -> list[Instruction]:
-    """The representation of the actual experiment to be executed."""
+    """Representation of the actual experiment to be executed."""
     return [
         i_
         for block in (
