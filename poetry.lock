@@ -6384,6 +6384,7 @@ emulator = ["qutip"]
 los = ["pyvisa-py", "qcodes", "qcodes_contrib_drivers"]
 qblox = ["pyvisa-py", "qblox-instruments", "qcodes", "qcodes_contrib_drivers"]
 qm = ["qm-qua"]
+qrng = ["pyserial"]
 rfsoc = ["qibosoq"]
 twpa = ["pyvisa-py", "qcodes", "qcodes_contrib_drivers"]
 zh = ["laboneq"]
@@ -6391,4 +6392,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.13"
-content-hash = "0d9b2914468c0bfa4484c3770c00636fa94507c7a5a6162209cfaee56f4286b0"
+content-hash = "f9db7224d2be81a1fcfba232ab52b8c2aca0ca95f5db0c967ee0fc96bfea9334"
