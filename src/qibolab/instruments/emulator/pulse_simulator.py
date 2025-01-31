@@ -506,13 +506,12 @@ def ps_to_waveform_dict(
                         pulse, sampling_rate, sim_sampling_boost
                     )
                     times_list.append(t)
-                    """
-                    if pulse.type.value == "qd":
-                        platform_channel_name = f"drive-{qubit}"
-                    elif pulse.type.value == "ro":
-                        platform_channel_name = f"readout-{qubit}"
-                    elif pulse.type.value == "qf":
-                        platform_channel_name = f"flux-{qubit}"
+                    """If pulse.type.value == "qd":
+
+                    platform_channel_name = f"drive-{qubit}" elif
+                    pulse.type.value == "ro":     platform_channel_name
+                    = f"readout-{qubit}" elif pulse.type.value == "qf":
+                    platform_channel_name = f"flux-{qubit}"
                     """
 
                     signals_list.append(pulse_signal)
@@ -534,13 +533,12 @@ def ps_to_waveform_dict(
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-                    """
-                    if pulse.type.value == "cf":
-                        platform_channel_name = f"flux-c{coupler}"
-                    elif (
-                        pulse.type.value == "cd"
-                    ):  # when drive pulse for couplers are available
-                        platform_channel_name = f"drive-{coupler}"
+                    """If pulse.type.value == "cf": platform_channel_name =
+                    f"flux-c{coupler}" elif (
+
+                    pulse.type.value == "cd" ):  # when drive pulse
+                    for couplers are available     platform_channel_name
+                    = f"drive-{coupler}"
                     """
 
                     emulator_channel_name_list.append(
@@ -570,13 +568,12 @@ def ps_to_waveform_dict(
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-                    """
-                    if pulse.type.value == "qd":
-                        platform_channel_name = f"drive-{qubit}"
-                    elif pulse.type.value == "ro":
-                        platform_channel_name = f"readout-{qubit}"
-                    elif pulse.type.value == "qf":
-                        platform_channel_name = f"flux-{qubit}"
+                    """If pulse.type.value == "qd":
+
+                    platform_channel_name = f"drive-{qubit}" elif
+                    pulse.type.value == "ro":     platform_channel_name
+                    = f"readout-{qubit}" elif pulse.type.value == "qf":
+                    platform_channel_name = f"flux-{qubit}"
                     """
 
                     emulator_channel_name_list.append(
@@ -596,13 +593,12 @@ def ps_to_waveform_dict(
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
-                    """
-                    if pulse.type.value == "cf":
-                        platform_channel_name = f"flux-c{coupler}"
-                    elif (
-                        pulse.type.value == "cd"
-                    ):  # when drive pulse for couplers are available
-                        platform_channel_name = f"drive-c{coupler}"
+                    """If pulse.type.value == "cf": platform_channel_name =
+                    f"flux-c{coupler}" elif (
+
+                    pulse.type.value == "cd" ):  # when drive pulse
+                    for couplers are available     platform_channel_name
+                    = f"drive-c{coupler}"
                     """
 
                     emulator_channel_name_list.append(
