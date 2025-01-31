@@ -297,7 +297,7 @@ def generate_model_config(
         t1 = model_params["T1"][q]
         g1 = 0 if t1 == 0 else 1.0 / t1  # * 2 * np.pi
         t2 = model_params["T2"][q]
-        g2 = 0 if t1 == 0 else 1.0 / t2  # * 2 * np.pi
+        g2 = 0 if t2 == 0 else 1.0 / t2  # * 2 * np.pi
 
         # dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{q}", [q]))
         # dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{q}", [q]))
@@ -359,7 +359,7 @@ def generate_model_config(
         t1 = model_params["T1"][c]
         g1 = 0 if t1 == 0 else 1.0 / t1  # * 2 * np.pi
         t2 = model_params["T2"][c]
-        g2 = 0 if t1 == 0 else 1.0 / t2  # * 2 * np.pi
+        g2 = 0 if t2 == 0 else 1.0 / t2  # * 2 * np.pi
 
         # dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{c}", [c]))
         # dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{c}", [c]))
