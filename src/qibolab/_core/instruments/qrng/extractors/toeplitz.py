@@ -1,28 +1,12 @@
-import hashlib
-from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
 import numpy.typing as npt
 from scipy.linalg import toeplitz
 
-from ...serialize import Model
+from .abstract import Extractor
 
-__all__ = ["Extractor", "ToeplitzExtractor", "ShaExtractor"]
-
-
-class Extractor(Model, ABC):
-    @abstractmethod
-    def num_raw_samples(self, n: int) -> int:
-        """Number of raw QRNG samples that are needed to reach the required random floats.
-
-        Args:
-            n (int): Number of required random floats.
-        """
-
-    @abstractmethod
-    def extract(self, raw: List[int]) -> npt.NDArray:
-        """Extract uniformly distributed integers from the device samples."""
+__all__ = ["ToeplitzExtractor"]
 
 
 def unpackbits(x: npt.NDArray, num_bits: int) -> npt.NDArray:
@@ -98,24 +82,3 @@ class ToeplitzExtractor(Extractor):
         ).astype(int)
         upscaled = upscale(extracted, self.extraction_ratio, self.precision_bits)
         return upscaled.astype(float) / (2**self.precision_bits - 1)
-
-
-class ShaExtractor:
-    """Extractor based on the SHA-256 hash algorithm."""
-
-    def num_raw_samples(self, n: int) -> int:
-        return 22 * (n // 4 + 1)
-
-    def extract(self, raw: List[int]) -> npt.NDArray:
-        extracted = []
-        for i in range(len(raw) // 22):
-            stream = "".join(
-                format(sample, "012b") for sample in raw[22 * i : 22 * (i + 1)]
-            )
-            hash = hashlib.sha256(stream.encode("utf-8")).hexdigest()
-            sha_bin = bin(int(hash, 16))[2:].zfill(256)
-            for j in range(4):
-                # Convert 53-bit chunk to integer
-                uniform_int = int(sha_bin[53 * j : 53 * (j + 1)], 2)
-                extracted.append(uniform_int / (2**53 - 1))
-        return np.array(extracted)
