@@ -2,15 +2,20 @@ import numpy as np
 import pytest
 from serial.serialutil import SerialException
 
-from qibolab.instruments.qrng import QRNG
+from qibolab.instruments.qrng import QRNG, ShaExtractor, ToeplitzExtractor
 
 RAW_BITS = 12
 """Number of bits in each QRNG sample."""
 
 
 @pytest.fixture
-def qrng(mocker):
-    qrng = QRNG(address="/dev/ttyACM0")
+def extractor():
+    return ShaExtractor()
+
+
+@pytest.fixture
+def qrng(mocker, extractor):
+    qrng = QRNG(address="/dev/ttyACM0", extractor=extractor)
     try:
         qrng.connect()
     except SerialException:
@@ -22,6 +27,7 @@ def qrng(mocker):
     return qrng
 
 
+@pytest.mark.parametrize("extractor", [ShaExtractor(), ToeplitzExtractor()])
 def test_qrng_random(qrng):
     data = qrng.random(1000)
     assert isinstance(data, np.ndarray)
