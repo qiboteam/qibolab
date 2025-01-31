@@ -31,6 +31,7 @@ from ..q1asm.ast_ import (
     Program,
     Reference,
     Register,
+    ResetPh,
     SetAwgGain,
     SetAwgOffs,
     SetFreq,
@@ -86,7 +87,7 @@ def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> L
     return [shots] + sweep if inner_shots else sweep + [shots]
 
 
-Params = Sequence[tuple[Register, float, float, Optional[PulseId], Optional[str]]]
+Params = Sequence[tuple[Register, int, int, Optional[PulseId], Optional[str]]]
 """Sequence of update parameters tuples.
 
 These are produced by the :func:`params` function, and consist of a:
@@ -98,12 +99,32 @@ These are produced by the :func:`params` function, and consist of a:
 - a textual description, used in some accompanying comments
 """
 
+MAX_PARAM = {
+    Parameter.amplitude: 32767,
+    Parameter.offset: 32767,
+    Parameter.relative_phase: 1e9,
+    Parameter.frequency: 2e9,
+}
+"""Maximum range for parameters.
+
+Declared in https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#q1-instructions
+
+Ranges may be one-sided (just positive) or two-sided. This is accounted for in
+:func:`convert`.
+"""
+
 
 def convert(value: float, kind: Parameter) -> int:
     """Convert sweeper value in assembly units."""
-    # TODO: a conversion is needed, for all parameters type - usually multiplying by a
-    # fraction of the maximum value
-    return int(value) if kind is Parameter.duration else int(value)
+    if kind is Parameter.amplitude:
+        return int(value * MAX_PARAM[kind])
+    if kind is Parameter.relative_phase:
+        return int((value / (2 * np.pi)) % 1.0 * MAX_PARAM[kind])
+    if kind is Parameter.frequency:
+        return int(value / 5e8 * MAX_PARAM[kind])
+    if kind is Parameter.offset:
+        return int(value * MAX_PARAM[kind])
+    raise ValueError(f"Unsupported sweeper: {kind.name}")
 
 
 def start(value: float, kind: Parameter) -> int:
@@ -227,6 +248,7 @@ SHOTS = "shots"
 def loop_conclusion(relaxation_time: int):
     return [
         Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
+        Line(instruction=ResetPh(), comment="phase reset"),
         Line(
             instruction=Add(
                 a=Registers.bin.value, b=1, destination=Registers.bin.value
