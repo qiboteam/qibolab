@@ -327,11 +327,18 @@ def loop_machinery(
         + [
             *(
                 (
-                    Line(
-                        instruction=Add(a=p[0], b=p[2], destination=p[0]),
-                        comment=f"increment {p[4]}",
+                    line
+                    for block in (
+                        (
+                            Line(
+                                instruction=Add(a=p[0], b=p[2], destination=p[0]),
+                                comment=f"increment {p[4]}",
+                            ),
+                            *((SWEEP_UPDATE[p[5]](p[0]),) if p[4] is not None else ()),
+                        )
+                        for p in (params[lp[2]][0] + params[lp[2]][1])
                     )
-                    for p in (params[lp[2]][0] + params[lp[2]][1])
+                    for line in block
                 )
                 if lp[2] is not None
                 else ()
