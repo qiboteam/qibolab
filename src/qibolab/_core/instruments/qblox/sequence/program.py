@@ -1,11 +1,13 @@
 from collections.abc import Iterable, Sequence
 from enum import Enum
 from itertools import groupby
-from typing import Optional, Union, cast
+from typing import Callable, Optional, Union, cast
 
 import numpy as np
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
+from qibolab._core.identifier import ChannelId
+from qibolab._core.instruments.qblox.q1asm.ast_ import SetAwgGain, SetAwgOffs, SetFreq
 from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
@@ -89,7 +91,9 @@ def sweep_desc(index: int) -> str:
     return f"sweeper {index + 1}"
 
 
-Param = tuple[Register, int, int, Optional[PulseId], str]
+Param = tuple[
+    Register, int, int, Optional[PulseId], Optional[ChannelId], Parameter, str
+]
 
 Params = Sequence[tuple[int, Param]]
 """Sequence of update parameters tuples.
@@ -101,6 +105,8 @@ These are produced by the :func:`params` function, and consist of a:
 - the increment
 - the loop to which is associated
 - the :class:`PulseId` of the target pulse (if the sweeper targets pulses)
+- the :class:`ChannelId` of the target channel (if the sweeper targets channels)
+- the parameter type
 - a textual description, used in some accompanying comments
 """
 
@@ -156,21 +162,35 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
                 start,
                 step,
                 pulse,
+                channel,
+                kind,
                 f"sweeper {j + 1} (pulse: {pulse})",
             ),
         )
-        for i, (j, start, step, pulse) in enumerate(
+        for i, (j, start, step, pulse, channel, kind) in enumerate(
             (
                 j,
                 start(sweep.irange[0], sweep.parameter),
                 step(sweep.irange[2], sweep.parameter),
                 pulse.id if pulse is not None else None,
+                channel,
+                sweep.parameter,
             )
             for j, parsweep in enumerate(sweepers)
             for sweep in parsweep
             for pulse in (sweep.pulses if sweep.pulses is not None else [None])
+            for channel in (sweep.channels if sweep.channels is not None else [None])
         )
     ]
+
+
+SWEEP_UPDATE: dict[Parameter, Callable] = {
+    Parameter.frequency: lambda v: SetFreq(value=v),
+    Parameter.offset: lambda v: SetAwgOffs(value_0=v, value_1=v),
+    Parameter.amplitude: lambda v: SetAwgGain(value_0=v, value_1=v),
+    Parameter.relative_phase: lambda v: SetPhDelta(value=v),
+    Parameter.duration: lambda _: None,
+}
 
 
 def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction]]:
