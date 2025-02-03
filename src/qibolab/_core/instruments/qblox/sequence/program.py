@@ -145,7 +145,7 @@ def start(value: float, kind: Parameter) -> int:
 
 def step(value: float, kind: Parameter) -> int:
     """Convert sweeper start value in assembly units."""
-    return 0 if kind is Parameter.duration else convert(value, kind)
+    return 2 if kind is Parameter.duration else convert(value, kind)
 
 
 def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
