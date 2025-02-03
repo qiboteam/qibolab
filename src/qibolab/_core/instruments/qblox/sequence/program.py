@@ -218,10 +218,13 @@ def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction
         + [
             Line(
                 instruction=Move(source=p[1], destination=p[0]),
-                comment=f"init {p[4]}",
+                comment=f"init {p[6]}",
             )
             for p in params
         ]
+        + [
+            SWEEP_UPDATE[p[5]](p[1]) for p in params if p[4] is not None
+        ]  # TODO: condition on the ID of the current channel, since the sequence is being built for it
         + [WaitSync(duration=4)]
     )
 
