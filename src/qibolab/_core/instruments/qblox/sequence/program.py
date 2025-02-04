@@ -19,6 +19,7 @@ from qibolab._core.pulses.pulse import (
     VirtualZ,
 )
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
 
 from ..q1asm.ast_ import (
@@ -91,23 +92,32 @@ def sweep_desc(index: int) -> str:
     return f"sweeper {index + 1}"
 
 
-Param = tuple[
-    Register, int, int, Optional[PulseId], Optional[ChannelId], Parameter, str
-]
+class Param(Model):
+    register: Register
+    """Register used for the parameter value."""
+    start: int
+    """Initial value."""
+    step: int
+    """Increment."""
+    kind: Parameter
+    """The parameter type."""
+    sweeper: int
+    """The loop to which is associated."""
+    pulse: Optional[PulseId]
+    """The target pulse (if the sweeper targets pulses)."""
+    channel: Optional[ChannelId]
+    """The target channel (if the sweeper targets channels)."""
+
+    @property
+    def description(self):
+        """Textual description, used in some accompanying comments."""
+        return f"sweeper {self.sweeper + 1} (pulse: {self.pulse})"
+
 
 Params = Sequence[tuple[int, Param]]
-"""Sequence of update parameters tuples.
+"""Sequence of update parameters.
 
-These are produced by the :func:`params` function, and consist of a:
-
-- :class:`Register`, used for the parameter value
-- the initial value
-- the increment
-- the loop to which is associated
-- the :class:`PulseId` of the target pulse (if the sweeper targets pulses)
-- the :class:`ChannelId` of the target channel (if the sweeper targets channels)
-- the parameter type
-- a textual description, used in some accompanying comments
+It is created by the :func:`params` function.
 """
 
 MAX_PARAM = {
@@ -157,14 +167,14 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
     return [
         (
             j,
-            (
-                Register(number=i + allocated + 1),
-                start,
-                step,
-                pulse,
-                channel,
-                kind,
-                f"sweeper {j + 1} (pulse: {pulse})",
+            Param(
+                register=Register(number=i + allocated + 1),
+                start=start,
+                step=step,
+                pulse=pulse,
+                channel=channel,
+                kind=kind,
+                sweeper=j,
             ),
         )
         for i, (j, start, step, pulse, channel, kind) in enumerate(
@@ -217,13 +227,13 @@ def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction
         ]
         + [
             Line(
-                instruction=Move(source=p[1], destination=p[0]),
-                comment=f"init {p[6]}",
+                instruction=Move(source=p.start, destination=p.register),
+                comment=f"init {p.description}",
             )
             for p in params
         ]
         + [
-            SWEEP_UPDATE[p[5]](p[1]) for p in params if p[4] is not None
+            SWEEP_UPDATE[p.kind](p.start) for p in params if p.channel is not None
         ]  # TODO: condition on the ID of the current channel, since the sequence is being built for it
         + [WaitSync(duration=4)]
     )
@@ -238,7 +248,7 @@ def _channels_pulses(
     channels = []
     pulses = []
     for p in pars:
-        (channels if p[1][3] is None else pulses).append(p[1])
+        (channels if p[1].channel is not None else pulses).append(p[1])
     return channels, pulses
 
 
@@ -259,7 +269,7 @@ SweepSequence = list[ParameterizedPulse]
 
 def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequence:
     """Wrap swept pulses with updates markers."""
-    parbyid = {p[3]: p for p in params}
+    parbyid = {p.pulse: p for p in params}
     return [(p, parbyid.get(p.id)) for _, p in sequence]
 
 
@@ -331,10 +341,16 @@ def loop_machinery(
                     for block in (
                         (
                             Line(
-                                instruction=Add(a=p[0], b=p[2], destination=p[0]),
-                                comment=f"increment {p[4]}",
+                                instruction=Add(
+                                    a=p.register, b=p.step, destination=p.register
+                                ),
+                                comment=f"increment {p.description}",
                             ),
-                            *((SWEEP_UPDATE[p[5]](p[0]),) if p[4] is not None else ()),
+                            *(
+                                (SWEEP_UPDATE[p.kind](p.register),)
+                                if p.description is not None
+                                else ()
+                            ),
                         )
                         for p in (params[lp[2]][0] + params[lp[2]][1])
                     )
