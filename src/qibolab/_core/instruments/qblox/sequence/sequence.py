@@ -39,6 +39,7 @@ class Q1Sequence(Model):
         sweepers: list[ParallelSweepers],
         options: ExecutionParameters,
         sampling_rate: float,
+        channel: ChannelId,
     ):
         waveforms_ = waveforms(sequence, sampling_rate)
         acquisitions_ = acquisitions(
@@ -55,6 +56,7 @@ class Q1Sequence(Model):
                 options,
                 sweepers,
                 sampling_rate,
+                channel,
             ),
         )
 
@@ -122,6 +124,6 @@ def compile(
     sampling_rate: float,
 ) -> dict[ChannelId, Q1Sequence]:
     return {
-        ch: Q1Sequence.from_pulses(seq, sweepers, options, sampling_rate)
+        ch: Q1Sequence.from_pulses(seq, sweepers, options, sampling_rate, ch)
         for ch, seq in _split_channels(sequence).items()
     }

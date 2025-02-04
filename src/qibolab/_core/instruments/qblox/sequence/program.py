@@ -307,7 +307,7 @@ def iteration_end(relaxation_time: int) -> Sequence[Line]:
 
 
 def loop_machinery(
-    loops: Loops, params: IndexedParams, singleshot: bool
+    loops: Loops, params: IndexedParams, singleshot: bool, channel: ChannelId
 ) -> Sequence[Union[Line, Instruction]]:
     def shots(marker: Optional[int]) -> bool:
         return marker is None and not singleshot
@@ -348,7 +348,7 @@ def loop_machinery(
                             ),
                             *(
                                 (SWEEP_UPDATE[p.kind](p.register),)
-                                if p.description is not None
+                                if p.description is not None and p.channel == channel
                                 else ()
                             ),
                         )
@@ -376,9 +376,10 @@ def loop(
     experiment: list[Instruction],
     relaxation_time: int,
     singleshot: bool,
+    channel: ChannelId,
 ) -> Sequence[Union[Line, Instruction]]:
     end = cast(list, iteration_end(relaxation_time))
-    machinery = cast(list, loop_machinery(loops, params, singleshot))
+    machinery = cast(list, loop_machinery(loops, params, singleshot, channel))
     main = experiment + end + machinery
 
     return [
@@ -443,6 +444,7 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     sampling_rate: float,
+    channel: ChannelId,
 ) -> Program:
     assert options.nshots is not None
     assert options.relaxation_time is not None
@@ -469,6 +471,7 @@ def program(
                     execution(sweepseq, waveforms, acquisitions, sampling_rate),
                     options.relaxation_time,
                     options.averaging_mode is AveragingMode.SINGLESHOT,
+                    channel,
                 ),
                 finalization(),
             ]
