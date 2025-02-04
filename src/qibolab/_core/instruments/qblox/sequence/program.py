@@ -454,7 +454,10 @@ PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
     uid = pulse_uid(pulse)
-    return Play(wave_0=waveforms[(uid, 0)], wave_1=waveforms[(uid, 1)], duration=0)
+    w0 = waveforms[(uid, 0)]
+    w1 = waveforms[(uid, 1)]
+    assert w0[1] == w1[1]
+    return Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1])
 
 
 def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:

@@ -9,7 +9,7 @@ from qibolab._core.serialize import ArrayList, Model
 __all__ = []
 
 ComponentId = tuple[str, int]
-WaveformIndices = dict[ComponentId, int]
+WaveformIndices = dict[ComponentId, tuple[int, int]]
 
 
 def pulse_uid(pulse: Pulse) -> str:
@@ -21,12 +21,22 @@ class Waveform(Model):
     index: int
 
 
+class WaveformSpec(Model):
+    waveform: Waveform
+    duration: int
+
+
 Waveforms = dict[ComponentId, Waveform]
 
 
-def waveforms(sequence: PulseSequence, sampling_rate: float) -> Waveforms:
-    def waveform(pulse: Pulse, component: str) -> Waveform:
-        return Waveform(data=getattr(pulse, component)(sampling_rate), index=0)
+def waveforms(
+    sequence: PulseSequence, sampling_rate: float
+) -> dict[ComponentId, WaveformSpec]:
+    def waveform(pulse: Pulse, component: str) -> WaveformSpec:
+        return WaveformSpec(
+            waveform=Waveform(data=getattr(pulse, component)(sampling_rate), index=0),
+            duration=int(pulse.duration),
+        )
 
     def pulse_(event: Union[Pulse, Readout]) -> Pulse:
         return event.probe if isinstance(event, Readout) else event
@@ -45,9 +55,12 @@ def waveforms(sequence: PulseSequence, sampling_rate: float) -> Waveforms:
     }
 
     return {
-        k: Waveform(data=v.data, index=i) for i, (k, v) in enumerate(indexless.items())
+        k: WaveformSpec(
+            waveform=Waveform(data=v.waveform.data, index=i), duration=v.duration
+        )
+        for i, (k, v) in enumerate(indexless.items())
     }
 
 
-def waveform_indices(waveforms: Waveforms) -> WaveformIndices:
-    return {k: w.index for k, w in waveforms.items()}
+def waveform_indices(waveforms: dict[ComponentId, WaveformSpec]) -> WaveformIndices:
+    return {k: (w.waveform.index, w.duration) for k, w in waveforms.items()}
