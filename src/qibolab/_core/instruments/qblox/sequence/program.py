@@ -41,7 +41,7 @@ from ..q1asm.ast_ import (
     Wait,
     WaitSync,
 )
-from .acquisition import Acquisitions
+from .acquisition import AcquisitionSpec, MeasureId
 from .waveforms import WaveformIndices, pulse_uid
 
 __all__ = ["Program"]
@@ -327,7 +327,7 @@ def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequenc
 def execution(
     sequence: SweepSequence,
     waveforms: WaveformIndices,
-    acquisitions: Acquisitions,
+    acquisitions: dict[MeasureId, AcquisitionSpec],
     sampling_rate: float,
 ) -> list[Instruction]:
     """Representation of the actual experiment to be executed."""
@@ -468,7 +468,7 @@ def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:
 def play(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
-    acquisitions: Acquisitions,
+    acquisitions: dict[MeasureId, AcquisitionSpec],
     sampling_rate: float,
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
@@ -498,11 +498,12 @@ def play(
             )
         ]
     if isinstance(pulse, Acquisition):
+        acq = acquisitions[str(pulse.id)]
         return [
             Acquire(
-                acquisition=acquisitions[str(pulse.id)].index,
+                acquisition=acq.acquisition.index,
                 bin=Registers.bin.value,
-                duration=0,
+                duration=acq.duration,
             )
         ]
     if isinstance(pulse, Align):
@@ -517,7 +518,7 @@ def play(
 def event(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
-    acquisitions: Acquisitions,
+    acquisitions: dict[MeasureId, AcquisitionSpec],
     sampling_rate: float,
 ) -> list[Instruction]:
     param = parpulse[1]
@@ -531,7 +532,7 @@ def event(
 def program(
     sequence: PulseSequence,
     waveforms: WaveformIndices,
-    acquisitions: Acquisitions,
+    acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     sampling_rate: float,
