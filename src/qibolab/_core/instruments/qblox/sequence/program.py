@@ -460,9 +460,21 @@ def play(
             else play_duration_swept(pulse, param)
         ]
     if isinstance(pulse, Delay):
-        return [Wait(duration=int(pulse.duration * sampling_rate))]
+        return [
+            Wait(
+                duration=int(pulse.duration * sampling_rate)
+                if param is None
+                else param.register
+            )
+        ]
     if isinstance(pulse, VirtualZ):
-        return [SetPhDelta(value=int(pulse.phase * PHASE_FACTOR))]
+        return [
+            SetPhDelta(
+                value=int(pulse.phase * PHASE_FACTOR)
+                if param is None
+                else param.register
+            )
+        ]
     if isinstance(pulse, Acquisition):
         return [
             Acquire(
