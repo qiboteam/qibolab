@@ -309,7 +309,7 @@ def execution(
     return [
         i_
         for block in (
-            play(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
+            event(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
         )
         for i_ in block
     ]
@@ -475,6 +475,20 @@ def play(
             "Readout unsupported for Qblox - the operation should be unpacked in Pulse and Acquisition"
         )
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
+
+
+def event(
+    parpulse: ParameterizedPulse,
+    waveforms: WaveformIndices,
+    acquisitions: Acquisitions,
+    sampling_rate: float,
+) -> list[Instruction]:
+    param = parpulse[1]
+    return (
+        (update_instructions(param.kind, param.register) if param is not None else [])
+        + play(parpulse, waveforms, acquisitions, sampling_rate)
+        + (reset_instructions(param.kind, param.register) if param is not None else [])
+    )
 
 
 def program(
