@@ -46,7 +46,7 @@ class Q1Sequence(Model):
             sequence, np.prod(options.bins(sweepers), dtype=int)
         )
         return cls(
-            waveforms=waveforms_,
+            waveforms={k: w.waveform for k, w in waveforms_.items()},
             weights={},
             acquisitions={k: a.acquisition for k, a in acquisitions_.items()},
             program=program(
