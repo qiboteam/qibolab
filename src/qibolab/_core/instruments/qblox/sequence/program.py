@@ -207,7 +207,10 @@ SWEEP_UPDATE: dict[Parameter, Update] = {
     ),
     Parameter.amplitude: Update(
         update=lambda v: SetAwgGain(value_0=v, value_1=v),
-        reset=lambda v: SetAwgGain(value_0=v, value_1=v),
+        reset=lambda _: SetAwgGain(
+            value_0=MAX_PARAM[Parameter.amplitude],
+            value_1=MAX_PARAM[Parameter.amplitude],
+        ),
     ),
     Parameter.relative_phase: Update(update=lambda v: SetPhDelta(value=v), reset=None),
     Parameter.duration: Update(update=None, reset=None),
