@@ -37,6 +37,7 @@ from ..q1asm.ast_ import (
     ResetPh,
     SetPhDelta,
     Stop,
+    Value,
     Wait,
     WaitSync,
 )
@@ -194,13 +195,34 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
     ]
 
 
-SWEEP_UPDATE: dict[Parameter, Callable] = {
-    Parameter.frequency: lambda v: SetFreq(value=v),
-    Parameter.offset: lambda v: SetAwgOffs(value_0=v, value_1=v),
-    Parameter.amplitude: lambda v: SetAwgGain(value_0=v, value_1=v),
-    Parameter.relative_phase: lambda v: SetPhDelta(value=v),
-    Parameter.duration: lambda _: None,
+class Update(Model):
+    update: Optional[Callable[[Value], Instruction]]
+    reset: Optional[Callable[[Value], Instruction]]
+
+
+SWEEP_UPDATE: dict[Parameter, Update] = {
+    Parameter.frequency: Update(update=lambda v: SetFreq(value=v), reset=None),
+    Parameter.offset: Update(
+        update=lambda v: SetAwgOffs(value_0=v, value_1=v), reset=None
+    ),
+    Parameter.amplitude: Update(
+        update=lambda v: SetAwgGain(value_0=v, value_1=v), reset=None
+    ),
+    Parameter.relative_phase: Update(update=lambda v: SetPhDelta(value=v), reset=None),
+    Parameter.duration: Update(update=None, reset=None),
 }
+
+
+def update_instructions(
+    kind: Parameter, value: Value, reset: bool = False
+) -> list[Instruction]:
+    wrapper = SWEEP_UPDATE[kind]
+    up = wrapper.update if not reset else wrapper.reset
+    return [up(value)] if up is not None else []
+
+
+def reset_instructions(kind: Parameter, value: Value) -> list[Instruction]:
+    return update_instructions(kind, value, reset=True)
 
 
 def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction]]:
@@ -233,7 +255,10 @@ def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction
             for p in params
         ]
         + [
-            SWEEP_UPDATE[p.kind](p.start) for p in params if p.channel is not None
+            inst
+            for p in params
+            if p.channel is not None
+            for inst in update_instructions(p.kind, p.start)
         ]  # TODO: condition on the ID of the current channel, since the sequence is being built for it
         + [WaitSync(duration=4)]
     )
@@ -347,7 +372,7 @@ def loop_machinery(
                                 comment=f"increment {p.description}",
                             ),
                             *(
-                                (SWEEP_UPDATE[p.kind](p.register),)
+                                update_instructions(p.kind, p.register)
                                 if p.description is not None and p.channel == channel
                                 else ()
                             ),
