@@ -146,17 +146,39 @@ def convert(value: float, kind: Parameter) -> int:
         return int(value / 5e8 * MAX_PARAM[kind])
     if kind is Parameter.offset:
         return int(value * MAX_PARAM[kind])
+    if kind is Parameter.duration:
+        return int(value)
     raise ValueError(f"Unsupported sweeper: {kind.name}")
 
 
-def start(value: float, kind: Parameter) -> int:
-    """Convert sweeper start value in assembly units."""
-    return 0 if kind is Parameter.duration else convert(value, kind)
+def convert_or_pulse_duration(
+    value: float, kind: Parameter, pulse: Optional[PulseLike], duration: int
+) -> int:
+    """Wrap :func:`convert` handling pulse duration sweep.
+
+    In the special case of the duration sweep over an actual pulse, it
+    is not possible to convert from the values in the original sweeper,
+    since it needs to be first processed in order to generate the many
+    waveforms corresponding to the shape evaluated for the desired
+    amount of samples.
+    In this case, the value is explicitly required, and it is set in the wrapper
+    functions :func:`start` and :func:`step`.
+    """
+    return (
+        duration
+        if kind is Parameter.duration and isinstance(pulse, Pulse)
+        else convert(value, kind)
+    )
 
 
-def step(value: float, kind: Parameter) -> int:
+def start(value: float, kind: Parameter, pulse: Optional[PulseLike]) -> int:
     """Convert sweeper start value in assembly units."""
-    return 2 if kind is Parameter.duration else convert(value, kind)
+    return convert_or_pulse_duration(value, kind, pulse, 0)
+
+
+def step(value: float, kind: Parameter, pulse: Optional[PulseLike]) -> int:
+    """Convert sweeper start value in assembly units."""
+    return convert_or_pulse_duration(value, kind, pulse, 2)
 
 
 def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
@@ -181,8 +203,8 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
         for i, (j, start, step, pulse, channel, kind) in enumerate(
             (
                 j,
-                start(sweep.irange[0], sweep.parameter),
-                step(sweep.irange[2], sweep.parameter),
+                start(sweep.irange[0], sweep.parameter, pulse),
+                step(sweep.irange[2], sweep.parameter, pulse),
                 pulse.id if pulse is not None else None,
                 channel,
                 sweep.parameter,
