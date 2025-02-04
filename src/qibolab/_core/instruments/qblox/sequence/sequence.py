@@ -48,7 +48,7 @@ class Q1Sequence(Model):
         return cls(
             waveforms=waveforms_,
             weights={},
-            acquisitions=acquisitions_,
+            acquisitions={k: a.acquisition for k, a in acquisitions_.items()},
             program=program(
                 sequence,
                 waveform_indices(waveforms_),

@@ -19,9 +19,19 @@ class Acquisition(Model):
 Acquisitions = dict[MeasureId, Acquisition]
 
 
-def acquisitions(sequence: PulseSequence, num_bins: int) -> Acquisitions:
+class AcquisitionSpec(Model):
+    acquisition: Acquisition
+    duration: int
+
+
+def acquisitions(
+    sequence: PulseSequence, num_bins: int
+) -> dict[MeasureId, AcquisitionSpec]:
     return {
-        str(acq.id): Acquisition(num_bins=num_bins, index=i)
+        str(acq.id): AcquisitionSpec(
+            acquisition=Acquisition(num_bins=num_bins, index=i),
+            duration=int(acq.duration),
+        )
         for i, acq in enumerate(
             p for _, p in sequence if isinstance(p, pulses.Acquisition)
         )
