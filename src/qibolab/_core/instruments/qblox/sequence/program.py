@@ -206,7 +206,8 @@ SWEEP_UPDATE: dict[Parameter, Update] = {
         update=lambda v: SetAwgOffs(value_0=v, value_1=v), reset=None
     ),
     Parameter.amplitude: Update(
-        update=lambda v: SetAwgGain(value_0=v, value_1=v), reset=None
+        update=lambda v: SetAwgGain(value_0=v, value_1=v),
+        reset=lambda v: SetAwgGain(value_0=v, value_1=v),
     ),
     Parameter.relative_phase: Update(update=lambda v: SetPhDelta(value=v), reset=None),
     Parameter.duration: Update(update=None, reset=None),
@@ -426,6 +427,19 @@ def finalization() -> list[Instruction]:
 PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
+def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
+    uid = pulse_uid(pulse)
+    return Play(wave_0=waveforms[(uid, 0)], wave_1=waveforms[(uid, 1)], duration=0)
+
+
+def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:
+    return Play(
+        wave_0=param.register,
+        wave_1=Register(number=param.register.number + 1),
+        duration=0,
+    )
+
+
 def play(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
@@ -434,12 +448,13 @@ def play(
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
-    # param = parpulse[1]
+    param = parpulse[1]
 
     if isinstance(pulse, Pulse):
-        uid = pulse_uid(pulse)
         return [
-            Play(wave_0=waveforms[(uid, 0)], wave_1=waveforms[(uid, 1)], duration=0)
+            play_pulse(pulse, waveforms)
+            if param is None or param.kind is not Parameter.duration
+            else play_duration_swept(pulse, param)
         ]
     if isinstance(pulse, Delay):
         return [Wait(duration=int(pulse.duration * sampling_rate))]
