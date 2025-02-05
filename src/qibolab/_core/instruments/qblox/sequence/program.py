@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Union
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -15,18 +14,16 @@ from ..q1asm.ast_ import (
     WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .experiment import execution
+from .experiment import experiment
 from .loops import LoopSpec, Registers, loop, loops
 from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
-from .transpile import transpile
+from .transpile import Block, transpile
 from .waveforms import WaveformIndices
 
 __all__ = ["Program"]
 
 
-def setup(
-    loops: Sequence[LoopSpec], params: list[Param]
-) -> Sequence[Union[Line, Instruction]]:
+def setup(loops: Sequence[LoopSpec], params: list[Param]) -> Block:
     """Set up."""
     return (
         [
@@ -90,24 +87,24 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v[1]]
     )
+    experiment_ = experiment(sweepseq, waveforms, acquisitions, sampling_rate)
+    singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
 
     return transpile(
-        Program(
-            elements=[
-                el if isinstance(el, Line) else Line.instr(el)
-                for block in [
-                    setup(loops_, [p for _, p in params_]),
-                    loop(
-                        loops_,
-                        indexed_params,
-                        execution(sweepseq, waveforms, acquisitions, sampling_rate),
-                        options.relaxation_time,
-                        options.averaging_mode is AveragingMode.SINGLESHOT,
-                        channel,
-                    ),
-                    finalization(),
-                ]
-                for el in block
+        [
+            el
+            for block in [
+                setup(loops_, [p for _, p in params_]),
+                loop(
+                    loops_,
+                    indexed_params,
+                    experiment_,
+                    options.relaxation_time,
+                    singleshot,
+                    channel,
+                ),
+                finalization(),
             ]
-        )
+            for el in block
+        ]
     )
