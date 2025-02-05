@@ -1,4 +1,5 @@
 import json
+import math
 from typing import Optional, cast
 
 from qblox_instruments.qcodes_drivers.module import Module
@@ -59,10 +60,13 @@ class PortAddress(Model):
             https://docs.qblox.com/en/main/api_reference/cluster.html#qblox_instruments.Cluster.connect_sequencer
         """
         direction = "in" if self.input else "out"
+        for port in self.ports:
+            if port is not None:
+                assert port > 0
         channels = (
-            str(self.ports[0])
+            str(self.ports[0] - 1)
             if self.ports[1] is None
-            else f"{self.ports[0]}_{self.ports[1]}"
+            else f"{self.ports[0] - 1}_{self.ports[1] - 1}"
         )
         return f"{direction}{channels}"
 
@@ -122,8 +126,17 @@ def module(
 
     # set lo frequencies
     for iq, lo in _los(mod_channels, channels):
-        n = PortAddress.from_path(channels[iq].path).ports[0]
-        getattr(mod, f"out{n}_lo_freq")(cast(OscillatorConfig, configs[lo]).frequency)
+        n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+        if mod.is_qrm_type:
+            attr = f"out{n}_in{n}_lo_freq"
+        else:
+            attr = f"out{n}_lo_freq"
+        getattr(mod, attr)(cast(OscillatorConfig, configs[lo]).frequency)
+
+
+def normalize_angle(angle):
+    """Convert iq-angle to degrees in (0, 360)."""
+    return (angle % (2 * math.pi)) * 180 / math.pi
 
 
 def sequencer(
@@ -157,7 +170,7 @@ def sequencer(
         assert isinstance(config, AcquisitionConfig)
         seq.integration_length_acq(1000)
         # discrimination
-        seq.thresholded_acq_rotation(config.iq_angle)
+        seq.thresholded_acq_rotation(normalize_angle(config.iq_angle))
         seq.thresholded_acq_threshold(config.threshold)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
