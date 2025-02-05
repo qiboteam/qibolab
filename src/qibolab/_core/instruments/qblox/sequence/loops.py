@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from enum import Enum
-from typing import Optional, Union, cast
+from typing import Optional, cast
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
@@ -19,6 +19,7 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .sweepers import IndexedParams, update_instructions
+from .transpile import Block
 
 __all__ = []
 
@@ -84,7 +85,7 @@ START = "start"
 SHOTS = "shots"
 
 
-def iteration_end(relaxation_time: int) -> Sequence[Line]:
+def iteration_end(relaxation_time: int) -> list[Line]:
     return [
         Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
         Line(instruction=ResetPh(), comment="phase reset"),
@@ -102,7 +103,7 @@ def loop_machinery(
     params: IndexedParams,
     singleshot: bool,
     channel: ChannelId,
-) -> Sequence[Union[Line, Instruction]]:
+) -> Block:
     def shots(marker: LoopSpec) -> bool:
         return marker.shots and not singleshot
 
@@ -168,7 +169,7 @@ def loop(
     relaxation_time: int,
     singleshot: bool,
     channel: ChannelId,
-) -> Sequence[Union[Line, Instruction]]:
+) -> Block:
     end = cast(list, iteration_end(relaxation_time))
     machinery = cast(list, loop_machinery(loops, params, singleshot, channel))
     main = experiment + end + machinery
