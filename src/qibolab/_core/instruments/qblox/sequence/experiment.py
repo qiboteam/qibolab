@@ -113,7 +113,7 @@ def event(
     )
 
 
-def execution(
+def experiment(
     sequence: SweepSequence,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
