@@ -1,257 +1,38 @@
 from collections.abc import Iterable, Sequence
-from enum import Enum
 from itertools import groupby
-from typing import Callable, Optional, Union, cast
-
-import numpy as np
+from typing import Optional, Union, cast
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox.q1asm.ast_ import SetAwgGain, SetAwgOffs, SetFreq
-from qibolab._core.pulses.pulse import (
-    Acquisition,
-    Align,
-    Delay,
-    Pulse,
-    PulseId,
-    PulseLike,
-    Readout,
-    VirtualZ,
-)
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, Parameter, iteration_length
+from qibolab._core.sweeper import ParallelSweepers
 
 from ..q1asm.ast_ import (
-    Acquire,
     Add,
     Instruction,
     Jge,
     Line,
     Loop,
     Move,
-    Play,
     Program,
     Reference,
     Register,
     ResetPh,
-    SetPhDelta,
     Stop,
-    Value,
     Wait,
     WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .waveforms import WaveformIndices, pulse_uid
+from .loops import Loop, Registers
+from .sweepers import Param
+from .waveforms import WaveformIndices
 
 __all__ = ["Program"]
 
 
-class Registers(Enum):
-    bin = Register(number=0)
-    bin_reset = Register(number=1)
-    shots = Register(number=2)
-
-
-Loops = Sequence[tuple[Register, int, Optional[int]]]
-"""Sequence of loop-characterizing tuples.
-
-These are produced by the :func:`loops` function, and consist of a:
-
-- :class:`Register`, which is used as a loop counter, or it is auxiliary to the
-  iteration process
-- the iteration length
-- the iteration index
-"""
-
-
-def loops(sweepers: list[ParallelSweepers], nshots: int, inner_shots: bool) -> Loops:
-    """Initialize registers for loop counters.
-
-    The counters implement the ``length`` of the iteration, which, for a general
-    sweeper, is fully characterized by a ``(start, step, length)`` tuple.
-
-    Those related to :attr:`Registers.bin` and :attr:`Registers.bin_reset` are actually
-    not loop counter on their own, but they are required to properly store the
-    acquisitions in different bins.
-    """
-    shots = (Registers.shots.value, nshots, None)
-    first_sweeper = max(r.value.number for r in Registers) + 1
-    sweep = [
-        (
-            Register(number=i + first_sweeper),
-            iteration_length(parsweep),
-            i,
-        )
-        for i, parsweep in enumerate(sweepers)
-    ]
-    return [shots] + sweep if inner_shots else sweep + [shots]
-
-
-def sweep_desc(index: int) -> str:
-    """Sweeper textual description."""
-    return f"sweeper {index + 1}"
-
-
-class Param(Model):
-    reg: Register
-    """Register used for the parameter value."""
-    start: int
-    """Initial value."""
-    step: int
-    """Increment."""
-    kind: Parameter
-    """The parameter type."""
-    sweeper: int
-    """The loop to which is associated."""
-    pulse: Optional[PulseId]
-    """The target pulse (if the sweeper targets pulses)."""
-    channel: Optional[ChannelId]
-    """The target channel (if the sweeper targets channels)."""
-
-    @property
-    def description(self):
-        """Textual description, used in some accompanying comments."""
-        return f"sweeper {self.sweeper + 1} (pulse: {self.pulse})"
-
-
-Params = Sequence[tuple[int, Param]]
-"""Sequence of update parameters.
-
-It is created by the :func:`params` function.
-"""
-
-MAX_PARAM = {
-    Parameter.amplitude: 32767,
-    Parameter.offset: 32767,
-    Parameter.relative_phase: 1e9,
-    Parameter.frequency: 2e9,
-}
-"""Maximum range for parameters.
-
-Declared in https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#q1-instructions
-
-Ranges may be one-sided (just positive) or two-sided. This is accounted for in
-:func:`convert`.
-"""
-
-
-def convert(value: float, kind: Parameter) -> int:
-    """Convert sweeper value in assembly units."""
-    if kind is Parameter.amplitude:
-        return int(value * MAX_PARAM[kind])
-    if kind is Parameter.relative_phase:
-        return int((value / (2 * np.pi)) % 1.0 * MAX_PARAM[kind])
-    if kind is Parameter.frequency:
-        return int(value / 5e8 * MAX_PARAM[kind])
-    if kind is Parameter.offset:
-        return int(value * MAX_PARAM[kind])
-    if kind is Parameter.duration:
-        return int(value)
-    raise ValueError(f"Unsupported sweeper: {kind.name}")
-
-
-def convert_or_pulse_duration(
-    value: float, kind: Parameter, pulse: Optional[PulseLike], duration: int
-) -> int:
-    """Wrap :func:`convert` handling pulse duration sweep.
-
-    In the special case of the duration sweep over an actual pulse, it
-    is not possible to convert from the values in the original sweeper,
-    since it needs to be first processed in order to generate the many
-    waveforms corresponding to the shape evaluated for the desired
-    amount of samples.
-    In this case, the value is explicitly required, and it is set in the wrapper
-    functions :func:`start` and :func:`step`.
-    """
-    return (
-        duration
-        if kind is Parameter.duration and isinstance(pulse, Pulse)
-        else convert(value, kind)
-    )
-
-
-def start(value: float, kind: Parameter, pulse: Optional[PulseLike]) -> int:
-    """Convert sweeper start value in assembly units."""
-    return convert_or_pulse_duration(value, kind, pulse, 0)
-
-
-def step(value: float, kind: Parameter, pulse: Optional[PulseLike]) -> int:
-    """Convert sweeper start value in assembly units."""
-    return convert_or_pulse_duration(value, kind, pulse, 2)
-
-
-def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
-    """Initialize parameters' registers.
-
-    `allocated` is the number of already allocated registers for loop counters, as
-    initialized by :func:`loops`.
-    """
-    return [
-        (
-            j,
-            Param(
-                reg=Register(number=i + allocated + 1),
-                start=start,
-                step=step,
-                pulse=pulse,
-                channel=channel,
-                kind=kind,
-                sweeper=j,
-            ),
-        )
-        for i, (j, start, step, pulse, channel, kind) in enumerate(
-            (
-                j,
-                start(sweep.irange[0], sweep.parameter, pulse),
-                step(sweep.irange[2], sweep.parameter, pulse),
-                pulse.id if pulse is not None else None,
-                channel,
-                sweep.parameter,
-            )
-            for j, parsweep in enumerate(sweepers)
-            for sweep in parsweep
-            for pulse in (sweep.pulses if sweep.pulses is not None else [None])
-            for channel in (sweep.channels if sweep.channels is not None else [None])
-        )
-    ]
-
-
-class Update(Model):
-    update: Optional[Callable[[Value], Instruction]]
-    reset: Optional[Callable[[Value], Instruction]]
-
-
-SWEEP_UPDATE: dict[Parameter, Update] = {
-    Parameter.frequency: Update(update=lambda v: SetFreq(value=v), reset=None),
-    Parameter.offset: Update(
-        update=lambda v: SetAwgOffs(value_0=v, value_1=v), reset=None
-    ),
-    Parameter.amplitude: Update(
-        update=lambda v: SetAwgGain(value_0=v, value_1=v),
-        reset=lambda _: SetAwgGain(
-            value_0=MAX_PARAM[Parameter.amplitude],
-            value_1=MAX_PARAM[Parameter.amplitude],
-        ),
-    ),
-    Parameter.relative_phase: Update(update=lambda v: SetPhDelta(value=v), reset=None),
-    Parameter.duration: Update(update=None, reset=None),
-}
-
-
-def update_instructions(
-    kind: Parameter, value: Value, reset: bool = False
-) -> list[Instruction]:
-    wrapper = SWEEP_UPDATE[kind]
-    up = wrapper.update if not reset else wrapper.reset
-    return [up(value)] if up is not None else []
-
-
-def reset_instructions(kind: Parameter, value: Value) -> list[Instruction]:
-    return update_instructions(kind, value, reset=True)
-
-
-def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction]]:
+def setup(
+    loops: Sequence[Loop], params: list[Param]
+) -> Sequence[Union[Line, Instruction]]:
     """Set up."""
     return (
         [
@@ -312,32 +93,6 @@ def params_reshape(params: Params) -> IndexedParams:
     return {
         key: _channels_pulses(pars) for key, pars in groupby(params, key=lambda t: t[0])
     }
-
-
-ParameterizedPulse = tuple[PulseLike, Optional[Param]]
-SweepSequence = list[ParameterizedPulse]
-
-
-def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequence:
-    """Wrap swept pulses with updates markers."""
-    parbyid = {p.pulse: p for p in params}
-    return [(p, parbyid.get(p.id)) for _, p in sequence]
-
-
-def execution(
-    sequence: SweepSequence,
-    waveforms: WaveformIndices,
-    acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
-) -> list[Instruction]:
-    """Representation of the actual experiment to be executed."""
-    return [
-        i_
-        for block in (
-            event(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
-        )
-        for i_ in block
-    ]
 
 
 START = "start"
@@ -445,87 +200,6 @@ def loop(
 def finalization() -> list[Instruction]:
     """Finalize."""
     return [Stop()]
-
-
-PHASE_FACTOR = 1e9 / (2 * np.pi)
-
-
-def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
-    uid = pulse_uid(pulse)
-    w0 = waveforms[(uid, 0)]
-    w1 = waveforms[(uid, 1)]
-    assert w0[1] == w1[1]
-    return Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1])
-
-
-def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:
-    return Play(
-        wave_0=param.reg,
-        wave_1=Register(number=param.reg.number + 1),
-        duration=0,
-    )
-
-
-def play(
-    parpulse: ParameterizedPulse,
-    waveforms: WaveformIndices,
-    acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
-) -> list[Instruction]:
-    """Process the individual pulse in experiment."""
-    pulse = parpulse[0]
-    param = parpulse[1]
-
-    if isinstance(pulse, Pulse):
-        return [
-            play_pulse(pulse, waveforms)
-            if param is None or param.kind is not Parameter.duration
-            else play_duration_swept(pulse, param)
-        ]
-    if isinstance(pulse, Delay):
-        return [
-            Wait(
-                duration=int(pulse.duration * sampling_rate)
-                if param is None
-                else param.reg
-            )
-        ]
-    if isinstance(pulse, VirtualZ):
-        return [
-            SetPhDelta(
-                value=int(pulse.phase * PHASE_FACTOR) if param is None else param.reg
-            )
-        ]
-    if isinstance(pulse, Acquisition):
-        acq = acquisitions[str(pulse.id)]
-        return [
-            Acquire(
-                acquisition=acq.acquisition.index,
-                bin=Registers.bin.value,
-                duration=acq.duration,
-            )
-        ]
-    if isinstance(pulse, Align):
-        raise NotImplementedError("Align operation not yet supported by Qblox.")
-    if isinstance(pulse, Readout):
-        raise NotImplementedError(
-            "Readout unsupported for Qblox - the operation should be unpacked in Pulse and Acquisition"
-        )
-    raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
-
-
-def event(
-    parpulse: ParameterizedPulse,
-    waveforms: WaveformIndices,
-    acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
-) -> list[Instruction]:
-    param = parpulse[1]
-    return (
-        (update_instructions(param.kind, param.reg) if param is not None else [])
-        + play(parpulse, waveforms, acquisitions, sampling_rate)
-        + (reset_instructions(param.kind, param.reg) if param is not None else [])
-    )
 
 
 MAX_WAIT = 2**16 - 1
