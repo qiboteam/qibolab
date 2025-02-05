@@ -94,7 +94,7 @@ def sweep_desc(index: int) -> str:
 
 
 class Param(Model):
-    register: Register
+    reg: Register
     """Register used for the parameter value."""
     start: int
     """Initial value."""
@@ -191,7 +191,7 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
         (
             j,
             Param(
-                register=Register(number=i + allocated + 1),
+                reg=Register(number=i + allocated + 1),
                 start=start,
                 step=step,
                 pulse=pulse,
@@ -275,7 +275,7 @@ def setup(loops: Loops, params: list[Param]) -> Sequence[Union[Line, Instruction
         ]
         + [
             Line(
-                instruction=Move(source=p.start, destination=p.register),
+                instruction=Move(source=p.start, destination=p.reg),
                 comment=f"init {p.description}",
             )
             for p in params
@@ -392,13 +392,11 @@ def loop_machinery(
                     for block in (
                         (
                             Line(
-                                instruction=Add(
-                                    a=p.register, b=p.step, destination=p.register
-                                ),
+                                instruction=Add(a=p.reg, b=p.step, destination=p.reg),
                                 comment=f"increment {p.description}",
                             ),
                             *(
-                                update_instructions(p.kind, p.register)
+                                update_instructions(p.kind, p.reg)
                                 if p.description is not None and p.channel == channel
                                 else ()
                             ),
@@ -462,8 +460,8 @@ def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
 
 def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:
     return Play(
-        wave_0=param.register,
-        wave_1=Register(number=param.register.number + 1),
+        wave_0=param.reg,
+        wave_1=Register(number=param.reg.number + 1),
         duration=0,
     )
 
@@ -489,15 +487,13 @@ def play(
             Wait(
                 duration=int(pulse.duration * sampling_rate)
                 if param is None
-                else param.register
+                else param.reg
             )
         ]
     if isinstance(pulse, VirtualZ):
         return [
             SetPhDelta(
-                value=int(pulse.phase * PHASE_FACTOR)
-                if param is None
-                else param.register
+                value=int(pulse.phase * PHASE_FACTOR) if param is None else param.reg
             )
         ]
     if isinstance(pulse, Acquisition):
@@ -526,9 +522,9 @@ def event(
 ) -> list[Instruction]:
     param = parpulse[1]
     return (
-        (update_instructions(param.kind, param.register) if param is not None else [])
+        (update_instructions(param.kind, param.reg) if param is not None else [])
         + play(parpulse, waveforms, acquisitions, sampling_rate)
-        + (reset_instructions(param.kind, param.register) if param is not None else [])
+        + (reset_instructions(param.kind, param.reg) if param is not None else [])
     )
 
 
