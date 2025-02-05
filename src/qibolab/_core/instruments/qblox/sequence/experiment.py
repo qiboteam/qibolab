@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 
 from qibolab._core.pulses.pulse import (
@@ -7,11 +5,9 @@ from qibolab._core.pulses.pulse import (
     Align,
     Delay,
     Pulse,
-    PulseLike,
     Readout,
     VirtualZ,
 )
-from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter
 
 from ..q1asm.ast_ import (
@@ -23,36 +19,17 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .sweepers import Param
+from .loops import Registers
+from .sweepers import (
+    Param,
+    ParameterizedPulse,
+    SweepSequence,
+    reset_instructions,
+    update_instructions,
+)
 from .waveforms import WaveformIndices, pulse_uid
 
-ParameterizedPulse = tuple[PulseLike, Optional[Param]]
-SweepSequence = list[ParameterizedPulse]
-
-
 __all__ = []
-
-
-def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequence:
-    """Wrap swept pulses with updates markers."""
-    parbyid = {p.pulse: p for p in params}
-    return [(p, parbyid.get(p.id)) for _, p in sequence]
-
-
-def execution(
-    sequence: SweepSequence,
-    waveforms: WaveformIndices,
-    acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
-) -> list[Instruction]:
-    """Representation of the actual experiment to be executed."""
-    return [
-        i_
-        for block in (
-            event(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
-        )
-        for i_ in block
-    ]
 
 
 PHASE_FACTOR = 1e9 / (2 * np.pi)
@@ -134,3 +111,19 @@ def event(
         + play(parpulse, waveforms, acquisitions, sampling_rate)
         + (reset_instructions(param.kind, param.reg) if param is not None else [])
     )
+
+
+def execution(
+    sequence: SweepSequence,
+    waveforms: WaveformIndices,
+    acquisitions: dict[MeasureId, AcquisitionSpec],
+    sampling_rate: float,
+) -> list[Instruction]:
+    """Representation of the actual experiment to be executed."""
+    return [
+        i_
+        for block in (
+            event(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
+        )
+        for i_ in block
+    ]

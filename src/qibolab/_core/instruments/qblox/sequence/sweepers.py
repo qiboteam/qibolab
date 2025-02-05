@@ -1,5 +1,6 @@
-from collections.abc import Sequence
-from typing import Callable, Optional
+from collections.abc import Callable, Iterable, Sequence
+from itertools import groupby
+from typing import Optional
 
 import numpy as np
 
@@ -10,6 +11,7 @@ from qibolab._core.pulses.pulse import (
     PulseId,
     PulseLike,
 )
+from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -19,7 +21,6 @@ from ..q1asm.ast_ import (
     SetPhDelta,
     Value,
 )
-from .sweepers import Param
 
 __all__ = []
 
@@ -51,6 +52,8 @@ Params = Sequence[tuple[int, Param]]
 
 It is created by the :func:`params` function.
 """
+
+IndexedParams = dict[int, tuple[list[Param], list[Param]]]
 
 MAX_PARAM = {
     Parameter.amplitude: 32767,
@@ -180,3 +183,34 @@ def update_instructions(
 
 def reset_instructions(kind: Parameter, value: Value) -> list[Instruction]:
     return update_instructions(kind, value, reset=True)
+
+
+def _channels_pulses(
+    pars: Iterable[tuple[int, Param]],
+) -> tuple[list[Param], list[Param]]:
+    channels = []
+    pulses = []
+    for p in pars:
+        (channels if p[1].channel is not None else pulses).append(p[1])
+    return channels, pulses
+
+
+def params_reshape(params: Params) -> IndexedParams:
+    """Split parameters related to channels and pulses.
+
+    Moreover, it reorganize them by loop, to group the updates.
+    """
+
+    return {
+        key: _channels_pulses(pars) for key, pars in groupby(params, key=lambda t: t[0])
+    }
+
+
+ParameterizedPulse = tuple[PulseLike, Optional[Param]]
+SweepSequence = list[ParameterizedPulse]
+
+
+def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequence:
+    """Wrap swept pulses with updates markers."""
+    parbyid = {p.pulse: p for p in params}
+    return [(p, parbyid.get(p.id)) for _, p in sequence]
