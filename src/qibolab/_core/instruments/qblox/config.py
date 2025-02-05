@@ -127,14 +127,11 @@ def module(
     # set lo frequencies
     for iq, lo in _los(mod_channels, channels):
         n = PortAddress.from_path(channels[iq].path).ports[0] - 1
-        if mod.is_qrm_type:
-            attr = f"out{n}_in{n}_lo_freq"
-        else:
-            attr = f"out{n}_lo_freq"
+        attr = f"out{n}_in{n}_lo_freq" if mod.is_qrm_type else f"out{n}_lo_freq"
         getattr(mod, attr)(cast(OscillatorConfig, configs[lo]).frequency)
 
 
-def normalize_angle(angle):
+def radians_to_degrees(angle):
     """Convert iq-angle to degrees in (0, 360)."""
     return (angle % (2 * math.pi)) * 180 / math.pi
 
@@ -170,7 +167,7 @@ def sequencer(
         assert isinstance(config, AcquisitionConfig)
         seq.integration_length_acq(1000)
         # discrimination
-        seq.thresholded_acq_rotation(normalize_angle(config.iq_angle))
+        seq.thresholded_acq_rotation(radians_to_degrees(config.iq_angle))
         seq.thresholded_acq_threshold(config.threshold)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
