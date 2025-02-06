@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from enum import Enum
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
@@ -8,6 +8,7 @@ from qibolab._core.sweeper import ParallelSweepers, iteration_length
 
 from ..q1asm.ast_ import (
     Add,
+    Block,
     Instruction,
     Jge,
     Line,
@@ -19,7 +20,6 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .sweepers import IndexedParams, update_instructions
-from .transpile import Block
 
 __all__ = []
 
@@ -98,12 +98,84 @@ def iteration_end(relaxation_time: int) -> list[Line]:
     ]
 
 
-def loop_machinery(
+def _shots_bin_reset(lp, singleshot: bool) -> list[Line]:
+    """Reset bin counter to save shots to the same one.
+
+    The full algorithm is detailed at:
+    https://github.com/qiboteam/qibolab/discussions/1119
+    """
+    return [
+        Line(
+            instruction=Jge(
+                a=Registers.shots.value, b=1, address=Reference(label=SHOTS)
+            ),
+            comment="skip bin reset - advance both counters",
+        ),
+        Line(
+            instruction=Move(
+                source=Registers.bin_reset.value,
+                destination=Registers.bin.value,
+            ),
+            comment="shots average: reset bin counter",
+        ),
+    ]
+
+
+def _sweep_iteration(
+    lp: LoopSpec, params, shots: bool, channel: ChannelId
+) -> list[Union[Line, Instruction]]:
+    """Sweep loop.
+
+    - increment the parameter register
+    - update parameter (if channel-wise)
+    - loop, i.e. decrement iteration counter and jump
+    - reset iteration counter, after a whole cycle is completed
+    """
+    return [
+        *(
+            (
+                line
+                for block in (
+                    (
+                        Line(
+                            instruction=Add(a=p.reg, b=p.step, destination=p.reg),
+                            comment=f"increment {p.description}",
+                        ),
+                        *(
+                            update_instructions(p.kind, p.reg)
+                            if p.description is not None and p.channel == channel
+                            else ()
+                        ),
+                    )
+                    for p in (params[lp.id][0] + params[lp.id][1])
+                )
+                for line in block
+            )
+            if lp.id is not None
+            else ()
+        ),
+        Line(
+            instruction=Loop(a=lp.reg, address=Reference(label=START)),
+            comment=f"loop over {lp.description}",
+            label=SHOTS if shots else None,
+        ),
+        Move(source=lp.length, destination=lp.reg),
+    ]
+
+
+def _loop_machinery(
     loops: Sequence[LoopSpec],
     params: IndexedParams,
     singleshot: bool,
     channel: ChannelId,
 ) -> Block:
+    """Looping block.
+
+    It creates an instruction block to be entirely placed after the
+    experiment (including the relaxation part) to repeat it as
+    specified, taking into account both shots and nested sweeper loops.
+    """
+
     def shots(marker: LoopSpec) -> bool:
         return marker.shots and not singleshot
 
@@ -111,54 +183,9 @@ def loop_machinery(
         i_
         for lp in loops
         for i_ in (
-            [
-                Line(
-                    instruction=Jge(
-                        a=Registers.shots.value, b=1, address=Reference(label=SHOTS)
-                    ),
-                    comment="skip bin reset - advance both counters",
-                ),
-                Line(
-                    instruction=Move(
-                        source=Registers.bin_reset.value,
-                        destination=Registers.bin.value,
-                    ),
-                    comment="shots average: reset bin counter",
-                ),
-            ]
-            if shots(lp)
-            else []
+            (_shots_bin_reset(lp, singleshot) if shots(lp) else [])
+            + _sweep_iteration(lp, params, shots(lp), channel)
         )
-        + [
-            *(
-                (
-                    line
-                    for block in (
-                        (
-                            Line(
-                                instruction=Add(a=p.reg, b=p.step, destination=p.reg),
-                                comment=f"increment {p.description}",
-                            ),
-                            *(
-                                update_instructions(p.kind, p.reg)
-                                if p.description is not None and p.channel == channel
-                                else ()
-                            ),
-                        )
-                        for p in (params[lp.id][0] + params[lp.id][1])
-                    )
-                    for line in block
-                )
-                if lp.id is not None
-                else ()
-            ),
-            Line(
-                instruction=Loop(a=lp.reg, address=Reference(label=START)),
-                comment=f"loop over {lp.description}",
-                label=SHOTS if shots(lp) else None,
-            ),
-            Move(source=lp.length, destination=lp.reg),
-        ]
     ][:-1]
 
 
@@ -171,7 +198,7 @@ def loop(
     channel: ChannelId,
 ) -> Block:
     end = cast(list, iteration_end(relaxation_time))
-    machinery = cast(list, loop_machinery(loops, params, singleshot, channel))
+    machinery = cast(list, _loop_machinery(loops, params, singleshot, channel))
     main = experiment + end + machinery
 
     return [

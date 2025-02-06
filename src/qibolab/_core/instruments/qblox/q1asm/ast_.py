@@ -1,7 +1,7 @@
 import inspect
 import re
 import textwrap
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any, Optional, Sequence, Union
 
 from pydantic import (
     AfterValidator,
@@ -748,6 +748,7 @@ class Line(Model):
 
 
 Element = Union[Line, Comment]
+Block = Sequence[Union[Line, Instruction]]
 
 
 class Program(Model):
