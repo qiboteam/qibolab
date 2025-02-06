@@ -19,7 +19,7 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .loops import Registers
+from .asm import Registers
 from .sweepers import (
     Param,
     ParameterizedPulse,
