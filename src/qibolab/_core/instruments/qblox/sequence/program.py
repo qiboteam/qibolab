@@ -6,6 +6,7 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from ..q1asm.ast_ import (
+    Block,
     Instruction,
     Line,
     Move,
@@ -17,7 +18,7 @@ from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
 from .loops import LoopSpec, Registers, loop, loops
 from .sweepers import Param, params, params_reshape, sweep_sequence, update_instructions
-from .transpile import Block, transpile
+from .transpile import transpile
 from .waveforms import WaveformIndices
 
 __all__ = ["Program"]
