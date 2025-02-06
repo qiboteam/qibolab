@@ -24,8 +24,19 @@ from .waveforms import WaveformIndices
 __all__ = ["Program"]
 
 
-def setup(loops: Sequence[LoopSpec], params: list[Param]) -> Block:
-    """Set up."""
+def setup(loops: Sequence[LoopSpec], params: list[Param], channel: ChannelId) -> Block:
+    """Build preparation phase. Ending with synchronization.
+
+    This will set up all the registers used for iterations, parameters
+    updates (sweeps), and to track the bin index where to save the
+    results.
+
+    The initial values for channel-wide parameters is also set.
+
+    It is guaranteed that the final instruction of this block will
+    trigger the synchronization among modules, with no other instruction
+    trailing.
+    """
     return (
         [
             Line(
@@ -54,15 +65,18 @@ def setup(loops: Sequence[LoopSpec], params: list[Param]) -> Block:
         + [
             inst
             for p in params
-            if p.channel is not None
+            if p.channel == channel
             for inst in update_instructions(p.kind, p.start)
-        ]  # TODO: condition on the ID of the current channel, since the sequence is being built for it
+        ]
         + [WaitSync(duration=4)]
     )
 
 
 def finalization() -> list[Instruction]:
-    """Finalize."""
+    """Finalize.
+
+    Currently only stopping the sequencer.
+    """
     return [Stop()]
 
 
@@ -75,6 +89,7 @@ def program(
     sampling_rate: float,
     channel: ChannelId,
 ) -> Program:
+    """Generate sequencer program."""
     assert options.nshots is not None
     assert options.relaxation_time is not None
 
@@ -95,11 +110,11 @@ def program(
         [
             el
             for block in [
-                setup(loops_, [p for _, p in params_]),
+                setup(loops_, [p for _, p in params_], channel),
                 loop(
+                    experiment_,
                     loops_,
                     indexed_params,
-                    experiment_,
                     options.relaxation_time,
                     singleshot,
                     channel,
