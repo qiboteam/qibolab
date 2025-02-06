@@ -1,14 +1,16 @@
 from collections.abc import Sequence
-from enum import Enum
-from typing import Optional, Union, cast
+from typing import Optional
 
 from qibolab._core.identifier import ChannelId
+from qibolab._core.instruments.qblox.sequence.asm import label
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, iteration_length
 
 from ..q1asm.ast_ import (
     Add,
     Block,
+    BlockIter,
+    BlockList,
     Instruction,
     Jge,
     Line,
@@ -19,15 +21,10 @@ from ..q1asm.ast_ import (
     ResetPh,
     Wait,
 )
-from .sweepers import IndexedParams, update_instructions
+from .asm import Registers
+from .sweepers import IndexedParams, Param, update_instructions
 
 __all__ = []
-
-
-class Registers(Enum):
-    bin = Register(number=0)
-    bin_reset = Register(number=1)
-    shots = Register(number=2)
 
 
 class LoopSpec(Model):
@@ -69,10 +66,9 @@ def loops(
     acquisitions in different bins.
     """
     shots = LoopSpec(reg=Registers.shots.value, length=nshots, id=None)
-    first_sweeper = max(r.value.number for r in Registers) + 1
     sweep = [
         LoopSpec(
-            reg=Register(number=i + first_sweeper),
+            reg=Register(number=i + Registers.first_available()),
             length=iteration_length(parsweep),
             id=i,
         )
@@ -81,8 +77,8 @@ def loops(
     return [shots] + sweep if inner_shots else sweep + [shots]
 
 
-START = "start"
-SHOTS = "shots"
+START: str = "start"
+SHOTS: str = "shots"
 
 
 def _experiment_end(relaxation_time: int) -> list[Line]:
@@ -93,7 +89,7 @@ def _experiment_end(relaxation_time: int) -> list[Line]:
     - increment bin where the result is saved
 
     The bin increment is possibly reset later on, in order to save on the same bin, and
-    thus summing various shots (eventually averaging). Cf. :func:`_shots_bin_reset`.
+    thus summing various shots (eventually averaging). Cf. :const:`_SHOTS_BIN_RESET`.
     """
     return [
         Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
@@ -107,62 +103,76 @@ def _experiment_end(relaxation_time: int) -> list[Line]:
     ]
 
 
-def _shots_bin_reset(lp, singleshot: bool) -> list[Line]:
-    """Reset bin counter to save shots to the same one.
+_SHOTS_BIN_RESET: list[Line] = [
+    Line(
+        instruction=Jge(a=Registers.shots.value, b=1, address=Reference(label=SHOTS)),
+        comment="skip bin reset - advance both counters",
+    ),
+    Line(
+        instruction=Move(
+            source=Registers.bin_reset.value,
+            destination=Registers.bin.value,
+        ),
+        comment="shots average: reset bin counter",
+    ),
+]
+"""Reset bin counter to save shots to the same one.
 
-    The full algorithm is detailed at:
-    https://github.com/qiboteam/qibolab/discussions/1119
+The full algorithm is detailed at:
+https://github.com/qiboteam/qibolab/discussions/1119
+"""
+
+
+def _sweep_update(p: Param, channel: ChannelId) -> Block:
+    """Sweeper update for a single parameter.
+
+    - increment the parameter register
+    - set new parameter value (if channel-wise)
     """
-    return [
+    return (
         Line(
-            instruction=Jge(
-                a=Registers.shots.value, b=1, address=Reference(label=SHOTS)
-            ),
-            comment="skip bin reset - advance both counters",
+            instruction=Add(a=p.reg, b=p.step, destination=p.reg),
+            comment=f"increment {p.description}",
         ),
-        Line(
-            instruction=Move(
-                source=Registers.bin_reset.value,
-                destination=Registers.bin.value,
-            ),
-            comment="shots average: reset bin counter",
+        *(
+            update_instructions(p.kind, p.reg)
+            if p.description is not None and p.channel == channel
+            else ()
         ),
-    ]
+    )
+
+
+def _sweep_updates(
+    lp: LoopSpec, params: IndexedParams, channel: ChannelId
+) -> BlockIter:
+    """Parallel sweeper updates.
+
+    Collects all synced updates, those happening in a single loop.
+    """
+    return (
+        (
+            line
+            for block in (
+                _sweep_update(p, channel) for p in (params[lp.id][0] + params[lp.id][1])
+            )
+            for line in block
+        )
+        if lp.id is not None
+        else ()
+    )
 
 
 def _sweep_iteration(
-    lp: LoopSpec, params, shots: bool, channel: ChannelId
-) -> list[Union[Line, Instruction]]:
+    lp: LoopSpec, params: IndexedParams, shots: bool, channel: ChannelId
+) -> BlockList:
     """Sweep loop.
 
-    - increment the parameter register
-    - update parameter (if channel-wise)
+    - sweepers update
     - loop, i.e. decrement iteration counter and jump
     - reset iteration counter, after a whole cycle is completed
     """
     return [
-        *(
-            (
-                line
-                for block in (
-                    (
-                        Line(
-                            instruction=Add(a=p.reg, b=p.step, destination=p.reg),
-                            comment=f"increment {p.description}",
-                        ),
-                        *(
-                            update_instructions(p.kind, p.reg)
-                            if p.description is not None and p.channel == channel
-                            else ()
-                        ),
-                    )
-                    for p in (params[lp.id][0] + params[lp.id][1])
-                )
-                for line in block
-            )
-            if lp.id is not None
-            else ()
-        ),
+        *_sweep_updates(lp, params, channel),
         Line(
             instruction=Loop(a=lp.reg, address=Reference(label=START)),
             comment=f"loop over {lp.description}",
@@ -177,7 +187,7 @@ def _loop_machinery(
     params: IndexedParams,
     singleshot: bool,
     channel: ChannelId,
-) -> Block:
+) -> BlockList:
     """Looping block.
 
     It creates an instruction block to be entirely placed after the
@@ -192,30 +202,22 @@ def _loop_machinery(
         i_
         for lp in loops
         for i_ in (
-            (_shots_bin_reset(lp, singleshot) if shots(lp) else [])
+            (_SHOTS_BIN_RESET if shots(lp) else [])
             + _sweep_iteration(lp, params, shots(lp), channel)
         )
     ][:-1]
 
 
 def loop(
+    experiment: list[Instruction],
     loops: Sequence[LoopSpec],
     params: IndexedParams,
-    experiment: list[Instruction],
     relaxation_time: int,
     singleshot: bool,
     channel: ChannelId,
 ) -> Block:
-    end = cast(list, _experiment_end(relaxation_time))
-    machinery = cast(list, _loop_machinery(loops, params, singleshot, channel))
+    end = _experiment_end(relaxation_time)
+    machinery = _loop_machinery(loops, params, singleshot, channel)
     main = experiment + end + machinery
 
-    return [
-        (
-            Line(instruction=main[0], label=START)
-            if isinstance(main[0], Instruction)
-            else Line(
-                instruction=main[0].instruction, comment=main[0].comment, label=START
-            )
-        )
-    ] + main[1:]
+    return [label(main[0], START)] + main[1:]
