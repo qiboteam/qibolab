@@ -6,9 +6,9 @@ from ..q1asm.ast_ import (
     Move,
     Program,
     Reference,
-    Register,
     Wait,
 )
+from .asm import Registers
 
 __all__ = []
 
@@ -16,11 +16,10 @@ MAX_WAIT = 2**16 - 1
 
 
 def long_wait(duration: int) -> Block:
-    n = 60
     iterations = duration // MAX_WAIT
     remainder = duration % MAX_WAIT
-    register = Register(number=n)
-    label = f"wait-{n}"
+    register = Registers.wait.value
+    label = f"wait{register.number}"
     return [Wait(duration=remainder)] + [
         Move(source=iterations, destination=register),
         Line(instruction=Wait(duration=MAX_WAIT), label=label),
