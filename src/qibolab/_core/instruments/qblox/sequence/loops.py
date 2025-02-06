@@ -85,7 +85,16 @@ START = "start"
 SHOTS = "shots"
 
 
-def iteration_end(relaxation_time: int) -> list[Line]:
+def _experiment_end(relaxation_time: int) -> list[Line]:
+    """Wrap up experiment.
+
+    - relax
+    - reset phase (?)
+    - increment bin where the result is saved
+
+    The bin increment is possibly reset later on, in order to save on the same bin, and
+    thus summing various shots (eventually averaging). Cf. :func:`_shots_bin_reset`.
+    """
     return [
         Line(instruction=Wait(duration=relaxation_time), comment="relaxation"),
         Line(instruction=ResetPh(), comment="phase reset"),
@@ -197,7 +206,7 @@ def loop(
     singleshot: bool,
     channel: ChannelId,
 ) -> Block:
-    end = cast(list, iteration_end(relaxation_time))
+    end = cast(list, _experiment_end(relaxation_time))
     machinery = cast(list, _loop_machinery(loops, params, singleshot, channel))
     main = experiment + end + machinery
 
