@@ -1,7 +1,5 @@
-from collections.abc import Sequence
-from typing import Union
-
 from ..q1asm.ast_ import (
+    Block,
     Instruction,
     Line,
     Loop,
@@ -15,8 +13,6 @@ from ..q1asm.ast_ import (
 __all__ = []
 
 MAX_WAIT = 2**16 - 1
-
-Block = Sequence[Union[Line, Instruction]]
 
 
 def long_wait(duration: int) -> Block:
