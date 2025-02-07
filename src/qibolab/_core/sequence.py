@@ -1,7 +1,8 @@
 """PulseSequence class."""
 
-from collections import UserList
+from collections import UserList, defaultdict
 from collections.abc import Callable, Iterable
+from functools import cache
 from typing import Any, Union
 
 from pydantic import TypeAdapter
@@ -209,3 +210,49 @@ class PulseSequence(UserList[_Element]):
         """
         # pulse filter needed to exclude delays
         return [(ch, p) for ch, p in self if isinstance(p, (Acquisition, Readout))]
+
+    @property
+    def split_readouts(self) -> "PulseSequence":
+        """Split readout operations in its constituents.
+
+        This will also double the rest of the channels (mainly delays) on which the
+        readouts are placed, assuming the probe channels to be absent.
+
+        .. note::
+
+            Since :class:`Readout` is only placed on an acquisition channel, the name of
+            the associated probe channel is actually unknown.
+            This function assumes the convention that the relevant channels are named
+            ``.../acquisition`` and ``.../probe``.
+        """
+
+        def unwrap(pulse: PulseLike, double: bool) -> tuple[PulseLike, ...]:
+            return (
+                (pulse.acquisition, pulse.probe)
+                if isinstance(pulse, Readout)
+                else (pulse, pulse)
+                if double
+                else (pulse,)
+            )
+
+        @cache
+        def probe(channel: ChannelId) -> ChannelId:
+            return channel.split("/")[0] + "/probe"
+
+        readouts = {ch for ch, p in self if isinstance(p, Readout)}
+        return type(self)(
+            [
+                (ch_, p_)
+                for ch, p in self
+                for ch_, p_ in zip((ch, probe(ch)), unwrap(p, ch in readouts))
+            ]
+        )
+
+    @property
+    def by_channel(self) -> dict[ChannelId, list[PulseLike]]:
+        """Separate sequence into channels dictionary."""
+        seqs = defaultdict(list)
+        for ch, pulse in self:
+            seqs[ch].append(pulse)
+
+        return seqs
