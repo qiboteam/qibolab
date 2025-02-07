@@ -1,8 +1,8 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
-from qibolab._core.sequence import PulseSequence
+from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.sweeper import ParallelSweepers
 
 from ..q1asm.ast_ import (
@@ -81,7 +81,7 @@ def finalization() -> list[Instruction]:
 
 
 def program(
-    sequence: PulseSequence,
+    sequence: Iterable[PulseLike],
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
