@@ -67,7 +67,13 @@ class PortAddress(Model):
         return f"{direction}{channels}"
 
 
-def _probe(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
+def _iqout(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
+    """Extract associated IQ output channel.
+
+    This is the identity for each IQ output channel identifier, while it retrieves the
+    associated probe channel for acquisition ones, and :obj:`None` for any other one
+    (essentially, non-RF channels).
+    """
     return (
         id_
         if isinstance(channel, IqChannel)
@@ -79,9 +85,29 @@ def _probe(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
     )
 
 
+def _los(
+    mod_channels: set[ChannelId], channels: dict[ChannelId, Channel]
+) -> set[tuple[ChannelId, str]]:
+    """Extract all LOs of a certain module.
+
+    The result contains the associated channel, since required to
+    address the LO through the API. While the LO identifier is used to
+    retrieve the configuration.
+    """
+    return {
+        (iq, lo)
+        for iq, lo in {
+            (iq, cast(IqChannel, channels[iq]).lo)
+            for iq in (_iqout(ch, channels[ch]) for ch in mod_channels)
+            if iq is not None
+        }
+        if lo is not None
+    }
+
+
 def module(
     mod: Module,
-    mod_channels: dict[ChannelId, PortAddress],
+    mod_channels: set[ChannelId],
     channels: dict[ChannelId, Channel],
     configs: Configs,
 ):
@@ -94,15 +120,8 @@ def module(
         mod.scope_acq_trigger_mode_path1("sequencer")
 
     # set lo frequencies
-    los = {
-        (probe, cast(IqChannel, channels[probe]).lo)
-        for probe in (_probe(ch, channels[ch]) for ch in mod_channels)
-        if probe is not None
-    }
-    for probe, lo in los:
-        if lo is None:
-            continue
-        n = mod_channels[probe].ports[0]  # TODO: check it is the correct path
+    for iq, lo in _los(mod_channels, channels):
+        n = PortAddress.from_path(channels[iq].path).ports[0]
         getattr(mod, f"out{n}_lo_freq")(cast(OscillatorConfig, configs[lo]).frequency)
 
 
@@ -141,7 +160,7 @@ def sequencer(
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
 
-    probe = _probe(channel_id, channels[channel_id])
+    probe = _iqout(channel_id, channels[channel_id])
     if probe is not None:
         freq = cast(IqConfig, configs[probe]).frequency
         lo = cast(IqChannel, channels[probe]).lo
