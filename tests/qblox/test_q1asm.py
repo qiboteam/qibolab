@@ -30,3 +30,8 @@ def test_roundtrip(asm):
 def test_serialization(asm):
     prog = parse(asm)
     assert prog == Program.model_validate(prog.model_dump())
+
+
+def test_json_serialization(asm):
+    prog = parse(asm)
+    assert prog == Program.model_validate_json(prog.model_dump_json())
