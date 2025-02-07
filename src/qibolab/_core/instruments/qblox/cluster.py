@@ -22,7 +22,7 @@ from .identifiers import SequencerMap
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
-from .validate import _assert_no_probe
+from .validate import assert_channels_exclusion
 
 __all__ = ["Cluster"]
 
@@ -30,6 +30,8 @@ SAMPLING_RATE = 1
 
 
 class Cluster(Controller):
+    """Controller object for Qblox cluster."""
+
     name: str
     """Device name.
 
@@ -109,7 +111,7 @@ class Cluster(Controller):
         log = Logger(configs)
 
         for ps in sequences:
-            _assert_no_probe(ps, self._probes)
+            assert_channels_exclusion(ps, self._probes)
             sequences_ = compile(ps, sweepers, options, self.sampling_rate)
             log.sequences(sequences_)
             sequencers = self._configure(sequences_, configs, options.acquisition_type)
