@@ -93,9 +93,17 @@ def play(
     if isinstance(pulse, Align):
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
-        raise NotImplementedError(
-            "Readout unsupported for Qblox - the operation should be unpacked in Pulse and Acquisition"
-        )
+        acq = acquisitions[str(pulse.id)]
+        return [
+            Acquire(
+                acquisition=acq.acquisition.index,
+                bin=Registers.bin.value,
+                duration=4,
+            ),
+            play_pulse(pulse.probe, waveforms).model_copy(
+                update={"duration": int(pulse.duration) - 4}
+            ),
+        ]
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
 
 

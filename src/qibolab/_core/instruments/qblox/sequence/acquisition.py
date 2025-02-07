@@ -35,6 +35,6 @@ def acquisitions(
             duration=int(acq.duration),
         )
         for i, acq in enumerate(
-            p for p in sequence if isinstance(p, pulses.Acquisition)
+            p for p in sequence if isinstance(p, (pulses.Acquisition, pulses.Readout))
         )
     }
