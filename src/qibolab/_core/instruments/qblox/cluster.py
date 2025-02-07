@@ -43,6 +43,10 @@ class Cluster(Controller):
 
     @property
     def cluster(self) -> qblox.Cluster:
+        """Ensure cluster object access.
+
+        The object presence results from an existing connection.
+        """
         assert self._cluster is not None
         return self._cluster
 
@@ -77,9 +81,16 @@ class Cluster(Controller):
 
     @property
     def sampling_rate(self) -> int:
+        """Provide instrument's sampling rate."""
         return SAMPLING_RATE
 
+    @property
+    def is_connected(self) -> bool:
+        """Determine connections status."""
+        return self._cluster is not None
+
     def connect(self):
+        """Connect and initialize the instrument."""
         if self.is_connected:
             return
 
@@ -88,11 +99,8 @@ class Cluster(Controller):
         )
         self._cluster.reset()
 
-    @property
-    def is_connected(self) -> bool:
-        return self._cluster is not None
-
     def disconnect(self):
+        """Disconnect and reset the instrument."""
         assert self._cluster is not None
 
         for module in self._modules.values():
@@ -107,6 +115,7 @@ class Cluster(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
+        """Execute the given experiment."""
         results_ = {}
         log = Logger(configs)
 
