@@ -7,11 +7,13 @@ from pydantic import (
     AfterValidator,
     BeforeValidator,
     ConfigDict,
+    GetCoreSchemaHandler,
     computed_field,
     field_validator,
     model_serializer,
     model_validator,
 )
+from pydantic_core import core_schema
 
 from ....serialize import Model
 
@@ -701,6 +703,12 @@ def _format_comment(text: str, width: Optional[int] = None) -> str:
 
 
 class Comment(str):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: type[Any], handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
     def asm(self, width: Optional[int] = None) -> str:
         return _format_comment(self, width) + "\n"
 
