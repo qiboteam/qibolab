@@ -8,6 +8,7 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
+from qibolab._core.components.channels import AcquisitionChannel
 from qibolab._core.components.configs import Configs
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
@@ -21,6 +22,7 @@ from .identifiers import SequencerMap
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
+from .validate import _assert_no_probe
 
 __all__ = ["Cluster"]
 
@@ -47,6 +49,14 @@ class Cluster(Controller):
         return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
 
     @cached_property
+    def _probes(self) -> set[ChannelId]:
+        return {
+            ch.probe
+            for ch in self.channels.values()
+            if isinstance(ch, AcquisitionChannel) and ch.probe is not None
+        }
+
+    @cached_property
     def _channels_by_module(self) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
         addresses = {
             name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
@@ -55,7 +65,9 @@ class Cluster(Controller):
             k: [el[1] for el in g]
             for k, g in groupby(
                 sorted(
-                    (address.slot, (ch, address)) for ch, address in addresses.items()
+                    (address.slot, (ch, address))
+                    for ch, address in addresses.items()
+                    if ch not in self._probes
                 ),
                 key=lambda el: el[0],
             )
@@ -97,6 +109,7 @@ class Cluster(Controller):
         log = Logger(configs)
 
         for ps in sequences:
+            _assert_no_probe(ps, self._probes)
             sequences_ = compile(ps, sweepers, options, self.sampling_rate)
             log.sequences(sequences_)
             sequencers = self._configure(sequences_, configs, options.acquisition_type)
@@ -120,7 +133,7 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             assert len(module.sequencers) >= len(chs)
-            config.module(module, dict(chs), self.channels, configs)
+            config.module(module, {ch[0] for ch in chs}, self.channels, configs)
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
