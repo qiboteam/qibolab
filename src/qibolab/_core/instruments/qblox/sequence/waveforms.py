@@ -1,9 +1,10 @@
+from collections.abc import Iterable
 from typing import Annotated, Union
 
 from pydantic import AfterValidator
 
 from qibolab._core.pulses import Pulse, Readout
-from qibolab._core.sequence import PulseSequence
+from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.serialize import ArrayList, Model
 
 __all__ = []
@@ -30,7 +31,7 @@ Waveforms = dict[ComponentId, Waveform]
 
 
 def waveforms(
-    sequence: PulseSequence, sampling_rate: float
+    sequence: Iterable[PulseLike], sampling_rate: float
 ) -> dict[ComponentId, WaveformSpec]:
     def waveform(pulse: Pulse, component: str) -> WaveformSpec:
         return WaveformSpec(
@@ -48,7 +49,7 @@ def waveforms(
                 (pulse_uid(pulse_(event)), 0): waveform(pulse_(event), "i"),
                 (pulse_uid(pulse_(event)), 1): waveform(pulse_(event), "q"),
             }
-            for _, event in sequence
+            for event in sequence
             if isinstance(event, (Pulse, Readout))
         )
         for k, v in d.items()
