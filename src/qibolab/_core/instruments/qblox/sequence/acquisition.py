@@ -1,5 +1,7 @@
+from collections.abc import Iterable
+
 from qibolab._core import pulses
-from qibolab._core.sequence import PulseSequence
+from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.serialize import Model
 
 from .waveforms import Waveform
@@ -25,7 +27,7 @@ class AcquisitionSpec(Model):
 
 
 def acquisitions(
-    sequence: PulseSequence, num_bins: int
+    sequence: Iterable[PulseLike], num_bins: int
 ) -> dict[MeasureId, AcquisitionSpec]:
     return {
         str(acq.id): AcquisitionSpec(
@@ -33,6 +35,6 @@ def acquisitions(
             duration=int(acq.duration),
         )
         for i, acq in enumerate(
-            p for _, p in sequence if isinstance(p, pulses.Acquisition)
+            p for p in sequence if isinstance(p, pulses.Acquisition)
         )
     }
