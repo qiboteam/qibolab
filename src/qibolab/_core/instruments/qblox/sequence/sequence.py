@@ -88,5 +88,5 @@ def compile(
 ) -> dict[ChannelId, Q1Sequence]:
     return {
         ch: Q1Sequence.from_pulses(seq, sweepers, options, sampling_rate, ch)
-        for ch, seq in sequence.split_readouts.by_channel.items()
+        for ch, seq in sequence.by_channel.items()
     }
