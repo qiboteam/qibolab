@@ -96,11 +96,11 @@ def _los(
     """
     return {
         (iq, lo)
-        for iq, lo in {
+        for iq, lo in (
             (iq, cast(IqChannel, channels[iq]).lo)
             for iq in (_iqout(ch, channels[ch]) for ch in mod_channels)
             if iq is not None
-        }
+        )
         if lo is not None
     }
 
@@ -111,6 +111,7 @@ def module(
     channels: dict[ChannelId, Channel],
     configs: Configs,
 ):
+    """Configure module-wide settings."""
     # map sequencers to specific outputs (but first disable all sequencer connections)
     mod.disconnect_outputs()
 
@@ -134,6 +135,7 @@ def sequencer(
     configs: Configs,
     acquisition: AcquisitionType,
 ):
+    """Configure sequencer-wide settings."""
     # upload sequence
     # - ensure JSON compatibility of the sent dictionary
     seq.sequence(json.loads(sequence.model_dump_json()))
