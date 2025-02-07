@@ -11,7 +11,6 @@ from qibolab._core.pulses.pulse import (
     PulseId,
     PulseLike,
 )
-from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -200,7 +199,6 @@ def params_reshape(params: Params) -> IndexedParams:
 
     Moreover, it reorganize them by loop, to group the updates.
     """
-
     return {
         key: _channels_pulses(pars) for key, pars in groupby(params, key=lambda t: t[0])
     }
@@ -210,7 +208,7 @@ ParameterizedPulse = tuple[PulseLike, Optional[Param]]
 SweepSequence = list[ParameterizedPulse]
 
 
-def sweep_sequence(sequence: PulseSequence, params: list[Param]) -> SweepSequence:
+def sweep_sequence(sequence: Iterable[PulseLike], params: list[Param]) -> SweepSequence:
     """Wrap swept pulses with updates markers."""
     parbyid = {p.pulse: p for p in params}
-    return [(p, parbyid.get(p.id)) for _, p in sequence]
+    return [(p, parbyid.get(p.id)) for p in sequence]
