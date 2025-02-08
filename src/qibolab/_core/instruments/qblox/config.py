@@ -1,7 +1,7 @@
 import json
-import math
 from typing import Optional, cast
 
+import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
@@ -131,11 +131,6 @@ def module(
         getattr(mod, attr)(cast(OscillatorConfig, configs[lo]).frequency)
 
 
-def radians_to_degrees(angle):
-    """Convert iq-angle to degrees in (0, 360)."""
-    return (angle % (2 * math.pi)) * 180 / math.pi
-
-
 def sequencer(
     seq: Sequencer,
     address: PortAddress,
@@ -167,7 +162,7 @@ def sequencer(
         assert isinstance(config, AcquisitionConfig)
         seq.integration_length_acq(1000)
         # discrimination
-        seq.thresholded_acq_rotation(radians_to_degrees(config.iq_angle))
+        seq.thresholded_acq_rotation(np.degrees(config.iq_angle % (2 * np.pi)))
         seq.thresholded_acq_threshold(config.threshold)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
@@ -181,4 +176,5 @@ def sequencer(
         seq.nco_freq(freq - lo_freq)
 
     # connect to physical address
+    print(channel_id, address, seq)
     seq.connect_sequencer(address.local_address)
