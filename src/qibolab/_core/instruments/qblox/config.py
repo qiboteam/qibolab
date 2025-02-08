@@ -176,5 +176,4 @@ def sequencer(
         seq.nco_freq(freq - lo_freq)
 
     # connect to physical address
-    print(channel_id, address, seq)
     seq.connect_sequencer(address.local_address)
