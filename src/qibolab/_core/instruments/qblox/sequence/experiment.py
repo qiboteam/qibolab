@@ -55,7 +55,6 @@ def play(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
@@ -68,13 +67,7 @@ def play(
             else play_duration_swept(pulse, param)
         ]
     if isinstance(pulse, Delay):
-        return [
-            Wait(
-                duration=int(pulse.duration * sampling_rate)
-                if param is None
-                else param.reg
-            )
-        ]
+        return [Wait(duration=int(pulse.duration) if param is None else param.reg)]
     if isinstance(pulse, VirtualZ):
         return [
             SetPhDelta(
@@ -111,12 +104,11 @@ def event(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
 ) -> list[Instruction]:
     param = parpulse[1]
     return (
         (update_instructions(param.kind, param.reg) if param is not None else [])
-        + play(parpulse, waveforms, acquisitions, sampling_rate)
+        + play(parpulse, waveforms, acquisitions)
         + (reset_instructions(param.kind, param.reg) if param is not None else [])
     )
 
@@ -125,13 +117,10 @@ def experiment(
     sequence: SweepSequence,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
-    sampling_rate: float,
 ) -> list[Instruction]:
     """Representation of the actual experiment to be executed."""
     return [
         i_
-        for block in (
-            event(pulse, waveforms, acquisitions, sampling_rate) for pulse in sequence
-        )
+        for block in (event(pulse, waveforms, acquisitions) for pulse in sequence)
         for i_ in block
     ]
