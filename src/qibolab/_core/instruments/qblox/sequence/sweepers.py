@@ -55,8 +55,8 @@ It is created by the :func:`params` function.
 IndexedParams = dict[int, tuple[list[Param], list[Param]]]
 
 MAX_PARAM = {
-    Parameter.amplitude: 32767,
-    Parameter.offset: 32767,
+    Parameter.amplitude: 2**15 - 1,
+    Parameter.offset: 2**15 - 1,
     Parameter.relative_phase: 1e9,
     Parameter.frequency: 2e9,
 }
@@ -69,18 +69,18 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 """
 
 
-def convert(value: float, kind: Parameter) -> int:
+def _convert(value: float, kind: Parameter) -> float:
     """Convert sweeper value in assembly units."""
     if kind is Parameter.amplitude:
-        return int(value * MAX_PARAM[kind])
+        return value * MAX_PARAM[kind]
     if kind is Parameter.relative_phase:
-        return int((value / (2 * np.pi)) % 1.0 * MAX_PARAM[kind])
+        return (value / (2 * np.pi)) % 1.0 * MAX_PARAM[kind]
     if kind is Parameter.frequency:
-        return int(value / 5e8 * MAX_PARAM[kind])
+        return value / 500e6 * MAX_PARAM[kind]
     if kind is Parameter.offset:
-        return int(value * MAX_PARAM[kind])
+        return value * MAX_PARAM[kind]
     if kind is Parameter.duration:
-        return int(value)
+        return value
     raise ValueError(f"Unsupported sweeper: {kind.name}")
 
 
@@ -100,7 +100,7 @@ def convert_or_pulse_duration(
     return (
         duration
         if kind is Parameter.duration and isinstance(pulse, Pulse)
-        else convert(value, kind)
+        else int(_convert(value, kind))
     )
 
 
