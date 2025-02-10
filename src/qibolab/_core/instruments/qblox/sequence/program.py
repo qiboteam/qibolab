@@ -86,7 +86,6 @@ def program(
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
-    sampling_rate: float,
     channel: ChannelId,
 ) -> Program:
     """Generate sequencer program."""
@@ -103,7 +102,7 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v[1]]
     )
-    experiment_ = experiment(sweepseq, waveforms, acquisitions, sampling_rate)
+    experiment_ = experiment(sweepseq, waveforms, acquisitions)
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
 
     return transpile(
