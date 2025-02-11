@@ -59,7 +59,6 @@ class PortAddress(Model):
             Description adapted from
             https://docs.qblox.com/en/main/api_reference/cluster.html#qblox_instruments.Cluster.connect_sequencer
         """
-        direction = "in" if self.input else "out"
         for port in self.ports:
             if port is not None:
                 assert port > 0
@@ -68,7 +67,7 @@ class PortAddress(Model):
             if self.ports[1] is None
             else f"{self.ports[0] - 1}_{self.ports[1] - 1}"
         )
-        return f"{direction}{channels}"
+        return f"out{channels}"
 
 
 def _iqout(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
