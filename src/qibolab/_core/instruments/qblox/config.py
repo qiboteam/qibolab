@@ -172,7 +172,6 @@ def sequencer(
     if address.input:
         assert isinstance(config, AcquisitionConfig)
         length = _integration_length(sequence)
-        print(channel_id, length)
         if length is not None:
             seq.integration_length_acq(length)
         # discrimination
