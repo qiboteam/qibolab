@@ -39,6 +39,7 @@ def integration_lenghts(
             (mod_id, i): seq.integration_length_acq()
             for mod_id, mod in modules.items()
             for i, seq in enumerate(mod.sequencers)
+            if hasattr(seq, "integration_length_acq")
         },
         {
             acq: channels_to_sequencer[ch]
