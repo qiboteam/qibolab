@@ -130,6 +130,18 @@ def module(
         getattr(mod, attr)(cast(OscillatorConfig, configs[lo]).frequency)
 
 
+def _integration_length(sequence: Q1Sequence) -> Optional[int]:
+    """Find integration length based on sequence waveform lengths."""
+    lengths = {len(waveform.data) for waveform in sequence.waveforms.values()}
+    if len(lengths) == 0:
+        return None
+    if len(lengths) == 1:
+        return lengths.pop()
+    raise NotImplementedError(
+        "Cannot acquire different lengths using the same sequencer."
+    )
+
+
 def sequencer(
     seq: Sequencer,
     address: PortAddress,
@@ -159,7 +171,10 @@ def sequencer(
     # acquisition
     if address.input:
         assert isinstance(config, AcquisitionConfig)
-        seq.integration_length_acq(1000)
+        length = _integration_length(sequence)
+        print(channel_id, length)
+        if length is not None:
+            seq.integration_length_acq(length)
         # discrimination
         seq.thresholded_acq_rotation(np.degrees(config.iq_angle % (2 * np.pi)))
         seq.thresholded_acq_threshold(config.threshold)
