@@ -177,7 +177,7 @@ class Cluster(Controller):
 
         time.sleep(duration + 1)
 
-        return self.cluster
+        return {"cluster": self.cluster}
 
         acquisitions = {}
         for slot, seqs in sequencers.items():
