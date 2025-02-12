@@ -129,6 +129,7 @@ class Cluster(Controller):
             data = self._execute(
                 sequencers, sequences_, duration, options.acquisition_type
             )
+            return data
             log.data(data)
             lenghts = integration_lenghts(sequences_, sequencers, self._modules)
             results_ |= extract(data, lenghts, options.acquisition_type)
@@ -175,6 +176,8 @@ class Cluster(Controller):
             module.start_sequencer()
 
         time.sleep(duration + 1)
+
+        return self.cluster
 
         acquisitions = {}
         for slot, seqs in sequencers.items():
