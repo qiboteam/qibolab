@@ -129,7 +129,6 @@ class Cluster(Controller):
             data = self._execute(
                 sequencers, sequences_, duration, options.acquisition_type
             )
-            return data
             log.data(data)
             lenghts = integration_lenghts(sequences_, sequencers, self._modules)
             results_ |= extract(data, lenghts, options.acquisition_type)
@@ -177,15 +176,13 @@ class Cluster(Controller):
 
         time.sleep(duration + 1)
 
-        return {"cluster": self.cluster}
-
         acquisitions = {}
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 # wait all sequencers
-                status = self.cluster.get_sequencer_status(slot, seq, timeout=10)
-                if status.status is not qblox.SequencerStatuses.OKAY:
-                    raise RuntimeError(status)
+                # status = self.cluster.get_sequencer_status(slot, seq, timeout=10)
+                # if status.status is not qblox.SequencerStatuses.OKAY:
+                #     raise RuntimeError(status)
                 sequence = sequences.get(ch)
                 if sequence is None:
                     continue
@@ -193,7 +190,7 @@ class Cluster(Controller):
                 if len(seq_acqs) == 0:
                     # not an acquisition channel, or unused
                     continue
-                self.cluster.get_acquisition_status(slot, seq, timeout=10)
+                # self.cluster.get_acquisition_status(slot, seq, timeout=10)
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
                         self.cluster.store_scope_acquisition(slot, seq, name)
