@@ -13,17 +13,26 @@ def extractor():
     return ShaExtractor()
 
 
+class MockPort:
+    """Mock the serial port when QRNG device is not available for testing."""
+
+    def read(self, n: int) -> str:
+        data = []
+        for i in range(n):
+            if i % 4 == 3:
+                data.append(" ")
+            else:
+                data.append(str(np.random.randint(0, 10)))
+        return "".join(data).encode("utf-8")
+
+
 @pytest.fixture
-def qrng(mocker, extractor):
+def qrng(extractor):
     qrng = QRNG(address="/dev/ttyACM0", extractor=extractor)
     try:
         qrng.connect()
     except SerialException:
-
-        def read(n):
-            return list(np.random.randint(0, 2**RAW_BITS, size=(n,)))
-
-        mocker.patch.object(qrng, "read", side_effect=read)
+        qrng.port = MockPort()
     return qrng
 
 
