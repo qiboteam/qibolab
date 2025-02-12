@@ -36,7 +36,10 @@ def read(port: Serial, n: int = 1, nbytes: int = 4) -> List[int]:
 
 
 class QRNG(Instrument):
-    """Driver to sample numbers from a Quantum Random Number Generator (QRNG)."""
+    """Driver to sample numbers from a Quantum Random Number Generator (QRNG).
+
+    See :ref:`qrng` for example usage.
+    """
 
     address: str
     baudrate: int = 115200
@@ -56,6 +59,14 @@ class QRNG(Instrument):
             self.port = None
 
     def read(self, n: int) -> List[int]:
+        """Read raw samples from the QRNG device serial output.
+
+        In the entropy mode of the device, these typically follow a
+        normal distribution.
+
+        Args:
+            n: Number of samples to retrieve.
+        """
         return read(self.port, n, self.bytes_per_number)
 
     def random(self, size: Optional[Union[int, Sequence[int]]] = None) -> npt.NDArray:
