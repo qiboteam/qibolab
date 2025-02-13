@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from functools import cache
+from functools import cache, cached_property
 from typing import Any, Optional
 
 import numpy as np
@@ -106,6 +106,26 @@ class Sweeper(Model):
 
         return self
 
+    @cached_property
+    def irange(self) -> tuple[float, float, float]:
+        """Inferred range.
+
+        Always ensure a range, inferring it from :attr:`values` if :attr:`range` is
+        not set.
+        """
+        if self.range is not None:
+            return self.range
+        assert self.values is not None
+        return (self.values[0], self.values[-1], self.values[1] - self.values[0])
+
+    def __len__(self) -> int:
+        assert self.values is not None
+        return len(self.values)
+
 
 ParallelSweepers = list[Sweeper]
 """Sweepers that should be iterated in parallel."""
+
+
+def iteration_length(sweepers: ParallelSweepers) -> int:
+    return min(len(s) for s in sweepers)

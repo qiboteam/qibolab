@@ -4627,14 +4627,14 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 
 [[package]]
 name = "qblox-instruments"
-version = "0.12.0"
+version = "0.14.2"
 description = "Instrument drivers for Qblox devices."
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "docs"]
 markers = "python_version <= \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "qblox_instruments-0.12.0.tar.gz", hash = "sha256:79e76f8953bebf858ce2c21355d617ea55f52257ae5b2dc882af37222975bd7e"},
+    {file = "qblox_instruments-0.14.2.tar.gz", hash = "sha256:92a3a6c5530cbaf912a525147314c7de4fe23897d5824ad798fd02e7f179c03f"},
 ]
 
 [package.dependencies]
@@ -4645,7 +4645,7 @@ qcodes = ">=0.20.0,<0.41.0 || >0.41.0"
 spirack = "*"
 
 [package.extras]
-dev = ["anybadge", "black (==23.9.1)", "pylint (==2.17.5)", "pylint-exit", "pytest", "pytest-cov", "pytest-runner", "scipy", "twine"]
+dev = ["anybadge", "black (==24.3.0)", "flynt", "pylint (==2.17.5)", "pylint-exit", "pytest", "pytest-cov", "pytest-mock", "pytest-runner", "scipy", "twine (!=5.1.0)"]
 
 [[package]]
 name = "qcodes"
@@ -6410,4 +6410,4 @@ zh = ["laboneq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<3.13"
-content-hash = "5e002083d042b3202b69e67cda404f185beb3dbe3f58dc914182705e4becbf93"
+content-hash = "58541ac9cc99416ae66e95935bf413fdc55369a3adc0deaaea9abd186becd7e3"
