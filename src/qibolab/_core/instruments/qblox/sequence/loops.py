@@ -19,6 +19,7 @@ from ..q1asm.ast_ import (
     Reference,
     Register,
     ResetPh,
+    Sub,
     Wait,
 )
 from .asm import Registers
@@ -131,8 +132,12 @@ def _sweep_update(p: Param, channel: ChannelId) -> Block:
     """
     return (
         Line(
-            instruction=Add(a=p.reg, b=p.step, destination=p.reg),
-            comment=f"increment {p.description}",
+            instruction=(
+                Add(a=p.reg, b=p.step, destination=p.reg)
+                if p.step >= 0
+                else Sub(a=p.reg, b=-p.step, destination=p.reg)
+            ),
+            comment=f"shift {p.description}",
         ),
         *(
             update_instructions(p.kind, p.reg)
