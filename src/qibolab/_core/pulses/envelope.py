@@ -283,10 +283,11 @@ class Snz(BaseEnvelope):
         half_pulse_duration = (1 - self.t_idling) * samples / 2
         aspan = np.sum(np.arange(samples) < half_pulse_duration)
         idle = samples - 2 * (aspan + 1)
-
         pulse = np.ones(samples)
+        pulse[-aspan:] = -1
         # the aspan + 1 sample is B (and so the aspan + 1 + idle + 1), indexes are 0-based
-        pulse[aspan] = pulse[aspan + 1 + idle] = self.b_amplitude
+        pulse[aspan] = self.b_amplitude
+        pulse[aspan + 1 + idle] = -self.b_amplitude
         # set idle time to 0
         pulse[aspan + 1 : aspan + 1 + idle] = 0
         return pulse
