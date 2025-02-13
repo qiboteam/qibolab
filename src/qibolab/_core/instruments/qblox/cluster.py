@@ -148,16 +148,20 @@ class Cluster(Controller):
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
-                sequencers[slot][ch] = idx
+                seq = sequences.get(ch, Q1Sequence.empty())
+                # configure all sequencers
                 config.sequencer(
                     sequencer,
                     address,
-                    sequences.get(ch, Q1Sequence.empty()),
+                    seq,
                     ch,
                     self.channels,
                     configs,
                     acquisition,
                 )
+                # only collect active sequencers
+                if not seq.is_empty:
+                    sequencers[slot][ch] = idx
 
         return sequencers
 
