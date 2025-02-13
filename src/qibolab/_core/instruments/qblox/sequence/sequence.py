@@ -111,6 +111,10 @@ class Q1Sequence(Model):
         )
 
     @property
+    def is_empty(self) -> bool:
+        return len(self.program.elements) == 0
+
+    @property
     def integration_lengths(self) -> dict[MeasureId, Optional[int]]:
         """Determine the integration lengths fixed by weights.
 
