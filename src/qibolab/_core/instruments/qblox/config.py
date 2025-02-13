@@ -152,13 +152,6 @@ def sequencer(
     acquisition: AcquisitionType,
 ):
     """Configure sequencer-wide settings."""
-    # upload sequence
-    # - ensure JSON compatibility of the sent dictionary
-    seq.sequence(json.loads(sequence.model_dump_json()))
-
-    # configure the sequencers to synchronize
-    seq.sync_en(True)
-
     config = configs[channel_id]
 
     # set parameters
@@ -190,3 +183,14 @@ def sequencer(
 
     # connect to physical address
     seq.connect_sequencer(address.local_address)
+
+    # avoid sequence operations for inactive sequencers, including synchronization
+    if sequence.is_empty:
+        return
+
+    # upload sequence
+    # - ensure JSON compatibility of the sent dictionary
+    seq.sequence(json.loads(sequence.model_dump_json()))
+
+    # configure the sequencers to synchronize
+    seq.sync_en(True)
