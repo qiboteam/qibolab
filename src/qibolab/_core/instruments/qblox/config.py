@@ -1,6 +1,7 @@
 import json
 from typing import Optional, cast
 
+import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
@@ -58,13 +59,15 @@ class PortAddress(Model):
             Description adapted from
             https://docs.qblox.com/en/main/api_reference/cluster.html#qblox_instruments.Cluster.connect_sequencer
         """
-        direction = "in" if self.input else "out"
+        for port in self.ports:
+            if port is not None:
+                assert port > 0
         channels = (
-            str(self.ports[0])
+            str(self.ports[0] - 1)
             if self.ports[1] is None
-            else f"{self.ports[0]}_{self.ports[1]}"
+            else f"{self.ports[0] - 1}_{self.ports[1] - 1}"
         )
-        return f"{direction}{channels}"
+        return f"out{channels}"
 
 
 def _iqout(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
@@ -122,8 +125,21 @@ def module(
 
     # set lo frequencies
     for iq, lo in _los(mod_channels, channels):
-        n = PortAddress.from_path(channels[iq].path).ports[0]
-        getattr(mod, f"out{n}_lo_freq")(cast(OscillatorConfig, configs[lo]).frequency)
+        n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+        attr = f"out{n}_in{n}_lo_freq" if mod.is_qrm_type else f"out{n}_lo_freq"
+        getattr(mod, attr)(cast(OscillatorConfig, configs[lo]).frequency)
+
+
+def _integration_length(sequence: Q1Sequence) -> Optional[int]:
+    """Find integration length based on sequence waveform lengths."""
+    lengths = {len(waveform.data) for waveform in sequence.waveforms.values()}
+    if len(lengths) == 0:
+        return None
+    if len(lengths) == 1:
+        return lengths.pop()
+    raise NotImplementedError(
+        "Cannot acquire different lengths using the same sequencer."
+    )
 
 
 def sequencer(
@@ -136,13 +152,6 @@ def sequencer(
     acquisition: AcquisitionType,
 ):
     """Configure sequencer-wide settings."""
-    # upload sequence
-    # - ensure JSON compatibility of the sent dictionary
-    seq.sequence(json.loads(sequence.model_dump_json()))
-
-    # configure the sequencers to synchronize
-    seq.sync_en(True)
-
     config = configs[channel_id]
 
     # set parameters
@@ -155,9 +164,11 @@ def sequencer(
     # acquisition
     if address.input:
         assert isinstance(config, AcquisitionConfig)
-        seq.integration_length_acq(1000)
+        length = _integration_length(sequence)
+        if length is not None:
+            seq.integration_length_acq(length)
         # discrimination
-        seq.thresholded_acq_rotation(config.iq_angle)
+        seq.thresholded_acq_rotation(np.degrees(config.iq_angle % (2 * np.pi)))
         seq.thresholded_acq_threshold(config.threshold)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
@@ -172,3 +183,14 @@ def sequencer(
 
     # connect to physical address
     seq.connect_sequencer(address.local_address)
+
+    # avoid sequence operations for inactive sequencers, including synchronization
+    if sequence.is_empty:
+        return
+
+    # upload sequence
+    # - ensure JSON compatibility of the sent dictionary
+    seq.sequence(json.loads(sequence.model_dump_json()))
+
+    # configure the sequencers to synchronize
+    seq.sync_en(True)
