@@ -184,7 +184,7 @@ class Cluster(Controller):
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 # wait all sequencers
-                status = self.cluster.get_sequencer_status(slot, seq, timeout=10)
+                status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
                 if status.status is not qblox.SequencerStatuses.OKAY:
                     raise RuntimeError(status)
                 sequence = sequences.get(ch)
@@ -194,7 +194,7 @@ class Cluster(Controller):
                 if len(seq_acqs) == 0:
                     # not an acquisition channel, or unused
                     continue
-                self.cluster.get_acquisition_status(slot, seq, timeout=10)
+                self.cluster.get_acquisition_status(slot, seq, timeout=1)
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
                         self.cluster.store_scope_acquisition(slot, seq, name)
