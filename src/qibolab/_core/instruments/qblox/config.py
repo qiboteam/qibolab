@@ -1,5 +1,5 @@
 import json
-from typing import Optional, cast
+from typing import Literal, Optional, cast
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
@@ -42,6 +42,25 @@ class PortAddress(Model):
         )
 
     @property
+    def direction(self) -> Literal["io", "out"]:
+        """Signal flow direction.
+
+        This is used for :meth:`local_address`, check its description for the in-depth
+        meaning.
+
+        .. note::
+
+            While three directions are actually possible, there is no usage of pure
+            acquisition channels in this driver (corresponding to the ``"in""``
+            direction), and only support :class:`qibolab.Readout` instructions.
+
+            For this reason, an input channel is always resolved to ``"io"``, implying
+            that a same sequencer will be used to control both input (acquisitions) and
+            output (probe pulses).
+        """
+        return "io" if self.input else "out"
+
+    @property
     def local_address(self):
         """Physical address within the module.
 
@@ -67,7 +86,7 @@ class PortAddress(Model):
             if self.ports[1] is None
             else f"{self.ports[0] - 1}_{self.ports[1] - 1}"
         )
-        return f"out{channels}"
+        return f"{self.direction}{channels}"
 
 
 def _iqout(id_: ChannelId, channel: Channel) -> Optional[ChannelId]:
