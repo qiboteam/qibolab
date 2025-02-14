@@ -138,6 +138,7 @@ def module(
     mod.disconnect_outputs()
 
     if mod.is_qrm_type:
+        mod.disconnect_inputs()
         # we do not currently support acquisition on external digital trigger
         mod.scope_acq_trigger_mode_path0("sequencer")
         mod.scope_acq_trigger_mode_path1("sequencer")
