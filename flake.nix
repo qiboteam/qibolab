@@ -58,6 +58,7 @@
               languages.python = {
                 enable = true;
                 libraries = with pkgs; [zlib];
+                version = "3.12";
                 poetry = {
                   enable = true;
                   install = {
