@@ -7,7 +7,7 @@ from pydantic import Field
 from qibolab._core.sequence import PulseSequence
 
 from .serialize import Model
-from .sweeper import ParallelSweepers
+from .sweeper import ParallelSweepers, iteration_length
 
 __all__ = ["AcquisitionType", "AveragingMode"]
 
@@ -124,5 +124,5 @@ class ExecutionParameters(Model):
             (duration + len(sequences) * relaxation)
             * nshots
             * NS_TO_SEC
-            * prod(len(s[0]) for s in sweepers)
+            * prod(iteration_length(s) for s in sweepers)
         )
