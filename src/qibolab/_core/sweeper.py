@@ -133,4 +133,4 @@ ParallelSweepers = list[Sweeper]
 
 
 def iteration_length(sweepers: ParallelSweepers) -> int:
-    return min(len(s) for s in sweepers)
+    return min((len(s) for s in sweepers), default=0)
