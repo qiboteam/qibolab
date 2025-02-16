@@ -299,7 +299,7 @@ class QutipSimulator:
         for channel_name in channel_names:
             fp_list.append(
                 function_from_array(
-                    channel_waveforms["channels"][channel_name], full_time_list
+                    channel_waveforms["channels"][channel_name]['waveform'], full_time_list
                 )
             )
 

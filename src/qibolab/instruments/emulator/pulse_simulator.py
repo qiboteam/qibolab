@@ -458,6 +458,7 @@ def ps_to_waveform_dict(
     sampling_rate: float = 1.0,
     sim_sampling_boost: int = 1,
     runcard_duration_in_dt_units: bool = False,
+    exception_channels: dict = None,
 ) -> dict[str, Union[np.ndarray, dict[str, np.ndarray]]]:
     """Converts pulse sequence to dictionary of time and channel separated
     waveforms.
@@ -474,7 +475,10 @@ def ps_to_waveform_dict(
     """
     times_list = []
     signals_list = []
+    pulse_frequency_list = []
     emulator_channel_name_list = []
+    emulator_exception_channels = []
+
     sequence_couplers = sequence.cf_pulses
 
     def channel_translator(platform_channel_name, frequency):
@@ -502,10 +506,11 @@ def ps_to_waveform_dict(
             for channel in qubit_pulses.channels:
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    t, pulse_signal = get_pulse_signal(
-                        pulse, sampling_rate, sim_sampling_boost
+                    t, pulse_signal, pulse_frequency = get_pulse_signal(
+                        pulse, sampling_rate, sim_sampling_boost, exception_channels
                     )
                     times_list.append(t)
+                    signals_list.append(pulse_signal)
                     """If pulse.type.value == "qd":
 
                     platform_channel_name = f"drive-{qubit}" elif
@@ -514,12 +519,11 @@ def ps_to_waveform_dict(
                     platform_channel_name = f"flux-{qubit}"
                     """
 
-                    signals_list.append(pulse_signal)
-
-                    emulator_channel_name_list.append(
-                        # channel_translator(platform_channel_name, pulse._if)
-                        channel_translator(channel, pulse._if)
-                    )
+                    pulse_frequency_list.append(pulse_frequency)
+                    emulator_channel_name = channel_translator(channel, pulse._if)
+                    emulator_channel_name_list.append(emulator_channel_name)
+                    if channel in exception_channels:
+                        emulator_exception_channels.append(emulator_channel_name)
 
         for coupler in sequence_couplers.qubits:
             # only has coupler flux pulses; couplers only has flux pulses in qibolab 0.1
@@ -528,8 +532,8 @@ def ps_to_waveform_dict(
             for channel in coupler_pulses.channels:
                 channel_pulses = coupler_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    t, pulse_signal = get_pulse_signal(
-                        pulse, sampling_rate, sim_sampling_boost
+                    t, pulse_signal, pulse_frequency = get_pulse_signal(
+                        pulse, sampling_rate, sim_sampling_boost, exception_channels
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
@@ -541,10 +545,11 @@ def ps_to_waveform_dict(
                     = f"drive-{coupler}"
                     """
 
-                    emulator_channel_name_list.append(
-                        # channel_translator(platform_channel_name, pulse._if)
-                        channel_translator(channel_name, pulse._if)
-                    )
+                    pulse_frequency_list.append(pulse_frequency)
+                    emulator_channel_name = channel_translator(channel, pulse._if)
+                    emulator_channel_name_list.append(emulator_channel_name)
+                    if channel in exception_channels:
+                        emulator_exception_channels.append(emulator_channel_name)
 
         tmin, tmax = [], []
         for times in times_list:
@@ -563,8 +568,8 @@ def ps_to_waveform_dict(
             for channel in qubit_pulses.channels:
                 channel_pulses = qubit_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    t, pulse_signal = get_pulse_signal_ns(
-                        pulse, sampling_rate, sim_sampling_boost
+                    t, pulse_signal, pulse_frequency = get_pulse_signal_ns(
+                        pulse, sampling_rate, sim_sampling_boost, exception_channels
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
@@ -576,10 +581,11 @@ def ps_to_waveform_dict(
                     platform_channel_name = f"flux-{qubit}"
                     """
 
-                    emulator_channel_name_list.append(
-                        # channel_translator(platform_channel_name, pulse._if)
-                        channel_translator(channel, pulse._if)
-                    )
+                    pulse_frequency_list.append(pulse_frequency)
+                    emulator_channel_name = channel_translator(channel, pulse._if)
+                    emulator_channel_name_list.append(emulator_channel_name)
+                    if channel in exception_channels:
+                        emulator_exception_channels.append(emulator_channel_name)
 
         for coupler in sequence_couplers.qubits:
             # only has coupler flux pulses; couplers only has flux pulses in qibolab 0.1
@@ -588,8 +594,8 @@ def ps_to_waveform_dict(
             for channel in coupler_pulses.channels:
                 channel_pulses = coupler_pulses.get_channel_pulses(channel)
                 for i, pulse in enumerate(channel_pulses):
-                    t, pulse_signal = get_pulse_signal_ns(
-                        pulse, sampling_rate, sim_sampling_boost
+                    t, pulse_signal, pulse_frequency = get_pulse_signal_ns(
+                        pulse, sampling_rate, sim_sampling_boost, exception_channels
                     )
                     times_list.append(t)
                     signals_list.append(pulse_signal)
@@ -601,10 +607,11 @@ def ps_to_waveform_dict(
                     = f"drive-c{coupler}"
                     """
 
-                    emulator_channel_name_list.append(
-                        # channel_translator(platform_channel_name, pulse._if)
-                        channel_translator(channel, pulse._if)
-                    )
+                    pulse_frequency_list.append(pulse_frequency)
+                    emulator_channel_name = channel_translator(channel, pulse._if)
+                    emulator_channel_name_list.append(emulator_channel_name)
+                    if channel in exception_channels:
+                        emulator_exception_channels.append(emulator_channel_name)
 
         tmin, tmax = [], []
         for times in times_list:
@@ -619,8 +626,12 @@ def ps_to_waveform_dict(
     channel_waveforms = {"time": full_time_list, "channels": {}}
 
     unique_channel_names = np.unique(emulator_channel_name_list)
+    emulator_exception_channels = np.unique(emulator_exception_channels)
+    
     for channel_name in unique_channel_names:
         waveform = np.zeros(len(full_time_list))
+        if channel_name in emulator_exception_channels:
+            channel_frequency_list = np.zeros(len(full_time_list))
 
         for i, pulse_signal in enumerate(signals_list):
             if emulator_channel_name_list[i] == channel_name:
@@ -629,8 +640,19 @@ def ps_to_waveform_dict(
                         np.round((t - tmin) * sampling_rate * sim_sampling_boost)
                     )
                     waveform[full_t_ind] += pulse_signal[t_ind]
+                    try:
+                        channel_frequency_list[full_t_ind] = pulse_frequency_list[i]
+                    except:
+                        pass
 
-        channel_waveforms["channels"].update({channel_name: waveform})
+        #channel_waveforms["channels"].update({channel_name: waveform})
+        channel_waveforms["channels"].update({channel_name: {
+            'waveform': waveform,
+        }})
+        if channel_name in emulator_exception_channels:
+            channel_waveforms["channels"][channel_name].update({
+                'frequency': channel_frequency_list,
+            })
 
     return channel_waveforms
 
@@ -639,6 +661,7 @@ def get_pulse_signal(
     pulse: Union[ReadoutPulse, DrivePulse, FluxPulse],
     sampling_rate: float = 1.0,
     sim_sampling_boost: int = 1,
+    exception_channels: dict = None,
 ) -> tuple:
     """Converts pulse to a list of times and a list of corresponding pulse
     signal values assuming pulse duration in runcard is in units of
@@ -656,10 +679,15 @@ def get_pulse_signal(
     actual_pulse_frequency = (
         pulse.frequency
     )  # store actual pulse frequency for channel_translator
-    # rescale frequency to be compatible with sampling_rate = 1
-    pulse.frequency = pulse.frequency / sampling_rate
-    # need to first set pulse._if in GHz to use modulated_waveform_i method
-    pulse._if = pulse.frequency / GHZ
+
+    if pulse.channel in exception_channels.keys():
+        if exception_channels[pulse.channel] == 'fsim_effective_coupling':
+            pulse.frequency = pulse._if = 0
+    else:
+        # rescale frequency to be compatible with sampling_rate = 1
+        pulse.frequency = pulse.frequency / sampling_rate
+        # need to first set pulse._if in GHz to use modulated_waveform_i method
+        pulse._if = pulse.frequency / GHZ
 
     i_env = pulse.envelope_waveform_i(sim_sampling_boost).data
     q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
@@ -676,13 +704,14 @@ def get_pulse_signal(
     pulse.frequency = actual_pulse_frequency
     pulse._if = pulse.frequency / GHZ
 
-    return t, pulse_signal
+    return t, pulse_signal, actual_pulse_frequency
 
 
 def get_pulse_signal_ns(
     pulse: Union[ReadoutPulse, DrivePulse],
     sampling_rate: float = 1.0,
     sim_sampling_boost: int = 1,
+    exception_channels: dict = None,
 ) -> tuple:
     """Converts pulse to a list of times and a list of corresponding pulse
     signal values assuming pulse duration in runcard is in ns.
@@ -695,8 +724,13 @@ def get_pulse_signal_ns(
     Returns:
         tuple: list of times and corresponding pulse signal values.
     """
-    # need to first set pulse._if in GHz to use modulated_waveform_i method
-    pulse._if = pulse.frequency / GHZ
+
+    if pulse.channel in exception_channels.keys():
+        if exception_channels[pulse.channel] == 'fsim_effective_coupling':
+            pulse.frequency = pulse._if = 0
+    else:
+        # need to first set pulse._if in GHz to use modulated_waveform_i method
+        pulse._if = pulse.frequency / GHZ
 
     sim_sampling_rate = sampling_rate * sim_sampling_boost
 
@@ -711,8 +745,8 @@ def get_pulse_signal_ns(
     sinalpha = np.sin(2 * np.pi * pulse._if * t + pulse.relative_phase)
     pulse_signal = i_env * sinalpha + q_env * cosalpha
     # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
-
-    return t, pulse_signal
+    
+    return t, pulse_signal, actual_pulse_frequency
 
 
 def apply_readout_noise(
