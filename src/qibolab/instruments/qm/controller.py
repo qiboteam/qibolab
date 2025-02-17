@@ -124,6 +124,15 @@ class QMController(Controller):
     """Dictionary containing the :class:`qibolab.instruments.qm.devices.Octave`
     instruments being used."""
 
+    cluster_name: Optional[str] = None
+    """Name of the Quantum Machines clusters to use.
+
+    Needs to be specified only when more than one clusters are connected
+    to the same router. See
+    https://docs.quantum-machines.co/1.1.5/qm-qua-sdk/docs/Hardware/opx%2Binstallation/?h=cluster_name#network-overview-and-configuration
+    for more details.
+    """
+
     time_of_flight: int = 0
     """Time of flight used for hardware signal integration."""
     smearing: int = 0
@@ -249,7 +258,11 @@ class QMController(Controller):
         if self.cloud:
             credentials = create_credentials()
         self.manager = QuantumMachinesManager(
-            host=host, port=int(port), octave=octave, credentials=credentials
+            host=host,
+            port=int(port),
+            octave=octave,
+            credentials=credentials,
+            cluster_name=self.cluster_name,
         )
         self.is_connected = True
 
