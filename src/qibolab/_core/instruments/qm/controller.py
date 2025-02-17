@@ -149,6 +149,14 @@ class QmController(Controller):
     where ``fems`` are not given.
     """
 
+    cluster_name: Optional[str] = None
+    """Name of the Quantum Machines clusters to use.
+
+    Needs to be specified only when more than one clusters are connected to
+    the same router. See
+    https://docs.quantum-machines.co/1.1.5/qm-qua-sdk/docs/Hardware/opx%2Binstallation/?h=cluster_name#network-overview-and-configuration
+    for more details.
+    """
     bounds: str = "qm/bounds"
     """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[PathLike] = None
@@ -228,7 +236,11 @@ class QmController(Controller):
         if self.cloud:
             credentials = create_credentials()
         self.manager = QuantumMachinesManager(
-            host=host, port=int(port), octave=octave, credentials=credentials
+            host=host,
+            port=int(port),
+            octave=octave,
+            credentials=credentials,
+            cluster_name=self.cluster_name,
         )
 
     def disconnect(self):
