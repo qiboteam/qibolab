@@ -85,7 +85,17 @@ class Q1Sequence(Model):
         sampling_rate: float,
         channel: ChannelId,
     ):
-        waveforms_ = waveforms(sequence, sampling_rate)
+        waveforms_ = waveforms(
+            sequence,
+            sampling_rate,
+            amplitude_swept={
+                p.id
+                for parsweep in sweepers
+                for sweep in parsweep
+                if sweep.parameter is Parameter.amplitude and sweep.pulses is not None
+                for p in sweep.pulses
+            },
+        )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
         acquisitions_ = acquisitions(
             sequence, np.prod(options.bins(sweepers), dtype=int)
