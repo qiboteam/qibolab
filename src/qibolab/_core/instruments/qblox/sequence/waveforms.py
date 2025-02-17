@@ -3,8 +3,7 @@ from typing import Annotated, Union
 
 from pydantic import AfterValidator
 
-from qibolab._core.pulses import Pulse, Readout
-from qibolab._core.pulses.pulse import PulseLike
+from qibolab._core.pulses import Pulse, PulseId, PulseLike, Readout
 from qibolab._core.serialize import ArrayList, Model
 
 __all__ = []
@@ -31,11 +30,15 @@ Waveforms = dict[ComponentId, Waveform]
 
 
 def waveforms(
-    sequence: Iterable[PulseLike], sampling_rate: float
+    sequence: Iterable[PulseLike], sampling_rate: float, amplitude_swept: set[PulseId]
 ) -> dict[ComponentId, WaveformSpec]:
     def waveform(pulse: Pulse, component: str) -> WaveformSpec:
+        update = {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
         return WaveformSpec(
-            waveform=Waveform(data=getattr(pulse, component)(sampling_rate), index=0),
+            waveform=Waveform(
+                data=getattr(pulse.model_copy(update=update), component)(sampling_rate),
+                index=0,
+            ),
             duration=int(pulse.duration),
         )
 
