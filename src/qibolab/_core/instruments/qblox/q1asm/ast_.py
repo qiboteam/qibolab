@@ -63,8 +63,16 @@ class Reference(Model):
         return f"@{self.label}"
 
 
+def _value_bounds(n: int):
+    if abs(n) > 2**31:
+        raise ValueError("Register value out of bounds")
+    return n
+
+
 MultiBaseInt = Annotated[
-    int, BeforeValidator(lambda n: int(n, 0) if isinstance(n, str) else n)
+    int,
+    BeforeValidator(lambda n: int(n, 0) if isinstance(n, str) else n),
+    BeforeValidator(lambda n: _value_bounds(n) if isinstance(n, int) else n),
 ]
 Immediate = Union[MultiBaseInt, Reference]
 Value = Union[Register, Immediate]
