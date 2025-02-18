@@ -2,14 +2,14 @@ import time
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
-from typing import Optional
+from typing import Optional, cast
 
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
-from qibolab._core.components.channels import AcquisitionChannel
-from qibolab._core.components.configs import Configs
+from qibolab._core.components.channels import AcquisitionChannel, IqChannel
+from qibolab._core.components.configs import Configs, OscillatorConfig
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
@@ -79,6 +79,25 @@ class Cluster(Controller):
             )
         }
 
+    @cached_property
+    def _los(self) -> dict[ChannelId, str]:
+        """Extract channel to LO mapping.
+
+        The result contains the associated channel, since required to
+        address the LO through the API. While the LO identifier is used
+        to retrieve the configuration.
+        """
+        channels = self.channels
+        return {
+            iq: lo
+            for iq, lo in (
+                (iq, cast(IqChannel, channels[iq]).lo)
+                for iq in (channels[ch].iqout(ch) for ch in self.channels)
+                if iq is not None
+            )
+            if lo is not None
+        }
+
     @property
     def sampling_rate(self) -> int:
         """Provide instrument's sampling rate."""
@@ -144,7 +163,16 @@ class Cluster(Controller):
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             assert len(module.sequencers) >= len(chs)
-            config.module(module, {ch[0] for ch in chs}, self.channels, configs)
+            mod_channels = {ch[0] for ch in chs}
+            config.module(
+                module,
+                self.channels,
+                {
+                    id_: cast(OscillatorConfig, configs[lo])
+                    for id_, lo in self._los.items()
+                    if id_ in mod_channels
+                },
+            )
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
