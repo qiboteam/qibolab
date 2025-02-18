@@ -38,6 +38,23 @@ class Channel(Model):
     def port(self) -> int:
         return int(self.path)
 
+    def iqout(self, id_: ChannelId) -> Optional[ChannelId]:
+        """Extract associated IQ output channel.
+
+        This is the identity for each IQ output channel identifier, while it retrieves the
+        associated probe channel for acquisition ones, and :obj:`None` for any other one
+        (essentially, non-RF channels).
+
+        The argument is the identifier of the present channel, since it is not stored within
+        the objec itself, as it is only relevant to address it in a collection (and so,
+        out of the scope of the object itself).
+        """
+        return (
+            id_
+            if isinstance(self, IqChannel)
+            else (self.probe if isinstance(self, AcquisitionChannel) else None)
+        )
+
 
 class DcChannel(Channel):
     """Channel that can be used to send DC pulses."""
