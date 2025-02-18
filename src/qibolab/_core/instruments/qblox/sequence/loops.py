@@ -3,6 +3,7 @@ from typing import Optional
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.sequence.asm import label
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, iteration_length
 
@@ -124,20 +125,26 @@ https://github.com/qiboteam/qibolab/discussions/1119
 """
 
 
-def _sweep_update(p: Param, channel: ChannelId) -> Block:
+def _sweep_update(p: Param, channel: ChannelId, pulses: set[PulseId]) -> Block:
     """Sweeper update for a single parameter.
 
     - increment the parameter register
     - set new parameter value (if channel-wise)
     """
     return (
-        Line(
-            instruction=(
-                Add(a=p.reg, b=p.step, destination=p.reg)
-                if p.step >= 0
-                else Sub(a=p.reg, b=-p.step, destination=p.reg)
-            ),
-            comment=f"shift {p.description}",
+        *(
+            (
+                Line(
+                    instruction=(
+                        Add(a=p.reg, b=p.step, destination=p.reg)
+                        if p.step >= 0
+                        else Sub(a=p.reg, b=-p.step, destination=p.reg)
+                    ),
+                    comment=f"shift {p.description}",
+                ),
+            )
+            if p.channel == channel or p.pulse in pulses
+            else ()
         ),
         *(
             update_instructions(p.kind, p.reg)
@@ -148,7 +155,7 @@ def _sweep_update(p: Param, channel: ChannelId) -> Block:
 
 
 def _sweep_updates(
-    lp: LoopSpec, params: IndexedParams, channel: ChannelId
+    lp: LoopSpec, params: IndexedParams, channel: ChannelId, pulses: set[PulseId]
 ) -> BlockIter:
     """Parallel sweeper updates.
 
@@ -158,7 +165,8 @@ def _sweep_updates(
         (
             line
             for block in (
-                _sweep_update(p, channel) for p in (params[lp.id][0] + params[lp.id][1])
+                _sweep_update(p, channel, pulses)
+                for p in (params[lp.id][0] + params[lp.id][1])
             )
             for line in block
         )
@@ -168,7 +176,11 @@ def _sweep_updates(
 
 
 def _sweep_iteration(
-    lp: LoopSpec, params: IndexedParams, shots: bool, channel: ChannelId
+    lp: LoopSpec,
+    params: IndexedParams,
+    shots: bool,
+    channel: ChannelId,
+    pulses: set[PulseId],
 ) -> BlockList:
     """Sweep loop.
 
@@ -177,7 +189,7 @@ def _sweep_iteration(
     - reset iteration counter, after a whole cycle is completed
     """
     return [
-        *_sweep_updates(lp, params, channel),
+        *_sweep_updates(lp, params, channel, pulses),
         Line(
             instruction=Loop(a=lp.reg, address=Reference(label=START)),
             comment=f"loop over {lp.description}",
@@ -192,6 +204,7 @@ def _loop_machinery(
     params: IndexedParams,
     singleshot: bool,
     channel: ChannelId,
+    pulses: set[PulseId],
 ) -> BlockList:
     """Looping block.
 
@@ -208,7 +221,7 @@ def _loop_machinery(
         for lp in loops
         for i_ in (
             (_SHOTS_BIN_RESET if shots(lp) else [])
-            + _sweep_iteration(lp, params, shots(lp), channel)
+            + _sweep_iteration(lp, params, shots(lp), channel, pulses)
         )
     ][:-1]
 
@@ -220,9 +233,10 @@ def loop(
     relaxation_time: int,
     singleshot: bool,
     channel: ChannelId,
+    pulses: set[PulseId],
 ) -> Block:
     end = _experiment_end(relaxation_time)
-    machinery = _loop_machinery(loops, params, singleshot, channel)
+    machinery = _loop_machinery(loops, params, singleshot, channel, pulses)
     main = experiment + end + machinery
 
     return [label(main[0], START)] + main[1:]
