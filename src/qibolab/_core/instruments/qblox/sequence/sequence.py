@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 import numpy as np
 from pydantic import PlainSerializer, PlainValidator
 
+from qibolab._core.components.configs import OscillatorConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, PulseLike
@@ -41,29 +42,22 @@ def _apply_sampling_rate(
     ]
     sweepers_ = [
         [
-            s.model_copy(
-                update=(
-                    {
-                        "range": tuple(t * sampling_rate for t in s.range),
-                    }
-                    if s.range is not None
-                    else {}
-                )
-                | (
-                    {
-                        "values": sampling_rate * s.values,
-                    }
-                    if s.values is not None
-                    else {}
-                )
-            )
-            if s.parameter is Parameter.duration
-            else s
+            (s * sampling_rate) if s.parameter is Parameter.duration else s
             for s in parsweep
         ]
         for parsweep in sweepers
     ]
     return (sequence_, sweepers_)
+
+
+def _subtract_lo(sweepers: list[ParallelSweepers], lo: float) -> list[ParallelSweepers]:
+    return [
+        [
+            (sweep - lo) if sweep.parameter is Parameter.frequency else sweep
+            for sweep in parsweep
+        ]
+        for parsweep in sweepers
+    ]
 
 
 class Q1Sequence(Model):
@@ -84,6 +78,7 @@ class Q1Sequence(Model):
         options: ExecutionParameters,
         sampling_rate: float,
         channel: ChannelId,
+        lo: Optional[float],
     ):
         waveforms_ = waveforms(
             sequence,
@@ -97,6 +92,7 @@ class Q1Sequence(Model):
             },
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
+        sweepers = _subtract_lo(sweepers, lo) if lo is not None else sweepers
         acquisitions_ = acquisitions(
             sequence, np.prod(options.bins(sweepers), dtype=int)
         )
@@ -138,13 +134,20 @@ class Q1Sequence(Model):
         return {acq: _weight_len(self.weights.get(acq)) for acq in self.acquisitions}
 
 
+def _lo_frequency(lo: Optional[OscillatorConfig]) -> Optional[float]:
+    return lo.frequency if lo is not None else None
+
+
 def compile(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
+    los: dict[ChannelId, OscillatorConfig],
 ) -> dict[ChannelId, Q1Sequence]:
     return {
-        ch: Q1Sequence.from_pulses(seq, sweepers, options, sampling_rate, ch)
+        ch: Q1Sequence.from_pulses(
+            seq, sweepers, options, sampling_rate, ch, _lo_frequency(los.get(ch))
+        )
         for ch, seq in sequence.by_channel.items()
     }
