@@ -124,8 +124,44 @@ class Sweeper(Model):
         return (self.values[0], self.values[-1], self.values[1] - self.values[0])
 
     def __len__(self) -> int:
-        assert self.values is not None
-        return len(self.values)
+        """Compute number of iterations."""
+        if self.values is not None:
+            return len(self.values)
+        assert self.range is not None
+        return int((self.range[1] - self.range[0]) // self.range[2] + 1)
+
+    def __add__(self, value: float) -> "Sweeper":
+        """Add value to sweeper ones."""
+        return self.model_copy(
+            update=(
+                {"range": (self.range[0] + value, self.range[1] + value, self.range[2])}
+                if self.range is not None
+                else {}
+            )
+            | ({"values": self.values + value} if self.values is not None else {})
+        )
+
+    def __sub__(self, value: float) -> "Sweeper":
+        """Subtract value from sweeper ones."""
+        return self + (-value)
+
+    def __mul__(self, value: float) -> "Sweeper":
+        """Multiply value to sweeper ones.
+
+        TODO: deduplicate this and :meth:`__add__`
+        """
+        return self.model_copy(
+            update=(
+                {"range": (self.range[0] * value, self.range[1] * value, self.range[2])}
+                if self.range is not None
+                else {}
+            )
+            | ({"values": self.values * value} if self.values is not None else {})
+        )
+
+    def __truediv__(self, value: float) -> "Sweeper":
+        """Divide by value from sweeper ones."""
+        return self * (1 / value)
 
 
 ParallelSweepers = list[Sweeper]
