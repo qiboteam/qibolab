@@ -154,7 +154,7 @@ class QmController(Controller):
 
     Needs to be specified only when more than one clusters are connected to
     the same router. See
-    https://docs.quantum-machines.co/1.1.5/qm-qua-sdk/docs/Hardware/opx%2Binstallation/?h=cluster_name#network-overview-and-configuration
+    https://docs.quantum-machines.co/latest/docs/Hardware/network_and_router/#accessing-the-cluster
     for more details.
     """
     bounds: str = "qm/bounds"
