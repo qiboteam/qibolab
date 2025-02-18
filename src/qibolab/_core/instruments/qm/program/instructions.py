@@ -1,9 +1,7 @@
 from typing import Optional
 
-import numpy as np
-import numpy.typing as npt
 from qm import qua
-from qm.qua import Cast, Variable, declare, fixed, for_, for_each_
+from qm.qua import declare, fixed, for_
 
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -13,6 +11,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from ..config import operation
 from .acquisition import Acquisition
 from .arguments import ExecutionArguments, Parameters
+from .loops import from_array
 from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS, normalize_phase
 
 
@@ -137,115 +136,6 @@ def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
     return variable, values
 
 
-def _qua_for_loop(variables: list[Variable], values: list[npt.NDArray]):
-    """Generate QUA ``for_`` loop command for the sweeps.
-
-    Partly copied from ``qualang_tools.from_array``.
-    """
-    if len(variables) > 1:
-        return for_each_(variables, values)
-
-    var = variables[0]
-    array = values[0]
-
-    if len(array) == 0:
-        raise ValueError("Sweeper values must have length > 0.")
-    if len(array) == 1:
-        return for_(var, array[0], var <= array[0], var + 1)
-
-    if not isinstance(var, Variable):
-        raise TypeError("The first argument must be a QUA variable.")
-    if (not isinstance(array[0], (np.generic, int, float))) or (
-        isinstance(array[0], bool)
-    ):
-        raise TypeError("The array must be an array of python variables.")
-
-    start = array[0]
-    stop = array[-1]
-    if var.is_fixed():
-        if not (-8 <= start < 8) or not (-8 <= stop < 8):
-            raise ValueError("fixed numbers are bounded to [-8, 8).")
-    elif not var.is_int():
-        raise TypeError(
-            "This variable type is not supported. Please use a QUA 'int' or 'fixed' when sweeping."
-        )
-
-    # Linear increment
-    if np.isclose(np.std(np.diff(array)), 0) == "lin":
-        step = array[1] - array[0]
-
-        if var.is_int():
-            # Check that the array is an array of int with integer increments
-            if not all(float(x).is_integer() for x in (step, start, stop)):
-                raise TypeError(
-                    "When looping over a QUA int variable, the step and array elements must be integers."
-                )
-
-            if step > 0:
-                return for_(var, int(start), var <= int(stop), var + int(step))
-            else:
-                return for_(var, int(start), var >= int(stop), var + int(step))
-
-        elif var.is_fixed():
-            # Generate the loop parameters for positive and negative steps
-            if step > 0:
-                return for_(
-                    var,
-                    float(start),
-                    var < float(stop) + float(step) / 2,
-                    var + float(step),
-                )
-            else:
-                return for_(
-                    var,
-                    float(start),
-                    var > float(stop) + float(step) / 2,
-                    var + float(step),
-                )
-
-    # Logarithmic increment
-    if np.isclose(np.std(array[1:] / array[:-1]), 0, atol=1e-3):
-        step = array[1] / array[0]
-
-        if var.is_int():
-            if step > 1:
-                if int(round(start) * float(step)) == int(round(start)):
-                    return for_each_(var, array)
-                else:
-                    return for_(
-                        var,
-                        round(start),
-                        var < round(stop) * np.sqrt(float(step)),
-                        Cast.mul_int_by_fixed(var, float(step)),
-                    )
-            else:
-                return for_(
-                    var,
-                    round(start),
-                    var > round(stop) / np.sqrt(float(step)),
-                    Cast.mul_int_by_fixed(var, float(step)),
-                )
-
-        elif var.is_fixed():
-            if step > 1:
-                return for_(
-                    var,
-                    float(start),
-                    var < float(stop) * np.sqrt(float(step)),
-                    var * float(step),
-                )
-            else:
-                return for_(
-                    var,
-                    float(start),
-                    var > float(stop) * np.sqrt(float(step)),
-                    var * float(step),
-                )
-
-    # Non-(linear or logarithmic) increment requires ``for_each_``
-    return for_each_(var, array)
-
-
 def sweep(
     sweepers: list[ParallelSweepers],
     args: ExecutionArguments,
@@ -260,7 +150,10 @@ def sweep(
         variables, values = zip(
             *(_process_sweeper(sweeper, args) for sweeper in parallel_sweepers)
         )
-        loop = _qua_for_loop(variables, values)
+        if len(parallel_sweepers) > 1:
+            loop = qua.for_each_(variables, values)
+        else:
+            loop = for_(*from_array(variables[0], values[0]))
 
         with loop:
             for sweeper, variable in zip(parallel_sweepers, variables):
