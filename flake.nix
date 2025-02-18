@@ -49,12 +49,15 @@
 
               env = {
                 QIBOLAB_PLATFORMS = (dirOf config.env.DEVENV_ROOT) + "/qibolab_platforms_qrc";
+                LD_LIBRARY_PATH = builtins.concatStringsSep ":" (map (p: "${p}/lib") (with pkgs; [
+                  stdenv.cc.cc.lib
+                  zlib
+                ]));
               };
 
               languages.python = {
                 enable = true;
-                libraries = with pkgs; [zlib];
-                version = "3.11";
+                version = "3.12";
                 poetry = {
                   enable = true;
                   install = {
