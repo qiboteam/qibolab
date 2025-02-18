@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
-from qibolab._core.pulses.pulse import PulseLike
+from qibolab._core.pulses.pulse import PulseId, PulseLike
 from qibolab._core.sweeper import ParallelSweepers
 
 from ..q1asm.ast_ import (
@@ -24,7 +24,12 @@ from .waveforms import WaveformIndices
 __all__ = ["Program"]
 
 
-def setup(loops: Sequence[LoopSpec], params: list[Param], channel: ChannelId) -> Block:
+def setup(
+    loops: Sequence[LoopSpec],
+    params: list[Param],
+    channel: ChannelId,
+    pulses: set[PulseId],
+) -> Block:
     """Build preparation phase. Ending with synchronization.
 
     This will set up all the registers used for iterations, parameters
@@ -61,6 +66,7 @@ def setup(loops: Sequence[LoopSpec], params: list[Param], channel: ChannelId) ->
                 comment=f"init {p.description}",
             )
             for p in params
+            if p.channel == channel or p.pulse in pulses
         ]
         + [
             inst
@@ -104,12 +110,18 @@ def program(
     )
     experiment_ = experiment(sweepseq, waveforms, acquisitions)
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
+    pulses = {p[0].id for p in sweepseq}
 
     return transpile(
         [
             el
             for block in [
-                setup(loops_, [p for _, p in params_], channel),
+                setup(
+                    loops_,
+                    [p for _, p in params_],
+                    channel,
+                    pulses,
+                ),
                 loop(
                     experiment_,
                     loops_,
@@ -117,6 +129,7 @@ def program(
                     options.relaxation_time,
                     singleshot,
                     channel,
+                    pulses,
                 ),
                 finalization(),
             ]
