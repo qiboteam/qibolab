@@ -89,10 +89,10 @@ class Cluster(Controller):
         """
         channels = self.channels
         return {
-            iq: lo
-            for iq, lo in (
-                (iq, cast(IqChannel, channels[iq]).lo)
-                for iq in (channels[ch].iqout(ch) for ch in self.channels)
+            ch: lo
+            for ch, lo in (
+                (ch, cast(IqChannel, channels[iq]).lo)
+                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in self.channels)
                 if iq is not None
             )
             if lo is not None
@@ -140,7 +140,16 @@ class Cluster(Controller):
 
         for ps in sequences:
             assert_channels_exclusion(ps, self._probes)
-            sequences_ = compile(ps, sweepers, options, self.sampling_rate)
+            sequences_ = compile(
+                ps,
+                sweepers,
+                options,
+                self.sampling_rate,
+                {
+                    ch: cast(OscillatorConfig, configs[lo])
+                    for ch, lo in self._los.items()
+                },
+            )
             log.sequences(sequences_)
             sequencers = self._configure(sequences_, configs, options.acquisition_type)
             log.status(self.cluster, sequencers)
