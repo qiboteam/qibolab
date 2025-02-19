@@ -10,7 +10,7 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, PulseLike
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, Parameter
+from qibolab._core.sweeper import ParallelSweepers, Parameter, swept_pulses
 
 from ..q1asm import Program, parse
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
@@ -83,13 +83,8 @@ class Q1Sequence(Model):
         waveforms_ = waveforms(
             sequence,
             sampling_rate,
-            amplitude_swept={
-                p.id
-                for parsweep in sweepers
-                for sweep in parsweep
-                if sweep.parameter is Parameter.amplitude and sweep.pulses is not None
-                for p in sweep.pulses
-            },
+            amplitude_swept=swept_pulses(sweepers, {Parameter.amplitude}),
+            duration_swept=swept_pulses(sweepers, {Parameter.duration}),
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
         sweepers = _subtract_lo(sweepers, lo) if lo is not None else sweepers

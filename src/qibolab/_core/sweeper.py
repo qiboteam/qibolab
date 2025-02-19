@@ -1,10 +1,12 @@
 from enum import Enum, auto
 from functools import cache, cached_property
-from typing import Any, Optional
+from typing import Any, Collection, Container, Optional
 
 import numpy as np
 import numpy.typing as npt
 from pydantic import model_validator
+
+from qibolab._core.pulses.pulse import PulseId
 
 from .identifier import ChannelId
 from .pulses import PulseLike, VirtualZ
@@ -169,4 +171,23 @@ ParallelSweepers = list[Sweeper]
 
 
 def iteration_length(sweepers: ParallelSweepers) -> int:
+    """Compute lenght of parallel iteration."""
     return min((len(s) for s in sweepers), default=0)
+
+
+def swept_pulses(
+    sweepers: list[ParallelSweepers],
+    parameters: Collection[Parameter] = frozenset(Parameter),
+) -> set[PulseId]:
+    """Extract identifiers of swept pulses.
+
+    If `parameters` is passed, it limits the selection to pulses whose parameter swept
+    is among those listed. By default, all swept pulses are returned.
+    """
+    return {
+        p.id
+        for parsweep in sweepers
+        for sweep in parsweep
+        if sweep.parameter in parameters and sweep.pulses is not None
+        for p in sweep.pulses
+    }
