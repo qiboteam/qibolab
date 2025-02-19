@@ -30,7 +30,10 @@ Waveforms = dict[ComponentId, Waveform]
 
 
 def waveforms(
-    sequence: Iterable[PulseLike], sampling_rate: float, amplitude_swept: set[PulseId]
+    sequence: Iterable[PulseLike],
+    sampling_rate: float,
+    amplitude_swept: set[PulseId],
+    duration_swept: set[PulseId],
 ) -> dict[ComponentId, WaveformSpec]:
     def waveform(pulse: Pulse, component: str) -> WaveformSpec:
         update = {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
