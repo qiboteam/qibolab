@@ -6,8 +6,6 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import model_validator
 
-from qibolab._core.pulses.pulse import Pulse, PulseId
-
 from .identifier import ChannelId
 from .pulses import PulseLike
 from .serialize import Model
