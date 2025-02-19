@@ -52,7 +52,7 @@ class LoopSpec(Model):
     @property
     def description(self) -> str:
         """Sweeper textual description."""
-        return f"sweeper {self.id + 1}" if self.id is not None else "shots"
+        return f"loop {self.id + 1}" if self.id is not None else "shots"
 
 
 def loops(
