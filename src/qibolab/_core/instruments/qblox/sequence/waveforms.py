@@ -38,7 +38,7 @@ def waveforms(
     sequence: Iterable[PulseLike],
     sampling_rate: float,
     amplitude_swept: set[PulseId],
-    duration_swept: dict[PulseId, Sweeper],
+    duration_swept: dict[PulseLike, Sweeper],
 ) -> dict[ComponentId, WaveformSpec]:
     def _waveform(
         pulse: Pulse, component: str, duration: Optional[float] = None
@@ -52,7 +52,6 @@ def waveforms(
             duration=int(pulse.duration if duration is None else duration),
         )
 
-    events = {pulse.id: pulse for pulse in sequence}
     indexless = {
         k: v
         for d in (
@@ -62,7 +61,7 @@ def waveforms(
             }
             for pulse in (
                 _pulse(event)
-                for event in events.values()
+                for event in sequence
                 if isinstance(event, (Pulse, Readout))
             )
             if pulse not in duration_swept
@@ -76,8 +75,8 @@ def waveforms(
                 (pulse_uid(pulse), 2 * i + 1): _waveform(pulse, "q", duration),
             }
             for pulse, sweep in (
-                (_pulse(event), duration_swept[id_])
-                for id_, event in ((id_, events[id_]) for id_ in duration_swept)
+                (_pulse(event), duration_swept[event])
+                for event in duration_swept
                 if isinstance(event, (Pulse, Readout))
             )
             for i, duration in (

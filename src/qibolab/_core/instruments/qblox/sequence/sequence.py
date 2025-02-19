@@ -83,11 +83,13 @@ class Q1Sequence(Model):
         waveforms_ = waveforms(
             sequence,
             sampling_rate,
-            amplitude_swept=set(swept_pulses(sweepers, {Parameter.amplitude})),
+            amplitude_swept={
+                p.id for p in swept_pulses(sweepers, {Parameter.amplitude})
+            },
             duration_swept={
                 k: v
                 for k, v in swept_pulses(sweepers, {Parameter.duration}).items()
-                if isinstance(v, (Pulse, Readout))
+                if isinstance(k, (Pulse, Readout)) and k in sequence
             },
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
