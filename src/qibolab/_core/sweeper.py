@@ -69,21 +69,22 @@ class Sweeper(Model):
                 parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe]
             )
             platform.execute([sequence], [[sweeper]])
-
-    Args:
-        parameter: parameter to be swept, possible choices are frequency, attenuation, amplitude, current and gain.
-        values: array of parameter values to sweep over.
-        range: tuple of ``(start, stop, step)`` to sweep over the array ``np.arange(start, stop, step)``.
-            Can be provided instead of ``values`` for more efficient sweeps on some instruments.
-        pulses : list of `qibolab.Pulse` to be swept.
-        channels: list of channel names for which the parameter should be swept.
     """
 
     parameter: Parameter
+    """Parameter to be swept."""
     values: Optional[npt.NDArray] = None
+    """Array of parameter values to sweep over."""
     range: Optional[tuple[float, float, float]] = None
+    """Tuple of ``(start, stop, step)``.
+
+    To sweep over the array ``np.arange(start, stop, step)``.
+    Can be provided instead of ``values`` for more efficient sweeps on some instruments.
+    """
     pulses: Optional[list[PulseLike]] = None
+    """List of `qibolab.Pulse` to be swept."""
     channels: Optional[list[ChannelId]] = None
+    """List of channel names for which the parameter should be swept."""
 
     @model_validator(mode="after")
     def check_values(self):
@@ -178,14 +179,14 @@ def iteration_length(sweepers: ParallelSweepers) -> int:
 def swept_pulses(
     sweepers: list[ParallelSweepers],
     parameters: Collection[Parameter] = frozenset(Parameter),
-) -> set[PulseId]:
-    """Extract identifiers of swept pulses.
+) -> dict[PulseId, Sweeper]:
+    """Associate identifiers of swept pulses to sweepers.
 
     If `parameters` is passed, it limits the selection to pulses whose parameter swept
     is among those listed. By default, all swept pulses are returned.
     """
     return {
-        p.id
+        p.id: sweep
         for parsweep in sweepers
         for sweep in parsweep
         if sweep.parameter in parameters and sweep.pulses is not None
