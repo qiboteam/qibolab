@@ -7,7 +7,7 @@ from pydantic import PlainSerializer, PlainValidator
 from qibolab._core.components.configs import OscillatorConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
-from qibolab._core.pulses import Align, PulseLike
+from qibolab._core.pulses import Align, Pulse, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, swept_pulses
@@ -79,12 +79,16 @@ class Q1Sequence(Model):
         sampling_rate: float,
         channel: ChannelId,
         lo: Optional[float],
-    ):
+    ) -> "Q1Sequence":
         waveforms_ = waveforms(
             sequence,
             sampling_rate,
-            amplitude_swept=swept_pulses(sweepers, {Parameter.amplitude}),
-            duration_swept=swept_pulses(sweepers, {Parameter.duration}),
+            amplitude_swept=set(swept_pulses(sweepers, {Parameter.amplitude})),
+            duration_swept={
+                k: v
+                for k, v in swept_pulses(sweepers, {Parameter.duration}).items()
+                if isinstance(v, (Pulse, Readout))
+            },
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
         sweepers = _subtract_lo(sweepers, lo) if lo is not None else sweepers
@@ -106,7 +110,7 @@ class Q1Sequence(Model):
         )
 
     @classmethod
-    def empty(cls):
+    def empty(cls) -> "Q1Sequence":
         return cls(
             waveforms={}, weights={}, acquisitions={}, program=Program(elements=[])
         )
