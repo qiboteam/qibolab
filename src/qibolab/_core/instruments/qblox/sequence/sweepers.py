@@ -43,7 +43,9 @@ class Param(Model):
     @property
     def description(self):
         """Textual description, used in some accompanying comments."""
-        return f"sweeper {self.sweeper + 1} (pulse: {self.pulse})"
+        return (
+            f"sweeper {self.sweeper + 1} (pulse: {self.pulse}, kind: {self.kind.name})"
+        )
 
 
 Params = Sequence[tuple[int, Param]]
