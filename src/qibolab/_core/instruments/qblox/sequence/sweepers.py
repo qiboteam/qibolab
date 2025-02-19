@@ -44,7 +44,9 @@ class Param(Model):
     def description(self):
         """Textual description, used in some accompanying comments."""
         return (
-            f"sweeper {self.sweeper + 1} (pulse: {self.pulse}, kind: {self.kind.name})"
+            f"sweeper (loop: {self.sweeper + 1}, "
+            + (f"pulse: {self.pulse.hex[:5]}, " if self.pulse is not None else "")
+            + f"kind: {self.kind.name})"
         )
 
 
