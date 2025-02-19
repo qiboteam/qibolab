@@ -43,13 +43,16 @@ def waveforms(
     def _waveform(
         pulse: Pulse, component: str, duration: Optional[float] = None
     ) -> WaveformSpec:
-        update = {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
+        duration_ = pulse.duration if duration is None else duration
+        update = {"duration": duration_} | (
+            {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
+        )
         return WaveformSpec(
             waveform=Waveform(
                 data=getattr(pulse.model_copy(update=update), component)(sampling_rate),
                 index=0,
             ),
-            duration=int(pulse.duration if duration is None else duration),
+            duration=int(duration_),
         )
 
     indexless = {
