@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import model_validator
 
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses.pulse import Pulse, PulseId
 
 from .identifier import ChannelId
 from .pulses import PulseLike, VirtualZ
@@ -179,14 +179,16 @@ def iteration_length(sweepers: ParallelSweepers) -> int:
 def swept_pulses(
     sweepers: list[ParallelSweepers],
     parameters: Collection[Parameter] = frozenset(Parameter),
-) -> dict[PulseId, Sweeper]:
-    """Associate identifiers of swept pulses to sweepers.
+) -> dict[PulseLike, Sweeper]:
+    """Associate pulses swept to sweepers.
+
+    Essentially, it produces a reverse index from `sweepers`.
 
     If `parameters` is passed, it limits the selection to pulses whose parameter swept
     is among those listed. By default, all swept pulses are returned.
     """
     return {
-        p.id: sweep
+        p: sweep
         for parsweep in sweepers
         for sweep in parsweep
         if sweep.parameter in parameters and sweep.pulses is not None
