@@ -1,10 +1,10 @@
 """Pulse class."""
 
 from typing import Annotated, Literal, Union, cast
-from uuid import uuid1
+from uuid import uuid4
 
 import numpy as np
-from pydantic import UUID1, Field
+from pydantic import UUID4, Field
 
 from ..serialize import Model
 from .envelope import Envelope, IqWaveform, Waveform
@@ -20,12 +20,12 @@ __all__ = [
     "VirtualZ",
 ]
 
-PulseId = UUID1
+PulseId = UUID4
 """Unique identifier for a pulse."""
 
 
 class _PulseLike(Model):
-    id_: PulseId = Field(default_factory=uuid1, exclude=True)
+    id_: PulseId = Field(default_factory=uuid4, exclude=True)
 
     @property
     def id(self) -> PulseId:
@@ -33,7 +33,7 @@ class _PulseLike(Model):
         return self.id_
 
     def new(self) -> "PulseLike":
-        return cast(PulseLike, self.model_copy(deep=True, update={"id_": uuid1()}))
+        return cast(PulseLike, self.model_copy(deep=True, update={"id_": uuid4()}))
 
     def __eq__(self, other: object) -> bool:
         """Compare instances."""
@@ -174,7 +174,7 @@ class Readout(_PulseLike):
             self.model_copy(
                 deep=True,
                 update={
-                    "id_": uuid1(),
+                    "id_": uuid4(),
                     "acquisition": self.acquisition.new(),
                     "probe": self.probe.new(),
                 },
