@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from functools import cache, cached_property
-from typing import Any, Collection, Container, Optional
+from typing import Any, Collection, Optional
 
 import numpy as np
 import numpy.typing as npt
