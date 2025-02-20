@@ -83,7 +83,7 @@ def create_platform(name: str) -> Platform:
     if isinstance(hardware, Platform):
         return hardware
 
-    return Platform.load(path, **hardware.model_dump())
+    return Platform.load(path, instruments=hardware.instruments, **hardware.elements)
 
 
 def available_platforms() -> list[str]:

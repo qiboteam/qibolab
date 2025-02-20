@@ -236,6 +236,13 @@ class Hardware(Model):
     qubits: QubitMap
     couplers: QubitMap = Field(default_factory=dict)
 
+    @property
+    def elements(self) -> dict:
+        """Extract connected elements."""
+        d = self.model_dump()
+        del d["instruments"]
+        return d
+
 
 def _gate_channel(qubit: Qubit, gate: str) -> str:
     """Default channel that a native gate plays on."""
