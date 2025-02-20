@@ -27,7 +27,7 @@ from .sweepers import (
     reset_instructions,
     update_instructions,
 )
-from .waveforms import WaveformIndices, pulse_uid
+from .waveforms import WaveformIndices
 
 __all__ = []
 
@@ -36,7 +36,7 @@ PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
 def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
-    uid = pulse_uid(pulse)
+    uid = pulse.id
     w0 = waveforms[(uid, 0)]
     w1 = waveforms[(uid, 1)]
     assert w0[1] == w1[1]
@@ -75,7 +75,7 @@ def play(
             )
         ]
     if isinstance(pulse, Acquisition):
-        acq = acquisitions[str(pulse.id)]
+        acq = acquisitions[pulse.id]
         return [
             Acquire(
                 acquisition=acq.acquisition.index,
@@ -86,7 +86,7 @@ def play(
     if isinstance(pulse, Align):
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
-        acq = acquisitions[str(pulse.id)]
+        acq = acquisitions[pulse.id]
         return [
             Acquire(
                 acquisition=acq.acquisition.index,

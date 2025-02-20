@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from typing import Annotated, Optional, Union
 
-from pydantic import AfterValidator
+from pydantic import UUID4, AfterValidator
 
 from qibolab._core.pulses import Pulse, PulseId, PulseLike, Readout
 from qibolab._core.serialize import ArrayList, Model
@@ -9,12 +9,8 @@ from qibolab._core.sweeper import Sweeper
 
 __all__ = []
 
-ComponentId = tuple[str, int]
+ComponentId = tuple[UUID4, int]
 WaveformIndices = dict[ComponentId, tuple[int, int]]
-
-
-def pulse_uid(pulse: Pulse) -> str:
-    return str(hash(pulse))
 
 
 class Waveform(Model):
@@ -59,8 +55,8 @@ def waveforms(
         k: v
         for d in (
             {
-                (pulse_uid(pulse), 0): _waveform(pulse, "i"),
-                (pulse_uid(pulse), 1): _waveform(pulse, "q"),
+                (pulse.id, 0): _waveform(pulse, "i"),
+                (pulse.id, 1): _waveform(pulse, "q"),
             }
             for pulse in (
                 _pulse(event)
@@ -74,8 +70,8 @@ def waveforms(
         k: v
         for d in (
             {
-                (pulse_uid(pulse), 2 * i): _waveform(pulse, "i", duration),
-                (pulse_uid(pulse), 2 * i + 1): _waveform(pulse, "q", duration),
+                (pulse.id, 2 * i): _waveform(pulse, "i", duration),
+                (pulse.id, 2 * i + 1): _waveform(pulse, "q", duration),
             }
             for pulse, sweep in (
                 (_pulse(event), duration_swept[event])

@@ -234,7 +234,7 @@ class Cluster(Controller):
                 self.cluster.get_acquisition_status(slot, seq, timeout=1)
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
-                        self.cluster.store_scope_acquisition(slot, seq, name)
+                        self.cluster.store_scope_acquisition(slot, seq, str(name))
                 acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
