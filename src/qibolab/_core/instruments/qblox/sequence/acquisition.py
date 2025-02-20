@@ -1,5 +1,7 @@
 from collections.abc import Iterable
 
+from pydantic import UUID4
+
 from qibolab._core import pulses
 from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.serialize import Model
@@ -8,9 +10,9 @@ from .waveforms import Waveform
 
 __all__ = []
 
-MeasureId = str
+MeasureId = UUID4
 Weight = Waveform
-Weights = dict[str, Weight]
+Weights = dict[MeasureId, Weight]
 
 
 class Acquisition(Model):
@@ -30,7 +32,7 @@ def acquisitions(
     sequence: Iterable[PulseLike], num_bins: int
 ) -> dict[MeasureId, AcquisitionSpec]:
     return {
-        str(acq.id): AcquisitionSpec(
+        acq.id: AcquisitionSpec(
             acquisition=Acquisition(num_bins=num_bins, index=i),
             duration=int(acq.duration),
         )
