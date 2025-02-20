@@ -8,6 +8,8 @@ from typing import Any, Union
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
 
+from qibolab._core.pulses.pulse import PulseId
+
 from .identifier import ChannelId
 from .pulses import Acquisition, Align, Delay, PulseLike, Readout
 
@@ -90,7 +92,7 @@ class PulseSequence(UserList[_Element]):
         )
         return sum(pulse.duration for pulse in sequence.channel(channel))
 
-    def pulse_channels(self, pulse_id: int) -> list[ChannelId]:
+    def pulse_channels(self, pulse_id: PulseId) -> list[ChannelId]:
         """Find channels on which a pulse with a given id plays."""
         return [channel for channel, pulse in self if pulse.id == pulse_id]
 
