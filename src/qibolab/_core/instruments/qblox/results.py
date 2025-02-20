@@ -110,7 +110,7 @@ def extract(
     # TODO: check if the `lengths` info coincide with the
     # idata["acquisition"]["bins"]["avg_cnt"]
     return {
-        int(acq): (
+        acq: (
             _integration(idata["acquisition"]["bins"]["integration"], lengths[acq])
             if acquisition is AcquisitionType.INTEGRATION
             else _classification(idata["acquisition"]["bins"]["threshold"])
