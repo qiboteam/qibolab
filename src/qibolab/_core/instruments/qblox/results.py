@@ -1,6 +1,7 @@
 from functools import reduce
 from operator import or_
 from typing import Optional, TypedDict
+from uuid import UUID
 
 import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
@@ -85,7 +86,7 @@ class IndexedData(TypedDict):
     acquisition: Data
 
 
-AcquiredData = dict[acquisition.MeasureId, IndexedData]
+AcquiredData = dict[str, IndexedData]
 
 
 def _integration(data: Integration, length: int) -> Result:
@@ -110,8 +111,10 @@ def extract(
     # TODO: check if the `lengths` info coincide with the
     # idata["acquisition"]["bins"]["avg_cnt"]
     return {
-        acq: (
-            _integration(idata["acquisition"]["bins"]["integration"], lengths[acq])
+        UUID(acq): (
+            _integration(
+                idata["acquisition"]["bins"]["integration"], lengths[UUID(acq)]
+            )
             if acquisition is AcquisitionType.INTEGRATION
             else _classification(idata["acquisition"]["bins"]["threshold"])
             if acquisition is AcquisitionType.DISCRIMINATION
