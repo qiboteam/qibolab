@@ -102,10 +102,9 @@ class ExecutionParameters(Model):
         return shots + sweeps
 
     def results_shape(
-        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
+        self, sweepers: list[ParallelSweepers], samples: int = -1
     ) -> tuple[int, ...]:
         """Compute the expected shape for collected data."""
-
         inner = {
             AcquisitionType.DISCRIMINATION: (),
             AcquisitionType.INTEGRATION: (2,),
