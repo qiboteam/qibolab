@@ -125,6 +125,7 @@ class Cluster(Controller):
         for module in self._modules.values():
             module.stop_sequencer()
         self._cluster.reset()
+        self._cluster.close()
         self._cluster = None
 
     def play(
