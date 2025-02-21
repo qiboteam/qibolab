@@ -159,7 +159,9 @@ class Cluster(Controller):
             )
             log.data(data)
             lenghts = integration_lenghts(sequences_, sequencers, self._modules)
-            results_ |= extract(data, lenghts, options.acquisition_type)
+            results_ |= extract(
+                data, lenghts, options.acquisition_type, options.results_shape(sweepers)
+            )
         return results_
 
     def _configure(
@@ -234,7 +236,7 @@ class Cluster(Controller):
                 self.cluster.get_acquisition_status(slot, seq, timeout=1)
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
-                        self.cluster.store_scope_acquisition(slot, seq, str(name))
+                        self.cluster.store_scope_acquisition(slot, seq, name)
                 acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
