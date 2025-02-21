@@ -107,6 +107,7 @@ def extract(
     acquisitions: dict[ChannelId, AcquiredData],
     lengths: dict[acquisition.MeasureId, int],
     acquisition: AcquisitionType,
+    shape: tuple[int, ...],
 ) -> dict[PulseId, Result]:
     # TODO: check if the `lengths` info coincide with the
     # idata["acquisition"]["bins"]["avg_cnt"]
@@ -121,7 +122,7 @@ def extract(
             else _scope(idata["acquisition"]["scope"])
             if acquisition is AcquisitionType.RAW
             else np.array([])
-        )
+        ).reshape(shape)
         for data in acquisitions.values()
         for acq, idata in data.items()
     }
