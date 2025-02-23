@@ -35,6 +35,14 @@ def test_create_platform_error():
         _ = create_platform("nonexistent")
 
 
+def test_create_platform_from_hardware():
+    original_value = os.environ.get(PLATFORMS)
+    os.environ[PLATFORMS] = str(Path(__file__).parent)
+    _ = create_platform("dummy_hardware")
+    os.remove(Path(__file__).parent / "dummy_hardware" / PARAMETERS)
+    os.environ[PLATFORMS] = original_value
+
+
 def test_platform_basics():
     platform = Platform(
         name="ciao",
