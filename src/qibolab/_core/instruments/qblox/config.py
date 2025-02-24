@@ -107,8 +107,9 @@ def module(
     # set lo frequencies
     for iq, lo in los.items():
         n = PortAddress.from_path(channels[iq].path).ports[0] - 1
-        attr = f"out{n}_in{n}_lo_freq" if mod.is_qrm_type else f"out{n}_lo_freq"
-        getattr(mod, attr)(lo.frequency)
+        path = f"out{n}_in{n}" if mod.is_qrm_type else f"out{n}"
+        getattr(mod, f"{path}_lo_en")(True)
+        getattr(mod, f"{path}_lo_freq")(lo.frequency)
 
 
 def _integration_length(sequence: Q1Sequence) -> Optional[int]:
