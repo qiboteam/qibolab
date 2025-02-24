@@ -30,6 +30,18 @@ def _pulse(event: Union[Pulse, Readout]) -> Pulse:
     return event.probe if isinstance(event, Readout) else event
 
 
+WAVEFORM_MEMORY = 2**14
+"""Maximum waveform memory available.
+
+https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#waveform-memory
+"""
+WAVEFORM_NUMBER = 2**10
+"""Maximum number of waveforms available.
+
+https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#waveform-memory
+"""
+
+
 def waveforms(
     sequence: Iterable[PulseLike],
     sampling_rate: float,
@@ -84,6 +96,9 @@ def waveforms(
         )
         for k, v in d.items()
     }
+
+    assert sum(len(w.waveform.data) for _, w in indexless.items()) <= WAVEFORM_MEMORY
+    assert len(indexless) <= WAVEFORM_NUMBER
 
     return {
         k: WaveformSpec(

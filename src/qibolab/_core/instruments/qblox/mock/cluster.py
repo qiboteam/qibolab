@@ -73,6 +73,9 @@ class MockCluster:
     def reset(self) -> None:
         self.resets += 1
 
+    def close(self) -> None:
+        pass
+
     @property
     def records(self) -> dict:
         return {
