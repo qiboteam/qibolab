@@ -147,6 +147,12 @@ def sequencer(
     # modulation, only disable for QCM - always used for flux pulses
     mod = cast(Module, seq.ancestors[1])
     seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+
+    # FIX: for no apparent reason other than experimental evidence, the marker has to be
+    # enabled and set to a certain value
+    seq.marker_ovr_en(True)
+    seq.marker_ovr_value(15)
+
     # acquisition
     if address.input:
         assert isinstance(config, AcquisitionConfig)
@@ -167,7 +173,7 @@ def sequencer(
         lo = cast(IqChannel, channels[probe]).lo
         assert lo is not None
         lo_freq = cast(OscillatorConfig, configs[lo]).frequency
-        seq.nco_freq(freq - lo_freq)
+        seq.nco_freq(int(freq - lo_freq))
 
     # connect to physical address
     seq.connect_sequencer(address.local_address)
