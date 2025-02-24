@@ -118,30 +118,29 @@ class QmPulse:
 
 def integration_weights(element: str, readout_len: int, kernel=None, angle: float = 0):
     """Create integration weights section for QM config."""
-    cos, sin = np.cos(angle), np.sin(angle)
+
+    def convert(x: list[tuple], minus: bool = False):
+        return [(-i[0] if minus else i[0], i[1]) for i in x]
+
     if kernel is None:
-
-        def convert(x):
-            return [(x, readout_len)]
+        cos = [(np.cos(angle), readout_len)]
+        sin = [(np.sin(angle), readout_len)]
     else:
-        cos = kernel * cos
-        sin = kernel * sin
-
-        def convert(x):
-            return x
+        cos = [(i, 4) for i in kernel.real[::4]]
+        sin = [(i, 4) for i in kernel.imag[::4]]
 
     return {
         f"cosine_weights_{element}": {
             "cosine": convert(cos),
-            "sine": convert(-sin),
+            "sine": convert(sin, minus=True),
         },
         f"sine_weights_{element}": {
             "cosine": convert(sin),
             "sine": convert(cos),
         },
         f"minus_sine_weights_{element}": {
-            "cosine": convert(-sin),
-            "sine": convert(-cos),
+            "cosine": convert(sin, minus=True),
+            "sine": convert(cos, minus=True),
         },
     }
 
