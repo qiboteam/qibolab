@@ -150,8 +150,8 @@ def sequencer(
 
     # FIX: for no apparent reason other than experimental evidence, the marker has to be
     # enabled and set to a certain value
-    seq.marker_ovr_en(True)
-    seq.marker_ovr_value(15)
+    seq.marker_ovr_en(not (sequence.is_empty and address.input))
+    seq.marker_ovr_value(0 if sequence.is_empty else 15)
 
     # acquisition
     if address.input:
