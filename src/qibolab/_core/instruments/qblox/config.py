@@ -110,6 +110,10 @@ def module(
         path = f"out{n}_in{n}" if mod.is_qrm_type else f"out{n}"
         getattr(mod, f"{path}_lo_en")(True)
         getattr(mod, f"{path}_lo_freq")(lo.frequency)
+        getattr(mod, f"out{n}_att")(lo.power)
+
+    if mod.is_qrm_type:
+        mod.in0_att(0)
 
 
 def _integration_length(sequence: Q1Sequence) -> Optional[int]:
