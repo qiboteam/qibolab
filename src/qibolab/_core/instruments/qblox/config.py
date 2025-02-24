@@ -109,8 +109,8 @@ def module(
         n = PortAddress.from_path(channels[iq].path).ports[0] - 1
         path = f"out{n}_in{n}" if mod.is_qrm_type else f"out{n}"
         getattr(mod, f"{path}_lo_en")(True)
-        getattr(mod, f"{path}_lo_freq")(lo.frequency)
-        getattr(mod, f"out{n}_att")(lo.power)
+        getattr(mod, f"{path}_lo_freq")(int(lo.frequency))
+        getattr(mod, f"out{n}_att")(int(lo.power))
 
     if mod.is_qrm_type:
         mod.in0_att(0)
