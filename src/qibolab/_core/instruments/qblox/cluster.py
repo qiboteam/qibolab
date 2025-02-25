@@ -240,6 +240,7 @@ class Cluster(Controller):
         configs: Configs,
         acquisition: AcquisitionType,
     ) -> SequencerMap:
+        self.cluster.reference_source("internal")
         sequencers = defaultdict(dict)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]

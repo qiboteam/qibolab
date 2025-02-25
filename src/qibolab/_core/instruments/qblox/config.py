@@ -155,6 +155,16 @@ def sequencer(
     seq.marker_ovr_en(not (sequence.is_empty and address.input))
     seq.marker_ovr_value(0 if sequence.is_empty else 15)
 
+    seq.set("cont_mode_en_awg_path0", False)
+    seq.set("cont_mode_en_awg_path1", False)
+    seq.set("cont_mode_waveform_idx_awg_path0", 0)
+    seq.set("cont_mode_waveform_idx_awg_path1", 0)
+    seq.set("mixer_corr_gain_ratio", 1)
+    seq.set("mixer_corr_phase_offset_degree", 0)
+    seq.set("nco_phase_offs", 0)
+    seq.set("upsample_rate_awg_path0", 0)
+    seq.set("upsample_rate_awg_path1", 0)
+
     # acquisition
     if address.input:
         assert isinstance(config, AcquisitionConfig)
