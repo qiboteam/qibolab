@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Sequence
+from typing import Optional
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -93,6 +94,7 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     channel: ChannelId,
+    time_of_flight: Optional[float],
 ) -> Program:
     """Generate sequencer program."""
     assert options.nshots is not None
@@ -108,7 +110,7 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v[1]]
     )
-    experiment_ = experiment(sweepseq, waveforms, acquisitions)
+    experiment_ = experiment(sweepseq, waveforms, acquisitions, time_of_flight)
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
 

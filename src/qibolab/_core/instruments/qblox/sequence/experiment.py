@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from qibolab._core.pulses.pulse import (
@@ -55,6 +57,7 @@ def play(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
+    time_of_flight: Optional[float],
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
@@ -88,13 +91,15 @@ def play(
     if isinstance(pulse, Readout):
         acq = acquisitions[pulse.id]
         return [
+            play_pulse(pulse.probe, waveforms).model_copy(
+                update={
+                    "duration": int(time_of_flight) if time_of_flight is not None else 4
+                }
+            ),
             Acquire(
                 acquisition=acq.acquisition.index,
                 bin=Registers.bin.value,
-                duration=4,
-            ),
-            play_pulse(pulse.probe, waveforms).model_copy(
-                update={"duration": int(pulse.duration) - 4}
+                duration=int(pulse.duration),
             ),
         ]
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
@@ -104,11 +109,12 @@ def event(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
+    time_of_flight: Optional[float],
 ) -> list[Instruction]:
     param = parpulse[1]
     return (
         (update_instructions(param.kind, param.reg) if param is not None else [])
-        + play(parpulse, waveforms, acquisitions)
+        + play(parpulse, waveforms, acquisitions, time_of_flight)
         + (reset_instructions(param.kind, param.reg) if param is not None else [])
     )
 
@@ -117,10 +123,13 @@ def experiment(
     sequence: SweepSequence,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
+    time_of_flight: Optional[float],
 ) -> list[Instruction]:
     """Representation of the actual experiment to be executed."""
     return [
         i_
-        for block in (event(pulse, waveforms, acquisitions) for pulse in sequence)
+        for block in (
+            event(pulse, waveforms, acquisitions, time_of_flight) for pulse in sequence
+        )
         for i_ in block
     ]
