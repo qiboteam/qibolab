@@ -21,7 +21,7 @@ from ..q1asm.ast_ import (
     Wait,
 )
 from .acquisition import AcquisitionSpec, MeasureId
-from .asm import Registers
+from .asm import Registers, convert
 from .sweepers import (
     Param,
     ParameterizedPulse,
@@ -64,11 +64,22 @@ def play(
     param = parpulse[1]
 
     if isinstance(pulse, Pulse):
-        return [
-            play_pulse(pulse, waveforms)
-            if param is None or param.kind is not Parameter.duration
-            else play_duration_swept(pulse, param)
-        ]
+        phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        return (
+            ([SetPhDelta(value=phase)] if phase != 0 else [])
+            + [
+                play_pulse(pulse, waveforms)
+                if param is None or param.kind is not Parameter.duration
+                else play_duration_swept(pulse, param),
+            ]
+            + (
+                [
+                    SetPhDelta(value=-phase),
+                ]
+                if phase != 0
+                else []
+            )
+        )
     if isinstance(pulse, Delay):
         return [Wait(duration=int(pulse.duration) if param is None else param.reg)]
     if isinstance(pulse, VirtualZ):
