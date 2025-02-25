@@ -2,14 +2,15 @@ import pathlib
 
 from qibolab._core.components import AcquisitionChannel, DcChannel, IqChannel
 from qibolab._core.instruments.dummy import DummyInstrument, DummyLocalOscillator
+from qibolab._core.parameters import Hardware
 from qibolab._core.platform import Platform
 from qibolab._core.qubits import Qubit
 
 FOLDER = pathlib.Path(__file__).parent
 
 
-def create_dummy() -> Platform:
-    """Create a dummy platform using the dummy instrument."""
+def create_dummy_hardware() -> Hardware:
+    """Create dummy hardware configuration based on the dummy instrument."""
     qubits = {}
     channels = {}
     # attach the channels
@@ -38,6 +39,10 @@ def create_dummy() -> Platform:
         pump_name: DummyLocalOscillator(address="0.0.0.0"),
     }
 
-    return Platform.load(
-        path=FOLDER, instruments=instruments, qubits=qubits, couplers=couplers
-    )
+    return Hardware(instruments=instruments, qubits=qubits, couplers=couplers)
+
+
+def create_dummy() -> Platform:
+    """Create a dummy platform using the dummy instrument."""
+    hardware = create_dummy_hardware()
+    return Platform.load(path=FOLDER, **vars(hardware))
