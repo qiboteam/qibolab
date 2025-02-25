@@ -9,7 +9,11 @@ from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
 from qibolab._core.components.channels import AcquisitionChannel, IqChannel
-from qibolab._core.components.configs import Configs, OscillatorConfig
+from qibolab._core.components.configs import (
+    AcquisitionConfig,
+    Configs,
+    OscillatorConfig,
+)
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
@@ -149,6 +153,11 @@ class Cluster(Controller):
                 {
                     ch: cast(OscillatorConfig, configs[lo])
                     for ch, lo in self._los.items()
+                },
+                {
+                    ch: max(config.delay, 4.0)
+                    for ch, config in configs.items()
+                    if isinstance(config, AcquisitionConfig)
                 },
             )
             log.sequences(sequences_)
