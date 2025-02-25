@@ -216,6 +216,7 @@ def sequencer(
 
     # avoid sequence operations for inactive sequencers, including synchronization
     if sequence.is_empty:
+        seq.sync_en(False)
         return
 
     # upload sequence
