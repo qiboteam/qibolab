@@ -2,8 +2,6 @@ from collections.abc import Callable, Iterable, Sequence
 from itertools import groupby
 from typing import Optional
 
-import numpy as np
-
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.q1asm.ast_ import SetAwgGain, SetAwgOffs, SetFreq
 from qibolab._core.pulses.pulse import (
@@ -20,6 +18,7 @@ from ..q1asm.ast_ import (
     SetPhDelta,
     Value,
 )
+from .asm import MAX_PARAM, convert
 
 __all__ = []
 
@@ -58,35 +57,6 @@ It is created by the :func:`params` function.
 
 IndexedParams = dict[int, tuple[list[Param], list[Param]]]
 
-MAX_PARAM = {
-    Parameter.amplitude: 2**15 - 1,
-    Parameter.offset: 2**15 - 1,
-    Parameter.relative_phase: 1e9,
-    Parameter.frequency: 2e9,
-}
-"""Maximum range for parameters.
-
-Declared in https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#q1-instructions
-
-Ranges may be one-sided (just positive) or two-sided. This is accounted for in
-:func:`convert`.
-"""
-
-
-def _convert(value: float, kind: Parameter) -> float:
-    """Convert sweeper value in assembly units."""
-    if kind is Parameter.amplitude:
-        return value * MAX_PARAM[kind]
-    if kind is Parameter.relative_phase:
-        return (value / (2 * np.pi)) % 1.0 * MAX_PARAM[kind]
-    if kind is Parameter.frequency:
-        return value / 500e6 * MAX_PARAM[kind]
-    if kind is Parameter.offset:
-        return value * MAX_PARAM[kind]
-    if kind is Parameter.duration:
-        return value
-    raise ValueError(f"Unsupported sweeper: {kind.name}")
-
 
 def convert_or_pulse_duration(
     value: float, kind: Parameter, pulse: Optional[PulseLike], duration: int
@@ -104,7 +74,7 @@ def convert_or_pulse_duration(
     return (
         duration
         if kind is Parameter.duration and isinstance(pulse, Pulse)
-        else int(_convert(value, kind))
+        else int(convert(value, kind))
     )
 
 
