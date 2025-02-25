@@ -119,7 +119,7 @@ class QmPulse:
 def integration_weights(element: str, readout_len: int, kernel=None, angle: float = 0):
     """Create integration weights section for QM config."""
 
-    def convert(x: list[tuple], minus: bool = False):
+    def _convert_integration_weights(x: list[tuple], minus: bool = False):
         return [(-i[0] if minus else i[0], i[1]) for i in x]
 
     if kernel is None:
@@ -131,16 +131,16 @@ def integration_weights(element: str, readout_len: int, kernel=None, angle: floa
 
     return {
         f"cosine_weights_{element}": {
-            "cosine": convert(cos),
-            "sine": convert(sin, minus=True),
+            "cosine": _convert_integration_weights(cos),
+            "sine": _convert_integration_weights(sin, minus=True),
         },
         f"sine_weights_{element}": {
-            "cosine": convert(sin),
-            "sine": convert(cos),
+            "cosine": _convert_integration_weights(sin),
+            "sine": _convert_integration_weights(cos),
         },
         f"minus_sine_weights_{element}": {
-            "cosine": convert(sin, minus=True),
-            "sine": convert(cos, minus=True),
+            "cosine": _convert_integration_weights(sin, minus=True),
+            "sine": _convert_integration_weights(cos, minus=True),
         },
     }
 
