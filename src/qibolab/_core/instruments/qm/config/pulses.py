@@ -116,11 +116,13 @@ class QmPulse:
         )
 
 
+def _convert_integration_weights(x: list[tuple], minus: bool = False) -> list[tuple]:
+    """Convert integration weights array for QM."""
+    return [(-i[0] if minus else i[0], i[1]) for i in x]
+
+
 def integration_weights(element: str, readout_len: int, kernel=None, angle: float = 0):
     """Create integration weights section for QM config."""
-
-    def _convert_integration_weights(x: list[tuple], minus: bool = False):
-        return [(-i[0] if minus else i[0], i[1]) for i in x]
 
     if kernel is None:
         cos = [(np.cos(angle), readout_len)]
