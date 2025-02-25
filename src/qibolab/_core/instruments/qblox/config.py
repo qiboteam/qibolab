@@ -142,7 +142,9 @@ def sequencer(
 
     # set parameters
     # offsets
-    seq.offset_awg_path0(config.offset if isinstance(config, DcConfig) else 0.0)
+    if isinstance(config, DcConfig):
+        seq.ancestors[1].set(f"out{seq.seq_idx}_offset", config.offset)
+    seq.offset_awg_path0(0.0)
     seq.offset_awg_path1(0.0)
     # modulation, only disable for QCM - always used for flux pulses
     mod = cast(Module, seq.ancestors[1])
