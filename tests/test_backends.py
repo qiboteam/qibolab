@@ -50,7 +50,7 @@ def test_execute_circuit(gate, kwargs):
     backend = QibolabBackend("dummy")
     nqubits = backend.platform.nqubits
     circuit = generate_circuit_with_gate(nqubits, gate, **kwargs)
-    result = backend.execute_circuit(circuit, nshots=100)
+    _ = backend.execute_circuit(circuit, nshots=100)
 
 
 def test_measurement_samples():

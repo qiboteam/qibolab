@@ -4,10 +4,8 @@ from typing import Optional
 
 import numpy as np
 from qm import qua
-from qm.qua import declare, declare_stream, fixed
+from qm.qua import Cast, declare, declare_stream, fixed, wait
 from qm.qua._dsl import _ResultSource, _Variable  # for type declaration only
-from qualang_tools.addons.variables import assign_variables_to_element
-from qualang_tools.units import unit
 
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -92,6 +90,25 @@ class Acquisition(ABC):
         """Fetch downloaded streams to host device."""
 
 
+def raw_to_volts(signal):
+    """Convert raw acquisition to volts."""
+    return signal / 4096
+
+
+def assign_variables_to_element(element, *variables):
+    """Forces the given variables to be used by the given element thread.
+
+    Useful as a workaround for when the compiler wrongly assigns
+    variables which can cause gaps.
+
+    Taken from qualang_tools library.
+    """
+    _exp = Cast.to_int(variables[0])
+    for variable in variables[1:]:
+        _exp += Cast.to_int(variable)
+    wait(4 + 0 * _exp, element)
+
+
 @dataclass
 class RawAcquisition(Acquisition):
     """QUA variables used for raw waveform acquisition."""
@@ -119,8 +136,7 @@ class RawAcquisition(Acquisition):
         ires = handles.get(f"{self.name}_I").fetch_all()
         qres = handles.get(f"{self.name}_Q").fetch_all()
         # convert raw ADC signal to volts
-        u = unit()
-        signal = _collect(u.raw2volts(ires), u.raw2volts(qres), self.npulses)
+        signal = _collect(raw_to_volts(ires), raw_to_volts(qres), self.npulses)
         return _split(signal, self.npulses)
 
 

@@ -32,7 +32,7 @@ def test_create_platform(platform):
 
 def test_create_platform_error():
     with pytest.raises(ValueError):
-        platform = create_platform("nonexistent")
+        _ = create_platform("nonexistent")
 
 
 def test_platform_basics():
