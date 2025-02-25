@@ -104,6 +104,30 @@ def module(
         mod.scope_acq_trigger_mode_path0("sequencer")
         mod.scope_acq_trigger_mode_path1("sequencer")
 
+    # apply defaults
+    # ---
+    if not mod.is_qrm_type and not mod.is_rf_type:
+        mod.out0_offset(0)
+        mod.out1_offset(0)
+        mod.out2_offset(0)
+        mod.out3_offset(0)
+
+    if not mod.is_qrm_type and mod.is_rf_type:
+        mod.out0_offset_path0(0)
+        mod.out0_offset_path1(0)
+        mod.out1_offset_path0(0)
+        mod.out1_offset_path1(0)
+
+    if mod.is_qrm_type:
+        mod.out0_offset_path0(0)
+        mod.out0_offset_path1(0)
+        mod.scope_acq_avg_mode_en_path0(True)
+        mod.scope_acq_avg_mode_en_path1(True)
+        mod.scope_acq_sequencer_select(0)
+        mod.scope_acq_trigger_level_path0(0)
+        mod.scope_acq_trigger_level_path1(0)
+    # ---
+
     # set lo frequencies
     for iq, lo in los.items():
         n = PortAddress.from_path(channels[iq].path).ports[0] - 1
