@@ -176,6 +176,9 @@ def sequencer_default(seq: Sequencer):
         if seq.seq_idx < 2:
             default = True
             seq.set(f"connect_out{seq.seq_idx}", "IQ")
+            seq.set("mod_en_awg", True)
+            seq.set("nco_freq", 0)
+            seq.set("nco_phase_offs", 0)
 
     if mod.is_qrm_type:
         seq.set("marker_ovr_en", False)
