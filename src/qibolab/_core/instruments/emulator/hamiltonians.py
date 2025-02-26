@@ -5,10 +5,8 @@ from typing import Literal, Optional
 import numpy as np
 from pydantic import Field
 
-from qibolab import Delay, Pulse
-from qibolab._core.components import Config
-
-from ..components import IqConfig
+from ...components import Config, IqConfig
+from ...pulses import Delay, Pulse
 from .operators import L1, L2, QUBIT_CREATE, QUBIT_DESTROY, QUBIT_DRIVE, QUBIT_NUMBER
 from .utils import HZ_TO_GHZ
 
