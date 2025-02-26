@@ -89,6 +89,32 @@ class PortAddress(Model):
         return f"{self.direction}{channels}"
 
 
+def module_default(mod: Module):
+    if not mod.is_qrm_type and not mod.is_rf_type:
+        mod.out0_offset(0)
+        mod.out1_offset(0)
+        mod.out2_offset(0)
+        mod.out3_offset(0)
+
+    if not mod.is_qrm_type and mod.is_rf_type:
+        mod.out0_offset_path0(0)
+        mod.out0_offset_path1(0)
+        mod.out1_offset_path0(0)
+        mod.out1_offset_path1(0)
+
+    if mod.is_qrm_type:
+        mod.out0_offset_path0(0)
+        mod.out0_offset_path1(0)
+        mod.scope_acq_avg_mode_en_path0(True)
+        mod.scope_acq_avg_mode_en_path1(True)
+        mod.scope_acq_sequencer_select(0)
+        mod.scope_acq_trigger_level_path0(0)
+        mod.scope_acq_trigger_level_path1(0)
+        if mod.slot_idx == 20:
+            mod.out0_offset_path0(-8.1)
+            mod.out0_offset_path1(-3.8)
+
+
 def module(
     mod: Module,
     channels: dict[ChannelId, Channel],
@@ -128,6 +154,60 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
     )
 
 
+def sequencer_default(seq: Sequencer):
+    seq.set("marker_ovr_en", True)
+    seq.set("marker_ovr_value", 0)
+    seq.set("sync_en", False)
+
+    mod = cast(Module, seq.ancestors[1])
+
+    default = False
+    if not mod.is_qrm_type and not mod.is_rf_type:
+        if seq.seq_idx < 4:
+            default = True
+            seq.set(f"connect_out{seq.seq_idx}", "I" if seq.seq_idx % 2 == 0 else "Q")
+        else:
+            seq.set("connect_out0", "off")
+            seq.set("connect_out1", "off")
+            seq.set("connect_out2", "off")
+            seq.set("connect_out3", "off")
+
+    if not mod.is_qrm_type and mod.is_rf_type:
+        seq.set("connect_out0", "off")
+        seq.set("connect_out1", "off")
+        if seq.seq_idx < 2:
+            default = True
+            seq.set(f"connect_out{seq.seq_idx}", "IQ")
+            seq.set("mod_en_awg", True)
+            seq.set("nco_freq", 0)
+            seq.set("nco_phase_offs", 0)
+
+    if mod.is_qrm_type:
+        seq.set("marker_ovr_en", False)
+        seq.set("connect_acq", "in0")
+        seq.set("connect_out0", "off")
+        if seq.seq_idx < 1:
+            default = True
+            seq.set("demod_en_acq", True)
+            seq.set("connect_out0", "IQ")
+            seq.set("mod_en_awg", True)
+            seq.set("nco_freq", 0)
+            seq.set("nco_phase_offs", 0)
+            seq.set("integration_length_acq", 480)
+
+    if default:
+        seq.set("cont_mode_en_awg_path0", False)
+        seq.set("cont_mode_en_awg_path1", False)
+        seq.set("cont_mode_waveform_idx_awg_path0", 0)
+        seq.set("cont_mode_waveform_idx_awg_path1", 0)
+        seq.set("mixer_corr_gain_ratio", 1)
+        seq.set("mixer_corr_phase_offset_degree", 0)
+        seq.set("offset_awg_path0", 0)
+        seq.set("offset_awg_path1", 0)
+        seq.set("upsample_rate_awg_path0", 0)
+        seq.set("upsample_rate_awg_path1", 0)
+
+
 def sequencer(
     seq: Sequencer,
     address: PortAddress,
@@ -144,11 +224,23 @@ def sequencer(
     # offsets
     if isinstance(config, DcConfig):
         seq.ancestors[1].set(f"out{seq.seq_idx}_offset", config.offset)
+
+    # avoid sequence operations for inactive sequencers, including synchronization
+    if sequence.is_empty:
+        return
+
+    # connect to physical address
+    seq.connect_sequencer(address.local_address)
+
     seq.offset_awg_path0(0.0)
     seq.offset_awg_path1(0.0)
+
     # modulation, only disable for QCM - always used for flux pulses
-    mod = cast(Module, seq.ancestors[1])
-    seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+    # mod = cast(Module, seq.ancestors[1])
+    # seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+    seq.mod_en_awg(True)
+    seq.nco_freq(0)
+    seq.nco_phase_offs(0)
 
     # FIX: for no apparent reason other than experimental evidence, the marker has to be
     # enabled and set to a certain value
@@ -158,14 +250,15 @@ def sequencer(
     # acquisition
     if address.input:
         assert isinstance(config, AcquisitionConfig)
-        length = _integration_length(sequence)
-        if length is not None:
-            seq.integration_length_acq(length)
+        # length = _integration_length(sequence)
+        # if length is not None:
+        #     seq.integration_length_acq(length)
         # discrimination
         if config.iq_angle is not None:
             seq.thresholded_acq_rotation(np.degrees(config.iq_angle % (2 * np.pi)))
         if config.threshold is not None:
-            seq.thresholded_acq_threshold(config.threshold)
+            # seq.thresholded_acq_threshold(config.threshold * length)
+            seq.thresholded_acq_threshold(config.threshold * 480)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
 
@@ -177,12 +270,8 @@ def sequencer(
         lo_freq = cast(OscillatorConfig, configs[lo]).frequency
         seq.nco_freq(int(freq - lo_freq))
 
-    # connect to physical address
-    seq.connect_sequencer(address.local_address)
-
-    # avoid sequence operations for inactive sequencers, including synchronization
-    if sequence.is_empty:
-        return
+    if address.input:
+        seq.connect_out0("IQ")
 
     # upload sequence
     # - ensure JSON compatibility of the sent dictionary
