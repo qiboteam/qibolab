@@ -153,14 +153,8 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
 
 
 def sequencer_default(seq: Sequencer):
-    seq.set("cont_mode_en_awg_path0", False)
-    seq.set("cont_mode_en_awg_path1", False)
-    seq.set("cont_mode_waveform_idx_awg_path0", 0)
-    seq.set("cont_mode_waveform_idx_awg_path1", 0)
     seq.set("marker_ovr_en", True)
-    seq.set("mixer_corr_gain_ratio", 1)
-    seq.set("mixer_corr_phase_offset_degree", 0)
-    seq.set("nco_phase_offs", 0)
+    seq.set("marker_ovr_value", 0)
     seq.set("sync_en", False)
 
     mod = cast(Module, seq.ancestors[1])
@@ -189,6 +183,13 @@ def sequencer_default(seq: Sequencer):
             default = True
 
     if default:
+        seq.set("cont_mode_en_awg_path0", False)
+        seq.set("cont_mode_en_awg_path1", False)
+        seq.set("cont_mode_waveform_idx_awg_path0", 0)
+        seq.set("cont_mode_waveform_idx_awg_path1", 0)
+        seq.set("mixer_corr_gain_ratio", 1)
+        seq.set("mixer_corr_phase_offset_degree", 0)
+        seq.set("nco_phase_offs", 0)
         seq.set("upsample_rate_awg_path0", 0)
         seq.set("upsample_rate_awg_path1", 0)
 
