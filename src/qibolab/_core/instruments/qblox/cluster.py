@@ -242,6 +242,11 @@ class Cluster(Controller):
     ) -> SequencerMap:
         self.cluster.reference_source("internal")
         sequencers = defaultdict(dict)
+        for mod in self._modules.values():
+            config.module_default(mod)
+            for seq in mod.sequencers:
+                config.sequencer_default(seq)
+
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
             assert len(module.sequencers) >= len(chs)
