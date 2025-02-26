@@ -157,19 +157,19 @@ def sequencer_default(seq: Sequencer):
     seq.set("cont_mode_en_awg_path1", False)
     seq.set("cont_mode_waveform_idx_awg_path0", 0)
     seq.set("cont_mode_waveform_idx_awg_path1", 0)
-    seq.set("marker_ovr_en", False)
-    seq.set("marker_ovr_value", 0)
+    seq.set("marker_ovr_en", True)
     seq.set("mixer_corr_gain_ratio", 1)
     seq.set("mixer_corr_phase_offset_degree", 0)
     seq.set("nco_phase_offs", 0)
     seq.set("sync_en", False)
-    seq.set("upsample_rate_awg_path0", 0)
-    seq.set("upsample_rate_awg_path1", 0)
 
     mod = cast(Module, seq.ancestors[1])
 
+    default = False
     if not mod.is_qrm_type and not mod.is_rf_type:
-        if seq.seq_idx <= 3:
+        seq.set("marker_ovr_value", 15)
+        if seq.seq_idx < 4:
+            default = True
             seq.set(f"connect_out{seq.seq_idx}", "I" if seq.seq_idx % 2 == 0 else "Q")
         else:
             seq.set("connect_out0", "off")
@@ -178,11 +178,19 @@ def sequencer_default(seq: Sequencer):
             seq.set("connect_out3", "off")
 
     if not mod.is_qrm_type and mod.is_rf_type:
-        pass
+        if seq.seq_idx < 2:
+            default = True
 
     if mod.is_qrm_type:
+        seq.set("marker_ovr_en", False)
         seq.set("connect_acq", "in0")
         seq.set("connect_out0", "off")
+        if seq.seq_idx < 2:
+            default = True
+
+    if default:
+        seq.set("upsample_rate_awg_path0", 0)
+        seq.set("upsample_rate_awg_path1", 0)
 
 
 def sequencer(
