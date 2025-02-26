@@ -246,6 +246,10 @@ class Cluster(Controller):
             config.module_default(mod)
             for seq in mod.sequencers:
                 config.sequencer_default(seq)
+        for mod in self._modules.values():
+            config.module_default(mod)
+            for seq in mod.sequencers:
+                config.sequencer_default(seq)
 
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]

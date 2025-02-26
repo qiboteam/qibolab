@@ -161,7 +161,6 @@ def sequencer_default(seq: Sequencer):
 
     default = False
     if not mod.is_qrm_type and not mod.is_rf_type:
-        seq.set("marker_ovr_value", 15)
         if seq.seq_idx < 4:
             default = True
             seq.set(f"connect_out{seq.seq_idx}", "I" if seq.seq_idx % 2 == 0 else "Q")
