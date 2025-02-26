@@ -188,6 +188,9 @@ def sequencer_default(seq: Sequencer):
             default = True
             seq.set("demod_en_acq", True)
             seq.set("connect_out0", "IQ")
+            seq.set("mod_en_awg", True)
+            seq.set("nco_freq", 0)
+            seq.set("nco_phase_offs", 0)
 
     if default:
         seq.set("cont_mode_en_awg_path0", False)
