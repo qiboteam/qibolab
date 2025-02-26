@@ -165,6 +165,10 @@ def sequencer_default(seq: Sequencer):
         if seq.seq_idx < 4:
             default = True
             seq.set(f"connect_out{seq.seq_idx}", "I" if seq.seq_idx % 2 == 0 else "Q")
+            seq.set("mod_en_awg", True)
+            seq.set("nco_freq", 0)
+            seq.set("offset_awg_path0", 0)
+            seq.set("offset_awg_path1", 0)
         else:
             seq.set("connect_out0", "off")
             seq.set("connect_out1", "off")
