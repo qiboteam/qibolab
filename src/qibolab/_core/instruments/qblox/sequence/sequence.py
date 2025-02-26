@@ -80,7 +80,12 @@ class Q1Sequence(Model):
         channel: ChannelId,
         lo: Optional[float],
         time_of_flight: Optional[float],
+        duration: float,
     ) -> "Q1Sequence":
+        padding = (
+            duration
+            - sum(p.duration if not isinstance(p, Align) else 0 for p in sequence)
+        ) * sampling_rate
         waveforms_ = waveforms(
             sequence,
             sampling_rate,
@@ -110,6 +115,7 @@ class Q1Sequence(Model):
                 sweepers,
                 channel,
                 time_of_flight,
+                int(padding),
             ),
         )
 
@@ -149,6 +155,7 @@ def compile(
     los: dict[ChannelId, OscillatorConfig],
     time_of_flights: dict[ChannelId, float],
 ) -> dict[ChannelId, Q1Sequence]:
+    duration = sequence.duration
     return {
         ch: Q1Sequence.from_pulses(
             seq,
@@ -158,6 +165,7 @@ def compile(
             ch,
             _lo_frequency(los.get(ch)),
             time_of_flights.get(ch),
+            duration,
         )
         for ch, seq in sequence.by_channel.items()
     }
