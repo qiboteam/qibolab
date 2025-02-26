@@ -160,6 +160,7 @@ def sequencer_default(seq: Sequencer):
     seq.set("mixer_corr_gain_ratio", 1)
     seq.set("mixer_corr_phase_offset_degree", 0)
     seq.set("nco_phase_offs", 0)
+    seq.set("sync_en", False)
     seq.set("upsample_rate_awg_path0", 0)
     seq.set("upsample_rate_awg_path1", 0)
 
