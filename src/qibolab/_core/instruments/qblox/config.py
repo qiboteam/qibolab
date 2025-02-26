@@ -186,7 +186,7 @@ def sequencer_default(seq: Sequencer):
         seq.set("marker_ovr_en", False)
         seq.set("connect_acq", "in0")
         seq.set("connect_out0", "off")
-        if seq.seq_idx < 2:
+        if seq.seq_idx < 1:
             default = True
 
     if default:
