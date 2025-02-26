@@ -213,8 +213,17 @@ def sequencer(
     # offsets
     if isinstance(config, DcConfig):
         seq.ancestors[1].set(f"out{seq.seq_idx}_offset", config.offset)
+
+    # avoid sequence operations for inactive sequencers, including synchronization
+    if sequence.is_empty:
+        return
+
+    # connect to physical address
+    seq.connect_sequencer(address.local_address)
+
     seq.offset_awg_path0(0.0)
     seq.offset_awg_path1(0.0)
+
     # modulation, only disable for QCM - always used for flux pulses
     mod = cast(Module, seq.ancestors[1])
     seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
@@ -245,13 +254,6 @@ def sequencer(
         assert lo is not None
         lo_freq = cast(OscillatorConfig, configs[lo]).frequency
         seq.nco_freq(int(freq - lo_freq))
-
-    # connect to physical address
-    seq.connect_sequencer(address.local_address)
-
-    # avoid sequence operations for inactive sequencers, including synchronization
-    if sequence.is_empty:
-        return
 
     if address.input:
         seq.connect_out0("IQ")
