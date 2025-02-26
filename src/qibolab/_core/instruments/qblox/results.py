@@ -37,7 +37,7 @@ def integration_lenghts(
     return _fill_empty_lenghts(
         reduce(or_, (seq.integration_lengths for seq in sequences.values())),
         {
-            (mod_id, i): 1  # seq.integration_length_acq()
+            (mod_id, i): 480  # seq.integration_length_acq()
             for mod_id, mod in modules.items()
             for i, seq in enumerate(mod.sequencers)
             if hasattr(seq, "integration_length_acq")
