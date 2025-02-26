@@ -1,8 +1,9 @@
 """Emulator controller."""
 
+from collections import defaultdict
+
 import numpy as np
-from qibo.config import log
-from qutip import basis, mesolve, tensor
+from qutip import mesolve
 
 from qibolab import Readout
 from qibolab._core.components import AcquisitionConfig, Config
@@ -15,7 +16,20 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
 
 from .hamiltonians import waveform
+from .operators import INITIAL_STATE, _probability
 from .utils import merge_results
+
+
+def _normalize_prob(probs: list) -> list:
+    """Normalize probabilities.
+
+    Necessary to avoid rounding errors when calling np.random.choice.
+    """
+    prob0 = np.round(probs[0], 2)
+    prob1 = np.round(probs[1], 2)
+    prob2 = np.round(1 - prob0 - prob1, 2)
+    normalization = np.sum([prob0, prob1, prob2])
+    return [prob / normalization for prob in [prob0, prob1, prob2]]
 
 
 class EmulatorController(Controller):
@@ -24,10 +38,10 @@ class EmulatorController(Controller):
     bounds: str = "emulator/bounds"
 
     def connect(self):
-        log.info("Starting emulator.")
+        """Dummy connect method."""
 
     def disconnect(self):
-        log.info("Stopping emulator.")
+        """Dummy disconnect method."""
 
     @property
     def sampling_rate(self):
@@ -39,11 +53,11 @@ class EmulatorController(Controller):
     def initial_state(self):
         """System in ground state."""
         # initial state: qubit in ground state
-        return tensor(basis(3, 0))
+        return INITIAL_STATE
 
     def probability(self, state: int):
         """Probability of qubit in state."""
-        return basis(3, state) * basis(3, state).dag()
+        return _probability(state=state)
 
     def _play_sequence(self, sequence, configs, options, updates=None):
         """Play single sequence on emulator."""
@@ -71,7 +85,7 @@ class EmulatorController(Controller):
                 ro_pulse_id: np.random.choice(
                     [0, 1, 2],
                     size=options.nshots,
-                    p=[max(prob[0], 0), max(prob[1], 0), max(0, 1 - prob[0] - prob[1])],
+                    p=_normalize_prob(prob),
                 )
                 for ro_pulse_id, prob in averaged_results.items()
             }
@@ -122,16 +136,14 @@ class EmulatorController(Controller):
         options: ExecutionParameters,
         sweepers: list = None,
     ):
-        assert (
-            options.acquisition_type == AcquisitionType.DISCRIMINATION
-        ), "Emulator only supports DISCRIMINATION acquisition type."
+        assert options.acquisition_type == AcquisitionType.DISCRIMINATION, (
+            "Emulator only supports DISCRIMINATION acquisition type."
+        )
         results = {}
 
         for sequence in sequences:
-            if len(sweepers) > 0:
-                results.update(self._sweep(sequence, configs, options, sweepers))
-            else:
-                results.update(self._play_sequence(sequence, configs, options))
+            results.update(self._sweep(sequence, configs, options, sweepers))
+
         return results
 
     def _measurement(self, sequence, configs, updates=None):
@@ -163,17 +175,13 @@ class EmulatorController(Controller):
     ) -> dict[str, list]:
         """Construct Hamiltonian dependent term for qutip simulation."""
 
-        hamiltonians = {}
+        hamiltonians = defaultdict(list)
         h_t = []
-
         for channel, pulse in sequence:
             # do not handle readout pulses
             if not isinstance(configs[channel], AcquisitionConfig):
                 signal = waveform(pulse, channel, configs, updates)
-                if channel in hamiltonians:
-                    hamiltonians[channel] += [signal]
-                else:
-                    hamiltonians[channel] = [signal]
+                hamiltonians[channel] += [signal]
 
         for channel, waveforms in hamiltonians.items():
 

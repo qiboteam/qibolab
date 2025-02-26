@@ -1,13 +1,25 @@
-from qutip import basis, destroy
+from qutip import basis, destroy, tensor
 
-STATE_0 = basis(3, 0)
+N_LEVELS = 3
+"""Levels for transmon system."""
+
+STATE_0 = basis(N_LEVELS, 0)
 """State 0."""
-STATE_1 = basis(3, 1)
+STATE_1 = basis(N_LEVELS, 1)
 """State 1."""
-STATE_2 = basis(3, 2)
+STATE_2 = basis(N_LEVELS, 2)
 """State 2."""
 
-QUBIT_DESTROY = destroy(3)
+INITIAL_STATE = tensor(STATE_0)
+"""System initial state."""
+
+
+def _probability(state: int):
+    """Probability of qubit in state."""
+    return basis(N_LEVELS, state) * basis(N_LEVELS, state).dag()
+
+
+QUBIT_DESTROY = destroy(N_LEVELS)
 """Qubit destruction operator."""
 QUBIT_CREATE = QUBIT_DESTROY.dag()
 """Qubit creation operator."""
