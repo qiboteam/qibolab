@@ -13,6 +13,7 @@ from ..q1asm.ast_ import (
     Move,
     Program,
     Stop,
+    Wait,
     WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
@@ -95,6 +96,7 @@ def program(
     sweepers: list[ParallelSweepers],
     channel: ChannelId,
     time_of_flight: Optional[float],
+    padding: int,
 ) -> Program:
     """Generate sequencer program."""
     assert options.nshots is not None
@@ -110,7 +112,10 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v[1]]
     )
-    experiment_ = experiment(sweepseq, waveforms, acquisitions, time_of_flight)
+    experiment_ = experiment(sweepseq, waveforms, acquisitions, time_of_flight) + [
+        # add 4 spare ns to ensure minimum duration
+        Wait(duration=padding + 4)
+    ]
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
 
