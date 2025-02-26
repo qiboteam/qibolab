@@ -172,8 +172,11 @@ def sequencer_default(seq: Sequencer):
             seq.set("connect_out3", "off")
 
     if not mod.is_qrm_type and mod.is_rf_type:
+        seq.set("connect_out0", "off")
+        seq.set("connect_out1", "off")
         if seq.seq_idx < 2:
             default = True
+            seq.set(f"connect_out{seq.seq_idx}", "off")
 
     if mod.is_qrm_type:
         seq.set("marker_ovr_en", False)
@@ -248,8 +251,10 @@ def sequencer(
 
     # avoid sequence operations for inactive sequencers, including synchronization
     if sequence.is_empty:
-        seq.sync_en(False)
         return
+
+    if address.input:
+        seq.connect_out0("IQ")
 
     # upload sequence
     # - ensure JSON compatibility of the sent dictionary
