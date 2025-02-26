@@ -61,3 +61,15 @@ class Qubit(Model):
         if channels is None:
             channels = [name for name, f in cls.model_fields.items() if f.metadata[0]]
         return cls(**{ch: f"{name}/{ch}" for ch in channels}, **kwargs)
+
+    @classmethod
+    def coupler(cls, name: QubitId, **kwargs):
+        """Create a qubit with default channel names."""
+        return cls(flux=f"coupler_{name}/flux", **kwargs)
+
+
+class QubitPair(Model):
+    """Represent a two-qubit interaction."""
+
+    drive: Optional[ChannelId] = None
+    """Output channel, for cross-resonance driving."""
