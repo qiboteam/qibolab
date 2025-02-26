@@ -101,16 +101,13 @@ def play(
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
         acq = acquisitions[pulse.id]
+        delay = int(time_of_flight) if time_of_flight is not None else 4
         return [
-            play_pulse(pulse.probe, waveforms).model_copy(
-                update={
-                    "duration": int(time_of_flight) if time_of_flight is not None else 4
-                }
-            ),
+            play_pulse(pulse.probe, waveforms).model_copy(update={"duration": delay}),
             Acquire(
                 acquisition=acq.acquisition.index,
                 bin=Registers.bin.value,
-                duration=int(pulse.duration),
+                duration=int(pulse.duration) - delay,
             ),
         ]
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
