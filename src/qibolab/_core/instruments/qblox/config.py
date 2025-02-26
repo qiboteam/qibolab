@@ -176,7 +176,7 @@ def sequencer_default(seq: Sequencer):
         seq.set("connect_out1", "off")
         if seq.seq_idx < 2:
             default = True
-            seq.set(f"connect_out{seq.seq_idx}", "off")
+            seq.set(f"connect_out{seq.seq_idx}", "IQ")
 
     if mod.is_qrm_type:
         seq.set("marker_ovr_en", False)
@@ -184,6 +184,8 @@ def sequencer_default(seq: Sequencer):
         seq.set("connect_out0", "off")
         if seq.seq_idx < 1:
             default = True
+            seq.set("demod_en_acq", True)
+            seq.set("connect_out0", "IQ")
 
     if default:
         seq.set("cont_mode_en_awg_path0", False)
