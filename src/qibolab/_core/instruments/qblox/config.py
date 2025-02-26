@@ -89,23 +89,7 @@ class PortAddress(Model):
         return f"{self.direction}{channels}"
 
 
-def module(
-    mod: Module,
-    channels: dict[ChannelId, Channel],
-    los: dict[ChannelId, OscillatorConfig],
-):
-    """Configure module-wide settings."""
-    # map sequencers to specific outputs (but first disable all sequencer connections)
-    mod.disconnect_outputs()
-
-    if mod.is_qrm_type:
-        mod.disconnect_inputs()
-        # we do not currently support acquisition on external digital trigger
-        mod.scope_acq_trigger_mode_path0("sequencer")
-        mod.scope_acq_trigger_mode_path1("sequencer")
-
-    # apply defaults
-    # ---
+def module_default(mod: Module):
     if not mod.is_qrm_type and not mod.is_rf_type:
         mod.out0_offset(0)
         mod.out1_offset(0)
@@ -127,6 +111,22 @@ def module(
         mod.scope_acq_trigger_level_path0(0)
         mod.scope_acq_trigger_level_path1(0)
     # ---
+
+
+def module(
+    mod: Module,
+    channels: dict[ChannelId, Channel],
+    los: dict[ChannelId, OscillatorConfig],
+):
+    """Configure module-wide settings."""
+    # map sequencers to specific outputs (but first disable all sequencer connections)
+    mod.disconnect_outputs()
+
+    if mod.is_qrm_type:
+        mod.disconnect_inputs()
+        # we do not currently support acquisition on external digital trigger
+        mod.scope_acq_trigger_mode_path0("sequencer")
+        mod.scope_acq_trigger_mode_path1("sequencer")
 
     # set lo frequencies
     for iq, lo in los.items():
@@ -150,6 +150,18 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
     raise NotImplementedError(
         "Cannot acquire different lengths using the same sequencer."
     )
+
+
+def sequencer_default(seq: Sequencer):
+    seq.set("cont_mode_en_awg_path0", False)
+    seq.set("cont_mode_en_awg_path1", False)
+    seq.set("cont_mode_waveform_idx_awg_path0", 0)
+    seq.set("cont_mode_waveform_idx_awg_path1", 0)
+    seq.set("mixer_corr_gain_ratio", 1)
+    seq.set("mixer_corr_phase_offset_degree", 0)
+    seq.set("nco_phase_offs", 0)
+    seq.set("upsample_rate_awg_path0", 0)
+    seq.set("upsample_rate_awg_path1", 0)
 
 
 def sequencer(
@@ -178,16 +190,6 @@ def sequencer(
     # enabled and set to a certain value
     seq.marker_ovr_en(not (sequence.is_empty and address.input))
     seq.marker_ovr_value(0 if sequence.is_empty else 15)
-
-    seq.set("cont_mode_en_awg_path0", False)
-    seq.set("cont_mode_en_awg_path1", False)
-    seq.set("cont_mode_waveform_idx_awg_path0", 0)
-    seq.set("cont_mode_waveform_idx_awg_path1", 0)
-    seq.set("mixer_corr_gain_ratio", 1)
-    seq.set("mixer_corr_phase_offset_degree", 0)
-    seq.set("nco_phase_offs", 0)
-    seq.set("upsample_rate_awg_path0", 0)
-    seq.set("upsample_rate_awg_path1", 0)
 
     # acquisition
     if address.input:
