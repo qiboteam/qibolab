@@ -191,11 +191,8 @@ def sequencer_default(seq: Sequencer):
         seq.set("cont_mode_en_awg_path1", False)
         seq.set("cont_mode_waveform_idx_awg_path0", 0)
         seq.set("cont_mode_waveform_idx_awg_path1", 0)
-        seq.set("mod_en_awg", True)
         seq.set("mixer_corr_gain_ratio", 1)
         seq.set("mixer_corr_phase_offset_degree", 0)
-        seq.set("nco_freq", 0)
-        seq.set("nco_phase_offs", 0)
         seq.set("offset_awg_path0", 0)
         seq.set("offset_awg_path1", 0)
         seq.set("upsample_rate_awg_path0", 0)
@@ -230,8 +227,11 @@ def sequencer(
     seq.offset_awg_path1(0.0)
 
     # modulation, only disable for QCM - always used for flux pulses
-    mod = cast(Module, seq.ancestors[1])
-    seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+    # mod = cast(Module, seq.ancestors[1])
+    # seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+    seq.mod_en_awg(True)
+    seq.nco_freq(0)
+    seq.nco_phase_offs(0)
 
     # FIX: for no apparent reason other than experimental evidence, the marker has to be
     # enabled and set to a certain value
