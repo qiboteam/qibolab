@@ -110,7 +110,9 @@ def module_default(mod: Module):
         mod.scope_acq_sequencer_select(0)
         mod.scope_acq_trigger_level_path0(0)
         mod.scope_acq_trigger_level_path1(0)
-    # ---
+        if mod.slot_idx == 20:
+            mod.out0_offset_path0(-8.1)
+            mod.out0_offset_path1(-3.8)
 
 
 def module(
@@ -191,6 +193,7 @@ def sequencer_default(seq: Sequencer):
             seq.set("mod_en_awg", True)
             seq.set("nco_freq", 0)
             seq.set("nco_phase_offs", 0)
+            seq.set("integration_length_acq", 480)
 
     if default:
         seq.set("cont_mode_en_awg_path0", False)
@@ -247,14 +250,15 @@ def sequencer(
     # acquisition
     if address.input:
         assert isinstance(config, AcquisitionConfig)
-        length = _integration_length(sequence)
-        if length is not None:
-            seq.integration_length_acq(length)
+        # length = _integration_length(sequence)
+        # if length is not None:
+        #     seq.integration_length_acq(length)
         # discrimination
         if config.iq_angle is not None:
             seq.thresholded_acq_rotation(np.degrees(config.iq_angle % (2 * np.pi)))
         if config.threshold is not None:
-            seq.thresholded_acq_threshold(config.threshold)
+            # seq.thresholded_acq_threshold(config.threshold * length)
+            seq.thresholded_acq_threshold(config.threshold * 480)
         # demodulation
         seq.demod_en_acq(acquisition is not AcquisitionType.RAW)
 
