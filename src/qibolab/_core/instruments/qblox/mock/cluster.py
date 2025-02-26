@@ -12,8 +12,12 @@ class MockSequencer:
         self.register = {"calls": []}
         self.ancestors = [self] + ancestors
 
+    @property
+    def seq_idx(self):
+        return self.idx
+
     def __getattribute__(self, name: str):
-        if name in ["idx", "register", "ancestors"]:
+        if name in ["idx", "register", "ancestors", "seq_idx"]:
             return super().__getattribute__(name)
 
         log: dict["str", Any] = {"name": name}
@@ -131,3 +135,6 @@ class MockCluster:
 
     def get_acquisitions(self, slot: int, sequencer: int) -> dict:
         return {}
+
+    def reference_source(self, value=None) -> None:
+        pass
