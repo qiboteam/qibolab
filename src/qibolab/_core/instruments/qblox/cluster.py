@@ -17,6 +17,7 @@ from qibolab._core.components.configs import (
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses.pulse import Delay
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -144,6 +145,11 @@ class Cluster(Controller):
         log = Logger(configs)
 
         for ps in sequences:
+            ps = [
+                (ch, Delay(duration=4))
+                for ch in self.channels
+                if "flux" in ch or ch in ps.channels
+            ] + ps
             assert_channels_exclusion(ps, self._probes)
             sequences_ = compile(
                 ps,
