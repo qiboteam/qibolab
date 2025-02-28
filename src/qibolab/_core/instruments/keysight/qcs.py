@@ -52,7 +52,6 @@ class KeysightQCS(Controller):
         sweepers: list[ParallelSweepers],
         num_shots: int,
     ) -> tuple[qcs.Program, list[tuple[int, int]]]:
-
         # SWEEPER MANAGEMENT
         probe_channel_ids = {
             chan.probe
@@ -129,7 +128,6 @@ class KeysightQCS(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
-
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
 
@@ -158,7 +156,6 @@ class KeysightQCS(Controller):
                 )
 
                 for result, input_op in zip(raw.values(), input_ops):
-
                     ret[input_op.id] = parse_result(result, options)
 
         return ret
