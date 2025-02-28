@@ -125,7 +125,7 @@ https://github.com/qiboteam/qibolab/discussions/1119
 """
 
 
-def _sweep_update(p: Param, channel: ChannelId, pulses: set[PulseId]) -> Block:
+def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Block:
     """Sweeper update for a single parameter.
 
     - increment the parameter register
@@ -146,16 +146,12 @@ def _sweep_update(p: Param, channel: ChannelId, pulses: set[PulseId]) -> Block:
             if p.channel == channel or p.pulse in pulses
             else ()
         ),
-        *(
-            update_instructions(p.kind, p.reg)
-            if p.description is not None and p.channel == channel
-            else ()
-        ),
+        *(update_instructions(p.kind, p.reg) if p.channel in channel else ()),
     )
 
 
 def _sweep_updates(
-    lp: LoopSpec, params: IndexedParams, channel: ChannelId, pulses: set[PulseId]
+    lp: LoopSpec, params: IndexedParams, channel: set[ChannelId], pulses: set[PulseId]
 ) -> BlockIter:
     """Parallel sweeper updates.
 
@@ -179,7 +175,7 @@ def _sweep_iteration(
     lp: LoopSpec,
     params: IndexedParams,
     shots: bool,
-    channel: ChannelId,
+    channel: set[ChannelId],
     pulses: set[PulseId],
 ) -> BlockList:
     """Sweep loop.
@@ -203,7 +199,7 @@ def _loop_machinery(
     loops: Sequence[LoopSpec],
     params: IndexedParams,
     singleshot: bool,
-    channel: ChannelId,
+    channel: set[ChannelId],
     pulses: set[PulseId],
 ) -> BlockList:
     """Looping block.
@@ -232,7 +228,7 @@ def loop(
     params: IndexedParams,
     relaxation_time: int,
     singleshot: bool,
-    channel: ChannelId,
+    channel: set[ChannelId],
     pulses: set[PulseId],
 ) -> Block:
     end = _experiment_end(relaxation_time)
