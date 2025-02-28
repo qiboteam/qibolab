@@ -536,9 +536,9 @@ def ps_to_waveform_dict(
                     """If pulse.type.value == "cf": platform_channel_name =
                     f"flux-c{coupler}" elif (
 
-                    pulse.type.value == "cd" ):  # when drive pulse
-                    for couplers are available     platform_channel_name
-                    = f"drive-{coupler}"
+                    pulse.type.value == "cd" ):  # when drive pulse for
+                    couplers are available     platform_channel_name =
+                    f"drive-{coupler}"
                     """
 
                     emulator_channel_name_list.append(
@@ -596,9 +596,9 @@ def ps_to_waveform_dict(
                     """If pulse.type.value == "cf": platform_channel_name =
                     f"flux-c{coupler}" elif (
 
-                    pulse.type.value == "cd" ):  # when drive pulse
-                    for couplers are available     platform_channel_name
-                    = f"drive-c{coupler}"
+                    pulse.type.value == "cd" ):  # when drive pulse for
+                    couplers are available     platform_channel_name =
+                    f"drive-c{coupler}"
                     """
 
                     emulator_channel_name_list.append(
