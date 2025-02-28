@@ -253,7 +253,7 @@ def generate_model_config(
         # dissipation_dict["t1"].append((np.sqrt(g1 / 2), f"sp01_{ind}", [ind]))
         # dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{ind}", [ind]))
         dissipation_dict["t1"].append((np.sqrt(g1), f"sp01_{ind}", [ind]))
-        dissipation_dict["t2"].append((np.sqrt(g2/2), f"Z01_{ind}", [ind]))
+        dissipation_dict["t2"].append((np.sqrt(g2 / 2), f"Z01_{ind}", [ind]))
 
     # two-body terms (couplings)
     for key in list(
