@@ -28,6 +28,13 @@ NS_TO_S = 1e-9
 __all__ = ["KeysightQCS"]
 
 
+def sweeper_reducer(
+    program: qcs.Program, sweepers: tuple[list[qcs.Array], list[qcs.Scalar]]
+):
+    """Helper method to unpack the QCS sweep parameters when processing sweepers."""
+    return program.sweep(*sweepers)
+
+
 class KeysightQCS(Controller):
     """Driver for interacting with QCS controller server."""
 
@@ -52,7 +59,6 @@ class KeysightQCS(Controller):
         sweepers: list[ParallelSweepers],
         num_shots: int,
     ) -> tuple[qcs.Program, list[tuple[int, int]]]:
-
         # SWEEPER MANAGEMENT
         probe_channel_ids = {
             chan.probe
@@ -69,11 +75,12 @@ class KeysightQCS(Controller):
         # Here we are telling the program to run hardware sweepers first, then software sweepers
         # It is essential that we match the original sweeper order to the modified sweeper order
         # to reconcile the results at the end
-        sweep = lambda program, sweepers: program.sweep(*sweepers)
         program = reduce(
-            sweep,
+            sweeper_reducer,
             software_sweepers,
-            reduce(sweep, hardware_sweepers, qcs.Program()).n_shots(num_shots),
+            reduce(sweeper_reducer, hardware_sweepers, qcs.Program()).n_shots(
+                num_shots
+            ),
         )
 
         # WAVEFORM COMPILATION
@@ -129,7 +136,6 @@ class KeysightQCS(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
-
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
 
@@ -158,7 +164,6 @@ class KeysightQCS(Controller):
                 )
 
                 for result, input_op in zip(raw.values(), input_ops):
-
                     ret[input_op.id] = parse_result(result, options)
 
         return ret
