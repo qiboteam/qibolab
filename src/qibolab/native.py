@@ -245,7 +245,8 @@ class NativeSequence:
 
         for pulse in self.pulses:
             if isinstance(pulse, NativePulse):
-                sequence.add(pulse.pulse(start=start))
+                #sequence.add(pulse.pulse(start=start))
+                sequence.add(pulse.pulse(start=pulse.start, relative_phase=pulse.phase))
             else:
                 virtual_z_phases[pulse.qubit.name] += pulse.phase
 
