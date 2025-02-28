@@ -1,5 +1,6 @@
 import inspect
 import re
+import shutil
 import textwrap
 from typing import Annotated, Any, Iterable, Optional, Sequence, Union
 
@@ -832,3 +833,6 @@ class Program(Model):
         return (
             code if comments else re.sub("^\n*", "", re.sub("\n+", "\n", code))
         ) + "\n"
+
+    def __rich__(self):
+        return self.asm(width=shutil.get_terminal_size((None, None)).columns)
