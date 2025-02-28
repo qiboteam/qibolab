@@ -98,15 +98,18 @@ class QutipSimulator:
                 [basis_list[i] * basis_list[j].dag() for j in range(nlevels)]
                 for i in range(nlevels)
             ]
+            # sig[i][j] = create [i] kill [j]
             self.op_dict["basis"].update({qid: basis_list})
             self.op_dict["sig"].update({qid: sig})
-            self.op_dict["pm1_matrix"].update(
-                {qid: [(sig[i][i + 1] + sig[i + 1][i]) / 2 for i in range(nlevels - 1)]}
-            )
             Id = sig[0][0]
             for i in range(1, nlevels):
                 Id += sig[i][i]
             self.op_dict["id"].update({qid: Id})
+
+            if nlevels > 1:
+                self.op_dict["pm1_matrix"].update(
+                    {qid: [(sig[i][i + 1] + sig[i + 1][i]) / 2 for i in range(nlevels - 1)]}
+                )
 
         ### operator connector dictionary ###
         self.op_connectors_dict = OrderedDict(
@@ -136,27 +139,52 @@ class QutipSimulator:
                 "X": {},
                 "Z01": {},
                 "sp01": {},
+                "sig01": {},
+                "sig10": {},
+                "sig00": {},
+                "sig11": {},
+                "sig22": {},
+                "sig12": {},
+                "sig21": {},
             }
         )
 
         ### Construct qutip op_dict for each qubit and coupler ###
         for qid, nlevels in self.qid_nlevels_map.items():
-            sig = self.op_dict["sig"][qid]
-            b = sig[0][1]
-            for i in range(nlevels - 2):
-                b += np.sqrt(i + 2) * sig[i + 1][i + 2]
-            bdag = b.dag()
-            O = bdag * b
-            X = b + bdag
-            Z01 = sig[0][0] - sig[1][1]
-            sp01 = sig[0][1]
+            if nlevels > 1:
+                sig = self.op_dict["sig"][qid]
+                b = sig[0][1] 
+                for i in range(nlevels - 2):
+                    b += np.sqrt(i + 2) * sig[i + 1][i + 2]
+                bdag = b.dag()
+                O = bdag * b
+                X = b + bdag
+                Z01 = sig[0][0] - sig[1][1]
+                sp01 = sig[0][1] ## todo rename to sm01? check decay channel
+                sig01 = sp01
+                sig10 = sig[1][0]
+                sig00 = sig[0][0]
+                sig11 = sig[1][1]           
+    
+                self.op_dict["b"].update({qid: b})
+                self.op_dict["bdag"].update({qid: bdag})
+                self.op_dict["O"].update({qid: O})
+                self.op_dict["X"].update({qid: X})
+                self.op_dict["Z01"].update({qid: Z01})
+                self.op_dict["sp01"].update({qid: sp01})
+                self.op_dict["sig01"].update({qid: sig01})
+                self.op_dict["sig10"].update({qid: sig10})
+                self.op_dict["sig00"].update({qid: sig00})
+                self.op_dict["sig11"].update({qid: sig11})
+                
+            if nlevels > 2:
+                sig22 = 2*sig[2][2]
+                sig12 = np.sqrt(2) * sig[1][2]
+                sig21 = np.sqrt(2) * sig[2][1]
 
-            self.op_dict["b"].update({qid: b})
-            self.op_dict["bdag"].update({qid: bdag})
-            self.op_dict["O"].update({qid: O})
-            self.op_dict["X"].update({qid: X})
-            self.op_dict["Z01"].update({qid: Z01})
-            self.op_dict["sp01"].update({qid: sp01})
+                self.op_dict["sig22"].update({qid: sig22})
+                self.op_dict["sig12"].update({qid: sig12})
+                self.op_dict["sig21"].update({qid: sig21})
 
         ## initialize operators ##
         self.drift = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
@@ -186,11 +214,26 @@ class QutipSimulator:
         except:
             pass
 
+        ### two-qubit drive (only for effective two body drive model)
+        try:
+            for channel_name, op_instruction_list in self.model_config["two_body_drive"].items():
+                channel_op = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
+                for op_instruction in op_instruction_list:
+                    channel_op += self.make_operator(op_instruction)
+            self.operators.update({channel_name: channel_op})
+            
+        except:
+            pass
+
+        #print(self.operators)
+        
         ### dissipation ###
         for op_instruction in self.model_config["dissipation"]["t1"]:
             self.static_dissipators += [self.make_operator(op_instruction)]
         for op_instruction in self.model_config["dissipation"]["t2"]:
             self.static_dissipators += [self.make_operator(op_instruction)]
+
+        #print(self.static_dissipators)
 
     def make_arbitrary_state(
         self, statedata: np.ndarray, is_qibo_state_vector: bool = False
@@ -297,6 +340,8 @@ class QutipSimulator:
 
         fp_list = []
         for channel_name in channel_names:
+            #print(channel_name)
+            #print(channel_waveforms["channels"][channel_name]['waveform'])
             fp_list.append(
                 function_from_array(
                     channel_waveforms["channels"][channel_name]['waveform'], full_time_list
@@ -320,10 +365,14 @@ class QutipSimulator:
         else:
             static_dissipators = []
 
+        '''
         H = [drift]
         for i, op in enumerate(scheduled_operators):
             H.append([op, fp_list[i]])
 
+        #print(scheduled_operators)
+        #print(H)
+        
         sim_start_time = timer()
         if self.sim_method == "master_equation":
             result = mesolve(
@@ -343,6 +392,51 @@ class QutipSimulator:
         final_state = result.states[
             -1
         ]  # result.states in little endian, opposite to qibo convention
+        '''
+        nlevels_actual = [nl for nl in self.nlevels_HS if nl>1]
+        dims_actual = [nlevels_actual,nlevels_actual]
+        drift.dims = dims_actual
+        
+        H = [drift]
+        for i, op in enumerate(scheduled_operators):
+            op.dims = dims_actual
+            H.append([op, fp_list[i]])
+
+        #print(scheduled_operators)
+        #print(H)
+
+        psi0 = self.psi0
+        psi0.dims = [nlevels_actual, np.ones(len(nlevels_actual),dtype=int).tolist()]
+
+        for static_dissipator in static_dissipators:
+            static_dissipator.dims = dims_actual
+
+        sim_start_time = timer()
+        if self.sim_method == "master_equation":
+            result = mesolve(
+                H,
+                psi0,
+                full_time_list,
+                c_ops=static_dissipators,
+                options=self.sim_opts,
+                progress_bar=EnhancedTextProgressBar(
+                    len(full_time_list), int(len(full_time_list) / 100)
+                ),
+            )
+
+        sim_end_time = timer()
+        sim_time = sim_end_time - sim_start_time
+
+        result_states = result.states
+        for state in result_states:
+            if static_dissipators:
+                state.dims = [self.nlevels_HS,self.nlevels_HS]
+            else:
+                state.dims = [self.nlevels_HS, np.ones(len(self.nlevels_HS),dtype=int).tolist()]
+            
+        final_state = result_states[
+            -1
+        ]  # result.states in little endian, opposite to qibo convention
 
         times_dict = {
             "sequence_duration": full_time_list[-1],
@@ -352,7 +446,8 @@ class QutipSimulator:
 
         return (
             times_dict,
-            result.states,
+            #result.states,
+            result_states,
             *self.qobj_to_reduced_dm(final_state, ro_qubit_list),
         )
 
@@ -440,11 +535,17 @@ class QutipSimulator:
 
             full_HS_dim = np.prod(self.nlevels_HS)
             for state_id in range(full_HS_dim):
-                basis_string = dec_to_basis_string(state_id, self.nlevels_HS)
+                basis_string = dec_to_basis_string(state_id, self.nlevels_HS) # little endian
+                basis_string = np.flip(basis_string).tolist() # big endian
                 basis_state = self.state_from_basis_vector(
                     basis_string[: self.nqubits], basis_string[self.nqubits :]
                 )
                 psi = ket2dm(basis_state)
+
+                # reshape to compensate for ket2dm automatically removing trivial subspaces
+                basis_dims = basis_state.dims[0]
+                if psi.dims[0] != basis_dims:
+                    psi.dims = [basis_dims,basis_dims]
                 reference_states.update({str(basis_string): psi})
 
         total_samples = len(target_states)
@@ -536,3 +637,33 @@ def extend_op_dim(
     inverse_qubit_order = np.flip(np.argsort(unordered_index_list))
 
     return full_qobj.permute(inverse_qubit_order)
+
+
+def proj_to_2levelHS(qstate: Qobj):
+    """Projects the quantum statevector or density matrix to a system with all nlevel=2.
+    """
+    state_data = qstate.full()
+    dims = qstate.dims[0]
+    nsys = len(dims)
+    shape = qstate.shape
+    new_dims = []
+    for d in dims:
+        new_dims.append(np.clip(d,1,2))
+    full_new_dims = np.prod(new_dims)
+
+    reduced_orig_ind_list = []
+    for ind in range(full_new_dims):
+        basis_string = dec_to_basis_string(ind, new_dims)
+        orig_ind = 0
+        for i, bit in enumerate(basis_string):
+            orig_ind += bit*dims[i]**(nsys-i-1)
+        reduced_orig_ind_list.append(orig_ind)
+    
+    if shape[0]==shape[1]: # density matrix
+        reduced_state_data = state_data[reduced_orig_ind_list,:][:,reduced_orig_ind_list]
+        reduced_qstate = Qobj(reduced_state_data, dims=[new_dims,new_dims])
+    else:
+        reduced_state_data = state_data[reduced_orig_ind_list,:]
+        reduced_qstate = Qobj(reduced_state_data, dims=[new_dims,np.ones(nsys, dtype=int).tolist()])
+
+    return reduced_qstate

@@ -16,6 +16,7 @@ from qibolab.instruments.emulator.engines.qutip_engine import QutipSimulator
 from qibolab.instruments.emulator.models import (
     general_coupler_model,
     general_no_coupler_model,
+    effective_two_body_drive_model,
 )
 from qibolab.instruments.emulator.models.methods import flux_detuning
 from qibolab.platform import Platform
@@ -39,6 +40,7 @@ SIMULATION_ENGINES = {
 MODELS = {
     "general_no_coupler_model": general_no_coupler_model,
     "general_coupler_model": general_coupler_model,
+    "effective_two_body_drive_model": effective_two_body_drive_model,
 }
 
 DEFAULT_SIM_CONFIG = {
@@ -113,6 +115,12 @@ class PulseSimulator(Controller):
         self.simulate_dissipation = simulation_config["simulate_dissipation"]
         self.output_state_history = simulation_config["output_state_history"]
 
+        try:
+            self.exception_channels = model_config["exception_channels"]
+        except:            
+            self.exception_channels = []
+            
+
     def connect(self):
         pass
 
@@ -147,6 +155,7 @@ class PulseSimulator(Controller):
             self.sampling_rate,
             self.sim_sampling_boost,
             self.runcard_duration_in_dt_units,
+            self.exception_channels,
         )
 
         # convert flux pulse signals into flux detuning
@@ -156,10 +165,11 @@ class PulseSimulator(Controller):
                 ##max_frequency = current_frequency = self.flux_params_dict['current_frequency']
                 ##flux_op_coeffs = flux_detuning(pulse_signal, flux_quanta, max_frequency, current_frequency)
                 q = channel_name.split("-")[1]
-                flux_op_coeffs = flux_detuning(waveform, **self.flux_params_dict[q])
-                ##print('flux_op_coeffs:', flux_op_coeffs)
+                flux_op_coeffs = flux_detuning(waveform['waveform'], **self.flux_params_dict[q])
+                print('flux_op_coeffs:', flux_op_coeffs)
                 ##self.flux_op_coeffs = flux_op_coeffs
-                channel_waveforms["channels"].update({channel_name: flux_op_coeffs})
+                #channel_waveforms["channels"].update({channel_name: flux_op_coeffs})
+                channel_waveforms["channels"][channel_name].update({'waveform': flux_op_coeffs})
 
         # execute pulse simulation in emulator
         simulation_results = self.simulation_engine.qevolve(
@@ -458,7 +468,7 @@ def ps_to_waveform_dict(
     sampling_rate: float = 1.0,
     sim_sampling_boost: int = 1,
     runcard_duration_in_dt_units: bool = False,
-    exception_channels: dict = None,
+    exception_channels: list = [],
 ) -> dict[str, Union[np.ndarray, dict[str, np.ndarray]]]:
     """Converts pulse sequence to dictionary of time and channel separated
     waveforms.
@@ -478,7 +488,7 @@ def ps_to_waveform_dict(
     pulse_frequency_list = []
     emulator_channel_name_list = []
     emulator_exception_channels = []
-
+    #print(platform_to_simulator_channels)
     sequence_couplers = sequence.cf_pulses
 
     def channel_translator(platform_channel_name, frequency):
@@ -584,6 +594,7 @@ def ps_to_waveform_dict(
                     pulse_frequency_list.append(pulse_frequency)
                     emulator_channel_name = channel_translator(channel, pulse._if)
                     emulator_channel_name_list.append(emulator_channel_name)
+                    
                     if channel in exception_channels:
                         emulator_exception_channels.append(emulator_channel_name)
 
@@ -661,7 +672,7 @@ def get_pulse_signal(
     pulse: Union[ReadoutPulse, DrivePulse, FluxPulse],
     sampling_rate: float = 1.0,
     sim_sampling_boost: int = 1,
-    exception_channels: dict = None,
+    exception_channels: list = [],
 ) -> tuple:
     """Converts pulse to a list of times and a list of corresponding pulse
     signal values assuming pulse duration in runcard is in units of
@@ -676,19 +687,17 @@ def get_pulse_signal(
         tuple: list of times and corresponding pulse signal values.
     """
     start = int(pulse.start * sim_sampling_boost)
-    actual_pulse_frequency = (
-        pulse.frequency
-    )  # store actual pulse frequency for channel_translator
+    actual_pulse_frequency = pulse.frequency  # store actual pulse frequency for channel_translator
 
-    if pulse.channel in exception_channels.keys():
-        if exception_channels[pulse.channel] == 'fsim_effective_coupling':
-            pulse.frequency = pulse._if = 0
-    else:
-        # rescale frequency to be compatible with sampling_rate = 1
-        pulse.frequency = pulse.frequency / sampling_rate
-        # need to first set pulse._if in GHz to use modulated_waveform_i method
-        pulse._if = pulse.frequency / GHZ
+    # rescale frequency to be compatible with sampling_rate = 1
+    pulse.frequency = pulse.frequency / sampling_rate
 
+    if pulse.channel in exception_channels:
+        pulse.frequency = 2*pulse.frequency
+            
+    # need to first set pulse._if in GHz to use modulated_waveform_i method
+    pulse._if = pulse.frequency / GHZ
+    
     i_env = pulse.envelope_waveform_i(sim_sampling_boost).data
     q_env = pulse.envelope_waveform_q(sim_sampling_boost).data
 
@@ -711,7 +720,7 @@ def get_pulse_signal_ns(
     pulse: Union[ReadoutPulse, DrivePulse],
     sampling_rate: float = 1.0,
     sim_sampling_boost: int = 1,
-    exception_channels: dict = None,
+    exception_channels: list = [],
 ) -> tuple:
     """Converts pulse to a list of times and a list of corresponding pulse
     signal values assuming pulse duration in runcard is in ns.
@@ -725,12 +734,13 @@ def get_pulse_signal_ns(
         tuple: list of times and corresponding pulse signal values.
     """
 
-    if pulse.channel in exception_channels.keys():
-        if exception_channels[pulse.channel] == 'fsim_effective_coupling':
-            pulse.frequency = pulse._if = 0
-    else:
-        # need to first set pulse._if in GHz to use modulated_waveform_i method
-        pulse._if = pulse.frequency / GHZ
+    actual_pulse_frequency = pulse.frequency  # store actual pulse frequency for channel_translator
+
+    if pulse.channel in exception_channels:
+        pulse.frequency = 2*pulse.frequency
+    
+    # need to first set pulse._if in GHz to use modulated_waveform_i method
+    pulse._if = pulse.frequency / GHZ
 
     sim_sampling_rate = sampling_rate * sim_sampling_boost
 
@@ -745,6 +755,10 @@ def get_pulse_signal_ns(
     sinalpha = np.sin(2 * np.pi * pulse._if * t + pulse.relative_phase)
     pulse_signal = i_env * sinalpha + q_env * cosalpha
     # pulse_signal = pulse_signal/np.sqrt(2) # uncomment for ibm runcard
+    
+    # restore pulse frequency values
+    pulse.frequency = actual_pulse_frequency
+    pulse._if = pulse.frequency / GHZ    
     
     return t, pulse_signal, actual_pulse_frequency
 
