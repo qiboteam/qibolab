@@ -1,0 +1,27 @@
+name: docs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags:
+      - "*"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.classify.outputs.version}}
+
+    steps:
+      - id: classify
+        uses: qiboteam/workflows/actions/docs/version@v2
+
+  deploy-docs:
+    needs: [version]
+    uses: qiboteam/workflows/.github/workflows/latest-stable.yml@v2
+    with:
+      python-version: "3.11"
+      trigger-label: "${{needs.version.outputs.version}}"
+      project: qibolab
+      poetry-extras: --with docs --all-extras

@@ -8,10 +8,9 @@ from pathlib import Path
 from typing import Optional, Union
 
 from pydantic import Field
-from qm import QuantumMachinesManager, SimulationConfig, generate_qua_script
+from qm import QuantumMachinesManager, generate_qua_script
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
-from qualang_tools.simulator_tools import create_simulator_controller_connections
 
 from qibolab._core.components import (
     AcquisitionChannel,
@@ -24,7 +23,7 @@ from qibolab._core.components import (
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import Acquisition, Align, Delay, Pulse, Readout
+from qibolab._core.pulses import Align, Delay, Pulse, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import unroll_sequences
@@ -150,6 +149,14 @@ class QmController(Controller):
     where ``fems`` are not given.
     """
 
+    cluster_name: Optional[str] = None
+    """Name of the Quantum Machines clusters to use.
+
+    Needs to be specified only when more than one clusters are connected to
+    the same router. See
+    https://docs.quantum-machines.co/latest/docs/Hardware/network_and_router/#accessing-the-cluster
+    for more details.
+    """
     bounds: str = "qm/bounds"
     """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[PathLike] = None
@@ -194,8 +201,9 @@ class QmController(Controller):
 
     def model_post_init(self, __context):
         if self.simulation_duration is not None:
-            # convert simulation duration from ns to clock cycles
-            self.simulation_duration //= 4
+            raise NotImplementedError(
+                "Simulation is no longer supported by the QM driver."
+            )
 
     @property
     def sampling_rate(self):
@@ -228,7 +236,11 @@ class QmController(Controller):
         if self.cloud:
             credentials = create_credentials()
         self.manager = QuantumMachinesManager(
-            host=host, port=int(port), octave=octave, credentials=credentials
+            host=host,
+            port=int(port),
+            octave=octave,
+            credentials=credentials,
+            cluster_name=self.cluster_name,
         )
 
     def disconnect(self):
@@ -331,7 +343,9 @@ class QmController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         for id, pulse in sequence:
-            if hasattr(pulse, "duration") and not pulse.duration.is_integer():
+            if hasattr(pulse, "duration") and not (
+                isinstance(pulse.duration, int) or pulse.duration.is_integer()
+            ):
                 raise ValueError(
                     f"Quantum Machines cannot play pulse with duration {pulse.duration}. "
                     "Only integer duration in ns is supported."
@@ -344,9 +358,16 @@ class QmController(Controller):
     def register_duration_sweeper_pulses(
         self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
     ):
-        """Register pulse with many different durations.
+        """Register pulses needed to implement a duration sweep.
 
-        Needed when sweeping duration.
+        For standard (non-interpolated) duration sweeps, we need to
+        upload distinct waveforms for every different duration.
+
+        When interpolation is used, we need to upload a single pulse
+        with the minimum duration of the sweeper, because the QM real-
+        time interpolation can only stretch and not compress arbitrary
+        waveforms, as documented in
+        https://docs.quantum-machines.co/latest/docs/Guides/features/?h=interpo#dynamic-pulse-duration
         """
         for pulse in sweeper.pulses:
             if isinstance(pulse, (Align, Delay)):
@@ -357,10 +378,20 @@ class QmController(Controller):
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
-            for value in sweeper.values.astype(int):
-                sweep_pulse = original_pulse.model_copy(update={"duration": value})
-                sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
-                params.duration_ops.append((value, sweep_op))
+            values = sweeper.values.astype(int)
+            if sweeper.parameter is Parameter.duration_interpolated:
+                sweep_pulse = original_pulse.model_copy(
+                    update={"duration": min(values)}
+                )
+                params.interpolated_op = self.register_pulse(
+                    ids[0], configs[ids[0]], sweep_pulse
+                )
+            else:
+                assert sweeper.parameter is Parameter.duration
+                for value in values:
+                    sweep_pulse = original_pulse.model_copy(update={"duration": value})
+                    sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
+                    params.duration_ops.append((value, sweep_op))
 
     def register_amplitude_sweeper_pulses(
         self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
@@ -446,21 +477,13 @@ class QmController(Controller):
             self.register_amplitude_sweeper_pulses(args, configs, sweeper)
         for sweeper in find_sweepers(sweepers, Parameter.duration):
             self.register_duration_sweeper_pulses(args, configs, sweeper)
+        for sweeper in find_sweepers(sweepers, Parameter.duration_interpolated):
+            self.register_duration_sweeper_pulses(args, configs, sweeper)
 
     def execute_program(self, program):
         """Executes an arbitrary program written in QUA language."""
         machine = self.manager.open_qm(asdict(self.config))
         return machine.execute(program)
-
-    def simulate_program(self, program):
-        """Simulates an arbitrary program written in QUA language."""
-        ncontrollers = len(self.config.controllers)
-        controller_connections = create_simulator_controller_connections(ncontrollers)
-        simulation_config = SimulationConfig(
-            duration=self.simulation_duration,
-            controller_connections=controller_connections,
-        )
-        return self.manager.simulate(asdict(self.config), program, simulation_config)
 
     def play(
         self,
@@ -508,14 +531,6 @@ class QmController(Controller):
                 "Not connected to Quantum Machines. Returning program and config."
             )
             return {"program": experiment, "config": asdict(self.config)}
-
-        if self.simulation_duration is not None:
-            result = self.simulate_program(experiment)
-            results = {}
-            for _, pulse in sequence:
-                if isinstance(pulse, Acquisition):
-                    results[pulse.id] = result
-            return results
 
         result = self.execute_program(experiment)
         return fetch_results(result, acquisitions.values())

@@ -1,4 +1,3 @@
-# A single CI script with github workflow
 name: Build wheels
 
 on:
@@ -13,10 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-    uses: qiboteam/workflows/.github/workflows/deploy-pip-poetry.yml@v1
+    uses: qiboteam/workflows/.github/workflows/wheels.yml@v2
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
-      publish: ${{ github.event_name == 'release' && github.event.action == 'published' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10' }}
+      publish: ${{ github.event_name == 'release' && github.event.action == 'published' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' }}
       poetry-extras: "--with docs,tests,analysis --all-extras"
     secrets: inherit

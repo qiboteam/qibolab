@@ -1,3 +1,8 @@
 from .components import *
-from .executor import Zurich
-from .sweep import ProcessedSweeps, classify_sweepers
+from .executor import Zurich as Zurich
+from .sweep import (
+    ProcessedSweeps as ProcessedSweeps,
+)
+from .sweep import (
+    classify_sweepers as classify_sweepers,
+)

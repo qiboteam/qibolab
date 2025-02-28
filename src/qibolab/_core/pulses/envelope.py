@@ -283,10 +283,11 @@ class Snz(BaseEnvelope):
         half_pulse_duration = (1 - self.t_idling) * samples / 2
         aspan = np.sum(np.arange(samples) < half_pulse_duration)
         idle = samples - 2 * (aspan + 1)
-
         pulse = np.ones(samples)
+        pulse[-aspan:] = -1
         # the aspan + 1 sample is B (and so the aspan + 1 + idle + 1), indexes are 0-based
-        pulse[aspan] = pulse[aspan + 1 + idle] = self.b_amplitude
+        pulse[aspan] = self.b_amplitude
+        pulse[aspan + 1 + idle] = -self.b_amplitude
         # set idle time to 0
         pulse[aspan + 1 : aspan + 1 + idle] = 0
         return pulse
@@ -337,8 +338,8 @@ class Custom(BaseEnvelope):
 
     kind: Literal["custom"] = "custom"
 
-    i_: npt.NDArray
-    q_: npt.NDArray
+    i_: NdArray
+    q_: NdArray
 
     def i(self, samples: int) -> Waveform:
         """I.
@@ -372,6 +373,9 @@ class Custom(BaseEnvelope):
             Add docstring
         """
         return eq(self, other)
+
+    def __hash__(self):
+        return hash(np.concatenate([self.i_, self.q_]).tobytes())
 
 
 Envelope = Annotated[

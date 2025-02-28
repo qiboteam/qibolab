@@ -84,7 +84,7 @@ def waveforms_from_pulse(pulse: Pulse, max_voltage: float) -> dict[str, Waveform
 
 @dataclass(frozen=True)
 class Waveforms:
-    I: str
+    I: str  # noqa: E741
     Q: str
 
     @classmethod
@@ -116,28 +116,33 @@ class QmPulse:
         )
 
 
+def _convert_integration_weights(x: list[tuple], minus: bool = False) -> list[tuple]:
+    """Convert integration weights array for QM."""
+    return [(-i[0] if minus else i[0], i[1]) for i in x]
+
+
 def integration_weights(element: str, readout_len: int, kernel=None, angle: float = 0):
     """Create integration weights section for QM config."""
-    cos, sin = np.cos(angle), np.sin(angle)
+
     if kernel is None:
-        convert = lambda x: [(x, readout_len)]
+        cos = [(np.cos(angle), readout_len)]
+        sin = [(np.sin(angle), readout_len)]
     else:
-        cos = kernel * cos
-        sin = kernel * sin
-        convert = lambda x: x
+        cos = [(i, 4) for i in kernel.real[::4]]
+        sin = [(i, 4) for i in kernel.imag[::4]]
 
     return {
         f"cosine_weights_{element}": {
-            "cosine": convert(cos),
-            "sine": convert(-sin),
+            "cosine": _convert_integration_weights(cos),
+            "sine": _convert_integration_weights(sin, minus=True),
         },
         f"sine_weights_{element}": {
-            "cosine": convert(sin),
-            "sine": convert(cos),
+            "cosine": _convert_integration_weights(sin),
+            "sine": _convert_integration_weights(cos),
         },
         f"minus_sine_weights_{element}": {
-            "cosine": convert(-sin),
-            "sine": convert(-cos),
+            "cosine": _convert_integration_weights(sin, minus=True),
+            "sine": _convert_integration_weights(cos, minus=True),
         },
     }
 

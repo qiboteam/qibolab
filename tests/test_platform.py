@@ -9,11 +9,11 @@ import pytest
 from qibo.models import Circuit
 from qibo.result import CircuitResult
 
-from qibolab import create_platform
+from qibolab import create_platform, initialize_parameters
 from qibolab._core.backends import QibolabBackend
 from qibolab._core.components import AcquisitionConfig, IqConfig, OscillatorConfig
 from qibolab._core.dummy import create_dummy
-from qibolab._core.dummy.platform import FOLDER
+from qibolab._core.dummy.platform import FOLDER, create_dummy_hardware
 from qibolab._core.native import SingleQubitNatives, TwoQubitNatives
 from qibolab._core.parameters import NativeGates, Parameters, update_configs
 from qibolab._core.platform import Platform
@@ -32,7 +32,23 @@ def test_create_platform(platform):
 
 def test_create_platform_error():
     with pytest.raises(ValueError):
-        platform = create_platform("nonexistent")
+        _ = create_platform("nonexistent")
+
+
+@pytest.fixture
+def dummy_hardware(monkeypatch):
+    parameters = initialize_parameters(hardware=create_dummy_hardware())
+    path = Path(__file__).parent / "dummy_hardware" / PARAMETERS
+    path.write_text(parameters.model_dump_json(indent=4))
+    monkeypatch.setenv(PLATFORMS, str(Path(__file__).parent))
+    yield
+    path.unlink()
+
+
+def test_create_platform_from_hardware(dummy_hardware):
+    platform = create_platform("dummy_hardware")
+    assert isinstance(platform, Platform)
+    assert list(platform.qubits.keys()) == list(range(5))
 
 
 def test_platform_basics():

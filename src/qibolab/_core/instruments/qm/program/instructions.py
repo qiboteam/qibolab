@@ -2,7 +2,6 @@ from typing import Optional
 
 from qm import qua
 from qm.qua import declare, fixed, for_
-from qualang_tools.loops import from_array
 
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -12,6 +11,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from ..config import operation
 from .acquisition import Acquisition
 from .arguments import ExecutionArguments, Parameters
+from .loops import from_array
 from .sweepers import INT_TYPE, NORMALIZERS, SWEEPER_METHODS, normalize_phase
 
 
@@ -33,6 +33,8 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
 
 def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
+    assert not parameters.interpolated
+    assert parameters.interpolated_op is None
     with qua.switch_(parameters.duration, unsafe=True):
         for value, sweep_op in parameters.duration_ops:
             if parameters.amplitude is not None:
@@ -52,7 +54,13 @@ def _play_single_waveform(
     if acquisition is not None:
         acquisition.measure(op)
     else:
-        qua.play(op, element, duration=parameters.duration)
+        if parameters.duration is not None:
+            # sweeping duration using interpolation
+            # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
+            assert len(parameters.duration_ops) == 0
+            qua.play(parameters.interpolated_op, element, duration=parameters.duration)
+        else:
+            qua.play(op, element)
 
 
 def _play(
@@ -139,18 +147,16 @@ def sweep(
     if len(sweepers) > 0:
         parallel_sweepers = sweepers[0]
 
-        variables, all_values = zip(
+        variables, values = zip(
             *(_process_sweeper(sweeper, args) for sweeper in parallel_sweepers)
         )
         if len(parallel_sweepers) > 1:
-            loop = qua.for_each_(variables, all_values)
+            loop = qua.for_each_(variables, values)
         else:
-            loop = for_(*from_array(variables[0], all_values[0]))
+            loop = for_(*from_array(variables[0], values[0]))
 
         with loop:
-            for sweeper, variable, values in zip(
-                parallel_sweepers, variables, all_values
-            ):
+            for sweeper, variable in zip(parallel_sweepers, variables):
                 method = SWEEPER_METHODS[sweeper.parameter]
                 if sweeper.pulses is not None:
                     for pulse in sweeper.pulses:

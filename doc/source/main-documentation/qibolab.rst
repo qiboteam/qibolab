@@ -602,3 +602,42 @@ Quantum Machines
 Tested with a cluster of nine `OPX+ <https://www.quantum-machines.co/products/opx/>`_ controllers, using QOP213 and QOP220.
 
 Qibolab is communicating with the instruments using the `QUA <https://docs.quantum-machines.co/0.1/>`_ language, via the ``qm-qua`` and ``qualang-tools`` Python libraries.
+
+.. _qrng:
+
+Quantum Random Number Generator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to the above instruments used for QPU control, Qibolab provides a driver
+for sampling numbers from a quantum random number generator device (QRNG) in
+:class:`qibolab.instruments.qrng.QRNG`.
+This assumes that the device is connected to the host computer via a serial port.
+
+The following script can be used to sample 1000 floats uniformly distributed in [0, 1]:
+
+.. code::  python
+
+    from qibolab.instruments.qrng import QRNG
+
+    qrng = QRNG(address="/dev/ttyACM0")
+
+    qrng.connect()
+
+    samples = qrng.random(1000)
+
+    qrng.disconnect()
+
+
+The QRNG produces raw entropy which is converted to uniform distribution using an
+exctraction algorithm. Two such algorithms are implemented
+
+- :class:`qibolab.instruments.qrng.ShaExtrator`: default, based on SHA-256 hash algorithm,
+- :class:`qibolab.instruments.qrng.ToeplitzExtractor`.
+
+It is possible to switch extractor when instantiating the :class:`qibolab.instruments.qrng.QRNG` object:
+
+.. code::  python
+
+    from qibolab.instruments.qrng import QRNG, ToeplitzExtractor
+
+    qrng = QRNG(address="/dev/ttyACM0", extractor=ToeplitzExtractor())
