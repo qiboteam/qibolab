@@ -77,7 +77,7 @@ class Q1Sequence(Model):
         sweepers: list[ParallelSweepers],
         options: ExecutionParameters,
         sampling_rate: float,
-        channel: ChannelId,
+        channel: set[ChannelId],
         lo: Optional[float],
         time_of_flight: Optional[float],
         duration: float,
@@ -147,6 +147,19 @@ def _lo_frequency(lo: Optional[OscillatorConfig]) -> Optional[float]:
     return lo.frequency if lo is not None else None
 
 
+def _effective_channels(ch: ChannelId, seq: Iterable[PulseLike]) -> set[ChannelId]:
+    """Identify effective channels related to a subsequence.
+
+    The channel is the declared one, unless in presence of :class:`Readout` operations.
+    In which case the assumed *acquisition* channel is supplemented with a *probe* one.
+    """
+    return (
+        {ch}
+        if not any(isinstance(e, Readout) for e in seq)
+        else {ch, f"{'/'.join(ch.split('/')[:-1])}/probe"}
+    )
+
+
 def compile(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
@@ -162,7 +175,7 @@ def compile(
             sweepers,
             options,
             sampling_rate,
-            ch,
+            _effective_channels(ch, seq),
             _lo_frequency(los.get(ch)),
             time_of_flights.get(ch),
             duration,
