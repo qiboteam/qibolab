@@ -53,6 +53,7 @@
                   stdenv.cc.cc.lib
                   zlib
                 ]));
+                PYTHONBREAKPOINT = "pudb.set_trace";
               };
 
               languages.python = {
