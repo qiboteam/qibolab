@@ -40,7 +40,7 @@ class Param(Model):
     """The target channel (if the sweeper targets channels)."""
 
     @property
-    def description(self):
+    def description(self) -> str:
         """Textual description, used in some accompanying comments."""
         return (
             f"sweeper (loop: {self.sweeper + 1}, "
