@@ -29,7 +29,7 @@ __all__ = ["Program"]
 def setup(
     loops: Sequence[LoopSpec],
     params: list[Param],
-    channel: ChannelId,
+    channel: set[ChannelId],
     pulses: set[PulseId],
 ) -> Block:
     """Build preparation phase. Ending with synchronization.
@@ -68,12 +68,12 @@ def setup(
                 comment=f"init {p.description}",
             )
             for p in params
-            if p.channel == channel or p.pulse in pulses
+            if p.channel in channel or p.pulse in pulses
         ]
         + [
             inst
             for p in params
-            if p.channel == channel
+            if p.channel in channel
             for inst in update_instructions(p.kind, p.start)
         ]
         + [WaitSync(duration=4)]
@@ -94,7 +94,7 @@ def program(
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
-    channel: ChannelId,
+    channel: set[ChannelId],
     time_of_flight: Optional[float],
     padding: int,
 ) -> Program:
