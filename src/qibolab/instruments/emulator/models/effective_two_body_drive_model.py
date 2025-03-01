@@ -343,6 +343,7 @@ def generate_model_config(
         "topology": topology,
         "device_qubits_list": device_qubits_list,
         "actual_device_qubits_list": actual_device_qubits_list,
+        "exception_qubits": exception_qubits,
         "device_couplers_list": [],
         "qubits_list": qubits_list,
         "nlevels_q": nlevels_q,
