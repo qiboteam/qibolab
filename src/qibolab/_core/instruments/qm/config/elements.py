@@ -145,7 +145,7 @@ class MwFemElement:
 @dataclass
 class AcquireMwFemElement:
     MWInput: MwInput
-    MwOutput: MwOutput
+    MWOutput: MwOutput
     digitalInputs: DigitalInputs = field(default_factory=dict)
     time_of_flight: int = 24
     smearing: int = 0
