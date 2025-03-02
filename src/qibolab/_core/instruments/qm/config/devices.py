@@ -3,13 +3,13 @@ from typing import Generic, Literal, TypeVar, Union
 
 from qibolab._core.components import OscillatorConfig
 
-from ..components import OctaveOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
+from ..components import MwFemConfig, OctaveOscillatorConfig, QmAcquisitionConfig
 from ..components.configs import OctaveOutputModes
 
 __all__ = [
-    "AnalogOutput",
-    "FemAnalogOutput",
     "ModuleTypes",
+    "MwFemOutput",
+    "MwFemInput",
     "OctaveOutput",
     "OctaveInput",
     "Controller",
@@ -41,27 +41,6 @@ class PortDict(Generic[V], dict[str, V]):
 
 
 @dataclass(frozen=True)
-class AnalogOutput:
-    offset: float = 0.0
-    filter: dict[str, float] = field(default_factory=dict)
-
-    @classmethod
-    def from_config(cls, config: OpxOutputConfig):
-        return cls(offset=config.offset, filter=config.filter)
-
-
-@dataclass(frozen=True)
-class FemAnalogOutput(AnalogOutput):
-    output_mode: Literal["direct", "amplified"] = "direct"
-
-    @classmethod
-    def from_config(cls, config: OpxOutputConfig):
-        return cls(
-            offset=config.offset, filter=config.filter, output_mode=config.output_mode
-        )
-
-
-@dataclass(frozen=True)
 class AnalogInput:
     offset: float = 0.0
     gain_db: int = 0
@@ -69,6 +48,46 @@ class AnalogInput:
     @classmethod
     def from_config(cls, config: QmAcquisitionConfig):
         return cls(offset=config.offset, gain_db=config.gain)
+
+
+@dataclass
+class MwFemOutput:
+    upconverters: dict[int, dict[Literal["frequency"], float]]
+    band: int
+    sampling_rate: float
+    full_scale_power_dbm: int
+
+    @classmethod
+    def from_config(cls, config: MwFemConfig):
+        upconverters = {config.upconverter: config.frequency}
+        return cls(
+            upconverters=upconverters,
+            band=config.band,
+            sampling_rate=config.sampling_rate,
+            full_scale_power_dbm=config.full_scale_power_dbm,
+        )
+
+    def update(self, config: MwFemConfig):
+        assert self.band == config.band
+        assert self.sampling_rate == config.sampling_rate
+        assert self.full_scale_power_dbm == config.full_scale_power_dbm
+        assert config.upconverter not in self.upconverters
+        self.upconverters[config.upconverter] = config.frequency
+
+
+@dataclass(frozen=True)
+class MwFemInput:
+    downconverter_frequency: float
+    band: int
+    sampling_rate: float
+
+    @classmethod
+    def from_config(cls, config: MwFemConfig):
+        return cls(
+            downconverter_frequency=config.frequency,
+            band=config.band,
+            sampling_rate=config.sampling_rate,
+        )
 
 
 @dataclass(frozen=True)
@@ -101,16 +120,16 @@ ModuleTypes = Literal["opx1", "LF", "MW"]
 class Controller:
     type: ModuleTypes = "opx1"
     """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
-    analog_outputs: PortDict[dict[str, AnalogOutput]] = field(default_factory=PortDict)
+    analog_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
     digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
-    analog_inputs: PortDict[dict[str, AnalogInput]] = field(
+    analog_inputs: PortDict[dict[str, Union[AnalogInput, MwFemInput]]] = field(
         default_factory=lambda: PortDict(DEFAULT_INPUTS)
     )
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
-        self.analog_outputs[2 * port - 1] = AnalogOutput()
-        self.analog_outputs[2 * port] = AnalogOutput()
+        self.analog_outputs[2 * port - 1] = {}
+        self.analog_outputs[2 * port] = {}
 
         self.digital_outputs[2 * port - 1] = {}
 

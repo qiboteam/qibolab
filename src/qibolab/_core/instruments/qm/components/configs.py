@@ -2,18 +2,26 @@ from typing import Literal, Union
 
 from pydantic import Field
 
-from qibolab._core.components import AcquisitionConfig, DcConfig, OscillatorConfig
+from qibolab._core.components import (
+    AcquisitionConfig,
+    DcConfig,
+    IqConfig,
+    OscillatorConfig,
+)
 
 __all__ = [
     "OpxOutputConfig",
     "QmAcquisitionConfig",
     "QmConfigs",
     "OctaveOscillatorConfig",
+    "MwFemConfig",
 ]
 
 OctaveOutputModes = Literal[
     "always_on", "always_off", "triggered", "triggered_reversed"
 ]
+
+DEFAULT_SAMPLING_RATE = 1e9
 
 
 class OpxOutputConfig(DcConfig):
@@ -35,6 +43,8 @@ class OpxOutputConfig(DcConfig):
     Changing the filters affects the calibration of single shot discrimination (threshold and angle).
     """
     output_mode: Literal["direct", "amplified"] = "direct"
+    sampling_rate: float = DEFAULT_SAMPLING_RATE
+    upsampling_mode: Literal["mw", "pulsed"] = "mw"
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
@@ -59,4 +69,18 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """Constant voltage to be applied on the input."""
 
 
-QmConfigs = Union[OpxOutputConfig, OctaveOscillatorConfig, QmAcquisitionConfig]
+class MwFemConfig(IqConfig):
+    kind: Literal["mw-fem-output"] = "mw-fem-output"
+
+    upconverter: int = 1
+    band: int = 2
+    sampling_rate: float = DEFAULT_SAMPLING_RATE
+    full_scale_power_dbm: int = -10
+
+
+QmConfigs = Union[
+    OpxOutputConfig,
+    OctaveOscillatorConfig,
+    QmAcquisitionConfig,
+    MwFemConfig,
+]
