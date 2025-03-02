@@ -70,6 +70,12 @@ class QmAcquisitionConfig(AcquisitionConfig):
 
 
 class MwFemConfig(IqConfig):
+    """Output config for OPX1000 MW-FEM ports.
+
+    For more information see
+    https://docs.quantum-machines.co/latest/docs/Guides/opx1000_fems/?h=upsampl#microwave-fem-mw-fem
+    """
+
     kind: Literal["mw-fem-output"] = "mw-fem-output"
 
     upconverter: int = 1
