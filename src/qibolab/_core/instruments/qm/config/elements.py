@@ -5,7 +5,14 @@ from typing_extensions import TypedDict
 
 from qibolab._core.components import Channel
 
-__all__ = ["DcElement", "RfOctaveElement", "AcquireOctaveElement", "Element"]
+__all__ = [
+    "DcElement",
+    "RfOctaveElement",
+    "AcquireOctaveElement",
+    "MwFemElement",
+    "AcquireMwFemElement",
+    "Element",
+]
 
 
 InOutType = Union[tuple[str, int], tuple[str, int, int]]
@@ -116,4 +123,55 @@ class AcquireOctaveElement:
         )
 
 
-Element = Union[DcElement, RfOctaveElement, AcquireOctaveElement]
+MwInput = TypedDict("MwInput", {"port": tuple[str, int, int], "upconverter": int})
+MwOutput = TypedDict("MwOutput", {"port": tuple[str, int, int]})
+
+
+def _to_mw_fem_input(channel: Channel, upconverter: int):
+    return _to_port(channel) | {"upconverter": upconverter}
+
+
+@dataclass
+class MwFemElement:
+    MWInput: MwInput
+    digitalInputs: DigitalInputs = field(default_factory=dict)
+    operations: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_channel(cls, channel: Channel, upconverter: int):
+        return cls(_to_mw_fem_input(channel, upconverter))
+
+
+@dataclass
+class AcquireMwFemElement:
+    MWInput: MwInput
+    MwOutput: MwOutput
+    digitalInputs: DigitalInputs = field(default_factory=dict)
+    time_of_flight: int = 24
+    smearing: int = 0
+    operations: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_channel(
+        cls,
+        probe_channel: Channel,
+        upconverter: int,
+        acquire_channel: Channel,
+        time_of_flight: int,
+        smearing: int,
+    ):
+        return cls(
+            _to_mw_fem_input(probe_channel, upconverter),
+            _to_port(acquire_channel),
+            time_of_flight=time_of_flight,
+            smearing=smearing,
+        )
+
+
+Element = Union[
+    DcElement,
+    RfOctaveElement,
+    AcquireOctaveElement,
+    MwFemElement,
+    AcquireMwFemElement,
+]
