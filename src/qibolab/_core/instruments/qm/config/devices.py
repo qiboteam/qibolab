@@ -131,8 +131,8 @@ class Controller:
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
         self._set_default_inputs()
-        self.analog_outputs[2 * port - 1] = {}
-        self.analog_outputs[2 * port] = {}
+        self.analog_outputs[2 * port - 1] = {"offset": 0}
+        self.analog_outputs[2 * port] = {"offset": 0}
 
         self.digital_outputs[2 * port - 1] = {}
 
