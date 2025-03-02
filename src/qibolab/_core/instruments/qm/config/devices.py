@@ -18,14 +18,6 @@ __all__ = [
     "Controllers",
 ]
 
-
-DEFAULT_INPUTS = {"1": {"offset": 0}, "2": {"offset": 0}}
-"""Default controller config section.
-
-Inputs are always registered to avoid issues with automatic mixer
-calibration when using Octaves.
-"""
-
 V = TypeVar("V")
 
 
@@ -123,17 +115,29 @@ class Controller:
     analog_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
     digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
     analog_inputs: PortDict[dict[str, Union[AnalogInput, MwFemInput]]] = field(
-        default_factory=lambda: PortDict(DEFAULT_INPUTS)
+        default_factory=PortDict
     )
+
+    def _set_default_inputs(self):
+        """Add default inputs in controller config section.
+
+        Inputs are always registered to avoid issues with automatic mixer
+        calibration when using Octaves.
+        """
+        for port in range(1, 3):
+            if port not in self.analog_inputs:
+                self.analog_inputs[port] = {"offset": 0}
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
+        self._set_default_inputs()
         self.analog_outputs[2 * port - 1] = {}
         self.analog_outputs[2 * port] = {}
 
         self.digital_outputs[2 * port - 1] = {}
 
     def add_octave_input(self, port: int, config: QmAcquisitionConfig):
+        self._set_default_inputs()
         self.analog_inputs[2 * port - 1] = self.analog_inputs[2 * port] = (
             AnalogInput.from_config(config)
         )

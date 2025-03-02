@@ -107,7 +107,8 @@ class Configuration:
         else:
             output = MwFemOutput.from_config(config)
         controller.analog_outputs[channel.port] = asdict(output)
-        self.elements[id] = MwFemElement.from_channel(channel, config.upconverter)
+        if id is not None:
+            self.elements[id] = MwFemElement.from_channel(channel, config.upconverter)
 
     def configure_mw_fem_acquire_line(
         self,
