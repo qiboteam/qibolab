@@ -178,11 +178,20 @@ def params_reshape(params: Params) -> IndexedParams:
     }
 
 
-ParameterizedPulse = tuple[PulseLike, Optional[Param]]
+ParameterizedPulse = tuple[PulseLike, set[Param]]
 SweepSequence = list[ParameterizedPulse]
 
 
 def sweep_sequence(sequence: Iterable[PulseLike], params: list[Param]) -> SweepSequence:
     """Wrap swept pulses with updates markers."""
-    parbyid = {p.pulse: p for p in params}
-    return [(p, parbyid.get(p.id)) for p in sequence]
+    parsbyid = {
+        p: {pair[1] for pair in pairs}
+        for p, pairs in groupby(
+            sorted(
+                ((p.pulse, p) for p in params if p.pulse is not None),
+                key=lambda pair: pair[0],
+            ),
+            key=lambda pair: pair[0],
+        )
+    }
+    return [(e, parsbyid.get(e.id, set())) for e in sequence]
