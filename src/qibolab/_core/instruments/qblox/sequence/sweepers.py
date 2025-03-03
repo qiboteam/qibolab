@@ -132,7 +132,13 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
                     )
                 )
                 # reserve 3 registers for a pulse duration sweeper
-                else ([sweep_] + [sweep_.model_copy(update={"parameter": None})] * 2)
+                else (
+                    [
+                        sweep_,
+                        sweep_.model_copy(update={"parameter": None}),
+                        (sweep_ - 4.0),
+                    ]
+                )
             )
             for pulse in (sweep.pulses if sweep.pulses is not None else [None])
             for channel in (sweep.channels if sweep.channels is not None else [None])
