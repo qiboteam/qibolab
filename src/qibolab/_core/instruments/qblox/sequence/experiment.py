@@ -14,6 +14,7 @@ from qibolab._core.sweeper import Parameter
 
 from ..q1asm.ast_ import (
     Acquire,
+    Add,
     Instruction,
     Play,
     Register,
@@ -45,12 +46,17 @@ def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
     return Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1])
 
 
-def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:
-    return Play(
-        wave_0=param.reg,
-        wave_1=Register(number=param.reg.number + 1),
-        duration=4,
-    )
+def play_duration_swept(param: Param) -> list[Instruction]:
+    qreg = Register(number=param.reg.number + 1)
+    return [
+        Add(a=param.reg, b=1, destination=qreg),
+        Play(
+            wave_0=param.reg,
+            wave_1=qreg,
+            duration=4,
+        ),
+        Wait(duration=Register(number=param.reg.number + 2)),
+    ]
 
 
 def play(
@@ -66,14 +72,18 @@ def play(
     if isinstance(pulse, Pulse):
         # breakpoint()
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
-        duration_sweep = [p for p in params if p.kind is Parameter.duration]
+        duration_sweep = min(
+            (p for p in params if p.kind is Parameter.duration),
+            key=lambda p: p.reg.number,
+            default=None,
+        )
         return (
             ([SetPhDelta(value=phase)] if phase != 0 else [])
-            + [
-                play_pulse(pulse, waveforms)
-                if len(duration_sweep) == 0
-                else play_duration_swept(pulse, duration_sweep[0])
-            ]
+            + (
+                [play_pulse(pulse, waveforms)]
+                if duration_sweep is None
+                else play_duration_swept(duration_sweep)
+            )
             + ([SetPhDelta(value=-phase)] if phase != 0 else [])
         )
     if isinstance(pulse, Delay):
