@@ -302,7 +302,6 @@ class QmController(Controller):
                 assert probe.lo is not None
                 lo_config = configs[probe.lo]
                 assert isinstance(lo_config, OscillatorConfig)
-                self.configure_device(ch.device)
                 self.config.configure_acquire_line(
                     channel, ch, probe, config, probe_config, lo_config
                 )
