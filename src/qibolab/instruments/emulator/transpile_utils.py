@@ -42,7 +42,7 @@ def transpile(circuit, platform, native_gates=DEFAULT_NATIVE_GATES):
 
     return transpiled_circ, final_layout
 
-def get_pulse_sequence(circuit, backend, native_gates=DEFAULT_NATIVE_GATES):
+def get_pulse_sequence(circuit, backend, add_measure_all=False, native_gates=DEFAULT_NATIVE_GATES):
     platform = backend.platform
     
     # Set up circuit
@@ -51,6 +51,8 @@ def get_pulse_sequence(circuit, backend, native_gates=DEFAULT_NATIVE_GATES):
         circuit = Circuit.from_qasm(openqasm)
         nqubit = circuit.nqubits
         circuit.wire_names = list(range(nqubit))
+        
+    if add_measure_all:
         circuit.add(gates.M(*range(nqubit)))
 
     connectivity = get_emulator_connectivity(platform)
@@ -67,6 +69,6 @@ def get_pulse_sequence(circuit, backend, native_gates=DEFAULT_NATIVE_GATES):
     )
 
     # Compile pulse sequence
-    pulse_sequence = backend.compiler.compile(transpiled_circ, platform=platform)
+    pulse_sequence, measurement_map = backend.compiler.compile(transpiled_circ, platform=platform)
     
     return pulse_sequence
