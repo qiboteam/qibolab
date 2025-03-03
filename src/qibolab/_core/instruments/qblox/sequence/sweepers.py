@@ -109,18 +109,35 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
         )
         for i, (j, start, step, pulse, channel, kind) in enumerate(
             (
-                j,
-                start(sweep.irange[0], sweep.parameter, pulse),
-                step(sweep.irange[2], sweep.parameter, pulse),
-                pulse.id if pulse is not None else None,
-                channel,
-                sweep.parameter,
+                (
+                    j,
+                    start(sweep.irange[0], sweep.parameter, pulse),
+                    step(sweep.irange[2], sweep.parameter, pulse),
+                    pulse.id if pulse is not None else None,
+                    channel,
+                    sweep.parameter,
+                )
+                if sweep.parameter is not None
+                else (j, 0, 0, None, None, None)
             )
             for j, parsweep in enumerate(sweepers)
-            for sweep in parsweep
+            for sweep_ in parsweep
+            for sweep in (
+                [sweep_]
+                if (
+                    sweep_.parameter is not Parameter.duration
+                    or (
+                        sweep_.pulses is not None
+                        and not any(isinstance(p, Pulse) for p in sweep_.pulses)
+                    )
+                )
+                # reserve 3 registers for a pulse duration sweeper
+                else ([sweep_] + [sweep_.model_copy(update={"parameter": None})] * 2)
+            )
             for pulse in (sweep.pulses if sweep.pulses is not None else [None])
             for channel in (sweep.channels if sweep.channels is not None else [None])
         )
+        if kind is not None
     ]
 
 
