@@ -293,9 +293,9 @@ def generate_model_config(
     two_body_drive_dict = model_params["two_body_drive"]
     exception_qubits = list(two_body_drive_dict.keys())
     exception_channels = [f'drive-{q}' for q in exception_qubits]
-    print('device_qubits_list', device_qubits_list)
-    print('actual_device_qubits_list', actual_device_qubits_list)
-    print('exception_qubits', exception_qubits)
+    #print('device_qubits_list', device_qubits_list)
+    #print('actual_device_qubits_list', actual_device_qubits_list)
+    #print('exception_qubits', exception_qubits)
 
     for key in exception_qubits:
         ind_key = platform_to_simulator_qubits[key]
