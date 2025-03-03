@@ -639,7 +639,7 @@ def extend_op_dim(
     return full_qobj.permute(inverse_qubit_order)
 
 
-def proj_to_2levelHS(qstate: Qobj):
+def proj_to_2levelHS(qstate: Qobj, to_density_matrix:bool=False):
     """Projects the quantum statevector or density matrix to a system with all nlevel=2.
     """
     state_data = qstate.full()
@@ -665,5 +665,8 @@ def proj_to_2levelHS(qstate: Qobj):
     else:
         reduced_state_data = state_data[reduced_orig_ind_list,:]
         reduced_qstate = Qobj(reduced_state_data, dims=[new_dims,np.ones(nsys, dtype=int).tolist()])
+
+        if to_density_matrix:
+            reduced_qstate = ket2dm(reduced_qstate)
 
     return reduced_qstate
