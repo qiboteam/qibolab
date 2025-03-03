@@ -49,7 +49,7 @@ def play_duration_swept(pulse: Pulse, param: Param) -> Instruction:
     return Play(
         wave_0=param.reg,
         wave_1=Register(number=param.reg.number + 1),
-        duration=0,
+        duration=4,
     )
 
 
@@ -61,31 +61,35 @@ def play(
 ) -> list[Instruction]:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
-    param = parpulse[1]
+    params = parpulse[1]
 
     if isinstance(pulse, Pulse):
+        # breakpoint()
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        duration_sweep = [p for p in params if p.kind is Parameter.duration]
         return (
             ([SetPhDelta(value=phase)] if phase != 0 else [])
             + [
                 play_pulse(pulse, waveforms)
-                if param is None or param.kind is not Parameter.duration
-                else play_duration_swept(pulse, param),
+                if len(duration_sweep) == 0
+                else play_duration_swept(pulse, duration_sweep[0])
             ]
-            + (
-                [
-                    SetPhDelta(value=-phase),
-                ]
-                if phase != 0
-                else []
-            )
+            + ([SetPhDelta(value=-phase)] if phase != 0 else [])
         )
     if isinstance(pulse, Delay):
-        return [Wait(duration=int(pulse.duration) if param is None else param.reg)]
+        return [
+            Wait(
+                duration=int(pulse.duration)
+                if len(params) == 0
+                else next(iter(params)).reg
+            )
+        ]
     if isinstance(pulse, VirtualZ):
         return [
             SetPhDelta(
-                value=int(pulse.phase * PHASE_FACTOR) if param is None else param.reg
+                value=int(pulse.phase * PHASE_FACTOR)
+                if len(params) == 0
+                else next(iter(params)).reg
             )
         ]
     if isinstance(pulse, Acquisition):
@@ -119,11 +123,15 @@ def event(
     acquisitions: dict[MeasureId, AcquisitionSpec],
     time_of_flight: Optional[float],
 ) -> list[Instruction]:
-    param = parpulse[1]
+    params = parpulse[1]
     return (
-        (update_instructions(param.kind, param.reg) if param is not None else [])
+        [inst for p in params for inst in update_instructions(p.kind, p.reg)]
         + play(parpulse, waveforms, acquisitions, time_of_flight)
-        + (reset_instructions(param.kind, param.reg) if param is not None else [])
+        + [
+            inst
+            for p in reversed(list(params))
+            for inst in reset_instructions(p.kind, p.reg)
+        ]
     )
 
 
