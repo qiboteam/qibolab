@@ -519,6 +519,7 @@ class QutipSimulator:
         self,
         target_states: List[Qobj],
         reference_states: Optional[Dict[str, Qobj]] = None,
+        remove_trivial_subspaces: bool = True,
     ) -> dict:
         """Calculates the overlaps between a list of target device states, with
         respect to a list of reference device states.
@@ -526,6 +527,7 @@ class QutipSimulator:
         Args:
             target_states (list): List of target states (`qutip.Qobj`) of interest.
             reference_states (dict, optional): Reference states labelled by their respective keys to compare `target_states` with. If not provided, all basis states of the full device Hilbert space labelled by their generalized bitstrings will be used.
+            remove_trivial_subspaces (bool, optional): Flag to remove trivial subspaces of the Hilbert space. If not provided, it defaults to true.
 
         Returns:
             dict: Overlaps for each target state with each reference state.
@@ -546,7 +548,14 @@ class QutipSimulator:
                 basis_dims = basis_state.dims[0]
                 if psi.dims[0] != basis_dims:
                     psi.dims = [basis_dims,basis_dims]
-                reference_states.update({str(basis_string): psi})
+                if remove_trivial_subspaces:
+                    mod_basis_string = []
+                    for ind,d in enumerate(np.flip(basis_dims)): # basis_dims in little endian, basis_string in big endian
+                        if d>1:
+                            mod_basis_string.append(basis_string[ind])
+                    reference_states.update({str(mod_basis_string): psi})
+                else:
+                    reference_states.update({str(basis_string): psi})
 
         total_samples = len(target_states)
         all_overlaps = {}
