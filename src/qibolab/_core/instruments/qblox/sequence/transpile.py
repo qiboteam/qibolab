@@ -68,7 +68,7 @@ def _decompose_move(instr: Move) -> Optional[Block]:
     return _negative_move(instr)
 
 
-def _decompose(line: Line) -> Block:
+def _line_transform(line: Line) -> list[Line]:
     instr = line.instruction
     block = (
         _decompose_wait(instr)
@@ -83,21 +83,44 @@ def _decompose(line: Line) -> Block:
         return [line]
 
     assert isinstance(block[0], Instruction)
-    return (
-        [
-            Line(instruction=block[0], label=line.label, comment=line.comment),
-            *(el for el in block[1:]),
-        ]
-        if block is not None
-        else [line]
-    )
+    return [
+        el if isinstance(el, Line) else Line.instr(el)
+        for el in (
+            (
+                Line(instruction=block[0], label=line.label, comment=line.comment),
+                *(el for el in block[1:]),
+            )
+            if block is not None
+            else [line]
+        )
+    ]
+
+
+def _batch_wait(duration: int) -> list[Line]:
+    return [Line.instr(Wait(duration=duration))] if duration > 0 else []
+
+
+def _merge_wait(prog: list[Line]) -> list[Line]:
+    duration = 0
+    new = []
+    for line in prog:
+        instr = line.instruction
+        if isinstance(instr, Wait) and isinstance(instr.duration, int):
+            duration += instr.duration
+        else:
+            new += _batch_wait(duration) + [line]
+            duration = 0
+    new += _batch_wait(duration)
+
+    return new
+
+
+def _block_transform(prog: Block) -> list[Line]:
+    lines = [el if isinstance(el, Line) else Line.instr(el) for el in prog]
+    return _merge_wait(lines)
 
 
 def transpile(prog: Block) -> Program:
     return Program(
-        elements=[
-            el if isinstance(el, Line) else Line.instr(el)
-            for oel in prog
-            for el in (_decompose(oel) if isinstance(oel, Line) else [oel])
-        ]
+        elements=[el for oel in _block_transform(prog) for el in _line_transform(oel)]
     )
