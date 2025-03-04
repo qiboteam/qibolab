@@ -51,7 +51,7 @@ class MwFemOutput:
 
     @classmethod
     def from_config(cls, config: MwFemConfig):
-        upconverters = {config.upconverter: config.frequency}
+        upconverters = {config.upconverter: {"frequency": config.frequency}}
         return cls(
             upconverters=upconverters,
             band=config.band,
@@ -64,7 +64,7 @@ class MwFemOutput:
         assert self.sampling_rate == config.sampling_rate
         assert self.full_scale_power_dbm == config.full_scale_power_dbm
         assert config.upconverter not in self.upconverters
-        self.upconverters[config.upconverter] = config.frequency
+        self.upconverters[config.upconverter] = {"frequency": config.frequency}
 
 
 @dataclass(frozen=True)
