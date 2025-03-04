@@ -73,7 +73,7 @@ def play(
         # breakpoint()
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
         duration_sweep = min(
-            (p for p in params if p.kind is Parameter.duration),
+            (p for p in params if p.role.value is Parameter.duration),
             key=lambda p: p.reg.number,
             default=None,
         )
@@ -135,12 +135,12 @@ def event(
 ) -> list[Instruction]:
     params = parpulse[1]
     return (
-        [inst for p in params for inst in update_instructions(p.kind, p.reg)]
+        [inst for p in params for inst in update_instructions(p.role, p.reg)]
         + play(parpulse, waveforms, acquisitions, time_of_flight)
         + [
             inst
             for p in reversed(list(params))
-            for inst in reset_instructions(p.kind, p.reg)
+            for inst in reset_instructions(p.role, p.reg)
         ]
     )
 
