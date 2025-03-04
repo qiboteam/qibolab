@@ -74,7 +74,7 @@ def setup(
             inst
             for p in params
             if p.channel in channel
-            for inst in update_instructions(p.kind, p.start)
+            for inst in update_instructions(p.role, p.start)
         ]
         + [WaitSync(duration=4)]
     )

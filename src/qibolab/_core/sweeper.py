@@ -44,6 +44,9 @@ def _alternative_fields(a: _Field, b: _Field):
         )
 
 
+Range = tuple[float, float, float]
+
+
 class Sweeper(Model):
     """Data structure for Sweeper object.
 
@@ -73,7 +76,7 @@ class Sweeper(Model):
     """Parameter to be swept."""
     values: Optional[npt.NDArray] = None
     """Array of parameter values to sweep over."""
-    range: Optional[tuple[float, float, float]] = None
+    range: Optional[Range] = None
     """Tuple of ``(start, stop, step)``.
 
     To sweep over the array ``np.arange(start, stop, step)``.
