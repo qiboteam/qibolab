@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable, Sequence
+from enum import Enum
 from itertools import groupby
 from typing import Optional
 
@@ -23,6 +24,18 @@ from .asm import MAX_PARAM, convert
 __all__ = []
 
 
+class ParamRole(Enum):
+    """Parameter role in sweep.
+
+    Specifically used to discriminate the various roles in the duration
+    sweeps.
+    """
+
+    PULSE_I = "pulse I component"
+    PULSE_Q = "pulse Q component"
+    DURATION = "pulse duration"
+
+
 class Param(Model):
     reg: Register
     """Register used for the parameter value."""
@@ -38,6 +51,8 @@ class Param(Model):
     """The target pulse (if the sweeper targets pulses)."""
     channel: Optional[ChannelId]
     """The target channel (if the sweeper targets channels)."""
+    role: Optional[ParamRole]
+    """Role in the duration sweep."""
 
     @property
     def description(self) -> str:
