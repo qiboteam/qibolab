@@ -648,7 +648,7 @@ def extend_op_dim(
     return full_qobj.permute(inverse_qubit_order)
 
 
-def proj_to_2levelHS(qstate: Qobj, to_density_matrix:bool=False):
+def proj_to_2levelHS(qstate: Qobj, to_density_matrix:bool=True):
     """Projects the quantum statevector or density matrix to a system with all nlevel=2.
     """
     state_data = qstate.full()
