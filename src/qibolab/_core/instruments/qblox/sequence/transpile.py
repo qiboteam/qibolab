@@ -1,5 +1,7 @@
 from typing import Optional, cast
 
+from pydantic import BaseModel, Field
+
 from ..q1asm.ast_ import (
     Block,
     Instruction,
@@ -96,23 +98,48 @@ def _line_transform(line: Line) -> list[Line]:
     ]
 
 
-def _batch_wait(duration: int) -> list[Line]:
-    return [Line.instr(Wait(duration=duration))] if duration > 0 else []
+class _WaitBatch(BaseModel):
+    duration: int = 0
+    comment: list[str] = Field(default_factory=list)
+    label: Optional[str] = None
+
+    def increment(self, line: Line):
+        instr = line.instruction
+        assert isinstance(instr, Wait) and isinstance(instr.duration, int)
+        self.duration += instr.duration
+        if line.comment is not None:
+            self.comment.append(line.comment)
+        if line.label is not None:
+            self.label = line.label
+
+    @property
+    def lines(self) -> list[Line]:
+        return (
+            [
+                Line(
+                    label=self.label,
+                    instruction=Wait(duration=self.duration),
+                    comment="\n".join(self.comment),
+                )
+            ]
+            if self.duration > 0
+            else []
+        )
 
 
 def _merge_wait(prog: list[Line]) -> list[Line]:
-    duration = 0
+    batch = _WaitBatch()
     new = []
     for line in prog:
         instr = line.instruction
-        if isinstance(instr, Wait) and isinstance(instr.duration, int):
-            duration += instr.duration
-        else:
-            new += _batch_wait(duration) + [line]
-            duration = 0
-    new += _batch_wait(duration)
+        intwait = isinstance(instr, Wait) and isinstance(instr.duration, int)
+        if not intwait or line.label is not None:
+            new += batch.lines + ([line] if not intwait else [])
+            batch = _WaitBatch()
+        if intwait:
+            batch.increment(line)
 
-    return new
+    return new + batch.lines
 
 
 def _block_transform(prog: Block) -> list[Line]:
