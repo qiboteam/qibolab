@@ -146,7 +146,7 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
             if p.channel == channel or p.pulse in pulses
             else ()
         ),
-        *(update_instructions(p.kind, p.reg) if p.channel in channel else ()),
+        *(update_instructions(p.role, p.reg) if p.channel in channel else ()),
     )
 
 
