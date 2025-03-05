@@ -94,9 +94,7 @@ class ExecutionParameters(Model):
         shots = (
             (self.nshots,) if self.averaging_mode is AveragingMode.SINGLESHOT else ()
         )
-        sweeps = tuple(
-            min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
-        )
+        sweeps = tuple(iteration_length(parsweep) for parsweep in sweepers)
         return shots + sweeps
 
     def results_shape(
