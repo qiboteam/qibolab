@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable, Sequence
-from enum import Enum
+from enum import Enum, auto
 from itertools import groupby
 from typing import Optional
 
@@ -27,29 +27,29 @@ __all__ = []
 class ParamRole(Enum):
     """Parameter role in sweep.
 
-    Specifically used to discriminate the various roles in the duration
-    sweeps.
+    Discriminate the various register roles. Particularly, in the pulse
+    duration sweeps.
     """
 
-    FREQUENCY = Parameter.frequency
+    FREQUENCY = auto(), Parameter.frequency
     "Channel frequency."
-    OFFSET = Parameter.offset
+    OFFSET = auto(), Parameter.offset
     "Channel offset."
-    AMPLITUDE = Parameter.amplitude
+    AMPLITUDE = auto(), Parameter.amplitude
     "Pulse amplitude."
-    PHASE = Parameter.relative_phase
+    PHASE = auto(), Parameter.relative_phase
     "Pulse relative phase."
-    DURATION = Parameter.duration
+    DURATION = auto(), Parameter.duration
     "Pulse duration."
-    PULSE_I = Parameter.duration
+    PULSE_I = auto(), Parameter.duration
     "Pulse I component."
-    PULSE_Q = Parameter.duration
+    PULSE_Q = auto(), Parameter.duration
     "Pulse Q component."
 
     @classmethod
     def from_sweeper(cls, sweep: Sweeper) -> "ParamRole":
         for var in cls:
-            if sweep.parameter == var.value:
+            if sweep.parameter == var.value[1]:
                 return var
         raise ValueError("Sweeper parameter kind does not correspond to any role.")
 
@@ -59,6 +59,10 @@ class ParamRole(Enum):
             sweep.pulses is not None
             and not any(isinstance(p, Pulse) for p in sweep.pulses)
         )
+
+    @property
+    def kind(self):
+        return self.value[1]
 
 
 class Param(Model):
@@ -74,12 +78,15 @@ class Param(Model):
     """The target pulse (if the sweeper targets pulses)."""
     channel: Optional[ChannelId]
     """The target channel (if the sweeper targets channels)."""
+    loop: Optional[int] = None
+    """The loop which is associated to."""
 
     @property
     def description(self) -> str:
         """Textual description, used in some accompanying comments."""
         return (
             "sweeper ("
+            + (f"loop: {self.loop}, " if self.loop is not None else "")
             + (f"pulse: {self.pulse.hex[:5]}, " if self.pulse is not None else "")
             + f"role: {self.role.name})"
         )
@@ -141,7 +148,7 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
     initialized by :func:`loops`.
     """
     return [
-        (j, p.model_copy(update={"reg": Register(number=i + allocated + 1)}))
+        (j, p.model_copy(update={"reg": Register(number=i + allocated + 1), "loop": j}))
         for i, (j, p) in enumerate(_unravel_sweeps(sweepers))
     ]
 
@@ -151,7 +158,7 @@ class _Update(Model):
     reset: Optional[Callable[[Value], Instruction]]
 
 
-SWEEP_UPDATE: dict[Parameter, _Update] = {
+_SWEEP_UPDATE: dict[Parameter, _Update] = {
     Parameter.frequency: _Update(update=lambda v: SetFreq(value=v), reset=None),
     Parameter.offset: _Update(
         update=lambda v: SetAwgOffs(value_0=v, value_1=v), reset=None
@@ -171,7 +178,7 @@ SWEEP_UPDATE: dict[Parameter, _Update] = {
 def update_instructions(
     role: ParamRole, value: Value, reset: bool = False
 ) -> list[Instruction]:
-    wrapper = SWEEP_UPDATE[role.value]
+    wrapper = _SWEEP_UPDATE[role.kind]
     up = wrapper.update if not reset else wrapper.reset
     return [up(value)] if up is not None else []
 
