@@ -132,17 +132,17 @@ def event(
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     time_of_flight: Optional[float],
-) -> list[Instruction]:
+) -> Block:
     params = parpulse[1]
-    return (
-        [inst for p in params for inst in update_instructions(p.role, p.reg)]
-        + play(parpulse, waveforms, acquisitions, time_of_flight)
-        + [
-            inst
-            for p in reversed(list(params))
-            for inst in reset_instructions(p.role, p.reg)
-        ]
-    )
+    return [
+        inst
+        for block in (
+            *(update_instructions(p.role, p.reg) for p in params),
+            *(play(parpulse, waveforms, acquisitions, time_of_flight),),
+            *(reset_instructions(p.role, p.reg) for p in reversed(list(params))),
+        )
+        for inst in block
+    ]
 
 
 def experiment(
@@ -150,7 +150,7 @@ def experiment(
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     time_of_flight: Optional[float],
-) -> list[Instruction]:
+) -> Block:
     """Representation of the actual experiment to be executed."""
     return [
         i_
