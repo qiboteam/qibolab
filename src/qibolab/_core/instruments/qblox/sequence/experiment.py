@@ -14,8 +14,9 @@ from qibolab._core.sweeper import Parameter
 
 from ..q1asm.ast_ import (
     Acquire,
-    Add,
+    BlockList,
     Instruction,
+    Line,
     Play,
     Register,
     SetPhDelta,
@@ -38,23 +39,21 @@ __all__ = []
 PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
-def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Instruction:
+def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
     uid = pulse.id
     w0 = waveforms[(uid, 0)]
     w1 = waveforms[(uid, 1)]
     assert w0[1] == w1[1]
-    return Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1])
+    return Line(
+        instruction=Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1]),
+        comment=f"pulse: {uid.hex[:5]}",
+    )
 
 
 def play_duration_swept(param: Param) -> list[Instruction]:
     qreg = Register(number=param.reg.number + 1)
     return [
-        Add(a=param.reg, b=1, destination=qreg),
-        Play(
-            wave_0=param.reg,
-            wave_1=qreg,
-            duration=4,
-        ),
+        Play(wave_0=param.reg, wave_1=qreg, duration=4),
         Wait(duration=Register(number=param.reg.number + 2)),
     ]
 
@@ -64,7 +63,7 @@ def play(
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     time_of_flight: Optional[float],
-) -> list[Instruction]:
+) -> BlockList:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
     params = parpulse[1]
