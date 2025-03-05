@@ -112,9 +112,10 @@ def program(
     sweepseq = sweep_sequence(
         sequence, [p for v in indexed_params.values() for p in v[1]]
     )
-    experiment_ = experiment(sweepseq, waveforms, acquisitions, time_of_flight) + [
+    experiment_ = [
+        *experiment(sweepseq, waveforms, acquisitions, time_of_flight),
         # add 4 spare ns to ensure minimum duration
-        Wait(duration=padding + 4)
+        Wait(duration=padding + 4),
     ]
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
@@ -123,12 +124,7 @@ def program(
         [
             el
             for block in [
-                setup(
-                    loops_,
-                    [p for _, p in params_],
-                    channel,
-                    pulses,
-                ),
+                setup(loops_, params_, channel, pulses),
                 loop(
                     experiment_,
                     loops_,
