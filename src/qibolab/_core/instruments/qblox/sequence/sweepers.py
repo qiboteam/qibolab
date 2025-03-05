@@ -49,7 +49,7 @@ class ParamRole(Enum):
     @classmethod
     def from_sweeper(cls, sweep: Sweeper) -> "ParamRole":
         for var in cls:
-            if sweep.parameter == var.value[1]:
+            if sweep.parameter is var.kind:
                 return var
         raise ValueError("Sweeper parameter kind does not correspond to any role.")
 
