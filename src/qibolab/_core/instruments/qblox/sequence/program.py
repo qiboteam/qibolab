@@ -93,18 +93,18 @@ def program(
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     options: ExecutionParameters,
+    shots: int,
     sweepers: list[ParallelSweepers],
     channel: set[ChannelId],
     time_of_flight: Optional[float],
     padding: int,
 ) -> Program:
     """Generate sequencer program."""
-    assert options.nshots is not None
     assert options.relaxation_time is not None
 
     loops_ = loops(
         sweepers,
-        options.nshots,
+        shots,
         inner_shots=options.averaging_mode is AveragingMode.SEQUENTIAL,
     )
     params_ = params(sweepers, allocated=max(lp.reg.number for lp in loops_))
