@@ -78,6 +78,7 @@ class MwFemOscillatorConfig(OscillatorConfig):
     kind: Literal["mw-fem-oscillator"] = "mw-fem-oscillator"
 
     power: int = -10
+    """This corresponds to the ``full_scale_power_dbm`` setting."""
     upconverter: int = 1
     band: int = 2
     sampling_rate: float = DEFAULT_SAMPLING_RATE
