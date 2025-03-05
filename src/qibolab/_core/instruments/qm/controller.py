@@ -281,7 +281,7 @@ class QmController(Controller):
             if isinstance(lo_config, MwFemOscillatorConfig):
                 self.config.configure_mw_fem_line(ch, config, lo_config, channel)
             else:
-                self.config.configure_iq_line(channel, ch, config, lo_config)
+                self.config.configure_iq_line(ch, config, lo_config, channel)
 
         elif isinstance(ch, AcquisitionChannel):
             assert ch.probe is not None
@@ -295,16 +295,21 @@ class QmController(Controller):
             assert isinstance(lo_config, OscillatorConfig)
             if isinstance(lo_config, MwFemOscillatorConfig):
                 self.config.configure_mw_fem_acquire_line(
-                    channel,
                     ch,
                     probe,
                     config,
                     probe_config,
                     lo_config,
+                    channel,
                 )
             else:
                 self.config.configure_acquire_line(
-                    channel, ch, probe, config, probe_config, lo_config
+                    ch,
+                    probe,
+                    config,
+                    probe_config,
+                    lo_config,
+                    channel,
                 )
             return ch.probe
 

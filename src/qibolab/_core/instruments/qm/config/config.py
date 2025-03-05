@@ -114,14 +114,32 @@ class Configuration:
                 channel, lo_config.upconverter, intermediate_frequency
             )
 
+    def configure_iq_line(
+        self,
+        channel: IqChannel,
+        config: IqConfig,
+        lo_config: OscillatorConfig,
+        id: Optional[ChannelId] = None,
+    ):
+        port = channel.port
+        octave = self.octaves[channel.device]
+        octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
+        self.controllers[octave.connectivity].add_octave_output(port)
+
+        if id is not None:
+            intermediate_frequency = config.frequency - lo_config.frequency
+            self.elements[id] = RfOctaveElement.from_channel(
+                channel, octave.connectivity, intermediate_frequency
+            )
+
     def configure_mw_fem_acquire_line(
         self,
-        id: ChannelId,
         acquire_channel: AcquisitionChannel,
         probe_channel: IqChannel,
         acquire_config: QmAcquisitionConfig,
         probe_config: IqConfig,
         lo_config: MwFemOscillatorConfig,
+        id: ChannelId,
     ):
         port = acquire_channel.port
         controller = self.controllers[acquire_channel.device]
@@ -139,41 +157,21 @@ class Configuration:
             smearing=acquire_config.smearing,
         )
 
-    def configure_iq_line(
-        self,
-        id: ChannelId,
-        channel: IqChannel,
-        config: IqConfig,
-        lo_config: OscillatorConfig,
-    ):
-        port = channel.port
-        octave = self.octaves[channel.device]
-        octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
-        self.controllers[octave.connectivity].add_octave_output(port)
-
-        intermediate_frequency = config.frequency - lo_config.frequency
-        self.elements[id] = RfOctaveElement.from_channel(
-            channel, octave.connectivity, intermediate_frequency
-        )
-
     def configure_acquire_line(
         self,
-        id: ChannelId,
         acquire_channel: AcquisitionChannel,
         probe_channel: IqChannel,
         acquire_config: QmAcquisitionConfig,
         probe_config: IqConfig,
         lo_config: OscillatorConfig,
+        id: ChannelId,
     ):
         port = acquire_channel.port
         octave = self.octaves[acquire_channel.device]
         octave.RF_inputs[port] = OctaveInput(lo_config.frequency)
         self.controllers[octave.connectivity].add_octave_input(port, acquire_config)
 
-        port = probe_channel.port
-        octave = self.octaves[probe_channel.device]
-        octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
-        self.controllers[octave.connectivity].add_octave_output(port)
+        self.configure_iq_line(probe_channel, probe_config, lo_config)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
         self.elements[id] = AcquireOctaveElement.from_channel(
