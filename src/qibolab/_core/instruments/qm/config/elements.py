@@ -134,18 +134,25 @@ def _to_mw_fem_input(channel: Channel, upconverter: int):
 @dataclass
 class MwFemElement:
     MWInput: MwInput
+    intermediate_frequency: int
     digitalInputs: DigitalInputs = field(default_factory=dict)
     operations: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_channel(cls, channel: Channel, upconverter: int):
-        return cls(_to_mw_fem_input(channel, upconverter))
+    def from_channel(
+        cls, channel: Channel, upconverter: int, intermediate_frequency: int
+    ):
+        return cls(
+            _to_mw_fem_input(channel, upconverter),
+            intermediate_frequency=intermediate_frequency,
+        )
 
 
 @dataclass
 class AcquireMwFemElement:
     MWInput: MwInput
     MWOutput: MwOutput
+    intermediate_frequency: int
     digitalInputs: DigitalInputs = field(default_factory=dict)
     time_of_flight: int = 24
     smearing: int = 0
@@ -157,12 +164,14 @@ class AcquireMwFemElement:
         probe_channel: Channel,
         upconverter: int,
         acquire_channel: Channel,
+        intermediate_frequency: int,
         time_of_flight: int,
         smearing: int,
     ):
         return cls(
             _to_mw_fem_input(probe_channel, upconverter),
             _to_port(acquire_channel),
+            intermediate_frequency=intermediate_frequency,
             time_of_flight=time_of_flight,
             smearing=smearing,
         )

@@ -5,7 +5,6 @@ from pydantic import Field
 from qibolab._core.components import (
     AcquisitionConfig,
     DcConfig,
-    IqConfig,
     OscillatorConfig,
 )
 
@@ -14,7 +13,7 @@ __all__ = [
     "QmAcquisitionConfig",
     "QmConfigs",
     "OctaveOscillatorConfig",
-    "MwFemConfig",
+    "MwFemOscillatorConfig",
 ]
 
 OctaveOutputModes = Literal[
@@ -69,24 +68,24 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """Constant voltage to be applied on the input."""
 
 
-class MwFemConfig(IqConfig):
+class MwFemOscillatorConfig(OscillatorConfig):
     """Output config for OPX1000 MW-FEM ports.
 
     For more information see
     https://docs.quantum-machines.co/latest/docs/Guides/opx1000_fems/?h=upsampl#microwave-fem-mw-fem
     """
 
-    kind: Literal["mw-fem-output"] = "mw-fem-output"
+    kind: Literal["mw-fem-oscillator"] = "mw-fem-oscillator"
 
+    power: int = -10
     upconverter: int = 1
     band: int = 2
     sampling_rate: float = DEFAULT_SAMPLING_RATE
-    full_scale_power_dbm: int = -10
 
 
 QmConfigs = Union[
     OpxOutputConfig,
     OctaveOscillatorConfig,
     QmAcquisitionConfig,
-    MwFemConfig,
+    MwFemOscillatorConfig,
 ]
