@@ -1,6 +1,7 @@
+import operator
 import time
 from collections import defaultdict
-from functools import cached_property
+from functools import cached_property, reduce
 from itertools import groupby
 from typing import Optional, cast
 
@@ -14,11 +15,16 @@ from qibolab._core.components.configs import (
     Configs,
     OscillatorConfig,
 )
-from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses.pulse import Acquisition, Readout
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers
+from qibolab._core.sweeper import ParallelSweepers, iteration_length
 
 from . import config
 from .config import PortAddress, SlotId
@@ -31,6 +37,35 @@ from .validate import assert_channels_exclusion, validate_sequence
 __all__ = ["Cluster"]
 
 SAMPLING_RATE = 1
+
+
+def batch_shots(
+    sequence: PulseSequence,
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    sampling_rate: float,
+) -> list[int]:
+    """Subdivide shots in batches."""
+    assert options.nshots is not None
+    sweeps = reduce(operator.mul, (iteration_length(parsweep) for parsweep in sweepers))
+    samples = max(
+        sum(
+            int(p.duration * sampling_rate)
+            for p in pulses
+            if isinstance(p, (Acquisition, Readout))
+        )
+        for pulses in sequence.by_channel.values()
+    )
+    batches = options.nshots // samples // sweeps + 1
+    return (
+        [options.nshots // batches] * batches
+        if options.averaging_mode is not AveragingMode.SINGLESHOT
+        else [options.nshots]
+    )
+
+
+def concat_shots(results: list[dict[int, Result]]) -> dict[int, Result]:
+    return results[0]
 
 
 class Cluster(Controller):
@@ -140,41 +175,52 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
         """Execute the given experiment."""
-        results_ = {}
+        results = {}
         log = Logger(configs)
 
         for ps in sequences:
-            assert_channels_exclusion(ps, self._probes)
-            sequences_ = compile(
-                ps,
-                sweepers,
-                options,
-                self.sampling_rate,
-                {
-                    ch: cast(OscillatorConfig, configs[lo])
-                    for ch, lo in self._los.items()
-                },
-                {
-                    ch: max(config.delay, 4.0)
-                    for ch, config in configs.items()
-                    if isinstance(config, AcquisitionConfig)
-                },
-            )
-            for seq in sequences_.values():
-                validate_sequence(seq)
-            log.sequences(sequences_)
-            sequencers = self._configure(sequences_, configs, options.acquisition_type)
-            log.status(self.cluster, sequencers)
-            duration = options.estimate_duration([ps], sweepers)
-            data = self._execute(
-                sequencers, sequences_, duration, options.acquisition_type
-            )
-            log.data(data)
-            lenghts = integration_lenghts(sequences_, sequencers, self._modules)
-            results_ |= extract(
-                data, lenghts, options.acquisition_type, options.results_shape(sweepers)
-            )
-        return results_
+            psres = []
+            for shots in batch_shots(ps, sweepers, options, self.sampling_rate):
+                assert_channels_exclusion(ps, self._probes)
+                sequences_ = compile(
+                    ps,
+                    sweepers,
+                    options,
+                    shots,
+                    self.sampling_rate,
+                    {
+                        ch: cast(OscillatorConfig, configs[lo])
+                        for ch, lo in self._los.items()
+                    },
+                    {
+                        ch: max(config.delay, 4.0)
+                        for ch, config in configs.items()
+                        if isinstance(config, AcquisitionConfig)
+                    },
+                )
+                for seq in sequences_.values():
+                    validate_sequence(seq)
+                log.sequences(sequences_)
+                sequencers = self._configure(
+                    sequences_, configs, options.acquisition_type
+                )
+                log.status(self.cluster, sequencers)
+                duration = options.estimate_duration([ps], sweepers)
+                data = self._execute(
+                    sequencers, sequences_, duration, options.acquisition_type
+                )
+                log.data(data)
+                lenghts = integration_lenghts(sequences_, sequencers, self._modules)
+                psres.append(
+                    extract(
+                        data,
+                        lenghts,
+                        options.acquisition_type,
+                        options.results_shape(sweepers),
+                    )
+                )
+            results |= concat_shots(psres)
+        return results
 
     def _configure(
         self,
