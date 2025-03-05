@@ -270,6 +270,20 @@ class QcmRf(ClusterModule):
             # Even better, set the frequency before each pulse is played (would work with hardware modulation only)
 
         # create sequencer wrapper
+        if qubit is not None:
+            qubit_param = self.channel_map[f'drive{int(port[-1])-1}'].qubit
+            
+            self.device.sequencers[next_sequencer_number].set(
+            "mixer_corr_gain_ratio",
+            qubit_param.mixer_drive_g
+            )             
+        
+            self.device.sequencers[next_sequencer_number].set(
+            "mixer_corr_phase_offset_degree",
+            qubit_param.mixer_drive_phi
+            )
+
+
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit
         return sequencer

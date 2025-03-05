@@ -446,7 +446,7 @@ class QrmRf(ClusterModule):
                     port=port,
                     frequency=self.get_if(non_overlapping_pulses[0]),
                     qubits=qubits,
-                    qubit=non_overlapping_pulses[0].qubit,
+                     qubit=non_overlapping_pulses[0].qubit,
                 )
 
                 
