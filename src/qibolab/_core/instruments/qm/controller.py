@@ -28,7 +28,7 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import unroll_sequences
 
-from .components import MwFemConfig, OpxOutputConfig, QmAcquisitionConfig
+from .components import MwFemOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
 from .config import SAMPLING_RATE, Configuration, ControllerId, ModuleTypes
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
@@ -274,13 +274,13 @@ class QmController(Controller):
             self.config.configure_dc_line(channel, ch, config)
 
         elif isinstance(ch, IqChannel):
-            if isinstance(config, MwFemConfig):
-                self.config.configure_mw_fem_line(ch, config, channel)
+            assert isinstance(config, IqConfig)
+            assert ch.lo is not None
+            lo_config = configs[ch.lo]
+            assert isinstance(lo_config, OscillatorConfig)
+            if isinstance(lo_config, MwFemOscillatorConfig):
+                self.config.configure_mw_fem_line(ch, config, lo_config, channel)
             else:
-                assert isinstance(config, IqConfig)
-                assert ch.lo is not None
-                lo_config = configs[ch.lo]
-                assert isinstance(lo_config, OscillatorConfig)
                 self.config.configure_iq_line(channel, ch, config, lo_config)
 
         elif isinstance(ch, AcquisitionChannel):
@@ -290,18 +290,19 @@ class QmController(Controller):
             probe_config = configs[ch.probe]
             assert isinstance(probe, IqChannel)
             assert isinstance(probe_config, IqConfig)
-            if isinstance(probe_config, MwFemConfig):
+            assert probe.lo is not None
+            lo_config = configs[probe.lo]
+            assert isinstance(lo_config, OscillatorConfig)
+            if isinstance(lo_config, MwFemOscillatorConfig):
                 self.config.configure_mw_fem_acquire_line(
                     channel,
                     ch,
                     probe,
                     config,
                     probe_config,
+                    lo_config,
                 )
             else:
-                assert probe.lo is not None
-                lo_config = configs[probe.lo]
-                assert isinstance(lo_config, OscillatorConfig)
                 self.config.configure_acquire_line(
                     channel, ch, probe, config, probe_config, lo_config
                 )

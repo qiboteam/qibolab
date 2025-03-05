@@ -11,7 +11,7 @@ from qibolab._core.components import (
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Pulse, Readout
 
-from ..components import MwFemConfig, OpxOutputConfig, QmAcquisitionConfig
+from ..components import MwFemOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
 from .devices import (
     Controller,
     ControllerId,
@@ -97,18 +97,22 @@ class Configuration:
     def configure_mw_fem_line(
         self,
         channel: IqChannel,
-        config: MwFemConfig,
+        config: IqConfig,
+        lo_config: MwFemOscillatorConfig,
         id: Optional[ChannelId] = None,
     ):
         controller = self.controllers[channel.device]
         if channel.port in controller.analog_outputs:
             output = MwFemOutput(**controller.analog_outputs[channel.port])
-            output.update(config)
+            output.update(lo_config)
         else:
-            output = MwFemOutput.from_config(config)
+            output = MwFemOutput.from_config(lo_config)
         controller.analog_outputs[channel.port] = asdict(output)
         if id is not None:
-            self.elements[id] = MwFemElement.from_channel(channel, config.upconverter)
+            intermediate_frequency = config.frequency - lo_config.frequency
+            self.elements[id] = MwFemElement.from_channel(
+                channel, lo_config.upconverter, intermediate_frequency
+            )
 
     def configure_mw_fem_acquire_line(
         self,
@@ -116,18 +120,21 @@ class Configuration:
         acquire_channel: AcquisitionChannel,
         probe_channel: IqChannel,
         acquire_config: QmAcquisitionConfig,
-        probe_config: MwFemConfig,
+        probe_config: IqConfig,
+        lo_config: MwFemOscillatorConfig,
     ):
         port = acquire_channel.port
         controller = self.controllers[acquire_channel.device]
-        controller.analog_inputs[port] = MwFemInput.from_config(probe_config)
+        controller.analog_inputs[port] = MwFemInput.from_config(lo_config)
 
-        self.configure_mw_fem_line(probe_channel, probe_config)
+        self.configure_mw_fem_line(probe_channel, probe_config, lo_config)
 
+        intermediate_frequency = probe_config.frequency - lo_config.frequency
         self.elements[id] = AcquireMwFemElement.from_channel(
             probe_channel,
-            probe_config.upconverter,
+            lo_config.upconverter,
             acquire_channel,
+            intermediate_frequency=intermediate_frequency,
             time_of_flight=acquire_config.delay,
             smearing=acquire_config.smearing,
         )

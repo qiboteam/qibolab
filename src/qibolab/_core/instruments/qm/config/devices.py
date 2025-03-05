@@ -3,7 +3,11 @@ from typing import Generic, Literal, TypeVar, Union
 
 from qibolab._core.components import OscillatorConfig
 
-from ..components import MwFemConfig, OctaveOscillatorConfig, QmAcquisitionConfig
+from ..components import (
+    MwFemOscillatorConfig,
+    OctaveOscillatorConfig,
+    QmAcquisitionConfig,
+)
 from ..components.configs import OctaveOutputModes
 
 __all__ = [
@@ -50,19 +54,19 @@ class MwFemOutput:
     full_scale_power_dbm: int
 
     @classmethod
-    def from_config(cls, config: MwFemConfig):
+    def from_config(cls, config: MwFemOscillatorConfig):
         upconverters = {config.upconverter: {"frequency": config.frequency}}
         return cls(
             upconverters=upconverters,
             band=config.band,
             sampling_rate=config.sampling_rate,
-            full_scale_power_dbm=config.full_scale_power_dbm,
+            full_scale_power_dbm=config.power,
         )
 
-    def update(self, config: MwFemConfig):
+    def update(self, config: MwFemOscillatorConfig):
         assert self.band == config.band
         assert self.sampling_rate == config.sampling_rate
-        assert self.full_scale_power_dbm == config.full_scale_power_dbm
+        assert self.full_scale_power_dbm == config.power
         assert config.upconverter not in self.upconverters
         self.upconverters[config.upconverter] = {"frequency": config.frequency}
 
@@ -74,7 +78,7 @@ class MwFemInput:
     sampling_rate: float
 
     @classmethod
-    def from_config(cls, config: MwFemConfig):
+    def from_config(cls, config: MwFemOscillatorConfig):
         return cls(
             downconverter_frequency=config.frequency,
             band=config.band,
