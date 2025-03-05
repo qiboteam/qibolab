@@ -1,10 +1,10 @@
-import operator
 import time
 from collections import defaultdict
-from functools import cached_property, reduce
+from functools import cached_property
 from itertools import groupby
 from typing import Optional, cast
 
+import numpy as np
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
@@ -24,7 +24,7 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import Acquisition, Readout
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers, iteration_length
+from qibolab._core.sweeper import ParallelSweepers
 
 from . import config
 from .config import PortAddress, SlotId
@@ -32,7 +32,7 @@ from .identifiers import SequencerMap
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
-from .validate import assert_channels_exclusion, validate_sequence
+from .validate import ACQUISITION_MEMORY, assert_channels_exclusion, validate_sequence
 
 __all__ = ["Cluster"]
 
@@ -43,22 +43,21 @@ def batch_shots(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
-    sampling_rate: float,
 ) -> list[int]:
-    """Subdivide shots in batches."""
+    """Subdivide shots in batches.
+
+    It assumes an integrated/discriminated acquisition, such that each
+    acquisition in an individual loop accounts for a single bin.
+    """
     assert options.nshots is not None
-    sweeps = reduce(operator.mul, (iteration_length(parsweep) for parsweep in sweepers))
+    bins = np.prod(options.bins(sweepers))
     samples = max(
-        sum(
-            int(p.duration * sampling_rate)
-            for p in pulses
-            if isinstance(p, (Acquisition, Readout))
-        )
+        sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
         for pulses in sequence.by_channel.values()
     )
-    batches = options.nshots // samples // sweeps + 1
+    nfull, remainder = np.divmod(bins * samples, ACQUISITION_MEMORY)
     return (
-        [options.nshots // batches] * batches
+        [ACQUISITION_MEMORY] * nfull + [remainder]
         if options.averaging_mode is not AveragingMode.SINGLESHOT
         else [options.nshots]
     )
@@ -180,7 +179,7 @@ class Cluster(Controller):
 
         for ps in sequences:
             psres = []
-            for shots in batch_shots(ps, sweepers, options, self.sampling_rate):
+            for shots in batch_shots(ps, sweepers, options):
                 assert_channels_exclusion(ps, self._probes)
                 sequences_ = compile(
                     ps,
