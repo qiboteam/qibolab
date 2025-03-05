@@ -26,7 +26,7 @@ from .identifiers import SequencerMap
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
-from .validate import assert_channels_exclusion
+from .validate import assert_channels_exclusion, validate_sequence
 
 __all__ = ["Cluster"]
 
@@ -160,6 +160,8 @@ class Cluster(Controller):
                     if isinstance(config, AcquisitionConfig)
                 },
             )
+            for seq in sequences_.values():
+                validate_sequence(seq)
             log.sequences(sequences_)
             sequencers = self._configure(sequences_, configs, options.acquisition_type)
             log.status(self.cluster, sequencers)
