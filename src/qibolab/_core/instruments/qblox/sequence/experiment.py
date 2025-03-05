@@ -46,7 +46,7 @@ def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
     assert w0[1] == w1[1]
     return Line(
         instruction=Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1]),
-        comment=f"pulse: {uid.hex[:5]}",
+        comment=f"id: 0x{uid.hex[:5]}",
     )
 
 
@@ -72,7 +72,6 @@ def play(
     params = parpulse[1]
 
     if isinstance(pulse, Pulse):
-        # breakpoint()
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
         duration_sweep = {
             p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
@@ -88,11 +87,12 @@ def play(
         )
     if isinstance(pulse, Delay):
         return [
-            Wait(
-                duration=int(pulse.duration)
-                if len(params) == 0
-                else next(iter(params)).reg
+            Line(
+                instruction=Wait(duration=int(pulse.duration)),
+                comment=f"id: 0x{pulse.id.hex[:5]}",
             )
+            if len(params) == 0
+            else Wait(duration=next(iter(params)).reg)
         ]
     if isinstance(pulse, VirtualZ):
         return [
@@ -153,9 +153,9 @@ def experiment(
 ) -> Block:
     """Representation of the actual experiment to be executed."""
     return [
-        i_
+        inst
         for block in (
             event(pulse, waveforms, acquisitions, time_of_flight) for pulse in sequence
         )
-        for i_ in block
+        for inst in block
     ]
