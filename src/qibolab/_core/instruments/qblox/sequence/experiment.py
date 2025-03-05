@@ -14,7 +14,7 @@ from qibolab._core.sweeper import Parameter
 
 from ..q1asm.ast_ import (
     Acquire,
-    BlockList,
+    Block,
     Instruction,
     Line,
     Play,
@@ -25,8 +25,8 @@ from ..q1asm.ast_ import (
 from .acquisition import AcquisitionSpec, MeasureId
 from .asm import Registers, convert
 from .sweepers import (
-    Param,
     ParameterizedPulse,
+    ParamRole,
     SweepSequence,
     reset_instructions,
     update_instructions,
@@ -50,11 +50,14 @@ def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
     )
 
 
-def play_duration_swept(param: Param) -> list[Instruction]:
-    qreg = Register(number=param.reg.number + 1)
+def play_duration_swept(registers: dict[ParamRole, Register]) -> list[Instruction]:
     return [
-        Play(wave_0=param.reg, wave_1=qreg, duration=4),
-        Wait(duration=Register(number=param.reg.number + 2)),
+        Play(
+            wave_0=registers[ParamRole.PULSE_I],
+            wave_1=registers[ParamRole.PULSE_Q],
+            duration=4,
+        ),
+        Wait(duration=registers[ParamRole.DURATION]),
     ]
 
 
@@ -63,7 +66,7 @@ def play(
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
     time_of_flight: Optional[float],
-) -> BlockList:
+) -> Block:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
     params = parpulse[1]
@@ -71,16 +74,14 @@ def play(
     if isinstance(pulse, Pulse):
         # breakpoint()
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
-        duration_sweep = min(
-            (p for p in params if p.role.value is Parameter.duration),
-            key=lambda p: p.reg.number,
-            default=None,
-        )
+        duration_sweep = {
+            p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+        }
         return (
             ([SetPhDelta(value=phase)] if phase != 0 else [])
             + (
                 [play_pulse(pulse, waveforms)]
-                if duration_sweep is None
+                if len(duration_sweep) == 0
                 else play_duration_swept(duration_sweep)
             )
             + ([SetPhDelta(value=-phase)] if phase != 0 else [])
