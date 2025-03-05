@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable
 from enum import Enum, auto
 from itertools import groupby
 from typing import Optional
@@ -87,16 +87,11 @@ class Param(Model):
         return (
             "sweeper ("
             + (f"loop: {self.loop}, " if self.loop is not None else "")
-            + (f"pulse: {self.pulse.hex[:5]}, " if self.pulse is not None else "")
-            + f"role: {self.role.name})"
+            + (f"pulse: 0x{self.pulse.hex[:5]}, " if self.pulse is not None else "")
+            + f"role: {self.role.kind.name}.{self.role.name}"
+            + ")"
         )
 
-
-Params = Sequence[tuple[int, Param]]
-"""Sequence of update parameters.
-
-It is created by the :func:`params` function.
-"""
 
 IndexedParams = dict[int, tuple[list[Param], list[Param]]]
 
@@ -141,14 +136,14 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
     )
 
 
-def params(sweepers: list[ParallelSweepers], allocated: int) -> Params:
+def params(sweepers: list[ParallelSweepers], allocated: int) -> list[Param]:
     """Initialize parameters' registers.
 
     `allocated` is the number of already allocated registers for loop counters, as
     initialized by :func:`loops`.
     """
     return [
-        (j, p.model_copy(update={"reg": Register(number=i + allocated + 1), "loop": j}))
+        p.model_copy(update={"reg": Register(number=i + allocated + 1), "loop": j})
         for i, (j, p) in enumerate(_unravel_sweeps(sweepers))
     ]
 
@@ -188,22 +183,24 @@ def reset_instructions(role: ParamRole, value: Value) -> list[Instruction]:
 
 
 def _channels_pulses(
-    pars: Iterable[tuple[int, Param]],
+    pars: Iterable[Param],
 ) -> tuple[list[Param], list[Param]]:
     channels = []
     pulses = []
     for p in pars:
-        (channels if p[1].channel is not None else pulses).append(p[1])
+        (channels if p.channel is not None else pulses).append(p)
     return channels, pulses
 
 
-def params_reshape(params: Params) -> IndexedParams:
+def params_reshape(params: list[Param]) -> IndexedParams:
     """Split parameters related to channels and pulses.
 
     Moreover, it reorganize them by loop, to group the updates.
     """
     return {
-        key: _channels_pulses(pars) for key, pars in groupby(params, key=lambda t: t[0])
+        key: _channels_pulses(pars)
+        for key, pars in groupby(params, key=lambda p: p.loop)
+        if key is not None
     }
 
 
