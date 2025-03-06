@@ -59,7 +59,7 @@ class EmulatorController(Controller):
             e_ops=[SIGMAZ],
         )
         averaged_results = {
-            ro_pulse_id: results.expect[0][sample - 1]
+            ro_pulse_id: (1 - results.expect[0][sample - 1]) / 2
             for ro_pulse_id, sample in measurement.items()
         }
         if options.averaging_mode == AveragingMode.SINGLESHOT:
@@ -67,7 +67,7 @@ class EmulatorController(Controller):
                 ro_pulse_id: np.random.choice(
                     [0, 1],
                     size=options.nshots,
-                    p=[(1 + prob) / 2, (1 - prob) / 2],
+                    p=[1 - prob, prob],
                 )
                 for ro_pulse_id, prob in averaged_results.items()
             }
