@@ -16,20 +16,8 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
 
 from .hamiltonians import waveform
-from .operators import INITIAL_STATE, _probability
+from .operators import INITIAL_STATE, SIGMAZ
 from .utils import merge_results
-
-
-def _normalize_prob(probs: list) -> list:
-    """Normalize probabilities.
-
-    Necessary to avoid rounding errors when calling np.random.choice.
-    """
-    prob0 = np.round(probs[0], 2)
-    prob1 = np.round(probs[1], 2)
-    prob2 = np.round(1 - prob0 - prob1, 2)
-    normalization = np.sum([prob0, prob1, prob2])
-    return [prob / normalization for prob in [prob0, prob1, prob2]]
 
 
 class EmulatorController(Controller):
@@ -46,7 +34,6 @@ class EmulatorController(Controller):
     @property
     def sampling_rate(self):
         """Sampling rate of emulator."""
-        # TODO: remove hardcoded sampling rate
         return 1
 
     @property
@@ -54,10 +41,6 @@ class EmulatorController(Controller):
         """System in ground state."""
         # initial state: qubit in ground state
         return INITIAL_STATE
-
-    def probability(self, state: int):
-        """Probability of qubit in state."""
-        return _probability(state=state)
 
     def _play_sequence(self, sequence, configs, options, updates=None):
         """Play single sequence on emulator."""
@@ -73,19 +56,18 @@ class EmulatorController(Controller):
             self.initial_state,
             tlist,
             configs["hamiltonian"].decoherence,
-            [self.probability(0), self.probability(1)],
+            e_ops=[SIGMAZ],
         )
         averaged_results = {
-            ro_pulse_id: [results.expect[0][sample - 1], results.expect[1][sample - 1]]
+            ro_pulse_id: results.expect[0][sample - 1]
             for ro_pulse_id, sample in measurement.items()
         }
-
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             results = {
                 ro_pulse_id: np.random.choice(
-                    [0, 1, 2],
+                    [0, 1],
                     size=options.nshots,
-                    p=_normalize_prob(prob),
+                    p=[(1 + prob) / 2, (1 - prob) / 2],
                 )
                 for ro_pulse_id, prob in averaged_results.items()
             }
@@ -99,6 +81,8 @@ class EmulatorController(Controller):
         if updates is None:
             updates = {}
         results = {}
+        if len(sweepers) == 0:
+            return self._play_sequence(sequence, configs, options, updates)
         assert len(sweepers[0]) == 1, "Parallel sweepers not supported."
         sweeper = sweepers[0][0]
         for value in sweeper.values:

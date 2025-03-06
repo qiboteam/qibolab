@@ -7,7 +7,7 @@ from pydantic import Field
 
 from ...components import Config, IqConfig
 from ...pulses import Delay, Pulse
-from .operators import L1, L2, QUBIT_CREATE, QUBIT_DESTROY, QUBIT_DRIVE, QUBIT_NUMBER
+from .operators import L1, L2, QUBIT_DRIVE, SIGMAZ
 from .utils import HZ_TO_GHZ
 
 
@@ -16,8 +16,6 @@ class Qubit(Config):
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
-    anharmonicity: float = 0
-    """Qubit anharmonicity."""
     t1: float = 0
     """Relaxation time."""
     t2: float = 0
@@ -26,16 +24,7 @@ class Qubit(Config):
     @property
     def operator(self):
         """Time independent operator."""
-        return (
-            2 * np.pi * self.frequency * HZ_TO_GHZ * QUBIT_NUMBER
-            + np.pi
-            * self.anharmonicity
-            * HZ_TO_GHZ
-            * QUBIT_CREATE
-            * QUBIT_CREATE
-            * QUBIT_DESTROY
-            * QUBIT_DESTROY
-        )
+        return -np.pi * self.frequency * HZ_TO_GHZ * SIGMAZ
 
     @property
     def t_phi(self):
@@ -46,7 +35,7 @@ class Qubit(Config):
     def decoherence(self):
         """Decoherence operator."""
         assert self.t1 > 0 and self.t2 > 0
-        return np.sqrt(1 / self.t1) * L1 + np.sqrt(1 / self.t_phi) * L2
+        return np.sqrt(1 / self.t1) * L1 + np.sqrt(1 / self.t_phi / 2) * L2
 
 
 @dataclass
