@@ -72,6 +72,28 @@ def dec_to_basis_string(x: int, nlevels: list = [2]) -> list:
     return output_list
 
 
+def make_all_basis_strings(nlevels: list, big_endian:bool = False):
+    """Generates all generalized bitstrings in the computation basis
+    for the full Hilbert space speicified by nlevels. Assumes nlevels adopts little endian ordering
+
+    Args:
+        nlevels (list): List of integers specifying the Hilbert space.
+        big_endian (bool): Choice to input nlevels in big endian ordering. Defaults to False.
+
+    Returns:
+        list: All generalized bitstrings of the Hilbert space.
+    """
+    basis_string_list = []
+    full_HS_dim = np.prod(nlevels)
+    for state_id in range(full_HS_dim):
+        basis_string = dec_to_basis_string(state_id, nlevels) # little endian, default
+        if big_endian:
+            basis_string = np.flip(basis_string).tolist() # big endian
+        basis_string_list.append(basis_string)
+        
+    return basis_string_list
+
+
 def op_from_instruction(
     inst: tuple[float, str, list],
     op_dict: Optional[dict] = None,
