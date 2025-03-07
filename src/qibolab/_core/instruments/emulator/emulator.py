@@ -1,6 +1,8 @@
 """Emulator controller."""
 
 from collections import defaultdict
+from functools import reduce
+from operator import or_
 
 import numpy as np
 from qutip import mesolve
@@ -123,12 +125,14 @@ class EmulatorController(Controller):
         assert options.acquisition_type == AcquisitionType.DISCRIMINATION, (
             "Emulator only supports DISCRIMINATION acquisition type."
         )
-        results = {}
-
-        for sequence in sequences:
-            results.update(self._sweep(sequence, configs, options, sweepers))
-
-        return results
+        return reduce(
+            or_,
+            (
+                self._sweep(sequence, configs, options, sweepers)
+                for sequence in sequences
+            ),
+            {},
+        )
 
     def _measurement(self, sequence, configs, updates=None):
         """Given sequence creates a dictionary of readout pulses and their

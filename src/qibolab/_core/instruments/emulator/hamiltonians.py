@@ -61,17 +61,15 @@ class QubitDrive:
         return QUBIT_DRIVE
 
     def __len__(self):
-        return int(self.pulse.duration)
+        return int(self.pulse.duration * self.sampling_rate)
 
     def __call__(self, t, sample):
-        i, q = self.envelopes
         if isinstance(self.pulse, Delay):
             return 0
+        i, q = self.envelopes
+        omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase
         return self.pulse.amplitude * (
-            np.cos(2 * np.pi * self.frequency * t + self.pulse.relative_phase)
-            * i[sample]
-            + np.sin(2 * np.pi * self.frequency * t + self.pulse.relative_phase)
-            * q[sample]
+            np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
         )
 
 
@@ -87,13 +85,11 @@ class HamiltonianConfig(Config):
 
     @property
     def decoherence(self):
-        ops = []
-        for qubit in self.single_qubit.values():
-            if isinstance(qubit, list):
-                continue
-            else:
-                ops.append(qubit.decoherence)
-        return ops
+        return [
+            qubit.decoherence
+            for qubit in self.single_qubit.values()
+            if not isinstance(qubit, list)
+        ]
 
 
 def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
@@ -101,12 +97,27 @@ def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
     if updates is None:
         updates = {}
     # mapping IqConfig -> QubitDrive
-    if isinstance(configs[channel], IqConfig):
-        if channel in updates:
-            config = configs[channel].model_copy(update=updates[channel])
-            frequency = config.frequency
-        else:
-            frequency = configs[channel].frequency
-        if pulse.id in updates:
-            pulse = pulse.model_copy(update=updates[pulse.id])
-        return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
+
+    if not isinstance(configs[channel], IqConfig):
+        return None
+
+    config = configs[channel].model_copy(update=updates.get(channel, {}))
+    frequency = config.frequency
+    pulse = pulse.model_copy(update=updates.get(pulse.id, {}))
+    # if channel in updates:
+    #     config = configs[channel].model_copy(update=updates[channel])
+    #     frequency = config.frequency
+    # else:
+    #     frequency = configs[channel].frequency
+    # if pulse.id in updates:
+    #     pulse = pulse.model_copy(update=updates[pulse.id])
+    return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
+    # if isinstance(configs[channel], IqConfig):
+    #     if channel in updates:
+    #         config = configs[channel].model_copy(update=updates[channel])
+    #         frequency = config.frequency
+    #     else:
+    #         frequency = configs[channel].frequency
+    #     if pulse.id in updates:
+    #         pulse = pulse.model_copy(update=updates[pulse.id])
+    #     return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
