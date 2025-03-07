@@ -24,7 +24,7 @@ from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
 from .operators import INITIAL_STATE, SIGMAZ
-from .utils import merge_results
+from .utils import ndchoice
 
 
 class EmulatorController(Controller):
@@ -50,57 +50,35 @@ class EmulatorController(Controller):
         return INITIAL_STATE
 
     def _play_sequence(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        options: ExecutionParameters,
-        updates: dict,
-    ) -> dict[PulseId, Result]:
+        self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
+    ) -> NDArray:
         """Play single sequence on emulator."""
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         hamiltonian = config.hamiltonian
         hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
-        measurement, tlist = self._measurement(sequence, configs, updates)
+        measurements, tlist = self._measurement(sequence, configs, updates)
         results = mesolve(
-            hamiltonian,
-            self.initial_state,
-            tlist,
-            config.decoherence,
-            e_ops=[SIGMAZ],
+            hamiltonian, self.initial_state, tlist, config.decoherence, e_ops=[SIGMAZ]
         )
-        averaged_results = {
-            ro_pulse_id: (1 - results.expect[0][sample - 1]) / 2
-            for ro_pulse_id, sample in measurement.items()
-        }
-        if options.averaging_mode == AveragingMode.SINGLESHOT:
-            results = {
-                ro_pulse_id: np.random.choice(
-                    [0, 1], size=options.nshots, p=[1 - prob, prob]
-                )
-                for ro_pulse_id, prob in averaged_results.items()
-            }
-            return results
-
-        # dropping probability of 0 to keep compatibility with qibolab
-        return {pulse: prob[1] for pulse, prob in averaged_results.items()}
+        samples = np.array(list(measurements.values())) - 1
+        return (1 - results.expect[0][samples]) / 2
 
     def _sweep(
         self,
         sequence: PulseSequence,
         configs: dict[str, Config],
-        options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
-    ) -> dict[PulseId, Result]:
+    ) -> NDArray:
         """Sweep over sequence."""
         updates = defaultdict(dict) | ({} if updates is None else updates)
         if len(sweepers) == 0:
-            return self._play_sequence(sequence, configs, options, updates)
+            return self._play_sequence(sequence, configs, updates)
 
         assert len(sweepers[0]) == 1, "Parallel sweepers not supported."
         sweeper = sweepers[0][0]
 
-        results = {}
+        results = []
         for value in sweeper.values:
             if sweeper.pulses is not None:
                 for pulse in sweeper.pulses:
@@ -108,11 +86,33 @@ class EmulatorController(Controller):
             if sweeper.channels is not None:
                 for channel in sweeper.channels:
                     updates.get(channel, {}).update({sweeper.parameter.name: value})
-            temp = self._sweep(sequence, configs, options, sweepers[1:], updates)
+            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
-            results = merge_results(results, temp)
+        return np.vstack(results)
 
-        return results
+    def _play(
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[int, Result]:
+        res = self._sweep(sequence, configs, sweepers)
+        res_ = (
+            np.moveaxis(
+                ndchoice(np.moveaxis(np.array([1 - res, res]), 0, -1), options.nshots),
+                -1,
+                0,
+            )
+            if options.averaging_mode == AveragingMode.SINGLESHOT
+            else res
+        )
+        # move measurements dimension to the front, and reshape
+        res__ = np.moveaxis(res_, -1, 0).reshape(
+            res_.shape[-1], *options.results_shape(sweepers)
+        )
+        measurements, _ = self._measurement(sequence, configs, {})
+        return dict(zip(measurements.keys(), list(res__)))
 
     def play(
         self,
@@ -127,13 +127,7 @@ class EmulatorController(Controller):
         return reduce(
             or_,
             (
-                {
-                    # reshaping results
-                    k: v.reshape(options.results_shape(sweepers))
-                    for k, v in self._sweep(
-                        sequence, configs, options, sweepers
-                    ).items()
-                }
+                self._play(sequence, configs, options, sweepers)
                 for sequence in sequences
             ),
         )
