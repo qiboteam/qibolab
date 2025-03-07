@@ -54,7 +54,6 @@
               languages.python = {
                 enable = true;
                 libraries = with pkgs; [zlib];
-                version = "3.11";
                 poetry = {
                   enable = true;
                   install = {
@@ -63,7 +62,7 @@
                     extras = [
                       (lib.strings.concatStrings
                         (lib.strings.intersperse " -E "
-                          ["qblox" "qm" "zh" "rfsoc" "los"]))
+                          ["qblox" "qm" "zh" "rfsoc" "los" "emulator"]))
                     ];
                   };
                 };
