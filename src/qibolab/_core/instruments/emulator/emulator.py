@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from functools import reduce
+from itertools import chain
 from operator import or_
 
 import numpy as np
@@ -17,6 +18,7 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
 
+from ...serialize import replace
 from .hamiltonians import waveform
 from .operators import INITIAL_STATE, SIGMAZ
 from .utils import merge_results
@@ -44,15 +46,12 @@ class EmulatorController(Controller):
         # initial state: qubit in ground state
         return INITIAL_STATE
 
-    def _play_sequence(self, sequence, configs, options, updates=None):
+    def _play_sequence(self, sequence, configs, options):
         """Play single sequence on emulator."""
 
-        if updates is None:
-            updates = {}
-
         hamiltonian = configs["hamiltonian"].hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
-        measurement, tlist = self._measurement(sequence, configs, updates)
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, options)
+        measurement, tlist = self._measurement(sequence, configs, options)
         results = mesolve(
             hamiltonian,
             self.initial_state,
@@ -78,15 +77,14 @@ class EmulatorController(Controller):
         # dropping probability of 0 to keep compatibility with qibolab
         return {pulse: prob[1] for pulse, prob in averaged_results.items()}
 
-    def _sweep(self, sequence, configs, options, sweepers, updates=None):
+    def _sweep(self, sequence, configs, options, sweepers):
         """Sweep over sequence."""
-        if updates is None:
-            updates = {}
         results = {}
         if len(sweepers) == 0:
-            return self._play_sequence(sequence, configs, options, updates)
+            return self._play_sequence(sequence, configs, options)
         assert len(sweepers[0]) == 1, "Parallel sweepers not supported."
         sweeper = sweepers[0][0]
+        updates = dict(chain.from_iterable(d.items() for d in options.updates))
         for value in sweeper.values:
             if sweeper.pulses is not None:
                 for pulse in sweeper.pulses:
@@ -100,10 +98,11 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
                     except KeyError:
                         updates[channel] = {sweeper.parameter.name: value}
+            options = replace(options, updates=[{k: v} for k, v in updates.items()])
             if len(sweepers) > 1:
-                temp = self._sweep(sequence, configs, options, sweepers[1:], updates)
+                temp = self._sweep(sequence, configs, options, sweepers[1:])
             else:
-                temp = self._play_sequence(sequence, configs, options, updates)
+                temp = self._play_sequence(sequence, configs, options)
 
             results = merge_results(
                 results,
@@ -134,14 +133,12 @@ class EmulatorController(Controller):
             {},
         )
 
-    def _measurement(self, sequence, configs, updates=None):
+    def _measurement(self, sequence, configs, options):
         """Given sequence creates a dictionary of readout pulses and their
         sample index."""
         duration = 0
         pulses = {}
-        if updates is None:
-            updates = {}
-
+        updates = dict(chain.from_iterable(d.items() for d in options.updates))
         for channel, pulse in sequence:
             if isinstance(configs[channel], AcquisitionConfig):
                 if isinstance(pulse, Readout):
@@ -159,10 +156,11 @@ class EmulatorController(Controller):
         return pulses, tlist
 
     def _pulse_sequence_to_hamiltonian(
-        self, sequence: PulseSequence, configs, updates=None
+        self, sequence: PulseSequence, configs, options
     ) -> dict[str, list]:
         """Construct Hamiltonian dependent term for qutip simulation."""
 
+        updates = dict(chain.from_iterable(d.items() for d in options.updates))
         hamiltonians = defaultdict(list)
         h_t = []
         for channel, pulse in sequence:

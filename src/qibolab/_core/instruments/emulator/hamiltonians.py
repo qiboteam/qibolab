@@ -104,20 +104,4 @@ def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
     config = configs[channel].model_copy(update=updates.get(channel, {}))
     frequency = config.frequency
     pulse = pulse.model_copy(update=updates.get(pulse.id, {}))
-    # if channel in updates:
-    #     config = configs[channel].model_copy(update=updates[channel])
-    #     frequency = config.frequency
-    # else:
-    #     frequency = configs[channel].frequency
-    # if pulse.id in updates:
-    #     pulse = pulse.model_copy(update=updates[pulse.id])
     return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
-    # if isinstance(configs[channel], IqConfig):
-    #     if channel in updates:
-    #         config = configs[channel].model_copy(update=updates[channel])
-    #         frequency = config.frequency
-    #     else:
-    #         frequency = configs[channel].frequency
-    #     if pulse.id in updates:
-    #         pulse = pulse.model_copy(update=updates[pulse.id])
-    #     return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
