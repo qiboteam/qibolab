@@ -75,17 +75,15 @@ class EmulatorController(Controller):
         if len(sweepers) == 0:
             return self._play_sequence(sequence, configs, updates)
 
-        assert len(sweepers[0]) == 1, "Parallel sweepers not supported."
-        sweeper = sweepers[0][0]
-
         results = []
-        for value in sweeper.values:
-            if sweeper.pulses is not None:
-                for pulse in sweeper.pulses:
-                    updates[pulse.id].update({sweeper.parameter.name: value})
-            if sweeper.channels is not None:
-                for channel in sweeper.channels:
-                    updates.get(channel, {}).update({sweeper.parameter.name: value})
+        for values in zip(s.values for s in sweepers[0]):
+            for sweeper, value in zip(sweepers[0], values):
+                if sweeper.pulses is not None:
+                    for pulse in sweeper.pulses:
+                        updates[pulse.id].update({sweeper.parameter.name: value})
+                if sweeper.channels is not None:
+                    for channel in sweeper.channels:
+                        updates.get(channel, {}).update({sweeper.parameter.name: value})
             results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
         return np.vstack(results)
