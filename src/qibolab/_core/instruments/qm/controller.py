@@ -536,10 +536,7 @@ class QmController(Controller):
         experiment = program(args, options, sweepers, offsets)
 
         if self.script_file_name is not None:
-            script_config = (
-                {"version": 1} if self.manager is None else asdict(self.config)
-            )
-            script = generate_qua_script(experiment, script_config)
+            script = generate_qua_script(experiment, asdict(self.config))
             with open(self.script_file_name, "w") as file:
                 file.write(script)
 
