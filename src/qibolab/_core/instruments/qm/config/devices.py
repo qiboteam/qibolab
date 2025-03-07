@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Generic, Literal, TypeVar, Union
+from typing import Literal, Union
 
 from qibolab._core.components import OscillatorConfig
 
@@ -21,19 +21,6 @@ __all__ = [
     "ControllerId",
     "Controllers",
 ]
-
-V = TypeVar("V")
-
-
-class PortDict(Generic[V], dict[str, V]):
-    """Dictionary that automatically converts keys to strings.
-
-    Used to register input and output ports to controllers and Octaves
-    in the QUA config.
-    """
-
-    def __setitem__(self, key: Union[str, int], value: V):
-        super().__setitem__(str(key), value)
 
 
 @dataclass(frozen=True)
@@ -67,8 +54,12 @@ class MwFemOutput:
         assert self.band == config.band
         assert self.sampling_rate == config.sampling_rate
         assert self.full_scale_power_dbm == config.power
-        assert config.upconverter not in self.upconverters
-        self.upconverters[config.upconverter] = {"frequency": config.frequency}
+        if config.upconverter not in self.upconverters:
+            self.upconverters[config.upconverter] = {"frequency": config.frequency}
+        else:
+            assert (
+                config.frequency == self.upconverters[config.upconverter]["frequency"]
+            )
 
 
 @dataclass(frozen=True)
@@ -116,10 +107,10 @@ ModuleTypes = Literal["opx1", "LF", "MW"]
 class Controller:
     type: ModuleTypes = "opx1"
     """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
-    analog_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
-    digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
-    analog_inputs: PortDict[dict[str, Union[AnalogInput, MwFemInput]]] = field(
-        default_factory=PortDict
+    analog_outputs: dict[int, dict] = field(default_factory=dict)
+    digital_outputs: dict[int, dict] = field(default_factory=dict)
+    analog_inputs: dict[int, Union[AnalogInput, MwFemInput]] = field(
+        default_factory=dict
     )
 
     def _set_default_inputs(self):
@@ -150,14 +141,14 @@ class Controller:
 @dataclass
 class Opx1000:
     type: Literal["opx1000"] = "opx1000"
-    fems: dict[str, Controller] = field(default_factory=PortDict)
+    fems: dict[int, Controller] = field(default_factory=dict)
 
 
 @dataclass
 class Octave:
     connectivity: Union[str, tuple[str, int]]
-    RF_outputs: PortDict[dict[str, OctaveOutput]] = field(default_factory=PortDict)
-    RF_inputs: PortDict[dict[str, OctaveInput]] = field(default_factory=PortDict)
+    RF_outputs: dict[int, OctaveOutput] = field(default_factory=dict)
+    RF_inputs: dict[int, OctaveInput] = field(default_factory=dict)
 
     def __post_init__(self):
         if "/" in self.connectivity:
@@ -179,9 +170,10 @@ def process_controller_id(id: ControllerId):
     """
     if isinstance(id, tuple):
         con, fem = id
-        return con, str(fem)
+        return con, fem
     if "/" in id:
-        return id.split("/")
+        con, fem = id.split("/")
+        return con, int(fem)
     return id, None
 
 
