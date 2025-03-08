@@ -1131,3 +1131,30 @@ def make_emulator_runcard(
             outfile.write(json.dumps(runcard, indent=4))
 
     return runcard
+
+
+def get_readout_counts(
+    results:dict, 
+    qubits:list
+) -> dict:
+    """Get readout counts from results.
+
+    Args:
+        results (dict): Results from PulseSimulator.play.
+        qubits(list): List of qubit indices to collate results from.
+        
+    Returns:
+        dict: Counts for each outcome.
+    """
+    bitstrings = []
+    for q in qubits:
+        bitstrings.append(results[q].samples.tolist())
+    bitstrings = np.transpose(bitstrings)
+
+    bitstrings = ["".join(map(str, i)) for i in bitstrings]
+
+    keys = np.sort(list(set(bitstrings))).tolist()
+    
+    readout_counts = {item: bitstrings.count(item) for item in keys}
+    
+    return readout_counts
