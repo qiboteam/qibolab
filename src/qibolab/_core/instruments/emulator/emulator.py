@@ -75,9 +75,12 @@ class EmulatorController(Controller):
         if len(sweepers) == 0:
             return self._play_sequence(sequence, configs, updates)
 
+        parsweep = sweepers[0]
         results = []
-        for values in zip(s.values for s in sweepers[0]):
-            for sweeper, value in zip(sweepers[0], values):
+        # execute once for each parallel value
+        for values in zip(*(s.values for s in parsweep)):
+            # update all parallel sweepers with the respective values
+            for sweeper, value in zip(parsweep, values):
                 if sweeper.pulses is not None:
                     for pulse in sweeper.pulses:
                         updates[pulse.id].update({sweeper.parameter.name: value})
