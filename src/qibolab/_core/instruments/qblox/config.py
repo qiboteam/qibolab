@@ -144,16 +144,24 @@ def sequencer(
     # offsets
     if isinstance(config, DcConfig):
         seq.ancestors[1].set(f"out{seq.seq_idx}_offset", config.offset)
+
+    # avoid sequence operations for inactive sequencers, including synchronization
+    if sequence.is_empty:
+        return
+
+    # connect to physical address
+    seq.connect_sequencer(address.local_address)
+
     seq.offset_awg_path0(0.0)
     seq.offset_awg_path1(0.0)
     # modulation, only disable for QCM - always used for flux pulses
     mod = cast(Module, seq.ancestors[1])
-    seq.mod_en_awg(mod.is_qrm_type or mod.is_rf_type)
+    seq.mod_en_awg(mod.is_rf_type)
 
     # FIX: for no apparent reason other than experimental evidence, the marker has to be
     # enabled and set to a certain value
-    seq.marker_ovr_en(not (sequence.is_empty and address.input))
-    seq.marker_ovr_value(0 if sequence.is_empty else 15)
+    seq.marker_ovr_en(True)
+    seq.marker_ovr_value(15)
 
     # acquisition
     if address.input:
@@ -176,13 +184,6 @@ def sequencer(
         assert lo is not None
         lo_freq = cast(OscillatorConfig, configs[lo]).frequency
         seq.nco_freq(int(freq - lo_freq))
-
-    # connect to physical address
-    seq.connect_sequencer(address.local_address)
-
-    # avoid sequence operations for inactive sequencers, including synchronization
-    if sequence.is_empty:
-        return
 
     # upload sequence
     # - ensure JSON compatibility of the sent dictionary
