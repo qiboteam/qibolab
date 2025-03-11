@@ -52,7 +52,11 @@ class EmulatorController(Controller):
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> NDArray:
-        """Play single sequence on emulator."""
+        """Play single sequence on emulator.
+
+        The array returned by this function has a single dimension, over
+        the various measurements included in the sequence.
+        """
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         hamiltonian = config.hamiltonian
         hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
@@ -70,12 +74,21 @@ class EmulatorController(Controller):
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
     ) -> NDArray:
-        """Sweep over sequence."""
+        """Sweep over sequence.
+
+        This function invokes itself recursively, adding an array
+        dimension at each call as the outermost one. The extra dimension
+        corresponds to the values in the first nested sweep (with the
+        lowest index, interpreted as the outermost as well).
+        """
+        # use a default dictionary, merging existing values
         updates = defaultdict(dict) | ({} if updates is None else updates)
+
         if len(sweepers) == 0:
             return self._play_sequence(sequence, configs, updates)
 
         parsweep = sweepers[0]
+        # collect slices of results, corresponding to the current iteration
         results = []
         # execute once for each parallel value
         for values in zip(*(s.values for s in parsweep)):
@@ -87,8 +100,11 @@ class EmulatorController(Controller):
                 if sweeper.channels is not None:
                     for channel in sweeper.channels:
                         updates[channel].update({sweeper.parameter.name: value})
+
+            # append new slice for the current parallel value
             results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
+        # stack all slices in a single array, along the current outermost dimension
         return np.stack(results)
 
     def _single_sequence(
@@ -98,17 +114,26 @@ class EmulatorController(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
-        """Collect results for a single pulse sequence."""
+        """Collect results for a single pulse sequence.
+
+        The dictionary returned is already compliant with the expected
+        result for the execution of this single sequence, thus suitable
+        to be returned as is.
+        """
         # probabilities for the |1> state, for each swept value
         probabilities = self._sweep(sequence, configs, sweepers)
+
         assert options.nshots is not None
+        # extract results from probabilities, according to the requested averaging mode
         res = (
             shots(probabilities, options.nshots)
             if options.averaging_mode == AveragingMode.SINGLESHOT
             else probabilities
         )
-        # move measurements dimension to the front
+        # move measurements dimension to the front, getting ready for extraction
         measurements = np.moveaxis(res, -1, 0)
+        # match measurements with their IDs, in order to already comply with the general
+        # format established by the `Controller` interface
         measurement_ids = self._measurement(sequence, configs, {})[0].keys()
         return dict(zip(measurement_ids, list(measurements)))
 
@@ -122,6 +147,7 @@ class EmulatorController(Controller):
         assert options.acquisition_type == AcquisitionType.DISCRIMINATION, (
             "Emulator only supports DISCRIMINATION acquisition type."
         )
+        # just merge the results of multiple executions in a single dictionary
         return reduce(
             or_,
             (
