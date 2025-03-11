@@ -89,7 +89,7 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
             results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
-        return np.vstack(results)
+        return np.stack(results)
 
     def _play(
         self,
