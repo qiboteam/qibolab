@@ -76,7 +76,6 @@ def create_platform(name: str) -> Platform:
         from qibolab._core.dummy import create_dummy
 
         return create_dummy()
-
     path = _search(name, _platforms_paths())
 
     hardware = _load(path)
