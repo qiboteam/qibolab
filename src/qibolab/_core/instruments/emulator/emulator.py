@@ -24,7 +24,7 @@ from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
 from .operators import INITIAL_STATE, SIGMAZ
-from .utils import ndchoice
+from .utils import shots
 
 
 class EmulatorController(Controller):
@@ -91,29 +91,26 @@ class EmulatorController(Controller):
 
         return np.stack(results)
 
-    def _play(
+    def _single_sequence(
         self,
         sequence: PulseSequence,
         configs: dict[str, Config],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
-        res = self._sweep(sequence, configs, sweepers)
-        res_ = (
-            np.moveaxis(
-                ndchoice(np.moveaxis(np.array([1 - res, res]), 0, -1), options.nshots),
-                -1,
-                0,
-            )
+        """Collect results for a single pulse sequence."""
+        # probabilities for the |1> state, for each swept value
+        probabilities = self._sweep(sequence, configs, sweepers)
+        assert options.nshots is not None
+        res = (
+            shots(probabilities, options.nshots)
             if options.averaging_mode == AveragingMode.SINGLESHOT
-            else res
+            else probabilities
         )
-        # move measurements dimension to the front, and reshape
-        res__ = np.moveaxis(res_, -1, 0).reshape(
-            res_.shape[-1], *options.results_shape(sweepers)
-        )
-        measurements, _ = self._measurement(sequence, configs, {})
-        return dict(zip(measurements.keys(), list(res__)))
+        # move measurements dimension to the front
+        measurements = np.moveaxis(res, -1, 0)
+        measurement_ids = self._measurement(sequence, configs, {})[0].keys()
+        return dict(zip(measurement_ids, list(measurements)))
 
     def play(
         self,
@@ -128,7 +125,7 @@ class EmulatorController(Controller):
         return reduce(
             or_,
             (
-                self._play(sequence, configs, options, sweepers)
+                self._single_sequence(sequence, configs, options, sweepers)
                 for sequence in sequences
             ),
         )
