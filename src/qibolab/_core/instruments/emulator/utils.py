@@ -30,3 +30,17 @@ def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
         probabilities.cumsum(-1).reshape(*probabilities.shape, -1)
         > np.random.rand(*probabilities.shape[:-1], 1, samples)
     ).argmax(-2)
+
+
+def shots(probabilities: NDArray, nshots: int) -> NDArray:
+    """Extract shots from state |1> probabilities.
+
+    This function just wraps :func:`ndchoice`, taking care of creating the n-D array of
+    binomial distributions, and extracting shots as the outermost dimension.
+    """
+    # discrete distributions of [|0>, |1>] states, over the innermost dimension
+    dists = np.stack([1 - probabilities, probabilities], axis=-1)
+    # shots, in the innermost dimension, replacing the distribution dimension
+    shots = ndchoice(dists, nshots)
+    # move shots from innermost to outermost dimension
+    return np.moveaxis(shots, -1, 0)
