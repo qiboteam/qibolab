@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 
+import numpy as np
 from keysight import qcs
 
 from qibolab._core.identifier import ChannelId
@@ -16,6 +17,7 @@ SUPPORTED_PULSE_SWEEPERS = [
     Parameter.relative_phase,
 ]
 
+ACQ_BASE = 10 / 3
 
 def process_sweepers(
     sweepers: list[ParallelSweepers], probe_channel_ids: set[ChannelId]
@@ -77,7 +79,7 @@ def process_sweepers(
                 qcs.Array(
                     name=f"A{idx}_{idx2}",
                     value=(
-                        sweeper.values * NS_TO_S
+                        np.round(sweeper.values / ACQ_BASE) * ACQ_BASE * NS_TO_S
                         if sweeper.parameter is Parameter.duration
                         else sweeper.values
                     ),

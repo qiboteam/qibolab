@@ -4,12 +4,14 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import Union
 
+import numpy as np
 from keysight import qcs
 
 from qibolab._core.pulses import Drag, Envelope, Gaussian, PulseId, Rectangular
 from qibolab._core.pulses.pulse import PulseLike
 
 NS_TO_S = 1e-9
+ACQ_BASE = (10 / 3)
 
 
 def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
@@ -29,9 +31,9 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
         raise Exception("Envelope not supported")
 
 
-def process_acquisition_channel_pulses(
+def process_acquisition_channel_pulse(
     program: qcs.Program,
-    pulses: Iterable[PulseLike],
+    pulse: PulseLike,
     frequency: Union[float, qcs.Scalar],
     virtual_channel: qcs.Channels,
     probe_virtual_channel: qcs.Channels,
@@ -51,41 +53,40 @@ def process_acquisition_channel_pulses(
         to be swept and corresponding QCS variable.
     """
 
-    for pulse in pulses:
-        sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
+    sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
 
-        if pulse.kind == "delay":
-            qcs_pulse = qcs.Delay(
-                sweep_param_map.get("duration", pulse.duration * NS_TO_S)
-            )
-            program.add_waveform(qcs_pulse, virtual_channel)
-            program.add_waveform(qcs_pulse, probe_virtual_channel)
+    if pulse.kind == "delay":
+        qcs_pulse = qcs.Delay(
+            sweep_param_map.get("duration", np.round(pulse.duration * ACQ_BASE) / ACQ_BASE * NS_TO_S)
+        )
+        program.add_waveform(qcs_pulse, virtual_channel)
+        program.add_waveform(qcs_pulse, probe_virtual_channel)
 
-        elif pulse.kind == "acquisition":
-            duration = sweep_param_map.get("duration", pulse.duration * NS_TO_S)
-            program.add_acquisition(duration, virtual_channel)
+    elif pulse.kind == "acquisition":
+        duration = sweep_param_map.get("duration", pulse.duration * NS_TO_S)
+        program.add_acquisition(duration, virtual_channel)
 
-        elif pulse.kind == "readout":
-            sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
-            qcs_pulse = qcs.RFWaveform(
-                duration=sweep_param_map.get(
-                    "duration", pulse.probe.duration * NS_TO_S
-                ),
-                envelope=generate_qcs_envelope(pulse.probe.envelope),
-                amplitude=sweep_param_map.get("amplitude", pulse.probe.amplitude),
-                rf_frequency=frequency,
-                instantaneous_phase=sweep_param_map.get(
-                    "relative_phase", pulse.probe.relative_phase
-                ),
-            )
-            integration_filter = qcs.IntegrationFilter(qcs_pulse)
-            program.add_waveform(qcs_pulse, probe_virtual_channel)
-            program.add_acquisition(integration_filter, virtual_channel, classifier)
+    elif pulse.kind == "readout":
+        sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
+        qcs_pulse = qcs.RFWaveform(
+            duration=sweep_param_map.get(
+                "duration", pulse.probe.duration * NS_TO_S
+            ),
+            envelope=generate_qcs_envelope(pulse.probe.envelope),
+            amplitude=sweep_param_map.get("amplitude", pulse.probe.amplitude),
+            rf_frequency=frequency,
+            instantaneous_phase=sweep_param_map.get(
+                "relative_phase", pulse.probe.relative_phase
+            ),
+        )
+        integration_filter = qcs.IntegrationFilter(qcs_pulse)
+        program.add_waveform(qcs_pulse, probe_virtual_channel)
+        program.add_acquisition(integration_filter, virtual_channel, classifier)
 
 
-def process_iq_channel_pulses(
+def process_iq_channel_pulse(
     program: qcs.Program,
-    pulses: Iterable[PulseLike],
+    pulse: PulseLike,
     frequency: Union[float, qcs.Scalar],
     virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
@@ -101,41 +102,38 @@ def process_iq_channel_pulses(
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.
     """
-    qcs_pulses = []
-    for pulse in pulses:
-        sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
 
-        if pulse.kind == "delay":
-            qcs_pulse = qcs.Delay(
-                sweep_param_map.get("duration", pulse.duration * NS_TO_S)
-            )
-        elif pulse.kind == "virtualz":
-            qcs_pulse = qcs.PhaseIncrement(
-                phase=sweep_param_map.get("relative_phase", pulse.phase)
-            )
-        elif pulse.kind == "pulse":
-            qcs_pulse = qcs.RFWaveform(
-                duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
-                envelope=generate_qcs_envelope(pulse.envelope),
-                amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
-                rf_frequency=frequency,
-                instantaneous_phase=sweep_param_map.get(
-                    "relative_phase", pulse.relative_phase
-                ),
-            )
-            if pulse.envelope.kind == "drag":
-                qcs_pulse = qcs_pulse.drag(coeff=pulse.envelope.beta)
-        else:
-            raise ValueError("Unrecognized pulse type", pulse.kind)
+    sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
 
-        qcs_pulses.append(qcs_pulse)
+    if pulse.kind == "delay":
+        qcs_pulse = qcs.Delay(
+            sweep_param_map.get("duration", pulse.duration * NS_TO_S)
+        )
+    elif pulse.kind == "virtualz":
+        qcs_pulse = qcs.PhaseIncrement(
+            phase=sweep_param_map.get("relative_phase", pulse.phase)
+        )
+    elif pulse.kind == "pulse":
+        qcs_pulse = qcs.RFWaveform(
+            duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
+            envelope=generate_qcs_envelope(pulse.envelope),
+            amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
+            rf_frequency=frequency,
+            instantaneous_phase=sweep_param_map.get(
+                "relative_phase", pulse.relative_phase
+            ),
+        )
+        if pulse.envelope.kind == "drag":
+            qcs_pulse = qcs_pulse.drag(coeff=pulse.envelope.beta)
+    else:
+        raise ValueError("Unrecognized pulse type", pulse.kind)
 
-    program.add_waveform(qcs_pulses, virtual_channel)
+    program.add_waveform(qcs_pulse, virtual_channel)
 
 
-def process_dc_channel_pulses(
+def process_dc_channel_pulse(
     program: qcs.Program,
-    pulses: Iterable[PulseLike],
+    pulse: PulseLike,
     virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
 ):
@@ -149,21 +147,19 @@ def process_dc_channel_pulses(
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.
     """
-    qcs_pulses = []
-    for pulse in pulses:
-        sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
-        if pulse.kind == "delay":
-            qcs_pulse = qcs.Delay(
-                sweep_param_map.get("duration", pulse.duration * NS_TO_S)
-            )
-        elif pulse.kind == "pulse":
-            qcs_pulse = qcs.DCWaveform(
-                duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
-                envelope=generate_qcs_envelope(pulse.envelope),
-                amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
-            )
-        else:
-            raise ValueError("Unrecognized pulse type", pulse.kind)
-        qcs_pulses.append(qcs_pulse)
+    
+    sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
+    if pulse.kind == "delay":
+        qcs_pulse = qcs.Delay(
+            sweep_param_map.get("duration", pulse.duration * NS_TO_S)
+        )
+    elif pulse.kind == "pulse":
+        qcs_pulse = qcs.DCWaveform(
+            duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
+            envelope=generate_qcs_envelope(pulse.envelope),
+            amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
+        )
+    else:
+        raise ValueError("Unrecognized pulse type", pulse.kind)
 
-    program.add_waveform(qcs_pulses, virtual_channel)
+    program.add_waveform(qcs_pulse, virtual_channel)

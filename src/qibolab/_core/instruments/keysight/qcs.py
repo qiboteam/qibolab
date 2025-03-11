@@ -16,9 +16,9 @@ from qibolab._core.sequence import InputOps, PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .pulse import (
-    process_acquisition_channel_pulses,
-    process_dc_channel_pulses,
-    process_iq_channel_pulses,
+    process_acquisition_channel_pulse,
+    process_dc_channel_pulse,
+    process_iq_channel_pulse,
 )
 from .results import fetch_result, parse_result
 from .sweep import process_sweepers
@@ -85,16 +85,16 @@ class KeysightQCS(Controller):
 
         # WAVEFORM COMPILATION
         # Iterate over channels and convert qubit pulses to QCS waveforms
-        for channel_id in sequence.channels:
+        for channel_id, pulse in sequence:
             channel = self.channels[channel_id]
             virtual_channel = self.virtual_channel_map[channel_id]
 
             if isinstance(channel, AcquisitionChannel):
                 probe_channel_id = channel.probe
                 classifier_reference = configs[channel_id].state_iq_values
-                process_acquisition_channel_pulses(
+                process_acquisition_channel_pulse(
                     program=program,
-                    pulses=sequence.channel(channel_id),
+                    pulse=pulse,
                     frequency=sweeper_channel_map.get(
                         probe_channel_id, configs[probe_channel_id].frequency
                     ),
@@ -109,9 +109,9 @@ class KeysightQCS(Controller):
                 )
 
             elif isinstance(channel, IqChannel):
-                process_iq_channel_pulses(
+                process_iq_channel_pulse(
                     program=program,
-                    pulses=sequence.channel(channel_id),
+                    pulse=pulse,
                     frequency=sweeper_channel_map.get(
                         channel_id, configs[channel_id].frequency
                     ),
@@ -120,9 +120,9 @@ class KeysightQCS(Controller):
                 )
 
             elif isinstance(channel, DcChannel):
-                process_dc_channel_pulses(
+                process_dc_channel_pulse(
                     program=program,
-                    pulses=sequence.channel(channel_id),
+                    pulse=pulse,
                     virtual_channel=virtual_channel,
                     sweeper_pulse_map=sweeper_pulse_map,
                 )
