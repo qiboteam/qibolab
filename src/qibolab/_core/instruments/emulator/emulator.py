@@ -86,7 +86,7 @@ class EmulatorController(Controller):
                         updates[pulse.id].update({sweeper.parameter.name: value})
                 if sweeper.channels is not None:
                     for channel in sweeper.channels:
-                        updates.get(channel, {}).update({sweeper.parameter.name: value})
+                        updates[channel].update({sweeper.parameter.name: value})
             results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
         return np.vstack(results)
