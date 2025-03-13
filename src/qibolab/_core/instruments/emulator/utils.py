@@ -1,11 +1,6 @@
 import numpy as np
 from numpy.typing import NDArray
 
-GHZ_TO_HZ = 1e9
-"""Converting GHz to Hz."""
-HZ_TO_GHZ = 1e-9
-"""Converting Hz to GHz."""
-
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
     """Sample elements with n-dimensional probabilities.

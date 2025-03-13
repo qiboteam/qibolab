@@ -4,11 +4,11 @@ from typing import Literal, Optional
 
 import numpy as np
 from pydantic import Field
+from scipy.constants import giga
 
 from ...components import Config, IqConfig
 from ...pulses import Delay, Pulse
 from .operators import L1, L2, QUBIT_DRIVE, SIGMAZ
-from .utils import HZ_TO_GHZ
 
 
 class Qubit(Config):
@@ -24,7 +24,7 @@ class Qubit(Config):
     @property
     def operator(self):
         """Time independent operator."""
-        return -np.pi * self.frequency * HZ_TO_GHZ * SIGMAZ
+        return -np.pi * (self.frequency / giga) * SIGMAZ
 
     @property
     def t_phi(self):
@@ -104,4 +104,4 @@ def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
     config = configs[channel].model_copy(update=updates.get(channel, {}))
     frequency = config.frequency
     pulse = pulse.model_copy(update=updates.get(pulse.id, {}))
-    return QubitDrive(pulse=pulse, frequency=frequency * HZ_TO_GHZ)
+    return QubitDrive(pulse=pulse, frequency=frequency / giga)
