@@ -9,10 +9,10 @@ import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 from scipy.constants import mega, micro, nano
 
-from qibolab.pulses import Pulse, PulseSequence, PulseShape
-from qibolab.qubits import Qubit
-from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
-
+from qibolab._core.pulses import Pulse
+from qibolab._core.qubits import Qubit
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import Parameter, Sweeper
 
 
 def replace_pulse_shape(
