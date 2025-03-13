@@ -61,9 +61,11 @@ class Controller(Instrument):
 
     @property
     @abstractmethod
-    def sampling_rate(self) -> int:
-        """Sampling rate of control electronics in giga samples per second
-        (GSps)."""
+    def sampling_rate(self) -> float:
+        """Sampling rate of control electronics.
+
+        Expressed in giga samples per second (GSps).
+        """
 
     @abstractmethod
     def play(
