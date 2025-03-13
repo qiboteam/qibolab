@@ -7,13 +7,12 @@ from functools import singledispatch
 import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
+from scipy.constants import mega, micro, nano
 
 from qibolab.pulses import Pulse, PulseSequence, PulseShape
 from qibolab.qubits import Qubit
 from qibolab.sweeper import BIAS, DURATION, START, Parameter, Sweeper
 
-HZ_TO_MHZ = 1e-6
-NS_TO_US = 1e-3
 
 
 def replace_pulse_shape(
@@ -64,11 +63,11 @@ def convert_units_sweeper(
         if parameter is rfsoc.Parameter.FREQUENCY:
             pulse = sequence[jdx]
             lo_frequency = pulse_lo_frequency(pulse, qubits)
-            sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) * HZ_TO_MHZ
-            sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) * HZ_TO_MHZ
+            sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) / mega
+            sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) / mega
         elif parameter is rfsoc.Parameter.DELAY:
-            sweeper.starts[idx] *= NS_TO_US
-            sweeper.stops[idx] *= NS_TO_US
+            sweeper.starts[idx] *= nano / micro
+            sweeper.stops[idx] *= nano / micro
         elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
             sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
             sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
@@ -98,7 +97,7 @@ def _(
     last_pulse_start = 0
     list_sequence = []
     for pulse in sorted(sequence.pulses, key=lambda item: item.start):
-        start_delay = (pulse.start - last_pulse_start) * NS_TO_US
+        start_delay = (pulse.start - last_pulse_start) * nano / micro
         pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
         list_sequence.append(pulse_dict)
 
@@ -117,11 +116,11 @@ def _(
     lo_frequency = pulse_lo_frequency(pulse, qubits)
 
     rfsoc_pulse = rfsoc_pulses.Pulse(
-        frequency=(pulse.frequency - lo_frequency) * HZ_TO_MHZ,
+        frequency=(pulse.frequency - lo_frequency) / mega,
         amplitude=pulse.amplitude,
         relative_phase=np.degrees(pulse.relative_phase),
         start_delay=start_delay,
-        duration=pulse.duration * NS_TO_US,
+        duration=pulse.duration * nano / micro,
         dac=dac,
         adc=adc,
         name=pulse.serial,

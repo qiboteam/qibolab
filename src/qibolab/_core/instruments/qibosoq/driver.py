@@ -9,6 +9,7 @@ import numpy.typing as npt
 import qibosoq.components.base as rfsoc
 from qibo.config import log
 from qibosoq import client
+from scipy.constants import micro, nano
 
 from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
 from qibolab.couplers import Coupler
@@ -20,9 +21,6 @@ from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResul
 from qibolab.sweeper import BIAS, Sweeper
 
 from .convert import convert, convert_units_sweeper
-
-HZ_TO_MHZ = 1e-6
-NS_TO_US = 1e-3
 
 
 @dataclass
@@ -293,7 +291,9 @@ class RFSoC(Controller):
         if execution_parameters.nshots is not None:
             self.cfg.reps = execution_parameters.nshots
         if execution_parameters.relaxation_time is not None:
-            self.cfg.relaxation_time = execution_parameters.relaxation_time * NS_TO_US
+            self.cfg.relaxation_time = (
+                execution_parameters.relaxation_time * nano / micro
+            )
 
     def classify_shots(
         self,
