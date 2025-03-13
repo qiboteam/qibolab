@@ -1,36 +1,28 @@
 """RFSoC FPGA driver."""
 
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 import qibosoq.components.base as rfsoc
+from pydantic import Field
 from qibo.config import log
 from qibosoq import client
 from scipy.constants import micro, nano
 
-from qibolab import AcquisitionType, AveragingMode, ExecutionParameters
-from qibolab.couplers import Coupler
-from qibolab.instruments.abstract import Controller
-from qibolab.instruments.port import Port
-from qibolab.pulses import PulseSequence, PulseType
-from qibolab.qubits import Qubit
-from qibolab.result import AveragedSampleResults, IntegratedResults, SampleResults
-from qibolab.sweeper import BIAS, Sweeper
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
+from qibolab._core.instruments.abstract import Controller
+from qibolab._core.qubits import Qubit
+from qibolab._core.sequence import PulseSequence
+from qibolab._core.sweeper import Sweeper
 
 from .convert import convert, convert_units_sweeper
-
-
-@dataclass
-class RFSoCPort(Port):
-    """Port object of the RFSoC."""
-
-    name: int
-    """DAC number."""
-    offset: float = 0.0
-    """Amplitude factor for biasing."""
 
 
 class RFSoC(Controller):
@@ -39,30 +31,11 @@ class RFSoC(Controller):
     The two way of executing pulses are with ``play`` (for arbitrary
     qibolab ``PulseSequence``) or with ``sweep`` that execute a
     ``PulseSequence`` object with one or more ``Sweeper``.
-
-    Attributes:
-        cfg (rfsoc.Config): Configuration dictionary required for pulse execution.
     """
 
-    PortType = RFSoCPort
-
-    def __init__(self, name: str, address: str, port: int, sampling_rate: float = 1.0):
-        """Set server information and base configuration.
-
-        Args:
-            name (str): Name of the instrument instance.
-            address (str): IP and port of the server (ex. 192.168.0.10)
-            port (int): Port of the server (ex.6000)
-        """
-        super().__init__(name, address=address)
-        self.host = address
-        self.port = port
-        self.cfg = rfsoc.Config()
-        self._sampling_rate = sampling_rate
-
-    @property
-    def sampling_rate(self):
-        return self._sampling_rate
+    sampling_rate: float
+    cfg: rfsoc.Config = Field(default_factory=rfsoc.Config)
+    """Configuration dictionary required for pulse execution."""
 
     def connect(self):
         """Empty method to comply with Instrument interface."""
