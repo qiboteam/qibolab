@@ -11,6 +11,7 @@ from qibo.config import log
 from qibosoq import client
 from scipy.constants import micro, nano
 
+from qibolab._core.components.configs import Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -74,9 +75,29 @@ class RFSoC(Controller):
     def disconnect(self):
         """Empty method to comply with Instrument interface."""
 
-    def _try_to_execute(self, server_commands):
+    def _execute(
+        self,
+        sequence: PulseSequence,
+        qubits: dict[int, Qubit],
+        sweepers: list[rfsoc.Sweeper],
+        opcode: rfsoc.OperationCode,
+    ) -> tuple[list, list]:
+        """Prepare the commands dictionary to send to the qibosoq server.
+
+        Returns lists of I and Q value measured.
+        """
         host, port_ = self.address.split(":")
         port = int(port_)
+        converted_sweepers = [
+            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
+        ]
+        server_commands = {
+            "operation_code": opcode,
+            "cfg": asdict(self.cfg),
+            "sequence": convert(sequence, qubits, self.sampling_rate),
+            "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
+            "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
+        }
         try:
             return client.connect(server_commands, host, port)
         except RuntimeError as e:
@@ -91,33 +112,6 @@ class RFSoC(Controller):
             if re.search(buffer_overflow, str(e)) is not None:
                 log.warning("Buffer full! Use shorter pulses.")
             raise e
-
-    def _execute(
-        self,
-        sequence: PulseSequence,
-        qubits: dict[int, Qubit],
-        sweepers: list[rfsoc.Sweeper],
-    ) -> tuple[list, list]:
-        """Prepare the commands dictionary to send to the qibosoq server.
-
-        Args:
-            sequence (`qibolab.pulses.PulseSequence`): arbitrary PulseSequence object to execute
-            qubits: list of qubits (`qibolab.platforms.abstract.Qubit`) of the platform in the form of a dictionary
-            sweepers: list of `qibosoq.abstract.Sweeper` objects
-        Returns:
-            Lists of I and Q value measured
-        """
-        converted_sweepers = [
-            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
-        ]
-        server_commands = {
-            "operation_code": rfsoc.OperationCode.EXECUTE_SWEEPS,
-            "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, qubits, self.sampling_rate),
-            "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
-        }
-        return self._try_to_execute(server_commands)
 
     def _play(
         self,
@@ -138,7 +132,7 @@ class RFSoC(Controller):
             if options.acquisition_type is AcquisitionType.RAW
             else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
         )
-        toti, totq = self._execute(sequence, configs, opcode)
+        toti, totq = self._execute(sequence, configs, opcode, sweepers)
 
         probed_qubits = np.unique([p.qubit for p in sequence.ro_pulses])
 
