@@ -3,54 +3,53 @@
 from copy import deepcopy
 from dataclasses import asdict
 from functools import singledispatch
+from typing import Any, cast
 
 import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 from scipy.constants import mega, micro, nano
 
-from qibolab._core.pulses import Pulse
+from qibolab._core.components.configs import Config, DcConfig
+from qibolab._core.pulses.envelope import (
+    Drag,
+    Envelope,
+    Exponential,
+    Gaussian,
+    Rectangular,
+)
 from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
 
 def replace_pulse_shape(
-    rfsoc_pulse: rfsoc_pulses.Pulse, shape: PulseShape, sampling_rate: float
+    rfsoc_pulse: rfsoc_pulses.Pulse, envelope: Envelope, samples: int
 ) -> rfsoc_pulses.Pulse:
     """Set pulse shape parameters in rfsoc_pulses pulse object."""
-    if shape.name not in {"Gaussian", "Drag", "Rectangular", "Exponential"}:
-        new_pulse = rfsoc_pulses.Arbitrary(
+    if isinstance(envelope, Rectangular):
+        return rfsoc_pulses.Rectangular(**asdict(rfsoc_pulse))
+    if isinstance(envelope, Gaussian):
+        return rfsoc_pulses.Gaussian(
+            **asdict(rfsoc_pulse), rel_sigma=envelope.rel_sigma
+        )
+    if isinstance(envelope, Drag):
+        return rfsoc_pulses.Drag(
+            **asdict(rfsoc_pulse), rel_sigma=envelope.rel_sigma, beta=envelope.beta
+        )
+    if isinstance(envelope, Exponential):
+        return rfsoc_pulses.FluxExponential(
             **asdict(rfsoc_pulse),
-            i_values=shape.envelope_waveform_i(sampling_rate),
-            q_values=shape.envelope_waveform_q(sampling_rate),
-        )
-        return new_pulse
-    new_pulse_cls = getattr(rfsoc_pulses, shape.name)
-    if shape.name == "Rectangular":
-        return new_pulse_cls(**asdict(rfsoc_pulse))
-    if shape.name == "Gaussian":
-        return new_pulse_cls(**asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma)
-    if shape.name == "Drag":
-        return new_pulse_cls(
-            **asdict(rfsoc_pulse), rel_sigma=shape.rel_sigma, beta=shape.beta
-        )
-    if shape.name == "Exponential":
-        return new_pulse_cls(
-            **asdict(rfsoc_pulse), tau=shape.tau, upsilon=shape.upsilon, weight=shape.g
+            tau=envelope.tau,
+            upsilon=envelope.upsilon,
+            weight=envelope.g,
         )
 
-
-def pulse_lo_frequency(pulse: Pulse, qubits: dict[int, Qubit]) -> int:
-    """Return local_oscillator frequency (HZ) of a pulse."""
-    pulse_type = pulse.type.name.lower()
-    try:
-        lo_frequency = getattr(
-            qubits[pulse.qubit], pulse_type
-        ).local_oscillator.frequency
-    except AttributeError:
-        lo_frequency = 0
-    return lo_frequency
+    return rfsoc_pulses.Arbitrary(
+        **asdict(rfsoc_pulse),
+        i_values=envelope.i(samples).tolist(),
+        q_values=envelope.q(samples).tolist(),
+    )
 
 
 def convert_units_sweeper(
@@ -61,8 +60,7 @@ def convert_units_sweeper(
     for idx, jdx in enumerate(sweeper.indexes):
         parameter = sweeper.parameters[idx]
         if parameter is rfsoc.Parameter.FREQUENCY:
-            pulse = sequence[jdx]
-            lo_frequency = pulse_lo_frequency(pulse, qubits)
+            lo_frequency = ...
             sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) / mega
             sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) / mega
         elif parameter is rfsoc.Parameter.DELAY:
@@ -75,17 +73,18 @@ def convert_units_sweeper(
 
 
 @singledispatch
-def convert(*args):
+def convert(*args) -> Any:
     """Convert from qibolab obj to qibosoq obj, overloaded."""
     raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")
 
 
 @convert.register
-def _(qubit: Qubit) -> rfsoc.Qubit:
+def _(qubit: Qubit, configs: dict[str, Config], ports: dict[str, int]) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to
     `qibosoq.abstract.Qubit`."""
-    if qubit.flux:
-        return rfsoc.Qubit(qubit.flux.offset, qubit.flux.port.name)
+    if qubit.flux is not None:
+        flux = cast(DcConfig, configs[qubit.flux])
+        return rfsoc.Qubit(flux.offset, ports[qubit.flux])
     return rfsoc.Qubit(0.0, None)
 
 
@@ -94,39 +93,39 @@ def _(
     sequence: PulseSequence, qubits: dict[int, Qubit], sampling_rate: float
 ) -> list[rfsoc_pulses.Pulse]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
-    last_pulse_start = 0
+    # last_pulse_start = 0
     list_sequence = []
-    for pulse in sorted(sequence.pulses, key=lambda item: item.start):
-        start_delay = (pulse.start - last_pulse_start) * nano / micro
-        pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
-        list_sequence.append(pulse_dict)
-
-        last_pulse_start = pulse.start
+    # for pulse in sorted(sequence):
+    #     start_delay = (pulse.start - last_pulse_start) * nano / micro
+    #     pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
+    #     list_sequence.append(pulse_dict)
+    #
+    #     last_pulse_start = pulse.start
     return list_sequence
 
 
-@convert.register
-def _(
-    pulse: Pulse, qubits: dict[int, Qubit], start_delay: float, sampling_rate: float
-) -> rfsoc_pulses.Pulse:
-    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
-    pulse_type = pulse.type.name.lower()
-    dac = getattr(qubits[pulse.qubit], pulse_type).port.name
-    adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
-    lo_frequency = pulse_lo_frequency(pulse, qubits)
-
-    rfsoc_pulse = rfsoc_pulses.Pulse(
-        frequency=(pulse.frequency - lo_frequency) / mega,
-        amplitude=pulse.amplitude,
-        relative_phase=np.degrees(pulse.relative_phase),
-        start_delay=start_delay,
-        duration=pulse.duration * nano / micro,
-        dac=dac,
-        adc=adc,
-        name=pulse.serial,
-        type=pulse_type,
-    )
-    return replace_pulse_shape(rfsoc_pulse, pulse.shape, sampling_rate)
+# @convert.register
+# def _(
+#     pulse: Pulse, qubits: dict[int, Qubit], start_delay: float, sampling_rate: float
+# ) -> rfsoc_pulses.Pulse:
+#     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
+#     pulse_type = pulse.type.name.lower()
+#     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
+#     adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
+#     lo_frequency = pulse_lo_frequency(pulse, qubits)
+#
+#     rfsoc_pulse = rfsoc_pulses.Pulse(
+#         frequency=(pulse.frequency - lo_frequency) / mega,
+#         amplitude=pulse.amplitude,
+#         relative_phase=np.degrees(pulse.relative_phase),
+#         start_delay=start_delay,
+#         duration=pulse.duration * nano / micro,
+#         dac=dac,
+#         adc=adc,
+#         name=pulse.serial,
+#         type=pulse_type,
+#     )
+#     return replace_pulse_shape(rfsoc_pulse, pulse.shape, sampling_rate)
 
 
 @convert.register
@@ -150,50 +149,43 @@ def _(
     stops = []
     indexes = []
 
-    if sweeper.parameter is BIAS:
-        for qubit in sweeper.qubits:
-            parameters.append(rfsoc.Parameter.BIAS)
-            indexes.append(list(qubits.values()).index(qubit))
-            base_value = qubit.flux.offset
-            values = sweeper.get_values(base_value)
-            starts.append(values[0])
-            stops.append(values[-1])
+    if sweeper.parameter is Parameter.offset:
+        # for qubit in sweeper.qubits:
+        #     parameters.append(rfsoc.Parameter.BIAS)
+        #     indexes.append(list(qubits.values()).index(qubit))
+        #     base_value = qubit.flux.offset
+        #     values = sweeper.get_values(base_value)
+        #     starts.append(values[0])
+        #     stops.append(values[-1])
 
         if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
             raise ValueError("Sweeper amplitude is set to reach values higher than 1")
     else:
-        for pulse in sweeper.pulses:
-            idx_sweep = sequence.index(pulse)
-            indexes.append(idx_sweep)
-            base_value = getattr(pulse, sweeper.parameter.name)
-            if idx_sweep != 0 and sweeper.parameter is START:
-                # do the conversion from start to delay
-                base_value = base_value - sequence[idx_sweep - 1].start
-            values = sweeper.get_values(base_value)
-            starts.append(values[0])
-            stops.append(values[-1])
-
-            if sweeper.parameter is START:
-                parameters.append(rfsoc.Parameter.DELAY)
-            elif sweeper.parameter is DURATION:
-                parameters.append(rfsoc.Parameter.DURATION)
-                delta_start = values[0] - base_value
-                delta_stop = values[-1] - base_value
-
-                if len(sequence) > idx_sweep + 1:
-                    # if duration-swept pulse is not last
-                    indexes.append(idx_sweep + 1)
-                    t_start = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
-                    parameters.append(rfsoc.Parameter.DELAY)
-                    starts.append(t_start + delta_start)
-                    stops.append(t_start + delta_stop)
-            else:
-                parameters.append(convert(sweeper.parameter))
+        # for pulse in sweeper.pulses:
+        #     idx_sweep = sequence.index(pulse)
+        #     indexes.append(idx_sweep)
+        #     start, stop, step = sweeper.irange
+        #     starts.append(start)
+        #     stops.append(step)
+        #
+        #     if sweeper.parameter is Parameter.duration:
+        #         parameters.append(rfsoc.Parameter.DURATION)
+        #
+        #         if len(sequence) > idx_sweep + 1:
+        #             # if duration-swept pulse is not last
+        #             indexes.append(idx_sweep + 1)
+        #             t_start = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
+        #             parameters.append(rfsoc.Parameter.DELAY)
+        #             starts.append(t_start + delta_start)
+        #             stops.append(t_start + delta_stop)
+        #     else:
+        #         parameters.append(convert(sweeper.parameter))
+        pass
 
     return rfsoc.Sweeper(
         parameters=parameters,
         indexes=indexes,
-        starts=starts,
-        stops=stops,
-        expts=len(sweeper.values),
+        starts=np.asarray(starts),
+        stops=np.asarray(stops),
+        expts=0,  # len(sweeper.values),
     )
