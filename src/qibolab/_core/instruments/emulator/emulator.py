@@ -73,13 +73,16 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         sequence_ = update_sequence(sequence, updates)
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs)
-        tlist = measurements(sequence_)
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs, updates)
+        tlist = np.arange(
+            0, max(measurements(sequence_).values()), 1 / self.sampling_rate / 2
+        )
         results = mesolve(
             hamiltonian, self.initial_state, tlist, config.decoherence, e_ops=[SIGMAZ]
         )
-        acq = np.array(list(self._acquisitions(sequence_).values())) - 1
-        return (1 - results.expect[0][acq]) / 2
+        acq = np.array(list(self._acquisitions(sequence_).values()))
+        samples = (acq[:, np.newaxis] > tlist).argmax(-1)
+        return (1 - results.expect[0][samples]) / 2
 
     def _sweep(
         self,
