@@ -36,6 +36,11 @@ def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
     )
 
 
+def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Config]:
+    """Apply sweep updates to base configs."""
+    return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
+
+
 def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
     """Compute times for evolution.
 
@@ -110,9 +115,10 @@ class EmulatorController(Controller):
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate)
 
-        config = cast(HamiltonianConfig, configs["hamiltonian"])
+        configs_ = update_configs(configs, updates)
+        config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs, updates)
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs_)
 
         results = mesolve(
             hamiltonian, self.initial_state, tlist_, config.decoherence, e_ops=[SIGMAZ]
@@ -232,7 +238,7 @@ class EmulatorController(Controller):
         return acq
 
     def _pulse_sequence_to_hamiltonian(
-        self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
+        self, sequence: PulseSequence, configs: dict[str, Config]
     ) -> dict[str, list]:
         """Construct Hamiltonian dependent term for qutip simulation."""
 
@@ -241,7 +247,7 @@ class EmulatorController(Controller):
         for channel, pulse in sequence:
             # do not handle readout pulses
             if not isinstance(configs[channel], AcquisitionConfig):
-                signal = waveform(pulse, channel, configs, updates)
+                signal = waveform(pulse, channel, configs)
                 hamiltonians[channel] += [signal]
 
         for channel, waveforms in hamiltonians.items():
