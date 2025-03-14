@@ -1,16 +1,16 @@
 """Emulator controller."""
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import reduce
 from operator import or_
 from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from qutip import mesolve
+from qutip import Qobj, QobjEvo, mesolve
 
-from qibolab._core.components import AcquisitionConfig, Config
+from qibolab._core.components import Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -18,11 +18,12 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
+from qibolab._core.pulses import Acquisition, Align, Pulse, PulseId, Readout
+from qibolab._core.pulses.pulse import PulseLike
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .hamiltonians import HamiltonianConfig, waveform
+from .hamiltonians import HamiltonianConfig, QubitDrive, channel_operator, waveform
 from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
 
@@ -88,6 +89,40 @@ def extract_probabilities(
     return (1 - expectations[samples]) / 2
 
 
+def hamiltonian(
+    pulses: Iterable[PulseLike], config: Config
+) -> tuple[Qobj, list[QubitDrive]]:
+    op = channel_operator(config)
+    waveforms = (
+        waveform(pulse, config)
+        for pulse in pulses
+        # only handle pulses (thus no readout)
+        if isinstance(pulse, Pulse)
+    )
+    return (op, [w for w in waveforms if w is not None])
+
+
+def hamiltonians(
+    sequence: PulseSequence, configs: dict[str, Config]
+) -> Iterable[tuple[Qobj, list[QubitDrive]]]:
+    return (hamiltonian(sequence.channel(ch), configs[ch]) for ch in sequence.channels)
+
+
+def channel_time(waveforms) -> Callable[[float], float]:
+    def time(t):
+        cumulative_time = 0
+        for pulse in waveforms:
+            pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
+            if cumulative_time <= t < cumulative_time + pulse_duration:
+                relative_time = t - cumulative_time
+                index = int(relative_time // 1)  # TODO: pass sampling rate
+                return pulse(t, index)
+            cumulative_time += pulse_duration
+        return 0
+
+    return time
+
+
 class EmulatorController(Controller):
     """Emulator controller."""
 
@@ -124,7 +159,7 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs_)
+        hamiltonian += self._pulse_hamiltonian(sequence_, configs_)
 
         results = mesolve(
             hamiltonian, self.initial_state, tlist_, config.decoherence, e_ops=[SIGMAZ]
@@ -243,31 +278,11 @@ class EmulatorController(Controller):
                 time += ev.duration
         return acq
 
-    def _pulse_sequence_to_hamiltonian(
+    def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> dict[str, list]:
-        """Construct Hamiltonian dependent term for qutip simulation."""
-
-        hamiltonians = defaultdict(list)
-        h_t = []
-        for channel, pulse in sequence:
-            # do not handle readout pulses
-            if not isinstance(configs[channel], AcquisitionConfig):
-                signal = waveform(pulse, channel, configs)
-                hamiltonians[channel] += [signal]
-
-        for channel, waveforms in hamiltonians.items():
-
-            def time(t):
-                cumulative_time = 0
-                for pulse in waveforms:
-                    pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
-                    if cumulative_time <= t < cumulative_time + pulse_duration:
-                        relative_time = t - cumulative_time
-                        index = int(relative_time // 1)  # TODO: pass sampling rate
-                        return pulse(t, index)
-                    cumulative_time += pulse_duration
-                return 0
-
-            h_t.append([waveforms[0].operator, time])
-        return h_t
+    ) -> list[QobjEvo]:
+        """Construct Hamiltonian time dependent term for qutip simulation."""
+        return [
+            [operator, channel_time(waveforms)]
+            for operator, waveforms in hamiltonians(sequence, configs)
+        ]

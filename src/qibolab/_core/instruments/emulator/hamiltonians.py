@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 import numpy as np
 from pydantic import Field
+from qutip import Qobj
 from scipy.constants import giga
 
 from ...components import Config, IqConfig
@@ -55,11 +56,6 @@ class QubitDrive:
             return [np.zeros(len(self)), np.zeros(len(self))]
         return self.pulse.envelopes(self.sampling_rate)
 
-    @cached_property
-    def operator(self):
-        """Time independent operator."""
-        return QUBIT_DRIVE
-
     def __len__(self):
         return int(self.pulse.duration * self.sampling_rate)
 
@@ -92,11 +88,17 @@ class HamiltonianConfig(Config):
         ]
 
 
-def waveform(pulse, channel, configs) -> Optional[QubitDrive]:
+def channel_operator(config: Config) -> Qobj:
+    """Time independent operator."""
+    # TODO: add distinct operators for distinct channel types
+    return QUBIT_DRIVE
+
+
+def waveform(pulse: Pulse, config: Config) -> Optional[QubitDrive]:
     """Convert pulse to hamiltonian."""
     # mapping IqConfig -> QubitDrive
-    if not isinstance(configs[channel], IqConfig):
+    if not isinstance(config, IqConfig):
         return None
 
-    frequency = configs[channel].frequency
+    frequency = config.frequency
     return QubitDrive(pulse=pulse, frequency=frequency / giga)
