@@ -40,11 +40,16 @@ def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Confi
     return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
 
 
-def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
+def tlist(
+    sequence: PulseSequence, sampling_rate: float, per_sample: float = 2
+) -> NDArray:
     """Compute times for evolution.
 
     The frequency of times is double the sampling rate, to make sure
     that all pulses features are resolved by the evolution.
+
+    This can be customized using the `per_sample` rate, e.g. to retrieve times at the
+    sampling rate itself, for pulses evaluation.
 
     .. note::
 
@@ -62,7 +67,8 @@ def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
         else sequence
     )
     end = max(seq.duration, 1)
-    return np.arange(0, end, 1 / sampling_rate / 2)
+    rate = sampling_rate * per_sample
+    return np.arange(0, end, 1 / rate)
 
 
 def wrapped_time(waveforms):
