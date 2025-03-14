@@ -1,15 +1,15 @@
 """Emulator controller."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Any, Optional, cast
+from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from qutip import mesolve
 
-from qibolab import Readout
 from qibolab._core.components import AcquisitionConfig, Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -18,13 +18,63 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
 from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
+
+__all__ = ["EmulatorController"]
+
+
+def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
+    """Apply sweep updates to base sequence."""
+    return PulseSequence(
+        [(ch, e.model_copy(update=updates.get(e.id, {}))) for ch, e in sequence]
+    )
+
+
+def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
+    """Compute times for evolution.
+
+    The frequency of times is double the sampling rate, to make sure
+    that all pulses features are resolved by the evolution.
+
+    .. note::
+
+        As an optimization, if an acquisition is executed as the last
+        sequence operation, that's not taken into account, since it is not
+        simulated by the present emulator.
+
+        For long experiments, it is a mild optimization. But it critically speeds up
+        short experiments, given the usual relative duration of acquisitions and control
+        pulses.
+    """
+    seq = (
+        sequence[:-1]
+        if isinstance(sequence[-1][1], (Acquisition, Readout))
+        else sequence
+    )
+    end = max(seq.duration, 1)
+    return np.arange(0, end, 1 / sampling_rate / 2)
+
+
+def extract_probabilities(
+    expectations: NDArray, acquisitions: Iterable[float], times: NDArray
+) -> NDArray:
+    """Extract probabilities from expectations.
+
+    First, retrieve acquisitions, and locate them in the tlist, to
+    isolate the expectations related to measurements.
+
+    Then, it computes probabilities, based on the identified
+    expectations.
+    """
+    acq = np.array(list(acquisitions))
+    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
+    return (1 - expectations[samples]) / 2
 
 
 class EmulatorController(Controller):
@@ -57,15 +107,20 @@ class EmulatorController(Controller):
         The array returned by this function has a single dimension, over
         the various measurements included in the sequence.
         """
+        sequence_ = update_sequence(sequence, updates)
+        tlist_ = tlist(sequence_, self.sampling_rate)
+
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
-        measurements, tlist = self._measurement(sequence, configs, updates)
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs, updates)
+
         results = mesolve(
-            hamiltonian, self.initial_state, tlist, config.decoherence, e_ops=[SIGMAZ]
+            hamiltonian, self.initial_state, tlist_, config.decoherence, e_ops=[SIGMAZ]
         )
-        samples = np.array(list(measurements.values())) - 1
-        return (1 - results.expect[0][samples]) / 2
+
+        return extract_probabilities(
+            results.expect[0], self._acquisitions(sequence_).values(), tlist_
+        )
 
     def _sweep(
         self,
@@ -144,7 +199,7 @@ class EmulatorController(Controller):
             )
         # match measurements with their IDs, in order to already comply with the general
         # format established by the `Controller` interface
-        measurement_ids = self._measurement(sequence, configs, {})[0].keys()
+        measurement_ids = self._acquisitions(sequence).keys()
         return dict(zip(measurement_ids, list(measurements)))
 
     def play(
@@ -163,31 +218,18 @@ class EmulatorController(Controller):
             ),
         )
 
-    def _measurement(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        updates: dict,
-    ) -> tuple[dict[PulseId, Any], NDArray]:
-        """Given sequence creates a dictionary of readout pulses and their
-        sample index."""
-        duration = 0
-        pulses = {}
-        for channel, pulse in sequence:
-            if isinstance(configs[channel], AcquisitionConfig):
-                if isinstance(pulse, Readout):
-                    pulses[pulse.id] = int(duration)
-                if pulse.id in updates:
-                    pulse = pulse.model_copy(update=updates[pulse.id])
-                duration += pulse.duration
-
-        tmax = int(max(pulses.values()) * self.sampling_rate)
-        if tmax > 0:
-            # TODO: less steps to speed up simulation
-            tlist = np.arange(0, tmax)
-        else:
-            tlist = np.arange(0, 1)
-        return pulses, tlist
+    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
+        """Compute acqusitions' times."""
+        acq = {}
+        for ch in sequence.channels:
+            time = 0
+            for ev in sequence.channel(ch):
+                if isinstance(ev, (Acquisition, Readout)):
+                    acq[ev.id] = time
+                if isinstance(ev, Align):
+                    raise ValueError("Align not support in emulator.")
+                time += ev.duration
+        return acq
 
     def _pulse_sequence_to_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -204,7 +246,7 @@ class EmulatorController(Controller):
 
         for channel, waveforms in hamiltonians.items():
 
-            def time(t, args=None):
+            def time(t):
                 cumulative_time = 0
                 for pulse in waveforms:
                     pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
