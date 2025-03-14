@@ -222,13 +222,13 @@ class EmulatorController(Controller):
         """Compute acqusitions' times."""
         acq = {}
         for ch in sequence.channels:
-            duration = 0
+            time = 0
             for ev in sequence.channel(ch):
                 if isinstance(ev, (Acquisition, Readout)):
-                    acq[ev.id] = duration
+                    acq[ev.id] = time
                 if isinstance(ev, Align):
                     raise ValueError("Align not support in emulator.")
-                duration += ev.duration
+                time += ev.duration
         return acq
 
     def _pulse_sequence_to_hamiltonian(
@@ -246,7 +246,7 @@ class EmulatorController(Controller):
 
         for channel, waveforms in hamiltonians.items():
 
-            def time(t, args=None):
+            def time(t):
                 cumulative_time = 0
                 for pulse in waveforms:
                     pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
