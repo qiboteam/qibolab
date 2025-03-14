@@ -4,13 +4,14 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Optional, cast
+from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from qutip import mesolve
+from qutip import Qobj, QobjEvo, mesolve
 
-from qibolab._core.components import AcquisitionConfig, Config
+from qibolab._core.components import Config
+from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -18,63 +19,16 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
+from qibolab._core.pulses import Acquisition, Align, Pulse, PulseId, Readout
+from qibolab._core.pulses.pulse import Delay, PulseLike
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .hamiltonians import HamiltonianConfig, waveform
+from .hamiltonians import HamiltonianConfig, Modulated, channel_operator, waveform
 from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
 
 __all__ = ["EmulatorController"]
-
-
-def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
-    """Apply sweep updates to base sequence."""
-    return PulseSequence(
-        [(ch, e.model_copy(update=updates.get(e.id, {}))) for ch, e in sequence]
-    )
-
-
-def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
-    """Compute times for evolution.
-
-    The frequency of times is double the sampling rate, to make sure
-    that all pulses features are resolved by the evolution.
-
-    .. note::
-
-        As an optimization, if an acquisition is executed as the last
-        sequence operation, that's not taken into account, since it is not
-        simulated by the present emulator.
-
-        For long experiments, it is a mild optimization. But it critically speeds up
-        short experiments, given the usual relative duration of acquisitions and control
-        pulses.
-    """
-    seq = (
-        sequence[:-1]
-        if isinstance(sequence[-1][1], (Acquisition, Readout))
-        else sequence
-    )
-    end = max(seq.duration, 1)
-    return np.arange(0, end, 1 / sampling_rate / 2)
-
-
-def extract_probabilities(
-    expectations: NDArray, acquisitions: Iterable[float], times: NDArray
-) -> NDArray:
-    """Extract probabilities from expectations.
-
-    First, retrieve acquisitions, and locate them in the tlist, to
-    isolate the expectations related to measurements.
-
-    Then, it computes probabilities, based on the identified
-    expectations.
-    """
-    acq = np.array(list(acquisitions))
-    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return (1 - expectations[samples]) / 2
 
 
 class EmulatorController(Controller):
@@ -93,74 +47,27 @@ class EmulatorController(Controller):
         """Sampling rate of emulator."""
         return 1
 
+    def play(
+        self,
+        configs: dict[str, Config],
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[int, Result]:
+        # just merge the results of multiple executions in a single dictionary
+        return reduce(
+            or_,
+            (
+                self._single_sequence(sequence, configs, options, sweepers)
+                for sequence in sequences
+            ),
+        )
+
     @property
     def initial_state(self):
         """System in ground state."""
         # initial state: qubit in ground state
         return INITIAL_STATE
-
-    def _play_sequence(
-        self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray:
-        """Play single sequence on emulator.
-
-        The array returned by this function has a single dimension, over
-        the various measurements included in the sequence.
-        """
-        sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate)
-
-        config = cast(HamiltonianConfig, configs["hamiltonian"])
-        hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs, updates)
-
-        results = mesolve(
-            hamiltonian, self.initial_state, tlist_, config.decoherence, e_ops=[SIGMAZ]
-        )
-
-        return extract_probabilities(
-            results.expect[0], self._acquisitions(sequence_).values(), tlist_
-        )
-
-    def _sweep(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        sweepers: list[ParallelSweepers],
-        updates: Optional[dict] = None,
-    ) -> NDArray:
-        """Sweep over sequence.
-
-        This function invokes itself recursively, adding an array
-        dimension at each call as the outermost one. The extra dimension
-        corresponds to the values in the first nested sweep (with the
-        lowest index, interpreted as the outermost as well).
-        """
-        # use a default dictionary, merging existing values
-        updates = defaultdict(dict) | ({} if updates is None else updates)
-
-        if len(sweepers) == 0:
-            return self._play_sequence(sequence, configs, updates)
-
-        parsweep = sweepers[0]
-        # collect slices of results, corresponding to the current iteration
-        results = []
-        # execute once for each parallel value
-        for values in zip(*(s.values for s in parsweep)):
-            # update all parallel sweepers with the respective values
-            for sweeper, value in zip(parsweep, values):
-                if sweeper.pulses is not None:
-                    for pulse in sweeper.pulses:
-                        updates[pulse.id].update({sweeper.parameter.name: value})
-                if sweeper.channels is not None:
-                    for channel in sweeper.channels:
-                        updates[channel].update({sweeper.parameter.name: value})
-
-            # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
-
-        # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
 
     def _single_sequence(
         self,
@@ -202,22 +109,6 @@ class EmulatorController(Controller):
         measurement_ids = self._acquisitions(sequence).keys()
         return dict(zip(measurement_ids, list(measurements)))
 
-    def play(
-        self,
-        configs: dict[str, Config],
-        sequences: list[PulseSequence],
-        options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
-        # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
-                self._single_sequence(sequence, configs, options, sweepers)
-                for sequence in sequences
-            ),
-        )
-
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
         """Compute acqusitions' times."""
         acq = {}
@@ -231,31 +122,175 @@ class EmulatorController(Controller):
                 time += ev.duration
         return acq
 
-    def _pulse_sequence_to_hamiltonian(
+    def _sweep(
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        sweepers: list[ParallelSweepers],
+        updates: Optional[dict] = None,
+    ) -> NDArray:
+        """Sweep over sequence.
+
+        This function invokes itself recursively, adding an array
+        dimension at each call as the outermost one. The extra dimension
+        corresponds to the values in the first nested sweep (with the
+        lowest index, interpreted as the outermost as well).
+        """
+        # use a default dictionary, merging existing values
+        updates = defaultdict(dict) | ({} if updates is None else updates)
+
+        if len(sweepers) == 0:
+            return self._play_sequence(sequence, configs, updates)
+
+        parsweep = sweepers[0]
+        # collect slices of results, corresponding to the current iteration
+        results = []
+        # execute once for each parallel value
+        for values in zip(*(s.values for s in parsweep)):
+            # update all parallel sweepers with the respective values
+            for sweeper, value in zip(parsweep, values):
+                if sweeper.pulses is not None:
+                    for pulse in sweeper.pulses:
+                        updates[pulse.id].update({sweeper.parameter.name: value})
+                if sweeper.channels is not None:
+                    for channel in sweeper.channels:
+                        updates[channel].update({sweeper.parameter.name: value})
+
+            # append new slice for the current parallel value
+            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+
+        # stack all slices in a single array, along the current outermost dimension
+        return np.stack(results)
+
+    def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> dict[str, list]:
-        """Construct Hamiltonian dependent term for qutip simulation."""
+    ) -> NDArray:
+        """Play single sequence on emulator.
 
-        hamiltonians = defaultdict(list)
-        h_t = []
-        for channel, pulse in sequence:
-            # do not handle readout pulses
-            if not isinstance(configs[channel], AcquisitionConfig):
-                signal = waveform(pulse, channel, configs, updates)
-                hamiltonians[channel] += [signal]
+        The array returned by this function has a single dimension, over
+        the various measurements included in the sequence.
+        """
+        sequence_ = update_sequence(sequence, updates)
+        tlist_ = tlist(sequence_, self.sampling_rate)
 
-        for channel, waveforms in hamiltonians.items():
+        configs_ = update_configs(configs, updates)
+        config = cast(HamiltonianConfig, configs_["hamiltonian"])
+        hamiltonian = sum(config.hamiltonian)
+        hamiltonian += self._pulse_hamiltonian(sequence_, configs_)
 
-            def time(t):
-                cumulative_time = 0
-                for pulse in waveforms:
-                    pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
-                    if cumulative_time <= t < cumulative_time + pulse_duration:
-                        relative_time = t - cumulative_time
-                        index = int(relative_time // 1)  # TODO: pass sampling rate
-                        return pulse(t, index)
-                    cumulative_time += pulse_duration
-                return 0
+        results = mesolve(
+            hamiltonian, self.initial_state, tlist_, config.decoherence, e_ops=[SIGMAZ]
+        )
 
-            h_t.append([waveforms[0].operator, time])
-        return h_t
+        return extract_probabilities(
+            results.expect[0], self._acquisitions(sequence_).values(), tlist_
+        )
+
+    def _pulse_hamiltonian(
+        self, sequence: PulseSequence, configs: dict[str, Config]
+    ) -> QobjEvo:
+        """Construct Hamiltonian time dependent term for qutip simulation."""
+        return QobjEvo(
+            [
+                [operator, channel_time(waveforms)]
+                for operator, waveforms in hamiltonians(sequence, configs)
+            ]
+        )
+
+
+def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
+    """Apply sweep updates to base sequence."""
+    return PulseSequence(
+        [(ch, e.model_copy(update=updates.get(e.id, {}))) for ch, e in sequence]
+    )
+
+
+def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Config]:
+    """Apply sweep updates to base configs."""
+    return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
+
+
+def tlist(
+    sequence: PulseSequence, sampling_rate: float, per_sample: float = 2
+) -> NDArray:
+    """Compute times for evolution.
+
+    The frequency of times is double the sampling rate, to make sure
+    that all pulses features are resolved by the evolution.
+
+    This can be customized using the `per_sample` rate, e.g. to retrieve times at the
+    sampling rate itself, for pulses evaluation.
+
+    .. note::
+
+        As an optimization, if an acquisition is executed as the last
+        sequence operation, that's not taken into account, since it is not
+        simulated by the present emulator.
+
+        For long experiments, it is a mild optimization. But it critically speeds up
+        short experiments, given the usual relative duration of acquisitions and control
+        pulses.
+    """
+    seq = (
+        sequence[:-1]
+        if isinstance(sequence[-1][1], (Acquisition, Readout))
+        else sequence
+    )
+    end = max(seq.duration, 1)
+    rate = sampling_rate * per_sample
+    return np.arange(0, end, 1 / rate)
+
+
+def extract_probabilities(
+    expectations: NDArray, acquisitions: Iterable[float], times: NDArray
+) -> NDArray:
+    """Extract probabilities from expectations.
+
+    First, retrieve acquisitions, and locate them in the tlist, to
+    isolate the expectations related to measurements.
+
+    Then, it computes probabilities, based on the identified
+    expectations.
+    """
+    acq = np.array(list(acquisitions))
+    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
+    return (1 - expectations[samples]) / 2
+
+
+def hamiltonian(
+    pulses: Iterable[PulseLike], config: Config
+) -> tuple[Qobj, list[Modulated]]:
+    op = channel_operator(config)
+    waveforms = (
+        waveform(pulse, config)
+        for pulse in pulses
+        # only handle pulses (thus no readout)
+        if isinstance(pulse, (Pulse, Delay))
+    )
+    return (op, [w for w in waveforms if w is not None])
+
+
+def hamiltonians(
+    sequence: PulseSequence, configs: dict[str, Config]
+) -> Iterable[tuple[Qobj, list[Modulated]]]:
+    return (
+        hamiltonian(sequence.channel(ch), configs[ch])
+        for ch in sequence.channels
+        # TODO: drop the following, and treat acquisitions just as empty channels
+        if not isinstance(configs[ch], AcquisitionConfig)
+    )
+
+
+def channel_time(waveforms) -> Callable[[float], float]:
+    def time(t):
+        cumulative_time = 0
+        for pulse in waveforms:
+            pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
+            if cumulative_time <= t < cumulative_time + pulse_duration:
+                relative_time = t - cumulative_time
+                index = int(relative_time // 1)  # TODO: pass sampling rate
+                return pulse(t, index)
+            cumulative_time += pulse_duration
+        return 0
+
+    return time
