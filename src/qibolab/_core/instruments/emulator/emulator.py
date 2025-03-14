@@ -66,10 +66,10 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         sequence_ = update_sequence(sequence, updates)
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs)
-        tlist = measurements(sequence_)
-        # return probability of 1 for generic system
-        # TODO: add option to retrieve probability of 0 or 2
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs, updates)
+        tlist = np.arange(
+            0, max(measurements(sequence_).values()), 1 / self.sampling_rate / 2
+        )
         results = mesolve(
             hamiltonian,
             config.initial_state,
@@ -77,7 +77,7 @@ class EmulatorController(Controller):
             config.dissipation,
             e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
         )
-        acq = np.array(list(self._acquisitions(sequence_).values())) - 1
+        acq = np.array(list(self._acquisitions(sequence_).values()))
         return np.stack(
             [results.expect[i][acq] for i in range(config.transmon_levels)], axis=-1
         )
