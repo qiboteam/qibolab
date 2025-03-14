@@ -125,13 +125,23 @@ class EmulatorController(Controller):
 
         assert options.nshots is not None
         # extract results from probabilities, according to the requested averaging mode
-        res = (
+        averaged = (
             shots(probabilities, options.nshots)
             if options.averaging_mode == AveragingMode.SINGLESHOT
             else probabilities
         )
         # move measurements dimension to the front, getting ready for extraction
-        measurements = np.moveaxis(res, -1, 0)
+        res = np.moveaxis(averaged, -1, 0)
+
+        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+            measurements = res
+        elif options.acquisition_type is AcquisitionType.INTEGRATION:
+            x = np.stack((res, np.zeros_like(res)), axis=-1)
+            measurements = np.random.normal(x, scale=0.2)
+        else:
+            raise ValueError(
+                f"Acquisition type '{options.acquisition_type}' unsupported"
+            )
         # match measurements with their IDs, in order to already comply with the general
         # format established by the `Controller` interface
         measurement_ids = self._measurement(sequence, configs, {})[0].keys()
@@ -144,9 +154,6 @@ class EmulatorController(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
-        assert options.acquisition_type == AcquisitionType.DISCRIMINATION, (
-            "Emulator only supports DISCRIMINATION acquisition type."
-        )
         # just merge the results of multiple executions in a single dictionary
         return reduce(
             or_,
