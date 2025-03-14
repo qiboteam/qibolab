@@ -1,6 +1,7 @@
 """Emulator controller."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import reduce
 from operator import or_
 from typing import Optional, cast
@@ -60,6 +61,20 @@ def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
     return np.arange(0, end, 1 / sampling_rate / 2)
 
 
+def extract_probabilities(
+    expectations: NDArray, acquisitions: Iterable[float], times: NDArray
+) -> NDArray:
+    """Extract probabilities from expectations.
+
+    First, retrieve acquisitions, and locate them in the tlist, to
+    isolate the expectations related to measurements.
+
+    Then, it computes probabilities, based on the identified
+    expectations.
+    """
+    acq = np.array(list(acquisitions))
+    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
+    return (1 - expectations[samples]) / 2
 
 
 class EmulatorController(Controller):
@@ -103,9 +118,9 @@ class EmulatorController(Controller):
             hamiltonian, self.initial_state, tlist_, config.decoherence, e_ops=[SIGMAZ]
         )
 
-        acq = np.array(list(self._acquisitions(sequence_).values()))
-        samples = (acq[:, np.newaxis] > tlist_).argmin(-1)
-        return (1 - results.expect[0][samples]) / 2
+        return extract_probabilities(
+            results.expect[0], self._acquisitions(sequence_).values(), tlist_
+        )
 
     def _sweep(
         self,
