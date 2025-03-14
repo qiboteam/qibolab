@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 import numpy as np
 from pydantic import Field
 from qutip import Qobj
 from scipy.constants import giga
 
+from qibolab._core.pulses.pulse import Delay
+from qibolab._core.serialize import Model
+
 from ...components import Config, IqConfig
-from ...pulses import Delay, Pulse
+from ...pulses import Pulse
 from .operators import L1, L2, QUBIT_DRIVE, SIGMAZ
 
 
@@ -69,6 +72,13 @@ class QubitDrive:
         )
 
 
+class ModulatedDelay(Model):
+    duration: float
+
+    def __call__(self, t: float, sample: int) -> float:
+        return 0
+
+
 class HamiltonianConfig(Config):
     """Hamiltonian configuration."""
 
@@ -89,16 +99,21 @@ class HamiltonianConfig(Config):
 
 
 def channel_operator(config: Config) -> Qobj:
-    """Time independent operator."""
+    """Time independent channel operator."""
     # TODO: add distinct operators for distinct channel types
     return QUBIT_DRIVE
 
 
-def waveform(pulse: Pulse, config: Config) -> Optional[QubitDrive]:
+Modulated = Union[QubitDrive, ModulatedDelay]
+
+
+def waveform(pulse: Union[Pulse, Delay], config: Config) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     # mapping IqConfig -> QubitDrive
     if not isinstance(config, IqConfig):
         return None
 
-    frequency = config.frequency
-    return QubitDrive(pulse=pulse, frequency=frequency / giga)
+    if isinstance(pulse, Pulse):
+        frequency = config.frequency
+        return QubitDrive(pulse=pulse, frequency=frequency / giga)
+    return ModulatedDelay(duration=pulse.duration)

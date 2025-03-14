@@ -1,16 +1,17 @@
 """Emulator controller."""
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Optional, cast
+from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from qutip import Qobj, QobjEvo, mesolve
 
 from qibolab._core.components import Config
+from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -19,11 +20,11 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Acquisition, Align, Pulse, PulseId, Readout
-from qibolab._core.pulses.pulse import PulseLike
+from qibolab._core.pulses.pulse import Delay, PulseLike
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .hamiltonians import HamiltonianConfig, QubitDrive, channel_operator, waveform
+from .hamiltonians import HamiltonianConfig, Modulated, channel_operator, waveform
 from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
 
@@ -91,21 +92,26 @@ def extract_probabilities(
 
 def hamiltonian(
     pulses: Iterable[PulseLike], config: Config
-) -> tuple[Qobj, list[QubitDrive]]:
+) -> tuple[Qobj, list[Modulated]]:
     op = channel_operator(config)
     waveforms = (
         waveform(pulse, config)
         for pulse in pulses
         # only handle pulses (thus no readout)
-        if isinstance(pulse, Pulse)
+        if isinstance(pulse, (Pulse, Delay))
     )
     return (op, [w for w in waveforms if w is not None])
 
 
 def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
-) -> Iterable[tuple[Qobj, list[QubitDrive]]]:
-    return (hamiltonian(sequence.channel(ch), configs[ch]) for ch in sequence.channels)
+) -> Iterable[tuple[Qobj, list[Modulated]]]:
+    return (
+        hamiltonian(sequence.channel(ch), configs[ch])
+        for ch in sequence.channels
+        # TODO: drop the following, and treat acquisitions just as empty channels
+        if not isinstance(configs[ch], AcquisitionConfig)
+    )
 
 
 def channel_time(waveforms) -> Callable[[float], float]:
@@ -158,7 +164,7 @@ class EmulatorController(Controller):
 
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = config.hamiltonian
+        hamiltonian = sum(config.hamiltonian)
         hamiltonian += self._pulse_hamiltonian(sequence_, configs_)
 
         results = mesolve(
@@ -280,9 +286,11 @@ class EmulatorController(Controller):
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> list[QobjEvo]:
+    ) -> QobjEvo:
         """Construct Hamiltonian time dependent term for qutip simulation."""
-        return [
-            [operator, channel_time(waveforms)]
-            for operator, waveforms in hamiltonians(sequence, configs)
-        ]
+        return QobjEvo(
+            [
+                [operator, channel_time(waveforms)]
+                for operator, waveforms in hamiltonians(sequence, configs)
+            ]
+        )
