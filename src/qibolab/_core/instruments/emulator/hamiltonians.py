@@ -148,7 +148,6 @@ def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
 
     config = configs[channel].model_copy(update=updates.get(channel, {}))
     frequency = config.frequency
-    pulse = pulse.model_copy(update=updates.get(pulse.id, {}))
     return QubitDrive(
         pulse=pulse,
         frequency=frequency / giga,

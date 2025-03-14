@@ -60,6 +60,26 @@ def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
     return np.arange(0, end, 1 / sampling_rate / 2)
 
 
+def wrapped_time(waveforms):
+    """Wrap time function for specific channel.
+
+    Used to avoid late binding issues.
+    """
+
+    def time(t):
+        cumulative_time = 0
+        for pulse in waveforms:
+            pulse_duration = len(pulse)  # TODO: pass sampling rate
+            if cumulative_time <= t < cumulative_time + pulse_duration:
+                relative_time = t - cumulative_time
+                index = int(relative_time)  # TODO: pass sampling rate
+                return pulse(t, index)
+            cumulative_time += pulse_duration
+        return 0
+
+    return time
+
+
 def extract_probabilities(
     expectations: NDArray, acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
@@ -221,20 +241,19 @@ class EmulatorController(Controller):
         """Compute acqusitions' times."""
         acq = {}
         for ch in sequence.channels:
-            duration = 0
+            time = 0
             for ev in sequence.channel(ch):
                 if isinstance(ev, (Acquisition, Readout)):
-                    acq[ev.id] = duration
+                    acq[ev.id] = time
                 if isinstance(ev, Align):
                     raise ValueError("Align not support in emulator.")
-                duration += ev.duration
+                time += ev.duration
         return acq
 
     def _pulse_sequence_to_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> dict[str, list]:
         """Construct Hamiltonian dependent term for qutip simulation."""
-
         hamiltonians = defaultdict(list)
         h_t = []
         for channel, pulse in sequence:
@@ -244,25 +263,5 @@ class EmulatorController(Controller):
                 hamiltonians[channel] += [signal]
 
         for channel, waveforms in hamiltonians.items():
-
-            def _wrapped_time(waveforms):
-                """Wrapped time function for specific channel.
-
-                Used to avoid late binding issues.
-                """
-
-                def time(t):
-                    cumulative_time = 0
-                    for pulse in waveforms:
-                        pulse_duration = len(pulse)  # TODO: pass sampling rate
-                        if cumulative_time <= t < cumulative_time + pulse_duration:
-                            relative_time = t - cumulative_time
-                            index = int(relative_time)  # TODO: pass sampling rate
-                            return pulse(t, index)
-                        cumulative_time += pulse_duration
-                    return 0
-
-                return time
-
-            h_t.append([waveforms[0].operator, _wrapped_time(waveforms)])
+            h_t.append([waveforms[0].operator, wrapped_time(waveforms)])
         return h_t
