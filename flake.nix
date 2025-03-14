@@ -62,7 +62,7 @@
                     extras = [
                       (lib.strings.concatStrings
                         (lib.strings.intersperse " -E "
-                          ["qblox" "qm" "zh" "rfsoc" "los" "emulator"]))
+                          ["qblox" "qm" "zh" "qibosoq" "los" "emulator"]))
                     ];
                   };
                 };
