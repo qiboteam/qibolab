@@ -27,11 +27,6 @@ from .utils import shots
 __all__ = ["EmulatorController"]
 
 
-def measurements(sequence: PulseSequence) -> dict[PulseId, float]:
-    """Extract acquisition identifiers and durations."""
-    return {acq.id: acq.duration for _, acq in sequence.acquisitions}
-
-
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
     """Apply sweep updates to base sequence."""
     return PulseSequence(
@@ -47,12 +42,23 @@ def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
 
     .. note::
 
-        As a mild optimization, if an acquisition is executed as the last
+        As an optimization, if an acquisition is executed as the last
         sequence operation, that's not taken into account, since it is not
         simulated by the present emulator.
+
+        For long experiments, it is a mild optimization. But it critically speeds up
+        short experiments, given the usual relative duration of acquisitions and control
+        pulses.
     """
-    seq = sequence[:-1] if isinstance(sequence[-1][1], ()) else sequence
-    return np.arange(0, max(measurements(seq).values()), 1 / sampling_rate)
+    seq = (
+        sequence[:-1]
+        if isinstance(sequence[-1][1], (Acquisition, Readout))
+        else sequence
+    )
+    end = max(seq.duration, 1)
+    return np.arange(0, end, 1 / sampling_rate / 2)
+
+
 
 
 class EmulatorController(Controller):
