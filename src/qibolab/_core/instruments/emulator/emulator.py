@@ -39,6 +39,22 @@ def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
     )
 
 
+def tlist(sequence: PulseSequence, sampling_rate: float) -> NDArray:
+    """Compute times for evolution.
+
+    The frequency of times is double the sampling rate, to make sure
+    that all pulses features are resolved by the evolution.
+
+    .. note::
+
+        As a mild optimization, if an acquisition is executed as the last
+        sequence operation, that's not taken into account, since it is not
+        simulated by the present emulator.
+    """
+    seq = sequence[:-1] if isinstance(sequence[-1][1], ()) else sequence
+    return np.arange(0, max(measurements(seq).values()), 1 / sampling_rate)
+
+
 class EmulatorController(Controller):
     """Emulator controller."""
 
@@ -63,23 +79,25 @@ class EmulatorController(Controller):
         The array returned by this function has a single dimension, over
         the various measurements included in the sequence.
         """
-        config = cast(HamiltonianConfig, configs["hamiltonian"])
         sequence_ = update_sequence(sequence, updates)
+        tlist_ = tlist(sequence_, self.sampling_rate)
+
+        config = cast(HamiltonianConfig, configs["hamiltonian"])
         hamiltonian = config.hamiltonian
         hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs, updates)
-        tlist = np.arange(
-            0, max(measurements(sequence_).values()), 1 / self.sampling_rate / 2
-        )
+
         results = mesolve(
             hamiltonian,
             config.initial_state,
-            tlist,
+            tlist_,
             config.dissipation,
             e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
         )
+
         acq = np.array(list(self._acquisitions(sequence_).values()))
+        samples = (acq[:, np.newaxis] > tlist_).argmin(-1)
         return np.stack(
-            [results.expect[i][acq] for i in range(config.transmon_levels)], axis=-1
+            [results.expect[i][samples] for i in range(config.transmon_levels)], axis=-1
         )
 
     def _sweep(
@@ -179,17 +197,17 @@ class EmulatorController(Controller):
         )
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute measurements' times."""
-        meas = {}
+        """Compute acqusitions' times."""
+        acq = {}
         for ch in sequence.channels:
             duration = 0
             for ev in sequence.channel(ch):
                 if isinstance(ev, (Acquisition, Readout)):
-                    meas[ev.id] = duration
+                    acq[ev.id] = duration
                 if isinstance(ev, Align):
                     raise ValueError("Align not support in emulator.")
                 duration += ev.duration
-        return meas
+        return acq
 
     def _pulse_sequence_to_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
