@@ -137,18 +137,15 @@ class HamiltonianConfig(Config):
         ]
 
 
-def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
+def waveform(pulse, channel, configs) -> Optional[QubitDrive]:
     """Convert pulse to hamiltonian."""
-    if updates is None:
-        updates = {}
     # mapping IqConfig -> QubitDrive
-
     if not isinstance(configs[channel], IqConfig):
         return None
 
-    config = configs[channel].model_copy(update=updates.get(channel, {}))
+    frequency = configs[channel].frequency
     return QubitDrive(
         pulse=pulse,
-        frequency=config.frequency / giga,
+        frequency=frequency / giga,
         n=configs["hamiltonian"].transmon_levels,
     )
