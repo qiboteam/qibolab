@@ -3,13 +3,12 @@
 from collections import defaultdict
 from functools import reduce
 from operator import or_
-from typing import Any, Optional, cast
+from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from qutip import mesolve
 
-from qibolab import Readout
 from qibolab._core.components import AcquisitionConfig, Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -18,13 +17,27 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
 from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
+
+__all__ = ["EmulatorController"]
+
+
+def measurements(sequence: PulseSequence) -> dict[PulseId, float]:
+    """Extract acquisition identifiers and durations."""
+    return {acq.id: acq.duration for _, acq in sequence.acquisitions}
+
+
+def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
+    """Apply sweep updates to base sequence."""
+    return PulseSequence(
+        [(ch, e.model_copy(update=updates.get(e.id, {}))) for ch, e in sequence]
+    )
 
 
 class EmulatorController(Controller):
@@ -58,14 +71,15 @@ class EmulatorController(Controller):
         the various measurements included in the sequence.
         """
         config = cast(HamiltonianConfig, configs["hamiltonian"])
+        sequence_ = update_sequence(sequence, updates)
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
-        measurements, tlist = self._measurement(sequence, configs, updates)
+        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs)
+        tlist = measurements(sequence_)
         results = mesolve(
             hamiltonian, self.initial_state, tlist, config.decoherence, e_ops=[SIGMAZ]
         )
-        samples = np.array(list(measurements.values())) - 1
-        return (1 - results.expect[0][samples]) / 2
+        acq = np.array(list(self._acquisitions(sequence_).values())) - 1
+        return (1 - results.expect[0][acq]) / 2
 
     def _sweep(
         self,
@@ -144,7 +158,7 @@ class EmulatorController(Controller):
             )
         # match measurements with their IDs, in order to already comply with the general
         # format established by the `Controller` interface
-        measurement_ids = self._measurement(sequence, configs, {})[0].keys()
+        measurement_ids = self._acquisitions(sequence).keys()
         return dict(zip(measurement_ids, list(measurements)))
 
     def play(
@@ -163,31 +177,18 @@ class EmulatorController(Controller):
             ),
         )
 
-    def _measurement(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        updates: dict,
-    ) -> tuple[dict[PulseId, Any], NDArray]:
-        """Given sequence creates a dictionary of readout pulses and their
-        sample index."""
-        duration = 0
-        pulses = {}
-        for channel, pulse in sequence:
-            if isinstance(configs[channel], AcquisitionConfig):
-                if isinstance(pulse, Readout):
-                    pulses[pulse.id] = int(duration)
-                if pulse.id in updates:
-                    pulse = pulse.model_copy(update=updates[pulse.id])
-                duration += pulse.duration
-
-        tmax = int(max(pulses.values()) * self.sampling_rate)
-        if tmax > 0:
-            # TODO: less steps to speed up simulation
-            tlist = np.arange(0, tmax)
-        else:
-            tlist = np.arange(0, 1)
-        return pulses, tlist
+    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
+        """Compute measurements' times."""
+        meas = {}
+        for ch in sequence.channels:
+            duration = 0
+            for ev in sequence.channel(ch):
+                if isinstance(ev, (Acquisition, Readout)):
+                    meas[ev.id] = duration
+                if isinstance(ev, Align):
+                    raise ValueError("Align not support in emulator.")
+                duration += ev.duration
+        return meas
 
     def _pulse_sequence_to_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
