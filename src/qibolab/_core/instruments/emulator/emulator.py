@@ -23,7 +23,8 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
-from .operators import INITIAL_STATE, SIGMAZ
+
+# from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
 
 
@@ -43,12 +44,6 @@ class EmulatorController(Controller):
         """Sampling rate of emulator."""
         return 1
 
-    @property
-    def initial_state(self):
-        """System in ground state."""
-        # initial state: qubit in ground state
-        return INITIAL_STATE
-
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> NDArray:
@@ -61,11 +56,17 @@ class EmulatorController(Controller):
         hamiltonian = config.hamiltonian
         hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
         measurements, tlist = self._measurement(sequence, configs, updates)
+        # return probability of 1 for generic system
+        # TODO: add option to retrieve probability of 0 or 2
         results = mesolve(
-            hamiltonian, self.initial_state, tlist, config.decoherence, e_ops=[SIGMAZ]
+            hamiltonian,
+            config.initial_state,
+            tlist,
+            config.dissipation,
+            e_ops=[config.probability(state=1)],
         )
         samples = np.array(list(measurements.values())) - 1
-        return (1 - results.expect[0][samples]) / 2
+        return results.expect[0][samples]
 
     def _sweep(
         self,
