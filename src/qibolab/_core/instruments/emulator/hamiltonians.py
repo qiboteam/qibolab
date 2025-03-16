@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cache
 from typing import Literal, Optional, Union
 
 import numpy as np
+from numpy.typing import NDArray
 from pydantic import Field
 from qutip import Qobj
 from scipy.constants import giga
@@ -87,11 +88,6 @@ class QubitDrive:
     sampling_rate: float = 1
     """Sampling rate."""
 
-    @cached_property
-    def envelopes(self):
-        """Pulse envelopes."""
-        return self.pulse.envelopes(self.sampling_rate)
-
     @property
     def duration(self):
         """Duration of the pulse."""
@@ -102,10 +98,10 @@ class QubitDrive:
         """Virtual Z phase."""
         return 0
 
-    def __call__(self, t, sample, phase):
-        i, q = self.envelopes
-        omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase + phase
-        return np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
+    def __call__(self, times: NDArray, phase: float) -> NDArray:
+        i, q = self.pulse.amplitude * self.pulse.envelope.envelopes(times.size)
+        omega = 2 * np.pi * self.frequency * times + self.pulse.relative_phase + phase
+        return np.cos(omega) * i + np.sin(omega) * q
 
 
 @cache
@@ -123,9 +119,8 @@ class ModulatedDelay(Model):
     phase: float = 0
     """Delay has 0 virtual z phase."""
 
-    def __call__(self, t: float, sample: int, phase: float) -> float:
-        """Delay waveform."""
-        return 0
+    def __call__(self, times: NDArray, phase: float) -> NDArray:
+        return np.zeros_like(times)
 
 
 class ModulatedVirtualZ(Model):
@@ -136,8 +131,8 @@ class ModulatedVirtualZ(Model):
     duration: float = 0
     """Duration is 0 for virtual Z."""
 
-    def __call__(self, t: float, sample: int, phase: float) -> float:
-        raise NotImplementedError
+    def __call__(self, times: NDArray, phase: float) -> NDArray:
+        return np.array([])
 
 
 Modulated = Union[QubitDrive, ModulatedDelay, ModulatedVirtualZ]
@@ -173,7 +168,7 @@ class HamiltonianConfig(Config):
 
 
 def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int
+    pulse: Union[Pulse, Delay, VirtualZ], channel: Config, level: int
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     # mapping IqConfig -> QubitDrive
