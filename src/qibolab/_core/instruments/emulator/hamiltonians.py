@@ -41,7 +41,7 @@ class Qubit(Config):
         quadratic_term = transmon_create(n) * transmon_destroy(n) * self.omega / giga
         quartic_term = (
             self.anharmonicity
-            / 2
+            * np.pi
             / giga
             * transmon_create(n)
             * transmon_create(n)

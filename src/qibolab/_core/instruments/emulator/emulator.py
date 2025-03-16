@@ -63,7 +63,9 @@ class EmulatorController(Controller):
             config.initial_state,
             tlist,
             config.dissipation,
-            e_ops=[config.probability(state=1)],
+            e_ops=[
+                config.probability(state=1),
+            ],
         )
         samples = np.array(list(measurements.values())) - 1
         return results.expect[0][samples]
@@ -138,7 +140,7 @@ class EmulatorController(Controller):
             measurements = res
         elif options.acquisition_type is AcquisitionType.INTEGRATION:
             x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.2)
+            measurements = np.random.normal(x, scale=0.001)
         else:
             raise ValueError(
                 f"Acquisition type '{options.acquisition_type}' unsupported"
@@ -205,16 +207,25 @@ class EmulatorController(Controller):
 
         for channel, waveforms in hamiltonians.items():
 
-            def time(t, args=None):
-                cumulative_time = 0
-                for pulse in waveforms:
-                    pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
-                    if cumulative_time <= t < cumulative_time + pulse_duration:
-                        relative_time = t - cumulative_time
-                        index = int(relative_time // 1)  # TODO: pass sampling rate
-                        return pulse(t, index)
-                    cumulative_time += pulse_duration
-                return 0
+            def _wrapped_time(waveforms):
+                """Wrapped time function for specific channel.
 
-            h_t.append([waveforms[0].operator, time])
+                Used to avoid late binding issues.
+
+                """
+
+                def time(t):
+                    cumulative_time = 0
+                    for pulse in waveforms:
+                        pulse_duration = len(pulse)  # TODO: pass sampling rate
+                        if cumulative_time <= t < cumulative_time + pulse_duration:
+                            relative_time = t - cumulative_time
+                            index = int(relative_time)  # TODO: pass sampling rate
+                            return pulse(t, index)
+                        cumulative_time += pulse_duration
+                    return 0
+
+                return time
+
+            h_t.append([waveforms[0].operator, _wrapped_time(waveforms)])
         return h_t
