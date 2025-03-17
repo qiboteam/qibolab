@@ -61,12 +61,12 @@ class EmulatorController(Controller):
             config.initial_state,
             tlist,
             config.dissipation,
-            e_ops=[
-                config.probability(state=1),
-            ],
+            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
         )
         samples = np.array(list(measurements.values())) - 1
-        return results.expect[0][samples]
+        return np.stack(
+            [results.expect[i][samples] for i in range(config.transmon_levels)], axis=-1
+        )
 
     def _sweep(
         self,
@@ -121,15 +121,15 @@ class EmulatorController(Controller):
         result for the execution of this single sequence, thus suitable
         to be returned as is.
         """
-        # probabilities for the |1> state, for each swept value
+        # probabilities for the |0>, |1> ... |n> state, for each swept value
         probabilities = self._sweep(sequence, configs, sweepers)
-
         assert options.nshots is not None
         # extract results from probabilities, according to the requested averaging mode
         averaged = (
             shots(probabilities, options.nshots)
             if options.averaging_mode == AveragingMode.SINGLESHOT
-            else probabilities
+            # weighted averaged
+            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
         )
         # move measurements dimension to the front, getting ready for extraction
         res = np.moveaxis(averaged, -1, 0)
