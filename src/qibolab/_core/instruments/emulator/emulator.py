@@ -23,8 +23,6 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
-
-# from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
 
 
