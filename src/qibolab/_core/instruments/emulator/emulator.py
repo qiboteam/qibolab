@@ -37,6 +37,172 @@ from .utils import shots
 __all__ = ["EmulatorController"]
 
 
+class EmulatorController(Controller):
+    """Emulator controller."""
+
+    bounds: str = "emulator/bounds"
+
+    def connect(self):
+        """Dummy connect method."""
+
+    def disconnect(self):
+        """Dummy disconnect method."""
+
+    @property
+    def sampling_rate(self):
+        """Sampling rate of emulator."""
+        return 1
+
+    def play(
+        self,
+        configs: dict[str, Config],
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[int, Result]:
+        # just merge the results of multiple executions in a single dictionary
+        return reduce(
+            or_,
+            (
+                self._single_sequence(sequence, configs, options, sweepers)
+                for sequence in sequences
+            ),
+        )
+
+    def _single_sequence(
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[int, Result]:
+        """Collect results for a single pulse sequence.
+
+        The dictionary returned is already compliant with the expected
+        result for the execution of this single sequence, thus suitable
+        to be returned as is.
+        """
+        # probabilities for the |0>, |1> ... |n> state, for each swept value
+        probabilities = self._sweep(sequence, configs, sweepers)
+        assert options.nshots is not None
+        # extract results from probabilities, according to the requested averaging mode
+        averaged = (
+            shots(probabilities, options.nshots)
+            if options.averaging_mode == AveragingMode.SINGLESHOT
+            # weighted averaged
+            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
+        )
+        # move measurements dimension to the front, getting ready for extraction
+        res = np.moveaxis(averaged, -1, 0)
+
+        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+            measurements = res
+        elif options.acquisition_type is AcquisitionType.INTEGRATION:
+            x = np.stack((res, np.zeros_like(res)), axis=-1)
+            measurements = np.random.normal(x, scale=0.001)
+        else:
+            raise ValueError(
+                f"Acquisition type '{options.acquisition_type}' unsupported"
+            )
+        # match measurements with their IDs, in order to already comply with the general
+        # format established by the `Controller` interface
+        measurement_ids = self._acquisitions(sequence).keys()
+        return dict(zip(measurement_ids, list(measurements)))
+
+    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
+        """Compute acqusitions' times."""
+        acq = {}
+        for ch in sequence.channels:
+            time = 0
+            for ev in sequence.channel(ch):
+                if isinstance(ev, (Acquisition, Readout)):
+                    acq[ev.id] = time
+                if isinstance(ev, Align):
+                    raise ValueError("Align not support in emulator.")
+                time += ev.duration
+        return acq
+
+    def _sweep(
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        sweepers: list[ParallelSweepers],
+        updates: Optional[dict] = None,
+    ) -> NDArray:
+        """Sweep over sequence.
+
+        This function invokes itself recursively, adding an array
+        dimension at each call as the outermost one. The extra dimension
+        corresponds to the values in the first nested sweep (with the
+        lowest index, interpreted as the outermost as well).
+        """
+        # use a default dictionary, merging existing values
+        updates = defaultdict(dict) | ({} if updates is None else updates)
+
+        if len(sweepers) == 0:
+            return self._play_sequence(sequence, configs, updates)
+
+        parsweep = sweepers[0]
+        # collect slices of results, corresponding to the current iteration
+        results = []
+        # execute once for each parallel value
+        for values in zip(*(s.values for s in parsweep)):
+            # update all parallel sweepers with the respective values
+            for sweeper, value in zip(parsweep, values):
+                if sweeper.pulses is not None:
+                    for pulse in sweeper.pulses:
+                        updates[pulse.id].update({sweeper.parameter.name: value})
+                if sweeper.channels is not None:
+                    for channel in sweeper.channels:
+                        updates[channel].update({sweeper.parameter.name: value})
+
+            # append new slice for the current parallel value
+            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+
+        # stack all slices in a single array, along the current outermost dimension
+        return np.stack(results)
+
+    def _play_sequence(
+        self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
+    ) -> NDArray:
+        """Play single sequence on emulator.
+
+        The array returned by this function has a single dimension, over
+        the various measurements included in the sequence.
+        """
+        sequence_ = update_sequence(sequence, updates)
+        tlist_ = tlist(sequence_, self.sampling_rate)
+
+        configs_ = update_configs(configs, updates)
+        config = cast(HamiltonianConfig, configs_["hamiltonian"])
+        hamiltonian = sum(config.hamiltonian)
+        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        if time_hamiltonian is not None:
+            hamiltonian += time_hamiltonian
+
+        results = mesolve(
+            hamiltonian,
+            config.initial_state,
+            tlist_,
+            config.dissipation,
+            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
+        )
+
+        return extract_probabilities(
+            results.expect, self._acquisitions(sequence_).values(), tlist_
+        )
+
+    def _pulse_hamiltonian(
+        self, sequence: PulseSequence, configs: dict[str, Config]
+    ) -> Optional[QobjEvo]:
+        """Construct Hamiltonian time dependent term for qutip simulation."""
+        channels = [
+            [operator, channel_time(waveforms)]
+            for operator, waveforms in hamiltonians(sequence, configs)
+        ]
+        return QobjEvo(channels) if len(channels) > 0 else None
+
+
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
     """Apply sweep updates to base sequence."""
     return PulseSequence(
@@ -140,169 +306,3 @@ def extract_probabilities(
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
     return np.stack(expectations, axis=-1)[samples]
-
-
-class EmulatorController(Controller):
-    """Emulator controller."""
-
-    bounds: str = "emulator/bounds"
-
-    def connect(self):
-        """Dummy connect method."""
-
-    def disconnect(self):
-        """Dummy disconnect method."""
-
-    @property
-    def sampling_rate(self):
-        """Sampling rate of emulator."""
-        return 1
-
-    def _play_sequence(
-        self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray:
-        """Play single sequence on emulator.
-
-        The array returned by this function has a single dimension, over
-        the various measurements included in the sequence.
-        """
-        sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate)
-
-        configs_ = update_configs(configs, updates)
-        config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = sum(config.hamiltonian)
-        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        if time_hamiltonian is not None:
-            hamiltonian += time_hamiltonian
-
-        results = mesolve(
-            hamiltonian,
-            config.initial_state,
-            tlist_,
-            config.dissipation,
-            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
-        )
-
-        return extract_probabilities(
-            results.expect, self._acquisitions(sequence_).values(), tlist_
-        )
-
-    def _sweep(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        sweepers: list[ParallelSweepers],
-        updates: Optional[dict] = None,
-    ) -> NDArray:
-        """Sweep over sequence.
-
-        This function invokes itself recursively, adding an array
-        dimension at each call as the outermost one. The extra dimension
-        corresponds to the values in the first nested sweep (with the
-        lowest index, interpreted as the outermost as well).
-        """
-        # use a default dictionary, merging existing values
-        updates = defaultdict(dict) | ({} if updates is None else updates)
-
-        if len(sweepers) == 0:
-            return self._play_sequence(sequence, configs, updates)
-
-        parsweep = sweepers[0]
-        # collect slices of results, corresponding to the current iteration
-        results = []
-        # execute once for each parallel value
-        for values in zip(*(s.values for s in parsweep)):
-            # update all parallel sweepers with the respective values
-            for sweeper, value in zip(parsweep, values):
-                if sweeper.pulses is not None:
-                    for pulse in sweeper.pulses:
-                        updates[pulse.id].update({sweeper.parameter.name: value})
-                if sweeper.channels is not None:
-                    for channel in sweeper.channels:
-                        updates[channel].update({sweeper.parameter.name: value})
-
-            # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
-
-        # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
-
-    def _single_sequence(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
-        """Collect results for a single pulse sequence.
-
-        The dictionary returned is already compliant with the expected
-        result for the execution of this single sequence, thus suitable
-        to be returned as is.
-        """
-        # probabilities for the |0>, |1> ... |n> state, for each swept value
-        probabilities = self._sweep(sequence, configs, sweepers)
-        assert options.nshots is not None
-        # extract results from probabilities, according to the requested averaging mode
-        averaged = (
-            shots(probabilities, options.nshots)
-            if options.averaging_mode == AveragingMode.SINGLESHOT
-            # weighted averaged
-            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
-        )
-        # move measurements dimension to the front, getting ready for extraction
-        res = np.moveaxis(averaged, -1, 0)
-
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            measurements = res
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.001)
-        else:
-            raise ValueError(
-                f"Acquisition type '{options.acquisition_type}' unsupported"
-            )
-        # match measurements with their IDs, in order to already comply with the general
-        # format established by the `Controller` interface
-        measurement_ids = self._acquisitions(sequence).keys()
-        return dict(zip(measurement_ids, list(measurements)))
-
-    def play(
-        self,
-        configs: dict[str, Config],
-        sequences: list[PulseSequence],
-        options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
-        # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
-                self._single_sequence(sequence, configs, options, sweepers)
-                for sequence in sequences
-            ),
-        )
-
-    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute acqusitions' times."""
-        acq = {}
-        for ch in sequence.channels:
-            time = 0
-            for ev in sequence.channel(ch):
-                if isinstance(ev, (Acquisition, Readout)):
-                    acq[ev.id] = time
-                if isinstance(ev, Align):
-                    raise ValueError("Align not support in emulator.")
-                time += ev.duration
-        return acq
-
-    def _pulse_hamiltonian(
-        self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> Optional[QobjEvo]:
-        """Construct Hamiltonian time dependent term for qutip simulation."""
-        channels = [
-            [operator, channel_time(waveforms)]
-            for operator, waveforms in hamiltonians(sequence, configs)
-        ]
-        return QobjEvo(channels) if len(channels) > 0 else None
