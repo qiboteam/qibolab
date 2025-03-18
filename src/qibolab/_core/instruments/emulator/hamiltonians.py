@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from functools import cache, cached_property
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 import numpy as np
 from pydantic import Field
 from qutip import Qobj
 from scipy.constants import giga
+
+from qibolab._core.serialize import Model
 
 from ...components import Config, IqConfig
 from ...identifier import QubitId, TransitionId
@@ -87,16 +89,13 @@ class QubitDrive:
 
     @cached_property
     def envelopes(self):
-        if isinstance(self.pulse, Delay):
-            return [np.zeros(len(self)), np.zeros(len(self))]
         return self.pulse.envelopes(self.sampling_rate)
 
-    def __len__(self):
-        return int(self.pulse.duration * self.sampling_rate)
+    @property
+    def duration(self):
+        return self.pulse.duration
 
     def __call__(self, t, sample):
-        if isinstance(self.pulse, Delay):
-            return 0
         i, q = self.envelopes
         omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase
         return self.pulse.amplitude * (
@@ -109,6 +108,16 @@ def channel_operator(n: int) -> Qobj:
     """Time independent operator for channel coupling."""
     # TODO: add distinct operators for distinct channel types
     return -1.0j * (transmon_destroy(n) - transmon_create(n))
+
+
+class ModulatedDelay(Model):
+    duration: float
+
+    def __call__(self, t: float, sample: int) -> float:
+        return 0
+
+
+Modulated = Union[QubitDrive, ModulatedDelay]
 
 
 class HamiltonianConfig(Config):
@@ -140,11 +149,15 @@ class HamiltonianConfig(Config):
         ]
 
 
-def waveform(pulse: Pulse, channel: Config, level: int) -> Optional[QubitDrive]:
+def waveform(
+    pulse: Union[Pulse, Delay], channel: Config, level: int
+) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     # mapping IqConfig -> QubitDrive
     if not isinstance(channel, IqConfig):
         return None
 
-    frequency = channel.frequency
-    return QubitDrive(pulse=pulse, frequency=frequency / giga, n=level)
+    if isinstance(pulse, Pulse):
+        frequency = channel.frequency
+        return QubitDrive(pulse=pulse, frequency=frequency / giga, n=level)
+    return ModulatedDelay(duration=pulse.duration)
