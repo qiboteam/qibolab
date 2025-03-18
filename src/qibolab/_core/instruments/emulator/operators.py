@@ -1,23 +1,39 @@
-from qutip import basis, sigmap, sigmax, sigmaz, tensor
+"""Useful operators in qutip for n levels transmon."""
 
-N_LEVELS = 2
-"""Levels for transmon system."""
+from qutip import Qobj, basis, create, destroy, tensor
 
-STATE_0 = basis(N_LEVELS, 0)
-"""State 0."""
-STATE_1 = basis(N_LEVELS, 1)
-"""State 1."""
 
-INITIAL_STATE = tensor(STATE_0)
-"""System initial state."""
+def transmon_create(n: int) -> Qobj:
+    """Creation operator for n levels system."""
+    return create(n)
 
-SIGMAZ = sigmaz()
-"""Qubit destruction operator."""
-QUBIT_DRIVE = sigmax()
-"""Qubit drive term."""
 
-# TODO: check these operators
-L1 = sigmap()
-"""Time relaxation operator."""
-L2 = sigmaz()
-"""Dephasing operator."""
+def transmon_destroy(n: int) -> Qobj:
+    """Destruction operator for n levels system."""
+    return destroy(n)
+
+
+def relaxation(final_state: int, initial_state: int, n: int) -> Qobj:
+    """Relaxation operator.
+
+    Matrix element for initial_state -> final_state decay.
+    """
+    return basis(n, final_state) * basis(n, initial_state).dag()
+
+
+def dephasing(state0: int, state1: int, n: int) -> Qobj:
+    """Dephasing operator between two states."""
+    return (
+        basis(n, state0) * basis(n, state0).dag()
+        - basis(n, state1) * basis(n, state1).dag()
+    )
+
+
+def probability(state: int, n: int) -> Qobj:
+    """Probability of measuring state."""
+    return basis(n, state) * basis(n, state).dag()
+
+
+def state(state, n) -> Qobj:
+    """State as tensor for qutip."""
+    return tensor(basis(n, state))

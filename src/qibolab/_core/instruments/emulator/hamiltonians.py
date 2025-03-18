@@ -7,8 +7,16 @@ from pydantic import Field
 from scipy.constants import giga
 
 from ...components import Config, IqConfig
+from ...identifier import QubitId, TransitionId
 from ...pulses import Delay, Pulse
-from .operators import L1, L2, QUBIT_DRIVE, SIGMAZ
+from .operators import (
+    dephasing,
+    probability,
+    relaxation,
+    state,
+    transmon_create,
+    transmon_destroy,
+)
 
 
 class Qubit(Config):
@@ -16,26 +24,51 @@ class Qubit(Config):
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
-    t1: float = 0
-    """Relaxation time."""
-    t2: float = 0
-    """Coherence time."""
+    anharmonicity: float = 0
+    """Qubit anharmonicity."""
+    t1: dict[TransitionId, float] = Field(default_factory=dict)
+    """Dictionary with relaxation times per transition."""
+    t2: dict[TransitionId, float] = Field(default_factory=dict)
+    """Dictionary with dephasing time per transition."""
 
     @property
-    def operator(self):
+    def omega(self) -> float:
+        """Angular velocity."""
+        return 2 * np.pi * self.frequency
+
+    def operator(self, n: int):
         """Time independent operator."""
-        return -np.pi * (self.frequency / giga) * SIGMAZ
+        quadratic_term = transmon_create(n) * transmon_destroy(n) * self.omega / giga
+        quartic_term = (
+            self.anharmonicity
+            * np.pi
+            / giga
+            * transmon_create(n)
+            * transmon_create(n)
+            * transmon_destroy(n)
+            * transmon_destroy(n)
+        )
+        return quadratic_term + quartic_term
 
-    @property
-    def t_phi(self):
-        """T_phi computed from T1 and T2."""
-        return 1 / (1 / self.t2 - 1 / self.t1 / 2)
+    def t_phi(self, transition: TransitionId) -> float:
+        """T_phi computed from T1 and T2 per transition."""
+        return 1 / (1 / self.t2[transition] - 1 / self.t1[transition] / 2)
 
-    @property
-    def decoherence(self):
+    def relaxation(self, n: int):
+        return sum(
+            np.sqrt(1 / t1) * relaxation(pair[0], pair[1], n)
+            for pair, t1 in self.t1.items()
+        )
+
+    def dephasing(self, n: int):
+        return sum(
+            np.sqrt(1 / self.t_phi(pair) / 2) * dephasing(pair[0], pair[1], n)
+            for pair in self.t2
+        )
+
+    def dissipation(self, n: int):
         """Decoherence operator."""
-        assert self.t1 > 0 and self.t2 > 0
-        return np.sqrt(1 / self.t1) * L1 + np.sqrt(1 / self.t_phi / 2) * L2
+        return self.relaxation(n) + self.dephasing(n)
 
 
 @dataclass
@@ -46,6 +79,8 @@ class QubitDrive:
     """Drive pulse."""
     frequency: float
     """Drive frequency."""
+    n: int
+    """Transmon levels."""
     sampling_rate: float = 1
     """Sampling rate."""
 
@@ -58,7 +93,7 @@ class QubitDrive:
     @cached_property
     def operator(self):
         """Time independent operator."""
-        return QUBIT_DRIVE
+        return -1.0j * (transmon_destroy(self.n) - transmon_create(self.n))
 
     def __len__(self):
         return int(self.pulse.duration * self.sampling_rate)
@@ -77,16 +112,26 @@ class HamiltonianConfig(Config):
     """Hamiltonian configuration."""
 
     kind: Literal["hamiltonian"] = "hamiltonian"
-    single_qubit: dict[str, Qubit] = Field(default_factory=dict)
+    transmon_levels: int = 2
+    single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
+
+    @property
+    def initial_state(self):
+        return state(0, self.transmon_levels)
+
+    def probability(self, state: int):
+        return probability(state=state, n=self.transmon_levels)
 
     @property
     def hamiltonian(self):
-        return [qubit.operator for qubit in self.single_qubit.values()]
+        return [
+            qubit.operator(self.transmon_levels) for qubit in self.single_qubit.values()
+        ]
 
     @property
-    def decoherence(self):
+    def dissipation(self):
         return [
-            qubit.decoherence
+            qubit.dissipation(self.transmon_levels)
             for qubit in self.single_qubit.values()
             if not isinstance(qubit, list)
         ]
@@ -104,4 +149,8 @@ def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
     config = configs[channel].model_copy(update=updates.get(channel, {}))
     frequency = config.frequency
     pulse = pulse.model_copy(update=updates.get(pulse.id, {}))
-    return QubitDrive(pulse=pulse, frequency=frequency / giga)
+    return QubitDrive(
+        pulse=pulse,
+        frequency=frequency / giga,
+        n=configs["hamiltonian"].transmon_levels,
+    )

@@ -23,7 +23,6 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import HamiltonianConfig, waveform
-from .operators import INITIAL_STATE, SIGMAZ
 from .utils import shots
 
 
@@ -43,12 +42,6 @@ class EmulatorController(Controller):
         """Sampling rate of emulator."""
         return 1
 
-    @property
-    def initial_state(self):
-        """System in ground state."""
-        # initial state: qubit in ground state
-        return INITIAL_STATE
-
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> NDArray:
@@ -61,11 +54,19 @@ class EmulatorController(Controller):
         hamiltonian = config.hamiltonian
         hamiltonian += self._pulse_sequence_to_hamiltonian(sequence, configs, updates)
         measurements, tlist = self._measurement(sequence, configs, updates)
+        # return probability of 1 for generic system
+        # TODO: add option to retrieve probability of 0 or 2
         results = mesolve(
-            hamiltonian, self.initial_state, tlist, config.decoherence, e_ops=[SIGMAZ]
+            hamiltonian,
+            config.initial_state,
+            tlist,
+            config.dissipation,
+            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
         )
         samples = np.array(list(measurements.values())) - 1
-        return (1 - results.expect[0][samples]) / 2
+        return np.stack(
+            [results.expect[i][samples] for i in range(config.transmon_levels)], axis=-1
+        )
 
     def _sweep(
         self,
@@ -120,15 +121,15 @@ class EmulatorController(Controller):
         result for the execution of this single sequence, thus suitable
         to be returned as is.
         """
-        # probabilities for the |1> state, for each swept value
+        # probabilities for the |0>, |1> ... |n> state, for each swept value
         probabilities = self._sweep(sequence, configs, sweepers)
-
         assert options.nshots is not None
         # extract results from probabilities, according to the requested averaging mode
         averaged = (
             shots(probabilities, options.nshots)
             if options.averaging_mode == AveragingMode.SINGLESHOT
-            else probabilities
+            # weighted averaged
+            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
         )
         # move measurements dimension to the front, getting ready for extraction
         res = np.moveaxis(averaged, -1, 0)
@@ -137,7 +138,7 @@ class EmulatorController(Controller):
             measurements = res
         elif options.acquisition_type is AcquisitionType.INTEGRATION:
             x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.2)
+            measurements = np.random.normal(x, scale=0.001)
         else:
             raise ValueError(
                 f"Acquisition type '{options.acquisition_type}' unsupported"
@@ -204,16 +205,25 @@ class EmulatorController(Controller):
 
         for channel, waveforms in hamiltonians.items():
 
-            def time(t, args=None):
-                cumulative_time = 0
-                for pulse in waveforms:
-                    pulse_duration = len(pulse) * 1  # TODO: pass sampling rate
-                    if cumulative_time <= t < cumulative_time + pulse_duration:
-                        relative_time = t - cumulative_time
-                        index = int(relative_time // 1)  # TODO: pass sampling rate
-                        return pulse(t, index)
-                    cumulative_time += pulse_duration
-                return 0
+            def _wrapped_time(waveforms):
+                """Wrapped time function for specific channel.
 
-            h_t.append([waveforms[0].operator, time])
+                Used to avoid late binding issues.
+
+                """
+
+                def time(t):
+                    cumulative_time = 0
+                    for pulse in waveforms:
+                        pulse_duration = len(pulse)  # TODO: pass sampling rate
+                        if cumulative_time <= t < cumulative_time + pulse_duration:
+                            relative_time = t - cumulative_time
+                            index = int(relative_time)  # TODO: pass sampling rate
+                            return pulse(t, index)
+                        cumulative_time += pulse_duration
+                    return 0
+
+                return time
+
+            h_t.append([waveforms[0].operator, _wrapped_time(waveforms)])
         return h_t
