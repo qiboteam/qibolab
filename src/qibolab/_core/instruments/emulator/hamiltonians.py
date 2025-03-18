@@ -147,9 +147,8 @@ def waveform(pulse, channel, configs, updates=None) -> Optional[QubitDrive]:
         return None
 
     config = configs[channel].model_copy(update=updates.get(channel, {}))
-    frequency = config.frequency
     return QubitDrive(
         pulse=pulse,
-        frequency=frequency / giga,
+        frequency=config.frequency / giga,
         n=configs["hamiltonian"].transmon_levels,
     )

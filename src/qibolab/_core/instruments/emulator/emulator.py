@@ -81,7 +81,7 @@ def wrapped_time(waveforms):
 
 
 def extract_probabilities(
-    expectations: NDArray, acquisitions: Iterable[float], times: NDArray
+    expectations: list[NDArray], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
     """Extract probabilities from expectations.
 
@@ -93,7 +93,7 @@ def extract_probabilities(
     """
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return (1 - expectations[samples]) / 2
+    return np.stack(expectations, axis=-1)[samples]
 
 
 class EmulatorController(Controller):
@@ -136,9 +136,7 @@ class EmulatorController(Controller):
         )
 
         return extract_probabilities(
-            np.stack(results.expect, axis=-1),
-            self._acquisitions(sequence_).values(),
-            tlist_,
+            results.expect, self._acquisitions(sequence_).values(), tlist_
         )
 
     def _sweep(
