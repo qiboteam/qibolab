@@ -30,18 +30,35 @@ def _normalize_angles(theta, phi):
 
 
 def rotation(
-    seq: PulseSequence, theta: float = np.pi, phi: float = 0.0
+    seq: PulseSequence,
+    theta: float = np.pi,
+    phi: float = 0.0,
+    rx90: bool = False,
 ) -> PulseSequence:
     """Create a sequence for single-qubit rotation.
 
     ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
+    If ``rx90`` is True the rotation will be performed starting from an RX90 pulse doubling its amplitude,
+    if the amplitude is greater than 0.5 two pulses are played.
     """
     theta, phi = _normalize_angles(theta, phi)
     ch, pulse = seq[0]
     assert isinstance(pulse, Pulse)
-    new_amplitude = pulse.amplitude * theta / np.pi
+    amplitude = pulse.amplitude * theta / np.pi
+    if rx90:
+        if amplitude > 0.5:
+            return PulseSequence(
+                [
+                    (ch, replace(pulse, amplitude=amplitude, relative_phase=phi)),
+                    (ch, replace(pulse, amplitude=amplitude, relative_phase=phi)),
+                ]
+            )
+        else:
+            return PulseSequence(
+                [(ch, replace(pulse, amplitude=2 * amplitude, relative_phase=phi))]
+            )
     return PulseSequence(
-        [(ch, replace(pulse, amplitude=new_amplitude, relative_phase=phi))]
+        [(ch, replace(pulse, amplitude=amplitude, relative_phase=phi))]
     )
 
 
@@ -81,8 +98,7 @@ class SingleQubitNatives(NativeContainer):
         ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
         """
         if self.RX90 is not None:
-            return rotation(self.RX90, 2 * theta, phi)
-        assert self.RX is not None
+            return rotation(self.RX90, theta, phi, rx90=True)
         return rotation(self.RX, theta, phi)
 
 
