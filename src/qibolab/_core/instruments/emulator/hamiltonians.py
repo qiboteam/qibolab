@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cache, cached_property
 from typing import Literal, Optional
 
 import numpy as np
 from pydantic import Field
+from qutip import Qobj
 from scipy.constants import giga
 
 from ...components import Config, IqConfig
@@ -90,11 +91,6 @@ class QubitDrive:
             return [np.zeros(len(self)), np.zeros(len(self))]
         return self.pulse.envelopes(self.sampling_rate)
 
-    @cached_property
-    def operator(self):
-        """Time independent operator."""
-        return -1.0j * (transmon_destroy(self.n) - transmon_create(self.n))
-
     def __len__(self):
         return int(self.pulse.duration * self.sampling_rate)
 
@@ -106,6 +102,13 @@ class QubitDrive:
         return self.pulse.amplitude * (
             np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
         )
+
+
+@cache
+def channel_operator(n: int) -> Qobj:
+    """Time independent operator for channel coupling."""
+    # TODO: add distinct operators for distinct channel types
+    return -1.0j * (transmon_destroy(n) - transmon_create(n))
 
 
 class HamiltonianConfig(Config):
@@ -137,15 +140,11 @@ class HamiltonianConfig(Config):
         ]
 
 
-def waveform(pulse, channel, configs) -> Optional[QubitDrive]:
+def waveform(pulse: Pulse, channel: Config, level: int) -> Optional[QubitDrive]:
     """Convert pulse to hamiltonian."""
     # mapping IqConfig -> QubitDrive
-    if not isinstance(configs[channel], IqConfig):
+    if not isinstance(channel, IqConfig):
         return None
 
-    frequency = configs[channel].frequency
-    return QubitDrive(
-        pulse=pulse,
-        frequency=frequency / giga,
-        n=configs["hamiltonian"].transmon_levels,
-    )
+    frequency = channel.frequency
+    return QubitDrive(pulse=pulse, frequency=frequency / giga, n=level)

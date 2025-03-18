@@ -4,13 +4,13 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Optional, cast
+from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from qutip import mesolve
+from qutip import Qobj, QobjEvo, mesolve
 
-from qibolab._core.components import AcquisitionConfig, Config
+from qibolab._core.components import Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -19,10 +19,11 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
+from qibolab._core.pulses.pulse import Pulse, PulseLike
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .hamiltonians import HamiltonianConfig, waveform
+from .hamiltonians import HamiltonianConfig, QubitDrive, channel_operator, waveform
 from .utils import shots
 
 __all__ = ["EmulatorController"]
@@ -71,13 +72,37 @@ def tlist(
     return np.arange(0, end, 1 / rate)
 
 
-def wrapped_time(waveforms):
+def hamiltonian(
+    pulses: Iterable[PulseLike], config: Config, hamiltonian: HamiltonianConfig
+) -> tuple[Qobj, list[QubitDrive]]:
+    n = hamiltonian.transmon_levels
+    op = channel_operator(n)
+    waveforms = (
+        waveform(pulse, config, n)
+        for pulse in pulses
+        # only handle pulses (thus no readout)
+        if isinstance(pulse, Pulse)
+    )
+    return (op, [w for w in waveforms if w is not None])
+
+
+def hamiltonians(
+    sequence: PulseSequence, configs: dict[str, Config]
+) -> Iterable[tuple[Qobj, list[QubitDrive]]]:
+    hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
+    return (
+        hamiltonian(sequence.channel(ch), configs[ch], hconfig)
+        for ch in sequence.channels
+    )
+
+
+def channel_time(waveforms: Iterable[QubitDrive]) -> Callable[[float], float]:
     """Wrap time function for specific channel.
 
     Used to avoid late binding issues.
     """
 
-    def time(t):
+    def time(t: float) -> float:
         cumulative_time = 0
         for pulse in waveforms:
             pulse_duration = len(pulse)  # TODO: pass sampling rate
@@ -137,7 +162,7 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian
-        hamiltonian += self._pulse_sequence_to_hamiltonian(sequence_, configs_)
+        hamiltonian += self._pulse_hamiltonian(sequence_, configs_)
 
         results = mesolve(
             hamiltonian,
@@ -260,18 +285,11 @@ class EmulatorController(Controller):
                 time += ev.duration
         return acq
 
-    def _pulse_sequence_to_hamiltonian(
+    def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> dict[str, list]:
-        """Construct Hamiltonian dependent term for qutip simulation."""
-        hamiltonians = defaultdict(list)
-        h_t = []
-        for channel, pulse in sequence:
-            # do not handle readout pulses
-            if not isinstance(configs[channel], AcquisitionConfig):
-                signal = waveform(pulse, channel, configs)
-                hamiltonians[channel] += [signal]
-
-        for channel, waveforms in hamiltonians.items():
-            h_t.append([waveforms[0].operator, wrapped_time(waveforms)])
-        return h_t
+    ) -> list[QobjEvo]:
+        """Construct Hamiltonian time dependent term for qutip simulation."""
+        return [
+            [operator, channel_time(waveforms)]
+            for operator, waveforms in hamiltonians(sequence, configs)
+        ]
