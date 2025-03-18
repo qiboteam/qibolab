@@ -98,9 +98,7 @@ class QubitDrive:
     def __call__(self, t, sample):
         i, q = self.envelopes
         omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase
-        return self.pulse.amplitude * (
-            np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
-        )
+        return np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
 
 
 @cache
