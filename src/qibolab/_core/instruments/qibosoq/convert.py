@@ -52,9 +52,7 @@ def replace_pulse_shape(
     )
 
 
-def convert_units_sweeper(
-    sweeper: rfsoc.Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
-) -> rfsoc.Sweeper:
+def convert_units_sweeper(sweeper: Sweeper, sequence: PulseSequence) -> Sweeper:
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
     sweeper = deepcopy(sweeper)
     for idx, jdx in enumerate(sweeper.indexes):
