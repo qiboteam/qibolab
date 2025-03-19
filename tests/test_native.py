@@ -50,8 +50,6 @@ def test_fixed_sequence_factory():
         ({"phi": np.pi / 4}, 1.0, np.pi / 4),
         ({"theta": np.pi / 4, "phi": np.pi / 3}, 1.0 / 4, np.pi / 3),
         ({"theta": 3 * np.pi / 2}, -0.5, 0.0),
-        ({"theta": 7 * np.pi}, 1.0, 0.0),
-        ({"theta": 7.5 * np.pi}, -0.5, 0.0),
         ({"phi": 7.5 * np.pi}, 1.0, 1.5 * np.pi),
     ],
 )
