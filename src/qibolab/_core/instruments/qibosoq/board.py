@@ -18,9 +18,10 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.identifier import Result
+from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
+from qibolab._core.pulses.pulse import PulseId, PulseLike
 from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
@@ -68,128 +69,37 @@ class RFSoC(Controller):
         sweepers: list[ParallelSweepers],
         software: int,
         options: ExecutionParameters,
-    ) -> dict[int, Result]:
-        """Execute a sweep of an arbitrary number of Sweepers via recursion."""
-        # If there are no sweepers run ExecutePulseSequence acquisition.
+    ) -> dict[PulseId, Result]:
+        """Execute a sweep of an arbitrary number of sweepers via recursion."""
+
+        # If there are no software sweepers send experiment.
         # Last layer for recursion.
-
-        if len(sweepers) == 0:
-            return self._play_sequence_in_sweep_recursion(
-                qubits, couplers, sequence, or_sequence, execution_parameters
-            )
-
         if software == 0:
-            toti, totq = self._execute_sweeps(sequence, qubits, sweepers)
-            res = self._convert_sweep_results(
-                or_sequence, qubits, toti, totq, execution_parameters
-            )
-            return res
+            return self._play(sequence, sweepers)
 
-        sweeper = convert(sweepers[0][0], sequence, configs)
-        values = []
-        for idx, _ in enumerate(sweeper.indexes):
-            val = np.linspace(sweeper.starts[idx], sweeper.stops[idx], sweeper.expts)
-            if sweeper.parameters[idx] in rfsoc.Parameter.variants(
-                {"duration", "delay"}
-            ):
-                val = val.astype(int)
-            values.append(val)
-
+        parsweep = sweepers[0]
         results = {}
-        for idx in range(sweeper.expts):
-            # update values
-            for jdx, kdx in enumerate(sweeper.indexes):
-                sweeper_parameter = sweeper.parameters[jdx]
-                if sweeper_parameter is rfsoc.Parameter.BIAS:
-                    qubits[list(qubits)[kdx]].flux.offset = values[jdx][idx]
-                elif sweeper_parameter in rfsoc.Parameter.variants(
-                    {
-                        "amplitude",
-                        "frequency",
-                        "relative_phase",
-                        "duration",
-                    }
-                ):
-                    setattr(
-                        sequence[kdx], sweeper_parameter.name.lower(), values[jdx][idx]
+        for values in zip(*(s.values for s in parsweep)):
+            # update all parallel sweepers with the respective values
+            for sweeper, value in zip(parsweep, values):
+                sequence = (
+                    sequence
+                    if sweeper.pulses is None
+                    else _update_sequence(
+                        sequence, sweeper.parameter, sweeper.pulses, value
                     )
-                    if sweeper_parameter is rfsoc.Parameter.DURATION:
-                        for pulse_idx in range(
-                            kdx + 1,
-                            len(sequence.get_qubit_pulses(sequence[kdx].qubit)),
-                        ):
-                            # TODO: this is a patch and works just for simple experiments
-                            sequence[pulse_idx].start = sequence[pulse_idx - 1].finish
-                elif sweeper_parameter is rfsoc.Parameter.DELAY:
-                    sequence[kdx].start_delay = values[jdx][idx]
+                )
+                configs = (
+                    configs
+                    if sweeper.channels is None
+                    else _update_configs(
+                        configs, sweeper.parameter, sweeper.channels, value
+                    )
+                )
 
             res = self._sweep(configs, sequence, sweepers[1:], software - 1, options)
             results = _merge_sweep_results(results, res)
         return results
-
-    def _play_sequence_in_sweep_recursion(
-        self,
-        qubits: dict[int, Qubit],
-        sequence: PulseSequence,
-        or_sequence: PulseSequence,
-        execution_parameters: ExecutionParameters,
-    ) -> dict[int, Result]:
-        """Last recursion layer, if no sweeps are present.
-
-        After playing the sequence, the resulting dictionary keys need
-        to be converted to the correct values. Even indexes correspond
-        to qubit number and are not changed. Odd indexes correspond to
-        readout pulses serials and are convert to match the original
-        sequence (of the sweep) and not the one just executed.
-        """
-        res = self._play(qubits, couplers, sequence, execution_parameters)
-        newres = {}
-        serials = [pulse.serial for pulse in or_sequence.ro_pulses]
-        for idx, key in enumerate(res):
-            if idx % 2 == 1:
-                newres[serials[idx // 2]] = res[key]
-            else:
-                newres[key] = res[key]
-
-        return newres
-
-    def _execute(
-        self,
-        sequence: PulseSequence,
-        qubits: dict[int, Qubit],
-        sweepers: list[rfsoc.Sweeper],
-        opcode: rfsoc.OperationCode,
-    ) -> tuple[list, list]:
-        """Prepare the commands dictionary to send to the qibosoq server.
-
-        Returns lists of I and Q value measured.
-        """
-        host, port_ = self.address.split(":")
-        port = int(port_)
-        converted_sweepers = [
-            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
-        ]
-        server_commands = {
-            "operation_code": opcode,
-            "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, qubits, self.sampling_rate),
-            "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "sweepers": [sweeper.serialized for sweeper in converted_sweepers],
-        }
-        try:
-            return client.connect(server_commands, host, port)
-        except RuntimeError as e:
-            if "exception in readout loop" in str(e):
-                log.warning(
-                    "%s %s",
-                    "Exception in readout loop. Attempting again",
-                    "You may want to increase the relaxation time.",
-                )
-                return client.connect(server_commands, host, port)
-            buffer_overflow = r"buffer length must be \d+ samples or less"
-            if re.search(buffer_overflow, str(e)) is not None:
-                log.warning("Buffer full! Use shorter pulses.")
-            raise e
 
     def _play(
         self,
@@ -227,19 +137,6 @@ class RFSoC(Controller):
 
         return results
 
-    def _classify_shots(
-        self,
-        i_values: npt.NDArray[np.float64],
-        q_values: npt.NDArray[np.float64],
-        angle: float,
-        threshold: float,
-    ) -> npt.NDArray[np.float64]:
-        rotated = (
-            np.asarray([np.cos(angle), -np.sin(angle)])
-            * np.stack([i_values, q_values]).T
-        ).T
-        return np.heaviside(np.array(rotated) - threshold, 0)
-
     def _convert_sweep_results(
         self,
         sequence: PulseSequence,
@@ -247,7 +144,7 @@ class RFSoC(Controller):
         toti: list[list[list[float]]],
         totq: list[list[list[float]]],
         options: ExecutionParameters,
-    ) -> dict[str, Result]:
+    ) -> dict[PulseId, Result]:
         """Convert sweep res to qibolab dict res.
 
         `toti` are the I values downloaded, and `totq` Q ones.
@@ -270,12 +167,51 @@ class RFSoC(Controller):
                     q_vals = np.reshape(q_vals, (self.cfg.reps, *q_vals.shape[:-1]))
 
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    result = self._classify_shots(i_vals, q_vals, angle, threshold)
+                    result = _classify_shots(i_vals, q_vals, angle, threshold)
                 else:
                     result = np.stack([i_vals, q_vals], axis=-1)
 
                 results[ro_pulse.id] = result
         return results
+
+    def _execute(
+        self,
+        sequence: PulseSequence,
+        qubits: dict[int, Qubit],
+        sweepers: list[ParallelSweepers],
+        opcode: rfsoc.OperationCode,
+    ) -> tuple[list, list]:
+        """Prepare the commands dictionary to send to the qibosoq server.
+
+        Returns lists of I and Q value measured.
+        """
+        host, port_ = self.address.split(":")
+        port = int(port_)
+        converted_sweepers = [
+            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
+        ]
+        server_commands = {
+            "operation_code": opcode,
+            "cfg": asdict(self.cfg),
+            "sequence": convert(sequence, qubits, self.sampling_rate),
+            "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
+            "sweepers": [convert(sweeper).serialized for sweeper in converted_sweepers],
+        }
+
+        try:
+            return client.connect(server_commands, host, port)
+        except RuntimeError as e:
+            if "exception in readout loop" in str(e):
+                log.warning(
+                    "%s %s",
+                    "Exception in readout loop. Attempting again",
+                    "You may want to increase the relaxation time.",
+                )
+                return client.connect(server_commands, host, port)
+            buffer_overflow = r"buffer length must be \d+ samples or less"
+            if re.search(buffer_overflow, str(e)) is not None:
+                log.warning("Buffer full! Use shorter pulses.")
+            raise e
 
 
 def _validate_input_command(
@@ -289,7 +225,7 @@ def _validate_input_command(
             raise NotImplementedError(
                 "Raw data acquisition is not compatible with sweepers"
             )
-        if len(sequence.ro_pulses) != 1:
+        if len(sequence.acquisitions) != 1:
             raise NotImplementedError(
                 "Raw data acquisition is compatible only with a single readout"
             )
@@ -297,23 +233,6 @@ def _validate_input_command(
             raise NotImplementedError("Raw data acquisition can only be averaged")
     if options.fast_reset:
         raise NotImplementedError("Fast reset is not supported")
-
-
-def _merge_sweep_results(
-    a: dict[int, Result], b: dict[int, Result]
-) -> dict[int, Result]:
-    """Merge two results dictionaries, appending common keys."""
-    return {
-        key: np.append(a.get(key, []), b.get(key, [])) for key in a.keys() | b.keys()
-    }
-
-
-def _reshape_sweep_results(results, sweepers, execution_parameters):
-    shape = [len(sweeper.values) for sweeper in sweepers]
-    if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-        shape.insert(0, execution_parameters.nshots)
-
-    return {key: value.reshape(shape) for key, value in results.items()}
 
 
 def _update_cfg(cfg, options: ExecutionParameters):
@@ -382,3 +301,43 @@ def _firmware_loops(
         n += 1
 
     return n
+
+
+def _update_sequence(
+    sequence: PulseSequence, parameter: Parameter, pulses: list[PulseLike], value: float
+) -> PulseSequence:
+    return PulseSequence([])
+
+
+def _update_configs(
+    configs: dict[str, Config],
+    parameter: Parameter,
+    pulses: list[ChannelId],
+    value: float,
+) -> dict[str, Config]:
+    return {}
+
+
+def _classify_shots(
+    i: npt.NDArray, q: npt.NDArray, angle: float, threshold: float
+) -> npt.NDArray:
+    """Classify shots through linear separation."""
+    rotated = np.cos(angle) * i - np.sin(angle) * q
+    return np.heaviside(np.array(rotated) - threshold, 0)
+
+
+def _merge_sweep_results(
+    a: dict[int, Result], b: dict[int, Result]
+) -> dict[int, Result]:
+    """Merge two results dictionaries, appending common keys."""
+    return {
+        key: np.append(a.get(key, []), b.get(key, [])) for key in a.keys() | b.keys()
+    }
+
+
+def _reshape_sweep_results(results, sweepers, execution_parameters):
+    shape = [len(sweeper.values) for sweeper in sweepers]
+    if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+        shape.insert(0, execution_parameters.nshots)
+
+    return {key: value.reshape(shape) for key, value in results.items()}

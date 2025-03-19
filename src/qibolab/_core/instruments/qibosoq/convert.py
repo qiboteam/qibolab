@@ -20,7 +20,7 @@ from qibolab._core.pulses.envelope import (
 )
 from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import Parameter, Sweeper
+from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
 
 def replace_pulse_shape(
@@ -136,7 +136,7 @@ def _(par: Parameter) -> rfsoc.Parameter:
 
 @convert.register
 def _(
-    sweeper: Sweeper, sequence: PulseSequence, qubits: dict[int, Qubit]
+    sweeper: ParallelSweepers, sequence: PulseSequence, qubits: dict[int, Qubit]
 ) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
