@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import asdict
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -12,7 +13,7 @@ from qibosoq import client
 from scipy.constants import micro, nano
 
 from qibolab._core.components.channels import AcquisitionChannel
-from qibolab._core.components.configs import Config, DcConfig
+from qibolab._core.components.configs import AcquisitionConfig, Config, DcConfig
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -22,7 +23,6 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
 from qibolab._core.pulses.pulse import PulseId, PulseLike
-from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -75,7 +75,7 @@ class RFSoC(Controller):
         # If there are no software sweepers send experiment.
         # Last layer for recursion.
         if software == 0:
-            return self._play(sequence, sweepers)
+            return self._play(configs, sequence, sweepers, options)
 
         parsweep = sweepers[0]
         results = {}
@@ -105,8 +105,8 @@ class RFSoC(Controller):
         self,
         configs: dict[str, Config],
         sequence: PulseSequence,
-        options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
+        options: ExecutionParameters,
     ) -> dict[int, Result]:
         results = {}
 
@@ -120,64 +120,25 @@ class RFSoC(Controller):
             if options.acquisition_type is AcquisitionType.RAW
             else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
         )
-        toti, totq = self._execute(sequence, configs, opcode, sweepers)
+        toti, totq = self._execute(configs, sequence, sweepers, opcode)
 
-        probed_qubits = np.unique([p.qubit for p in sequence.ro_pulses])
+        for i, q, (ch, acq) in zip(toti[0], totq[0], sequence.acquisitions):
+            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                config = cast(AcquisitionConfig, configs[ch])
+                angle, threshold = config.iq_angle, config.threshold
+                assert angle is not None
+                assert threshold is not None
+                result = _classify_shots(i, q, angle, threshold)
+            else:
+                result = np.stack([i, q], axis=-1)
+            results[acq.id] = result
 
-        for j, qubit in enumerate(probed_qubits):
-            for i, ro_pulse in enumerate(sequence.ro_pulses):
-                i_pulse = np.array(toti[j][i])
-                q_pulse = np.array(totq[j][i])
-
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    result = self._classify_shots(i_pulse, q_pulse, angle, threshold)
-                else:
-                    result = np.stack([i_pulse, q_pulse], axis=-1)
-                results[ro_pulse.serial] = result
-
-        return results
-
-    def _convert_sweep_results(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        toti: list[list[list[float]]],
-        totq: list[list[list[float]]],
-        options: ExecutionParameters,
-    ) -> dict[PulseId, Result]:
-        """Convert sweep res to qibolab dict res.
-
-        `toti` are the I values downloaded, and `totq` Q ones.
-        """
-        results = {}
-
-        adcs = np.unique([configs[ch].path.port for ch in sequence.channels])
-        for k, k_val in enumerate(adcs):
-            adc_ro = [
-                pulse
-                for _, pulse in sequence
-                if qubits[pulse.qubit].feedback.port.name == k_val
-            ]
-            for i, ro_pulse in enumerate(adc_ro):
-                i_vals = np.array(toti[k][i])
-                q_vals = np.array(totq[k][i])
-
-                if not self.cfg.average:
-                    i_vals = np.reshape(i_vals, (self.cfg.reps, *i_vals.shape[:-1]))
-                    q_vals = np.reshape(q_vals, (self.cfg.reps, *q_vals.shape[:-1]))
-
-                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                    result = _classify_shots(i_vals, q_vals, angle, threshold)
-                else:
-                    result = np.stack([i_vals, q_vals], axis=-1)
-
-                results[ro_pulse.id] = result
         return results
 
     def _execute(
         self,
+        configs: dict[str, Config],
         sequence: PulseSequence,
-        qubits: dict[int, Qubit],
         sweepers: list[ParallelSweepers],
         opcode: rfsoc.OperationCode,
     ) -> tuple[list, list]:
@@ -185,18 +146,21 @@ class RFSoC(Controller):
 
         Returns lists of I and Q value measured.
         """
-        host, port_ = self.address.split(":")
-        port = int(port_)
         converted_sweepers = [
-            convert_units_sweeper(sweeper, sequence, qubits) for sweeper in sweepers
+            [convert_units_sweeper(s, sequence) for s in parsweep]
+            for parsweep in sweepers
         ]
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, qubits, self.sampling_rate),
-            "qubits": [asdict(convert(qubits[idx])) for idx in qubits],
-            "sweepers": [convert(sweeper).serialized for sweeper in converted_sweepers],
+            "sequence": convert(sequence, configs, self.sampling_rate),
+            "qubits": [{}],
+            "sweepers": [
+                convert(parsweep).serialized for parsweep in converted_sweepers
+            ],
         }
+        host, port_ = self.address.split(":")
+        port = int(port_)
 
         try:
             return client.connect(server_commands, host, port)
