@@ -27,11 +27,18 @@ from qibolab._core.pulses import (
     PulseId,
     PulseLike,
     Readout,
+    VirtualZ,
 )
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .hamiltonians import HamiltonianConfig, Modulated, channel_operator, waveform
+from .hamiltonians import (
+    HamiltonianConfig,
+    Modulated,
+    ModulatedVirtualZ,
+    channel_operator,
+    waveform,
+)
 from .utils import shots
 
 __all__ = ["EmulatorController"]
@@ -196,6 +203,7 @@ class EmulatorController(Controller):
         self, sequence: PulseSequence, configs: dict[str, Config]
     ) -> Optional[QobjEvo]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
+
         channels = [
             [operator, channel_time(waveforms)]
             for operator, waveforms in hamiltonians(sequence, configs)
@@ -255,7 +263,7 @@ def hamiltonian(
         waveform(pulse, config, n)
         for pulse in pulses
         # only handle pulses (thus no readout)
-        if isinstance(pulse, (Pulse, Delay))
+        if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
     return (op, [w for w in waveforms if w is not None])
 
@@ -280,13 +288,19 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
 
     def time(t: float) -> float:
         cumulative_time = 0
+        cumulative_phase = 0
         for pulse in waveforms:
             pulse_duration = pulse.duration  # TODO: pass sampling rate
+            pulse_phase = pulse.phase
             if cumulative_time <= t < cumulative_time + pulse_duration:
                 relative_time = t - cumulative_time
                 index = int(relative_time)  # TODO: pass sampling rate
-                return pulse(t, index)
+                if isinstance(pulse, ModulatedVirtualZ):
+                    continue
+                return pulse(t, index, cumulative_phase)
             cumulative_time += pulse_duration
+            # mirror rule used when compiling
+            cumulative_phase -= pulse_phase
         return 0
 
     return time

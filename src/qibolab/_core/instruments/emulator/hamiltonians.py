@@ -11,7 +11,7 @@ from qibolab._core.serialize import Model
 
 from ...components import Config, IqConfig
 from ...identifier import QubitId, TransitionId
-from ...pulses import Delay, Pulse
+from ...pulses import Delay, Pulse, VirtualZ
 from .operators import (
     dephasing,
     probability,
@@ -89,15 +89,22 @@ class QubitDrive:
 
     @cached_property
     def envelopes(self):
+        """Pulse envelopes."""
         return self.pulse.envelopes(self.sampling_rate)
 
     @property
     def duration(self):
+        """Duration of the pulse."""
         return self.pulse.duration
 
-    def __call__(self, t, sample):
+    @property
+    def phase(self):
+        """Virtual Z phase."""
+        return 0
+
+    def __call__(self, t, sample, phase):
         i, q = self.envelopes
-        omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase
+        omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase + phase
         return np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
 
 
@@ -109,13 +116,31 @@ def channel_operator(n: int) -> Qobj:
 
 
 class ModulatedDelay(Model):
-    duration: float
+    """Modulated delay."""
 
-    def __call__(self, t: float, sample: int) -> float:
+    duration: float
+    """Delay duration."""
+    phase: float = 0
+    """Delay has 0 virtual z phase."""
+
+    def __call__(self, t: float, sample: int, phase: float) -> float:
+        """Delay waveform."""
         return 0
 
 
-Modulated = Union[QubitDrive, ModulatedDelay]
+class ModulatedVirtualZ(Model):
+    """Modulated Virtual Z pulse."""
+
+    phase: float
+    """Virtual Z phase."""
+    duration: float = 0
+    """Duration is 0 for virtual Z."""
+
+    def __call__(self, t: float, sample: int, phase: float) -> float:
+        raise NotImplementedError
+
+
+Modulated = Union[QubitDrive, ModulatedDelay, ModulatedVirtualZ]
 
 
 class HamiltonianConfig(Config):
@@ -154,8 +179,10 @@ def waveform(
     # mapping IqConfig -> QubitDrive
     if not isinstance(channel, IqConfig):
         return None
-
     if isinstance(pulse, Pulse):
         frequency = channel.frequency
         return QubitDrive(pulse=pulse, frequency=frequency / giga, n=level)
-    return ModulatedDelay(duration=pulse.duration)
+    if isinstance(pulse, Delay):
+        return ModulatedDelay(duration=pulse.duration)
+    if isinstance(pulse, VirtualZ):
+        return ModulatedVirtualZ(phase=pulse.phase)
