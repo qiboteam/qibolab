@@ -1,6 +1,7 @@
 """QICK-Qibosoq interface."""
 
 import re
+from collections import defaultdict
 from dataclasses import asdict
 from typing import cast
 
@@ -19,10 +20,10 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.identifier import ChannelId, Result
+from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
-from qibolab._core.pulses.pulse import PulseId, PulseLike
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -69,35 +70,32 @@ class RFSoC(Controller):
         sweepers: list[ParallelSweepers],
         software: int,
         options: ExecutionParameters,
+        updates: dict,
     ) -> dict[PulseId, Result]:
         """Execute a sweep of an arbitrary number of sweepers via recursion."""
-
         # If there are no software sweepers send experiment.
         # Last layer for recursion.
         if software == 0:
-            return self._play(configs, sequence, sweepers, options)
+            return self._play(configs, sequence, sweepers, options, updates)
+
+        # use a default dictionary, merging existing values
+        updates = defaultdict(dict) | ({} if updates is None else updates)
 
         parsweep = sweepers[0]
         results = {}
         for values in zip(*(s.values for s in parsweep)):
             # update all parallel sweepers with the respective values
             for sweeper, value in zip(parsweep, values):
-                sequence = (
-                    sequence
-                    if sweeper.pulses is None
-                    else _update_sequence(
-                        sequence, sweeper.parameter, sweeper.pulses, value
-                    )
-                )
-                configs = (
-                    configs
-                    if sweeper.channels is None
-                    else _update_configs(
-                        configs, sweeper.parameter, sweeper.channels, value
-                    )
-                )
+                if sweeper.pulses is not None:
+                    for pulse in sweeper.pulses:
+                        updates[pulse.id].update({sweeper.parameter.name: value})
+                if sweeper.channels is not None:
+                    for channel in sweeper.channels:
+                        updates[channel].update({sweeper.parameter.name: value})
 
-            res = self._sweep(configs, sequence, sweepers[1:], software - 1, options)
+            res = self._sweep(
+                configs, sequence, sweepers[1:], software - 1, options, updates
+            )
             results = _merge_sweep_results(results, res)
         return results
 
@@ -107,6 +105,7 @@ class RFSoC(Controller):
         sequence: PulseSequence,
         sweepers: list[ParallelSweepers],
         options: ExecutionParameters,
+        updates: dict,
     ) -> dict[int, Result]:
         results = {}
 
@@ -120,7 +119,12 @@ class RFSoC(Controller):
             if options.acquisition_type is AcquisitionType.RAW
             else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
         )
-        toti, totq = self._execute(configs, sequence, sweepers, opcode)
+        toti, totq = self._execute(
+            _update_configs(configs, updates),
+            _update_sequence(sequence, updates),
+            sweepers,
+            opcode,
+        )
 
         for i, q, (ch, acq) in zip(toti[0], totq[0], sequence.acquisitions):
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
@@ -267,19 +271,16 @@ def _firmware_loops(
     return n
 
 
-def _update_sequence(
-    sequence: PulseSequence, parameter: Parameter, pulses: list[PulseLike], value: float
-) -> PulseSequence:
-    return PulseSequence([])
+def _update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
+    """Apply sweep updates to base sequence."""
+    return PulseSequence(
+        [(ch, e.model_copy(update=updates.get(e.id, {}))) for ch, e in sequence]
+    )
 
 
-def _update_configs(
-    configs: dict[str, Config],
-    parameter: Parameter,
-    pulses: list[ChannelId],
-    value: float,
-) -> dict[str, Config]:
-    return {}
+def _update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Config]:
+    """Apply sweep updates to base configs."""
+    return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
 
 
 def _classify_shots(
