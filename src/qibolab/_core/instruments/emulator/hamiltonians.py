@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from functools import cache, cached_property
+from itertools import product
 from typing import Literal, Optional, Union
 
 import numpy as np
 from pydantic import Field
-from qutip import Qobj
+from qutip import Qobj, qeye, tensor
 from scipy.constants import giga
 
 from qibolab._core.serialize import Model
@@ -151,25 +152,59 @@ class HamiltonianConfig(Config):
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
 
     @property
-    def initial_state(self):
-        return state(0, self.transmon_levels)
+    def nqubits(self):
+        return len(self.single_qubit)
 
-    def probability(self, state: int):
-        return probability(state=state, n=self.transmon_levels)
+    @property
+    def identity(self):
+        return self.nqubits * [qeye(self.transmon_levels)]
+
+    def _embed_operator(self, operator: Qobj, index: int) -> Qobj:
+        """Embed operator in the tensor product space."""
+        space = self.identity
+        space[index] = operator
+        return tensor(space)
+
+    @property
+    def initial_state(self):
+        return tensor(state(0, self.transmon_levels) for i in range(self.nqubits))
+
+    @property
+    def outcomes(self) -> list[str]:
+        """Compute all possible outcomes."""
+        if self.nqubits > 1:
+            return [
+                f"{i}{j}"
+                for i, j in product(
+                    list(range(self.transmon_levels)), repeat=self.nqubits
+                )
+            ]
+        return [f"{i}" for i in range(self.transmon_levels)]
+
+    def probability(self, bitstring: str) -> Qobj:
+        """Probability of a given bitstring."""
+        return tensor(
+            probability(state=int(state), n=self.transmon_levels) for state in bitstring
+        )
 
     @property
     def hamiltonian(self):
-        return [
-            qubit.operator(self.transmon_levels) for qubit in self.single_qubit.values()
-        ]
+        return sum(
+            [
+                self._embed_operator(qubit.operator(self.transmon_levels), i)
+                for i, qubit in self.single_qubit.items()
+            ]
+        )
 
     @property
     def dissipation(self):
-        return [
-            qubit.dissipation(self.transmon_levels)
-            for qubit in self.single_qubit.values()
-            if not isinstance(qubit, list)
-        ]
+        return sum(
+            [
+                self._embed_operator(qubit.dissipation(self.transmon_levels), i)
+                for i, qubit in self.single_qubit.items()
+                if not isinstance(qubit, list)
+            ]
+        )
 
 
 def waveform(
