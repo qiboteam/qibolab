@@ -50,8 +50,6 @@ def test_fixed_sequence_factory():
         ({"phi": np.pi / 4}, 1.0, np.pi / 4),
         ({"theta": np.pi / 4, "phi": np.pi / 3}, 1.0 / 4, np.pi / 3),
         ({"theta": 3 * np.pi / 2}, -0.5, 0.0),
-        ({"theta": 7 * np.pi}, 1.0, 0.0),
-        ({"theta": 7.5 * np.pi}, -0.5, 0.0),
         ({"phi": 7.5 * np.pi}, 1.0, 1.5 * np.pi),
     ],
 )
@@ -75,6 +73,33 @@ def test_rotation(args, amplitude, phase):
     pulse = next(iter(fseq1.channel("1/drive")))
     assert pulse.amplitude == pytest.approx(amplitude)
     assert pulse.relative_phase == pytest.approx(phase)
+
+
+@pytest.mark.parametrize("amplitude", [0.4, 0.6])
+@pytest.mark.parametrize("theta", [np.pi / 2, np.pi])
+def test_rotation_rx90(amplitude, theta):
+    """Testing rotation rx90 decomposition."""
+    seq = PulseSequence(
+        [
+            (
+                "1/drive",
+                Pulse(
+                    duration=40, amplitude=amplitude, envelope=Gaussian(rel_sigma=3.0)
+                ),
+            )
+        ]
+    )
+    rx90_seq = rotation(seq, theta, phi=0, rx90=True)
+    pulse_rx90 = next(iter(rx90_seq.channel("1/drive")))
+    rx_seq = rotation(seq, theta, phi=0, rx90=False)
+    pulse_rx = next(iter(rx_seq.channel("1/drive")))
+
+    if theta * amplitude / np.pi > 0.5:
+        assert len(rx90_seq) == 2
+        assert pulse_rx90.amplitude == pulse_rx.amplitude
+    else:
+        assert len(rx90_seq) == 1
+        assert pulse_rx90.amplitude == 2 * pulse_rx.amplitude
 
 
 def test_two_qubit_natives_symmetric():
