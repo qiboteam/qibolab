@@ -204,9 +204,15 @@ def hamiltonian(
     config: Config,
     hamiltonian: HamiltonianConfig,
     qubit: int,
+<<<<<<< HEAD
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
     op = expand(config.operator(n), hamiltonian.dims, qubit)
+=======
+) -> tuple[Qobj, list[Modulated]]:
+    n = hamiltonian.transmon_levels
+    op = hamiltonian._embed_operator(channel_operator(n), qubit)
+>>>>>>> 842adb55 (feat: Uncoupled transmons prototype)
     waveforms = (
         waveform(pulse, config)
         for pulse in pulses
