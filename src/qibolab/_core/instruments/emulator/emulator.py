@@ -88,32 +88,50 @@ class EmulatorController(Controller):
         result for the execution of this single sequence, thus suitable
         to be returned as is.
         """
-        # probabilities for the |0>, |1> ... |n> state, for each swept value
+        # probabilities for states in computational basis
         probabilities = self._sweep(sequence, configs, sweepers)
         assert options.nshots is not None
         # extract results from probabilities, according to the requested averaging mode
-        averaged = (
-            shots(probabilities, options.nshots)
-            if options.averaging_mode == AveragingMode.SINGLESHOT
-            # weighted averaged
-            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
-        )
-        # move measurements dimension to the front, getting ready for extraction
-        res = np.moveaxis(averaged, -1, 0)
-
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            measurements = res
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.001)
-        else:
-            raise ValueError(
-                f"Acquisition type '{options.acquisition_type}' unsupported"
+        results = {}
+        outcomes = np.array(configs["hamiltonian"].outcomes)
+        # since we are computing probabilities for all the computational basis
+        # we need to loop over the single qubit acquisition to retrieve the results
+        for i, ro_id in enumerate(self._acquisitions(sequence)):
+            # TODO: simplify this code
+            qubit = int(sequence.pulse_channels(ro_id)[0][0])
+            probs = {outcomes[j]: probabilities[i][j] for j in range(len(outcomes))}
+            single_qubit_probs = {
+                i: 0 for i in range(configs["hamiltonian"].transmon_levels)
+            }
+            for basis, prob in probs.items():
+                single_qubit_probs[int(basis[qubit])] += prob
+            single_qubit_probs = np.array(
+                [
+                    single_qubit_probs[i]
+                    for i in range(configs["hamiltonian"].transmon_levels)
+                ]
             )
-        # match measurements with their IDs, in order to already comply with the general
-        # format established by the `Controller` interface
-        measurement_ids = self._acquisitions(sequence).keys()
-        return dict(zip(measurement_ids, list(measurements)))
+
+            res = (
+                shots(single_qubit_probs, options.nshots)
+                if options.averaging_mode == AveragingMode.SINGLESHOT
+                # weighted averaged
+                else np.sum(
+                    single_qubit_probs * np.arange(single_qubit_probs.shape[-1]),
+                    axis=-1,
+                )
+            )
+            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                measurements = res
+            elif options.acquisition_type is AcquisitionType.INTEGRATION:
+                x = np.stack((res, np.zeros_like(res)), axis=-1)
+                measurements = np.random.normal(x, scale=0.001)
+            else:
+                raise ValueError(
+                    f"Acquisition type '{options.acquisition_type}' unsupported"
+                )
+            results[ro_id] = measurements
+        return results
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
         """Compute acqusitions' times."""
@@ -181,19 +199,17 @@ class EmulatorController(Controller):
 
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = sum(config.hamiltonian)
+        hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
             hamiltonian += time_hamiltonian
-
         results = mesolve(
             hamiltonian,
             config.initial_state,
             tlist_,
             config.dissipation,
-            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
+            e_ops=[config.probability(i) for i in config.outcomes],
         )
-
         return extract_probabilities(
             results.expect, self._acquisitions(sequence_).values(), tlist_
         )
@@ -254,10 +270,13 @@ def tlist(
 
 
 def hamiltonian(
-    pulses: Iterable[PulseLike], config: Config, hamiltonian: HamiltonianConfig
+    pulses: Iterable[PulseLike],
+    config: Config,
+    hamiltonian: HamiltonianConfig,
+    qubit: int,
 ) -> tuple[Qobj, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = channel_operator(n)
+    op = hamiltonian._embed_operator(channel_operator(n), qubit)
     waveforms = (
         waveform(pulse, config, n)
         for pulse in pulses
@@ -271,8 +290,9 @@ def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
 ) -> Iterable[tuple[Qobj, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
+    # TODO: pass qubit in a better way
     return (
-        hamiltonian(sequence.channel(ch), configs[ch], hconfig)
+        hamiltonian(sequence.channel(ch), configs[ch], hconfig, int(ch[0]))
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig)
