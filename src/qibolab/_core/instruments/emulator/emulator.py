@@ -93,42 +93,24 @@ class EmulatorController(Controller):
         probabilities = self._sweep(sequence, configs, sweepers)
         assert options.nshots is not None
         results = {}
-        outcomes = np.array(configs["hamiltonian"].outcomes)
-        # since we are computing probabilities for all the computational basis
-        # we need to loop over the single qubit acquisition to retrieve the results
-        for i, ro_id in enumerate(self._acquisitions(sequence)):
-            # TODO: simplify this code
-            # bring acquisitions to first dimensions
-            acquisition_prob = np.expand_dims(np.moveaxis(probabilities, -2, 0)[i], -2)
-            # bring probabilities to first dimension
-            acquisition_prob = np.moveaxis(acquisition_prob, -1, 0)
-
-            # extract qubit from acquisition channel
+        levels = np.array(configs["hamiltonian"].transmon_levels)
+        for ro_id in self._acquisitions(sequence):
             qubit = int(sequence.pulse_channels(ro_id)[0][0])
-
-            # extract probabilities
-            probs = {outcomes[j]: acquisition_prob[j] for j in range(len(outcomes))}
-            # compute probabilities for single qubit
-            single_qubit_probs = {
-                i: 0 for i in range(configs["hamiltonian"].transmon_levels)
-            }
-            for basis, prob in probs.items():
-                single_qubit_probs[int(basis[qubit])] += prob
-
-            single_qubit_probs = np.array(
-                [
-                    single_qubit_probs[i]
-                    for i in range(configs["hamiltonian"].transmon_levels)
-                ]
+            single_qubit_probabilities = np.moveaxis(
+                np.moveaxis(probabilities, -1, 0)[
+                    qubit * levels : (qubit + 1) * levels
+                ],
+                0,
+                -1,
             )
-            single_qubit_probs = np.moveaxis(single_qubit_probs, 0, -1)
 
             res = (
-                shots(single_qubit_probs, options.nshots)
+                shots(single_qubit_probabilities, options.nshots)
                 if options.averaging_mode == AveragingMode.SINGLESHOT
                 # weighted averaged
                 else np.sum(
-                    single_qubit_probs * np.arange(single_qubit_probs.shape[-1]),
+                    single_qubit_probabilities
+                    * np.arange(single_qubit_probabilities.shape[-1]),
                     axis=-1,
                 )
             )
@@ -220,7 +202,7 @@ class EmulatorController(Controller):
             config.initial_state,
             tlist_,
             config.dissipation,
-            e_ops=[config.probability(i) for i in config.outcomes],
+            e_ops=config.observable,
         )
         return extract_probabilities(
             results.expect, self._acquisitions(sequence_).values(), tlist_
