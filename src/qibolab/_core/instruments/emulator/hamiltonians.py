@@ -11,7 +11,7 @@ from scipy.constants import giga
 from qibolab._core.serialize import Model
 
 from ...components import Config, IqConfig
-from ...identifier import QubitId, TransitionId
+from ...identifier import QubitId, QubitPairId, TransitionId
 from ...pulses import Delay, Pulse, VirtualZ
 from .operators import (
     dephasing,
@@ -73,6 +73,23 @@ class Qubit(Config):
     def dissipation(self, n: int):
         """Decoherence operator."""
         return self.relaxation(n) + self.dephasing(n)
+
+
+class QubitPair(Config):
+    """Hamiltonian parameters for qubit pair."""
+
+    coupling: float
+    """Qubit-qubit coupling."""
+
+    def operator(self, n: int):
+        """Time independent operator."""
+        return (
+            2
+            * np.pi
+            * self.coupling
+            / giga
+            * tensor(channel_operator(n), channel_operator(n))
+        )
 
 
 @dataclass
@@ -150,6 +167,7 @@ class HamiltonianConfig(Config):
     kind: Literal["hamiltonian"] = "hamiltonian"
     transmon_levels: int = 2
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
+    pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
 
     @property
     def nqubits(self):
@@ -189,12 +207,14 @@ class HamiltonianConfig(Config):
 
     @property
     def hamiltonian(self):
-        return sum(
+        ham = sum(
             [
                 self._embed_operator(qubit.operator(self.transmon_levels), i)
                 for i, qubit in self.single_qubit.items()
             ]
         )
+        ham += sum(pair.operator(self.transmon_levels) for pair in self.pairs.values())
+        return ham
 
     @property
     def dissipation(self):

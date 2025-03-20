@@ -91,9 +91,7 @@ class EmulatorController(Controller):
         """
         # probabilities for states in computational basis
         probabilities = self._sweep(sequence, configs, sweepers)
-        print("ALL PROB", probabilities.shape)
         assert options.nshots is not None
-        # extract results from probabilities, according to the requested averaging mode
         results = {}
         outcomes = np.array(configs["hamiltonian"].outcomes)
         # since we are computing probabilities for all the computational basis
