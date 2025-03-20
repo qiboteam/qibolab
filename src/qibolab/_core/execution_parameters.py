@@ -3,6 +3,7 @@ from math import prod
 from typing import Any, Optional, TypeVar
 
 from pydantic import Field
+from scipy.constants import nano
 
 from qibolab._core.sequence import PulseSequence
 
@@ -10,8 +11,6 @@ from .serialize import Model
 from .sweeper import ParallelSweepers, iteration_length
 
 __all__ = ["AcquisitionType", "AveragingMode"]
-
-NS_TO_SEC = 1e-9
 
 
 class AcquisitionType(Enum):
@@ -120,6 +119,6 @@ class ExecutionParameters(Model):
         return (
             (duration + len(sequences) * relaxation)
             * nshots
-            * NS_TO_SEC
+            * nano
             * prod(iteration_length(s) for s in sweepers)
         )
