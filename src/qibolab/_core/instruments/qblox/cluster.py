@@ -217,18 +217,19 @@ class Cluster(Controller):
 
             # compute module configurations, and apply them
             los = config.module.los(self._los, configs, chs)
-            config.ModuleConfigs.compute(self.channels, los, module.is_qrm_type).apply(
+            config.ModuleConfig.compute(self.channels, los, module.is_qrm_type).apply(
                 module
             )
 
             # configure all sequencers, and store active ones' association to channels
+            rf = module.is_rf_type
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
                 seq = sequences.get(ch, Q1Sequence.empty())
-                config.sequencer(
-                    sequencer, address, seq, ch, self.channels, configs, acquisition
-                )
+                config.SequencerConfig.build(
+                    address, seq, ch, self.channels, configs, acquisition, idx, rf
+                ).apply(sequencer)
                 # only collect active sequencers
                 if not seq.is_empty:
                     sequencers[slot][ch] = idx
