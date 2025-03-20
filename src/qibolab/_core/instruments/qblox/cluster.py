@@ -50,61 +50,6 @@ class Cluster(Controller):
         assert self._cluster is not None
         return self._cluster
 
-    @cached_property
-    def _modules(self) -> dict[SlotId, Module]:
-        """Retrieve slot to module object mapping."""
-        return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
-
-    @cached_property
-    def _probes(self) -> set[ChannelId]:
-        """Determine probe channels."""
-        return {
-            ch.probe
-            for ch in self.channels.values()
-            if isinstance(ch, AcquisitionChannel) and ch.probe is not None
-        }
-
-    @cached_property
-    def _channels_by_module(self) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
-        """Identify channels associated to each module.
-
-        Channels are otherwise a set, where the association is stored in
-        the :attr:`qibolab.Channel.port` attributes of each channel.
-        """
-        addresses = {
-            name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
-        }
-        return {
-            k: [el[1] for el in g]
-            for k, g in groupby(
-                sorted(
-                    (address.slot, (ch, address))
-                    for ch, address in addresses.items()
-                    if ch not in self._probes
-                ),
-                key=lambda el: el[0],
-            )
-        }
-
-    @cached_property
-    def _los(self) -> dict[ChannelId, str]:
-        """Extract channel to LO mapping.
-
-        The result contains the associated channel, since required to
-        address the LO through the API. While the LO identifier is used
-        to retrieve the configuration.
-        """
-        channels = self.channels
-        return {
-            ch: lo
-            for ch, lo in (
-                (ch, cast(IqChannel, channels[iq]).lo)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in self.channels)
-                if iq is not None
-            )
-            if lo is not None
-        }
-
     @property
     def sampling_rate(self) -> int:
         """Provide instrument's sampling rate."""
@@ -280,3 +225,58 @@ class Cluster(Controller):
                 acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
+
+    @cached_property
+    def _modules(self) -> dict[SlotId, Module]:
+        """Retrieve slot to module object mapping."""
+        return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
+
+    @cached_property
+    def _probes(self) -> set[ChannelId]:
+        """Determine probe channels."""
+        return {
+            ch.probe
+            for ch in self.channels.values()
+            if isinstance(ch, AcquisitionChannel) and ch.probe is not None
+        }
+
+    @cached_property
+    def _channels_by_module(self) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
+        """Identify channels associated to each module.
+
+        Channels are otherwise a set, where the association is stored in
+        the :attr:`qibolab.Channel.port` attributes of each channel.
+        """
+        addresses = {
+            name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
+        }
+        return {
+            k: [el[1] for el in g]
+            for k, g in groupby(
+                sorted(
+                    (address.slot, (ch, address))
+                    for ch, address in addresses.items()
+                    if ch not in self._probes
+                ),
+                key=lambda el: el[0],
+            )
+        }
+
+    @cached_property
+    def _los(self) -> dict[ChannelId, str]:
+        """Extract channel to LO mapping.
+
+        The result contains the associated channel, since required to
+        address the LO through the API. While the LO identifier is used
+        to retrieve the configuration.
+        """
+        channels = self.channels
+        return {
+            ch: lo
+            for ch, lo in (
+                (ch, cast(IqChannel, channels[iq]).lo)
+                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in self.channels)
+                if iq is not None
+            )
+            if lo is not None
+        }
