@@ -80,7 +80,15 @@ def loops(
 
 
 START: str = "start"
+"""Label first experiment's instruction."""
 SHOTS: str = "shots"
+"""Label instruction after bin counter reset instruction.
+
+The instruction is used for shots, and skipped when all shots are
+finished.
+
+Cf. :const:`_SHOTS_BIN_RESET`.
+"""
 
 
 def _experiment_end(relaxation_time: int) -> list[Line]:
