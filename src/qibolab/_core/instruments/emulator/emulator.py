@@ -91,6 +91,7 @@ class EmulatorController(Controller):
         """
         # probabilities for states in computational basis
         probabilities = self._sweep(sequence, configs, sweepers)
+        print("ALL PROB", probabilities.shape)
         assert options.nshots is not None
         # extract results from probabilities, according to the requested averaging mode
         results = {}
@@ -99,19 +100,30 @@ class EmulatorController(Controller):
         # we need to loop over the single qubit acquisition to retrieve the results
         for i, ro_id in enumerate(self._acquisitions(sequence)):
             # TODO: simplify this code
+            # bring acquisitions to first dimensions
+            acquisition_prob = np.expand_dims(np.moveaxis(probabilities, -2, 0)[i], -2)
+            # bring probabilities to first dimension
+            acquisition_prob = np.moveaxis(acquisition_prob, -1, 0)
+
+            # extract qubit from acquisition channel
             qubit = int(sequence.pulse_channels(ro_id)[0][0])
-            probs = {outcomes[j]: probabilities[i][j] for j in range(len(outcomes))}
+
+            # extract probabilities
+            probs = {outcomes[j]: acquisition_prob[j] for j in range(len(outcomes))}
+            # compute probabilities for single qubit
             single_qubit_probs = {
                 i: 0 for i in range(configs["hamiltonian"].transmon_levels)
             }
             for basis, prob in probs.items():
                 single_qubit_probs[int(basis[qubit])] += prob
+
             single_qubit_probs = np.array(
                 [
                     single_qubit_probs[i]
                     for i in range(configs["hamiltonian"].transmon_levels)
                 ]
             )
+            single_qubit_probs = np.moveaxis(single_qubit_probs, 0, -1)
 
             res = (
                 shots(single_qubit_probs, options.nshots)
@@ -122,6 +134,7 @@ class EmulatorController(Controller):
                     axis=-1,
                 )
             )
+            res = np.moveaxis(res, -1, 0)
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 measurements = res
             elif options.acquisition_type is AcquisitionType.INTEGRATION:
@@ -131,7 +144,7 @@ class EmulatorController(Controller):
                 raise ValueError(
                     f"Acquisition type '{options.acquisition_type}' unsupported"
                 )
-            results[ro_id] = measurements
+            results[ro_id] = measurements[0]
         return results
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
