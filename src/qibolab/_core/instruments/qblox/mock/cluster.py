@@ -99,9 +99,9 @@ class MockCluster:
             for k, v in {
                 (mod.slot_idx, seq.idx): next(
                     iter(
-                        call["args"][0]
+                        call["args"][1]
                         for call in seq.register["calls"]
-                        if call["name"] == "sequence"
+                        if call["name"] == "set" and call["args"][0] == "sequence"
                     ),
                     None,
                 )
