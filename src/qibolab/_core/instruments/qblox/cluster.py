@@ -245,15 +245,15 @@ class Cluster(Controller):
             module = self._modules[slot]
             assert len(module.sequencers) >= len(chs)
             mod_channels = {ch[0] for ch in chs}
-            config.module(
-                module,
+            config.ModuleConfigs.from_qibolab(
                 self.channels,
                 {
                     id_: cast(OscillatorConfig, configs[lo])
                     for id_, lo in self._los.items()
                     if id_ in mod_channels
                 },
-            )
+                module.is_qrm_type,
+            ).apply(module)
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
