@@ -34,9 +34,10 @@ class ModuleType(Flag):
     """Radio frequency module."""
 
 
-class ModuleConfigs(Model):
+class ModuleConfig(Model):
     los: dict[str, Any]
     """Local oscillators configurations."""
+    # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
         Literal["sequencer", "level"], ModuleType.QRM
     ] = "sequencer"
@@ -62,7 +63,7 @@ class ModuleConfigs(Model):
         channels: dict[ChannelId, Channel],
         los: dict[ChannelId, OscillatorConfig],
         qrm: bool,
-    ) -> "ModuleConfigs":
+    ) -> "ModuleConfig":
         los_ = {}
         # set lo frequencies
         for iq, lo in los.items():
