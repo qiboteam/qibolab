@@ -1,15 +1,28 @@
 from enum import Flag, auto
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
+from qibolab._core.components.configs import Configs
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
 from .port import PortAddress
 
 __all__ = []
+
+
+def los(
+    all: dict[ChannelId, str],
+    configs: Configs,
+    module_channels: list[tuple[ChannelId, PortAddress]],
+) -> dict[ChannelId, OscillatorConfig]:
+    return {
+        id_: cast(OscillatorConfig, configs[lo])
+        for id_, lo in all.items()
+        if id_ in {ch[0] for ch in module_channels}
+    }
 
 
 class ModuleType(Flag):
