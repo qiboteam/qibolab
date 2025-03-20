@@ -1,5 +1,5 @@
-from .module import ModuleConfigs as ModuleConfigs
+from .module import ModuleConfig as ModuleConfig
 from .port import PortAddress as PortAddress
-from .sequencer import sequencer as sequencer
+from .sequencer import SequencerConfig as SequencerConfig
 
 __all__ = []
