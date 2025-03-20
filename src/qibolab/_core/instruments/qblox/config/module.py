@@ -57,7 +57,7 @@ class ModuleConfigs(Model):
     """Input attenuation."""
 
     @classmethod
-    def from_qibolab(
+    def compute(
         cls,
         channels: dict[ChannelId, Channel],
         los: dict[ChannelId, OscillatorConfig],

@@ -52,10 +52,12 @@ class Cluster(Controller):
 
     @cached_property
     def _modules(self) -> dict[SlotId, Module]:
+        """Retrieve slot to module object mapping."""
         return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
 
     @cached_property
     def _probes(self) -> set[ChannelId]:
+        """Determine probe channels."""
         return {
             ch.probe
             for ch in self.channels.values()
@@ -64,6 +66,11 @@ class Cluster(Controller):
 
     @cached_property
     def _channels_by_module(self) -> dict[SlotId, list[tuple[ChannelId, PortAddress]]]:
+        """Identify channels associated to each module.
+
+        Channels are otherwise a set, where the association is stored in
+        the :attr:`qibolab.Channel.port` attributes of each channel.
+        """
         addresses = {
             name: PortAddress.from_path(ch.path) for name, ch in self.channels.items()
         }
@@ -139,9 +146,13 @@ class Cluster(Controller):
         results = {}
         log = Logger(configs)
 
+        # no unrolling yet: act one sequence at a time, and merge results
         for ps in sequences:
+            # split shots in batches, in case the required experiment exceeds the
+            # allowed memory
             psres = []
             for shots in batch_shots(ps, sweepers, options):
+                # first compile pulses and sweepers into Qblox sequences
                 assert_channels_exclusion(ps, self._probes)
                 sequences_ = compile(
                     ps,
@@ -155,15 +166,22 @@ class Cluster(Controller):
                 for seq in sequences_.values():
                     validate_sequence(seq)
                 log.sequences(sequences_)
+
+                # then configure modules and sequencers
+                # (including sequences upload)
                 sequencers = self._configure(
                     sequences_, configs, options.acquisition_type
                 )
                 log.status(self.cluster, sequencers)
+
+                # finally execute the experiment, and fetch results
                 duration = options.estimate_duration([ps], sweepers)
                 data = self._execute(
                     sequencers, sequences_, duration, options.acquisition_type
                 )
                 log.data(data)
+
+                # process raw results to adhere to standard format
                 lenghts = integration_lenghts(sequences_, sequencers, self._modules)
                 psres.append(
                     extract(
@@ -173,6 +191,8 @@ class Cluster(Controller):
                         options.results_shape(sweepers),
                     )
                 )
+
+            # update results - concatenating shots, if needed
             results |= concat_shots(psres, options)
         return results
 
@@ -182,27 +202,32 @@ class Cluster(Controller):
         configs: Configs,
         acquisition: AcquisitionType,
     ) -> SequencerMap:
+        """Configure modules and sequencers.
+
+        The return value consists of the association map from channels
+        to sequencers, for each module.
+        """
         sequencers = defaultdict(dict)
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
+
+            # each channel is going to be assigned to its own sequencer, thus they can
+            # not be outnumbered
             assert len(module.sequencers) >= len(chs)
+
+            # compute module configurations, and apply them
             los = config.module.los(self._los, configs, chs)
-            config.ModuleConfigs.from_qibolab(
-                self.channels, los, module.is_qrm_type
-            ).apply(module)
+            config.ModuleConfigs.compute(self.channels, los, module.is_qrm_type).apply(
+                module
+            )
+
+            # configure all sequencers, and store active ones' association to channels
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
                 seq = sequences.get(ch, Q1Sequence.empty())
-                # configure all sequencers
                 config.sequencer(
-                    sequencer,
-                    address,
-                    seq,
-                    ch,
-                    self.channels,
-                    configs,
-                    acquisition,
+                    sequencer, address, seq, ch, self.channels, configs, acquisition
                 )
                 # only collect active sequencers
                 if not seq.is_empty:
@@ -217,14 +242,18 @@ class Cluster(Controller):
         duration: float,
         acquisition: AcquisitionType,
     ) -> dict[ChannelId, AcquiredData]:
+        """Execute experiment and fetch results."""
+        # start experiment, arming and starting all sequencers
         for mod, seqs in sequencers.items():
             module = self._modules[mod]
             for seq in seqs.values():
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
+        # approximately wait for experiment completion
         time.sleep(duration + 1)
 
+        # fetch acquired results
         acquisitions = {}
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
@@ -232,17 +261,21 @@ class Cluster(Controller):
                 status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
                 if status.status is not qblox.SequencerStatuses.OKAY:
                     raise RuntimeError(status)
+
+                # skip results retrieval for passive or inactive sequencers...
                 sequence = sequences.get(ch)
                 if sequence is None:
                     continue
+                # ... and also for channels missing acquisition instructions
                 seq_acqs = sequence.acquisitions
                 if len(seq_acqs) == 0:
-                    # not an acquisition channel, or unused
                     continue
+
+                # ensure acquisition status, and fetch results
                 self.cluster.get_acquisition_status(slot, seq, timeout=1)
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
-                        self.cluster.store_scope_acquisition(slot, seq, name)
+                        self.cluster.store_scope_acquisition(slot, seq, str(name))
                 acquisitions[ch] = self.cluster.get_acquisitions(slot, seq)
 
         return acquisitions
