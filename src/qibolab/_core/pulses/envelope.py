@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import Field
 from scipy.signal import lfilter
-from scipy.signal.windows import gaussian
+from scipy.signal.windows import dpss, gaussian
 
 from ..serialize import Model, NdArray, eq
 
@@ -24,6 +24,7 @@ __all__ = [
     "Iir",
     "Snz",
     "ECap",
+    "Slepian",
     "Custom",
 ]
 
@@ -254,6 +255,24 @@ class Iir(BaseEnvelope):
         return eq(self, other)
 
 
+class Slepian(BaseEnvelope):
+    kind: Literal["slepian"] = "slepian"
+
+    relative_bandwidth: float = 0.5
+    """Relative B amplitude (wrt A)."""
+
+    def i(self, samples: int) -> Waveform:
+        """I.
+
+        .. todo::
+
+            Add docstring
+        """
+        # convert timings to samples
+        waveform = dpss(samples, self.relative_bandwidth * samples)
+        return waveform - waveform[0]  # first and last bin have zero amplitude
+
+
 class Snz(BaseEnvelope):
     """Sudden variant Net Zero.
 
@@ -389,6 +408,7 @@ Envelope = Annotated[
         Snz,
         ECap,
         Custom,
+        Slepian,
     ],
     Field(discriminator="kind"),
 ]
