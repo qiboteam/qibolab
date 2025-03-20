@@ -2,6 +2,7 @@ import json
 from typing import Optional, cast
 
 import numpy as np
+from pydantic import ConfigDict
 from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
@@ -36,10 +37,14 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
 
 
 class SequencerConfig(Model):
+    # disable freeze, to be able to construct instance with optional fields, but also
+    # static validation
+    model_config = ConfigDict(frozen=False)
+
     module: dict
     address: Optional[str] = None
     # the following attributes are automatically processed and set
-    sequence: Optional[str] = None
+    sequence: Optional[dict] = None
     sync_en: Optional[bool] = None
     offset_awg_path0: Optional[float] = None
     offset_awg_path1: Optional[float] = None
