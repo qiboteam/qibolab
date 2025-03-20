@@ -199,11 +199,19 @@ class HamiltonianConfig(Config):
             ]
         return [f"{i}" for i in range(self.transmon_levels)]
 
-    def probability(self, bitstring: str) -> Qobj:
-        """Probability of a given bitstring."""
-        return tensor(
-            probability(state=int(state), n=self.transmon_levels) for state in bitstring
+    def probability(self, state: int, index: int) -> Qobj:
+        """Probability of having qubit at `index` with state `state`."""
+        return self._embed_operator(
+            probability(state=int(state), n=self.transmon_levels), index
         )
+
+    @property
+    def observable(self) -> list[Qobj]:
+        operators = []
+        for i in range(self.nqubits):
+            for j in range(self.transmon_levels):
+                operators.append(self.probability(j, i))
+        return operators
 
     @property
     def hamiltonian(self):
