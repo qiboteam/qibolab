@@ -21,11 +21,11 @@
       "kind": "hamiltonian"
     },
     "0/drive": {
-      "kind": "iq",
+      "kind": "drive",
       "frequency": 5000000000
     },
     "0/probe": {
-      "kind": "iq",
+      "kind": "drive",
       "frequency": 5200000000.0
     },
     "0/acquisition": {

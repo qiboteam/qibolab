@@ -10,7 +10,7 @@ from scipy.constants import giga
 
 from qibolab._core.serialize import Model
 
-from ...components import Config, IqConfig
+from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
 from ...pulses import Delay, Pulse, VirtualZ
 from .operators import (
@@ -21,6 +21,19 @@ from .operators import (
     transmon_create,
     transmon_destroy,
 )
+
+
+class DriveConfig(Config):
+    """Configuration for an IQ channel."""
+
+    kind: Literal["drive"] = "drive"
+
+    frequency: float
+    """Frequency of drive."""
+    rabi_frequency: float = 1
+    """Rabi frequency [GHz]"""
+    scale_factor: float = 10
+    """Scaling factor."""
 
 
 class Qubit(Config):
@@ -83,6 +96,7 @@ class QubitPair(Config):
 
     def operator(self, n: int):
         """Time independent operator."""
+        # TODO: pass index of qubits to assign position in the tensor product
         return (
             2
             * np.pi
@@ -100,6 +114,10 @@ class QubitDrive:
     """Drive pulse."""
     frequency: float
     """Drive frequency."""
+    rabi_frequency: float
+    """Rabi frequency."""
+    scale_factor: float
+    """Scaling factor."""
     n: int
     """Transmon levels."""
     sampling_rate: float = 1
@@ -120,17 +138,25 @@ class QubitDrive:
         """Virtual Z phase."""
         return 0
 
+    @property
+    def omega(self):
+        return 2 * np.pi * self.rabi_frequency
+
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
-        omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase + phase
-        return np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
+        phi = 2 * np.pi * self.frequency * t + self.pulse.relative_phase + phase
+        return (
+            self.omega
+            * self.scale_factor
+            * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
+        )
 
 
 @cache
 def channel_operator(n: int) -> Qobj:
     """Time independent operator for channel coupling."""
     # TODO: add distinct operators for distinct channel types
-    return -1.0j * (transmon_destroy(n) - transmon_create(n))
+    return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
 class ModulatedDelay(Model):
@@ -240,11 +266,16 @@ def waveform(
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     # mapping IqConfig -> QubitDrive
-    if not isinstance(channel, IqConfig):
+    if not isinstance(channel, DriveConfig):
         return None
     if isinstance(pulse, Pulse):
-        frequency = channel.frequency
-        return QubitDrive(pulse=pulse, frequency=frequency / giga, n=level)
+        return QubitDrive(
+            pulse=pulse,
+            frequency=channel.frequency / giga,
+            rabi_frequency=channel.rabi_frequency / giga,
+            scale_factor=channel.scale_factor,
+            n=level,
+        )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
