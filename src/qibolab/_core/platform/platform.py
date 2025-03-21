@@ -17,6 +17,7 @@ from ..parameters import (
     NativeGates,
     Parameters,
     QubitMap,
+    QubitPairMap,
     Settings,
     Update,
     update_configs,
@@ -95,6 +96,11 @@ class Platform:
 
     Fully analogue to :attr:`qubits`. Only the flux channel is expected to be populated
     in the mapped objects.
+    """
+    qubit_pairs: QubitPairMap = field(default_factory=dict)
+    """Pairs controllers.
+
+    Necessary to add drive for CR gate.
     """
     resonator_type: Literal["2D", "3D"] = "2D"
     """Type of resonator (2D or 3D) in the used QPU."""
@@ -302,6 +308,7 @@ class Platform:
         instruments: InstrumentMap,
         qubits: QubitMap,
         couplers: Optional[QubitMap] = None,
+        qubit_pairs: Optional[QubitPairMap] = None,
         name: Optional[str] = None,
     ) -> "Platform":
         """Dump platform."""
@@ -312,6 +319,7 @@ class Platform:
             instruments=instruments,
             qubits=qubits,
             couplers=couplers if couplers is not None else {},
+            qubit_pairs=qubit_pairs if qubit_pairs is not None else {},
         )
 
     def dump(self, path: Path):
