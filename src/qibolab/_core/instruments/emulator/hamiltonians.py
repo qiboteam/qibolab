@@ -41,6 +41,19 @@ class DriveEmulatorConfig(Config):
         return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
+class DriveConfig(Config):
+    """Configuration for an IQ channel."""
+
+    kind: Literal["drive"] = "drive"
+
+    frequency: float
+    """Frequency of drive."""
+    rabi_frequency: float = 1
+    """Rabi frequency [GHz]"""
+    scale_factor: float = 10
+    """Scaling factor."""
+
+
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
@@ -140,6 +153,10 @@ class ModulatedDrive(Model):
     @property
     def rabi_omega(self):
         return 2 * np.pi * self.config.rabi_frequency / giga
+
+    @property
+    def omega(self):
+        return 2 * np.pi * self.rabi_frequency
 
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
