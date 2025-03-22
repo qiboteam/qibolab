@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from functools import cache, cached_property
-from itertools import product
 from typing import Literal, Optional, Union
 
 import numpy as np
@@ -96,7 +95,7 @@ class QubitPair(Config):
 
     def operator(self, n: int):
         """Time independent operator."""
-        # TODO: pass index of qubits to assign position in the tensor product
+        # TODO: pass index of qubits to assign position in the tensor product space
         return (
             2
             * np.pi
@@ -200,7 +199,8 @@ class HamiltonianConfig(Config):
         return len(self.single_qubit)
 
     @property
-    def identity(self):
+    def identity(self) -> list[Qobj]:
+        """Identiy as list of identity for each qubit."""
         return self.nqubits * [qeye(self.transmon_levels)]
 
     def _embed_operator(self, operator: Qobj, index: int) -> Qobj:
@@ -211,19 +211,8 @@ class HamiltonianConfig(Config):
 
     @property
     def initial_state(self):
+        """Initial state as ground state of the system."""
         return tensor(state(0, self.transmon_levels) for i in range(self.nqubits))
-
-    @property
-    def outcomes(self) -> list[str]:
-        """Compute all possible outcomes."""
-        if self.nqubits > 1:
-            return [
-                f"{i}{j}"
-                for i, j in product(
-                    list(range(self.transmon_levels)), repeat=self.nqubits
-                )
-            ]
-        return [f"{i}" for i in range(self.transmon_levels)]
 
     def probability(self, state: int, index: int) -> Qobj:
         """Probability of having qubit at `index` with state `state`."""
@@ -233,6 +222,7 @@ class HamiltonianConfig(Config):
 
     @property
     def observable(self) -> list[Qobj]:
+        """List of operators used as observables in mesolve."""
         operators = []
         for i in range(self.nqubits):
             for j in range(self.transmon_levels):
@@ -240,7 +230,8 @@ class HamiltonianConfig(Config):
         return operators
 
     @property
-    def hamiltonian(self):
+    def hamiltonian(self) -> Qobj:
+        """Time independent part of Hamiltonian."""
         ham = sum(
             [
                 self._embed_operator(qubit.operator(self.transmon_levels), i)
@@ -251,7 +242,10 @@ class HamiltonianConfig(Config):
         return ham
 
     @property
-    def dissipation(self):
+    def dissipation(self) -> Qobj:
+        """Dissipation operators for the hamiltonian.
+
+        They are going to be passed to mesolve as collapse operators."""
         return sum(
             [
                 self._embed_operator(qubit.dissipation(self.transmon_levels), i)
