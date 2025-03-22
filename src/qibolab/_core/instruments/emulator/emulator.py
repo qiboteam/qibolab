@@ -94,6 +94,8 @@ class EmulatorController(Controller):
         results = {}
         levels = np.array(configs["hamiltonian"].transmon_levels)
         for ro_id in self._acquisitions(sequence):
+            # TODO: find better to extract qubit from acquisition channel
+            # possible solution _single_sequence should be aware of platform.qubits
             qubit = int(sequence.pulse_channels(ro_id)[0][0])
             single_qubit_probabilities = np.moveaxis(
                 np.moveaxis(probabilities, -1, 0)[
