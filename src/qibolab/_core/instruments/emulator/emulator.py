@@ -137,10 +137,6 @@ class EmulatorController(Controller):
             config.initial_state,
             tlist_,
             config.dissipation,
-<<<<<<< HEAD
-=======
-            e_ops=config.observable,
->>>>>>> 89eb31b9 (refactor: Simplify code by introducing observable)
         )
         return select_acquisitions(
             results.states,

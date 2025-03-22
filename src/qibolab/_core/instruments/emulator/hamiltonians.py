@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 from functools import cached_property
+=======
+from dataclasses import dataclass
+from functools import cache, cached_property
+>>>>>>> ce09d263 (doc: Adding comments and docstrings)
 from typing import Literal, Optional, Union
 
 import numpy as np
@@ -235,7 +240,11 @@ class HamiltonianConfig(Config):
         return single_qubit_terms + two_qubit_terms
 
     @property
+<<<<<<< HEAD
     def dissipation(self) -> Operator:
+=======
+    def dissipation(self) -> Qobj:
+>>>>>>> ce09d263 (doc: Adding comments and docstrings)
         """Dissipation operators for the hamiltonian.
 
         They are going to be passed to mesolve as collapse operators."""
