@@ -236,7 +236,7 @@ class Hardware(Model):
     instruments: InstrumentMap
     qubits: QubitMap
     couplers: QubitMap = Field(default_factory=dict)
-    pairs: QubitPairMap = Field(default_factory=dict)
+    qubit_pairs: QubitPairMap = Field(default_factory=dict)
 
 
 def _gate_channel(qubit: Qubit, gate: str) -> str:
