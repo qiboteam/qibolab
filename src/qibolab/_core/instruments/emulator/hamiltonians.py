@@ -9,7 +9,7 @@ from scipy.constants import giga
 
 from qibolab._core.serialize import Model
 
-from ...components import Config
+from ...components import Config, DcConfig
 from ...identifier import QubitId, QubitPairId, TransitionId
 from ...pulses import Delay, Pulse, VirtualZ
 from .operators import (
@@ -41,6 +41,8 @@ class Qubit(Config):
     """Qubit frequency for 0->1."""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
+    asymmetry: float = 0
+    """Asymmetry."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -50,6 +52,23 @@ class Qubit(Config):
     def omega(self) -> float:
         """Angular velocity."""
         return 2 * np.pi * self.frequency
+
+    def frequency_shift(self, flux: float) -> float:
+        return (
+            2
+            * np.pi
+            * (
+                (self.frequency - self.anharmonicity)
+                * (
+                    self.asymmetry**2
+                    + (1 - self.asymmetry**2) * np.cos(np.pi * flux) ** 2
+                )
+                ** (1 / 4)
+                - self.frequency
+                + self.anharmonicity
+            )
+            / giga
+        )
 
     def operator(self, n: int):
         """Time independent operator."""
@@ -105,6 +124,35 @@ class QubitPair(Config):
 
 
 @dataclass
+class FluxPulse:
+    pulse: Pulse
+    """Flux pulse to be played."""
+    flux_freq_dependence: callable
+    """Flux frequency dep."""
+    sampling_rate: float = 1
+    """Sampling rate."""
+
+    @cached_property
+    def envelopes(self):
+        """Pulse envelopes."""
+        return self.pulse.envelopes(self.sampling_rate)
+
+    @property
+    def duration(self):
+        """Duration of the pulse."""
+        return self.pulse.duration
+
+    @property
+    def phase(self):
+        """Virtual Z phase."""
+        return 0
+
+    def __call__(self, t, sample, phase):
+        i, _ = self.envelopes
+        return self.flux_freq_dependence(i[sample])
+
+
+@dataclass
 class QubitDrive:
     """Hamiltonian parameters for qubit drive."""
 
@@ -155,6 +203,12 @@ def channel_operator(n: int) -> Qobj:
     """Time independent operator for channel coupling."""
     # TODO: add distinct operators for distinct channel types
     return -1j * (transmon_destroy(n) - transmon_create(n))
+
+
+@cache
+def number_operator(n: int) -> Qobj:
+    """Number operator."""
+    return transmon_create(n) * transmon_destroy(n)
 
 
 class ModulatedDelay(Model):
@@ -240,20 +294,27 @@ class HamiltonianConfig(Config):
 
 
 def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int
+    pulse: Union[Pulse, Delay], channel: Config, level: int, fun: callable
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
-    # mapping IqConfig -> QubitDrive
-    if not isinstance(channel, DriveConfig):
+
+    if not isinstance(channel, (DriveConfig, DcConfig)):
         return None
+
     if isinstance(pulse, Pulse):
-        return QubitDrive(
-            pulse=pulse,
-            frequency=channel.frequency / giga,
-            rabi_frequency=channel.rabi_frequency / giga,
-            scale_factor=channel.scale_factor,
-            n=level,
-        )
+        if isinstance(channel, DriveConfig):
+            return QubitDrive(
+                pulse=pulse,
+                frequency=channel.frequency / giga,
+                rabi_frequency=channel.rabi_frequency / giga,
+                scale_factor=channel.scale_factor,
+                n=level,
+            )
+        if isinstance(channel, DcConfig):
+            return FluxPulse(
+                pulse=pulse,
+                flux_freq_dependence=fun,
+            )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):

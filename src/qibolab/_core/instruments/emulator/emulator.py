@@ -33,10 +33,12 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import (
+    DriveConfig,
     HamiltonianConfig,
     Modulated,
     ModulatedVirtualZ,
     channel_operator,
+    number_operator,
     waveform,
 )
 from .utils import shots
@@ -291,14 +293,17 @@ def hamiltonian(
     qubit: int,
 ) -> tuple[Qobj, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = hamiltonian._embed_operator(channel_operator(n), qubit)
+    operator = hamiltonian._embed_operator(
+        channel_operator(n) if isinstance(config, DriveConfig) else number_operator(n),
+        qubit,
+    )
     waveforms = (
-        waveform(pulse, config, n)
+        waveform(pulse, config, n, hamiltonian.single_qubit[qubit].frequency_shift)
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
-    return (op, [w for w in waveforms if w is not None])
+    return (operator, [w for w in waveforms if w is not None])
 
 
 def hamiltonians(
