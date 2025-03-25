@@ -8,8 +8,13 @@ from scipy.constants import giga
 
 from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
+<<<<<<< HEAD
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
+=======
+from ...parameters import Update, _setvalue
+from ...pulses import Delay, Pulse, VirtualZ
+>>>>>>> b30529ae (feat: Dummy prototype for offset sweeper)
 from .operators import (
     Operator,
     dephasing,
@@ -87,7 +92,6 @@ class Qubit(Config):
                 - self.frequency
                 + self.anharmonicity
             )
-            / giga
         )
 
     def operator(self, n: int):
@@ -143,7 +147,37 @@ class QubitPair(Config):
         return 2 * np.pi * self.coupling / giga * op
 
 
-class ModulatedDrive(Model):
+@dataclass
+class FluxPulse:
+    pulse: Pulse
+    """Flux pulse to be played."""
+    flux_freq_dependence: callable
+    """Flux frequency dep."""
+    sampling_rate: float = 1
+    """Sampling rate."""
+
+    @cached_property
+    def envelopes(self):
+        """Pulse envelopes."""
+        return self.pulse.envelopes(self.sampling_rate)
+
+    @property
+    def duration(self):
+        """Duration of the pulse."""
+        return self.pulse.duration
+
+    @property
+    def phase(self):
+        """Virtual Z phase."""
+        return 0
+
+    def __call__(self, t, sample, phase):
+        i, _ = self.envelopes
+        return self.flux_freq_dependence(i[sample]) / giga
+
+
+@dataclass
+class QubitDrive:
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
@@ -224,6 +258,14 @@ class HamiltonianConfig(Config):
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
     pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
 
+    def replace(self, update: Update) -> "HamiltonianConfig":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+
+        return self.model_validate(d)
+
     @property
     def nqubits(self):
         return len(self.single_qubit)
@@ -265,13 +307,27 @@ class HamiltonianConfig(Config):
         )
 
 
-def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
+def waveform(
+    pulse: Union[Pulse, Delay], channel: Config, level: int, flux_dependence: callable
+) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, DriveEmulatorConfig):
         return None
 
     if isinstance(pulse, Pulse):
-        return ModulatedDrive(pulse=pulse, config=config)
+        if isinstance(channel, DriveConfig):
+            return QubitDrive(
+                pulse=pulse,
+                frequency=channel.frequency / giga,
+                rabi_frequency=channel.rabi_frequency / giga,
+                scale_factor=channel.scale_factor,
+                n=level,
+            )
+        if isinstance(channel, DcConfig):
+            return FluxPulse(
+                pulse=pulse,
+                flux_freq_dependence=flux_dependence,
+            )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
