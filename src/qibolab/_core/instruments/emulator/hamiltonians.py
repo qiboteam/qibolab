@@ -11,6 +11,7 @@ from qibolab._core.serialize import Model
 
 from ...components import Config, DcConfig
 from ...identifier import QubitId, QubitPairId, TransitionId
+from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, VirtualZ
 from .operators import (
     dephasing,
@@ -67,7 +68,6 @@ class Qubit(Config):
                 - self.frequency
                 + self.anharmonicity
             )
-            / giga
         )
 
     def operator(self, n: int):
@@ -149,7 +149,7 @@ class FluxPulse:
 
     def __call__(self, t, sample, phase):
         i, _ = self.envelopes
-        return self.flux_freq_dependence(i[sample])
+        return self.flux_freq_dependence(i[sample]) / giga
 
 
 @dataclass
@@ -247,6 +247,14 @@ class HamiltonianConfig(Config):
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
     pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
 
+    def replace(self, update: Update) -> "HamiltonianConfig":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+
+        return self.model_validate(d)
+
     @property
     def nqubits(self):
         return len(self.single_qubit)
@@ -294,7 +302,7 @@ class HamiltonianConfig(Config):
 
 
 def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int, fun: callable
+    pulse: Union[Pulse, Delay], channel: Config, level: int, flux_dependence: callable
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
 
@@ -313,7 +321,7 @@ def waveform(
         if isinstance(channel, DcConfig):
             return FluxPulse(
                 pulse=pulse,
-                flux_freq_dependence=fun,
+                flux_freq_dependence=flux_dependence,
             )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
