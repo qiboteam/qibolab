@@ -26,6 +26,7 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import (
+    DriveConfig,
     HamiltonianConfig,
     Modulated,
     Operator,

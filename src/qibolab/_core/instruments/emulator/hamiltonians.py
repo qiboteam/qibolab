@@ -61,6 +61,8 @@ class Qubit(Config):
     """Qubit frequency for 0->1."""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
+    asymmetry: float = 0
+    """Asymmetry."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -70,6 +72,23 @@ class Qubit(Config):
     def omega(self) -> float:
         """Angular velocity."""
         return 2 * np.pi * self.frequency
+
+    def frequency_shift(self, flux: float) -> float:
+        return (
+            2
+            * np.pi
+            * (
+                (self.frequency - self.anharmonicity)
+                * (
+                    self.asymmetry**2
+                    + (1 - self.asymmetry**2) * np.cos(np.pi * flux) ** 2
+                )
+                ** (1 / 4)
+                - self.frequency
+                + self.anharmonicity
+            )
+            / giga
+        )
 
     def operator(self, n: int):
         """Time independent operator."""
@@ -250,6 +269,7 @@ def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, DriveEmulatorConfig):
         return None
+
     if isinstance(pulse, Pulse):
         return ModulatedDrive(pulse=pulse, config=config)
     if isinstance(pulse, Delay):
