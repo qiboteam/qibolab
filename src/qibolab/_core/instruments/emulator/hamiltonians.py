@@ -64,8 +64,12 @@ class Qubit(Config):
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
+    dynamical_frequency: float = 0
+    """Frequency to be used during evolution (could be different from frequency due to static offset.)"""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
+    sweetspot: float = 0
+    """Sweetspot point."""
     asymmetry: float = 0
     """Asymmetry."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
@@ -76,23 +80,14 @@ class Qubit(Config):
     @property
     def omega(self) -> float:
         """Angular velocity."""
-        return 2 * np.pi * self.frequency
+        return 2 * np.pi * self.dynamical_frequency
 
-    def frequency_shift(self, flux: float) -> float:
-        return (
-            2
-            * np.pi
-            * (
-                (self.frequency - self.anharmonicity)
-                * (
-                    self.asymmetry**2
-                    + (1 - self.asymmetry**2) * np.cos(np.pi * flux) ** 2
-                )
-                ** (1 / 4)
-                - self.frequency
-                + self.anharmonicity
-            )
-        )
+    def detuned_frequency(self, flux: float) -> float:
+        """Return frequency of the qubit modified by the flux."""
+        return (self.frequency - self.anharmonicity) * (
+            self.asymmetry**2
+            + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
+        ) ** (1 / 4) + self.anharmonicity
 
     def operator(self, n: int):
         """Time independent operator."""
@@ -151,6 +146,8 @@ class QubitPair(Config):
 class FluxPulse:
     pulse: Pulse
     """Flux pulse to be played."""
+    offset: float
+    """Static bias offset."""
     flux_freq_dependence: callable
     """Flux frequency dep."""
     sampling_rate: float = 1
@@ -173,7 +170,18 @@ class FluxPulse:
 
     def __call__(self, t, sample, phase):
         i, _ = self.envelopes
-        return self.flux_freq_dependence(i[sample]) / giga
+        # we are passing the relative frequency because the term with the offset
+        # is already included in the time-independent part of the Hamiltonian
+        # and it corresponds to changing the static bias
+        return (
+            2
+            * np.pi
+            * (
+                self.flux_freq_dependence(i[sample] + self.offset)
+                - self.flux_freq_dependence(self.offset)
+            )
+            / giga
+        )
 
 
 @dataclass
@@ -326,6 +334,7 @@ def waveform(
         if isinstance(channel, DcConfig):
             return FluxPulse(
                 pulse=pulse,
+                offset=channel.offset,
                 flux_freq_dependence=flux_dependence,
             )
     if isinstance(pulse, Delay):

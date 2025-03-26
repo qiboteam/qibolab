@@ -128,20 +128,15 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        # TODO: improve this
-        offsets = {
-            int(channel.split("/")[0]): value["offset"]
-            for channel, value in updates.items()
-            if "offset" in value
-        }
+
         config = config.replace(
             update={
-                f"single_qubit.{qubit}.frequency": config.single_qubit[qubit].frequency
-                + config.single_qubit[qubit].frequency_shift(offset)
-                for qubit, offset in offsets.items()
+                f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                    qubit
+                ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
+                for qubit in config.single_qubit
             }
         )
-
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
@@ -222,7 +217,7 @@ def hamiltonian(
     n = hamiltonian.transmon_levels
     op = expand(config.operator(n), hamiltonian.dims, qubit)
     waveforms = (
-        waveform(pulse, config)
+        waveform(pulse, config, hamiltonian.single_qubit[qubit].detuned_frequency)
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
