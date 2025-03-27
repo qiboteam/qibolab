@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -32,13 +32,7 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
-from .hamiltonians import (
-    HamiltonianConfig,
-    Modulated,
-    ModulatedVirtualZ,
-    channel_operator,
-    waveform,
-)
+from .hamiltonians import HamiltonianConfig, Modulated, channel_operator, waveform
 from .utils import shots
 
 __all__ = ["EmulatorController"]
@@ -178,7 +172,7 @@ class EmulatorController(Controller):
         the various measurements included in the sequence.
         """
         sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate)
+        tlist_ = tlist(sequence_, self.sampling_rate * 2)
 
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
@@ -203,12 +197,15 @@ class EmulatorController(Controller):
         self, sequence: PulseSequence, configs: dict[str, Config]
     ) -> Optional[QobjEvo]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
-
-        channels = [
-            [operator, channel_time(waveforms)]
+        ts = tlist(sequence, self.sampling_rate * 20)
+        ops = [
+            [
+                operator,
+                channel_time(waveforms, ts, self.sampling_rate),
+            ]
             for operator, waveforms in hamiltonians(sequence, configs)
         ]
-        return QobjEvo(channels) if len(channels) > 0 else None
+        return QobjEvo(ops, tlist=ts, order=0) if len(ops) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -223,16 +220,11 @@ def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Confi
     return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
 
 
-def tlist(
-    sequence: PulseSequence, sampling_rate: float, per_sample: float = 2
-) -> NDArray:
+def tlist(sequence: PulseSequence, rate: float) -> NDArray:
     """Compute times for evolution.
 
-    The frequency of times is double the sampling rate, to make sure
-    that all pulses features are resolved by the evolution.
-
-    This can be customized using the `per_sample` rate, e.g. to retrieve times at the
-    sampling rate itself, for pulses evaluation.
+    `rate` sets the frequency of times. Use at least double of the sampling rate, to
+    make sure that all pulses features are resolved by the evolution.
 
     .. note::
 
@@ -250,7 +242,6 @@ def tlist(
         else sequence
     )
     end = max(seq.duration, 1)
-    rate = sampling_rate * per_sample
     return np.arange(0, end, 1 / rate)
 
 
@@ -280,30 +271,19 @@ def hamiltonians(
     )
 
 
-def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
-    """Wrap time function for specific channel.
-
-    Used to avoid late binding issues.
-    """
-
-    def time(t: float) -> float:
-        cumulative_time = 0
-        cumulative_phase = 0
-        for pulse in waveforms:
-            pulse_duration = pulse.duration  # TODO: pass sampling rate
-            pulse_phase = pulse.phase
-            if cumulative_time <= t < cumulative_time + pulse_duration:
-                relative_time = t - cumulative_time
-                index = int(relative_time)  # TODO: pass sampling rate
-                if isinstance(pulse, ModulatedVirtualZ):
-                    continue
-                return pulse(t, index, cumulative_phase)
-            cumulative_time += pulse_duration
-            # mirror rule used when compiling
-            cumulative_phase -= pulse_phase
-        return 0
-
-    return time
+def channel_time(
+    waveforms: Iterable[Modulated], times: NDArray, sampling_rate: float
+) -> NDArray:
+    elapsed = 0
+    phase = 0
+    samples = []
+    for pulse in waveforms:
+        start = elapsed
+        elapsed += int(sampling_rate * pulse.duration)
+        phase -= pulse.phase
+        samples.append(pulse(times[start:elapsed], phase))
+    samples.append(np.zeros(times.size - elapsed))
+    return np.append(*samples)
 
 
 def extract_probabilities(
