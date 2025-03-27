@@ -7,10 +7,6 @@
       url = "github:cachix/nixpkgs-python";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = {
@@ -47,14 +43,6 @@
 
               env.QIBOLAB_PLATFORMS = platforms;
 
-              languages.c = {
-                enable = true;
-              };
-
-              languages.cplusplus = {
-                enable = true;
-              };
-
               languages.python = {
                 enable = true;
                 poetry = {
@@ -62,28 +50,13 @@
                   install = {
                     enable = true;
                     groups = ["dev" "tests"];
-                    extras = [
-                      (lib.strings.concatStrings
-                        (lib.strings.intersperse " -E "
-                          ["qblox" "qm" "zh" "rfsoc" "los"]))
-                    ];
+                    allExtras = true;
                   };
                 };
-                version = "3.11";
-              };
-
-              languages.rust = {
-                enable = true;
-                channel = "stable";
               };
             })
           ];
         };
       });
-  };
-
-  nixConfig = {
-    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
-    extra-substituters = "https://devenv.cachix.org";
   };
 }

@@ -1,0 +1,62 @@
+{
+    "nqubits": 1,
+    "qubits": [
+        0
+    ],
+    "topology": [],
+    "settings": {
+        "nshots": 1024,
+        "relaxation_time": 70000
+    },
+    "native_gates": {
+        "single_qubit": {
+            "0": {
+                "RX": {
+                    "duration": 40,
+                    "amplitude": 0.4991361195928207,
+                    "frequency": 5509378347,
+                    "shape": "Gaussian(3)",
+                    "type": "qd",
+                    "start": 0,
+                    "phase": 0
+                },
+                "MZ": {
+                    "duration": 1000,
+                    "amplitude": 0.02,
+                    "frequency": 7369805303,
+                    "shape": "Rectangular()",
+                    "type": "ro",
+                    "start": 0,
+                    "phase": 0
+                }
+            }
+        },
+        "two_qubits": {}
+    },
+    "characterization": {
+        "single_qubit": {
+            "0": {
+                "readout_frequency": 7369805303,
+                "drive_frequency": 5509378347,
+                "anharmonicity": 0,
+                "Ec": 0,
+                "Ej": 0,
+                "g": 0,
+                "pi_pulse_amplitude": 0.4991361195928207,
+                "T1": 19905.294436569755,
+                "T2_spin_echo": 11255.259744766483,
+                "T2": 4654.863660508437,
+                "threshold": 0.594148378361051,
+                "iq_angle": -3.012709931343581,
+                "mean_gnd_states": [
+                    0.1758355048859935,
+                    0.248585667752443
+                ],
+                "mean_exc_states": [
+                    -1.2420530944625408,
+                    0.43234560260586313
+                ]
+            }
+        }
+    }
+}
