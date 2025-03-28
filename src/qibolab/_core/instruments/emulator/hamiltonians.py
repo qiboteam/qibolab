@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from functools import cached_property
+=======
+from functools import cache, cached_property
+>>>>>>> 038c4b41 (refactor: Address first comments)
 from typing import Literal, Optional, Union
 
 import numpy as np
@@ -46,16 +50,16 @@ class DriveEmulatorConfig(Config):
         return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
-class DriveConfig(Config):
+class DriveEmulatorConfig(Config):
     """Configuration for an IQ channel."""
 
-    kind: Literal["drive"] = "drive"
+    kind: Literal["drive-emulator"] = "drive-emulator"
 
     frequency: float
     """Frequency of drive."""
     rabi_frequency: float = 1
     """Rabi frequency [GHz]"""
-    scale_factor: float = 10
+    scale_factor: float = 1
     """Scaling factor."""
 
 
@@ -142,6 +146,7 @@ class QubitPair(Config):
         return 2 * np.pi * self.coupling / giga * op
 
 
+<<<<<<< HEAD
 @dataclass
 class FluxPulse:
     pulse: Pulse
@@ -150,6 +155,17 @@ class FluxPulse:
     """Static bias offset."""
     flux_freq_dependence: callable
     """Flux frequency dep."""
+=======
+class QubitDrive(Model):
+    """Hamiltonian parameters for qubit drive."""
+
+    pulse: Pulse
+    """Drive pulse."""
+    config: DriveEmulatorConfig
+    """Drive emulator configuration."""
+    n: int
+    """Transmon levels."""
+>>>>>>> 038c4b41 (refactor: Address first comments)
     sampling_rate: float = 1
     """Sampling rate."""
 
@@ -217,13 +233,21 @@ class QubitDrive:
 
     @property
     def omega(self):
-        return 2 * np.pi * self.rabi_frequency
+        return 2 * np.pi * self.config.frequency / giga
+
+    @property
+    def rabi_omega(self):
+        return 2 * np.pi * self.config.rabi_frequency / giga
 
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
         phi = self.omega * t + self.pulse.relative_phase + phase
         return (
+<<<<<<< HEAD
             self.rabi_omega
+=======
+            self.omega
+>>>>>>> 038c4b41 (refactor: Address first comments)
             * self.config.scale_factor
             * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
         )
@@ -319,10 +343,15 @@ def waveform(
     pulse: Union[Pulse, Delay], channel: Config, level: int, flux_dependence: callable
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
+<<<<<<< HEAD
     if not isinstance(config, DriveEmulatorConfig):
+=======
+    if not isinstance(channel, DriveEmulatorConfig):
+>>>>>>> 038c4b41 (refactor: Address first comments)
         return None
 
     if isinstance(pulse, Pulse):
+<<<<<<< HEAD
         if isinstance(channel, DriveConfig):
             return QubitDrive(
                 pulse=pulse,
@@ -337,6 +366,13 @@ def waveform(
                 offset=channel.offset,
                 flux_freq_dependence=flux_dependence,
             )
+=======
+        return QubitDrive(
+            pulse=pulse,
+            config=channel,
+            n=level,
+        )
+>>>>>>> 038c4b41 (refactor: Address first comments)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
