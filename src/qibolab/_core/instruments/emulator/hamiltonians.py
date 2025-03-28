@@ -144,7 +144,7 @@ class QubitDrive(Model):
         i, q = self.envelopes
         phi = self.omega * t + self.pulse.relative_phase + phase
         return (
-            self.omega
+            self.rabi_omega
             * self.config.scale_factor
             * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
         )
