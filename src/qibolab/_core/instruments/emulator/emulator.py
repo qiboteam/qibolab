@@ -102,36 +102,36 @@ class EmulatorController(Controller):
         )
         averaged = shots(probabilities, options.nshots)
         # move measurements dimension to the front, getting ready for extraction
-        res = np.moveaxis(averaged, 1, 0)
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            measurements = res
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.001)
-        else:
-            raise ValueError(
-                f"Acquisition type '{options.acquisition_type}' unsupported"
-            )
-        # match measurements with their IDs, in order to already comply with the general
-        # format established by the `Controller` interface
+        measurements = np.moveaxis(averaged, 1, 0)
+
         results = {}
-        for i, ro_id in enumerate(self._acquisitions(sequence)):
+        # introduce cached measurements to avoid losing correlations
+        cache_measurements = {}
+        for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
             qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+            cache_measurements.setdefault(sample, measurements[i])
             assert configs["hamiltonian"].nqubits < 3, (
                 "Results cannot be retrieved for more than 2 transmons"
             )
-            results[ro_id] = (
+            res = (
                 np.array(
                     [
                         divmod(val, configs["hamiltonian"].transmon_levels)[qubit]
-                        for val in measurements[i].flatten()
+                        for val in cache_measurements[sample].flatten()
                     ]
                 ).reshape(measurements[i].shape)
                 if configs["hamiltonian"].nqubits == 2
-                else measurements[i]
+                else cache_measurements[sample]
             )
+
+            if options.acquisition_type is AcquisitionType.INTEGRATION:
+                res = np.stack((res, np.zeros_like(res)), axis=-1)
+                res = np.random.normal(res, scale=0.001)
+
             if options.averaging_mode == AveragingMode.CYCLIC:
-                results[ro_id] = np.mean(results[ro_id], axis=0)
+                res = np.mean(res, axis=0)
+
+            results[ro_id] = res
         return results
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
