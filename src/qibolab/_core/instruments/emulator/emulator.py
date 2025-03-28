@@ -94,29 +94,47 @@ class EmulatorController(Controller):
         assert options.nshots is not None
         results = {}
         levels = np.array(configs["hamiltonian"].transmon_levels)
-        for ro_id in self._acquisitions(sequence):
-            # TODO: find better to extract qubit from acquisition channel
-            # possible solution _single_sequence should be aware of platform.qubits
-            qubit = int(sequence.pulse_channels(ro_id)[0][0])
-            single_qubit_probabilities = np.moveaxis(
-                np.moveaxis(probabilities, -1, 0)[
-                    qubit * levels : (qubit + 1) * levels
-                ],
-                0,
-                -1,
-            )
+        # store density matrices for each duration for the whole system
+        density_matrices = {}
 
-            res = (
-                shots(single_qubit_probabilities, options.nshots)
+        probabilities = np.moveaxis(probabilities, -2, 0)
+        for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
+            density_matrices.setdefault(
+                sample,
+                shots(probabilities[i], options.nshots)
                 if options.averaging_mode == AveragingMode.SINGLESHOT
-                # weighted averaged
-                else np.sum(
-                    single_qubit_probabilities
-                    * np.arange(single_qubit_probabilities.shape[-1]),
+                else probabilities[i],
+            )
+        for ro_id, sample in self._acquisitions(sequence).items():
+
+            def _get_qubit(a: int, qubit: int, n: int):
+                return a // n if qubit == 0 else a % n
+
+            def _get_probability(probs: list, qubit: int, n: int):
+                states = np.arange(n)
+                probs = probs.reshape(n, n)
+                if qubit == 1:
+                    return sum(np.dot(states, probs.T))
+                elif qubit == 0:
+                    return sum(np.dot(states, probs))
+
+            qubit = int(sequence.pulse_channels(ro_id)[0][0])
+            res = (
+                np.vectorize(
+                    lambda a: _get_qubit(
+                        a, int(sequence.pulse_channels(ro_id)[0][0]), levels
+                    )
+                )(density_matrices[sample])
+                if options.averaging_mode == AveragingMode.SINGLESHOT
+                else np.apply_along_axis(
+                    _get_probability,
                     axis=-1,
+                    arr=density_matrices[sample],
+                    qubit=qubit,
+                    n=levels,
                 )
             )
-            res = np.moveaxis(res, -1, 0)
+            # TODO: for probabilities convert to float
             if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                 measurements = res
             elif options.acquisition_type is AcquisitionType.INTEGRATION:
@@ -126,11 +144,11 @@ class EmulatorController(Controller):
                 raise ValueError(
                     f"Acquisition type '{options.acquisition_type}' unsupported"
                 )
-            results[ro_id] = measurements[0]
+            results[ro_id] = measurements
         return results
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute acqusitions' times."""
+        """Compute acquisitions' times."""
         acq = {}
         for ch in sequence.channels:
             time = 0
@@ -204,10 +222,11 @@ class EmulatorController(Controller):
             config.initial_state,
             tlist_,
             config.dissipation,
-            e_ops=config.observable,
         )
         return extract_probabilities(
-            results.expect, self._acquisitions(sequence_).values(), tlist_
+            results.states,
+            self._acquisitions(sequence_).values(),
+            tlist_,
         )
 
     def _pulse_hamiltonian(
@@ -332,6 +351,8 @@ def extract_probabilities(
     Then, it computes probabilities, based on the identified
     expectations.
     """
+    expectations = [x.tidyup(atol=1e-2).diag() for x in expectations]
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack(expectations, axis=-1)[samples]
+
+    return np.stack(expectations, axis=0)[samples]

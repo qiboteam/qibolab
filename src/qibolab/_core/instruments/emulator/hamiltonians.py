@@ -14,7 +14,6 @@ from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .operators import (
     dephasing,
-    probability,
     relaxation,
     state,
     transmon_create,
@@ -216,21 +215,6 @@ class HamiltonianConfig(Config):
     def initial_state(self):
         """Initial state as ground state of the system."""
         return tensor(state(0, self.transmon_levels) for i in range(self.nqubits))
-
-    def probability(self, state: int, index: int) -> Qobj:
-        """Probability of having qubit at `index` with state `state`."""
-        return self._embed_operator(
-            probability(state=int(state), n=self.transmon_levels), index
-        )
-
-    @property
-    def observable(self) -> list[Qobj]:
-        """List of operators used as observables in mesolve."""
-        operators = []
-        for i in range(self.nqubits):
-            for j in range(self.transmon_levels):
-                operators.append(self.probability(j, i))
-        return operators
 
     @property
     def hamiltonian(self) -> Qobj:
