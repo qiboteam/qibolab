@@ -8,8 +8,9 @@ from scipy.constants import giga
 
 from qibolab._core.serialize import Model
 
-from ...components import Config
+from ...components import Config, DcConfig
 from ...identifier import QubitId, QubitPairId, TransitionId
+from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, VirtualZ
 from .operators import (
     dephasing,
@@ -38,8 +39,14 @@ class Qubit(Config):
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
+    dynamical_frequency: float = 0
+    """Frequency to be used during evolution (could be different from frequency due to static offset.)"""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
+    sweetspot: float = 0
+    """Sweetspot point."""
+    asymmetry: float = 0
+    """Asymmetry."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -48,7 +55,14 @@ class Qubit(Config):
     @property
     def omega(self) -> float:
         """Angular velocity."""
-        return 2 * np.pi * self.frequency
+        return 2 * np.pi * self.dynamical_frequency
+
+    def detuned_frequency(self, flux: float) -> float:
+        """Return frequency of the qubit modified by the flux."""
+        return (self.frequency - self.anharmonicity) * (
+            self.asymmetry**2
+            + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
+        ) ** (1 / 4) + self.anharmonicity
 
     def operator(self, n: int):
         """Time independent operator."""
@@ -100,6 +114,47 @@ class QubitPair(Config):
             * self.coupling
             / giga
             * tensor(channel_operator(n), channel_operator(n))
+        )
+
+
+class FluxPulse(Model):
+    pulse: Pulse
+    """Flux pulse to be played."""
+    offset: float
+    """Static bias offset."""
+    flux_freq_dependence: callable
+    """Flux frequency dep."""
+    sampling_rate: float = 1
+    """Sampling rate."""
+
+    @cached_property
+    def envelopes(self):
+        """Pulse envelopes."""
+        return self.pulse.envelopes(self.sampling_rate)
+
+    @property
+    def duration(self):
+        """Duration of the pulse."""
+        return self.pulse.duration
+
+    @property
+    def phase(self):
+        """Virtual Z phase."""
+        return 0
+
+    def __call__(self, t, sample, phase):
+        i, _ = self.envelopes
+        # we are passing the relative frequency because the term with the offset
+        # is already included in the time-independent part of the Hamiltonian
+        # and it corresponds to changing the static bias
+        return (
+            2
+            * np.pi
+            * (
+                self.flux_freq_dependence(i[sample] + self.offset)
+                - self.flux_freq_dependence(self.offset)
+            )
+            / giga
         )
 
 
@@ -155,6 +210,12 @@ def channel_operator(n: int) -> Qobj:
     return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
+@cache
+def number_operator(n: int) -> Qobj:
+    """Number operator."""
+    return transmon_create(n) * transmon_destroy(n)
+
+
 class ModulatedDelay(Model):
     """Modulated delay."""
 
@@ -190,6 +251,14 @@ class HamiltonianConfig(Config):
     transmon_levels: int = 2
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
     pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+
+    def replace(self, update: Update) -> "HamiltonianConfig":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+
+        return self.model_validate(d)
 
     @property
     def nqubits(self):
@@ -240,17 +309,27 @@ class HamiltonianConfig(Config):
 
 
 def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int
+    pulse: Union[Pulse, Delay], channel: Config, level: int, flux_dependence: callable
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
-    if not isinstance(channel, DriveEmulatorConfig):
+
+    if not isinstance(channel, (DriveEmulatorConfig, DcConfig)):
         return None
+
     if isinstance(pulse, Pulse):
-        return QubitDrive(
-            pulse=pulse,
-            config=channel,
-            n=level,
-        )
+        if isinstance(channel, DriveEmulatorConfig):
+            return QubitDrive(
+                pulse=pulse,
+                config=channel,
+                n=level,
+            )
+        if isinstance(channel, DcConfig):
+            return FluxPulse(
+                pulse=pulse,
+                offset=channel.offset,
+                flux_freq_dependence=flux_dependence,
+            )
+
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
