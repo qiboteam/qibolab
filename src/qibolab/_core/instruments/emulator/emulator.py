@@ -32,8 +32,12 @@ from .hamiltonians import (
     Operator,
     waveform,
 )
+<<<<<<< HEAD
 from .operators import TimeDependentOperator, evolve, expand
 from .results import acquisitions, results, select_acquisitions
+=======
+from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
+>>>>>>> 38b956b7 (refactor: Re-organize results)
 
 __all__ = ["EmulatorController"]
 
@@ -259,3 +263,24 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
         return 0
 
     return time
+<<<<<<< HEAD
+=======
+
+
+def extract_probabilities(
+    expectations: list[Qobj], acquisitions: Iterable[float], times: NDArray
+) -> NDArray:
+    """Extract probabilities from expectations.
+
+    First, retrieve acquisitions, and locate them in the tlist, to
+    isolate the expectations related to measurements.
+
+    Then, it computes probabilities, based on the identified
+    expectations.
+    """
+    expectations = [x.full() for x in expectations]
+    acq = np.array(list(acquisitions))
+    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
+
+    return np.stack(expectations, axis=0)[samples]
+>>>>>>> 38b956b7 (refactor: Re-organize results)
