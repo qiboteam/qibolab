@@ -39,7 +39,7 @@ from .hamiltonians import (
     channel_operator,
     waveform,
 )
-from .utils import shots
+from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
 
 __all__ = ["EmulatorController"]
 
@@ -92,59 +92,46 @@ class EmulatorController(Controller):
         # probabilities for states in computational basis
         probabilities = self._sweep(sequence, configs, sweepers)
         assert options.nshots is not None
+        probabilities = np.moveaxis(probabilities, -3, 0)
+        probabilities = apply_to_last_two_axes(
+            calculate_probabilities_density_matrix,
+            probabilities,
+            tuple(configs["hamiltonian"].single_qubit),
+            configs["hamiltonian"].nqubits,
+            configs["hamiltonian"].transmon_levels,
+        )
+        averaged = shots(probabilities, options.nshots)
+        # move measurements dimension to the front, getting ready for extraction
+        res = np.moveaxis(averaged, 1, 0)
+        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+            measurements = res
+        elif options.acquisition_type is AcquisitionType.INTEGRATION:
+            x = np.stack((res, np.zeros_like(res)), axis=-1)
+            measurements = np.random.normal(x, scale=0.001)
+        else:
+            raise ValueError(
+                f"Acquisition type '{options.acquisition_type}' unsupported"
+            )
+        # match measurements with their IDs, in order to already comply with the general
+        # format established by the `Controller` interface
         results = {}
-        levels = np.array(configs["hamiltonian"].transmon_levels)
-        # store density matrices for each duration for the whole system
-        density_matrices = {}
-
-        probabilities = np.moveaxis(probabilities, -2, 0)
-        for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
-            density_matrices.setdefault(
-                sample,
-                shots(probabilities[i], options.nshots)
-                if options.averaging_mode == AveragingMode.SINGLESHOT
-                else probabilities[i],
+        for i, ro_id in enumerate(self._acquisitions(sequence)):
+            qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+            assert configs["hamiltonian"].nqubits < 3, (
+                "Results cannot be retrieved for more than 2 transmons"
             )
-        for ro_id, sample in self._acquisitions(sequence).items():
-
-            def _get_qubit(a: int, qubit: int, n: int):
-                return a // n if qubit == 0 else a % n
-
-            def _get_probability(probs: list, qubit: int, n: int):
-                states = np.arange(n)
-                probs = probs.reshape(n, n)
-                if qubit == 1:
-                    return sum(np.dot(states, probs.T))
-                elif qubit == 0:
-                    return sum(np.dot(states, probs))
-
-            qubit = int(sequence.pulse_channels(ro_id)[0][0])
-            res = (
-                np.vectorize(
-                    lambda a: _get_qubit(
-                        a, int(sequence.pulse_channels(ro_id)[0][0]), levels
-                    )
-                )(density_matrices[sample])
-                if options.averaging_mode == AveragingMode.SINGLESHOT
-                else np.apply_along_axis(
-                    _get_probability,
-                    axis=-1,
-                    arr=density_matrices[sample],
-                    qubit=qubit,
-                    n=levels,
-                )
+            results[ro_id] = (
+                np.array(
+                    [
+                        divmod(val, configs["hamiltonian"].transmon_levels)[qubit]
+                        for val in measurements[i].flatten()
+                    ]
+                ).reshape(measurements[i].shape)
+                if configs["hamiltonian"].nqubits == 2
+                else measurements[i]
             )
-            # TODO: for probabilities convert to float
-            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                measurements = res
-            elif options.acquisition_type is AcquisitionType.INTEGRATION:
-                x = np.stack((res, np.zeros_like(res)), axis=-1)
-                measurements = np.random.normal(x, scale=0.001)
-            else:
-                raise ValueError(
-                    f"Acquisition type '{options.acquisition_type}' unsupported"
-                )
-            results[ro_id] = measurements
+            if options.averaging_mode == AveragingMode.CYCLIC:
+                results[ro_id] = np.mean(results[ro_id], axis=0)
         return results
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
@@ -351,7 +338,7 @@ def extract_probabilities(
     Then, it computes probabilities, based on the identified
     expectations.
     """
-    expectations = [x.tidyup(atol=1e-2).diag() for x in expectations]
+    expectations = [x.full() for x in expectations]
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
 
