@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 from functools import cached_property
-=======
-from functools import cache, cached_property
->>>>>>> 038c4b41 (refactor: Address first comments)
 from typing import Literal, Optional, Union
 
 import numpy as np
@@ -12,13 +8,8 @@ from scipy.constants import giga
 
 from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
-<<<<<<< HEAD
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
-=======
-from ...parameters import Update, _setvalue
-from ...pulses import Delay, Pulse, VirtualZ
->>>>>>> b30529ae (feat: Dummy prototype for offset sweeper)
 from .operators import (
     Operator,
     dephasing,
@@ -146,7 +137,6 @@ class QubitPair(Config):
         return 2 * np.pi * self.coupling / giga * op
 
 
-<<<<<<< HEAD
 @dataclass
 class FluxPulse:
     pulse: Pulse
@@ -155,17 +145,6 @@ class FluxPulse:
     """Static bias offset."""
     flux_freq_dependence: callable
     """Flux frequency dep."""
-=======
-class QubitDrive(Model):
-    """Hamiltonian parameters for qubit drive."""
-
-    pulse: Pulse
-    """Drive pulse."""
-    config: DriveEmulatorConfig
-    """Drive emulator configuration."""
-    n: int
-    """Transmon levels."""
->>>>>>> 038c4b41 (refactor: Address first comments)
     sampling_rate: float = 1
     """Sampling rate."""
 
@@ -244,10 +223,14 @@ class QubitDrive:
         phi = self.omega * t + self.pulse.relative_phase + phase
         return (
 <<<<<<< HEAD
+<<<<<<< HEAD
             self.rabi_omega
 =======
             self.omega
 >>>>>>> 038c4b41 (refactor: Address first comments)
+=======
+            self.rabi_omega
+>>>>>>> 79511a5b (fix: Missing rabi_)
             * self.config.scale_factor
             * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
         )
