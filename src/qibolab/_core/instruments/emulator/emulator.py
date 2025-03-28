@@ -341,7 +341,7 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
 
 
 def extract_probabilities(
-    expectations: list[NDArray], acquisitions: Iterable[float], times: NDArray
+    expectations: list[Qobj], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
     """Extract probabilities from expectations.
 

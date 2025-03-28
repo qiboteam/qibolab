@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from functools import cache, cached_property
 from typing import Literal, Optional, Union
 
@@ -21,16 +20,16 @@ from .operators import (
 )
 
 
-class DriveConfig(Config):
+class DriveEmulatorConfig(Config):
     """Configuration for an IQ channel."""
 
-    kind: Literal["drive"] = "drive"
+    kind: Literal["drive-emulator"] = "drive-emulator"
 
     frequency: float
     """Frequency of drive."""
     rabi_frequency: float = 1
     """Rabi frequency [GHz]"""
-    scale_factor: float = 10
+    scale_factor: float = 1
     """Scaling factor."""
 
 
@@ -104,18 +103,13 @@ class QubitPair(Config):
         )
 
 
-@dataclass
-class QubitDrive:
+class QubitDrive(Model):
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
     """Drive pulse."""
-    frequency: float
-    """Drive frequency."""
-    rabi_frequency: float
-    """Rabi frequency."""
-    scale_factor: float
-    """Scaling factor."""
+    config: DriveEmulatorConfig
+    """Drive emulator configuration."""
     n: int
     """Transmon levels."""
     sampling_rate: float = 1
@@ -138,14 +132,18 @@ class QubitDrive:
 
     @property
     def omega(self):
-        return 2 * np.pi * self.rabi_frequency
+        return 2 * np.pi * self.config.frequency / giga
+
+    @property
+    def rabi_omega(self):
+        return 2 * np.pi * self.config.rabi_frequency / giga
 
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
-        phi = 2 * np.pi * self.frequency * t + self.pulse.relative_phase + phase
+        phi = self.omega * t + self.pulse.relative_phase + phase
         return (
             self.omega
-            * self.scale_factor
+            * self.config.scale_factor
             * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
         )
 
@@ -216,14 +214,16 @@ class HamiltonianConfig(Config):
     @property
     def hamiltonian(self) -> Qobj:
         """Time independent part of Hamiltonian."""
-        ham = sum(
+        single_qubit_terms = sum(
             [
                 self._embed_operator(qubit.operator(self.transmon_levels), i)
                 for i, qubit in self.single_qubit.items()
             ]
         )
-        ham += sum(pair.operator(self.transmon_levels) for pair in self.pairs.values())
-        return ham
+        two_qubit_terms = sum(
+            pair.operator(self.transmon_levels) for pair in self.pairs.values()
+        )
+        return single_qubit_terms + two_qubit_terms
 
     @property
     def dissipation(self) -> Qobj:
@@ -243,15 +243,12 @@ def waveform(
     pulse: Union[Pulse, Delay], channel: Config, level: int
 ) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
-    # mapping IqConfig -> QubitDrive
-    if not isinstance(channel, DriveConfig):
+    if not isinstance(channel, DriveEmulatorConfig):
         return None
     if isinstance(pulse, Pulse):
         return QubitDrive(
             pulse=pulse,
-            frequency=channel.frequency / giga,
-            rabi_frequency=channel.rabi_frequency / giga,
-            scale_factor=channel.scale_factor,
+            config=channel,
             n=level,
         )
     if isinstance(pulse, Delay):
