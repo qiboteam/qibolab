@@ -130,7 +130,7 @@ class Gaussian(BaseEnvelope):
         return gaussian(samples, _samples_sigma(self.rel_sigma, samples))
 
 
-class GaussianSquare(BaseEnvelope):
+class GaussianSquareQibolab(BaseEnvelope):
     r"""Rectangular envelope with Gaussian rise and fall.
 
     .. math::
@@ -139,26 +139,29 @@ class GaussianSquare(BaseEnvelope):
     """
 
     kind: Literal["gaussian_square"] = "gaussian_square"
+    risefall: int
+    sigma: float
+        
+    def width(self, samples):
+        return  samples - 2* self.risefall
 
-    rel_sigma: float
-    """Relative Gaussian standard deviation.
-
-    In units of the interval duration.
-    """
-    width: float
-    """Length of the flat portion."""
-
-    def i(self, samples: int) -> Waveform:
+    @staticmethod
+    def _gaussian(x, mu, sigma):
+        return (
+            np.exp(-np.power((x - mu) / sigma, 2.0) / 2)
+        )
+        
+    def i(self, samples: int):
         """Generate a Gaussian envelope, with a flat central window."""
-
-        pulse = np.ones(samples)
-        u, hw = samples / 2, self.width / 2
-        ts = np.arange(samples)
-        tails = (ts < (u - hw)) | ((u + hw) < ts)
-        pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, samples))
-
-        return pulse
-
+        width = self.width(samples)
+        x_rise = np.arange(0, self.risefall,1)
+        rise = self._gaussian(x_rise, mu = self.risefall, sigma = self.sigma)
+        plateau = np.ones(width) * rise[-1]
+        fall_time = self.risefall + width
+        x_fall = np.arange(fall_time+1, samples+1,1)
+        fall = self._gaussian(x_fall, mu = fall_time, sigma = self.sigma)
+        wave = np.concatenate([rise, plateau, fall]) - rise[0]
+        return wave / np.max(wave)
 
 class Drag(BaseEnvelope):
     """Derivative Removal by Adiabatic Gate (DRAG) pulse envelope.
