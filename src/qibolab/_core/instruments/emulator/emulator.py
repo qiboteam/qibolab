@@ -299,8 +299,7 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
                     continue
                 return pulse(t, index, cumulative_phase)
             cumulative_time += pulse_duration
-            # mirror rule used when compiling
-            cumulative_phase -= pulse_phase
+            cumulative_phase += pulse_phase
         return 0
 
     return time
