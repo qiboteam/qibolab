@@ -34,11 +34,19 @@ def test_integration_mode(platform):
     assert result[acq_handle].shape == (2,)
     np.testing.assert_allclose(result[acq_handle][1], 0, atol=1e-2)
 
+    with pytest.raises(ValueError):
+        platform.execute(
+            [seq],
+            nshots=1000,
+            acquisition_type=AcquisitionType.RAW,
+            averaging_mode=AveragingMode.CYCLIC,
+        )
+
 
 def test_align_fail(platform):
-    seq = platform.natives.single_qubit[0].MZ()
-    seq += (platform.qubits[0].drive, Align())
-
+    q0 = platform.natives.single_qubit[0]
+    seq = q0.RX() | q0.MZ()
+    seq += [(platform.qubits[0].drive, Align())]
     with pytest.raises(ValueError):
         platform.execute([seq])
 
@@ -49,6 +57,13 @@ def test_sweepers(platform):
     ch, pulse = seq[0]
     sweeper = Sweeper(
         parameter=Parameter.amplitude, values=np.array([0, 1]), pulses=[pulse]
+    )
+    acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
+    res = platform.execute([seq], [[sweeper]], nshots=100)
+    assert res[acq_handle].shape == (100, 2)
+
+    sweeper = Sweeper(
+        parameter=Parameter.frequency, values=np.array([0, 1]), channels=[ch]
     )
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
     res = platform.execute([seq], [[sweeper]], nshots=100)
