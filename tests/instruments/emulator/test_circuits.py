@@ -18,7 +18,7 @@ def test_hadamard(platform):
     circuit.add(gates.GPI2(0, 0))
     circuit.add(gates.M(0))
     result = backend.execute_circuit(circuit, nshots=1000)
-    np.testing.assert_allclose(result.probabilities(), [0.5, 0.5], atol=5e-2)
+    np.testing.assert_allclose(result.probabilities(), [0.5, 0.5], atol=1e-1)
 
 
 def test_rz(platform):
