@@ -20,6 +20,7 @@ __all__ = [
     "Exponential",
     "Gaussian",
     "GaussianSquare",
+    "GaussianSquareRelative",
     "Drag",
     "Iir",
     "Snz",
@@ -151,6 +152,29 @@ class GaussianSquare(BaseEnvelope):
         gaussian_pulse = gaussian(2*self.risefall+1, std = self.sigma)
         plateau = np.ones(width) * gaussian_pulse[self.risefall]
         wave = np.concatenate([gaussian_pulse[:self.risefall], plateau, gaussian_pulse[self.risefall+1:]]) 
+        wave -= wave[0]
+        return wave / np.max(wave)
+
+class GaussianSquareRelative(BaseEnvelope):
+    r"""Rectangular envelope with Gaussian rise and fall.
+
+    .. math::
+
+        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
+    """
+
+    kind: Literal["gaussian_square_relative"] = "gaussian_square_relative"
+    rel_risefall: float = 0
+    rel_sigma: float = 0
+        
+    def i(self, samples: int):
+        """Generate a Gaussian envelope, with a flat central window."""
+        sigma = self.rel_sigma * samples
+        risefall = int(self.rel_risefall * samples)
+        width = samples - 2*risefall
+        gaussian_pulse = gaussian(2*risefall+1, std = sigma)
+        plateau = np.ones(width) * gaussian_pulse[risefall]
+        wave = np.concatenate([gaussian_pulse[:risefall], plateau, gaussian_pulse[risefall+1:]]) 
         wave -= wave[0]
         return wave / np.max(wave)
 
@@ -378,6 +402,7 @@ Envelope = Annotated[
         Exponential,
         Gaussian,
         GaussianSquare,
+        GaussianSquareRelative,
         Drag,
         Iir,
         Snz,
