@@ -35,7 +35,6 @@ from qibolab._core.sweeper import ParallelSweepers
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
-    ModulatedVirtualZ,
     channel_operator,
     waveform,
 )
@@ -125,7 +124,7 @@ class EmulatorController(Controller):
                 if isinstance(ev, (Acquisition, Readout)):
                     acq[ev.id] = time
                 if isinstance(ev, Align):
-                    raise ValueError("Align not support in emulator.")
+                    raise ValueError("Align not supported in emulator.")
                 time += ev.duration
         return acq
 
@@ -295,12 +294,10 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
             if cumulative_time <= t < cumulative_time + pulse_duration:
                 relative_time = t - cumulative_time
                 index = int(relative_time)  # TODO: pass sampling rate
-                if isinstance(pulse, ModulatedVirtualZ):
-                    continue
                 return pulse(t, index, cumulative_phase)
             cumulative_time += pulse_duration
             cumulative_phase += pulse_phase
-        return 0
+        return 0  # pragma: no cover
 
     return time
 
