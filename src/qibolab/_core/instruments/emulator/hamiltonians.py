@@ -4,12 +4,13 @@ from typing import Literal, Optional, Union
 
 import numpy as np
 from pydantic import Field
+from qibo.config import raise_error
 from qutip import Qobj
 from scipy.constants import giga
 
 from ...components import Config, IqConfig
 from ...identifier import QubitId, TransitionId
-from ...pulses import Delay, Pulse, VirtualZ
+from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .operators import (
     dephasing,
@@ -74,7 +75,7 @@ class Qubit(Config):
 
 
 @dataclass
-class QubitDrive:
+class ModulatedDrive:
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
@@ -83,6 +84,8 @@ class QubitDrive:
     """Drive frequency."""
     n: int
     """Transmon levels."""
+    phase: float = 0
+    """Drive has zero virtual z phase."""
     sampling_rate: float = 1
     """Sampling rate."""
 
@@ -95,11 +98,6 @@ class QubitDrive:
     def duration(self):
         """Duration of the pulse."""
         return self.pulse.duration
-
-    @property
-    def phase(self):
-        """Virtual Z phase."""
-        return 0
 
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
@@ -136,10 +134,11 @@ class ModulatedVirtualZ(Model):
     """Duration is 0 for virtual Z."""
 
     def __call__(self, t: float, sample: int, phase: float) -> float:
-        raise NotImplementedError
+        """Delay waveform."""
+        raise_error(ValueError, "VirtualZ doesn't have waveform.")
 
 
-Modulated = Union[QubitDrive, ModulatedDelay, ModulatedVirtualZ]
+Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
 
 
 class HamiltonianConfig(Config):
@@ -171,16 +170,14 @@ class HamiltonianConfig(Config):
         ]
 
 
-def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int
-) -> Optional[Modulated]:
+def waveform(pulse: PulseLike, config: Config, level: int) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
-    # mapping IqConfig -> QubitDrive
-    if not isinstance(channel, IqConfig):
+    # mapping IqConfig -> ModulatedDrive
+    if not isinstance(config, IqConfig):
         return None
     if isinstance(pulse, Pulse):
-        frequency = channel.frequency
-        return QubitDrive(pulse=pulse, frequency=frequency / giga, n=level)
+        frequency = config.frequency
+        return ModulatedDrive(pulse=pulse, frequency=frequency / giga, n=level)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
