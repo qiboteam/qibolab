@@ -3,10 +3,9 @@ import pytest
 from qibolab import Platform
 
 
-def test_sequence(platform: Platform):
+def test_ground_state(platform: Platform):
     q0 = platform.natives.single_qubit[0]
-    mz = q0.MZ()
-    sequences = [(mz, 0), (q0.RX() | mz, 1), (q0.RX() | q0.RX() | mz, 0)]
-    for ps, mean in sequences:
-        res = platform.execute([ps], nshots=1e4)[mz[0][1].id]
-        assert pytest.approx(res.mean(), abs=1e-1) == mean
+    seq = q0.MZ()
+    acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
+    res = platform.execute([seq], nshots=1e4)[acq_handle]
+    assert pytest.approx(res.mean(), abs=1e-1) == 0

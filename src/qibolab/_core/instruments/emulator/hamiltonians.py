@@ -7,11 +7,10 @@ from pydantic import Field
 from qutip import Qobj
 from scipy.constants import giga
 
-from qibolab._core.serialize import Model
-
 from ...components import Config, IqConfig
 from ...identifier import QubitId, TransitionId
 from ...pulses import Delay, Pulse, VirtualZ
+from ...serialize import Model
 from .operators import (
     dephasing,
     probability,
