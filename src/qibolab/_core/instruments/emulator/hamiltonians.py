@@ -27,8 +27,8 @@ class DriveEmulatorConfig(Config):
 
     frequency: float
     """Frequency of drive."""
-    rabi_frequency: float = 1
-    """Rabi frequency [GHz]"""
+    rabi_frequency: float = 1e9
+    """Rabi frequency [Hz]"""
     scale_factor: float = 1
     """Scaling factor."""
 
