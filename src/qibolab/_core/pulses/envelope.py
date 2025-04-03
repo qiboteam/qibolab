@@ -268,25 +268,29 @@ class Snz(BaseEnvelope):
     kind: Literal["snz"] = "snz"
 
     t_idling: int
-    """Fraction of interval where idling."""
+    """Absolute idling time."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
-    def i(self, samples: int):
+    def i(self, samples: int) -> Waveform:
         """I.
 
         .. todo::
 
             Add docstring
         """
+        assert samples > self.t_idling, "Number of samples shorter than the idling time."
+        assert (samples - self.t_idling) % 2 == 0, "The total duration of the square pulses should be even." 
+
         square_pulse_duration = int((samples - self.t_idling) / 2 - 1)
+        square_pulse = np.ones(square_pulse_duration)
         return np.concatenate(
             [
-                np.ones(square_pulse_duration),
+                square_pulse,
                 [self.b_amplitude],
                 np.zeros(self.t_idling),
                 [-1 * self.b_amplitude],
-                -1 * np.ones(square_pulse_duration),
+                -1 * square_pulse,
             ]
         )
 
