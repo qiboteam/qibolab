@@ -275,9 +275,19 @@ class Snz(BaseEnvelope):
     def i(self, samples: int) -> Waveform:
         """I.
 
-        .. todo::
+        .. math::
 
-            Add docstring
+            \Phi(t) = 
+            \begin{cases}
+            1 & \text{for } 0 \leq t < \tau \\
+            b & \text{for } t = \tau \\
+            0 & \text{for } \tau < t < \tau + \tau_{idle}\\
+            b & \text{for } t = \tau + \tau_{idle}\\
+            -1 & \text{for } \tau + \tau_{idle} < t \leq 2\tau + \tau_{idle} \\
+            \end{cases}.
+
+        Where $\tau$ is the duration of the square pulse.
+
         """
         assert samples > self.t_idling, "Number of samples shorter than the idling time."
         assert (samples - self.t_idling) % 2 == 0, "The total duration of the square pulses should be even." 
