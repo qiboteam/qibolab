@@ -272,15 +272,24 @@ class Snz(BaseEnvelope):
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
-    def i(self, samples: int) :
+    def i(self, samples: int):
         """I.
 
         .. todo::
 
             Add docstring
         """
-        square_pulse_duration = int((samples - self.t_idling)/2 - 1 )
-        return np.concatenate([np.ones(square_pulse_duration), [self.b_amplitude], np.zeros(self.t_idling), [-1*self.b_amplitude], -1*np.ones(square_pulse_duration)])
+        square_pulse_duration = int((samples - self.t_idling) / 2 - 1)
+        return np.concatenate(
+            [
+                np.ones(square_pulse_duration),
+                [self.b_amplitude],
+                np.zeros(self.t_idling),
+                [-1 * self.b_amplitude],
+                -1 * np.ones(square_pulse_duration),
+            ]
+        )
+
 
 class ECap(BaseEnvelope):
     r"""ECap pulse envelope.
