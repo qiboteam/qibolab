@@ -136,17 +136,12 @@ We are now going to give an example on how to setup the `platform.py` file.
 
     # emulator / platform.py
 
-    import pathlib
 
-    from qibolab import ConfigKinds
-    from qibolab._core.components import IqChannel
-    from qibolab._core.instruments.emulator.emulator import EmulatorController
-    from qibolab._core.instruments.emulator.hamiltonians import HamiltonianConfig
-    from qibolab._core.platform import Platform
-    from qibolab._core.qubits import Qubit
+    from pathlib import Path
+    from qibolab import ConfigKinds, IqChannel, Platform, Qubit
+    from qibolab.instruments.emulator import EmulatorController, HamiltonianConfig
 
-    FOLDER = pathlib.Path(__file__).parent
-
+    FOLDER = Path.cwd()
     ConfigKinds.extend([HamiltonianConfig])
 
 
