@@ -267,31 +267,20 @@ class Snz(BaseEnvelope):
 
     kind: Literal["snz"] = "snz"
 
-    t_idling: float
+    t_idling: int
     """Fraction of interval where idling."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
-    def i(self, samples: int) -> Waveform:
+    def i(self, samples: int) :
         """I.
 
         .. todo::
 
             Add docstring
         """
-        # convert timings to samples
-        half_pulse_duration = (1 - self.t_idling) * samples / 2
-        aspan = np.sum(np.arange(samples) < half_pulse_duration)
-        idle = samples - 2 * (aspan + 1)
-        pulse = np.ones(samples)
-        pulse[-aspan:] = -1
-        # the aspan + 1 sample is B (and so the aspan + 1 + idle + 1), indexes are 0-based
-        pulse[aspan] = self.b_amplitude
-        pulse[aspan + 1 + idle] = -self.b_amplitude
-        # set idle time to 0
-        pulse[aspan + 1 : aspan + 1 + idle] = 0
-        return pulse
-
+        square_pulse_duration = int((samples - self.t_idling)/2 - 1 )
+        return np.concatenate([np.ones(square_pulse_duration), [self.b_amplitude], np.zeros(self.t_idling), [-1*self.b_amplitude], -1*np.ones(square_pulse_duration)])
 
 class ECap(BaseEnvelope):
     r"""ECap pulse envelope.
