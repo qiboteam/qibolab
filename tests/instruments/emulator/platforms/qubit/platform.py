@@ -1,8 +1,7 @@
 import pathlib
 
 from qibolab import ConfigKinds, IqChannel, Platform, Qubit
-from qibolab._core.instruments.emulator.emulator import EmulatorController
-from qibolab._core.instruments.emulator.hamiltonians import HamiltonianConfig
+from qibolab.instruments.emulator import EmulatorController, HamiltonianConfig
 
 FOLDER = pathlib.Path(__file__).parent
 
