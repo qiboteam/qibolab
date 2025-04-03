@@ -16,17 +16,17 @@ def test_integration_mode(platform):
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
     result = platform.execute(
         [seq],
-        nshots=1000,
+        nshots=NSHOTS,
         acquisition_type=AcquisitionType.INTEGRATION,
         averaging_mode=AveragingMode.SINGLESHOT,
     )
 
-    assert result[acq_handle].shape == (1000, 2)
+    assert result[acq_handle].shape == (NSHOTS, 2)
     np.testing.assert_allclose(result[acq_handle][:, 1].mean(), 0, atol=1e-2)
 
     result = platform.execute(
         [seq],
-        nshots=1000,
+        nshots=NSHOTS,
         acquisition_type=AcquisitionType.INTEGRATION,
         averaging_mode=AveragingMode.CYCLIC,
     )
@@ -37,7 +37,7 @@ def test_integration_mode(platform):
     with pytest.raises(ValueError):
         platform.execute(
             [seq],
-            nshots=1000,
+            nshots=NSHOTS,
             acquisition_type=AcquisitionType.RAW,
             averaging_mode=AveragingMode.CYCLIC,
         )
@@ -59,12 +59,12 @@ def test_sweepers(platform):
         parameter=Parameter.amplitude, values=np.array([0, 1]), pulses=[pulse]
     )
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
-    res = platform.execute([seq], [[sweeper]], nshots=100)
-    assert res[acq_handle].shape == (100, 2)
+    res = platform.execute([seq], [[sweeper]], nshots=NSHOTS)
+    assert res[acq_handle].shape == (NSHOTS, 2)
 
     sweeper = Sweeper(
         parameter=Parameter.frequency, values=np.array([0, 1]), channels=[ch]
     )
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
-    res = platform.execute([seq], [[sweeper]], nshots=100)
-    assert res[acq_handle].shape == (100, 2)
+    res = platform.execute([seq], [[sweeper]], nshots=NSHOTS)
+    assert res[acq_handle].shape == (NSHOTS, 2)
