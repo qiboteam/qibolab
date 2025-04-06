@@ -125,6 +125,7 @@ NORMALIZERS = {
     Parameter.frequency: normalize_frequency,
     Parameter.amplitude: normalize_amplitude,
     Parameter.relative_phase: normalize_phase,
+    Parameter.phase: normalize_phase,
     Parameter.duration_interpolated: normalize_duration,
 }
 """Functions to normalize sweeper values.
@@ -138,6 +139,7 @@ SWEEPER_METHODS = {
     Parameter.duration: _duration,
     Parameter.duration_interpolated: _duration_interpolated,
     Parameter.relative_phase: _relative_phase,
+    Parameter.phase: _relative_phase,
     Parameter.offset: _offset,
 }
 """Methods that return part of QUA program to be used inside the loop."""
