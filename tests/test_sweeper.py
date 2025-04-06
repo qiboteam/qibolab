@@ -19,6 +19,9 @@ def test_sweeper_pulses(parameter):
     if parameter in Parameter.channels():
         with pytest.raises(ValueError, match="channels"):
             _ = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
+    elif parameter is Parameter.phase:
+        with pytest.raises(TypeError):
+            _ = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
     else:
         sweeper = Sweeper(parameter=parameter, values=parameter_range, pulses=[pulse])
         assert sweeper.parameter is parameter
