@@ -31,6 +31,14 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
             qua.wait(duration, element)
 
 
+def _virtualz(pulse: VirtualZ, element: str, parameters: Parameters):
+    if parameters.phase is not None:
+        phase = parameters.phase
+    else:
+        phase = normalize_phase(pulse.phase)
+    qua.frame_rotation_2pi(phase, element)
+
+
 def _play_multiple_waveforms(element: str, parameters: Parameters):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     assert not parameters.interpolated
@@ -97,15 +105,15 @@ def play(args: ExecutionArguments):
         element = str(channel_id)
         op = operation(pulse)
         params = args.parameters[pulse.id]
-        if isinstance(pulse, Delay):
-            _delay(pulse, element, params)
-        elif isinstance(pulse, Pulse):
+        if isinstance(pulse, Pulse):
             _play(op, element, params)
         elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
+        elif isinstance(pulse, Delay):
+            _delay(pulse, element, params)
         elif isinstance(pulse, VirtualZ):
-            qua.frame_rotation_2pi(normalize_phase(pulse.phase), element)
+            _virtualz(pulse, element, params)
         elif isinstance(pulse, Align) and pulse.id not in processed_aligns:
             channel_ids = args.sequence.pulse_channels(pulse.id)
             qua.align(*(str(ch) for ch in channel_ids))
