@@ -40,7 +40,7 @@ class Qubit(Model):
             x
             for x in (
                 [getattr(self, ch) for ch in ["probe", "acquisition", "drive", "flux"]]
-                + list(self.drive_qudits.values())
+                + list(self.drive_extra.values())
             )
             if x is not None
         ]

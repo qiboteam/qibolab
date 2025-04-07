@@ -168,7 +168,7 @@ These channels encompass distinct types, each serving a specific purpose:
 - acquisition (measurement acquisition from qubits to controller)
 - drive
 - flux
-- drive_qudits (additional drive channels at different frequencies used to probe higher-level transition)
+- drive_extra (additional drive channels at different frequencies used to probe higher-level transition)
 
 Some channel types are optional because not all hardware platforms require them.
 For example, flux channels are typically relevant only for flux tunable qubits.
