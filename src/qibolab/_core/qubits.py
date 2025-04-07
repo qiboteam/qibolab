@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 
 from pydantic import ConfigDict, Field
 
@@ -23,8 +23,8 @@ class Qubit(Model):
 
     drive: DefaultChannelType = None
     """Ouput channel, to drive the qubit state."""
-    drive_qudits: Annotated[dict[TransitionId, ChannelId], False] = Field(
-        default_factory=dict
+    drive_extra: Annotated[dict[Union[TransitionId, QubitId], ChannelId], False] = (
+        Field(default_factory=dict)
     )
     """Output channels collection, to drive non-qubit transitions."""
     flux: DefaultChannelType = None
