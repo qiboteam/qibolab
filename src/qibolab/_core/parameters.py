@@ -226,7 +226,6 @@ class Parameters(Model):
 
 
 QubitMap = dict[QubitId, Qubit]
-QubitPairMap = dict[QubitPairId, Qubit]
 InstrumentMap = dict[InstrumentId, Instrument]
 
 
@@ -236,7 +235,6 @@ class Hardware(Model):
     instruments: InstrumentMap
     qubits: QubitMap
     couplers: QubitMap = Field(default_factory=dict)
-    qubit_pairs: QubitPairMap = Field(default_factory=dict)
 
 
 def _gate_channel(qubit: Qubit, gate: str) -> str:
@@ -244,7 +242,7 @@ def _gate_channel(qubit: Qubit, gate: str) -> str:
     if gate in ("RX", "RX90", "CNOT"):
         return qubit.drive
     if gate == "RX12":
-        return qubit.drive_qudits[(1, 2)]
+        return qubit.drive_extra[(1, 2)]
     if gate == "MZ":
         return qubit.acquisition
     if gate in ("CP", "CZ", "iSWAP"):
