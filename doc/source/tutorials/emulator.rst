@@ -5,7 +5,7 @@ In this section we are going to explain how to setup a platform for pulse emulat
 and how to use it in Qibolab. To setup a platform we first recommend to have a look at
 :ref:`tutorial_platform`.
 
-We are now going to explain a few differences which are necessary to build an emulation
+We are now going to explain a few distinctive features/elements of an emulation
 platform. All parameters related to the Hamiltonian to be simulated are coded directly in the JSON file under
 the section ``configs``. Here is an example
 
@@ -147,14 +147,8 @@ We are now going to give an example on how to setup the `platform.py` file.
 
     def create() -> Platform:
         """Create a dummy platform using the dummy instrument."""
-        qubits = {}
-        channels = {}
-
-        for q in range(1):
-            qubits[q] = qubit = Qubit.default(q)
-            channels |= {
-                qubit.drive: IqChannel(mixer=None, lo=None),
-            }
+        qubits = {Qubit.default(q) for q in range(1)}
+        channels = {qubit.drive: IqChannel(mixer=None, lo=None) for qubit in qubits.values()}
 
         # register the instruments
         instruments = {
