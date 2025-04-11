@@ -148,7 +148,9 @@ We are now going to give an example on how to setup the `platform.py` file.
     def create() -> Platform:
         """Create a dummy platform using the dummy instrument."""
         qubits = {Qubit.default(q) for q in range(1)}
-        channels = {qubit.drive: IqChannel(mixer=None, lo=None) for qubit in qubits.values()}
+        channels = {
+            qubit.drive: IqChannel(mixer=None, lo=None) for qubit in qubits.values()
+        }
 
         # register the instruments
         instruments = {
