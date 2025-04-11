@@ -663,9 +663,9 @@ where :math:`a (a^\dagger)` are the destruction (creation) operators for the tra
 :math:`\omega_q` is the transmon frequency, :math:`\alpha / 2 \pi` is the anharmonicity of the transmon and :math:`\Omega(t)` is a time-dependent
 term for driving the transmon.
 
-The readout pulses parameters are ignored, given that the Hamiltonian doesn't include a resonator, except for the duration
-which is used to determine for how long the system should be evolved. The results retrieved by the emulator correspond to the time
-when the readout pulse is played.
+The readout pulses parameters are ignored, given that the Hamiltonian doesn't include a resonator. The only information
+used when the readout pulse is placed in the sequence which is necessary to determine for how long the system should be evolved.
+The results retrieved by the emulator correspond to the time when the readout pulse is played.
 
 Measurements are performed by measuring the probability of each transmon state available. In the case of two levels we return the probability
 of finding the transmon in either :math:`\ket{0}` or :math:`\ket{1}`. When ``AveragingMode.SINGLESHOT`` is used samples are generated from the probabilities
@@ -678,7 +678,8 @@ computed previously. If ``AveragingMode.CYCLIC`` the following weighted average 
 where :math:`p_i` is the probability corresponding to state :math:`\ket{i}`, and :math:`N` are the transmon levels available.
 
 The emulator supports ``AcquisitionType.DISCRIMINATION``. We also provide a way of retrieving information with ``AcquisitionType.INTEGRATION``
-by encoding into the :math:`I` component the probabilities and on :math:`Q` we simply add some noise. This could be enough to get some meaningful results
-by computing the magnitude of the signal :math:`\sqrt{I^2 + Q^2}`.
+by encoding into the :math:`I` component the probabilities and while the :math:`Q` component is set at 0.
+We add a Gaussian noise both on :math:`I` and :math:`Q`.
+This should be enough to get some meaningful results by computing the magnitude of the signal :math:`\sqrt{I^2 + Q^2}`.
 
 Example of platforms using the emulator are available `here <https://https://github.com/qiboteam/qibolab/tree/emulator-tests/tests/instruments/emulator/platforms/>`_.

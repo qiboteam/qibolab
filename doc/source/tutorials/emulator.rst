@@ -127,7 +127,7 @@ We are defining an Hamiltonian with a transmon with two-levels, with a frequency
 anharmoncity :math:`\alpha/2 \pi = - 200 \ \text{MHz}`,
 with :math:`T_1 = 1 \  \mu s` and :math:`T_2 = 1.9 \ \mu s`.
 Everything else follows the usual Qibolab conventions. Keep in mind that you still need to define also a readout pulse even if all
-parameters except for the duration are ignored in the current emulator.
+parameters ignored in the current emulator except when the readout pulse is played.
 
 We are now going to give an example on how to setup the `platform.py` file.
 
@@ -137,16 +137,14 @@ We are now going to give an example on how to setup the `platform.py` file.
     # emulator / platform.py
 
 
-    from pathlib import Path
-    from qibolab import ConfigKinds, IqChannel, Platform, Qubit
+    from qibolab import ConfigKinds, IqChannel, Hardware, Qubit
     from qibolab.instruments.emulator import EmulatorController, HamiltonianConfig
 
-    FOLDER = Path.cwd()
     ConfigKinds.extend([HamiltonianConfig])
 
 
-    def create() -> Platform:
-        """Create a dummy platform using the dummy instrument."""
+    def create() -> Hardware:
+        """Create an emulator hardware."""
         qubits = {Qubit.default(q) for q in range(1)}
         channels = {
             qubit.drive: IqChannel(mixer=None, lo=None) for qubit in qubits.values()
@@ -157,8 +155,7 @@ We are now going to give an example on how to setup the `platform.py` file.
             "dummy": EmulatorController(address="0.0.0.0", channels=channels),
         }
 
-        return Platform.load(
-            path=FOLDER,
+        return Hardware(
             instruments=instruments,
             qubits=qubits,
         )
@@ -166,13 +163,3 @@ We are now going to give an example on how to setup the `platform.py` file.
 We can observe that we need to allocate an object of type ``EmulatorController`` where we load the channels.
 Note that in order to enables the config to support the Hamiltonian configuration we are adding it explicitly
 in the statement ``ConfigKinds.extend([HamiltonianConfig])``.
-
-If the platform and the configuration have been coded correctly it is possible to use the emulation
-platform exactly as any other platform. If we store both the ``parameters.json`` and ``platform.py`` in a directory named
-``emulator`` we can load it using
-
-.. code-block:: python
-
-    from qibolab import create_platform
-
-    platform = create_platform("emulator")
