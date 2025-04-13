@@ -1,6 +1,7 @@
 """Testing basic circuits with emulator platforms."""
 
 import numpy as np
+import pytest
 from qibo import Circuit, construct_backend, gates
 
 
@@ -9,7 +10,7 @@ def test_measurement(platform):
     circuit = Circuit(1)
     circuit.add(gates.M(0))
     result = backend.execute_circuit(circuit, nshots=1000)
-    np.testing.assert_allclose(result.probabilities(), [1, 0], atol=5e-2)
+    pytest.approx(result.probabilities(), abs=5e-2) == [1, 0]
 
 
 def test_hadamard(platform):
@@ -18,7 +19,7 @@ def test_hadamard(platform):
     circuit.add(gates.GPI2(0, 0))
     circuit.add(gates.M(0))
     result = backend.execute_circuit(circuit, nshots=1000)
-    np.testing.assert_allclose(result.probabilities(), [0.5, 0.5], atol=1e-1)
+    pytest.approx(result.probabilities(), abs=1e-1) == [0.5, 0.5]
 
 
 def test_rz(platform):
@@ -29,4 +30,4 @@ def test_rz(platform):
     circuit.add(gates.GPI2(0, np.pi / 2))
     circuit.add(gates.M(0))
     result = backend.execute_circuit(circuit, nshots=1000)
-    np.testing.assert_allclose(result.probabilities(), [0, 1], atol=5e-2)
+    pytest.approx(result.probabilities(), abs=5e-2) == [0, 1]

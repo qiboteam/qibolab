@@ -22,7 +22,7 @@ def test_integration_mode(platform):
     )
 
     assert result[acq_handle].shape == (NSHOTS, 2)
-    np.testing.assert_allclose(result[acq_handle][:, 1].mean(), 0, atol=1e-2)
+    pytest.approx(result[acq_handle][:, 1].mean(), abs=1e-2) == 0
 
     result = platform.execute(
         [seq],
@@ -32,7 +32,7 @@ def test_integration_mode(platform):
     )
 
     assert result[acq_handle].shape == (2,)
-    np.testing.assert_allclose(result[acq_handle][1], 0, atol=1e-2)
+    pytest.approx(result[acq_handle][1], abs=1e-2) == 0
 
     with pytest.raises(ValueError):
         platform.execute(
