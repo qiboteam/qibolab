@@ -286,6 +286,31 @@ class HamiltonianConfig(Config):
         return len(self.single_qubit)
 
     @property
+<<<<<<< HEAD
+=======
+    def identity(self) -> list[Qobj]:
+        """Identiy as list of identity for each qubit."""
+        return self.nqubits * [qeye(self.transmon_levels)]
+
+    def _embed_operator(self, operator: Qobj, index: int) -> Qobj:
+        """Embed operator in the tensor product space."""
+        space = self.identity
+        space[index] = operator
+        return tensor(space)
+
+    def _qubit_qubit_coupling(self, pair: QubitPairId) -> Qobj:
+        """Qubit-qubit coupling operator."""
+        q0, q1 = pair
+        return self._embed_operator(
+            transmon_destroy(self.transmon_levels), q0
+        ) * self._embed_operator(
+            transmon_create(self.transmon_levels), q1
+        ) + self._embed_operator(
+            transmon_create(self.transmon_levels), q0
+        ) * self._embed_operator(transmon_destroy(self.transmon_levels), q1)
+
+    @property
+>>>>>>> 149b658d (refactor: Hardcode qubit-qubit coupling)
     def initial_state(self):
         """Initial state as ground state of the system."""
         return tensor_product(
@@ -305,7 +330,11 @@ class HamiltonianConfig(Config):
             for i, qubit in self.single_qubit.items()
         )
         two_qubit_terms = sum(
+<<<<<<< HEAD
             expand(pair.operator(self.transmon_levels), self.dims, list(pair_id))
+=======
+            pair.operator(self._qubit_qubit_coupling(pair_id))
+>>>>>>> 149b658d (refactor: Hardcode qubit-qubit coupling)
             for pair_id, pair in self.pairs.items()
         )
         return single_qubit_terms + two_qubit_terms
