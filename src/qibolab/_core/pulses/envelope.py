@@ -268,7 +268,7 @@ class Snz(BaseEnvelope):
     kind: Literal["snz"] = "snz"
 
     t_idling: int
-    """Absolute idling time."""
+    """Absolute idling time, in number of samples."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
