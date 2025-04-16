@@ -32,7 +32,11 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
 
 
 def _virtualz(pulse: VirtualZ, element: str, parameters: Parameters):
-    phase = parameters.phase if parameters.phase is not None else normalize_phase(pulse.phase)
+    phase = (
+        parameters.phase
+        if parameters.phase is not None
+        else normalize_phase(pulse.phase)
+    )
     qua.frame_rotation_2pi(phase, element)
 
 
