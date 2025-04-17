@@ -3,14 +3,14 @@ from typing import Literal, Optional, Union
 
 import numpy as np
 from pydantic import Field
+from qibo.config import raise_error
 from qutip import Qobj, qeye, tensor
 from scipy.constants import giga
 
-from qibolab._core.serialize import Model
-
 from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
-from ...pulses import Delay, Pulse, VirtualZ
+from ...pulses import Delay, Pulse, PulseLike, VirtualZ
+from ...serialize import Model
 from .operators import (
     dephasing,
     relaxation,
@@ -18,6 +18,8 @@ from .operators import (
     transmon_create,
     transmon_destroy,
 )
+
+__all__ = ["DriveEmulatorConfig", "HamiltonianConfig"]
 
 
 class DriveEmulatorConfig(Config):
@@ -96,7 +98,7 @@ class QubitPair(Config):
         return 2 * np.pi * self.coupling / giga * op
 
 
-class QubitDrive(Model):
+class ModulatedDrive(Model):
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
@@ -105,6 +107,8 @@ class QubitDrive(Model):
     """Drive emulator configuration."""
     n: int
     """Transmon levels."""
+    phase: float = 0
+    """Drive has zero virtual z phase."""
     sampling_rate: float = 1
     """Sampling rate."""
 
@@ -117,11 +121,6 @@ class QubitDrive(Model):
     def duration(self):
         """Duration of the pulse."""
         return self.pulse.duration
-
-    @property
-    def phase(self):
-        """Virtual Z phase."""
-        return 0
 
     @property
     def omega(self):
@@ -170,10 +169,11 @@ class ModulatedVirtualZ(Model):
     """Duration is 0 for virtual Z."""
 
     def __call__(self, t: float, sample: int, phase: float) -> float:
-        raise NotImplementedError
+        """Delay waveform."""
+        raise_error(ValueError, "VirtualZ doesn't have waveform.")
 
 
-Modulated = Union[QubitDrive, ModulatedDelay, ModulatedVirtualZ]
+Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
 
 
 class HamiltonianConfig(Config):
@@ -244,18 +244,12 @@ class HamiltonianConfig(Config):
         )
 
 
-def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int
-) -> Optional[Modulated]:
+def waveform(pulse: PulseLike, config: Config, level: int) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
-    if not isinstance(channel, DriveEmulatorConfig):
+    if not isinstance(config, DriveEmulatorConfig):
         return None
     if isinstance(pulse, Pulse):
-        return QubitDrive(
-            pulse=pulse,
-            config=channel,
-            n=level,
-        )
+        return ModulatedDrive(pulse=pulse, config=config, n=level)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
