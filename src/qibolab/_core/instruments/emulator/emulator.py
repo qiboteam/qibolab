@@ -33,9 +33,11 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import (
+    DriveEmulatorConfig,
     HamiltonianConfig,
     Modulated,
     channel_operator,
+    number_operator,
     waveform,
 )
 from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
@@ -196,9 +198,29 @@ class EmulatorController(Controller):
         """
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate)
-
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
+
+        config_update = {}
+        for qubit in config.single_qubit:
+            try:
+                config_update.update(
+                    {
+                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                            qubit
+                        ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
+                    }
+                )
+            except KeyError:
+                config_update.update(
+                    {
+                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                            qubit
+                        ].detuned_frequency(0)
+                    }
+                )
+        config = config.replace(update=config_update)
+
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
@@ -277,14 +299,19 @@ def hamiltonian(
     qubit: int,
 ) -> tuple[Qobj, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = hamiltonian._embed_operator(channel_operator(n), qubit)
+    operator = hamiltonian._embed_operator(
+        channel_operator(n)
+        if isinstance(config, DriveEmulatorConfig)
+        else number_operator(n),
+        qubit,
+    )
     waveforms = (
-        waveform(pulse, config, n)
+        waveform(pulse, config, n, hamiltonian.single_qubit[qubit].detuned_frequency)
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
-    return (op, [w for w in waveforms if w is not None])
+    return (operator, [w for w in waveforms if w is not None])
 
 
 def hamiltonians(
