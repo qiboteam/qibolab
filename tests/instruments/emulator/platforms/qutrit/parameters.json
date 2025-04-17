@@ -28,12 +28,15 @@
     "kind": "hamiltonian"
   },
     "0/drive": {
-      "kind": "iq",
+      "kind": "drive-emulator",
+      "scale_factor": 0.1591549,
       "frequency": 5e9
     },
     "0/drive12": {
-      "kind": "iq",
+      "kind": "drive-emulator",
+      "scale_factor": 0.1591549,
       "frequency": 4.8e9
+
     },
   "0/probe": {
     "kind": "iq",

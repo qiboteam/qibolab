@@ -1,9 +1,11 @@
 """Testing hamiltonians functions."""
 
+import numpy as np
 import pytest
 
-from qibolab._core.components import AcquisitionConfig, DcConfig, IqConfig
+from qibolab._core.components import AcquisitionConfig, DcConfig
 from qibolab._core.instruments.emulator.hamiltonians import (
+    DriveEmulatorConfig,
     ModulatedDelay,
     ModulatedDrive,
     ModulatedVirtualZ,
@@ -30,11 +32,11 @@ def test_dummy_waveform():
 )
 @pytest.mark.parametrize("level", [1, 2])
 def test_iq_waveform(pulse, level):
-    iq_config = IqConfig(frequency=5e9)
+    iq_config = DriveEmulatorConfig(frequency=5e9)
     modulated = waveform(pulse=pulse, config=iq_config, level=level)
     if isinstance(pulse, Pulse):
         assert isinstance(modulated, ModulatedDrive)
-        assert pytest.approx(modulated.frequency) == 5
+        assert pytest.approx(modulated.omega) == 2 * np.pi * 5
     if isinstance(pulse, Delay):
         assert isinstance(modulated, ModulatedDelay)
     if isinstance(pulse, VirtualZ):

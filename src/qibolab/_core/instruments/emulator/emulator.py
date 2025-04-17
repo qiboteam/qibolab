@@ -38,7 +38,7 @@ from .hamiltonians import (
     channel_operator,
     waveform,
 )
-from .utils import shots
+from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
 
 __all__ = ["EmulatorController"]
 
@@ -88,35 +88,53 @@ class EmulatorController(Controller):
         result for the execution of this single sequence, thus suitable
         to be returned as is.
         """
-        # probabilities for the |0>, |1> ... |n> state, for each swept value
+        # probabilities for states in computational basis
         probabilities = self._sweep(sequence, configs, sweepers)
         assert options.nshots is not None
-        # extract results from probabilities, according to the requested averaging mode
-        averaged = (
-            shots(probabilities, options.nshots)
-            if options.averaging_mode == AveragingMode.SINGLESHOT
-            # weighted averaged
-            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
+        probabilities = np.moveaxis(probabilities, -3, 0)
+        probabilities = apply_to_last_two_axes(
+            calculate_probabilities_density_matrix,
+            probabilities,
+            tuple(configs["hamiltonian"].single_qubit),
+            configs["hamiltonian"].nqubits,
+            configs["hamiltonian"].transmon_levels,
         )
+        averaged = shots(probabilities, options.nshots)
         # move measurements dimension to the front, getting ready for extraction
-        res = np.moveaxis(averaged, -1, 0)
+        measurements = np.moveaxis(averaged, 1, 0)
 
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            measurements = res
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.001)
-        else:
-            raise ValueError(
-                f"Acquisition type '{options.acquisition_type}' unsupported"
+        results = {}
+        # introduce cached measurements to avoid losing correlations
+        cache_measurements = {}
+        for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
+            qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+            cache_measurements.setdefault(sample, measurements[i])
+            assert configs["hamiltonian"].nqubits < 3, (
+                "Results cannot be retrieved for more than 2 transmons"
             )
-        # match measurements with their IDs, in order to already comply with the general
-        # format established by the `Controller` interface
-        measurement_ids = self._acquisitions(sequence).keys()
-        return dict(zip(measurement_ids, list(measurements)))
+            res = (
+                np.array(
+                    [
+                        divmod(val, configs["hamiltonian"].transmon_levels)[qubit]
+                        for val in cache_measurements[sample].flatten()
+                    ]
+                ).reshape(measurements[i].shape)
+                if configs["hamiltonian"].nqubits == 2
+                else cache_measurements[sample]
+            )
+
+            if options.acquisition_type is AcquisitionType.INTEGRATION:
+                res = np.stack((res, np.zeros_like(res)), axis=-1)
+                res = np.random.normal(res, scale=0.001)
+
+            if options.averaging_mode == AveragingMode.CYCLIC:
+                res = np.mean(res, axis=0)
+
+            results[ro_id] = res
+        return results
 
     def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute acqusitions' times."""
+        """Compute acquisitions' times."""
         acq = {}
         for ch in sequence.channels:
             time = 0
@@ -181,21 +199,20 @@ class EmulatorController(Controller):
 
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = sum(config.hamiltonian)
+        hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
             hamiltonian += time_hamiltonian
-
         results = mesolve(
             hamiltonian,
             config.initial_state,
             tlist_,
             config.dissipation,
-            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
         )
-
         return extract_probabilities(
-            results.expect, self._acquisitions(sequence_).values(), tlist_
+            results.states,
+            self._acquisitions(sequence_).values(),
+            tlist_,
         )
 
     def _pulse_hamiltonian(
@@ -254,10 +271,13 @@ def tlist(
 
 
 def hamiltonian(
-    pulses: Iterable[PulseLike], config: Config, hamiltonian: HamiltonianConfig
+    pulses: Iterable[PulseLike],
+    config: Config,
+    hamiltonian: HamiltonianConfig,
+    qubit: int,
 ) -> tuple[Qobj, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = channel_operator(n)
+    op = hamiltonian._embed_operator(channel_operator(n), qubit)
     waveforms = (
         waveform(pulse, config, n)
         for pulse in pulses
@@ -271,8 +291,9 @@ def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
 ) -> Iterable[tuple[Qobj, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
+    # TODO: pass qubit in a better way
     return (
-        hamiltonian(sequence.channel(ch), configs[ch], hconfig)
+        hamiltonian(sequence.channel(ch), configs[ch], hconfig, int(ch[0]))
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig)
@@ -303,7 +324,7 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
 
 
 def extract_probabilities(
-    expectations: list[NDArray], acquisitions: Iterable[float], times: NDArray
+    expectations: list[Qobj], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
     """Extract probabilities from expectations.
 
@@ -313,6 +334,8 @@ def extract_probabilities(
     Then, it computes probabilities, based on the identified
     expectations.
     """
+    expectations = [x.full() for x in expectations]
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack(expectations, axis=-1)[samples]
+
+    return np.stack(expectations, axis=0)[samples]

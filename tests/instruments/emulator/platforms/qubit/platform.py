@@ -1,11 +1,15 @@
 import pathlib
 
 from qibolab import ConfigKinds, IqChannel, Platform, Qubit
-from qibolab.instruments.emulator import EmulatorController, HamiltonianConfig
+from qibolab.instruments.emulator import (
+    DriveEmulatorConfig,
+    EmulatorController,
+    HamiltonianConfig,
+)
 
 FOLDER = pathlib.Path(__file__).parent
 
-ConfigKinds.extend([HamiltonianConfig])
+ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig])
 
 
 def create() -> Platform:
