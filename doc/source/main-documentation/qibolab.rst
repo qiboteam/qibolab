@@ -641,3 +641,45 @@ It is possible to switch extractor when instantiating the :class:`qibolab.instru
     from qibolab.instruments.qrng import QRNG, ToeplitzExtractor
 
     qrng = QRNG(address="/dev/ttyACM0", extractor=ToeplitzExtractor())
+
+
+.. _main_doc_emulator:
+
+Simulation of QPU platforms
+---------------------------
+
+Although Qibolab is mostly dedicated to providing hardware drivers for self-hosted quantum computing setups,
+it is also possible to simulate the outcome of a pulse sequence with an emulator.
+The emulator currently available is based on `QuTiP <https://qutip.org/>`_, the simulation is performed
+by solving the master equation for a given Hamiltonian including dissipation using `mesolve <https://qutip.readthedocs.io/en/qutip-5.1.x/apidoc/solver.html#qutip.solver.mesolve.mesolve>`_.
+
+Qibolab currently support a model consisting of a single transmon with a drive term whose Hamiltonian is the following
+
+.. math::
+
+    \frac{H}{\hbar} =  a^\dagger a \omega_q + \frac{\alpha}{2} a^\dagger a^\dagger a a - i \Omega(t) (a - a^\dagger)
+
+where :math:`a (a^\dagger)` are the destruction (creation) operators for the transmon,
+:math:`\omega_q` is the transmon frequency, :math:`\alpha / 2 \pi` is the anharmonicity of the transmon and :math:`\Omega(t)` is a time-dependent
+term for driving the transmon.
+
+The readout pulses parameters are ignored, given that the Hamiltonian doesn't include a resonator. The only information
+used when the readout pulse is placed in the sequence which is necessary to determine for how long the system should be evolved.
+The results retrieved by the emulator correspond to the time when the readout pulse is played.
+
+Measurements are performed by measuring the probability of each transmon state available. In the case of two levels we return the probability
+of finding the transmon in either :math:`\ket{0}` or :math:`\ket{1}`. When ``AveragingMode.SINGLESHOT`` is used samples are generated from the probabilities
+computed previously. If ``AveragingMode.CYCLIC`` the following weighted average is returned
+
+.. math::
+
+    \mu = \sum_{i=0}^{N} i  p_i
+
+where :math:`p_i` is the probability corresponding to state :math:`\ket{i}`, and :math:`N` are the transmon levels available.
+
+The emulator supports ``AcquisitionType.DISCRIMINATION``. We also provide a way of retrieving information with ``AcquisitionType.INTEGRATION``
+by encoding into the :math:`I` component the probabilities and while the :math:`Q` component is set at 0.
+We add a Gaussian noise both on :math:`I` and :math:`Q`.
+This should be enough to get some meaningful results by computing the magnitude of the signal :math:`\sqrt{I^2 + Q^2}`.
+
+Example of platforms using the emulator are available `here <https://https://github.com/qiboteam/qibolab/tree/emulator-tests/tests/instruments/emulator/platforms/>`_.
