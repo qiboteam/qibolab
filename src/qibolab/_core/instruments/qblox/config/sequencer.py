@@ -55,6 +55,7 @@ class SequencerConfig(Model):
     thresholded_acq_threshold: Optional[float] = None
     demod_en_acq: Optional[bool] = None
     nco_freq: Optional[int] = None
+    mod_en_awg: Optional[bool] = None
 
     @classmethod
     def build(
@@ -80,9 +81,6 @@ class SequencerConfig(Model):
         if sequence.is_empty:
             return cls(module=module)
 
-        # modulation, only disable for QCM - always used for flux pulses
-        module["mod_en_awg"] = rf
-
         # conditional configurations
         cfg = cls(
             module=module,
@@ -100,6 +98,8 @@ class SequencerConfig(Model):
             sequence=json.loads(sequence.model_dump_json()),
             # configure the sequencers to synchronize
             sync_en=True,
+            # modulation, only disable for QCM - always used for flux pulses
+            mod_en_awg=rf,
         )
 
         # acquisition
