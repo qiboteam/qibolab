@@ -3,6 +3,7 @@ import pathlib
 from collections.abc import Callable
 from typing import Optional
 
+import numpy as np
 import numpy.typing as npt
 import pytest
 
@@ -14,6 +15,11 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 ORIGINAL_PLATFORMS = os.environ.get(PLATFORMS, "")
 TESTING_PLATFORM_NAMES = ["dummy"]
 """Platforms used for testing without access to real instruments."""
+
+
+@pytest.fixture(scope="module", autouse=True)
+def seed():
+    np.random.seed(42)
 
 
 def pytest_addoption(parser):
