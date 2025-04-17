@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 
 from pydantic import ConfigDict, Field
 
@@ -23,8 +23,8 @@ class Qubit(Model):
 
     drive: DefaultChannelType = None
     """Ouput channel, to drive the qubit state."""
-    drive_qudits: Annotated[dict[TransitionId, ChannelId], False] = Field(
-        default_factory=dict
+    drive_extra: Annotated[dict[Union[TransitionId, QubitId], ChannelId], False] = (
+        Field(default_factory=dict)
     )
     """Output channels collection, to drive non-qubit transitions."""
     flux: DefaultChannelType = None
@@ -40,7 +40,7 @@ class Qubit(Model):
             x
             for x in (
                 [getattr(self, ch) for ch in ["probe", "acquisition", "drive", "flux"]]
-                + list(self.drive_qudits.values())
+                + list(self.drive_extra.values())
             )
             if x is not None
         ]
@@ -61,10 +61,3 @@ class Qubit(Model):
         if channels is None:
             channels = [name for name, f in cls.model_fields.items() if f.metadata[0]]
         return cls(**{ch: f"{name}/{ch}" for ch in channels}, **kwargs)
-
-
-class QubitPair(Model):
-    """Represent a two-qubit interaction."""
-
-    drive: Optional[ChannelId] = None
-    """Output channel, for cross-resonance driving."""

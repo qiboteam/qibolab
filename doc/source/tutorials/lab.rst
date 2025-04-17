@@ -1,3 +1,5 @@
+.. _tutorial_platform:
+
 How to connect Qibolab to your lab?
 ===================================
 

@@ -7,7 +7,7 @@ import numpy.typing as npt
 from pydantic import model_validator
 
 from .identifier import ChannelId
-from .pulses import PulseLike
+from .pulses import PulseLike, VirtualZ
 from .serialize import Model
 
 __all__ = ["Parameter", "ParallelSweepers", "Sweeper"]
@@ -24,6 +24,7 @@ class Parameter(Enum):
     duration = (auto(), _PULSE)
     duration_interpolated = (auto(), _PULSE)
     relative_phase = (auto(), _PULSE)
+    phase = (auto(), _PULSE)
     offset = (auto(), _CHANNEL)
 
     @classmethod
@@ -95,6 +96,10 @@ class Sweeper(Model):
             raise ValueError(
                 f"Cannot create a sweeper for {self.parameter} without specifying pulses."
             )
+        if self.parameter is Parameter.phase and not all(
+            isinstance(pulse, VirtualZ) for pulse in self.pulses
+        ):
+            raise TypeError("Cannot create a phase sweeper on non-VirtualZ pulses.")
 
         if self.range is not None:
             object.__setattr__(self, "values", np.arange(*self.range))

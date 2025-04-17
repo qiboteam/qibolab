@@ -36,7 +36,6 @@ from .hamiltonians import (
     DriveEmulatorConfig,
     HamiltonianConfig,
     Modulated,
-    ModulatedVirtualZ,
     channel_operator,
     number_operator,
     waveform,
@@ -145,7 +144,7 @@ class EmulatorController(Controller):
                 if isinstance(ev, (Acquisition, Readout)):
                     acq[ev.id] = time
                 if isinstance(ev, Align):
-                    raise ValueError("Align not support in emulator.")
+                    raise ValueError("Align not supported in emulator.")
                 time += ev.duration
         return acq
 
@@ -202,14 +201,26 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
 
-        config = config.replace(
-            update={
-                f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                    qubit
-                ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
-                for qubit in config.single_qubit
-            }
-        )
+        config_update = {}
+        for qubit in config.single_qubit:
+            try:
+                config_update.update(
+                    {
+                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                            qubit
+                        ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
+                    }
+                )
+            except KeyError:
+                config_update.update(
+                    {
+                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                            qubit
+                        ].detuned_frequency(0)
+                    }
+                )
+        config = config.replace(update=config_update)
+
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
@@ -331,11 +342,8 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
             if cumulative_time <= t < cumulative_time + pulse_duration:
                 relative_time = t - cumulative_time
                 index = int(relative_time)  # TODO: pass sampling rate
-                if isinstance(pulse, ModulatedVirtualZ):
-                    continue
                 return pulse(t, index, cumulative_phase)
             cumulative_time += pulse_duration
-            # mirror rule used when compiling
             cumulative_phase += pulse_phase
         return 0
 
