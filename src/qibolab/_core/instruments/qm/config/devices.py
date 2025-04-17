@@ -1,15 +1,19 @@
 from dataclasses import dataclass, field
-from typing import Generic, Literal, TypeVar, Union
+from typing import Literal, Union
 
 from qibolab._core.components import OscillatorConfig
 
-from ..components import OctaveOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
+from ..components import (
+    MwFemOscillatorConfig,
+    OctaveOscillatorConfig,
+    QmAcquisitionConfig,
+)
 from ..components.configs import OctaveOutputModes
 
 __all__ = [
-    "AnalogOutput",
-    "FemAnalogOutput",
     "ModuleTypes",
+    "MwFemOutput",
+    "MwFemInput",
     "OctaveOutput",
     "OctaveInput",
     "Controller",
@@ -17,48 +21,6 @@ __all__ = [
     "ControllerId",
     "Controllers",
 ]
-
-
-DEFAULT_INPUTS = {"1": {"offset": 0}, "2": {"offset": 0}}
-"""Default controller config section.
-
-Inputs are always registered to avoid issues with automatic mixer
-calibration when using Octaves.
-"""
-
-V = TypeVar("V")
-
-
-class PortDict(Generic[V], dict[str, V]):
-    """Dictionary that automatically converts keys to strings.
-
-    Used to register input and output ports to controllers and Octaves
-    in the QUA config.
-    """
-
-    def __setitem__(self, key: Union[str, int], value: V):
-        super().__setitem__(str(key), value)
-
-
-@dataclass(frozen=True)
-class AnalogOutput:
-    offset: float = 0.0
-    filter: dict[str, float] = field(default_factory=dict)
-
-    @classmethod
-    def from_config(cls, config: OpxOutputConfig):
-        return cls(offset=config.offset, filter=config.filter)
-
-
-@dataclass(frozen=True)
-class FemAnalogOutput(AnalogOutput):
-    output_mode: Literal["direct", "amplified"] = "direct"
-
-    @classmethod
-    def from_config(cls, config: OpxOutputConfig):
-        return cls(
-            offset=config.offset, filter=config.filter, output_mode=config.output_mode
-        )
 
 
 @dataclass(frozen=True)
@@ -69,6 +31,50 @@ class AnalogInput:
     @classmethod
     def from_config(cls, config: QmAcquisitionConfig):
         return cls(offset=config.offset, gain_db=config.gain)
+
+
+@dataclass
+class MwFemOutput:
+    upconverters: dict[int, dict[Literal["frequency"], float]]
+    band: int
+    sampling_rate: float
+    full_scale_power_dbm: int
+
+    @classmethod
+    def from_config(cls, config: MwFemOscillatorConfig):
+        upconverters = {config.upconverter: {"frequency": config.frequency}}
+        return cls(
+            upconverters=upconverters,
+            band=config.band,
+            sampling_rate=config.sampling_rate,
+            full_scale_power_dbm=config.power,
+        )
+
+    def update(self, config: MwFemOscillatorConfig):
+        assert self.band == config.band
+        assert self.sampling_rate == config.sampling_rate
+        assert self.full_scale_power_dbm == config.power
+        if config.upconverter not in self.upconverters:
+            self.upconverters[config.upconverter] = {"frequency": config.frequency}
+        else:
+            assert (
+                config.frequency == self.upconverters[config.upconverter]["frequency"]
+            )
+
+
+@dataclass(frozen=True)
+class MwFemInput:
+    downconverter_frequency: float
+    band: int
+    sampling_rate: float
+
+    @classmethod
+    def from_config(cls, config: MwFemOscillatorConfig):
+        return cls(
+            downconverter_frequency=config.frequency,
+            band=config.band,
+            sampling_rate=config.sampling_rate,
+        )
 
 
 @dataclass(frozen=True)
@@ -101,20 +107,32 @@ ModuleTypes = Literal["opx1", "LF", "MW"]
 class Controller:
     type: ModuleTypes = "opx1"
     """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
-    analog_outputs: PortDict[dict[str, AnalogOutput]] = field(default_factory=PortDict)
-    digital_outputs: PortDict[dict[str, dict]] = field(default_factory=PortDict)
-    analog_inputs: PortDict[dict[str, AnalogInput]] = field(
-        default_factory=lambda: PortDict(DEFAULT_INPUTS)
+    analog_outputs: dict[int, dict] = field(default_factory=dict)
+    digital_outputs: dict[int, dict] = field(default_factory=dict)
+    analog_inputs: dict[int, Union[AnalogInput, MwFemInput]] = field(
+        default_factory=dict
     )
+
+    def _set_default_inputs(self):
+        """Add default inputs in controller config section.
+
+        Inputs are always registered to avoid issues with automatic mixer
+        calibration when using Octaves.
+        """
+        for port in range(1, 3):
+            if port not in self.analog_inputs:
+                self.analog_inputs[port] = {"offset": 0}
 
     def add_octave_output(self, port: int):
         # TODO: Add offset here?
-        self.analog_outputs[2 * port - 1] = AnalogOutput()
-        self.analog_outputs[2 * port] = AnalogOutput()
+        self._set_default_inputs()
+        self.analog_outputs[2 * port - 1] = {"offset": 0}
+        self.analog_outputs[2 * port] = {"offset": 0}
 
         self.digital_outputs[2 * port - 1] = {}
 
     def add_octave_input(self, port: int, config: QmAcquisitionConfig):
+        self._set_default_inputs()
         self.analog_inputs[2 * port - 1] = self.analog_inputs[2 * port] = (
             AnalogInput.from_config(config)
         )
@@ -123,14 +141,14 @@ class Controller:
 @dataclass
 class Opx1000:
     type: Literal["opx1000"] = "opx1000"
-    fems: dict[str, Controller] = field(default_factory=PortDict)
+    fems: dict[int, Controller] = field(default_factory=dict)
 
 
 @dataclass
 class Octave:
     connectivity: Union[str, tuple[str, int]]
-    RF_outputs: PortDict[dict[str, OctaveOutput]] = field(default_factory=PortDict)
-    RF_inputs: PortDict[dict[str, OctaveInput]] = field(default_factory=PortDict)
+    RF_outputs: dict[int, OctaveOutput] = field(default_factory=dict)
+    RF_inputs: dict[int, OctaveInput] = field(default_factory=dict)
 
     def __post_init__(self):
         if "/" in self.connectivity:
@@ -152,9 +170,10 @@ def process_controller_id(id: ControllerId):
     """
     if isinstance(id, tuple):
         con, fem = id
-        return con, str(fem)
+        return con, fem
     if "/" in id:
-        return id.split("/")
+        con, fem = id.split("/")
+        return con, int(fem)
     return id, None
 
 
