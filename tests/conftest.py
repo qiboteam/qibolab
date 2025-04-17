@@ -17,7 +17,7 @@ TESTING_PLATFORM_NAMES = ["dummy"]
 """Platforms used for testing without access to real instruments."""
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def seed():
     np.random.seed(42)
 
