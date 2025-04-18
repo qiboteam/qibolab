@@ -1,6 +1,11 @@
 """Useful operators in qutip for n levels transmon."""
 
-from qutip import Qobj, basis, create, destroy, tensor
+from qutip import Qobj, QobjEvo, basis, create, destroy, mesolve, qeye, tensor
+
+Operator = Qobj
+"""Generic operator."""
+TimeDependentOperator = QobjEvo
+"""Generic time dependent operator."""
 
 
 def transmon_create(n: int) -> Qobj:
@@ -11,6 +16,16 @@ def transmon_create(n: int) -> Qobj:
 def transmon_destroy(n: int) -> Qobj:
     """Destruction operator for n levels system."""
     return destroy(n)
+
+
+def identity(n: int) -> Qobj:
+    """Identity operator for n levels system."""
+    return qeye(n)
+
+
+def tensor_product(*args) -> Qobj:
+    """Tensor product of a list of operators using Qutip."""
+    return tensor(*args)
 
 
 def relaxation(final_state: int, initial_state: int, n: int) -> Qobj:
@@ -37,3 +52,13 @@ def probability(state: int, n: int) -> Qobj:
 def state(state, n) -> Qobj:
     """State as tensor for qutip."""
     return tensor(basis(n, state))
+
+
+def evolve(
+    hamiltonian: Operator,
+    initial_state: Operator,
+    time: list[float],
+    collapse_operators: list[Operator] = None,
+) -> Operator:
+    """Evolve initial state with hamiltonian."""
+    return mesolve(hamiltonian, initial_state, time, collapse_operators)
