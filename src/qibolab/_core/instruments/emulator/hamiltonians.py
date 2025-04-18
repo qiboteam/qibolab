@@ -4,7 +4,6 @@ from typing import Literal, Optional, Union
 import numpy as np
 from pydantic import Field
 from qibo.config import raise_error
-from qutip import Qobj, qeye, tensor
 from scipy.constants import giga
 
 from ...components import Config
@@ -12,9 +11,12 @@ from ...identifier import QubitId, QubitPairId, TransitionId
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .operators import (
+    Operator,
     dephasing,
+    identity,
     relaxation,
     state,
+    tensor_product,
     transmon_create,
     transmon_destroy,
 )
@@ -93,7 +95,7 @@ class QubitPair(Config):
     coupling: float
     """Qubit-qubit coupling."""
 
-    def operator(self, op: Qobj):
+    def operator(self, op: Operator):
         """Time independent operator."""
         return 2 * np.pi * self.coupling / giga * op
 
@@ -141,7 +143,7 @@ class ModulatedDrive(Model):
 
 
 @cache
-def channel_operator(n: int) -> Qobj:
+def channel_operator(n: int) -> Operator:
     """Time independent operator for channel coupling."""
     # TODO: add distinct operators for distinct channel types
     return -1j * (transmon_destroy(n) - transmon_create(n))
@@ -189,17 +191,17 @@ class HamiltonianConfig(Config):
         return len(self.single_qubit)
 
     @property
-    def identity(self) -> list[Qobj]:
+    def identity(self) -> list[Operator]:
         """Identiy as list of identity for each qubit."""
-        return self.nqubits * [qeye(self.transmon_levels)]
+        return self.nqubits * [identity(self.transmon_levels)]
 
-    def _embed_operator(self, operator: Qobj, index: int) -> Qobj:
+    def _embed_operator(self, operator: Operator, index: int) -> Operator:
         """Embed operator in the tensor product space."""
         space = self.identity
         space[index] = operator
-        return tensor(space)
+        return tensor_product(space)
 
-    def _qubit_qubit_coupling(self, pair: QubitPairId) -> Qobj:
+    def _qubit_qubit_coupling(self, pair: QubitPairId) -> Operator:
         """Qubit-qubit coupling operator."""
         q0, q1 = pair
         return self._embed_operator(
@@ -213,10 +215,12 @@ class HamiltonianConfig(Config):
     @property
     def initial_state(self):
         """Initial state as ground state of the system."""
-        return tensor(state(0, self.transmon_levels) for i in range(self.nqubits))
+        return tensor_product(
+            state(0, self.transmon_levels) for i in range(self.nqubits)
+        )
 
     @property
-    def hamiltonian(self) -> Qobj:
+    def hamiltonian(self) -> Operator:
         """Time independent part of Hamiltonian."""
         single_qubit_terms = sum(
             [
@@ -231,7 +235,7 @@ class HamiltonianConfig(Config):
         return single_qubit_terms + two_qubit_terms
 
     @property
-    def dissipation(self) -> Qobj:
+    def dissipation(self) -> Operator:
         """Dissipation operators for the hamiltonian.
 
         They are going to be passed to mesolve as collapse operators."""

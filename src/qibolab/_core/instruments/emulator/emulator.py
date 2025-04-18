@@ -8,7 +8,6 @@ from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from qutip import Qobj, QobjEvo, mesolve
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -35,9 +34,11 @@ from qibolab._core.sweeper import ParallelSweepers
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
+    Operator,
     channel_operator,
     waveform,
 )
+from .operators import TimeDependentOperator, evolve
 from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
 
 __all__ = ["EmulatorController"]
@@ -203,7 +204,7 @@ class EmulatorController(Controller):
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
             hamiltonian += time_hamiltonian
-        results = mesolve(
+        results = evolve(
             hamiltonian,
             config.initial_state,
             tlist_,
@@ -217,14 +218,14 @@ class EmulatorController(Controller):
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> Optional[QobjEvo]:
+    ) -> Optional[TimeDependentOperator]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         channels = [
             [operator, channel_time(waveforms)]
             for operator, waveforms in hamiltonians(sequence, configs)
         ]
-        return QobjEvo(channels) if len(channels) > 0 else None
+        return TimeDependentOperator(channels) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -275,7 +276,7 @@ def hamiltonian(
     config: Config,
     hamiltonian: HamiltonianConfig,
     qubit: int,
-) -> tuple[Qobj, list[Modulated]]:
+) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
     op = hamiltonian._embed_operator(channel_operator(n), qubit)
     waveforms = (
@@ -289,7 +290,7 @@ def hamiltonian(
 
 def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
-) -> Iterable[tuple[Qobj, list[Modulated]]]:
+) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
     # TODO: pass qubit in a better way
     return (
@@ -324,7 +325,7 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
 
 
 def extract_probabilities(
-    expectations: list[Qobj], acquisitions: Iterable[float], times: NDArray
+    expectations: list[Operator], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
     """Extract probabilities from expectations.
 
