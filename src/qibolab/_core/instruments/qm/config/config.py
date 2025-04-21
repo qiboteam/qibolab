@@ -90,8 +90,11 @@ class Configuration:
         else:
             keys = list(config.model_fields.keys())
             keys.remove("kind")
-        values = config.model_dump()
-        controller.analog_outputs[channel.port] = {k: values[k] for k in keys}
+        config_values = config.model_dump()
+        values = {k: config_values[k] for k in keys}
+        if config.sampling_rate > 1e9:
+            del values["upsampling_mode"]
+        controller.analog_outputs[channel.port] = values
         self.elements[id] = DcElement.from_channel(channel)
 
     def configure_mw_fem_line(
@@ -211,7 +214,7 @@ class Configuration:
     ):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse, max_voltage)
+            self.pulses[op] = self.register_waveforms(pulse, sampling_rate, max_voltage)
         self.elements[element].operations[op] = op
         return op
 
