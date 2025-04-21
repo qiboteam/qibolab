@@ -6,10 +6,6 @@ import numpy as np
 from qibolab._core.pulses import Pulse, Rectangular
 from qibolab._core.pulses.modulation import rotate, wrap_phase
 
-SAMPLING_RATE = 1
-"""Sampling rate of Quantum Machines OPX+ in GSps."""
-
-
 __all__ = [
     "operation",
     "Waveform",
@@ -32,7 +28,7 @@ def baked_duration(duration: int) -> int:
     4ns. Waveforms that don't satisfy these constraints are padded with
     zeros.
     """
-    return int(np.maximum((duration + 3) // 4 * 4, 16))
+    return int(np.maximum((duration + 3.5) // 4 * 4, 16))
 
 
 @dataclass(frozen=True)
@@ -41,7 +37,9 @@ class ConstantWaveform:
     type: str = "constant"
 
     @classmethod
-    def from_pulse(cls, pulse: Pulse, max_voltage: float) -> dict[str, "Waveform"]:
+    def from_pulse(
+        cls, pulse: Pulse, sampling_rate: float, max_voltage: float
+    ) -> dict[str, "Waveform"]:
         phase = wrap_phase(pulse.relative_phase)
         voltage_amp = pulse.amplitude * max_voltage
         return {
@@ -56,11 +54,13 @@ class ArbitraryWaveform:
     type: str = "arbitrary"
 
     @classmethod
-    def from_pulse(cls, pulse: Pulse, max_voltage: float) -> dict[str, "Waveform"]:
-        original_waveforms = pulse.envelopes(SAMPLING_RATE) * max_voltage
+    def from_pulse(
+        cls, pulse: Pulse, sampling_rate: float, max_voltage: float
+    ) -> dict[str, "Waveform"]:
+        original_waveforms = pulse.envelopes(sampling_rate) * max_voltage
         rotated_waveforms = rotate(original_waveforms, pulse.relative_phase)
         new_duration = baked_duration(pulse.duration)
-        pad_len = new_duration - int(pulse.duration)
+        pad_len = sampling_rate * new_duration - len(rotated_waveforms[0])
         baked_waveforms = np.pad(rotated_waveforms, ((0, 0), (0, pad_len)))
         return {
             "I": cls(baked_waveforms[0].tolist()),
@@ -71,7 +71,9 @@ class ArbitraryWaveform:
 Waveform = Union[ConstantWaveform, ArbitraryWaveform]
 
 
-def waveforms_from_pulse(pulse: Pulse, max_voltage: float) -> dict[str, Waveform]:
+def waveforms_from_pulse(
+    pulse: Pulse, sampling_rate: float, max_voltage: float
+) -> dict[str, Waveform]:
     """Register QM waveforms for a given pulse."""
     needs_baking = pulse.duration < 16 or pulse.duration % 4 != 0
     wvtype = (
@@ -79,7 +81,7 @@ def waveforms_from_pulse(pulse: Pulse, max_voltage: float) -> dict[str, Waveform
         if isinstance(pulse.envelope, Rectangular) and not needs_baking
         else ArbitraryWaveform
     )
-    return wvtype.from_pulse(pulse, max_voltage)
+    return wvtype.from_pulse(pulse, sampling_rate, max_voltage)
 
 
 @dataclass(frozen=True)

@@ -24,7 +24,7 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
         duration = parameters.duration + 1
         qua.wait(duration, element)
     else:
-        duration = parameters.duration / 4
+        duration = parameters.duration / (8 if parameters.doubled_samples else 4)
         with qua.if_(duration < 4):
             qua.wait(4, element)
         with qua.else_():
@@ -131,7 +131,13 @@ def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
 
     if parameter in INT_TYPE:
         variable = declare(int)
-        values = sweeper.values.astype(int)
+        if (
+            parameter is Parameter.duration
+            and abs(sweeper.values[1] - sweeper.values[0]) < 1
+        ):
+            values = (2 * sweeper.values).astype(int)
+        else:
+            values = sweeper.values.astype(int)
     else:
         variable = declare(fixed)
         values = sweeper.values
