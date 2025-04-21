@@ -43,7 +43,7 @@ class OpxOutputConfig(DcConfig):
     """
     output_mode: Literal["direct", "amplified"] = "direct"
     sampling_rate: float = DEFAULT_SAMPLING_RATE
-    upsampling_mode: Literal["mw", "pulsed"] = "mw"
+    upsampling_mode: Literal["mw", "pulse"] = "mw"
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
