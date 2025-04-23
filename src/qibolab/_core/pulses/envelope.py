@@ -267,30 +267,46 @@ class Snz(BaseEnvelope):
 
     kind: Literal["snz"] = "snz"
 
-    t_idling: float
-    """Fraction of interval where idling."""
+    t_idling: int
+    """Absolute idling time, in number of samples."""
     b_amplitude: float = 0.5
     """Relative B amplitude (wrt A)."""
 
     def i(self, samples: int) -> Waveform:
-        """I.
+        r"""I.
 
-        .. todo::
+        .. math::
 
-            Add docstring
+            \\Phi(t) =
+            \begin{cases}
+            1 & \text{for } 0 \\leq t < \tau \\
+            b & \text{for } t = \tau \\
+            0 & \text{for } \tau < t < \tau + \tau_{idle}\\
+            b & \text{for } t = \tau + \tau_{idle}\\
+            -1 & \text{for } \tau + \tau_{idle} < t \\leq 2\tau + \tau_{idle} \\
+            \\end{cases}.
+
+        Where $\tau$ is the duration of the square pulse.
+
         """
-        # convert timings to samples
-        half_pulse_duration = (1 - self.t_idling) * samples / 2
-        aspan = np.sum(np.arange(samples) < half_pulse_duration)
-        idle = samples - 2 * (aspan + 1)
-        pulse = np.ones(samples)
-        pulse[-aspan:] = -1
-        # the aspan + 1 sample is B (and so the aspan + 1 + idle + 1), indexes are 0-based
-        pulse[aspan] = self.b_amplitude
-        pulse[aspan + 1 + idle] = -self.b_amplitude
-        # set idle time to 0
-        pulse[aspan + 1 : aspan + 1 + idle] = 0
-        return pulse
+        assert samples > self.t_idling, (
+            "Number of samples shorter than the idling time."
+        )
+        assert (samples - self.t_idling) % 2 == 0, (
+            "The total duration of the square pulses should be even."
+        )
+
+        square_pulse_duration = int((samples - self.t_idling) / 2 - 1)
+        square_pulse = np.ones(square_pulse_duration)
+        return np.concatenate(
+            [
+                square_pulse,
+                [self.b_amplitude],
+                np.zeros(self.t_idling),
+                [-self.b_amplitude],
+                -square_pulse,
+            ]
+        )
 
 
 class ECap(BaseEnvelope):
