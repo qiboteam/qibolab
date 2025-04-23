@@ -24,17 +24,19 @@ def batch_shots(
     acquisition in an individual loop accounts for a single bin.
     """
     assert options.nshots is not None
-    bins = np.prod(options.bins(sweepers))
-    samples = max(
+
+    if options.averaging_mode is not AveragingMode.SINGLESHOT:
+        return [options.nshots]
+
+    bins = np.prod(options.bins(sweepers)[1:])
+    acquisitions = max(
         sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
         for pulses in sequence.by_channel.values()
     )
-    nfull, remainder = np.divmod(bins * samples, ACQUISITION_MEMORY)
-    return (
-        [ACQUISITION_MEMORY] * nfull + [remainder]
-        if options.averaging_mode is AveragingMode.SINGLESHOT
-        else [options.nshots]
-    )
+    per_shot_memory = bins * acquisitions
+    max_shots = ACQUISITION_MEMORY // per_shot_memory
+    nfull, remainder = np.divmod(options.nshots, max_shots)
+    return [max_shots] * nfull + [remainder]
 
 
 def concat_shots(
