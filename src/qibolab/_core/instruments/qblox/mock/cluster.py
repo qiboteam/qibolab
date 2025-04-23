@@ -39,6 +39,10 @@ class MockModule:
         return True
 
     @property
+    def is_rf_type(self) -> bool:
+        return True
+
+    @property
     def is_qrm_type(self) -> bool:
         return True
 
@@ -53,6 +57,7 @@ class MockModule:
             "register",
             "sequencers",
             "present",
+            "is_rf_type",
             "is_qrm_type",
             "snapshot",
         ]:
