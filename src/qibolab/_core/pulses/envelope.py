@@ -273,7 +273,7 @@ class Snz(BaseEnvelope):
     """Relative B amplitude (wrt A)."""
 
     def i(self, samples: int) -> Waveform:
-        """I.
+        r"""I.
 
         .. math::
 
