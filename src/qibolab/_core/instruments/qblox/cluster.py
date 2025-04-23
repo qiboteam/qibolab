@@ -97,13 +97,13 @@ class Cluster(Controller):
             # allowed memory
             psres = []
             for shots in batch_shots(ps, sweepers, options):
+                options_ = options.model_copy(update={"nshots": shots})
                 # first compile pulses and sweepers into Qblox sequences
                 assert_channels_exclusion(ps, self._probes)
                 sequences_ = compile(
                     ps,
                     sweepers,
-                    options,
-                    shots,
+                    options_,
                     self.sampling_rate,
                     lo_configs(self._los, configs),
                     time_of_flights(configs),
