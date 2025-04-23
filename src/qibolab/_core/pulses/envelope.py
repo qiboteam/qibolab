@@ -303,8 +303,8 @@ class Snz(BaseEnvelope):
                 square_pulse,
                 [self.b_amplitude],
                 np.zeros(self.t_idling),
-                [-1 * self.b_amplitude],
-                -1 * square_pulse,
+                [-self.b_amplitude],
+                -square_pulse,
             ]
         )
 
