@@ -195,7 +195,7 @@ class HamiltonianConfig(Config):
         """Identiy as list of identity for each qubit."""
         return self.nqubits * [identity(self.transmon_levels)]
 
-    def _embed_operator(self, operator: Operator, index: int) -> Operator:
+    def embed_operator(self, operator: Operator, index: int) -> Operator:
         """Embed operator in the tensor product space."""
         space = self.identity
         space[index] = operator
@@ -204,13 +204,13 @@ class HamiltonianConfig(Config):
     def _qubit_qubit_coupling(self, pair: QubitPairId) -> Operator:
         """Qubit-qubit coupling operator."""
         q0, q1 = pair
-        return self._embed_operator(
+        return self.embed_operator(
             transmon_destroy(self.transmon_levels), q0
-        ) * self._embed_operator(
+        ) * self.embed_operator(
             transmon_create(self.transmon_levels), q1
-        ) + self._embed_operator(
+        ) + self.embed_operator(
             transmon_create(self.transmon_levels), q0
-        ) * self._embed_operator(transmon_destroy(self.transmon_levels), q1)
+        ) * self.embed_operator(transmon_destroy(self.transmon_levels), q1)
 
     @property
     def initial_state(self):
@@ -224,7 +224,7 @@ class HamiltonianConfig(Config):
         """Time independent part of Hamiltonian."""
         single_qubit_terms = sum(
             [
-                self._embed_operator(qubit.operator(self.transmon_levels), i)
+                self.embed_operator(qubit.operator(self.transmon_levels), i)
                 for i, qubit in self.single_qubit.items()
             ]
         )
@@ -241,7 +241,7 @@ class HamiltonianConfig(Config):
         They are going to be passed to mesolve as collapse operators."""
         return sum(
             [
-                self._embed_operator(qubit.dissipation(self.transmon_levels), i)
+                self.embed_operator(qubit.dissipation(self.transmon_levels), i)
                 for i, qubit in self.single_qubit.items()
                 if not isinstance(qubit, list)
             ]
