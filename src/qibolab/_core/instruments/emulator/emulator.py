@@ -279,7 +279,7 @@ def hamiltonian(
     qubit: int,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = hamiltonian._embed_operator(channel_operator(n), qubit)
+    op = hamiltonian.embed_operator(channel_operator(n), qubit)
     waveforms = (
         waveform(pulse, config, n)
         for pulse in pulses
