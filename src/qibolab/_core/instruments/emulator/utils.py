@@ -38,15 +38,11 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
     return np.moveaxis(shots, -1, 0)
 
 
-def _order_probabilities(probs, qubits, nqubits):
+def _order_probabilities(probs, qubits):
     """Arrange probabilities according to the given `qubits ordering."""
-    unmeasured, reduced = [], {}
-    for i in range(nqubits):
-        if i in qubits:
-            reduced[i] = i - len(unmeasured)
-        else:
-            unmeasured.append(i)
-    return np.transpose(probs, [reduced.get(i) for i in qubits])
+    return np.transpose(
+        probs, [i for i, _ in sorted(enumerate(qubits), key=lambda t: t[1])]
+    )
 
 
 def calculate_probabilities_density_matrix(state, subsystems, nsubsystems, d):
@@ -63,7 +59,7 @@ def calculate_probabilities_density_matrix(state, subsystems, nsubsystems, d):
     probs = np.abs(np.einsum("abab->a", state))
     probs = np.reshape(probs, len(subsystems) * (d,))
 
-    return _order_probabilities(probs, subsystems, nsubsystems).ravel()
+    return _order_probabilities(probs, subsystems).ravel()
 
 
 def apply_to_last_two_axes(func, array, *args, **kwargs):
