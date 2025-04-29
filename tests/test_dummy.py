@@ -25,7 +25,7 @@ def test_dummy_execute_coupler_pulse(platform: Platform):
     pulse = Pulse(
         duration=30,
         amplitude=0.05,
-        envelope=GaussianSquare(rel_sigma=5, width=0.75),
+        envelope=GaussianSquare(risefall=5, sigma=0.15),
     )
     sequence.append((channel, pulse))
 
