@@ -143,7 +143,9 @@ class GaussianSquare(BaseEnvelope):
 
     kind: Literal["gaussian_square"] = "gaussian_square"
     risefall: int = 0
+    """Risefall time, in number of samples."""
     sigma: float = 0
+    """Gaussian standard deviation."""
         
     def width(self, samples):
         return  samples - 2* self.risefall
@@ -153,9 +155,9 @@ class GaussianSquare(BaseEnvelope):
         width = self.width(samples)
         gaussian_pulse = gaussian(2*self.risefall+1, std = self.sigma)
         plateau = np.ones(width) * gaussian_pulse[self.risefall]
-        wave = np.concatenate([gaussian_pulse[:self.risefall], plateau, gaussian_pulse[self.risefall+1:]]) 
-        wave -= wave[0]
-        return wave / np.max(wave)
+        pulse = np.concatenate([gaussian_pulse[:self.risefall], plateau, gaussian_pulse[self.risefall+1:]]) 
+        pulse -= pulse[0]
+        return pulse / np.max(pulse)
 
 
 class Drag(BaseEnvelope):
