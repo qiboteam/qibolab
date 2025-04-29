@@ -146,16 +146,22 @@ class GaussianSquare(BaseEnvelope):
     """Risefall time, in number of samples."""
     sigma: float = 0
     """Gaussian standard deviation."""
-        
+
     def width(self, samples):
-        return  samples - 2* self.risefall
-        
+        return samples - 2 * self.risefall
+
     def i(self, samples: int):
         """Generate a Gaussian envelope, with a flat central window."""
         width = self.width(samples)
-        gaussian_pulse = gaussian(2*self.risefall+1, std = self.sigma)
+        gaussian_pulse = gaussian(2 * self.risefall + 1, std=self.sigma)
         plateau = np.ones(width) * gaussian_pulse[self.risefall]
-        pulse = np.concatenate([gaussian_pulse[:self.risefall], plateau, gaussian_pulse[self.risefall+1:]]) 
+        pulse = np.concatenate(
+            [
+                gaussian_pulse[: self.risefall],
+                plateau,
+                gaussian_pulse[self.risefall + 1 :],
+            ]
+        )
         pulse -= pulse[0]
         return pulse / np.max(pulse)
 
