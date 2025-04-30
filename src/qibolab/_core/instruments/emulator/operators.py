@@ -18,14 +18,11 @@ def transmon_destroy(n: int) -> Qobj:
     return destroy(n)
 
 
-def identity(n: int) -> Qobj:
-    """Identity operator for n levels system."""
-    return qeye(n)
+identity = qeye
+"""Identity operator for n levels system."""
 
-
-def tensor_product(*args) -> Qobj:
-    """Tensor product of a list of operators using Qutip."""
-    return tensor(*args)
+tensor_product = tensor
+"""Tensor product of a list of operators using Qutip."""
 
 
 def relaxation(final_state: int, initial_state: int, n: int) -> Qobj:

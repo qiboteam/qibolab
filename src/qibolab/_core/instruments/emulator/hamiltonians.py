@@ -226,10 +226,8 @@ class HamiltonianConfig(Config):
     def hamiltonian(self) -> Operator:
         """Time independent part of Hamiltonian."""
         single_qubit_terms = sum(
-            [
-                self.embed_operator(qubit.operator(self.transmon_levels), i)
-                for i, qubit in self.single_qubit.items()
-            ]
+            self.embed_operator(qubit.operator(self.transmon_levels), i)
+            for i, qubit in self.single_qubit.items()
         )
         two_qubit_terms = sum(
             pair.operator(self._qubit_qubit_coupling(pair_id))
@@ -243,11 +241,9 @@ class HamiltonianConfig(Config):
 
         They are going to be passed to mesolve as collapse operators."""
         return sum(
-            [
-                self.embed_operator(qubit.dissipation(self.transmon_levels), i)
-                for i, qubit in self.single_qubit.items()
-                if not isinstance(qubit, list)
-            ]
+            self.embed_operator(qubit.dissipation(self.transmon_levels), i)
+            for i, qubit in self.single_qubit.items()
+            if not isinstance(qubit, list)
         )
 
 
