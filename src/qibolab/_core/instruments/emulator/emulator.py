@@ -89,20 +89,20 @@ class EmulatorController(Controller):
         result for the execution of this single sequence, thus suitable
         to be returned as is.
         """
-        # probabilities for states in computational basis
-        probabilities = self._sweep(sequence, configs, sweepers)
-        assert options.nshots is not None
-        probabilities = np.moveaxis(probabilities, -3, 0)
+        # states in computational basis
+        states = self._sweep(sequence, configs, sweepers)
         probabilities = apply_to_last_two_axes(
             calculate_probabilities_density_matrix,
-            probabilities,
+            states,
             tuple(configs["hamiltonian"].single_qubit),
             configs["hamiltonian"].nqubits,
             configs["hamiltonian"].transmon_levels,
         )
-        averaged = shots(probabilities, options.nshots)
+
+        assert options.nshots is not None
+        sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
         # move measurements dimension to the front, getting ready for extraction
-        measurements = np.moveaxis(averaged, 1, 0)
+        measurements = np.moveaxis(sampled, 1, 0)
 
         results = {}
         # introduce cached measurements to avoid losing correlations
