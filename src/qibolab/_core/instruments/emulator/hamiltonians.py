@@ -13,7 +13,7 @@ from ...serialize import Model
 from .operators import (
     Operator,
     dephasing,
-    identity,
+    expand,
     relaxation,
     state,
     tensor_product,
@@ -99,8 +99,15 @@ class QubitPair(Config):
     coupling: float
     """Qubit-qubit coupling."""
 
-    def operator(self, op: Operator):
+    def operator(self, n: int) -> Operator:
         """Time independent operator."""
+        op = tensor_product(
+            transmon_destroy(n),
+            transmon_create(n),
+        ) + tensor_product(
+            transmon_create(n),
+            transmon_destroy(n),
+        )
         return 2 * np.pi * self.coupling / giga * op
 
 
@@ -186,28 +193,6 @@ class HamiltonianConfig(Config):
         return len(self.single_qubit)
 
     @property
-    def identity(self) -> list[Operator]:
-        """Identiy as list of identity for each qubit."""
-        return self.nqubits * [identity(self.transmon_levels)]
-
-    def embed_operator(self, operator: Operator, index: int) -> Operator:
-        """Embed operator in the tensor product space."""
-        space = self.identity
-        space[index] = operator
-        return tensor_product(space)
-
-    def _qubit_qubit_coupling(self, pair: QubitPairId) -> Operator:
-        """Qubit-qubit coupling operator."""
-        q0, q1 = pair
-        return self.embed_operator(
-            transmon_destroy(self.transmon_levels), q0
-        ) * self.embed_operator(
-            transmon_create(self.transmon_levels), q1
-        ) + self.embed_operator(
-            transmon_create(self.transmon_levels), q0
-        ) * self.embed_operator(transmon_destroy(self.transmon_levels), q1)
-
-    @property
     def initial_state(self):
         """Initial state as ground state of the system."""
         return tensor_product(
@@ -215,14 +200,19 @@ class HamiltonianConfig(Config):
         )
 
     @property
+    def dims(self) -> list[int]:
+        """Dimensions of the system."""
+        return [self.transmon_levels] * self.nqubits
+
+    @property
     def hamiltonian(self) -> Operator:
         """Time independent part of Hamiltonian."""
         single_qubit_terms = sum(
-            self.embed_operator(qubit.operator(self.transmon_levels), i)
+            expand(qubit.operator(self.transmon_levels), self.dims, i)
             for i, qubit in self.single_qubit.items()
         )
         two_qubit_terms = sum(
-            pair.operator(self._qubit_qubit_coupling(pair_id))
+            expand(pair.operator(self.transmon_levels), self.dims, list(pair_id))
             for pair_id, pair in self.pairs.items()
         )
         return single_qubit_terms + two_qubit_terms
@@ -233,7 +223,7 @@ class HamiltonianConfig(Config):
 
         They are going to be passed to mesolve as collapse operators."""
         return sum(
-            self.embed_operator(qubit.dissipation(self.transmon_levels), i)
+            expand(qubit.dissipation(self.transmon_levels), self.dims, i)
             for i, qubit in self.single_qubit.items()
             if not isinstance(qubit, list)
         )

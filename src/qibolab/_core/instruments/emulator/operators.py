@@ -1,6 +1,16 @@
 """Useful operators in qutip for n levels transmon."""
 
-from qutip import Qobj, QobjEvo, basis, create, destroy, mesolve, qeye, tensor
+from qutip import (
+    Qobj,
+    QobjEvo,
+    basis,
+    create,
+    destroy,
+    expand_operator,
+    mesolve,
+    qeye,
+    tensor,
+)
 
 Operator = Qobj
 """Generic operator."""
@@ -25,6 +35,9 @@ identity = qeye
 
 tensor_product = tensor
 """Tensor product of a list of operators using Qutip."""
+
+expand = expand_operator
+"""Expand operator in larger Hilber space using Qutip."""
 
 
 def relaxation(final_state: int, initial_state: int, n: int) -> Qobj:
