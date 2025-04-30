@@ -38,7 +38,7 @@ from .hamiltonians import (
     Operator,
     waveform,
 )
-from .operators import TimeDependentOperator, evolve
+from .operators import TimeDependentOperator, evolve, expand
 from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
 
 __all__ = ["EmulatorController"]
@@ -278,9 +278,9 @@ def hamiltonian(
     qubit: int,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = hamiltonian.embed_operator(config.operator(n), qubit)
+    op = expand(config.operator(n), hamiltonian.dims, qubit)
     waveforms = (
-        waveform(pulse, config, n)
+        waveform(pulse, config)
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
