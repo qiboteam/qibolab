@@ -6,6 +6,8 @@ Operator = Qobj
 """Generic operator."""
 TimeDependentOperator = QobjEvo
 """Generic time dependent operator."""
+evolve = mesolve
+"""Generic time evolution function."""
 
 
 def transmon_create(n: int) -> Qobj:
@@ -49,13 +51,3 @@ def probability(state: int, n: int) -> Qobj:
 def state(state, n) -> Qobj:
     """State as tensor for qutip."""
     return tensor(basis(n, state))
-
-
-def evolve(
-    hamiltonian: Operator,
-    initial_state: Operator,
-    time: list[float],
-    collapse_operators: list[Operator] = None,
-) -> Operator:
-    """Evolve initial state with hamiltonian."""
-    return mesolve(hamiltonian, initial_state, time, collapse_operators)
