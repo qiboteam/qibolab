@@ -1,4 +1,4 @@
-from functools import cache, cached_property
+from functools import cached_property
 from typing import Literal, Optional, Union
 
 import numpy as np
@@ -35,6 +35,10 @@ class DriveEmulatorConfig(Config):
     """Rabi frequency [Hz]"""
     scale_factor: float = 1
     """Scaling factor."""
+
+    @staticmethod
+    def operator(n: int) -> Operator:
+        return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
 class Qubit(Config):
@@ -107,8 +111,6 @@ class ModulatedDrive(Model):
     """Drive pulse."""
     config: DriveEmulatorConfig
     """Drive emulator configuration."""
-    n: int
-    """Transmon levels."""
     phase: float = 0
     """Drive has zero virtual z phase."""
     sampling_rate: float = 1
@@ -140,13 +142,6 @@ class ModulatedDrive(Model):
             * self.config.scale_factor
             * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
         )
-
-
-@cache
-def channel_operator(n: int) -> Operator:
-    """Time independent operator for channel coupling."""
-    # TODO: add distinct operators for distinct channel types
-    return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
 class ModulatedDelay(Model):
@@ -244,12 +239,12 @@ class HamiltonianConfig(Config):
         )
 
 
-def waveform(pulse: PulseLike, config: Config, level: int) -> Optional[Modulated]:
+def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, DriveEmulatorConfig):
         return None
     if isinstance(pulse, Pulse):
-        return ModulatedDrive(pulse=pulse, config=config, n=level)
+        return ModulatedDrive(pulse=pulse, config=config)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):

@@ -35,7 +35,6 @@ from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
     Operator,
-    channel_operator,
     waveform,
 )
 from .operators import TimeDependentOperator, evolve
@@ -278,7 +277,7 @@ def hamiltonian(
     qubit: int,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = hamiltonian.embed_operator(channel_operator(n), qubit)
+    op = hamiltonian.embed_operator(config.operator(n), qubit)
     waveforms = (
         waveform(pulse, config, n)
         for pulse in pulses
