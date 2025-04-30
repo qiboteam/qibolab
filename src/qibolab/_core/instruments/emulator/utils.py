@@ -47,18 +47,8 @@ def _order_probabilities(probs, qubits):
 
 def calculate_probabilities_density_matrix(state, subsystems, nsubsystems, d):
     """Compute probabilities from density matrix."""
-    order = tuple(sorted(subsystems))
-    order += tuple(i for i in range(nsubsystems) if i not in subsystems)
-    order = order + tuple(i + nsubsystems for i in order)
-
-    shape = 2 * (d ** len(subsystems), d ** (nsubsystems - len(subsystems)))
-
     state = np.reshape(state, 2 * nsubsystems * (d,))
-    state = np.reshape(np.transpose(state, order), shape)
-
-    probs = np.abs(np.einsum("abab->a", state))
-    probs = np.reshape(probs, len(subsystems) * (d,))
-
+    probs = np.abs(np.einsum(state, list(range(nsubsystems)) * 2, sorted(subsystems)))
     return _order_probabilities(probs, subsystems).ravel()
 
 
