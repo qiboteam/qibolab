@@ -210,7 +210,7 @@ class EmulatorController(Controller):
             tlist_,
             config.dissipation,
         )
-        return extract_probabilities(
+        return select_acquisitions(
             results.states,
             self._acquisitions(sequence_).values(),
             tlist_,
@@ -327,19 +327,17 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
     return time
 
 
-def extract_probabilities(
-    expectations: list[Operator], acquisitions: Iterable[float], times: NDArray
+def select_acquisitions(
+    states: list[Operator], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
-    """Extract probabilities from expectations.
+    """Select density matrices from states.
 
     First, retrieve acquisitions, and locate them in the tlist, to
     isolate the expectations related to measurements.
 
-    Then, it computes probabilities, based on the identified
-    expectations.
+    The return type should be rank-3 array, where the last two are the density
+    matrices dimensions, while the first one should correspond to the acquisitions.
     """
-    expectations = [x.full() for x in expectations]
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-
-    return np.stack(expectations, axis=0)[samples]
+    return np.stack([x.full() for x in states])[samples]
