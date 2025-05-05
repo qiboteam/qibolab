@@ -1,0 +1,56 @@
+from functools import cached_property
+from typing import Literal
+
+from .abstract import Operator, OperatorEvolution, SimulationEngine
+
+__all__ = ["QutipEngine"]
+
+
+class QutipEngine(SimulationEngine):
+    kind: Literal["qutip"] = "qutip"
+
+    @cached_property
+    def engine(self):
+        """Return the qutip engine."""
+        import qutip as qt
+
+        return qt
+
+    def evolve(
+        self,
+        hamiltonian: Operator | OperatorEvolution,
+        initial_state: Operator,
+        time: list[float],
+        collapse_operators: list[Operator] = None,
+    ):
+        """Evolve the system."""
+        hamiltonian = (
+            self.engine.QobjEvo(hamiltonian.operators)
+            if isinstance(hamiltonian, OperatorEvolution)
+            else hamiltonian
+        )
+        return self.engine.mesolve(hamiltonian, initial_state, time, collapse_operators)
+
+    def create(self, n: int) -> Operator:
+        """Create operator for n levels system."""
+        return self.engine.create(n)
+
+    def destroy(self, n: int) -> Operator:
+        """Destroy operator for n levels system."""
+        return self.engine.destroy(n)
+
+    def identity(self, n: int) -> Operator:
+        """Identity operator for n levels system."""
+        return self.engine.qeye(n)
+
+    def tensor(self, operators: list[Operator]) -> Operator:
+        """Tensor product of a list of operators."""
+        return self.engine.tensor(*operators)
+
+    def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
+        """Expand operator in larger Hilbert space."""
+        return self.engine.expand_operator(op, targets, dims)
+
+    def basis(self, n: int, state: int) -> Operator:
+        """Basis operator for n levels system."""
+        return self.engine.basis(dimensions=n, n=state)
