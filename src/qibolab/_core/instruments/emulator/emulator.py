@@ -46,6 +46,7 @@ class EmulatorController(Controller):
     """Emulator controller."""
 
     engine: SimulationEngine = QutipEngine()
+    """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
 
     def connect(self):

@@ -10,10 +10,13 @@ __all__ = ["SimulationEngine", "Operator", "TimeDependentOperator", "OperatorEvo
 
 
 class Operator(Protocol):
-    """Abstract operator interface."""
+    """Abstract operator interface.
+
+    It can represents both operators and states in the Hilbert space.
+    """
 
     n: int
-    """Dimension of Hilber space."""
+    """Dimension of Hilbert space."""
 
     def dag(self) -> "Operator":
         """Return the adjoint of the operator."""
@@ -30,23 +33,21 @@ class TimeDependentOperator(Protocol):
     time: Callable[[float, dict], float]
     """Time function."""
 
-    # TODO: Add method to return [op, time]
+
+class EvolutionResult(Protocol):
+    """Result from evolution."""
+
+    states: list[Operator]
+    """List of Operators."""
 
 
 @dataclass
 class OperatorEvolution:
-    operators: list[Union[Operator, list[Operator, Callable[[float, dict], float]]]] = (
-        field(default_factory=list)
-    )
+    """Abstract operator evolution interface."""
 
-    def __add__(
-        self, other: Union[Operator, "OperatorEvolution"]
-    ) -> "OperatorEvolution":
-        """Add two operator evolutions."""
-        cls = self.__class__
-        if isinstance(other, list):
-            return cls(other.operators + self.operators)
-        return cls([other] + self.operators)
+    operators: list[Union[Operator, TimeDependentOperator]] = field(
+        default_factory=list
+    )
 
 
 class SimulationEngine(Model, ABC):
@@ -55,7 +56,7 @@ class SimulationEngine(Model, ABC):
     @property
     @abstractmethod
     def engine(self):
-        """The name of the type of fruit."""
+        """Engine module."""
 
     @abstractmethod
     def evolve(
@@ -64,36 +65,31 @@ class SimulationEngine(Model, ABC):
         initial_state: Operator,
         time: list[float],
         collapse_operators: list[Operator] = None,
-    ):
+    ) -> EvolutionResult:
         """Evolve the system."""
-        raise NotImplementedError
 
     @abstractmethod
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
-        raise NotImplementedError
 
     @abstractmethod
     def destroy(self, n: int) -> Operator:
         """Destroy operator for n levels system."""
-        raise NotImplementedError
 
     @abstractmethod
     def identity(self, n: int) -> Operator:
         """Identity operator for n levels system."""
-        raise NotImplementedError
 
     @abstractmethod
     def tensor(self, operators: list[Operator]) -> Operator:
         """Tensor product of a list of operators."""
-        raise NotImplementedError
 
     @abstractmethod
-    def expand(self, op: Operator, targets: Union[int, list[int]], dims: list[int]):
+    def expand(
+        self, op: Operator, targets: Union[int, list[int]], dims: list[int]
+    ) -> Operator:
         """Expand operator in larger Hilbert space."""
-        raise NotImplementedError
 
     @abstractmethod
     def basis(self, n: int, state: int) -> Operator:
         """Basis operator for n levels system."""
-        raise NotImplementedError

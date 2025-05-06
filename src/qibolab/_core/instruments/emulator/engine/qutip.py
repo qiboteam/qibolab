@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Literal, Union
+from typing import Union
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
@@ -7,11 +7,12 @@ __all__ = ["QutipEngine"]
 
 
 class QutipEngine(SimulationEngine):
-    kind: Literal["qutip"] = "qutip"
+    """Qutip simulation engine."""
 
     @cached_property
     def engine(self):
         """Return the qutip engine."""
+        # TODO: maybe it can be improved
         import qutip as qt
 
         return qt
