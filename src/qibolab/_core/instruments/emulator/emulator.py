@@ -70,81 +70,16 @@ class EmulatorController(Controller):
         return reduce(
             or_,
             (
-                self._single_sequence(sequence, configs, options, sweepers)
+                results(
+                    # states in computational basis
+                    self._sweep(sequence, configs, sweepers),
+                    sequence,
+                    configs,
+                    options,
+                )
                 for sequence in sequences
             ),
         )
-
-    def _single_sequence(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
-        """Collect results for a single pulse sequence.
-
-        The dictionary returned is already compliant with the expected
-        result for the execution of this single sequence, thus suitable
-        to be returned as is.
-        """
-        # states in computational basis
-        states = self._sweep(sequence, configs, sweepers)
-        hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
-        probabilities = calculate_probabilities_from_density_matrix(
-            states,
-            tuple(hamiltonian.single_qubit),
-            hamiltonian.nqubits,
-            hamiltonian.transmon_levels,
-        )
-
-        assert options.nshots is not None
-        sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
-        # move measurements dimension to the front, getting ready for extraction
-        measurements = np.moveaxis(sampled, 1, 0)
-
-        results = {}
-        # introduce cached measurements to avoid losing correlations
-        cache_measurements = {}
-        for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
-            qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
-            cache_measurements.setdefault(sample, measurements[i])
-            assert hamiltonian.nqubits < 3, (
-                "Results cannot be retrieved for more than 2 transmons"
-            )
-            res = (
-                np.array(
-                    [
-                        divmod(val, hamiltonian.transmon_levels)[qubit]
-                        for val in cache_measurements[sample].flatten()
-                    ]
-                ).reshape(measurements[i].shape)
-                if hamiltonian.nqubits == 2
-                else cache_measurements[sample]
-            )
-
-            if options.acquisition_type is AcquisitionType.INTEGRATION:
-                res = np.stack((res, np.zeros_like(res)), axis=-1)
-                res = np.random.normal(res, scale=0.001)
-
-            if options.averaging_mode == AveragingMode.CYCLIC:
-                res = np.mean(res, axis=0)
-
-            results[ro_id] = res
-        return results
-
-    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute acquisitions' times."""
-        acq = {}
-        for ch in sequence.channels:
-            time = 0
-            for ev in sequence.channel(ch):
-                if isinstance(ev, (Acquisition, Readout)):
-                    acq[ev.id] = time
-                if isinstance(ev, Align):
-                    raise ValueError("Align not supported in emulator.")
-                time += ev.duration
-        return acq
 
     def _sweep(
         self,
@@ -211,7 +146,7 @@ class EmulatorController(Controller):
         )
         return select_acquisitions(
             results.states,
-            self._acquisitions(sequence_).values(),
+            acquisitions(sequence_).values(),
             tlist_,
         )
 
@@ -321,6 +256,76 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
         return 0
 
     return time
+
+
+def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
+    """Compute acquisitions' times."""
+    acq = {}
+    for ch in sequence.channels:
+        time = 0
+        for ev in sequence.channel(ch):
+            if isinstance(ev, (Acquisition, Readout)):
+                acq[ev.id] = time
+            if isinstance(ev, Align):
+                raise ValueError("Align not supported in emulator.")
+            time += ev.duration
+    return acq
+
+
+def results(
+    states: NDArray,
+    sequence: PulseSequence,
+    configs: dict[str, Config],
+    options: ExecutionParameters,
+) -> dict[int, Result]:
+    """Collect results for a single pulse sequence.
+
+    The dictionary returned is already compliant with the expected
+    result for the execution of this single sequence, thus suitable
+    to be returned as is.
+    """
+    hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
+    probabilities = calculate_probabilities_from_density_matrix(
+        states,
+        tuple(hamiltonian.single_qubit),
+        hamiltonian.nqubits,
+        hamiltonian.transmon_levels,
+    )
+
+    assert options.nshots is not None
+    sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
+    # move measurements dimension to the front, getting ready for extraction
+    measurements = np.moveaxis(sampled, 1, 0)
+
+    results = {}
+    # introduce cached measurements to avoid losing correlations
+    cache_measurements = {}
+    for i, (ro_id, sample) in enumerate(acquisitions(sequence).items()):
+        qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+        cache_measurements.setdefault(sample, measurements[i])
+        assert hamiltonian.nqubits < 3, (
+            "Results cannot be retrieved for more than 2 transmons"
+        )
+        res = (
+            np.array(
+                [
+                    divmod(val, hamiltonian.transmon_levels)[qubit]
+                    for val in cache_measurements[sample].flatten()
+                ]
+            ).reshape(measurements[i].shape)
+            if hamiltonian.nqubits == 2
+            else cache_measurements[sample]
+        )
+
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            res = np.stack((res, np.zeros_like(res)), axis=-1)
+            res = np.random.normal(res, scale=0.001)
+
+        if options.averaging_mode == AveragingMode.CYCLIC:
+            res = np.mean(res, axis=0)
+
+        results[ro_id] = res
+    return results
 
 
 def select_acquisitions(
