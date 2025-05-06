@@ -109,17 +109,17 @@ class EmulatorController(Controller):
         for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
             qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
             cache_measurements.setdefault(sample, measurements[i])
-            assert configs["hamiltonian"].nqubits < 3, (
+            assert hamiltonian.nqubits < 3, (
                 "Results cannot be retrieved for more than 2 transmons"
             )
             res = (
                 np.array(
                     [
-                        divmod(val, configs["hamiltonian"].transmon_levels)[qubit]
+                        divmod(val, hamiltonian.transmon_levels)[qubit]
                         for val in cache_measurements[sample].flatten()
                     ]
                 ).reshape(measurements[i].shape)
-                if configs["hamiltonian"].nqubits == 2
+                if hamiltonian.nqubits == 2
                 else cache_measurements[sample]
             )
 
