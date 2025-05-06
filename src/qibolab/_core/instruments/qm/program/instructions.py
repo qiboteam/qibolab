@@ -4,7 +4,6 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, Delay, Pulse, Readout, VirtualZ
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
@@ -190,14 +189,9 @@ def program(
     args: ExecutionArguments,
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
-    offsets: list[tuple[ChannelId, float]],
 ):
     """QUA program implementing the required experiment."""
     with qua.program() as experiment:
-        # FIXME: force offset setting due to a bug in QUA 1.2.1a2 and OPX1000
-        for channel_id, offset in offsets:
-            qua.set_dc_offset(channel_id, "single", offset)
-
         n = declare(int)
         # declare acquisition variables
         for acquisition in args.acquisitions.values():
