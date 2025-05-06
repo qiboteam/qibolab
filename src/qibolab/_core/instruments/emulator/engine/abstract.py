@@ -1,10 +1,8 @@
 """Abstract engine for platform emulation."""
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Callable, Protocol
+from typing import Callable, Protocol, Union
 
 from ....serialize import Model
 
@@ -17,10 +15,10 @@ class Operator(Protocol):
     n: int
     """Dimension of Hilber space."""
 
-    def dag(self) -> Operator:
+    def dag(self) -> "Operator":
         """Return the adjoint of the operator."""
 
-    def __add__(self, other: Operator) -> Operator:
+    def __add__(self, other: "Operator") -> "Operator":
         """Add two operators."""
 
 
@@ -37,15 +35,18 @@ class TimeDependentOperator(Protocol):
 
 @dataclass
 class OperatorEvolution:
-    operators: list[Operator | list[Operator, Callable[[float, dict], float]]] = field(
-        default_factory=list
+    operators: list[Union[Operator, list[Operator, Callable[[float, dict], float]]]] = (
+        field(default_factory=list)
     )
 
-    def __add__(self, other: Operator | OperatorEvolution) -> OperatorEvolution:
+    def __add__(
+        self, other: Union[Operator, "OperatorEvolution"]
+    ) -> "OperatorEvolution":
         """Add two operator evolutions."""
+        cls = self.__class__
         if isinstance(other, list):
-            return OperatorEvolution(other.operators + self.operators)
-        return OperatorEvolution([other] + self.operators)
+            return cls(other.operators + self.operators)
+        return cls([other] + self.operators)
 
 
 class SimulationEngine(Model, ABC):
@@ -88,7 +89,7 @@ class SimulationEngine(Model, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
+    def expand(self, op: Operator, targets: Union[int, list[int]], dims: list[int]):
         """Expand operator in larger Hilbert space."""
         raise NotImplementedError
 
