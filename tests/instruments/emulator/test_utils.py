@@ -24,15 +24,17 @@ def former_calculate(state, subsystems, nsubsystems, d):
     return _order_probabilities(probs, subsystems).ravel()
 
 
-def random_density(dimension: int):
-    components = np.random.rand(dimension)
-    state = components / np.sqrt((components**2).sum())
+def random_states(space: tuple[int, ...], sweeps: tuple[int, ...] = (), nacq: int = 1):
+    dimension = np.prod(space, dtype=int)
+    components = np.random.rand(*sweeps, nacq, dimension)
 
-    return np.outer(state, state)
+    state = components / np.sqrt((components**2).sum(axis=-1))
+
+    return np.einsum("...i,...j->...ij", state, state)
 
 
 def test_density_to_probs():
-    density = random_density(2**4)
+    density = random_states((2,) * 4)
     a = former_calculate(density, (1, 3), nsubsystems=4, d=2)
     b = calculate_probabilities_density_matrix(density, (1, 3), nsubsystems=4, d=2)
 
