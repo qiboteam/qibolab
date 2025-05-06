@@ -18,17 +18,15 @@ class QutipEngine(SimulationEngine):
 
     def evolve(
         self,
-        hamiltonian: Operator | OperatorEvolution,
+        hamiltonian: Operator,
         initial_state: Operator,
         time: list[float],
+        time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
     ):
         """Evolve the system."""
-        hamiltonian = (
-            self.engine.QobjEvo(hamiltonian.operators)
-            if isinstance(hamiltonian, OperatorEvolution)
-            else hamiltonian
-        )
+        if time_hamiltonian is not None:
+            hamiltonian += self.engine.QobjEvo(time_hamiltonian.operators)
         return self.engine.mesolve(hamiltonian, initial_state, time, collapse_operators)
 
     def create(self, n: int) -> Operator:
@@ -51,6 +49,6 @@ class QutipEngine(SimulationEngine):
         """Expand operator in larger Hilbert space."""
         return self.engine.expand_operator(op, targets, dims)
 
-    def basis(self, n: int, state: int) -> Operator:
+    def basis(self, dim: int, state: int) -> Operator:
         """Basis operator for n levels system."""
-        return self.engine.basis(dimensions=n, n=state)
+        return self.engine.basis(dimensions=dim, n=state)

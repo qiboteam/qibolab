@@ -70,17 +70,20 @@ class Qubit(Config):
     def relaxation(self, n: int, engine: SimulationEngine) -> Operator:
         return sum(
             np.sqrt(1 / t1)
-            * engine.basis(state=transition[0], n=n)
-            * engine.basis(state=transition[1], n=n).dag()
+            * engine.basis(state=transition[0], dim=n)
+            * engine.basis(state=transition[1], dim=n).dag()
             for transition, t1 in self.t1.items()
         )
 
     def dephasing(self, n: int, engine: SimulationEngine) -> Operator:
         return sum(
             np.sqrt(1 / self.t_phi(pair) / 2)
-            * engine.basis(state=pair[0], n=n)
-            * engine.basis(state=pair[0], n=n).dag()
-            - engine.basis(state=pair[1], n=n) * engine.basis(state=pair[1], n=n).dag()
+            * (
+                engine.basis(state=pair[0], dim=n)
+                * engine.basis(state=pair[0], dim=n).dag()
+                - engine.basis(state=pair[1], dim=n)
+                * engine.basis(state=pair[1], dim=n).dag()
+            )
             for pair in self.t2
         )
 
@@ -191,7 +194,7 @@ class HamiltonianConfig(Config):
     def initial_state(self, engine: SimulationEngine) -> Operator:
         """Initial state as ground state of the system."""
         return engine.tensor(
-            engine.basis(state=0, n=self.transmon_levels) for i in range(self.nqubits)
+            engine.basis(state=0, dim=self.transmon_levels) for i in range(self.nqubits)
         )
 
     @property
@@ -202,12 +205,16 @@ class HamiltonianConfig(Config):
     def hamiltonian(self, engine: SimulationEngine) -> Operator:
         """Time independent part of Hamiltonian."""
         single_qubit_terms = sum(
-            engine.expand(qubit.operator(self.transmon_levels, engine), self.dims, i)
+            engine.expand(
+                qubit.operator(n=self.transmon_levels, engine=engine), self.dims, i
+            )
             for i, qubit in self.single_qubit.items()
         )
         two_qubit_terms = sum(
             engine.expand(
-                pair.operator(self.transmon_levels, engine), self.dims, list(pair_id)
+                pair.operator(n=self.transmon_levels, engine=engine),
+                self.dims,
+                list(pair_id),
             )
             for pair_id, pair in self.pairs.items()
         )
@@ -218,7 +225,9 @@ class HamiltonianConfig(Config):
 
         They are going to be passed to mesolve as collapse operators."""
         return sum(
-            engine.expand(qubit.dissipation(self.transmon_levels, engine), self.dims, i)
+            engine.expand(
+                qubit.dissipation(n=self.transmon_levels, engine=engine), self.dims, i
+            )
             for i, qubit in self.single_qubit.items()
             if not isinstance(qubit, list)
         )

@@ -201,13 +201,12 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        if time_hamiltonian is not None:
-            hamiltonian = time_hamiltonian + hamiltonian
         results = self.engine.evolve(
-            hamiltonian,
-            config.initial_state(self.engine),
-            tlist_,
-            config.dissipation(self.engine),
+            hamiltonian=hamiltonian,
+            initial_state=config.initial_state(self.engine),
+            time=tlist_,
+            collapse_operators=config.dissipation(self.engine),
+            time_hamiltonian=time_hamiltonian,
         )
         return select_acquisitions(
             results.states,
