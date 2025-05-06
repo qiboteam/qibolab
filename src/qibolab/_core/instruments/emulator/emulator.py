@@ -340,4 +340,4 @@ def select_acquisitions(
     """
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([x.full() for x in states])[samples]
+    return np.stack([states[n].full() for n in samples])
