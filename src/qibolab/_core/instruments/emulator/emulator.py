@@ -39,7 +39,7 @@ from .hamiltonians import (
     waveform,
 )
 from .operators import TimeDependentOperator, evolve, expand
-from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
+from .utils import calculate_probabilities_from_density_matrix, shots
 
 __all__ = ["EmulatorController"]
 
@@ -91,12 +91,12 @@ class EmulatorController(Controller):
         """
         # states in computational basis
         states = self._sweep(sequence, configs, sweepers)
-        probabilities = apply_to_last_two_axes(
-            calculate_probabilities_density_matrix,
+        hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
+        probabilities = calculate_probabilities_from_density_matrix(
             states,
-            tuple(configs["hamiltonian"].single_qubit),
-            configs["hamiltonian"].nqubits,
-            configs["hamiltonian"].transmon_levels,
+            tuple(hamiltonian.single_qubit),
+            hamiltonian.nqubits,
+            hamiltonian.transmon_levels,
         )
 
         assert options.nshots is not None

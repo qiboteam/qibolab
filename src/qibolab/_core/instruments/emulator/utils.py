@@ -1,5 +1,9 @@
+from collections.abc import Iterable
+
 import numpy as np
 from numpy.typing import NDArray
+
+from qibolab._core.identifier import QubitId
 
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
@@ -38,24 +42,16 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
     return np.moveaxis(shots, -1, 0)
 
 
-def _order_probabilities(probs, qubits):
-    """Arrange probabilities according to the given `qubits ordering."""
-    return np.transpose(
-        probs, [i for i, _ in sorted(enumerate(qubits), key=lambda t: t[1])]
-    )
-
-
-def calculate_probabilities_density_matrix(state, subsystems, nsubsystems, d):
+def calculate_probabilities_from_density_matrix(
+    states: NDArray, subsystems: Iterable[QubitId], nsubsystems: int, d: int
+) -> NDArray:
     """Compute probabilities from density matrix."""
-    state = np.reshape(state, 2 * nsubsystems * (d,))
-    probs = np.abs(np.einsum(state, list(range(nsubsystems)) * 2, sorted(subsystems)))
-    return _order_probabilities(probs, subsystems).ravel()
-
-
-def apply_to_last_two_axes(func, array, *args, **kwargs):
-    """Apply function over last two axes."""
-    batch_shape = array.shape[:-2]
-    m = array.shape[-1]
-    reshaped_array = array.reshape(-1, m, m)
-    processed = np.array([func(mat, *args, **kwargs) for mat in reshaped_array])
-    return processed.reshape(*batch_shape, *processed.shape[1:])
+    states_ = np.reshape(states, states.shape[:-2] + 2 * nsubsystems * (d,))
+    marginal = np.einsum(
+        states_,
+        # TODO: the `np.array()` wrapping call is only needed because of NumPy's type
+        # annotation - in practice, it also works without
+        np.array([...] + list(range(nsubsystems)) * 2),
+        np.array([...] + list(subsystems)),
+    )
+    return np.abs(marginal).reshape((*states.shape[:-2], -1))
