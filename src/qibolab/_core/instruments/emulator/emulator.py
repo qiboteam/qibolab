@@ -32,7 +32,7 @@ from .hamiltonians import (
     waveform,
 )
 from .operators import TimeDependentOperator, evolve, expand
-from .utils import acquisitions, results, select_acquisitions
+from .results import acquisitions, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
