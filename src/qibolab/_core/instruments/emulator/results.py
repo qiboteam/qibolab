@@ -1,10 +1,8 @@
 from collections.abc import Iterable
-from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-from qibolab._core.components.configs import Config
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
@@ -102,7 +100,7 @@ def select_acquisitions(
 def results(
     states: NDArray,
     sequence: PulseSequence,
-    configs: dict[str, Config],
+    hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
 ) -> dict[int, Result]:
     """Collect results for a single pulse sequence.
@@ -111,7 +109,6 @@ def results(
     result for the execution of this single sequence, thus suitable
     to be returned as is.
     """
-    hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
     probabilities = calculate_probabilities_from_density_matrix(
         states,
         tuple(hamiltonian.single_qubit),

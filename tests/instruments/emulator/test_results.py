@@ -1,9 +1,23 @@
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
-from qibolab._core.instruments.emulator.results import (
-    calculate_probabilities_from_density_matrix,
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
 )
+from qibolab._core.identifier import Result
+from qibolab._core.instruments.emulator.hamiltonians import HamiltonianConfig, Qubit
+from qibolab._core.instruments.emulator.results import (
+    acquisitions,
+    calculate_probabilities_from_density_matrix,
+    results,
+    shots,
+)
+from qibolab._core.pulses.envelope import Rectangular
+from qibolab._core.pulses.pulse import Acquisition, Pulse
+from qibolab._core.sequence import PulseSequence
 
 
 def _order_probabilities(probs, qubits):
@@ -46,6 +60,62 @@ def former_apply_to_last_two_axes(func, array, *args, **kwargs):
     return processed.reshape(*batch_shape, *processed.shape[1:])
 
 
+def former_results(
+    states: NDArray,
+    sequence: PulseSequence,
+    hamiltonian: HamiltonianConfig,
+    options: ExecutionParameters,
+) -> dict[int, Result]:
+    """Collect results for a single pulse sequence.
+
+    The dictionary returned is already compliant with the expected
+    result for the execution of this single sequence, thus suitable
+    to be returned as is.
+    """
+    probabilities = calculate_probabilities_from_density_matrix(
+        states,
+        tuple(hamiltonian.single_qubit),
+        hamiltonian.nqubits,
+        hamiltonian.transmon_levels,
+    )
+
+    assert options.nshots is not None
+    sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
+    # move measurements dimension to the front, getting ready for extraction
+    measurements = np.moveaxis(sampled, 1, 0)
+
+    results = {}
+    # introduce cached measurements to avoid losing correlations
+    cache_measurements = {}
+    for i, (ro_id, sample) in enumerate(acquisitions(sequence).items()):
+        qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+        cache_measurements.setdefault(sample, measurements[i])
+        assert hamiltonian.nqubits < 3, (
+            "Results cannot be retrieved for more than 2 transmons"
+        )
+        res = (
+            np.array(
+                [
+                    divmod(val, hamiltonian.transmon_levels)[qubit]
+                    for val in cache_measurements[sample].flatten()
+                ]
+            ).reshape(measurements[i].shape)
+            if hamiltonian.nqubits == 2
+            else cache_measurements[sample]
+        )
+
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            res = np.stack((res, np.zeros_like(res)), axis=-1)
+            res = np.random.normal(res, scale=0.001)
+
+        if options.averaging_mode == AveragingMode.CYCLIC:
+            res = np.mean(res, axis=0)
+
+        results[ro_id] = res
+
+    return results
+
+
 def random_states(space: tuple[int, ...], sweeps: tuple[int, ...] = (), nacq: int = 1):
     dimension = np.prod(space, dtype=int)
     components = np.random.rand(*sweeps, nacq, dimension)
@@ -73,3 +143,27 @@ def test_apply_to_last_two_axes():
     )
 
     assert pytest.approx(a) == b
+
+
+def test_resultz():
+    densities = random_states((2,) * 2, (3, 2))
+    sequence = PulseSequence(
+        [("0/drive", Pulse(duration=20, amplitude=0.8, envelope=Rectangular()))]
+    ) | PulseSequence([("0/acquisition", Acquisition(duration=1000))])
+    hamiltonian = HamiltonianConfig(single_qubit={q: Qubit() for q in range(2)})
+    options = ExecutionParameters(nshots=1000)
+
+    fres = former_results(
+        states=densities,
+        sequence=sequence,
+        hamiltonian=hamiltonian,
+        options=options,
+    )
+    res = results(
+        states=densities,
+        sequence=sequence,
+        hamiltonian=hamiltonian,
+        options=options,
+    )
+
+    assert all(pytest.approx(r) == f for r, f in zip(res, fres))
