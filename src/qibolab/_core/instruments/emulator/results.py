@@ -124,9 +124,9 @@ def results(
     results = {}
     # introduce cached measurements to avoid losing correlations
     cache_measurements = {}
-    for i, (ro_id, sample) in enumerate(acquisitions(sequence).items()):
+    for (ro_id, sample), meas in zip(acquisitions(sequence).items(), measurements):
         qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
-        cache_measurements.setdefault(sample, measurements[i])
+        cache_measurements.setdefault(sample, meas)
         assert hamiltonian.nqubits < 3, (
             "Results cannot be retrieved for more than 2 transmons"
         )
@@ -136,7 +136,7 @@ def results(
                     divmod(val, hamiltonian.transmon_levels)[qubit]
                     for val in cache_measurements[sample].flatten()
                 ]
-            ).reshape(measurements[i].shape)
+            ).reshape(meas.shape)
             if hamiltonian.nqubits == 2
             else cache_measurements[sample]
         )
