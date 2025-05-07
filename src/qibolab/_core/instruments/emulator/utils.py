@@ -1,9 +1,21 @@
 from collections.abc import Iterable
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-from qibolab._core.identifier import QubitId
+from qibolab._core.components.configs import Config
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
+from qibolab._core.identifier import QubitId, Result
+from qibolab._core.pulses.pulse import Acquisition, Align, PulseId, Readout
+from qibolab._core.sequence import PulseSequence
+
+from .hamiltonians import HamiltonianConfig
+from .operators import Operator
 
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
@@ -55,3 +67,90 @@ def calculate_probabilities_from_density_matrix(
         np.array([...] + list(subsystems)),
     )
     return np.abs(marginal).reshape((*states.shape[:-2], -1))
+
+
+def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
+    """Compute acquisitions' times."""
+    acq = {}
+    for ch in sequence.channels:
+        time = 0
+        for ev in sequence.channel(ch):
+            if isinstance(ev, (Acquisition, Readout)):
+                acq[ev.id] = time
+            if isinstance(ev, Align):
+                raise ValueError("Align not supported in emulator.")
+            time += ev.duration
+    return acq
+
+
+def select_acquisitions(
+    states: list[Operator], acquisitions: Iterable[float], times: NDArray
+) -> NDArray:
+    """Select density matrices from states.
+
+    First, retrieve acquisitions, and locate them in the tlist, to
+    isolate the expectations related to measurements.
+
+    The return type should be rank-3 array, where the last two are the density
+    matrices dimensions, while the first one should correspond to the acquisitions.
+    """
+    acq = np.array(list(acquisitions))
+    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
+    return np.stack([states[n].full() for n in samples])
+
+
+def results(
+    states: NDArray,
+    sequence: PulseSequence,
+    configs: dict[str, Config],
+    options: ExecutionParameters,
+) -> dict[int, Result]:
+    """Collect results for a single pulse sequence.
+
+    The dictionary returned is already compliant with the expected
+    result for the execution of this single sequence, thus suitable
+    to be returned as is.
+    """
+    hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
+    probabilities = calculate_probabilities_from_density_matrix(
+        states,
+        tuple(hamiltonian.single_qubit),
+        hamiltonian.nqubits,
+        hamiltonian.transmon_levels,
+    )
+
+    assert options.nshots is not None
+    sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
+    # move measurements dimension to the front, getting ready for extraction
+    measurements = np.moveaxis(sampled, 1, 0)
+
+    results = {}
+    # introduce cached measurements to avoid losing correlations
+    cache_measurements = {}
+    for i, (ro_id, sample) in enumerate(acquisitions(sequence).items()):
+        qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+        cache_measurements.setdefault(sample, measurements[i])
+        assert hamiltonian.nqubits < 3, (
+            "Results cannot be retrieved for more than 2 transmons"
+        )
+        res = (
+            np.array(
+                [
+                    divmod(val, hamiltonian.transmon_levels)[qubit]
+                    for val in cache_measurements[sample].flatten()
+                ]
+            ).reshape(measurements[i].shape)
+            if hamiltonian.nqubits == 2
+            else cache_measurements[sample]
+        )
+
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            res = np.stack((res, np.zeros_like(res)), axis=-1)
+            res = np.random.normal(res, scale=0.001)
+
+        if options.averaging_mode == AveragingMode.CYCLIC:
+            res = np.mean(res, axis=0)
+
+        results[ro_id] = res
+
+    return results
