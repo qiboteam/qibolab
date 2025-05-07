@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab._core.instruments.emulator.utils import (
+from qibolab._core.instruments.emulator.results import (
     calculate_probabilities_from_density_matrix,
 )
 
