@@ -68,7 +68,7 @@ class EmulatorController(Controller):
                     # states in computational basis
                     self._sweep(sequence, configs, sweepers),
                     sequence,
-                    configs,
+                    cast(HamiltonianConfig, configs["hamiltonian"]),
                     options,
                 )
                 for sequence in sequences
