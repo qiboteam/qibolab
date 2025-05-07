@@ -131,12 +131,9 @@ def results(
             "Results cannot be retrieved for more than 2 transmons"
         )
         res = (
-            np.array(
-                [
-                    divmod(val, hamiltonian.transmon_levels)[qubit]
-                    for val in cache_measurements[sample].flatten()
-                ]
-            ).reshape(meas.shape)
+            np.stack(
+                divmod(cache_measurements[sample], hamiltonian.transmon_levels),
+            )[qubit]
             if hamiltonian.nqubits == 2
             else cache_measurements[sample]
         )
