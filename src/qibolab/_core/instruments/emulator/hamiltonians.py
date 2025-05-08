@@ -21,6 +21,8 @@ from .operators import (
     transmon_destroy,
 )
 
+__all__ = ["DriveEmulatorConfig", "HamiltonianConfig"]
+
 
 class DriveEmulatorConfig(Config):
     """Configuration for an IQ channel."""
@@ -109,7 +111,7 @@ class QubitPair(Config):
         return 2 * np.pi * self.coupling / giga * op
 
 
-class QubitDrive(Model):
+class ModulatedDrive(Model):
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
@@ -130,11 +132,6 @@ class QubitDrive(Model):
     def duration(self):
         """Duration of the pulse."""
         return self.pulse.duration
-
-    @property
-    def phase(self):
-        """Virtual Z phase."""
-        return 0
 
     @property
     def omega(self):
@@ -180,7 +177,7 @@ class ModulatedVirtualZ(Model):
         raise_error(ValueError, "VirtualZ doesn't have waveform.")
 
 
-Modulated = Union[QubitDrive, ModulatedDelay, ModulatedVirtualZ]
+Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
 
 
 class HamiltonianConfig(Config):
@@ -237,7 +234,7 @@ def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
     if not isinstance(config, DriveEmulatorConfig):
         return None
     if isinstance(pulse, Pulse):
-        return QubitDrive(pulse=pulse, config=config)
+        return ModulatedDrive(pulse=pulse, config=config)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
