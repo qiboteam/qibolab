@@ -13,7 +13,7 @@ quantum hardware control. This module automates the implementation of quantum
 circuits on quantum hardware.
 
 Structure
----------
+^^^^^^^^^
 
 Qibolab's architecture comprises two primary components:
 
@@ -41,15 +41,14 @@ calibration procedures for any Qibolab-based platform.
 
 
 Contents
---------
+^^^^^^^^
 
 .. toctree::
     :maxdepth: 2
-    :caption: Introduction
+    :caption: Getting started
 
     getting-started/installation
     getting-started/experiment
-    tutorials/index
 
 .. toctree::
     :maxdepth: 2
@@ -59,6 +58,18 @@ Contents
     main-documentation/experiment
     main-documentation/drivers
     main-documentation/compiler
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Tutorials
+
+    tutorials/lab
+    tutorials/pulses
+    tutorials/circuits
+    tutorials/calibration
+    tutorials/instrument
+    tutorials/emulator
+    tutorials/storage
 
 .. toctree::
     :maxdepth: 1
@@ -89,7 +100,7 @@ Contents
 
 
 Indices and tables
-------------------
+^^^^^^^^^^^^^^^^^^
 
 * :ref:`genindex`
 * :ref:`search`

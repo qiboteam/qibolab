@@ -101,6 +101,11 @@ Finally, we can stop instruments and close connections.
 
     platform.disconnect()
 
+.. _main_doc_parameters:
+
+Parameters
+^^^^^^^^^^
+
 
 .. _main_doc_dummy:
 
