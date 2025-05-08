@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import Annotated, Optional
 
 import numpy as np
@@ -11,7 +10,7 @@ from .serialize import Model, replace
 class Native(PulseSequence):
     def create_sequence(self) -> PulseSequence:
         """Create the sequence associated to the gate."""
-        return deepcopy(self)
+        return PulseSequence([(ch, p.new()) for ch, p in self])
 
     def __call__(self, *args, **kwargs) -> PulseSequence:
         """Create the sequence associated to the gate.
