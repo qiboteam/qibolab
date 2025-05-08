@@ -20,8 +20,9 @@ Qibolab's architecture comprises two primary components:
 
 - the :ref:`Platform API <main_doc_platform>`, which facilitates the custom allocation
   of quantum hardware platforms and laboratory setups, and
-- its :ref:`Pulse API <main_doc_pulses>`, which provides the tools to define arbitrary
-  pulse sequences for execution on the configured platforms.
+- its :ref:`Experiment API <main_doc_experiment>`, which provides the tools to define
+  arbitrary experiments, based on pulse sequences, for execution on the configured
+  platforms.
 
 Platforms’ definition involve describing the arrangement of physical devices using
 Qibolab's abstractions. This is achieved through provided :ref:`drivers
@@ -46,14 +47,18 @@ Contents
     :maxdepth: 2
     :caption: Introduction
 
-    getting-started/index
+    getting-started/installation
+    getting-started/experiment
     tutorials/index
 
 .. toctree::
     :maxdepth: 2
     :caption: Core components
 
-    main-documentation/qibolab
+    main-documentation/platform
+    main-documentation/experiment
+    main-documentation/drivers
+    main-documentation/compiler
 
 .. toctree::
     :maxdepth: 1
