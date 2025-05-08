@@ -11,19 +11,13 @@ from numpy.typing import NDArray
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
-from qibolab._core.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import (
     Acquisition,
-    Align,
     Delay,
     Pulse,
-    PulseId,
     PulseLike,
     Readout,
     VirtualZ,
@@ -37,7 +31,7 @@ from .hamiltonians import (
     Modulated,
     waveform,
 )
-from .utils import apply_to_last_two_axes, calculate_probabilities_density_matrix, shots
+from .results import acquisitions, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
@@ -71,81 +65,16 @@ class EmulatorController(Controller):
         return reduce(
             or_,
             (
-                self._single_sequence(sequence, configs, options, sweepers)
+                results(
+                    # states in computational basis
+                    self._sweep(sequence, configs, sweepers),
+                    sequence,
+                    cast(HamiltonianConfig, configs["hamiltonian"]),
+                    options,
+                )
                 for sequence in sequences
             ),
         )
-
-    def _single_sequence(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
-        """Collect results for a single pulse sequence.
-
-        The dictionary returned is already compliant with the expected
-        result for the execution of this single sequence, thus suitable
-        to be returned as is.
-        """
-        # probabilities for states in computational basis
-        probabilities = self._sweep(sequence, configs, sweepers)
-        assert options.nshots is not None
-        probabilities = np.moveaxis(probabilities, -3, 0)
-        probabilities = apply_to_last_two_axes(
-            calculate_probabilities_density_matrix,
-            probabilities,
-            tuple(configs["hamiltonian"].single_qubit),
-            configs["hamiltonian"].nqubits,
-            configs["hamiltonian"].transmon_levels,
-        )
-        averaged = shots(probabilities, options.nshots)
-        # move measurements dimension to the front, getting ready for extraction
-        measurements = np.moveaxis(averaged, 1, 0)
-
-        results = {}
-        # introduce cached measurements to avoid losing correlations
-        cache_measurements = {}
-        for i, (ro_id, sample) in enumerate(self._acquisitions(sequence).items()):
-            qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
-            cache_measurements.setdefault(sample, measurements[i])
-            assert configs["hamiltonian"].nqubits < 3, (
-                "Results cannot be retrieved for more than 2 transmons"
-            )
-            res = (
-                np.array(
-                    [
-                        divmod(val, configs["hamiltonian"].transmon_levels)[qubit]
-                        for val in cache_measurements[sample].flatten()
-                    ]
-                ).reshape(measurements[i].shape)
-                if configs["hamiltonian"].nqubits == 2
-                else cache_measurements[sample]
-            )
-
-            if options.acquisition_type is AcquisitionType.INTEGRATION:
-                res = np.stack((res, np.zeros_like(res)), axis=-1)
-                res = np.random.normal(res, scale=0.001)
-
-            if options.averaging_mode == AveragingMode.CYCLIC:
-                res = np.mean(res, axis=0)
-
-            results[ro_id] = res
-        return results
-
-    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute acquisitions' times."""
-        acq = {}
-        for ch in sequence.channels:
-            time = 0
-            for ev in sequence.channel(ch):
-                if isinstance(ev, (Acquisition, Readout)):
-                    acq[ev.id] = time
-                if isinstance(ev, Align):
-                    raise ValueError("Align not supported in emulator.")
-                time += ev.duration
-        return acq
 
     def _sweep(
         self,
@@ -211,7 +140,7 @@ class EmulatorController(Controller):
         )
         return select_acquisitions(
             results.states,
-            self._acquisitions(sequence_).values(),
+            acquisitions(sequence_).values(),
             tlist_,
         )
 
@@ -224,7 +153,7 @@ class EmulatorController(Controller):
             [operator, channel_time(waveforms)]
             for operator, waveforms in hamiltonians(sequence, configs, self.engine)
         ]
-        return OperatorEvolution(operators=channels) if len(channels) > 0 else None
+        return OperatorEvolution(channels) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -324,19 +253,3 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
         return 0
 
     return time
-
-
-def select_acquisitions(
-    states: list[Operator], acquisitions: Iterable[float], times: NDArray
-) -> NDArray:
-    """Select density matrices from states.
-
-    First, retrieve acquisitions, and locate them in the tlist, to
-    isolate the expectations related to measurements.
-
-    The return type should be rank-3 array, where the last two are the density
-    matrices dimensions, while the first one should correspond to the acquisitions.
-    """
-    acq = np.array(list(acquisitions))
-    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([x.full() for x in states])[samples]
