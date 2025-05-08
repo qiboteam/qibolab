@@ -1,5 +1,5 @@
-Performing the first experiment
-===============================
+First experiment
+================
 
 Define the platform
 -------------------

@@ -1,5 +1,5 @@
-Installation instructions
-=========================
+Install
+=======
 
 .. _installing-qibolab:
 
@@ -17,7 +17,7 @@ After updating ``pip``, if needed, install Qibolab with:
 
 .. note::
 
-    Remember that Qibolab is compatible with Pyhon >= 3.9 and < 3.12.
+    Remember that Qibolab is compatible with Pyhon >= 3.9 and < 3.13.
 
 
 Installing from source
