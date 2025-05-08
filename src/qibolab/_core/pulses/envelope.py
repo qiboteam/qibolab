@@ -133,31 +133,37 @@ class Gaussian(BaseEnvelope):
 class GaussianSquare(BaseEnvelope):
     r"""Rectangular envelope with Gaussian rise and fall.
 
+    .. note::
+        The `risefall` and `sigma` are absolute values.
+
     .. math::
 
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
     """
 
     kind: Literal["gaussian_square"] = "gaussian_square"
+    risefall: int = 0
+    """Risefall time, in number of samples."""
+    sigma: float = 0
+    """Gaussian standard deviation."""
 
-    rel_sigma: float
-    """Relative Gaussian standard deviation.
+    def width(self, samples):
+        return samples - 2 * self.risefall
 
-    In units of the interval duration.
-    """
-    width: float
-    """Length of the flat portion."""
-
-    def i(self, samples: int) -> Waveform:
+    def i(self, samples: int):
         """Generate a Gaussian envelope, with a flat central window."""
-
-        pulse = np.ones(samples)
-        u, hw = samples / 2, self.width / 2
-        ts = np.arange(samples)
-        tails = (ts < (u - hw)) | ((u + hw) < ts)
-        pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, samples))
-
-        return pulse
+        width = self.width(samples)
+        gaussian_pulse = gaussian(2 * self.risefall + 1, std=self.sigma)
+        plateau = np.ones(width) * gaussian_pulse[self.risefall]
+        pulse = np.concatenate(
+            [
+                gaussian_pulse[: self.risefall],
+                plateau,
+                gaussian_pulse[self.risefall + 1 :],
+            ]
+        )
+        pulse -= pulse[0]
+        return pulse / np.max(pulse)
 
 
 class Drag(BaseEnvelope):
