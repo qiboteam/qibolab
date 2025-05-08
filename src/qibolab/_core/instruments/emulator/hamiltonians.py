@@ -1,25 +1,44 @@
-from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cached_property
 from typing import Literal, Optional, Union
 
 import numpy as np
 from pydantic import Field
 from qibo.config import raise_error
-from qutip import Qobj
 from scipy.constants import giga
 
-from ...components import Config, IqConfig
-from ...identifier import QubitId, TransitionId
+from ...components import Config
+from ...identifier import QubitId, QubitPairId, TransitionId
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .operators import (
+    Operator,
     dephasing,
-    probability,
+    expand,
     relaxation,
     state,
+    tensor_product,
     transmon_create,
     transmon_destroy,
 )
+
+__all__ = ["DriveEmulatorConfig", "HamiltonianConfig"]
+
+
+class DriveEmulatorConfig(Config):
+    """Configuration for an IQ channel."""
+
+    kind: Literal["drive-emulator"] = "drive-emulator"
+
+    frequency: float
+    """Frequency of drive."""
+    rabi_frequency: float = 1e9
+    """Rabi frequency [Hz]"""
+    scale_factor: float = 1
+    """Scaling factor."""
+
+    @staticmethod
+    def operator(n: int) -> Operator:
+        return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
 class Qubit(Config):
@@ -74,16 +93,31 @@ class Qubit(Config):
         return self.relaxation(n) + self.dephasing(n)
 
 
-@dataclass
-class ModulatedDrive:
+class QubitPair(Config):
+    """Hamiltonian parameters for qubit pair."""
+
+    coupling: float
+    """Qubit-qubit coupling."""
+
+    def operator(self, n: int) -> Operator:
+        """Time independent operator."""
+        op = tensor_product(
+            transmon_destroy(n),
+            transmon_create(n),
+        ) + tensor_product(
+            transmon_create(n),
+            transmon_destroy(n),
+        )
+        return 2 * np.pi * self.coupling / giga * op
+
+
+class ModulatedDrive(Model):
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
     """Drive pulse."""
-    frequency: float
-    """Drive frequency."""
-    n: int
-    """Transmon levels."""
+    config: DriveEmulatorConfig
+    """Drive emulator configuration."""
     phase: float = 0
     """Drive has zero virtual z phase."""
     sampling_rate: float = 1
@@ -99,17 +133,22 @@ class ModulatedDrive:
         """Duration of the pulse."""
         return self.pulse.duration
 
+    @property
+    def omega(self):
+        return 2 * np.pi * self.config.frequency / giga
+
+    @property
+    def rabi_omega(self):
+        return 2 * np.pi * self.config.rabi_frequency / giga
+
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
-        omega = 2 * np.pi * self.frequency * t + self.pulse.relative_phase + phase
-        return np.cos(omega) * i[sample] + np.sin(omega) * q[sample]
-
-
-@cache
-def channel_operator(n: int) -> Qobj:
-    """Time independent operator for channel coupling."""
-    # TODO: add distinct operators for distinct channel types
-    return -1.0j * (transmon_destroy(n) - transmon_create(n))
+        phi = self.omega * t + self.pulse.relative_phase + phase
+        return (
+            self.rabi_omega
+            * self.config.scale_factor
+            * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
+        )
 
 
 class ModulatedDelay(Model):
@@ -147,37 +186,55 @@ class HamiltonianConfig(Config):
     kind: Literal["hamiltonian"] = "hamiltonian"
     transmon_levels: int = 2
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
+    pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+
+    @property
+    def nqubits(self):
+        return len(self.single_qubit)
 
     @property
     def initial_state(self):
-        return state(0, self.transmon_levels)
-
-    def probability(self, state: int):
-        return probability(state=state, n=self.transmon_levels)
-
-    @property
-    def hamiltonian(self):
-        return [
-            qubit.operator(self.transmon_levels) for qubit in self.single_qubit.values()
-        ]
+        """Initial state as ground state of the system."""
+        return tensor_product(
+            state(0, self.transmon_levels) for i in range(self.nqubits)
+        )
 
     @property
-    def dissipation(self):
-        return [
-            qubit.dissipation(self.transmon_levels)
-            for qubit in self.single_qubit.values()
+    def dims(self) -> list[int]:
+        """Dimensions of the system."""
+        return [self.transmon_levels] * self.nqubits
+
+    @property
+    def hamiltonian(self) -> Operator:
+        """Time independent part of Hamiltonian."""
+        single_qubit_terms = sum(
+            expand(qubit.operator(self.transmon_levels), self.dims, i)
+            for i, qubit in self.single_qubit.items()
+        )
+        two_qubit_terms = sum(
+            expand(pair.operator(self.transmon_levels), self.dims, list(pair_id))
+            for pair_id, pair in self.pairs.items()
+        )
+        return single_qubit_terms + two_qubit_terms
+
+    @property
+    def dissipation(self) -> Operator:
+        """Dissipation operators for the hamiltonian.
+
+        They are going to be passed to mesolve as collapse operators."""
+        return sum(
+            expand(qubit.dissipation(self.transmon_levels), self.dims, i)
+            for i, qubit in self.single_qubit.items()
             if not isinstance(qubit, list)
-        ]
+        )
 
 
-def waveform(pulse: PulseLike, config: Config, level: int) -> Optional[Modulated]:
+def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
     """Convert pulse to hamiltonian."""
-    # mapping IqConfig -> ModulatedDrive
-    if not isinstance(config, IqConfig):
+    if not isinstance(config, DriveEmulatorConfig):
         return None
     if isinstance(pulse, Pulse):
-        frequency = config.frequency
-        return ModulatedDrive(pulse=pulse, frequency=frequency / giga, n=level)
+        return ModulatedDrive(pulse=pulse, config=config)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):

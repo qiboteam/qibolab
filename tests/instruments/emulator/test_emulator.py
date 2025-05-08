@@ -34,16 +34,6 @@ def test_integration_mode(platform):
     assert result[acq_handle].shape == (2,)
     pytest.approx(result[acq_handle][1], abs=1e-2) == 0
 
-    with pytest.raises(
-        ValueError, match="Acquisition type 'AcquisitionType.RAW' unsupported"
-    ):
-        platform.execute(
-            [seq],
-            nshots=NSHOTS,
-            acquisition_type=AcquisitionType.RAW,
-            averaging_mode=AveragingMode.CYCLIC,
-        )
-
 
 def test_align_fail(platform):
     q0 = platform.natives.single_qubit[0]

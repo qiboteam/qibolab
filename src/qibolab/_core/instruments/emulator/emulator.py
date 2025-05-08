@@ -8,23 +8,16 @@ from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from qutip import Qobj, QobjEvo, mesolve
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
-from qibolab._core.execution_parameters import (
-    AcquisitionType,
-    AveragingMode,
-    ExecutionParameters,
-)
+from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import (
     Acquisition,
-    Align,
     Delay,
     Pulse,
-    PulseId,
     PulseLike,
     Readout,
     VirtualZ,
@@ -35,10 +28,11 @@ from qibolab._core.sweeper import ParallelSweepers
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
-    channel_operator,
+    Operator,
     waveform,
 )
-from .utils import shots
+from .operators import TimeDependentOperator, evolve, expand
+from .results import acquisitions, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
@@ -70,63 +64,16 @@ class EmulatorController(Controller):
         return reduce(
             or_,
             (
-                self._single_sequence(sequence, configs, options, sweepers)
+                results(
+                    # states in computational basis
+                    self._sweep(sequence, configs, sweepers),
+                    sequence,
+                    cast(HamiltonianConfig, configs["hamiltonian"]),
+                    options,
+                )
                 for sequence in sequences
             ),
         )
-
-    def _single_sequence(
-        self,
-        sequence: PulseSequence,
-        configs: dict[str, Config],
-        options: ExecutionParameters,
-        sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
-        """Collect results for a single pulse sequence.
-
-        The dictionary returned is already compliant with the expected
-        result for the execution of this single sequence, thus suitable
-        to be returned as is.
-        """
-        # probabilities for the |0>, |1> ... |n> state, for each swept value
-        probabilities = self._sweep(sequence, configs, sweepers)
-        assert options.nshots is not None
-        # extract results from probabilities, according to the requested averaging mode
-        averaged = (
-            shots(probabilities, options.nshots)
-            if options.averaging_mode == AveragingMode.SINGLESHOT
-            # weighted averaged
-            else np.sum(probabilities * np.arange(probabilities.shape[-1]), axis=-1)
-        )
-        # move measurements dimension to the front, getting ready for extraction
-        res = np.moveaxis(averaged, -1, 0)
-
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            measurements = res
-        elif options.acquisition_type is AcquisitionType.INTEGRATION:
-            x = np.stack((res, np.zeros_like(res)), axis=-1)
-            measurements = np.random.normal(x, scale=0.001)
-        else:
-            raise ValueError(
-                f"Acquisition type '{options.acquisition_type}' unsupported"
-            )
-        # match measurements with their IDs, in order to already comply with the general
-        # format established by the `Controller` interface
-        measurement_ids = self._acquisitions(sequence).keys()
-        return dict(zip(measurement_ids, list(measurements)))
-
-    def _acquisitions(self, sequence: PulseSequence) -> dict[PulseId, float]:
-        """Compute acqusitions' times."""
-        acq = {}
-        for ch in sequence.channels:
-            time = 0
-            for ev in sequence.channel(ch):
-                if isinstance(ev, (Acquisition, Readout)):
-                    acq[ev.id] = time
-                if isinstance(ev, Align):
-                    raise ValueError("Align not supported in emulator.")
-                time += ev.duration
-        return acq
 
     def _sweep(
         self,
@@ -181,33 +128,32 @@ class EmulatorController(Controller):
 
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = sum(config.hamiltonian)
+        hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
             hamiltonian += time_hamiltonian
-
-        results = mesolve(
+        results = evolve(
             hamiltonian,
             config.initial_state,
             tlist_,
             config.dissipation,
-            e_ops=[config.probability(state=i) for i in range(config.transmon_levels)],
         )
-
-        return extract_probabilities(
-            results.expect, self._acquisitions(sequence_).values(), tlist_
+        return select_acquisitions(
+            results.states,
+            acquisitions(sequence_).values(),
+            tlist_,
         )
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> Optional[QobjEvo]:
+    ) -> Optional[TimeDependentOperator]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         channels = [
             [operator, channel_time(waveforms)]
             for operator, waveforms in hamiltonians(sequence, configs)
         ]
-        return QobjEvo(channels) if len(channels) > 0 else None
+        return TimeDependentOperator(channels) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -254,12 +200,15 @@ def tlist(
 
 
 def hamiltonian(
-    pulses: Iterable[PulseLike], config: Config, hamiltonian: HamiltonianConfig
-) -> tuple[Qobj, list[Modulated]]:
+    pulses: Iterable[PulseLike],
+    config: Config,
+    hamiltonian: HamiltonianConfig,
+    qubit: int,
+) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = channel_operator(n)
+    op = expand(config.operator(n), hamiltonian.dims, qubit)
     waveforms = (
-        waveform(pulse, config, n)
+        waveform(pulse, config)
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
@@ -269,10 +218,11 @@ def hamiltonian(
 
 def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
-) -> Iterable[tuple[Qobj, list[Modulated]]]:
+) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
+    # TODO: pass qubit in a better way
     return (
-        hamiltonian(sequence.channel(ch), configs[ch], hconfig)
+        hamiltonian(sequence.channel(ch), configs[ch], hconfig, int(ch[0]))
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig)
@@ -300,19 +250,3 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
         return 0
 
     return time
-
-
-def extract_probabilities(
-    expectations: list[NDArray], acquisitions: Iterable[float], times: NDArray
-) -> NDArray:
-    """Extract probabilities from expectations.
-
-    First, retrieve acquisitions, and locate them in the tlist, to
-    isolate the expectations related to measurements.
-
-    Then, it computes probabilities, based on the identified
-    expectations.
-    """
-    acq = np.array(list(acquisitions))
-    samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack(expectations, axis=-1)[samples]
