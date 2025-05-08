@@ -6,7 +6,7 @@ from pydantic import Field
 from qibo.config import raise_error
 from scipy.constants import giga
 
-from ...components import Config, DcConfig
+from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
 from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
@@ -312,7 +312,7 @@ def waveform(
     flux_dependence: Optional[callable] = None,
 ) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
-    if not isinstance(config, (DriveEmulatorConfig, DcConfig)):
+    if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         return None
 
     if isinstance(pulse, Pulse):
