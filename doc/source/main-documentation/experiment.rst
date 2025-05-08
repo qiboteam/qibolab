@@ -23,6 +23,24 @@ Qibolab offers a range of pre-defined pulse shapes which can be found in :py:mod
 
 To illustrate, here is an examples of how to instantiate a pulse using the Qibolab API:
 
+.. testsetup:: python
+
+    from qibolab import create_platform
+    from qibolab import (
+        AcquisitionType,
+        AveragingMode,
+    )
+
+    options = dict(
+        nshots=1000,
+        relaxation_time=10,
+        fast_reset=False,
+        acquisition_type=AcquisitionType.INTEGRATION,
+        averaging_mode=AveragingMode.CYCLIC,
+    )
+
+    platform = create_platform("dummy")
+
 .. testcode:: python
 
     from qibolab import Pulse, Rectangular
