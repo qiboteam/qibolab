@@ -6,8 +6,9 @@ from pydantic import Field
 from qibo.config import raise_error
 from scipy.constants import giga
 
-from ...components import Config
+from ...components import Config, DcConfig
 from ...identifier import QubitId, QubitPairId, TransitionId
+from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .operators import (
@@ -21,7 +22,7 @@ from .operators import (
     transmon_destroy,
 )
 
-__all__ = ["DriveEmulatorConfig", "HamiltonianConfig"]
+__all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 
 
 class DriveEmulatorConfig(Config):
@@ -41,17 +42,17 @@ class DriveEmulatorConfig(Config):
         return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
-class DriveEmulatorConfig(Config):
-    """Configuration for an IQ channel."""
+class FluxEmulatorConfig(Config):
+    """Configuration for a flux line."""
 
-    kind: Literal["drive-emulator"] = "drive-emulator"
+    kind: Literal["flux-emulator"] = "flux-emulator"
 
-    frequency: float
-    """Frequency of drive."""
-    rabi_frequency: float = 1e9
-    """Rabi frequency [Hz]"""
-    scale_factor: float = 1
-    """Scaling factor."""
+    offset: float
+    """DC offset of the channel."""
+
+    @staticmethod
+    def operator(n: int) -> Operator:
+        return transmon_create(n) * transmon_destroy(n)
 
 
 class Qubit(Config):
@@ -137,14 +138,13 @@ class QubitPair(Config):
         return 2 * np.pi * self.coupling / giga * op
 
 
-@dataclass
-class FluxPulse:
+class FluxPulse(Model):
+    """Flux pulse term in Hamiltonian."""
+
     pulse: Pulse
     """Flux pulse to be played."""
-    offset: float
-    """Static bias offset."""
-    flux_freq_dependence: callable
-    """Flux frequency dep."""
+    config: FluxEmulatorConfig
+    """Flux emulator configuration."""
     sampling_rate: float = 1
     """Sampling rate."""
 
@@ -179,8 +179,7 @@ class FluxPulse:
         )
 
 
-@dataclass
-class QubitDrive:
+class ModulatedDrive(Model):
     """Hamiltonian parameters for qubit drive."""
 
     pulse: Pulse
@@ -210,27 +209,11 @@ class QubitDrive:
     def rabi_omega(self):
         return 2 * np.pi * self.config.rabi_frequency / giga
 
-    @property
-    def omega(self):
-        return 2 * np.pi * self.config.frequency / giga
-
-    @property
-    def rabi_omega(self):
-        return 2 * np.pi * self.config.rabi_frequency / giga
-
     def __call__(self, t, sample, phase):
         i, q = self.envelopes
         phi = self.omega * t + self.pulse.relative_phase + phase
         return (
-<<<<<<< HEAD
-<<<<<<< HEAD
             self.rabi_omega
-=======
-            self.omega
->>>>>>> 038c4b41 (refactor: Address first comments)
-=======
-            self.rabi_omega
->>>>>>> 79511a5b (fix: Missing rabi_)
             * self.config.scale_factor
             * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
         )
@@ -263,6 +246,7 @@ class ModulatedVirtualZ(Model):
 
 
 Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
+ControlLine = Union[Modulated, FluxPulse]
 
 
 class HamiltonianConfig(Config):
@@ -282,40 +266,15 @@ class HamiltonianConfig(Config):
         return self.model_validate(d)
 
     @property
-    def nqubits(self):
-        return len(self.single_qubit)
-
-    @property
-<<<<<<< HEAD
-=======
-    def identity(self) -> list[Qobj]:
-        """Identiy as list of identity for each qubit."""
-        return self.nqubits * [qeye(self.transmon_levels)]
-
-    def _embed_operator(self, operator: Qobj, index: int) -> Qobj:
-        """Embed operator in the tensor product space."""
-        space = self.identity
-        space[index] = operator
-        return tensor(space)
-
-    def _qubit_qubit_coupling(self, pair: QubitPairId) -> Qobj:
-        """Qubit-qubit coupling operator."""
-        q0, q1 = pair
-        return self._embed_operator(
-            transmon_destroy(self.transmon_levels), q0
-        ) * self._embed_operator(
-            transmon_create(self.transmon_levels), q1
-        ) + self._embed_operator(
-            transmon_create(self.transmon_levels), q0
-        ) * self._embed_operator(transmon_destroy(self.transmon_levels), q1)
-
-    @property
->>>>>>> 149b658d (refactor: Hardcode qubit-qubit coupling)
     def initial_state(self):
         """Initial state as ground state of the system."""
         return tensor_product(
             state(0, self.transmon_levels) for i in range(self.nqubits)
         )
+
+    @property
+    def nqubits(self):
+        return len(self.single_qubit)
 
     @property
     def dims(self) -> list[int]:
@@ -330,11 +289,7 @@ class HamiltonianConfig(Config):
             for i, qubit in self.single_qubit.items()
         )
         two_qubit_terms = sum(
-<<<<<<< HEAD
             expand(pair.operator(self.transmon_levels), self.dims, list(pair_id))
-=======
-            pair.operator(self._qubit_qubit_coupling(pair_id))
->>>>>>> 149b658d (refactor: Hardcode qubit-qubit coupling)
             for pair_id, pair in self.pairs.items()
         )
         return single_qubit_terms + two_qubit_terms
@@ -352,39 +307,23 @@ class HamiltonianConfig(Config):
 
 
 def waveform(
-    pulse: Union[Pulse, Delay], channel: Config, level: int, flux_dependence: callable
-) -> Optional[Modulated]:
+    pulse: PulseLike,
+    config: Config,
+    flux_dependence: Optional[callable] = None,
+) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
-<<<<<<< HEAD
-    if not isinstance(config, DriveEmulatorConfig):
-=======
-    if not isinstance(channel, DriveEmulatorConfig):
->>>>>>> 038c4b41 (refactor: Address first comments)
+    if not isinstance(config, (DriveEmulatorConfig, DcConfig)):
         return None
 
     if isinstance(pulse, Pulse):
-<<<<<<< HEAD
-        if isinstance(channel, DriveConfig):
-            return QubitDrive(
-                pulse=pulse,
-                frequency=channel.frequency / giga,
-                rabi_frequency=channel.rabi_frequency / giga,
-                scale_factor=channel.scale_factor,
-                n=level,
-            )
-        if isinstance(channel, DcConfig):
+        if isinstance(config, DriveEmulatorConfig):
+            return ModulatedDrive(pulse=pulse, config=config)
+        if isinstance(config, FluxEmulatorConfig):
             return FluxPulse(
                 pulse=pulse,
-                offset=channel.offset,
+                config=config,
                 flux_freq_dependence=flux_dependence,
             )
-=======
-        return QubitDrive(
-            pulse=pulse,
-            config=channel,
-            n=level,
-        )
->>>>>>> 038c4b41 (refactor: Address first comments)
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):

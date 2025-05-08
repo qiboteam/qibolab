@@ -26,7 +26,6 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .hamiltonians import (
-    DriveConfig,
     HamiltonianConfig,
     Modulated,
     Operator,
@@ -129,14 +128,26 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
 
-        config = config.replace(
-            update={
-                f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                    qubit
-                ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
-                for qubit in config.single_qubit
-            }
-        )
+        config_update = {}
+        for qubit in config.single_qubit:
+            try:
+                config_update.update(
+                    {
+                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                            qubit
+                        ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
+                    }
+                )
+            except KeyError:
+                config_update.update(
+                    {
+                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                            qubit
+                        ].detuned_frequency(0)
+                    }
+                )
+        config = config.replace(update=config_update)
+
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
