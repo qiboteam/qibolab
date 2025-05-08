@@ -1,206 +1,141 @@
 First experiment
 ================
 
+The aim of this introductory example is to present the main aspects of the Qibolab
+interface, bringing up all the required ingredients for an actual execution.
+
+For configuration simplicity, a dummy instrument will be used. Since its only purpose is
+to generate purely random numbers, respecting the layout.
+At the end, the results will be compared with those resulting from a more comprehensive
+:doc:`tutorial <../tutorials/emulator>`, based on the numerically computed evolution of
+a :ref:`simulated system <main_doc_emulator>`.
+
 Define the platform
 -------------------
 
 To launch experiments on quantum hardware, users have first to define their platform.
-To define a platform the user needs to provide a folder with the following structure:
 
-.. code-block:: bash
-
-    my_platform/
-        platform.py
-        parameters.json
-
-where ``platform.py`` contains instruments information and ``parameters.json`` includes calibration parameters.
-
-More information about defining platforms is provided in :doc:`../tutorials/lab` and several examples can be found
-at the `TII QRC lab dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
-
-For a first experiment, let's define a single qubit platform at the path previously specified.
-In this example, the qubit is controlled by a Quantum Machines cluster that contains Octaves,
-although minimal changes are needed to use other devices.
+For a first experiment, let's define a single qubit platform.
+In this example, the qubit is only coupled to a drive channel and a transmission line.
+Where the latter is represented by a pair of related entities: an output probe channel,
+and an input acquisition channel.
 
 .. code-block:: python
 
-    # my_platform/platform.py
-
-    import pathlib
-
-    from qibolab import (
-        AcquisitionChannel,
-        Channel,
-        ConfigKinds,
-        DcChannel,
-        IqChannel,
-        Platform,
-        Qubit,
-    )
-    from qibolab.instruments.qm import Octave, QmConfigs, QmController
-
-    # folder containing runcard with calibration parameters
-    FOLDER = pathlib.Path.cwd()
-
-    # Register QM-specific configurations for parameters loading
-    ConfigKinds.extend([QmConfigs])
+    from qibolab import AcquisitionChannel, Hardware, IqChannel, Qubit
+    from qibolab.instruments.dummy import DummyInstrument
 
 
-    def create():
+    def create() -> Hardware:
         # Define qubit
-        qubits = {
-            0: Qubit(
-                drive="0/drive",
-                probe="0/probe",
-                acquisition="0/acquisition",
-            )
-        }
+        qubits = {0: Qubit.default(0)}
 
         # Create channels and connect to instrument ports
         channels = {}
         qubit = qubits[0]
         # Readout
-        channels[qubit.probe] = IqChannel(
-            device="octave1", path="1", mixer=None, lo="0/probe/lo"
-        )
+        channels[qubit.probe] = IqChannel(mixer=None, lo=None)
         # Acquire
-        channels[qubit.acquisition] = AcquisitionChannel(
-            device="octave1", path="1", probe=qubit.probe
-        )
+        channels[qubit.acquisition] = AcquisitionChannel(probe=qubit.probe, twpa_pump=None)
         # Drive
-        channels[qubit.drive] = IqChannel(
-            device="octave1", path="2", mixer=None, lo="0/drive/lo"
-        )
+        channels[qubit.drive] = IqChannel(mixer=None, lo=None)
 
-        # Define Quantum Machines instruments
-        octaves = {
-            "octave1": Octave("octave5", port=101, connectivity="con1"),
-        }
-        controller = QmController(
-            name="qm",
-            address="192.168.0.101:80",
-            octaves=octaves,
-            channels=channels,
-            calibration_path=FOLDER,
-        )
+        # Define instruments
+        controller = DummyInstrument(address="192.168.0.101:80", channels=channels)
 
         # Define and return platform
-        return Platform.load(
-            path=FOLDER, instruments=[controller], qubits=qubits, resonator_type="3D"
-        )
+        return Hardware(instruments={"dummy": controller}, qubits=qubits)
 
+
+And the we can define the following parameters (the exact content is not yet relevant,
+and it will be explained in the :ref:`related section <main_doc_parameters>`).
+
+.. collapse:: Parameters dictionary
+
+    .. testcode:: python
+
+        parameters = {
+            "settings": {"nshots": 1000, "relaxation_time": 70000},
+            "configs": {
+                "dummy/bounds": {
+                    "kind": "bounds",
+                    "waveforms": 0,
+                    "readout": 0,
+                    "instructions": 0,
+                },
+                "0/drive": {"kind": "iq", "frequency": 4833726197},
+                "0/probe": {"kind": "iq", "frequency": 7320000000},
+                "0/acquisition": {
+                    "kind": "acquisition",
+                    "delay": 224,
+                    "smearing": 0,
+                    "threshold": 0.002100861788865835,
+                    "iq_angle": -0.7669877581038627,
+                },
+            },
+            "native_gates": {
+                "single_qubit": {
+                    "0": {
+                        "RX": [
+                            [
+                                "0/drive",
+                                {
+                                    "kind": "pulse",
+                                    "duration": 40,
+                                    "amplitude": 0.5,
+                                    "envelope": {"kind": "gaussian", "rel_sigma": 3.0},
+                                },
+                            ],
+                        ],
+                        "MZ": [
+                            [
+                                "0/acquisition",
+                                {
+                                    "kind": "readout",
+                                    "acquisition": {
+                                        "kind": "acquisition",
+                                        "duration": 2000.0,
+                                    },
+                                    "probe": {
+                                        "kind": "pulse",
+                                        "duration": 2000.0,
+                                        "amplitude": 0.003,
+                                        "envelope": {"kind": "rectangular"},
+                                    },
+                                },
+                            ]
+                        ],
+                    }
+                },
+                "two_qubit": {},
+            },
+        }
+
+Finally, we can instantiate the defined platform as follows:
+
+.. testcode:: python
+
+    from qibolab import Platform, Parameters
+
+    params = Parameters.model_validate(parameters)
+    platform = Platform(name="my_platform", parameters=params, **vars(create()))
 
 .. note::
 
-    The ``platform.py`` file must contain a ``create_function`` with the following signature:
+    In this case, even defining ``create()`` and ``parameters`` separately appears
+    redundant.
+    However, this pattern is particularly convenient to separate the established devices
+    arrangement, which is considered to be the fixed part of the platform, from the set
+    of parameters, that are instead subject to calibration.
 
-    .. code-block:: python
-
-        import pathlib
-        from qibolab import Platform
-
-
-        def create() -> Platform:
-            """Function that generates Qibolab platform."""
-
-And the we can define the runcard ``my_platform/parameters.json``:
-
-.. code-block:: json
-
-    {
-        "settings": {
-            "nshots": 1024,
-            "relaxation_time": 70000
-        },
-        "configs": {
-            "0/drive": {
-                "kind": "iq",
-                "frequency": 4833726197
-            },
-            "0/drive/lo": {
-                "kind": "oscillator",
-                "frequency": 5200000000,
-                "power": 0
-            },
-            "0/probe": {
-                "kind": "iq",
-                "frequency": 7320000000
-            },
-            "0/probe/lo": {
-                "kind": "oscillator",
-                "frequency": 7300000000,
-                "power": 0
-            },
-            "0/acquisition": {
-                "kind": "qm-acquisition",
-                "delay": 224,
-                "smearing": 0,
-                "threshold": 0.002100861788865835,
-                "iq_angle": -0.7669877581038627,
-                "gain": 10,
-                "offset": 0.0
-            }
-        },
-        "native_gates": {
-            "single_qubit": {
-                "0": {
-                    "RX": {
-                        "0/drive": [
-                            {
-                                "duration": 40,
-                                "amplitude": 0.5,
-                                "envelope": { "kind": "gaussian", "rel_sigma": 3.0 },
-                                "type": "qd"
-                            }
-                        ]
-                    },
-                    "MZ": [
-                        [
-                            "0/acquisition",
-                            {
-                                "kind": "readout",
-                                "acquisition": {
-                                    "kind": "acquisition",
-                                    "duration": 2000.0
-                                },
-                                "probe": {
-                                    "kind": "pulse",
-                                    "duration": 2000.0,
-                                    "amplitude": 0.003,
-                                    "envelope": {
-                                        "kind": "rectangular"
-                                    }
-                                }
-                            }
-                        ]
-                    ]
-                }
-            },
-            "two_qubit": {}
-        }
-    }
+    The division is especially useful to store platforms as files. Qibolab also supplies
+    built-in machinery to load these stored platforms, as described in the
+    :doc:`../tutorials/storage` tutorial.
 
 
-Setting up the environment
---------------------------
-
-After defining the platform, we must instruct ``qibolab`` of the location of the platform(s).
-We need to define the path that contains platform folders.
-This can be done using an environment variable:
-for Unix based systems:
-
-.. code-block:: bash
-
-    export QIBOLAB_PLATFORMS=<path-platform-folders>
-
-for Windows:
-
-.. code-block:: bash
-
-    $env:QIBOLAB_PLATFORMS="<path-to-platform-folders>"
-
-To avoid having to repeat this export command for every session, this line can be added to the ``.bashrc`` file (or alternatives such as ``.zshrc``).
-
+Further information about defining platforms is provided in the
+:doc:`../main-documentation/platform` page, and several examples can be found at the
+`TII QRC lab-dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
 Run the experiment
 ------------------
@@ -223,9 +158,6 @@ We leave to the dedicated tutorial a full explanation of the experiment, but her
         Sweeper,
         create_platform,
     )
-
-    # load the platform from ``dummy.py`` and ``dummy.json``
-    platform = create_platform("dummy")
 
     qubit = platform.qubits[0]
     natives = platform.natives.single_qubit[0]
