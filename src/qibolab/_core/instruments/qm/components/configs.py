@@ -2,18 +2,25 @@ from typing import Literal, Union
 
 from pydantic import Field
 
-from qibolab._core.components import AcquisitionConfig, DcConfig, OscillatorConfig
+from qibolab._core.components import (
+    AcquisitionConfig,
+    DcConfig,
+    OscillatorConfig,
+)
 
 __all__ = [
     "OpxOutputConfig",
     "QmAcquisitionConfig",
     "QmConfigs",
     "OctaveOscillatorConfig",
+    "MwFemOscillatorConfig",
 ]
 
 OctaveOutputModes = Literal[
     "always_on", "always_off", "triggered", "triggered_reversed"
 ]
+
+DEFAULT_SAMPLING_RATE = 1e9
 
 
 class OpxOutputConfig(DcConfig):
@@ -35,6 +42,8 @@ class OpxOutputConfig(DcConfig):
     Changing the filters affects the calibration of single shot discrimination (threshold and angle).
     """
     output_mode: Literal["direct", "amplified"] = "direct"
+    sampling_rate: float = DEFAULT_SAMPLING_RATE
+    upsampling_mode: Literal["mw", "pulse"] = "mw"
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
@@ -59,4 +68,25 @@ class QmAcquisitionConfig(AcquisitionConfig):
     """Constant voltage to be applied on the input."""
 
 
-QmConfigs = Union[OpxOutputConfig, OctaveOscillatorConfig, QmAcquisitionConfig]
+class MwFemOscillatorConfig(OscillatorConfig):
+    """Output config for OPX1000 MW-FEM ports.
+
+    For more information see
+    https://docs.quantum-machines.co/latest/docs/Guides/opx1000_fems/?h=upsampl#microwave-fem-mw-fem
+    """
+
+    kind: Literal["mw-fem-oscillator"] = "mw-fem-oscillator"
+
+    power: int = -11
+    """This corresponds to the ``full_scale_power_dbm`` setting."""
+    upconverter: int = 1
+    band: int = 2
+    sampling_rate: float = DEFAULT_SAMPLING_RATE
+
+
+QmConfigs = Union[
+    OpxOutputConfig,
+    OctaveOscillatorConfig,
+    QmAcquisitionConfig,
+    MwFemOscillatorConfig,
+]
