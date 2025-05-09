@@ -158,17 +158,10 @@ We are now going to give an example on how to setup the `platform.py` file.
 
         return Hardware(instruments=instruments, qubits=qubits)
 
-
-We can observe that we need to allocate an object of type ``EmulatorController`` where we load the channels.
-Note that in order to enables the config to support the Hamiltonian configuration as well as drive and flux channels for the emualtor
-we are adding it explicitly
-in the statement ``ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig)``.
-By removing the lines referring to the flux channel we can also simulate a fixed-frequency transmon.
-
-.. todo::
+.. note::
 
     Split the following, sourcing from an external file - to avoid duplication with
-    :doc:`../getting-started/experiment`
+    :doc:`../getting-started/experiment`.
 
 .. testcode:: python
 
@@ -204,6 +197,8 @@ By removing the lines referring to the flux channel we can also simulate a fixed
     plt.title("Single shot classification")
     plt.xlabel("In-phase [a.u.]")
     plt.ylabel("Quadrature [a.u.]")
+    plt.xlim(-0.2, 1.2)
+    plt.ylim(-0.7, 0.7)
 
     plt.scatter(*results[0], label="0")
     plt.scatter(*results[1], label="1")
