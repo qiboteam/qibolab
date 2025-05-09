@@ -137,64 +137,71 @@ Further information about defining platforms is provided in the
 :doc:`../main-documentation/platform` page, and several examples can be found at the
 `TII QRC lab-dedicated repository <https://github.com/qiboteam/qibolab_platforms_qrc>`_.
 
-Run the experiment
-------------------
+Perform an experiment
+---------------------
 
-Let's take the `Resonator spectroscopy experiment` defined and detailed in :doc:`../tutorials/calibration`.
-Since it is a rather simple experiment, it can be used to perform a fast sanity-check on the platform.
+Once the platform is available, we can finally use it to execute an experiment.
 
-We leave to the dedicated tutorial a full explanation of the experiment, but here it is the required code:
+One of the simplest options is a *single-shot classification*. It will make limited
+usage of the available Experiment API, which will be explored in its :doc:`dedicated
+guide <../main-documentation/experiment.rst>`, or in further tutorials.
+
+Here it is the required code:
 
 .. testcode:: python
 
     import numpy as np
     import matplotlib.pyplot as plt
 
-    from qibolab import (
-        AcquisitionType,
-        AveragingMode,
-        Parameter,
-        PulseSequence,
-        Sweeper,
-        create_platform,
-    )
+    from qibolab import AcquisitionType, PulseSequence
 
-    qubit = platform.qubits[0]
-    natives = platform.natives.single_qubit[0]
-    # define the pulse sequence
-    sequence = natives.MZ.create_sequence()
+    # access the native gates
+    gates = platform.natives.single_qubit[0]
 
-    # define a sweeper for a frequency scan
-    f0 = platform.config(qubit.probe).frequency  # center frequency
-    sweeper = Sweeper(
-        parameter=Parameter.frequency,
-        range=(f0 - 2e8, f0 + 2e8, 1e6),
-        channels=[qubit.probe],
-    )
+    results = []
+    # iterate over pulse sequences
+    for sequence in [gates.MZ(), gates.RX() | gates.MZ()]:
 
-    # perform the experiment using specific options
-    results = platform.execute(
-        [sequence],
-        [[sweeper]],
-        nshots=1000,
-        relaxation_time=50,
-        averaging_mode=AveragingMode.CYCLIC,
-        acquisition_type=AcquisitionType.INTEGRATION,
-    )
-    _, acq = next(iter(sequence.acquisitions))
+        # perform the experiment using specific options
+        signal = platform.execute(
+            [sequence],
+            nshots=1000,
+            acquisition_type=AcquisitionType.INTEGRATION,
+        )
+        _, acq = next(iter(sequence.acquisitions))
 
-    # plot the results
-    signal = results[acq.id]
-    amplitudes = signal[..., 0] + 1j * signal[..., 1]
-    frequencies = sweeper.values
+        # collect the results
+        sig = signal[acq.id]
+        results.append([sig[..., 0], sig[..., 1]])
 
-    plt.title("Resonator Spectroscopy")
-    plt.xlabel("Frequencies [Hz]")
-    plt.ylabel("Amplitudes [a.u.]")
+    plt.title("Single shot classification")
+    plt.xlabel("In-phase [a.u.]")
+    plt.ylabel("Quadrature [a.u.]")
 
-    plt.plot(frequencies, amplitudes)
+    plt.scatter(*results[0], label="0")
+    plt.scatter(*results[1], label="1")
+    plt.legend()
 
-.. image:: ../tutorials/resonator_spectroscopy_light.svg
-   :class: only-light
-.. image:: ../tutorials/resonator_spectroscopy_dark.svg
-   :class: only-dark
+
+The main features of this snippet are:
+
+- the calibrated *native gates* are accessed from the ``platform`` parameters
+- they are used to construct a sequence (e.g. `gates.RX() | gates.MZ()`)
+- the sequence is executed by the ``platform``
+- the results consist of a dictionary, mapping the identifier of the acquisition
+  operations to the arrays of results, which are organized over multiple dimensions
+  (more in the :ref:`main_doc_results` section)
+
+As announced from the beginning, the results are pure white noise:
+
+.. image:: dummy-single-shot.svg
+    :align: center
+
+This is because the platform we defined adopted a dummy instrument, which is mainly
+provided for debugging purpose.
+
+Using a more meaningful platform, e.g. one based on :doc:`QPU numerical simulation
+<../tutorials/emulator>`, the result would have been the following
+
+.. image:: dummy-single-shot.svg
+    :align: center
