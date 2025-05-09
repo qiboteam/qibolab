@@ -144,7 +144,7 @@ Once the platform is available, we can finally use it to execute an experiment.
 
 One of the simplest options is a *single-shot classification*. It will make limited
 usage of the available Experiment API, which will be explored in its :doc:`dedicated
-guide <../main-documentation/experiment.rst>`, or in further tutorials.
+guide <../main-documentation/experiment>`, or in further tutorials.
 
 Here it is the required code:
 

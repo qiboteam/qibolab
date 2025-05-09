@@ -133,10 +133,10 @@ We are now going to give an example on how to setup the `platform.py` file.
 
         return Hardware(instruments=instruments, qubits=qubits)
 
-.. todo::
+.. note::
 
     Split the following, sourcing from an external file - to avoid duplication with
-    :doc:`../getting-started/experiment`
+    :doc:`../getting-started/experiment`.
 
 .. testcode:: python
 
@@ -172,6 +172,8 @@ We are now going to give an example on how to setup the `platform.py` file.
     plt.title("Single shot classification")
     plt.xlabel("In-phase [a.u.]")
     plt.ylabel("Quadrature [a.u.]")
+    plt.xlim(-0.2, 1.2)
+    plt.ylim(-0.7, 0.7)
 
     plt.scatter(*results[0], label="0")
     plt.scatter(*results[1], label="1")
