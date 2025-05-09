@@ -150,10 +150,9 @@ Here it is the required code:
 
 .. testcode:: python
 
-    import numpy as np
     import matplotlib.pyplot as plt
 
-    from qibolab import AcquisitionType, PulseSequence
+    from qibolab import AcquisitionType
 
     # access the native gates
     gates = platform.natives.single_qubit[0]
@@ -161,7 +160,6 @@ Here it is the required code:
     results = []
     # iterate over pulse sequences
     for sequence in [gates.MZ(), gates.RX() | gates.MZ()]:
-
         # perform the experiment using specific options
         signal = platform.execute(
             [sequence],
@@ -203,5 +201,5 @@ provided for debugging purpose.
 Using a more meaningful platform, e.g. one based on :doc:`QPU numerical simulation
 <../tutorials/emulator>`, the result would have been the following
 
-.. image:: dummy-single-shot.svg
+.. image:: ../tutorials/emulator-single-shot.svg
     :align: center
