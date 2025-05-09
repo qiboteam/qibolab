@@ -13,7 +13,7 @@ ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig])
 
 
 def create() -> Platform:
-    """Create a dummy platform using the dummy instrument."""
+    """Create emulator platform with one qutrit."""
     qubits = {}
     channels = {}
 

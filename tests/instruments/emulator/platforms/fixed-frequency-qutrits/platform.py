@@ -1,4 +1,4 @@
-from qibolab import ConfigKinds, Hardware, IqChannel, Platform, Qubit
+from qibolab import ConfigKinds, Hardware, IqChannel, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
@@ -8,8 +8,8 @@ from qibolab.instruments.emulator import (
 ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig])
 
 
-def create() -> Platform:
-    """Create a dummy platform using the dummy instrument."""
+def create() -> Hardware:
+    """Create emulator platform with fixed-frequency coupled qutrits."""
     qubits = {}
     channels = {}
 
@@ -28,7 +28,7 @@ def create() -> Platform:
     }
     # register the instruments
     instruments = {
-        "dummy": EmulatorController(address="0.0.0.0", channels=channels),
+        "emulator": EmulatorController(address="0.0.0.0", channels=channels),
     }
 
     return Hardware(

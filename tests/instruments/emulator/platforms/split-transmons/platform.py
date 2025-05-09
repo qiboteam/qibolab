@@ -1,6 +1,4 @@
-import pathlib
-
-from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
+from qibolab import ConfigKinds, DcChannel, Hardware, IqChannel, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
@@ -8,30 +6,27 @@ from qibolab.instruments.emulator import (
     HamiltonianConfig,
 )
 
-FOLDER = pathlib.Path(__file__).parent
-
 ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
 
-def create() -> Platform:
-    """Create emulator platform with one qubit."""
+def create() -> Hardware:
+    """Create platform with two split-transmons coupled."""
     qubits = {}
     channels = {}
 
-    for q in range(1):
-        qubits[q] = qubit = Qubit.default(q)
+    for q in range(2):
+        qubits[q] = qubit = Qubit.default(q, drive_extra={(1, 2): f"{q}/drive12"})
         channels |= {
             qubit.drive: IqChannel(mixer=None, lo=None),
             qubit.flux: DcChannel(),
+            qubits[q].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
         }
-
     # register the instruments
     instruments = {
-        "dummy": EmulatorController(address="0.0.0.0", channels=channels),
+        "emulator": EmulatorController(address="0.0.0.0", channels=channels),
     }
 
-    return Platform.load(
-        path=FOLDER,
+    return Hardware(
         instruments=instruments,
         qubits=qubits,
     )
