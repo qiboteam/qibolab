@@ -282,6 +282,7 @@ Supported averaging modes, available through the :class:`qibolab.AveragingMode` 
     In sequential mode, a sweeper is executed with the repetition loop nested inside, while cyclic mode places the sweeper as the outermost loop. Cyclic execution generally offers better noise resistance.
     Ideally, use the cyclic mode. However, some devices lack support for it and will automatically convert it to sequential execution.
 
+.. _main_doc_results:
 
 Results
 -------
