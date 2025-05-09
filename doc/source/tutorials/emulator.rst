@@ -148,9 +148,7 @@ We are now going to give an example on how to setup the `platform.py` file.
     # emulator / platform.py
 
 
-    import pathlib
-
-    from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
+    from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit, Hardware
     from qibolab.instruments.emulator import (
         DriveEmulatorConfig,
         EmulatorController,
@@ -158,13 +156,11 @@ We are now going to give an example on how to setup the `platform.py` file.
         HamiltonianConfig,
     )
 
-    FOLDER = pathlib.Path(__file__).parent
-
     ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
 
-    def create() -> Platform:
-        """Create a dummy platform using the dummy instrument."""
+    def create() -> Hardware:
+        """Create emulator platform with flux-tunable qubit."""
         qubits = {}
         channels = {}
 
@@ -177,11 +173,10 @@ We are now going to give an example on how to setup the `platform.py` file.
 
         # register the instruments
         instruments = {
-            "dummy": EmulatorController(address="0.0.0.0", channels=channels),
+            "emulator": EmulatorController(address="0.0.0.0", channels=channels),
         }
 
-        return Platform.load(
-            path=FOLDER,
+        return Hardware(
             instruments=instruments,
             qubits=qubits,
         )
