@@ -8,6 +8,7 @@ from scipy.constants import giga
 
 from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
+from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .operators import (
@@ -21,7 +22,7 @@ from .operators import (
     transmon_destroy,
 )
 
-__all__ = ["DriveEmulatorConfig", "HamiltonianConfig"]
+__all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 
 
 class DriveEmulatorConfig(Config):
@@ -41,13 +42,32 @@ class DriveEmulatorConfig(Config):
         return -1j * (transmon_destroy(n) - transmon_create(n))
 
 
+class FluxEmulatorConfig(Config):
+    """Configuration for a flux line."""
+
+    kind: Literal["flux-emulator"] = "flux-emulator"
+
+    offset: float
+    """DC offset of the channel."""
+
+    @staticmethod
+    def operator(n: int) -> Operator:
+        return transmon_create(n) * transmon_destroy(n)
+
+
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
+    dynamical_frequency: float = 0
+    """Frequency to be used during evolution (could be different from frequency due to static offset.)"""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
+    sweetspot: float = 0
+    """Sweetspot point."""
+    asymmetry: float = 0
+    """Asymmetry."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -56,7 +76,14 @@ class Qubit(Config):
     @property
     def omega(self) -> float:
         """Angular velocity."""
-        return 2 * np.pi * self.frequency
+        return 2 * np.pi * self.dynamical_frequency
+
+    def detuned_frequency(self, flux: float) -> float:
+        """Return frequency of the qubit modified by the flux."""
+        return (self.frequency - self.anharmonicity) * (
+            self.asymmetry**2
+            + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
+        ) ** (1 / 4) + self.anharmonicity
 
     def operator(self, n: int):
         """Time independent operator."""
@@ -109,6 +136,48 @@ class QubitPair(Config):
             transmon_destroy(n),
         )
         return 2 * np.pi * self.coupling / giga * op
+
+
+class FluxPulse(Model):
+    """Flux pulse term in Hamiltonian."""
+
+    pulse: Pulse
+    """Flux pulse to be played."""
+    config: FluxEmulatorConfig
+    """Flux emulator configuration."""
+    sampling_rate: float = 1
+    """Sampling rate."""
+    flux_freq_dependence: Optional[callable] = None
+
+    @cached_property
+    def envelopes(self):
+        """Pulse envelopes."""
+        return self.pulse.envelopes(self.sampling_rate)
+
+    @property
+    def duration(self):
+        """Duration of the pulse."""
+        return self.pulse.duration
+
+    @property
+    def phase(self):
+        """Virtual Z phase."""
+        return 0
+
+    def __call__(self, t, sample, phase):
+        i, _ = self.envelopes
+        # we are passing the relative frequency because the term with the offset
+        # is already included in the time-independent part of the Hamiltonian
+        # and it corresponds to changing the static bias
+        return (
+            2
+            * np.pi
+            * (
+                self.flux_freq_dependence(i[sample] + self.config.offset)
+                - self.flux_freq_dependence(self.config.offset)
+            )
+            / giga
+        )
 
 
 class ModulatedDrive(Model):
@@ -178,6 +247,7 @@ class ModulatedVirtualZ(Model):
 
 
 Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
+ControlLine = Union[Modulated, FluxPulse]
 
 
 class HamiltonianConfig(Config):
@@ -188,9 +258,13 @@ class HamiltonianConfig(Config):
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
     pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
 
-    @property
-    def nqubits(self):
-        return len(self.single_qubit)
+    def replace(self, update: Update) -> "HamiltonianConfig":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+
+        return self.model_validate(d)
 
     @property
     def initial_state(self):
@@ -198,6 +272,10 @@ class HamiltonianConfig(Config):
         return tensor_product(
             state(0, self.transmon_levels) for i in range(self.nqubits)
         )
+
+    @property
+    def nqubits(self):
+        return len(self.single_qubit)
 
     @property
     def dims(self) -> list[int]:
@@ -229,12 +307,24 @@ class HamiltonianConfig(Config):
         )
 
 
-def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
+def waveform(
+    pulse: PulseLike,
+    config: Config,
+    flux_dependence: Optional[callable] = None,
+) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
-    if not isinstance(config, DriveEmulatorConfig):
+    if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         return None
+
     if isinstance(pulse, Pulse):
-        return ModulatedDrive(pulse=pulse, config=config)
+        if isinstance(config, DriveEmulatorConfig):
+            return ModulatedDrive(pulse=pulse, config=config)
+        if isinstance(config, FluxEmulatorConfig):
+            return FluxPulse(
+                pulse=pulse,
+                config=config,
+                flux_freq_dependence=flux_dependence,
+            )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):

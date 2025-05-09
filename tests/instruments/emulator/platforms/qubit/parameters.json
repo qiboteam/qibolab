@@ -15,7 +15,9 @@
     "single_qubit": {
       "0": {
         "frequency": 5e9,
+        "sweetspot": 0.02,
         "anharmonicity": -200e6,
+        "asymmetry": 0.0,
         "t1": {
           "0-1": 1000
         },
@@ -36,6 +38,10 @@
       "frequency": 4.8e9,
       "scale_factor": 0.1591549
     },
+    "0/flux": {
+        "kind": "flux-emulator",
+        "offset": 0.02
+      },
   "0/probe": {
     "kind": "iq",
     "frequency": 5200000000.0
