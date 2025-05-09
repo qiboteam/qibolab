@@ -147,6 +147,7 @@ class FluxPulse(Model):
     """Flux emulator configuration."""
     sampling_rate: float = 1
     """Sampling rate."""
+    flux_freq_dependence: Optional[callable] = None
 
     @cached_property
     def envelopes(self):
@@ -172,8 +173,8 @@ class FluxPulse(Model):
             2
             * np.pi
             * (
-                self.flux_freq_dependence(i[sample] + self.offset)
-                - self.flux_freq_dependence(self.offset)
+                self.flux_freq_dependence(i[sample] + self.config.offset)
+                - self.flux_freq_dependence(self.config.offset)
             )
             / giga
         )

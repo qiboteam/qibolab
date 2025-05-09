@@ -1,15 +1,16 @@
 import pathlib
 
-from qibolab import ConfigKinds, IqChannel, Platform, Qubit
+from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
+    FluxEmulatorConfig,
     HamiltonianConfig,
 )
 
 FOLDER = pathlib.Path(__file__).parent
 
-ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig])
+ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
 
 def create() -> Platform:
@@ -21,6 +22,7 @@ def create() -> Platform:
         qubits[q] = qubit = Qubit.default(q)
         channels |= {
             qubit.drive: IqChannel(mixer=None, lo=None),
+            qubit.flux: DcChannel(),
         }
 
     # register the instruments
