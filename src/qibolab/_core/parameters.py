@@ -37,6 +37,7 @@ __all__ = [
     "QubitMap",
     "InstrumentMap",
     "Hardware",
+    "Parameters",
     "initialize_parameters",
 ]
 
