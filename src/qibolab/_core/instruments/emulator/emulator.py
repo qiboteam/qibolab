@@ -32,7 +32,7 @@ from .hamiltonians import (
     waveform,
 )
 from .operators import TimeDependentOperator, evolve, expand
-from .results import acquisitions, results, select_acquisitions
+from .results import acquisitions, index, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
@@ -246,9 +246,13 @@ def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    # TODO: pass qubit in a better way
     return (
-        hamiltonian(sequence.channel(ch), configs[ch], hconfig, int(ch[0]))
+        hamiltonian(
+            sequence.channel(ch),
+            configs[ch],
+            hconfig,
+            index(ch, hconfig),
+        )
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig)

@@ -286,7 +286,7 @@ class HamiltonianConfig(Config):
     kind: Literal["hamiltonian"] = "hamiltonian"
     transmon_levels: int = 2
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
-    pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+    two_qubit: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
 
     def replace(self, update: Update) -> "HamiltonianConfig":
         """Update parameters' values."""
@@ -304,7 +304,7 @@ class HamiltonianConfig(Config):
     @property
     def ncouplers(self):
         coupler_pairs = [
-            pair for pair in self.pairs.values() if pair.coupler is not None
+            pair for pair in self.two_qubit.values() if pair.coupler is not None
         ]
         return len(coupler_pairs)
 
@@ -313,9 +313,22 @@ class HamiltonianConfig(Config):
         return len(self.single_qubit)
 
     @property
+    def qubits(self):
+        return list(self.single_qubit)
+
+    @property
+    def pairs(self):
+        return list(self.two_qubit)
+
+    @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
         return [self.transmon_levels] * self.nqubits + [COUPLER_DIM] * self.ncouplers
+
+    @property
+    def reduced_dims(self) -> list[int]:
+        """Dimensions of the system (without couplers)"""
+        return [self.transmon_levels] * self.nqubits
 
     @property
     def hamiltonian(self) -> Operator:
@@ -330,9 +343,9 @@ class HamiltonianConfig(Config):
                 self.dims,
                 list(pair_id)
                 if pair.coupler is None
-                else list(pair_id) + [self.nqubits],  # TODO: fix coupler indices
+                else list(pair_id) + [self.nqubits + i],  # TODO: fix coupler indices
             )
-            for pair_id, pair in self.pairs.items()
+            for i, (pair_id, pair) in enumerate(self.two_qubit.items())
         )
         return single_qubit_terms + two_qubit_terms
 

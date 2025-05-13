@@ -38,7 +38,7 @@
           }
         }
       },
-      "pairs":{
+      "two_qubit":{
         "0-1": {
           "coupling": 12e6
         }

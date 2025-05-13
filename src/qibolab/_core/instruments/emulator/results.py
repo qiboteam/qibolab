@@ -8,7 +8,7 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.identifier import QubitId, Result
+from qibolab._core.identifier import ChannelId, QubitId, Result
 from qibolab._core.pulses.pulse import Acquisition, Align, PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 
@@ -97,6 +97,14 @@ def select_acquisitions(
     return np.stack([states[n].full() for n in samples])
 
 
+def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
+    """Returns Hilbert space index from channel id."""
+    target = ch.split("/")[0]
+    if "coupler" in target:
+        return hconfig.nqubits + int(target.split("_")[1])
+    return hconfig.qubits.index(int(target) if target.isdigit() else target)
+
+
 def results(
     states: NDArray,
     sequence: PulseSequence,
@@ -125,18 +133,11 @@ def results(
     # introduce cached measurements to avoid losing correlations
     cache_measurements = {}
     for (ro_id, sample), meas in zip(acquisitions(sequence).items(), measurements):
-        qubit = int(sequence.pulse_channels(ro_id)[0].split("/")[0])
+        i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
         cache_measurements.setdefault(sample, meas)
-        assert hamiltonian.nqubits < 3, (
-            "Results cannot be retrieved for more than 2 transmons"
-        )
-        res = (
-            np.stack(
-                divmod(cache_measurements[sample], hamiltonian.transmon_levels),
-            )[qubit]
-            if hamiltonian.nqubits == 2
-            else cache_measurements[sample]
-        )
+        res = np.stack(
+            np.unravel_index(cache_measurements[sample], hamiltonian.reduced_dims)
+        )[i]
 
         if options.acquisition_type is AcquisitionType.INTEGRATION:
             res = np.stack((res, np.zeros_like(res)), axis=-1)

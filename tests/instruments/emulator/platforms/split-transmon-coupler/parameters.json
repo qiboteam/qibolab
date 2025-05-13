@@ -38,7 +38,7 @@
           }
         }
       },
-      "pairs":{
+      "two_qubit":{
         "0-1": {
           "coupling": 12e6,
           "coupler": {
@@ -83,7 +83,7 @@
         "kind": "flux-emulator",
         "offset": 0.582
       },
-      "01/flux":{
+      "coupler_0/flux":{
         "kind": "flux-emulator",
         "offset": 0
       },
