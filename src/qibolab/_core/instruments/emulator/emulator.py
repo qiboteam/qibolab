@@ -158,8 +158,14 @@ class EmulatorController(Controller):
             tlist_,
             config.dissipation,
         )
+
         return select_acquisitions(
-            results.states,
+            np.stack(
+                [
+                    state.ptrace([i for i in range(config.nqubits)])
+                    for state in results.states
+                ]
+            ),
             acquisitions(sequence_).values(),
             tlist_,
         )

@@ -4,6 +4,7 @@ from typing import Literal, Optional, Union
 import numpy as np
 from pydantic import Field
 from qibo.config import raise_error
+from qutip import state_number_qobj
 from scipy.constants import giga
 
 from ...components import Config
@@ -16,13 +17,15 @@ from .operators import (
     dephasing,
     expand,
     relaxation,
-    state,
     tensor_product,
     transmon_create,
     transmon_destroy,
 )
 
 __all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
+
+COUPLER_DIM = 2
+"""Hilbert space dimension of couplers."""
 
 
 class DriveEmulatorConfig(Config):
@@ -120,22 +123,49 @@ class Qubit(Config):
         return self.relaxation(n) + self.dephasing(n)
 
 
+class Coupler(Qubit):
+    """Coupler configuration."""
+
+    coupling: list[float] = Field(default_factory=list)
+    """Coupling between coupler and qubit."""
+
+
 class QubitPair(Config):
     """Hamiltonian parameters for qubit pair."""
 
     coupling: float
     """Qubit-qubit coupling."""
+    coupler: Optional[Coupler] = None
+    """Coupler mediating the interaction."""
+
+    @staticmethod
+    def _operator(n: int, m: Optional[int] = None) -> Operator:
+        if m is None:
+            m = n
+        op = tensor_product(
+            transmon_destroy(n),
+            transmon_create(m),
+        ) + tensor_product(
+            transmon_create(n),
+            transmon_destroy(m),
+        )
+        return 2 * np.pi * op / giga
 
     def operator(self, n: int) -> Operator:
         """Time independent operator."""
-        op = tensor_product(
-            transmon_destroy(n),
-            transmon_create(n),
-        ) + tensor_product(
-            transmon_create(n),
-            transmon_destroy(n),
+        if self.coupler is None:
+            return self.coupling * self._operator(n)
+
+        dim = [n, n, COUPLER_DIM]
+        op = expand(self.coupler.operator(n=COUPLER_DIM), dim, 2)
+        op += expand(self.coupling * self._operator(n), dim, (0, 1))
+        op += expand(
+            self.coupler.coupling[0] * self._operator(n, COUPLER_DIM), dim, (0, 2)
         )
-        return 2 * np.pi * self.coupling / giga * op
+        op += expand(
+            self.coupler.coupling[1] * self._operator(n, COUPLER_DIM), dim, (1, 2)
+        )
+        return op
 
 
 class FluxPulse(Model):
@@ -269,9 +299,14 @@ class HamiltonianConfig(Config):
     @property
     def initial_state(self):
         """Initial state as ground state of the system."""
-        return tensor_product(
-            state(0, self.transmon_levels) for i in range(self.nqubits)
-        )
+        return state_number_qobj(self.dims, (self.nqubits + self.ncouplers) * [0])
+
+    @property
+    def ncouplers(self):
+        coupler_pairs = [
+            pair for pair in self.pairs.values() if pair.coupler is not None
+        ]
+        return len(coupler_pairs)
 
     @property
     def nqubits(self):
@@ -280,7 +315,7 @@ class HamiltonianConfig(Config):
     @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
-        return [self.transmon_levels] * self.nqubits
+        return [self.transmon_levels] * self.nqubits + [COUPLER_DIM] * self.ncouplers
 
     @property
     def hamiltonian(self) -> Operator:
@@ -290,7 +325,13 @@ class HamiltonianConfig(Config):
             for i, qubit in self.single_qubit.items()
         )
         two_qubit_terms = sum(
-            expand(pair.operator(self.transmon_levels), self.dims, list(pair_id))
+            expand(
+                pair.operator(self.transmon_levels),
+                self.dims,
+                list(pair_id)
+                if pair.coupler is None
+                else list(pair_id) + [self.nqubits],  # TODO: fix coupler indices
+            )
             for pair_id, pair in self.pairs.items()
         )
         return single_qubit_terms + two_qubit_terms
