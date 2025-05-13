@@ -19,7 +19,7 @@ def test_hadamard(platform):
     circuit.add(gates.GPI2(0, 0))
     circuit.add(gates.M(0))
     result = backend.execute_circuit(circuit, nshots=1000)
-    pytest.approx(result.samples().mean(), abs=1e-1) == 0.5
+    pytest.approx(result.samples().mean(), abs=5e-2) == 0.5
 
 
 def test_rz(platform):
