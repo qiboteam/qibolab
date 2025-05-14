@@ -38,7 +38,7 @@
         "0-1": {
           "coupling": 3.8e6,
           "coupler": {
-            "frequency": 5.905e9,
+            "frequency": 6.3e9,
             "anharmonicity": -254e6,
             "sweetspot": 0,
             "coupling": [81.3e6, 81.3e6]

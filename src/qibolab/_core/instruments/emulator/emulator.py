@@ -127,7 +127,6 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-
         config_update = {}
         for qubit in config.single_qubit:
             try:
@@ -248,7 +247,15 @@ def hamiltonian(
     n = hamiltonian.transmon_levels
     op = expand(config.operator(n), hamiltonian.dims, qubit)
     waveforms = (
-        waveform(pulse, config, hamiltonian.single_qubit[qubit].detuned_frequency)
+        waveform(
+            pulse,
+            config,
+            hamiltonian.single_qubit[qubit].detuned_frequency
+            if qubit in hamiltonian.single_qubit
+            else hamiltonian.two_qubit[
+                list(hamiltonian.two_qubit)[qubit - hamiltonian.nqubits]
+            ].coupler.detuned_frequency,
+        )
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
