@@ -38,6 +38,8 @@ def test_cnot(platform, setup):
     backend = construct_backend(backend="qibolab", platform=platform)
     if backend.platform.nqubits < 2:
         pytest.skip("CNOT requires at least two qubits.")
+    if backend.platform.config("hamiltonian").ncouplers > 0:
+        pytest.skip(f"Plaform {platform} with couplers unsupported.")
     if backend.platform.natives.two_qubit[0, 1].CNOT is None:
         pytest.skip(f"Platform {platform} doesn't support CNOT.")
     circuit = Circuit(2)

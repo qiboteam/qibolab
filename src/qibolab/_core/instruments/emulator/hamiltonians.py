@@ -24,9 +24,6 @@ from .operators import (
 
 __all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 
-COUPLER_DIM = 2
-"""Hilbert space dimension of couplers."""
-
 
 class DriveEmulatorConfig(Config):
     """Configuration for an IQ channel."""
@@ -139,15 +136,13 @@ class QubitPair(Config):
     """Coupler mediating the interaction."""
 
     @staticmethod
-    def _operator(n: int, m: Optional[int] = None) -> Operator:
-        if m is None:
-            m = n
+    def _operator(n: int) -> Operator:
         op = tensor_product(
             transmon_destroy(n),
-            transmon_create(m),
+            transmon_create(n),
         ) + tensor_product(
             transmon_create(n),
-            transmon_destroy(m),
+            transmon_destroy(n),
         )
         return 2 * np.pi * op / giga
 
@@ -156,15 +151,11 @@ class QubitPair(Config):
         if self.coupler is None:
             return self.coupling * self._operator(n)
 
-        dim = [n, n, COUPLER_DIM]
-        op = expand(self.coupler.operator(n=COUPLER_DIM), dim, 2)
+        dim = [n, n, n]
+        op = expand(self.coupler.operator(n=n), dim, 2)
         op += expand(self.coupling * self._operator(n), dim, (0, 1))
-        op += expand(
-            self.coupler.coupling[0] * self._operator(n, COUPLER_DIM), dim, (0, 2)
-        )
-        op += expand(
-            self.coupler.coupling[1] * self._operator(n, COUPLER_DIM), dim, (1, 2)
-        )
+        op += expand(self.coupler.coupling[0] * self._operator(n), dim, (0, 2))
+        op += expand(self.coupler.coupling[1] * self._operator(n), dim, (1, 2))
         return op
 
 
@@ -323,12 +314,7 @@ class HamiltonianConfig(Config):
     @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
-        return [self.transmon_levels] * self.nqubits + [COUPLER_DIM] * self.ncouplers
-
-    @property
-    def reduced_dims(self) -> list[int]:
-        """Dimensions of the system (without couplers)"""
-        return [self.transmon_levels] * self.nqubits
+        return [self.transmon_levels] * (self.nqubits + self.ncouplers)
 
     @property
     def hamiltonian(self) -> Operator:
@@ -347,7 +333,15 @@ class HamiltonianConfig(Config):
             )
             for i, (pair_id, pair) in enumerate(self.two_qubit.items())
         )
-        return single_qubit_terms + two_qubit_terms
+        coupler_terms = 0
+        for i, pair_id in enumerate(self.two_qubit):
+            if self.two_qubit[pair_id].coupler is not None:
+                coupler_terms += expand(
+                    self.two_qubit[pair_id].coupler.operator(self.transmon_levels),
+                    self.dims,
+                    self.nqubits + i,
+                )
+        return single_qubit_terms + two_qubit_terms + coupler_terms
 
     @property
     def dissipation(self) -> Operator:

@@ -146,6 +146,26 @@ class EmulatorController(Controller):
                         ].detuned_frequency(0)
                     }
                 )
+
+        for i, pair in enumerate(config.two_qubit):
+            if config.two_qubit[pair].coupler is not None:
+                try:
+                    config_update.update(
+                        {
+                            f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": config.single_qubit[
+                                qubit
+                            ].detuned_frequency(configs_[f"coupler_{i}/flux"].offset)
+                        }
+                    )
+                except KeyError:
+                    config_update.update(
+                        {
+                            f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": config.single_qubit[
+                                qubit
+                            ].detuned_frequency(0)
+                        }
+                    )
+
         config = config.replace(update=config_update)
 
         hamiltonian = config.hamiltonian
@@ -158,14 +178,8 @@ class EmulatorController(Controller):
             tlist_,
             config.dissipation,
         )
-
         return select_acquisitions(
-            np.stack(
-                [
-                    state.ptrace([i for i in range(config.nqubits)])
-                    for state in results.states
-                ]
-            ),
+            results.states,
             acquisitions(sequence_).values(),
             tlist_,
         )

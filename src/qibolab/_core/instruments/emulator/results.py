@@ -119,8 +119,8 @@ def results(
     """
     probabilities = calculate_probabilities_from_density_matrix(
         states,
-        tuple(hamiltonian.single_qubit),
-        hamiltonian.nqubits,
+        range(hamiltonian.nqubits + hamiltonian.ncouplers),
+        hamiltonian.nqubits + hamiltonian.ncouplers,
         hamiltonian.transmon_levels,
     )
 
@@ -135,9 +135,9 @@ def results(
     for (ro_id, sample), meas in zip(acquisitions(sequence).items(), measurements):
         i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
         cache_measurements.setdefault(sample, meas)
-        res = np.stack(
-            np.unravel_index(cache_measurements[sample], hamiltonian.reduced_dims)
-        )[i]
+        res = np.stack(np.unravel_index(cache_measurements[sample], hamiltonian.dims))[
+            i
+        ]
 
         if options.acquisition_type is AcquisitionType.INTEGRATION:
             res = np.stack((res, np.zeros_like(res)), axis=-1)

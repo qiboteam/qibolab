@@ -13,39 +13,35 @@
     "hamiltonian":{
       "transmon_levels": 3,
       "single_qubit": {
-        "0": {
-          "frequency": 4813586970.0,
-          "anharmonicity": -217e6,
-          "sweetspot":  0.405,
-          "t1": {
-            "0-1": 37000,
-            "1-2": 18000
-          },
-          "t2": {
-            "0-1": 23000
-          }
-        },
-        "1": {
-          "frequency": 5518133438.0,
-          "anharmonicity": -212e6,
-          "sweetspot": 0.582,
-          "t1": {
-            "0-1": 32000,
-            "1-2": 16000
+                "0": {
+                    "frequency": 4.961e9,
+                    "anharmonicity": -206e6,
+                    "t1": {
+                        "0-1": 14e3
                     },
-          "t2": {
-            "0-1": 9000
-          }
-        }
-      },
+                    "t2": {
+                        "0-1": 8.4e3
+                    }
+                },
+                "1": {
+                    "frequency": 4.926e9,
+                    "anharmonicity": -202e6,
+                    "t1": {
+                        "0-1": 13.7e3
+                    },
+                    "t2": {
+                        "0-1": 4e3
+                    }
+                }
+            },
       "two_qubit":{
         "0-1": {
-          "coupling": 12e6,
+          "coupling": 3.8e6,
           "coupler": {
-            "frequency": 4e9,
-            "anharmonicity": -220e6,
+            "frequency": 5.905e9,
+            "anharmonicity": -254e6,
             "sweetspot": 0,
-            "coupling": [1e6, 1e6]
+            "coupling": [81.3e6, 81.3e6]
           }
         }
       },
@@ -53,35 +49,35 @@
     },
       "0/drive": {
         "kind": "drive-emulator",
-        "frequency": 4813586970.0,
+        "frequency": 4.961e9,
         "rabi_frequency": 20e6,
         "scale_factor": 10
       },
       "0/drive12": {
         "kind": "drive-emulator",
-        "frequency": 4596587222,
+        "frequency": 4.755e9,
         "rabi_frequency": 20e6,
         "scale_factor": 10
       },
       "1/drive": {
         "kind": "drive-emulator",
-        "frequency": 5518133438.0,
+        "frequency":  4.926e9,
         "rabi_frequency": 20e6,
         "scale_factor": 10
       },
       "1/drive12": {
         "kind": "drive-emulator",
-        "frequency": 5305695381.0,
+        "frequency":  4.724e9,
         "rabi_frequency": 20e6,
         "scale_factor": 10
       },
       "0/flux": {
         "kind": "flux-emulator",
-        "offset": 0.405
+        "offset": 0
       },
       "1/flux": {
         "kind": "flux-emulator",
-        "offset": 0.582
+        "offset": 0
       },
       "coupler_0/flux":{
         "kind": "flux-emulator",
@@ -120,11 +116,11 @@
               "0/drive",
               {
                 "duration": 40,
-                "amplitude": 0.1265,
+                "amplitude": 0.13000,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
-                },
+                              },
                 "relative_phase": 0.0,
                 "kind": "pulse"
               }
@@ -135,11 +131,11 @@
               "0/drive",
               {
                 "duration": 40,
-                "amplitude": 0.0633,
+                "amplitude": 0.065,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
-                },
+                              },
                 "relative_phase": 0.0,
                 "kind": "pulse"
               }
@@ -149,12 +145,12 @@
             [
               "0/drive12",
               {
-                "duration": 40.0,
-                "amplitude": 0.08937,
+                "duration": 40,
+                "amplitude": 0.092,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
-                },
+                              },
                 "relative_phase": 0.0,
                 "kind": "pulse"
               }
@@ -171,7 +167,7 @@
                 },
                 "probe": {
                   "duration": 10.0,
-                  "amplitude": 0.1,
+                  "amplitude": 0.2,
                   "envelope": {
                     "kind": "gaussian_square",
                     "rel_sigma": 0.2,
@@ -191,7 +187,7 @@
               "1/drive",
               {
                 "duration": 40,
-                "amplitude": 0.1266,
+                "amplitude":0.124,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
@@ -206,8 +202,8 @@
               "1/drive",
               {
                 "duration": 40,
-                "amplitude": 0.0633,
-                "envelope": {
+                "amplitude":  0.062,
+               "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
                 },
@@ -220,8 +216,8 @@
             [
               "1/drive12",
               {
-                "duration": 40.0,
-                "amplitude": 0.0896,
+                "duration": 40,
+                "amplitude": 0.0859,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
@@ -242,7 +238,7 @@
                 },
                 "probe": {
                   "duration": 10.0,
-                  "amplitude": 0.1,
+                  "amplitude": 0.2,
                   "envelope": {
                     "kind": "gaussian_square",
                     "rel_sigma": 0.2,
@@ -258,38 +254,9 @@
         }
       },
       "two_qubit": {
-            "0-1": {
-                "CZ": [
-                    [
-                        "1/flux",
-                        {
-                            "kind": "pulse",
-                            "duration": 30,
-                            "amplitude": 0.1852,
-                            "envelope": {
-                                "kind": "snz",
-                                "t_idling": 4.0,
-                                "b_amplitude": 0.5
-                            },
-                            "relative_phase": 0.0
-                        }
-                    ],
-                    [
-                      "1/drive",
-                      {
-                          "kind": "virtualz",
-                          "phase": -4.656
-                      }
-                  ],
-                  [
-                      "0/drive",
-                      {
-                          "kind": "virtualz",
-                          "phase": -0.1494
-                      }
-                  ]
-                ]
-            }
+        "0-1": {
+          "CNOT": null
+        }
       }
     }
   }
