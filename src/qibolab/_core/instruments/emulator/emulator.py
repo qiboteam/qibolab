@@ -134,7 +134,10 @@ class EmulatorController(Controller):
                     {
                         f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
                             qubit
-                        ].detuned_frequency(configs_[f"{qubit}/flux"].offset)
+                        ].detuned_frequency(
+                            configs_[f"{qubit}/flux"].offset
+                            * configs_[f"{qubit}/flux"].voltage_to_flux
+                        )
                     }
                 )
             except KeyError:
