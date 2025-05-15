@@ -49,6 +49,8 @@ class FluxEmulatorConfig(Config):
 
     offset: float
     """DC offset of the channel."""
+    voltage_to_flux: float = 1
+    """Convert voltarget to flux."""
 
     @staticmethod
     def operator(n: int) -> Operator:
@@ -173,8 +175,12 @@ class FluxPulse(Model):
             2
             * np.pi
             * (
-                self.flux_freq_dependence(i[sample] + self.config.offset)
-                - self.flux_freq_dependence(self.config.offset)
+                self.flux_freq_dependence(
+                    self.config.voltage_to_flux * (i[sample] + self.config.offset)
+                )
+                - self.flux_freq_dependence(
+                    self.config.voltage_to_flux * self.config.offset
+                )
             )
             / giga
         )
