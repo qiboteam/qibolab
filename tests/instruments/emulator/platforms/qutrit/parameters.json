@@ -36,8 +36,11 @@
       "kind": "drive-emulator",
       "scale_factor": 0.1591549,
       "frequency": 4.8e9
-
     },
+    "0/flux": {
+        "kind": "flux-emulator",
+        "offset": 0
+      },
   "0/probe": {
     "kind": "iq",
     "frequency": 5200000000.0
