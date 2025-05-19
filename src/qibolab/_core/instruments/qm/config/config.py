@@ -189,16 +189,16 @@ class Configuration:
     def register_waveforms(
         self,
         pulse: Pulse,
-        sampling_rate: float,
+        sampling_rate: int,
         max_voltage: float,
         element: Optional[str] = None,
         dc: bool = False,
     ):
         if dc:
-            qmpulse = QmPulse.from_dc_pulse(pulse)
+            qmpulse = QmPulse.from_dc_pulse(pulse, sampling_rate)
         else:
             if element is None:
-                qmpulse = QmPulse.from_pulse(pulse)
+                qmpulse = QmPulse.from_pulse(pulse, sampling_rate)
             else:
                 qmpulse = QmAcquisition.from_pulse(pulse, element)
         waveforms = waveforms_from_pulse(pulse, sampling_rate, max_voltage)
@@ -210,7 +210,7 @@ class Configuration:
         return qmpulse
 
     def register_iq_pulse(
-        self, element: str, pulse: Pulse, sampling_rate: float, max_voltage: float
+        self, element: str, pulse: Pulse, sampling_rate: int, max_voltage: float
     ):
         op = operation(pulse)
         if op not in self.pulses:
@@ -219,7 +219,7 @@ class Configuration:
         return op
 
     def register_dc_pulse(
-        self, element: str, pulse: Pulse, sampling_rate: float, max_voltage: float
+        self, element: str, pulse: Pulse, sampling_rate: int, max_voltage: float
     ):
         op = operation(pulse)
         if op not in self.pulses:
@@ -230,7 +230,7 @@ class Configuration:
         return op
 
     def register_acquisition_pulse(
-        self, element: str, readout: Readout, sampling_rate: float, max_voltage: float
+        self, element: str, readout: Readout, sampling_rate: int, max_voltage: float
     ):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(readout)
