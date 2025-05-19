@@ -34,9 +34,9 @@ def batch_shots(
         for pulses in sequence.by_channel.values()
     )
     per_shot_memory = bins * acquisitions
-    max_shots = ACQUISITION_MEMORY // per_shot_memory
+    max_shots = int(ACQUISITION_MEMORY // per_shot_memory)
     nfull, remainder = np.divmod(options.nshots, max_shots)
-    return [max_shots] * nfull + [remainder]
+    return [max_shots] * int(nfull) + [int(remainder)]
 
 
 def concat_shots(
