@@ -395,46 +395,41 @@ class QmController(Controller):
         https://docs.quantum-machines.co/latest/docs/Guides/features/?h=interpo#dynamic-pulse-duration
         """
         for pulse in sweeper.pulses:
-            if isinstance(pulse, Align):
+            if isinstance(pulse, (Align, Delay)):
                 continue
 
             ids = args.sequence.pulse_channels(pulse.id)
-            params = args.parameters[pulse.id]
-            if abs(sweeper.values[1] - sweeper.values[0]) < 1:
+            sampling_rate = channel_sampling_rate(configs[ids[0]])
+
+            if not abs(sweeper.values[1] - sweeper.values[0]).is_integer():
                 assert sweeper.parameter is Parameter.duration
-                assert (
-                    isinstance(pulse, Delay)
-                    or channel_sampling_rate(configs[ids[0]]) == 2
-                )
-                params.doubled_samples = True
+                assert sampling_rate > 1
+            for _id in ids:
+                assert channel_sampling_rate(configs[_id]) == sampling_rate
 
-            if isinstance(pulse, Delay):
-                continue
+            params = args.parameters[pulse.id]
 
+            params.sampling_rate = sampling_rate
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
-            if params.doubled_samples:
-                values = (2 * sweeper.values).astype(int)
-            else:
-                values = sweeper.values.astype(int)
 
             if sweeper.parameter is Parameter.duration_interpolated:
                 sweep_pulse = original_pulse.model_copy(
-                    update={"duration": min(values)}
+                    update={"duration": int(min(sweeper.values))}
                 )
                 params.interpolated_op = self.register_pulse(
                     ids[0], configs[ids[0]], sweep_pulse
                 )
             else:
                 assert sweeper.parameter is Parameter.duration
-                for value in values:
-                    duration = value / 2 if params.doubled_samples else value
+                for duration in sweeper.values:
                     sweep_pulse = original_pulse.model_copy(
                         update={"duration": duration}
                     )
                     sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
-                    params.duration_ops.append((value, sweep_op))
+                    nsamples = int(sampling_rate * duration)
+                    params.duration_ops.append((nsamples, sweep_op))
 
     def register_amplitude_sweeper_pulses(
         self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
