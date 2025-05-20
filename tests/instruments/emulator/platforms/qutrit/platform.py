@@ -4,12 +4,13 @@ from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     EmulatorController,
+    FluxEmulatorConfig,
     HamiltonianConfig,
 )
 
 FOLDER = pathlib.Path(__file__).parent
 
-ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig])
+ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
 
 def create() -> Platform:
