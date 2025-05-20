@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Optional, Union
 
 from qibolab._core.components import (
@@ -11,19 +11,26 @@ from qibolab._core.components import (
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Pulse, Readout
 
-from ..components import OpxOutputConfig, QmAcquisitionConfig
+from ..components import MwFemOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
 from .devices import (
-    AnalogOutput,
     Controller,
     ControllerId,
     Controllers,
-    FemAnalogOutput,
     ModuleTypes,
+    MwFemInput,
+    MwFemOutput,
     Octave,
     OctaveInput,
     OctaveOutput,
 )
-from .elements import AcquireOctaveElement, DcElement, Element, RfOctaveElement
+from .elements import (
+    AcquireMwFemElement,
+    AcquireOctaveElement,
+    DcElement,
+    Element,
+    MwFemElement,
+    RfOctaveElement,
+)
 from .pulses import (
     QmAcquisition,
     QmPulse,
@@ -79,48 +86,92 @@ class Configuration:
     ):
         controller = self.controllers[channel.device]
         if controller.type == "opx1":
-            controller.analog_outputs[channel.port] = AnalogOutput.from_config(config)
+            keys = ["offset", "filter"]
         else:
-            controller.analog_outputs[channel.port] = FemAnalogOutput.from_config(
-                config
-            )
+            keys = list(config.model_fields.keys())
+            keys.remove("kind")
+        values = config.model_dump()
+        controller.analog_outputs[channel.port] = {k: values[k] for k in keys}
         self.elements[id] = DcElement.from_channel(channel)
+
+    def configure_mw_fem_line(
+        self,
+        channel: IqChannel,
+        config: IqConfig,
+        lo_config: MwFemOscillatorConfig,
+        id: Optional[ChannelId] = None,
+    ):
+        controller = self.controllers[channel.device]
+        if channel.port in controller.analog_outputs:
+            output = MwFemOutput(**controller.analog_outputs[channel.port])
+            output.update(lo_config)
+        else:
+            output = MwFemOutput.from_config(lo_config)
+        controller.analog_outputs[channel.port] = asdict(output)
+        if id is not None:
+            intermediate_frequency = config.frequency - lo_config.frequency
+            self.elements[id] = MwFemElement.from_channel(
+                channel, lo_config.upconverter, intermediate_frequency
+            )
 
     def configure_iq_line(
         self,
-        id: ChannelId,
         channel: IqChannel,
         config: IqConfig,
         lo_config: OscillatorConfig,
+        id: Optional[ChannelId] = None,
     ):
         port = channel.port
         octave = self.octaves[channel.device]
         octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
         self.controllers[octave.connectivity].add_octave_output(port)
 
-        intermediate_frequency = config.frequency - lo_config.frequency
-        self.elements[id] = RfOctaveElement.from_channel(
-            channel, octave.connectivity, intermediate_frequency
+        if id is not None:
+            intermediate_frequency = config.frequency - lo_config.frequency
+            self.elements[id] = RfOctaveElement.from_channel(
+                channel, octave.connectivity, intermediate_frequency
+            )
+
+    def configure_mw_fem_acquire_line(
+        self,
+        acquire_channel: AcquisitionChannel,
+        probe_channel: IqChannel,
+        acquire_config: QmAcquisitionConfig,
+        probe_config: IqConfig,
+        lo_config: MwFemOscillatorConfig,
+        id: ChannelId,
+    ):
+        port = acquire_channel.port
+        controller = self.controllers[acquire_channel.device]
+        controller.analog_inputs[port] = MwFemInput.from_config(lo_config)
+
+        self.configure_mw_fem_line(probe_channel, probe_config, lo_config)
+
+        intermediate_frequency = probe_config.frequency - lo_config.frequency
+        self.elements[id] = AcquireMwFemElement.from_channel(
+            probe_channel,
+            lo_config.upconverter,
+            acquire_channel,
+            intermediate_frequency=intermediate_frequency,
+            time_of_flight=acquire_config.delay,
+            smearing=acquire_config.smearing,
         )
 
     def configure_acquire_line(
         self,
-        id: ChannelId,
         acquire_channel: AcquisitionChannel,
         probe_channel: IqChannel,
         acquire_config: QmAcquisitionConfig,
         probe_config: IqConfig,
         lo_config: OscillatorConfig,
+        id: ChannelId,
     ):
         port = acquire_channel.port
         octave = self.octaves[acquire_channel.device]
         octave.RF_inputs[port] = OctaveInput(lo_config.frequency)
         self.controllers[octave.connectivity].add_octave_input(port, acquire_config)
 
-        port = probe_channel.port
-        octave = self.octaves[probe_channel.device]
-        octave.RF_outputs[port] = OctaveOutput.from_config(lo_config)
-        self.controllers[octave.connectivity].add_octave_output(port)
+        self.configure_iq_line(probe_channel, probe_config, lo_config)
 
         intermediate_frequency = probe_config.frequency - lo_config.frequency
         self.elements[id] = AcquireOctaveElement.from_channel(
