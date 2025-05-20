@@ -58,37 +58,8 @@ Supported instruments
 Qibolab supports the following control instruments:
 
 * Quantum Machines
-* Zurich Instruments
 * QBlox
 * Xilinx RFSoCs
 
 In order to use Qibolab on with one of these instruments chosen instrument,
 additional dependencies need to be installed.
-This can be done with:
-
-.. code-block:: bash
-
-      # for installation from releases
-      pip install qibolab[qm,zh,qblox,rfsoc]
-
-      # or for installation from source
-      poetry install -E qm -E zh -E qblox -E rfsoc
-
-Or with conda
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibolab[qm,zh,qblox,rfsoc]
-
-
-With the extras being:
-
-* Quantum Machines -> ``qm``
-* Zurich Instruments -> ``zh``
-* QBlox -> ``qblox``
-* Xilinx RFSoCs -> ``rfsoc``
-
-.. note::
-
-   Installing all the extras is usually not needed.
-   It is possible to install qibolab with any number of extras.

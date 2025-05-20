@@ -547,7 +547,6 @@ A list of all the supported electronics follows:
 
 Controllers (subclasses of :class:`qibolab._core.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.DummyInstrument`
-    - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
     - Quantum Machines: :class:`qibolab.instruments.qm.QMController`
 
 Other Instruments (subclasses of :class:`qibolab._core.instruments.abstract.Instrument`):
@@ -584,17 +583,6 @@ The following is a table of the currently supported or not supported features (d
     "Classified acquisition",       "yes","yes","yes","yes"
     "Raw waveform acquisition",     "yes","yes","yes","yes"
 
-
-Zurich Instruments
-^^^^^^^^^^^^^^^^^^
-
-Qibolab has been tested with the following `instrument cluster <https://www.zhinst.com/others/en/instruments/product-finder/type/quantum_computing_systems>`_:
-
-- 1 `SHFQC` (Superconducting Hybrid Frequency Converter)
-- 2 `HDAWGs` (High-Density Arbitrary Waveform Generators)
-- 1 `PQSC` (Programmable Quantum System Controller)
-
-The integration of Qibolab with the instrument cluster is facilitated through the `LabOneQ <https://github.com/zhinst/laboneq>`_ Python library that handles communication and coordination with the instruments.
 
 Quantum Machines
 ^^^^^^^^^^^^^^^^
