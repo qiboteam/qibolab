@@ -168,9 +168,10 @@ class FluxPulse(Model):
     """Flux pulse to be played."""
     config: FluxEmulatorConfig
     """Flux emulator configuration."""
+    qubit: Qubit
+    """Qubit affected by the flux pulse."""
     sampling_rate: float = 1
     """Sampling rate."""
-    flux_freq_dependence: Optional[callable] = None
 
     @cached_property
     def envelopes(self):
@@ -196,10 +197,10 @@ class FluxPulse(Model):
             2
             * np.pi
             * (
-                self.flux_freq_dependence(
+                self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * (i[sample] + self.config.offset)
                 )
-                - self.flux_freq_dependence(
+                - self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * self.config.offset
                 )
             )
@@ -293,6 +294,51 @@ class HamiltonianConfig(Config):
 
         return self.model_validate(d)
 
+    def update_from_configs(self, config: dict[str, Config]) -> "HamiltonianConfig":
+        """Update hamiltonian parameters from configs."""
+
+        config_update = {}
+        for qubit in self.single_qubit:
+            # setting static bias
+            flux = config.get(f"{qubit}/flux")
+            config_update.update(
+                {
+                    f"single_qubit.{qubit}.dynamical_frequency": self.single_qubit[
+                        qubit
+                    ].detuned_frequency(
+                        flux.offset * flux.voltage_to_flux if flux is not None else 0
+                    )
+                }
+            )
+
+        for i, pair in enumerate(config.two_qubit):
+            if config.two_qubit[pair].coupler is not None:
+                flux = config.get(f"coupler_{i}/flux")
+                config_update.update(
+                    {
+                        f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": self.two_qubit[
+                            pair
+                        ].coupler.detuned_frequency(
+                            flux.offset * flux.voltage_to_flux
+                            if flux is not None
+                            else 0
+                        )
+                    }
+                )
+        return self.replace(update=config_update)
+
+    @property
+    def qubits(self) -> list[QubitId]:
+        return list(self.single_qubit)
+
+    @property
+    def nqubits(self) -> int:
+        return len(self.single_qubit)
+
+    @property
+    def pairs(self) -> list[QubitPairId]:
+        return list(self.two_qubit)
+
     @property
     def initial_state(self):
         """Initial state as ground state of the system."""
@@ -304,18 +350,6 @@ class HamiltonianConfig(Config):
             pair for pair in self.two_qubit.values() if pair.coupler is not None
         ]
         return len(coupler_pairs)
-
-    @property
-    def nqubits(self):
-        return len(self.single_qubit)
-
-    @property
-    def qubits(self):
-        return list(self.single_qubit)
-
-    @property
-    def pairs(self):
-        return list(self.two_qubit)
 
     @property
     def dims(self) -> list[int]:
@@ -356,7 +390,7 @@ class HamiltonianConfig(Config):
 def waveform(
     pulse: PulseLike,
     config: Config,
-    flux_dependence: Optional[callable] = None,
+    qubit: Qubit,
 ) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
@@ -369,7 +403,7 @@ def waveform(
             return FluxPulse(
                 pulse=pulse,
                 config=config,
-                flux_freq_dependence=flux_dependence,
+                qubit=qubit,
             )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)

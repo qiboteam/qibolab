@@ -81,6 +81,14 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
     return acq
 
 
+def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
+    """Returns Hilbert space index from channel id."""
+    target = ch.split("/")[0]
+    if "coupler" in target:
+        return hconfig.nqubits + int(target.split("_")[1])
+    return hconfig.qubits.index(int(target) if target.isdigit() else target)
+
+
 def select_acquisitions(
     states: list[Operator], acquisitions: Iterable[float], times: NDArray
 ) -> NDArray:
@@ -95,14 +103,6 @@ def select_acquisitions(
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
     return np.stack([states[n].full() for n in samples])
-
-
-def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
-    """Returns Hilbert space index from channel id."""
-    target = ch.split("/")[0]
-    if "coupler" in target:
-        return hconfig.nqubits + int(target.split("_")[1])
-    return hconfig.qubits.index(int(target) if target.isdigit() else target)
 
 
 def results(

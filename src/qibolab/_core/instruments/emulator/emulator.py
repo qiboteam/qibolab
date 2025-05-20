@@ -127,51 +127,7 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        config_update = {}
-        for qubit in config.single_qubit:
-            try:
-                config_update.update(
-                    {
-                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                            qubit
-                        ].detuned_frequency(
-                            configs_[f"{qubit}/flux"].offset
-                            * configs_[f"{qubit}/flux"].voltage_to_flux
-                        )
-                    }
-                )
-            except KeyError:
-                config_update.update(
-                    {
-                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                            qubit
-                        ].detuned_frequency(0)
-                    }
-                )
-
-        for i, pair in enumerate(config.two_qubit):
-            if config.two_qubit[pair].coupler is not None:
-                try:
-                    config_update.update(
-                        {
-                            f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": config.single_qubit[
-                                qubit
-                            ].detuned_frequency(
-                                configs_[f"coupler_{i}/flux"].voltage_to_flux
-                                * configs_[f"coupler_{i}/flux"].offset
-                            )
-                        }
-                    )
-                except KeyError:
-                    config_update.update(
-                        {
-                            f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": config.single_qubit[
-                                qubit
-                            ].detuned_frequency(0)
-                        }
-                    )
-
-        config = config.replace(update=config_update)
+        config = config.update_from_configs(configs_)
 
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
@@ -248,19 +204,17 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    qubit: int,
+    i: int,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = expand(config.operator(n), hamiltonian.dims, qubit)
+    op = expand(config.operator(n), hamiltonian.dims, i)
     waveforms = (
         waveform(
             pulse,
             config,
-            hamiltonian.single_qubit[qubit].detuned_frequency
-            if qubit in hamiltonian.single_qubit
-            else hamiltonian.two_qubit[
-                list(hamiltonian.two_qubit)[qubit - hamiltonian.nqubits]
-            ].coupler.detuned_frequency,
+            hamiltonian.single_qubit[i]
+            if i in hamiltonian.single_qubit
+            else hamiltonian.two_qubit[list(hamiltonian.two_qubit)[i]].coupler,
         )
         for pulse in pulses
         # only handle pulses (thus no readout)
