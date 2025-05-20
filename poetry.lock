@@ -4801,4 +4801,4 @@ qrng = ["pyserial"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "488fc75f72200083883d97f25ba9b4cc6814de430e60ed397f72dcb05dd0475b"
+content-hash = "5f983bbe95c8c689db593d8ce9e6c1d3774e50e31d6fd8b987ec34dffeacbb81"
