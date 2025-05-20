@@ -33,7 +33,7 @@ class OpxOutputConfig(DcConfig):
 
     Possible values are -0.5V to 0.5V.
     """
-    filter: dict[str, list[float]] = Field(default_factory=dict)
+    filter: dict[str, list] = Field(default_factory=dict)
     """FIR and IIR filters to be applied for correcting signal distortions.
 
     See
