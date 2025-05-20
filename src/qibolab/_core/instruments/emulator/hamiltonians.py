@@ -281,6 +281,10 @@ class HamiltonianConfig(Config):
         )
 
     @property
+    def qubits(self):
+        return list(self.single_qubit)
+
+    @property
     def nqubits(self):
         return len(self.single_qubit)
 
