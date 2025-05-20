@@ -29,7 +29,7 @@ class Parameters:
     element: Optional[str] = None
     lo_frequency: Optional[int] = None
     max_offset: float = 0.5
-    doubled_samples: bool = False
+    sampling_rate: int = 1
 
 
 @dataclass
