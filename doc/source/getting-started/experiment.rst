@@ -22,7 +22,7 @@ For a first experiment, let's define a single qubit platform at the path previou
 In this example, the qubit is controlled by a Quantum Machines cluster that contains Octaves,
 although minimal changes are needed to use other devices.
 
-.. testcode:: python
+.. code-block:: python
 
     # my_platform/platform.py
 
