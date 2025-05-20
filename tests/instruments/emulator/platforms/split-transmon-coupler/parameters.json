@@ -181,6 +181,26 @@
           ],
           "CP": null
         },
+        "coupler_0": {
+          "RX": null,
+          "RX90": null,
+          "RX12": null,
+          "MZ": null,
+          "CP": [
+            [
+              "coupler_0/flux",
+              {
+                "duration": 40,
+                "amplitude":0.1,
+                "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "kind": "pulse"
+              }
+            ]
+          ]
+        },
         "1": {
           "RX": [
             [

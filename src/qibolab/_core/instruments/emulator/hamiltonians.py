@@ -154,10 +154,10 @@ class QubitPair(Config):
             return self.coupling * self._operator(n)
 
         dim = [n, n, n]
-        op = expand(self.coupler.operator(n=n), dim, 2)
-        op += expand(self.coupling * self._operator(n), dim, (0, 1))
-        op += expand(self.coupler.coupling[0] * self._operator(n), dim, (0, 2))
-        op += expand(self.coupler.coupling[1] * self._operator(n), dim, (1, 2))
+        op = expand(self.coupling * self._operator(n), dim, (0, 1))
+        op += expand(self.coupler.coupling[0] * self._operator(n=n), dim, (0, 2))
+        op += expand(self.coupler.coupling[1] * self._operator(n=n), dim, (1, 2))
+        op += expand(self.coupler.operator(n=n), dim, 2)
         return op
 
 
@@ -339,15 +339,7 @@ class HamiltonianConfig(Config):
             )
             for i, (pair_id, pair) in enumerate(self.two_qubit.items())
         )
-        coupler_terms = 0
-        for i, pair_id in enumerate(self.two_qubit):
-            if self.two_qubit[pair_id].coupler is not None:
-                coupler_terms += expand(
-                    self.two_qubit[pair_id].coupler.operator(self.transmon_levels),
-                    self.dims,
-                    self.nqubits + i,
-                )
-        return single_qubit_terms + two_qubit_terms + coupler_terms
+        return single_qubit_terms + two_qubit_terms
 
     @property
     def dissipation(self) -> Operator:
