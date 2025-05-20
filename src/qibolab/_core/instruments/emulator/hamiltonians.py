@@ -147,9 +147,10 @@ class FluxPulse(Model):
     """Flux pulse to be played."""
     config: FluxEmulatorConfig
     """Flux emulator configuration."""
+    qubit: Qubit
+    """Qubit affected by the flux pulse."""
     sampling_rate: float = 1
     """Sampling rate."""
-    flux_freq_dependence: Optional[callable] = None
 
     @cached_property
     def envelopes(self):
@@ -175,10 +176,10 @@ class FluxPulse(Model):
             2
             * np.pi
             * (
-                self.flux_freq_dependence(
+                self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * (i[sample] + self.config.offset)
                 )
-                - self.flux_freq_dependence(
+                - self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * self.config.offset
                 )
             )
@@ -316,7 +317,7 @@ class HamiltonianConfig(Config):
 def waveform(
     pulse: PulseLike,
     config: Config,
-    flux_dependence: Optional[callable] = None,
+    qubit: Qubit,
 ) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
@@ -329,7 +330,7 @@ def waveform(
             return FluxPulse(
                 pulse=pulse,
                 config=config,
-                flux_freq_dependence=flux_dependence,
+                qubit=qubit,
             )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)

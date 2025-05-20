@@ -130,27 +130,18 @@ class EmulatorController(Controller):
 
         config_update = {}
         for qubit in config.single_qubit:
-            try:
-                config_update.update(
-                    {
-                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                            qubit
-                        ].detuned_frequency(
-                            configs_[f"{qubit}/flux"].offset
-                            * configs_[f"{qubit}/flux"].voltage_to_flux
-                        )
-                    }
-                )
-            except KeyError:
-                config_update.update(
-                    {
-                        f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                            qubit
-                        ].detuned_frequency(0)
-                    }
-                )
-        config = config.replace(update=config_update)
+            flux = configs_.get(f"{qubit}/flux")
+            config_update.update(
+                {
+                    f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
+                        qubit
+                    ].detuned_frequency(
+                        flux.offset * flux.voltage_to_flux if flux is not None else 0
+                    )
+                }
+            )
 
+        config = config.replace(update=config_update)
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
@@ -231,7 +222,7 @@ def hamiltonian(
     n = hamiltonian.transmon_levels
     op = expand(config.operator(n), hamiltonian.dims, qubit)
     waveforms = (
-        waveform(pulse, config, hamiltonian.single_qubit[qubit].detuned_frequency)
+        waveform(pulse, config, hamiltonian.single_qubit[qubit])
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
