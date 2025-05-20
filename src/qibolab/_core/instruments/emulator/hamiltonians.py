@@ -273,6 +273,24 @@ class HamiltonianConfig(Config):
 
         return self.model_validate(d)
 
+    def update_from_configs(self, config: dict[str, Config]) -> "HamiltonianConfig":
+        """Update hamiltonian parameters from configs."""
+
+        config_update = {}
+        for qubit in self.single_qubit:
+            # setting static bias
+            flux = config.get(f"{qubit}/flux")
+            config_update.update(
+                {
+                    f"single_qubit.{qubit}.dynamical_frequency": self.single_qubit[
+                        qubit
+                    ].detuned_frequency(
+                        flux.offset * flux.voltage_to_flux if flux is not None else 0
+                    )
+                }
+            )
+        return self.replace(update=config_update)
+
     @property
     def initial_state(self):
         """Initial state as ground state of the system."""

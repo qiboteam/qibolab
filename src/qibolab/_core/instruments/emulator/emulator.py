@@ -127,21 +127,8 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
+        config = config.update_from_configs(configs_)
 
-        config_update = {}
-        for qubit in config.single_qubit:
-            flux = configs_.get(f"{qubit}/flux")
-            config_update.update(
-                {
-                    f"single_qubit.{qubit}.dynamical_frequency": config.single_qubit[
-                        qubit
-                    ].detuned_frequency(
-                        flux.offset * flux.voltage_to_flux if flux is not None else 0
-                    )
-                }
-            )
-
-        config = config.replace(update=config_update)
         hamiltonian = config.hamiltonian
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
