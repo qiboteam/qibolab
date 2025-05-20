@@ -73,174 +73,176 @@ Qibolab provides some utility functions, accessible through
 file with a specific format.
 Here is an example
 
-.. code-block::  json
+.. collapse:: Parameters
 
-    {
-      "settings": {
-        "nshots": 1024,
-        "relaxation_time": 50000
-      },
-      "configs": {
-        "0/drive": {
-          "kind": "iq",
-          "frequency": 4855663000
+  .. code-block::  json
+
+      {
+        "settings": {
+          "nshots": 1024,
+          "relaxation_time": 50000
         },
-        "1/drive": {
-          "kind": "iq",
-          "frequency": 5800563000
+        "configs": {
+          "0/drive": {
+            "kind": "iq",
+            "frequency": 4855663000
+          },
+          "1/drive": {
+            "kind": "iq",
+            "frequency": 5800563000
+          },
+          "0/flux": {
+            "kind": "dc",
+            "offset": 0.0
+          },
+          "1/flux": {
+            "kind": "dc",
+            "offset": 0.0
+          },
+          "0/probe": {
+            "kind": "iq",
+            "frequency": 7453265000
+          },
+          "1/probe": {
+            "kind": "iq",
+            "frequency": 7655107000
+          },
+          "0/acquisition": {
+            "kind": "acquisition",
+            "delay": 0,
+            "smearing": 0
+          },
+          "1/acquisition": {
+            "kind": "acquisition",
+            "delay": 0,
+            "smearing": 0
+          },
+          "01/coupler": {
+            "kind": "dc",
+            "offset": 0.12
+          }
         },
-        "0/flux": {
-          "kind": "dc",
-          "offset": 0.0
-        },
-        "1/flux": {
-          "kind": "dc",
-          "offset": 0.0
-        },
-        "0/probe": {
-          "kind": "iq",
-          "frequency": 7453265000
-        },
-        "1/probe": {
-          "kind": "iq",
-          "frequency": 7655107000
-        },
-        "0/acquisition": {
-          "kind": "acquisition",
-          "delay": 0,
-          "smearing": 0
-        },
-        "1/acquisition": {
-          "kind": "acquisition",
-          "delay": 0,
-          "smearing": 0
-        },
-        "01/coupler": {
-          "kind": "dc",
-          "offset": 0.12
-        }
-      },
-      "native_gates": {
-        "single_qubit": {
-          "0": {
-            "RX": [
-              [
-                "0/drive",
-                {
-                  "kind": "pulse",
-                  "duration": 40,
-                  "amplitude": 0.0484,
-                  "envelope": {
-                    "kind": "drag",
-                    "rel_sigma": 0.2,
-                    "beta": -0.02
-                  }
-                }
-              ]
-            ],
-            "MZ": [
+        "native_gates": {
+          "single_qubit": {
+            "0": {
+              "RX": [
                 [
-                  "0/acquisition",
+                  "0/drive",
+                  {
+                    "kind": "pulse",
+                    "duration": 40,
+                    "amplitude": 0.0484,
+                    "envelope": {
+                      "kind": "drag",
+                      "rel_sigma": 0.2,
+                      "beta": -0.02
+                    }
+                  }
+                ]
+              ],
+              "MZ": [
+                  [
+                    "0/acquisition",
+                    {
+                        "kind": "readout",
+                        "acquisition": {
+                            "kind": "acquisition",
+                            "duration": 620.0
+                        },
+                        "probe": {
+                            "kind": "pulse",
+                            "duration": 620.0,
+                            "amplitude": 0.003575,
+                            "envelope": {
+                                "kind": "rectangular"
+                            }
+                        }
+                    }
+                ]
+              ]
+            },
+            "1": {
+              "RX": [
+                [
+                  "1/drive",
+                  {
+                    "kind": "pulse",
+                    "duration": 40,
+                    "amplitude": 0.05682,
+                    "envelope": {
+                      "kind": "drag",
+                      "rel_sigma": 0.2,
+                      "beta": -0.04
+                    }
+                  }
+                ]
+              ],
+              "MZ": [
+                [
+                  "1/acquisition",
                   {
                       "kind": "readout",
                       "acquisition": {
                           "kind": "acquisition",
-                          "duration": 620.0
+                          "duration": 960.0
                       },
                       "probe": {
                           "kind": "pulse",
-                          "duration": 620.0,
-                          "amplitude": 0.003575,
+                          "duration": 960.0,
+                          "amplitude": 0.00325,
                           "envelope": {
                               "kind": "rectangular"
                           }
                       }
                   }
+                ]
               ]
-            ]
+            }
           },
-          "1": {
-            "RX": [
-              [
-                "1/drive",
-                {
-                  "kind": "pulse",
-                  "duration": 40,
-                  "amplitude": 0.05682,
-                  "envelope": {
-                    "kind": "drag",
-                    "rel_sigma": 0.2,
-                    "beta": -0.04
-                  }
-                }
-              ]
-            ],
-            "MZ": [
-              [
-                "1/acquisition",
-                {
-                    "kind": "readout",
-                    "acquisition": {
-                        "kind": "acquisition",
-                        "duration": 960.0
-                    },
-                    "probe": {
-                        "kind": "pulse",
-                        "duration": 960.0,
-                        "amplitude": 0.00325,
-                        "envelope": {
-                            "kind": "rectangular"
-                        }
+          "two_qubit": {
+            "0-1": {
+              "CZ": [
+                [
+                  "01/coupler",
+                  {
+                    "kind": "pulse",
+                    "duration": 40,
+                    "amplitude": 0.1,
+                    "envelope": {
+                      "kind": "rectangular"
                     }
-                }
-              ]
-            ]
-          }
-        },
-        "two_qubit": {
-          "0-1": {
-            "CZ": [
-              [
-                "01/coupler",
-                {
-                  "kind": "pulse",
-                  "duration": 40,
-                  "amplitude": 0.1,
-                  "envelope": {
-                    "kind": "rectangular"
                   }
-                }
-              ],
-              [
-                "0/flux",
-                {
-                  "kind": "pulse",
-                  "duration": 30,
-                  "amplitude": 0.6025,
-                  "envelope": {
-                    "kind": "rectangular"
+                ],
+                [
+                  "0/flux",
+                  {
+                    "kind": "pulse",
+                    "duration": 30,
+                    "amplitude": 0.6025,
+                    "envelope": {
+                      "kind": "rectangular"
+                    }
                   }
-                }
-              ],
-              [
-                "0/drive",
-                {
-                  "kind": "virtualz",
-                  "phase": -1
-                }
-              ],
-              [
-                "1/drive",
-                {
-                  "kind": "virtualz",
-                  "phase": -3
-                }
+                ],
+                [
+                  "0/drive",
+                  {
+                    "kind": "virtualz",
+                    "phase": -1
+                  }
+                ],
+                [
+                  "1/drive",
+                  {
+                    "kind": "virtualz",
+                    "phase": -3
+                  }
+                ]
               ]
-            ]
+            }
           }
         }
       }
-    }
 
 This file contains different sections: ``configs`` defines the default configuration of channel
 parameters, while ``native_gates`` specifies the calibrated pulse parameters for implementing

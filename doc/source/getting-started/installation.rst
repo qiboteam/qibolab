@@ -1,5 +1,5 @@
-Installation instructions
-=========================
+Install
+=======
 
 .. _installing-qibolab:
 
@@ -15,10 +15,6 @@ After updating ``pip``, if needed, install Qibolab with:
 
    pip install qibolab
 
-.. note::
-
-    Remember that Qibolab is compatible with Pyhon >= 3.9 and < 3.12.
-
 
 Installing from source
 """"""""""""""""""""""
@@ -33,18 +29,20 @@ In order to install ``qibolab`` from source, you have to clone the GitHub reposi
       git clone https://github.com/qiboteam/qibolab.git
       cd qibolab
 
-Then, to install the package in standard mode (recommended if no changes on the source code are needed) one can still use ``pip``:
+Then, to install the package
 
-.. code-block:: bash
+- if no changes on the source code are needed, one can still use ``pip``
 
-      pip install . # or pip install -e .
+  .. code-block:: bash
 
-For developers, in order to modify the source code, it is possible to install using ``poetry`` or ``pip``:
+        pip install .
 
-.. code-block:: bash
+- otherwise, to modify the source code, it is possible to install using ``poetry`` or ``pip``
 
-      poetry install    # recommended
-      pip install -e .  # not recommended
+  .. code-block:: bash
+
+        poetry install    # recommended
+        pip install -e .  # not recommended
 
 _______________________
 
@@ -53,12 +51,9 @@ _______________________
 Supported instruments
 ^^^^^^^^^^^^^^^^^^^^^
 
-.. image:: qibolab_instruments.svg
-
 Qibolab supports the following control instruments:
 
 * Quantum Machines
-* Zurich Instruments
 * QBlox
 * Xilinx RFSoCs
 
@@ -69,22 +64,14 @@ This can be done with:
 .. code-block:: bash
 
       # for installation from releases
-      pip install qibolab[qm,zh,qblox,rfsoc]
+      pip install qibolab[qm,qblox,rfsoc]
 
       # or for installation from source
-      poetry install -E qm -E zh -E qblox -E rfsoc
-
-Or with conda
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibolab[qm,zh,qblox,rfsoc]
-
+      poetry install -E qm -E qblox -E rfsoc
 
 With the extras being:
 
 * Quantum Machines -> ``qm``
-* Zurich Instruments -> ``zh``
 * QBlox -> ``qblox``
 * Xilinx RFSoCs -> ``rfsoc``
 
