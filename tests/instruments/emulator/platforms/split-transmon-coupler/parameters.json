@@ -38,7 +38,7 @@
         "0-1": {
           "coupling": 3.8e6,
           "coupler": {
-            "frequency": 6.3e9,
+            "frequency": 5.977e9,
             "anharmonicity": -254e6,
             "sweetspot": 0,
             "coupling": [81.3e6, 81.3e6]
@@ -81,7 +81,8 @@
       },
       "coupler_0/flux":{
         "kind": "flux-emulator",
-        "offset": 0
+        "offset": 0,
+        "voltage_to_flux": 1
       },
     "0/probe": {
       "kind": "iq",
@@ -116,7 +117,7 @@
               "0/drive",
               {
                 "duration": 40,
-                "amplitude": 0.13000,
+                "amplitude": 0.125569,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
@@ -131,7 +132,7 @@
               "0/drive",
               {
                 "duration": 40,
-                "amplitude": 0.065,
+                "amplitude": 0.0627845,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
@@ -146,7 +147,7 @@
               "0/drive12",
               {
                 "duration": 40,
-                "amplitude": 0.092,
+                "amplitude": 0.08758,
                 "envelope": {
                   "kind": "gaussian",
                   "rel_sigma": 0.2
@@ -159,6 +160,77 @@
           "MZ": [
             [
               "0/acquisition",
+              {
+                "kind": "readout",
+                "acquisition": {
+                  "kind": "acquisition",
+                  "duration": 10.0
+                },
+                "probe": {
+                  "duration": 10.0,
+                  "amplitude": 0.2,
+                  "envelope": {
+                    "kind": "gaussian_square",
+                    "rel_sigma": 0.2,
+                    "width": 0.75
+                  },
+                  "relative_phase": 0.0,
+                  "kind": "pulse"
+                }
+              }
+            ]
+          ],
+          "CP": null
+        },
+        "1": {
+          "RX": [
+            [
+              "1/drive",
+              {
+                "duration": 40,
+                "amplitude": 0.13036,
+                "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
+            ]
+          ],
+          "RX90": [
+            [
+              "1/drive",
+              {
+                "duration": 40,
+                "amplitude": 0.06518,
+               "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
+            ]
+          ],
+          "RX12": [
+            [
+              "1/drive12",
+              {
+                "duration": 40,
+                "amplitude": 0.092426,
+                "envelope": {
+                  "kind": "gaussian",
+                  "rel_sigma": 0.2
+                },
+                "relative_phase": 0.0,
+                "kind": "pulse"
+              }
+            ]
+          ],
+          "MZ": [
+            [
+              "1/acquisition",
               {
                 "kind": "readout",
                 "acquisition": {
@@ -200,83 +272,39 @@
               }
             ]
           ]
-        },
-        "1": {
-          "RX": [
-            [
-              "1/drive",
-              {
-                "duration": 40,
-                "amplitude":0.124,
-                "envelope": {
-                  "kind": "gaussian",
-                  "rel_sigma": 0.2
-                },
-                "relative_phase": 0.0,
-                "kind": "pulse"
-              }
-            ]
-          ],
-          "RX90": [
-            [
-              "1/drive",
-              {
-                "duration": 40,
-                "amplitude":  0.062,
-               "envelope": {
-                  "kind": "gaussian",
-                  "rel_sigma": 0.2
-                },
-                "relative_phase": 0.0,
-                "kind": "pulse"
-              }
-            ]
-          ],
-          "RX12": [
-            [
-              "1/drive12",
-              {
-                "duration": 40,
-                "amplitude": 0.0859,
-                "envelope": {
-                  "kind": "gaussian",
-                  "rel_sigma": 0.2
-                },
-                "relative_phase": 0.0,
-                "kind": "pulse"
-              }
-            ]
-          ],
-          "MZ": [
-            [
-              "1/acquisition",
-              {
-                "kind": "readout",
-                "acquisition": {
-                  "kind": "acquisition",
-                  "duration": 10.0
-                },
-                "probe": {
-                  "duration": 10.0,
-                  "amplitude": 0.2,
-                  "envelope": {
-                    "kind": "gaussian_square",
-                    "rel_sigma": 0.2,
-                    "width": 0.75
-                  },
-                  "relative_phase": 0.0,
-                  "kind": "pulse"
-                }
-              }
-            ]
-          ],
-          "CP": null
         }
       },
       "two_qubit": {
-        "0-1": {
-          "CNOT": null
-        }
+            "0-1": {
+                "CZ": [
+                    [
+                        "0/flux",
+                        {
+                            "kind": "pulse",
+                            "duration": 30,
+                            "amplitude": 0.1852,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 0.0
+                        }
+                    ]
+                ],
+                "iSWAP": [
+                  [
+                      "0/flux",
+                      {
+                          "kind": "pulse",
+                          "duration": 110,
+                          "amplitude": 0.052,
+                          "envelope": {
+                              "kind": "rectangular"
+                          },
+                          "relative_phase": 0.0
+                      }
+                  ]
+              ]
+            }
       }
     }
   }

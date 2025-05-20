@@ -311,8 +311,8 @@ class HamiltonianConfig(Config):
                 }
             )
 
-        for i, pair in enumerate(config.two_qubit):
-            if config.two_qubit[pair].coupler is not None:
+        for i, pair in enumerate(self.two_qubit):
+            if self.two_qubit[pair].coupler is not None:
                 flux = config.get(f"coupler_{i}/flux")
                 config_update.update(
                     {

@@ -214,7 +214,9 @@ def hamiltonian(
             config,
             hamiltonian.single_qubit[i]
             if i in hamiltonian.single_qubit
-            else hamiltonian.two_qubit[list(hamiltonian.two_qubit)[i]].coupler,
+            else hamiltonian.two_qubit[
+                list(hamiltonian.two_qubit)[i - hamiltonian.nqubits]
+            ].coupler,
         )
         for pulse in pulses
         # only handle pulses (thus no readout)
