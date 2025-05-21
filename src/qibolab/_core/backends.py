@@ -8,6 +8,7 @@ from qibo.result import MeasurementOutcomes
 from qibolab._version import __version__ as qibolab_version
 
 from .compilers import Compiler
+from .identifier import QubitId, QubitPairId
 from .platform import Platform, create_platform
 from .platform.load import available_platforms
 
@@ -47,6 +48,32 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
+
+    @property
+    def qubits(self) -> list[QubitId]:
+        """Returns the qubits in the platform."""
+        return list(self.platform.qubits)
+
+    @property
+    def connectivity(self) -> list[QubitPairId]:
+        """Returns the list of connected qubits."""
+        return self.platform.pairs
+
+    @property
+    def natives(self) -> list[str]:
+        """Returns the list of native gates supported by the platform."""
+        compiler = Compiler.default()
+        natives = [g.__name__ for g in list(compiler.rules)]
+        calibrated = self.platform.natives.two_qubit
+
+        check_2q = ["CZ", "CNOT"]
+        for gate in check_2q:
+            if gate in natives and all(
+                getattr(calibrated[p], gate) is None for p in self.connectivity
+            ):
+                natives.remove(gate)
+
+        return natives
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
@@ -98,6 +125,10 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
+        # Temporary fix: overwrite the wire names
+        if not all(q in self.qubits for q in circuit.wire_names):
+            circuit._wire_names = self.qubits[: circuit.nqubits]
+
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
         self.platform.connect()
@@ -136,6 +167,11 @@ class QibolabBackend(NumpyBackend):
                 ValueError,
                 "Hardware backend only supports circuits as initial states.",
             )
+
+        # Temporary fix: overwrite the wire names
+        for circuit in circuits:
+            if not all(q in self.qubits for q in circuit.wire_names):
+                circuit._wire_names = self.qubits[: circuit.nqubits]
 
         # TODO: Maybe these loops can be parallelized
         sequences, measurement_maps = zip(
