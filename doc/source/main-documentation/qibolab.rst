@@ -633,7 +633,7 @@ It is possible to switch extractor when instantiating the :class:`qibolab.instru
 
 .. _main_doc_emulator:
 
-Simulation of QPU platforms
+Emulation of QPU platforms
 ---------------------------
 
 Although Qibolab is mostly dedicated to providing hardware drivers for self-hosted quantum computing setups,
@@ -641,15 +641,26 @@ it is also possible to simulate the outcome of a pulse sequence with an emulator
 The emulator currently available is based on `QuTiP <https://qutip.org/>`_, the simulation is performed
 by solving the master equation for a given Hamiltonian including dissipation using `mesolve <https://qutip.readthedocs.io/en/qutip-5.1.x/apidoc/solver.html#qutip.solver.mesolve.mesolve>`_.
 
-Qibolab currently support a model consisting of a single transmon with a drive term whose Hamiltonian is the following
+Qibolab currently support up to 2 split-transmon capacively coupled qubit
 
 .. math::
 
-    \frac{H}{\hbar} =  a^\dagger a \omega_q + \frac{\alpha}{2} a^\dagger a^\dagger a a - i \Omega(t) (a - a^\dagger)
+    \frac{H}{\hbar} =  \sum_{i=1}^2 \Big[ a^\dagger_i a_i \omega_i (\Phi_i) + \frac{\alpha_i}{2} a_i^\dagger a_i^\dagger a_i a_i - i \Omega_i(t) (a_i - a_i^\dagger) \Big] + g (a_1^\dagger a_2 + a_1 a_2^\dagger)
 
-where :math:`a (a^\dagger)` are the destruction (creation) operators for the transmon,
-:math:`\omega_q` is the transmon frequency, :math:`\alpha / 2 \pi` is the anharmonicity of the transmon and :math:`\Omega(t)` is a time-dependent
-term for driving the transmon.
+where :math:`a_i (a_i^\dagger)` are the destruction (creation) operators for the transmon  :math:`i`,
+:math:`\omega_i` and :math:`\alpha_i / 2 \pi` are the frequency and the anharmoncity of the transmon  :math:`i`.
+Each transmon is controlled with a drive term with a Rabi frequency :math:`\Omega_i(t)` and it is flux-tunable, meaning
+that the frequency of the transmon can be changed by applying flux :math:`\Phi_i`
+
+.. math::
+
+    \omega_i(\Phi_i) = (\omega_i^{\text{max}} - \alpha_i)
+    \sqrt[4]{d_i^2 + (1 - d_i^2)\cos^2\left( \pi (\Phi - \Phi^{\text{sweetspot}}) \right)} + \alpha_i
+
+where :math:`\omega_i^{\text{max}}` is the maximum frequency of the transmon, :math:`d_i` is the junctions asymmetry
+and :math:`\Phi^{\text{sweetspot}}` is the flux value at which the transmon frequency is maximum.
+Currently neither drive or crosstalk effects are considered.
+The coupling strength between the two transmons :math:`g` .
 
 The readout pulses parameters are ignored, given that the Hamiltonian doesn't include a resonator. The only information
 used when the readout pulse is placed in the sequence which is necessary to determine for how long the system should be evolved.
