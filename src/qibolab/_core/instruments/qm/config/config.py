@@ -90,8 +90,11 @@ class Configuration:
         else:
             keys = list(config.model_fields.keys())
             keys.remove("kind")
-        values = config.model_dump()
-        controller.analog_outputs[channel.port] = {k: values[k] for k in keys}
+        config_values = config.model_dump()
+        values = {k: config_values[k] for k in keys}
+        if config.sampling_rate > 1e9:
+            del values["upsampling_mode"]
+        controller.analog_outputs[channel.port] = values
         self.elements[id] = DcElement.from_channel(channel)
 
     def configure_mw_fem_line(
@@ -186,18 +189,19 @@ class Configuration:
     def register_waveforms(
         self,
         pulse: Pulse,
+        sampling_rate: int,
         max_voltage: float,
         element: Optional[str] = None,
         dc: bool = False,
     ):
         if dc:
-            qmpulse = QmPulse.from_dc_pulse(pulse)
+            qmpulse = QmPulse.from_dc_pulse(pulse, sampling_rate)
         else:
             if element is None:
-                qmpulse = QmPulse.from_pulse(pulse)
+                qmpulse = QmPulse.from_pulse(pulse, sampling_rate)
             else:
                 qmpulse = QmAcquisition.from_pulse(pulse, element)
-        waveforms = waveforms_from_pulse(pulse, max_voltage)
+        waveforms = waveforms_from_pulse(pulse, sampling_rate, max_voltage)
         if dc:
             self.waveforms[qmpulse.waveforms["single"]] = waveforms["I"]
         else:
@@ -205,29 +209,35 @@ class Configuration:
                 self.waveforms[getattr(qmpulse.waveforms, mode)] = waveforms[mode]
         return qmpulse
 
-    def register_iq_pulse(self, element: str, pulse: Pulse, max_voltage: float):
+    def register_iq_pulse(
+        self, element: str, pulse: Pulse, sampling_rate: int, max_voltage: float
+    ):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse, max_voltage)
+            self.pulses[op] = self.register_waveforms(pulse, sampling_rate, max_voltage)
         self.elements[element].operations[op] = op
         return op
 
-    def register_dc_pulse(self, element: str, pulse: Pulse, max_voltage: float):
+    def register_dc_pulse(
+        self, element: str, pulse: Pulse, sampling_rate: int, max_voltage: float
+    ):
         op = operation(pulse)
         if op not in self.pulses:
-            self.pulses[op] = self.register_waveforms(pulse, max_voltage, dc=True)
+            self.pulses[op] = self.register_waveforms(
+                pulse, sampling_rate, max_voltage, dc=True
+            )
         self.elements[element].operations[op] = op
         return op
 
     def register_acquisition_pulse(
-        self, element: str, readout: Readout, max_voltage: float
+        self, element: str, readout: Readout, sampling_rate: int, max_voltage: float
     ):
         """Registers pulse, waveforms and integration weights in QM config."""
         op = operation(readout)
         acquisition = f"{op}_{element}"
         if acquisition not in self.pulses:
             self.pulses[acquisition] = self.register_waveforms(
-                readout.probe, max_voltage, element
+                readout.probe, sampling_rate, max_voltage, element
             )
         self.elements[element].operations[op] = acquisition
         return op
