@@ -17,7 +17,8 @@ SUPPORTED_PULSE_SWEEPERS = [
     Parameter.relative_phase,
 ]
 
-ACQ_BASE = 10 / 3
+SR = 300e6
+
 
 def process_sweepers(
     sweepers: list[ParallelSweepers], probe_channel_ids: set[ChannelId]
@@ -79,7 +80,7 @@ def process_sweepers(
                 qcs.Array(
                     name=f"A{idx}_{idx2}",
                     value=(
-                        np.round(sweeper.values / ACQ_BASE) * ACQ_BASE * NS_TO_S
+                        np.round(sweeper.values * NS_TO_S * SR) / SR
                         if sweeper.parameter is Parameter.duration
                         else sweeper.values
                     ),
