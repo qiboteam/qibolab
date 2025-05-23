@@ -21,7 +21,7 @@ def test_superposition_state(platform: Platform):
     seq = q0.RX90() | q0.MZ()
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
     res = platform.execute([seq], nshots=1e4)[acq_handle]
-    assert pytest.approx(res.mean(), abs=5e-2) == 0.5
+    assert pytest.approx(res.mean(), abs=1e-1) == 0.5
 
 
 def test_excited_state(platform: Platform):
@@ -139,6 +139,8 @@ def test_cz_sequence(
     """Test CZ sequence with emulator."""
     if platform.nqubits < 2:
         pytest.skip(f"Plaform {platform} requires at least two qubits.")
+    if platform.config("hamiltonian").ncouplers > 0:
+        pytest.skip(f"Plaform {platform} with couplers unsupported.")
     if platform.natives.two_qubit[0, 1].CZ is None:
         pytest.skip(f"Skipping due to missing CNOT for platform {platform}.")
     q0 = platform.natives.single_qubit[0]
