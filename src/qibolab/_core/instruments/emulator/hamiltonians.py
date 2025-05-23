@@ -132,7 +132,7 @@ class Coupler(Qubit):
 class QubitPair(Config):
     """Hamiltonian parameters for qubit pair."""
 
-    coupling: float
+    coupling: float = 0
     """Qubit-qubit coupling."""
     coupler: Optional[Coupler] = None
     """Coupler mediating the interaction."""
