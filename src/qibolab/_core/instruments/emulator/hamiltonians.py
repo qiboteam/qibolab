@@ -334,10 +334,6 @@ class HamiltonianConfig(Config):
         return len(self.single_qubit)
 
     @property
-    def pairs(self) -> list[QubitPairId]:
-        return list(self.two_qubit)
-
-    @property
     def initial_state(self):
         """Initial state as ground state of the system."""
         return state_number_qobj(self.dims, (self.nqubits + self.ncouplers) * [0])
