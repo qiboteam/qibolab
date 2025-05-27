@@ -200,9 +200,7 @@ class FluxPulse(Model):
                 self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * (i[sample] + self.config.offset)
                 )
-                - self.qubit.detuned_frequency(
-                    self.config.voltage_to_flux * self.config.offset
-                )
+                - self.qubit.dynamical_frequency
             )
             / giga
         )
