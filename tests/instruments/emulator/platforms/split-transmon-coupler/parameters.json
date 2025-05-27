@@ -11,7 +11,7 @@
       "instructions": 200
     },
     "hamiltonian":{
-      "transmon_levels": 3,
+      "transmon_levels": 2,
       "single_qubit": {
                 "0": {
                     "frequency": 4.961e9,
@@ -56,21 +56,9 @@
         "rabi_frequency": 20e6,
         "scale_factor": 10
       },
-      "0/drive12": {
-        "kind": "drive-emulator",
-        "frequency": 4.749e9,
-        "rabi_frequency": 20e6,
-        "scale_factor": 10
-      },
       "1/drive": {
         "kind": "drive-emulator",
         "frequency":  4.919e9,
-        "rabi_frequency": 20e6,
-        "scale_factor": 10
-      },
-      "1/drive12": {
-        "kind": "drive-emulator",
-        "frequency":  4.720e9,
         "rabi_frequency": 20e6,
         "scale_factor": 10
       },
@@ -84,7 +72,7 @@
       },
       "coupler_0/flux":{
         "kind": "flux-emulator",
-        "offset": 0.1
+        "offset": -0.1
       },
     "0/probe": {
       "kind": "iq",
@@ -140,21 +128,6 @@
                   "kind": "drag",
                   "rel_sigma": 0.2,
                   "beta": 0.9
-                              },
-                "relative_phase": 0.0,
-                "kind": "pulse"
-              }
-            ]
-          ],
-          "RX12": [
-            [
-              "0/drive12",
-              {
-                "duration": 40,
-                "amplitude": 0.08927,
-                "envelope": {
-                  "kind": "gaussian",
-                  "rel_sigma": 0.2
                               },
                 "relative_phase": 0.0,
                 "kind": "pulse"
@@ -219,21 +192,6 @@
               }
             ]
           ],
-          "RX12": [
-            [
-              "1/drive12",
-              {
-                "duration": 40,
-                "amplitude": 0.089808,
-                "envelope": {
-                  "kind": "gaussian",
-                  "rel_sigma": 0.2
-                              },
-                "relative_phase": 0.0,
-                "kind": "pulse"
-              }
-            ]
-          ],
           "MZ": [
             [
               "1/acquisition",
@@ -287,7 +245,7 @@
                       "0/flux",
                       {
                           "kind": "pulse",
-                          "duration": 30,
+                          "duration": 40,
                           "amplitude": 0.052,
                           "envelope": {
                               "kind": "rectangular"
@@ -299,8 +257,8 @@
                     "coupler_0/flux",
                     {
                         "kind": "pulse",
-                        "duration": 30,
-                        "amplitude": 0,
+                        "duration": 40,
+                        "amplitude": -0.1,
                         "envelope": {
                             "kind": "rectangular"
                         },

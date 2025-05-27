@@ -142,7 +142,7 @@ def test_cz_sequence(
     if platform.config("hamiltonian").ncouplers > 0:
         pytest.skip(f"Plaform {platform} with couplers unsupported.")
     if platform.natives.two_qubit[0, 1].CZ is None:
-        pytest.skip(f"Skipping due to missing CNOT for platform {platform}.")
+        pytest.skip(f"Skipping due to missing CZ for platform {platform}.")
     q0 = platform.natives.single_qubit[0]
     q1 = platform.natives.single_qubit[1]
     pair = platform.natives.two_qubit[0, 1]
@@ -158,3 +158,26 @@ def test_cz_sequence(
     res = platform.execute([seq], nshots=1e4)
     assert pytest.approx(res[target_handle].mean(), abs=2e-1) == 0.5
     assert pytest.approx(res[control_handle].mean(), abs=2e-1) == 0.5
+
+
+def test_iswap_sequence(
+    platform: Platform,
+):
+    """Test iSWAP sequence with emulator."""
+    if platform.nqubits < 2:
+        pytest.skip(f"Plaform {platform} requires at least two qubits.")
+    if platform.natives.two_qubit[0, 1].iSWAP is None:
+        pytest.skip(f"Skipping due to missing iSWAP for platform {platform}.")
+    q0 = platform.natives.single_qubit[0]
+    q1 = platform.natives.single_qubit[1]
+    pair = platform.natives.two_qubit[0, 1]
+
+    seq = PulseSequence()
+    seq += q0.RX()
+    seq |= pair.iSWAP()
+    seq |= q0.MZ() + q1.MZ()
+    control_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
+    target_handle = list(seq.channel(platform.qubits[1].acquisition))[-1].id
+    res = platform.execute([seq], nshots=1e4)
+    assert pytest.approx(res[target_handle].mean(), abs=2e-1) == 1
+    assert pytest.approx(res[control_handle].mean(), abs=2e-1) == 0
