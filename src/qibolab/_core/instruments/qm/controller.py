@@ -259,6 +259,7 @@ class QmController(Controller):
             port=int(port),
             credentials=credentials,
             cluster_name=self.cluster_name,
+            octave_calibration_db_path=self._calibration_path,
         )
 
     def disconnect(self):
