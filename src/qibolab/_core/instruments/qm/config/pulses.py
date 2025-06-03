@@ -63,8 +63,8 @@ class ArbitraryWaveform:
         pad_len = new_duration - int(pulse.duration)
         baked_waveforms = np.pad(rotated_waveforms, ((0, 0), (0, pad_len)))
         return {
-            "I": cls(baked_waveforms[0]),
-            "Q": cls(baked_waveforms[1]),
+            "I": cls(baked_waveforms[0].tolist()),
+            "Q": cls(baked_waveforms[1].tolist()),
         }
 
 

@@ -23,7 +23,6 @@ import qibolab
 # - https://github.com/pydantic/pydantic/discussions/7763
 import qibolab._core.instruments.dummy
 import qibolab._core.instruments.oscillator
-import qibolab._core.instruments.zhinst
 
 # -- Project information -----------------------------------------------------
 

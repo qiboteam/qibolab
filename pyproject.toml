@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "qibolab"
-version = "0.2.6"
+version = "0.2.7"
 description = "Quantum hardware module and drivers for Qibo"
 authors = ["The Qibo team"]
 license = "Apache License 2.0"
@@ -21,21 +21,12 @@ packages = [{ include = "qibolab", from = "src" }]
 include = ["*.out", "*.yml"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.10,<3.14"
 qibo = "^0.2.16"
-numpy = "^1.26.4"
+numpy = ">=1.26.4,<3"
 scipy = "^1.13.0"
 pydantic = "^2.6.4"
-qblox-instruments = { version = "0.12.0", optional = true }
-lark = { version = "^1.1.9", optional = true }
-qcodes = { version = "^0.37.0", optional = true }
-qcodes_contrib_drivers = { version = "0.18.0", optional = true }
-pyvisa-py = { version = "0.5.3", optional = true }
-qm-qua = { version = "==1.2.1", optional = true }
-laboneq = { version = "==2.25.0", optional = true }
-qibosoq = { version = ">=0.1.2,<0.2", python = "<3.12", optional = true }
 qutip = { version = "^5.0.2", optional = true }
-pyyaml = { version = "^6.0.2", optional = true }
 pyserial = { version = "^3.5", optional = true }
 
 [tool.poetry.group.dev]
@@ -58,11 +49,8 @@ nbsphinx = "^0.9.1"
 ipython = "^8.12.0"
 sphinx-copybutton = "^0.5.1"
 # extras
-qblox-instruments = "0.12.0"
-qcodes = "^0.37.0"
-qcodes_contrib_drivers = "0.18.0"
-qibosoq = { version = "^0.1.2", python = "<3.12" }
-laboneq = "==2.25.0"
+qcodes = "^0.52.0"
+qcodes_contrib_drivers = "^0.23.0"
 qutip = "^5.0.2"
 
 [tool.poetry.group.tests]
@@ -73,6 +61,11 @@ pytest = ">=7.2.2"
 pytest-cov = "^4.0.0"
 pytest-env = ">=0.8.1"
 pytest-mock = ">=3.10.0"
+lark = "^1.1.9"
+qcodes = "^0.52.0"
+qcodes_contrib_drivers = "^0.23.0"
+pyvisa-py = "^0.5.3"
+requests = "^2.32.0"
 
 [tool.poetry.group.analysis]
 optional = true
@@ -81,20 +74,7 @@ optional = true
 ruff = "^0.9.1"
 
 [tool.poetry.extras]
-qblox = [
-  "qblox-instruments",
-  "qcodes",
-  "qcodes_contrib_drivers",
-  "pyvisa-py",
-  "lark",
-]
-qm = ["qm-qua"]
-zh = ["laboneq"]
-rfsoc = ["qibosoq"]
-los = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
-twpa = ["qcodes", "qcodes_contrib_drivers", "pyvisa-py"]
 emulator = ["qutip"]
-bluefors = ["pyyaml"]
 qrng = ["pyserial"]
 
 [tool.poe.tasks]
