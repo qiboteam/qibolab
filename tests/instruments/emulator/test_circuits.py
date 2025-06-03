@@ -54,3 +54,18 @@ def test_cnot(platform, setup):
         )
         == 1
     )
+
+
+def test_iswap(platform):
+    backend = construct_backend(backend="qibolab", platform=platform)
+    if backend.platform.nqubits < 2:
+        pytest.skip("iSWAP requires at least two qubits.")
+    if backend.platform.natives.two_qubit[0, 1].iSWAP is None:
+        pytest.skip(f"Platform {platform} doesn't support iSWAP.")
+    circuit = Circuit(2)
+    circuit.add(gates.GPI(0, 0))
+    circuit.add(gates.iSWAP(0, 1))
+    circuit.add(gates.M(0, 1))
+    result = backend.execute_circuit(circuit, nshots=1000)
+    print(result.frequencies())
+    assert pytest.approx(result.frequencies()["01"] / 1000, abs=1e-1) == 1
