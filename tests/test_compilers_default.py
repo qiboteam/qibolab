@@ -130,6 +130,18 @@ def test_cz_to_sequence():
     assert sequence == test_sequence
 
 
+def test_iswap_to_sequence():
+    platform = create_platform("dummy")
+    natives = platform.natives
+
+    circuit = Circuit(3)
+    circuit.add(gates.iSWAP(1, 2))
+
+    sequence = compile_circuit(circuit, platform)
+    test_sequence = natives.two_qubit[(2, 1)].iSWAP.create_sequence()
+    assert sequence == test_sequence
+
+
 def test_cnot_to_sequence():
     platform = create_platform("dummy")
     natives = platform.natives
