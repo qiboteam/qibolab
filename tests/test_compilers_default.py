@@ -126,8 +126,8 @@ def test_cz_to_sequence():
     platform = create_platform("dummy")
     natives = platform.natives
 
-    circuit = circuit_on_platform(platform, 3)
-    circuit.add(gates.CZ(1, 2))
+    circuit = Circuit(2, wire_names=[1, 2])
+    circuit.add(gates.CZ(0, 1))
 
     sequence = compile_circuit(circuit, platform)
     test_sequence = natives.two_qubit[(2, 1)].CZ.create_sequence()
@@ -150,8 +150,8 @@ def test_cnot_to_sequence():
     platform = create_platform("dummy")
     natives = platform.natives
 
-    circuit = circuit_on_platform(platform, 4)
-    circuit.add(gates.CNOT(2, 3))
+    circuit = Circuit(2, wire_names=[2, 3])
+    circuit.add(gates.CNOT(0, 1))
 
     sequence = compile_circuit(circuit, platform)
     test_sequence = natives.two_qubit[(2, 3)].CNOT.create_sequence()
