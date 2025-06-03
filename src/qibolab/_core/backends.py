@@ -9,6 +9,7 @@ from qibolab._version import __version__ as qibolab_version
 
 from .compilers import Compiler
 from .identifier import QubitId, QubitPairId
+from .native import TwoQubitNatives
 from .platform import Platform, create_platform
 from .platform.load import available_platforms
 
@@ -66,7 +67,7 @@ class QibolabBackend(NumpyBackend):
         natives = [g.__name__ for g in list(compiler.rules)]
         calibrated = self.platform.natives.two_qubit
 
-        check_2q = ["CZ", "CNOT"]
+        check_2q = list(TwoQubitNatives.model_fields.keys())
         for gate in check_2q:
             if gate in natives and all(
                 getattr(calibrated[p], gate) is None for p in self.connectivity
