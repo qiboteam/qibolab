@@ -17,12 +17,11 @@ circuits definition that we leave to the `Qibo
     np.random.seed(0)
 
     # create a single qubit circuit
-    circuit = Circuit(1)
+    circuit = Circuit(1, wire_names=[0])
 
     # attach Hadamard gate and a measurement
     circuit.add(gates.GPI2(0, phi=np.pi / 2))
     circuit.add(gates.M(0))
-    circuit._wire_names = [0]
 
     # execute on quantum hardware
     qibo.set_backend("qibolab", platform="dummy")
@@ -78,12 +77,11 @@ results:
 
     def execute_rotation():
         # create single qubit circuit
-        circuit = Circuit(1)
+        circuit = Circuit(1, wire_names=[0])
 
         # attach Rotation on X-Pauli with angle = 0
         circuit.add(gates.GPI2(0, phi=0))
         circuit.add(gates.M(0))
-        circuit._wire_names = [0]
 
         # define range of angles from [0, 2pi]
         exp_angles = np.arange(0, 2 * np.pi, np.pi / 16)
