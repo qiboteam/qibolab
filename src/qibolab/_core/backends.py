@@ -127,7 +127,7 @@ class QibolabBackend(NumpyBackend):
 
         # Temporary fix: overwrite the wire names
         if not all(q in self.qubits for q in circuit.wire_names):
-            circuit._wire_names = self.qubits[: circuit.nqubits]
+            circuit.wire_names = self.qubits[: circuit.nqubits]
 
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
