@@ -126,10 +126,6 @@ class QibolabBackend(NumpyBackend):
                 "Hardware backend only supports circuits as initial states.",
             )
 
-        # Temporary fix: overwrite the wire names
-        if not all(q in self.qubits for q in circuit.wire_names):
-            circuit.wire_names = self.qubits[: circuit.nqubits]
-
         sequence, measurement_map = self.compiler.compile(circuit, self.platform)
 
         self.platform.connect()
@@ -168,11 +164,6 @@ class QibolabBackend(NumpyBackend):
                 ValueError,
                 "Hardware backend only supports circuits as initial states.",
             )
-
-        # Temporary fix: overwrite the wire names
-        for circuit in circuits:
-            if not all(q in self.qubits for q in circuit.wire_names):
-                circuit._wire_names = self.qubits[: circuit.nqubits]
 
         # TODO: Maybe these loops can be parallelized
         sequences, measurement_maps = zip(
