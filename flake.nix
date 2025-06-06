@@ -65,7 +65,10 @@
                   install = {
                     enable = true;
                     groups = ["dev" "analysis" "tests"];
-                    extras = ["emulator"];
+                    extras = [
+                      (lib.strings.concatStrings
+                        (lib.strings.intersperse " -E " ["qrng" "emulator"]))
+                    ];
                   };
                 };
               };
