@@ -16,12 +16,15 @@ from .platform.load import available_platforms
 __all__ = ["MetaBackend", "QibolabBackend"]
 
 
-def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
+def execute_qasm(
+    circuit: str, platform, wire_names=None, initial_state=None, nshots=1000
+):
     """Executes a QASM circuit.
 
     Args:
         circuit (str): the QASM circuit.
         platform (str): the platform where to execute the circuit.
+        wire_names (list, optional): List of wire names to map to hardware qubits.
         initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
         nshots (int): Number of shots to sample from the experiment.
@@ -30,9 +33,13 @@ def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
         ``MeasurementOutcomes`` object containing the results acquired from the execution.
     """
     circuit = Circuit.from_qasm(circuit)
-    return QibolabBackend(platform).execute_circuit(
-        circuit, initial_state=initial_state, nshots=nshots
-    )
+    circuit.wire_names = wire_names
+    backend = QibolabBackend(platform)
+    qubits = backend.platform.qubits
+    wires = set(circuit.wire_names if circuit.wire_names is not None else [])
+    if not wires.issubset(qubits):
+        circuit.wire_names = list(qubits)[: circuit.nqubits]
+    return backend.execute_circuit(circuit, initial_state=initial_state, nshots=nshots)
 
 
 class QibolabBackend(NumpyBackend):
