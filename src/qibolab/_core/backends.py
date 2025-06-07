@@ -8,18 +8,23 @@ from qibo.result import MeasurementOutcomes
 from qibolab._version import __version__ as qibolab_version
 
 from .compilers import Compiler
+from .identifier import QubitId, QubitPairId
+from .native import TwoQubitNatives
 from .platform import Platform, create_platform
 from .platform.load import available_platforms
 
 __all__ = ["MetaBackend", "QibolabBackend"]
 
 
-def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
+def execute_qasm(
+    circuit: str, platform, wire_names=None, initial_state=None, nshots=1000
+):
     """Executes a QASM circuit.
 
     Args:
         circuit (str): the QASM circuit.
         platform (str): the platform where to execute the circuit.
+        wire_names (list, optional): List of wire names to map to hardware qubits.
         initial_state (:class:`qibo.models.circuit.Circuit`): Circuit to prepare the initial state.
                 If ``None`` the default ``|00...0>`` state is used.
         nshots (int): Number of shots to sample from the experiment.
@@ -28,9 +33,13 @@ def execute_qasm(circuit: str, platform, initial_state=None, nshots=1000):
         ``MeasurementOutcomes`` object containing the results acquired from the execution.
     """
     circuit = Circuit.from_qasm(circuit)
-    return QibolabBackend(platform).execute_circuit(
-        circuit, initial_state=initial_state, nshots=nshots
-    )
+    circuit.wire_names = wire_names
+    backend = QibolabBackend(platform)
+    qubits = backend.platform.qubits
+    wires = set(circuit.wire_names if circuit.wire_names is not None else [])
+    if not wires.issubset(qubits):
+        circuit.wire_names = list(qubits)[: circuit.nqubits]
+    return backend.execute_circuit(circuit, initial_state=initial_state, nshots=nshots)
 
 
 class QibolabBackend(NumpyBackend):
@@ -47,6 +56,32 @@ class QibolabBackend(NumpyBackend):
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()
+
+    @property
+    def qubits(self) -> list[QubitId]:
+        """Returns the qubits in the platform."""
+        return list(self.platform.qubits)
+
+    @property
+    def connectivity(self) -> list[QubitPairId]:
+        """Returns the list of connected qubits."""
+        return self.platform.pairs
+
+    @property
+    def natives(self) -> list[str]:
+        """Returns the list of native gates supported by the platform."""
+        compiler = Compiler.default()
+        natives = [g.__name__ for g in list(compiler.rules)]
+        calibrated = self.platform.natives.two_qubit
+
+        check_2q = list(TwoQubitNatives.model_fields.keys())
+        for gate in check_2q:
+            if gate in natives and all(
+                getattr(calibrated[p], gate) is None for p in self.connectivity
+            ):
+                natives.remove(gate)
+
+        return natives
 
     def apply_gate(self, gate, state, nqubits):  # pragma: no cover
         raise_error(NotImplementedError, "Qibolab cannot apply gates directly.")
