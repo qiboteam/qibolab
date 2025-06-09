@@ -157,6 +157,8 @@ class QmController(Controller):
     where ``fems`` are not given.
     """
 
+    keep_dc_offsets_on: bool = True
+    """Keep DC offsets on after disconnecting from Quantum Machines."""
     cluster_name: Optional[str] = None
     """Name of the Quantum Machines clusters to use.
 
@@ -255,7 +257,8 @@ class QmController(Controller):
         """Disconnect from QM manager."""
         self._reset_temporary_calibration()
         if self.manager is not None:
-            self.manager.close_all_quantum_machines()
+            if not self.keep_dc_offsets_on:
+                self.manager.close_all_quantum_machines()
             self.manager = None
 
     def configure_device(self, device: str):
@@ -543,11 +546,9 @@ class QmController(Controller):
 
         # register DC elements so that all qubits are
         # sweetspot even when they are not used
-        offsets = []
         for id, channel in self.channels.items():
             if isinstance(channel, DcChannel):
                 self.configure_channel(id, configs)
-                offsets.append((id, configs[id].offset))
 
         probe_map = self.configure_channels(configs, sequence.channels)
         self.register_pulses(configs, sequence)
@@ -555,7 +556,7 @@ class QmController(Controller):
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
         self.preprocess_sweeps(sweepers, configs, args, probe_map)
-        experiment = program(args, options, sweepers, offsets)
+        experiment = program(args, options, sweepers)
 
         if self.script_file_name is not None:
             script = generate_qua_script(experiment, asdict(self.config))
