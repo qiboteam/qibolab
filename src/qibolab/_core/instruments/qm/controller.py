@@ -157,12 +157,8 @@ class QmController(Controller):
     where ``fems`` are not given.
     """
 
-    close_qm: bool = False
-    """Call ``close_all_quantum_machines()`` when disconnecting.
-
-    If ``False`` the DC offsets will be left on after disconnection.
-    Default is ``False``.
-    """
+    keep_dc_offsets_on: bool = True
+    """Keep DC offsets on after disconnecting from Quantum Machines."""
     cluster_name: Optional[str] = None
     """Name of the Quantum Machines clusters to use.
 
@@ -261,7 +257,7 @@ class QmController(Controller):
         """Disconnect from QM manager."""
         self._reset_temporary_calibration()
         if self.manager is not None:
-            if self.close_qm:
+            if not self.keep_dc_offsets_on:
                 self.manager.close_all_quantum_machines()
             self.manager = None
 
