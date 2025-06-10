@@ -132,8 +132,8 @@ class Cluster(Controller):
                     extract(
                         data,
                         lenghts,
-                        options.acquisition_type,
-                        options.results_shape(sweepers),
+                        options_.acquisition_type,
+                        options_.results_shape(sweepers),
                     )
                 )
 
