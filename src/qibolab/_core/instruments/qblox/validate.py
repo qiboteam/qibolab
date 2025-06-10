@@ -29,7 +29,7 @@ WEIGHT_NUMBER = 2**5
 https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#weight-memory
 """
 
-ACQUISITION_MEMORY = 2**17 + 1000
+ACQUISITION_MEMORY = 2**17
 """Maximum acquisition memory available.
 
 https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#binning-and-averaging
