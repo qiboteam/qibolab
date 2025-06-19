@@ -40,7 +40,7 @@ github_repository = "qibolab"
 # https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
 # master_doc = "index"
 
-autodoc_mock_imports = ["icarusq_rfsoc_driver"]
+autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight"]
 try:
     import qibolab.instruments.qm
 except ModuleNotFoundError:
