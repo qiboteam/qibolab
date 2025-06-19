@@ -20,7 +20,7 @@ In this example, the qubit is only coupled to a drive channel and a transmission
 Where the latter is represented by a pair of related entities: an output probe channel,
 and an input acquisition channel.
 
-.. code-block:: python
+.. testcode:: python
 
     from qibolab import AcquisitionChannel, Hardware, IqChannel, Qubit
     from qibolab.instruments.dummy import DummyInstrument
