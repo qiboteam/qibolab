@@ -59,3 +59,15 @@ Qibolab supports the following control instruments:
 
 In order to use Qibolab on with one of these instruments chosen instrument,
 additional dependencies need to be installed.
+
+.. note::
+
+    Some packages are available which collect and pin the required compatible
+    dependencies, such as ``qibolab-qm`` and ``qibolab-qblox``. Search on `PyPI
+    <https://pypi.org/search/?q=%22qibolab-%22&o=>`_ for them
+
+.. note::
+
+    The ``qcodes`` package is also required to operate some local oscillators (e.g. TWPA
+    pumps). While there is no dedicated package to restrict the dependency yet, any
+    available version is supposed to be suitable to control them

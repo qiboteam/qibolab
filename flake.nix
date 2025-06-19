@@ -65,11 +65,7 @@
                   install = {
                     enable = true;
                     groups = ["dev" "analysis" "tests"];
-                    extras = [
-                      (lib.strings.concatStrings
-                        (lib.strings.intersperse " -E "
-                          ["qblox" "qm" "zh" "rfsoc" "los" "emulator"]))
-                    ];
+                    extras = ["emulator"];
                   };
                 };
               };
