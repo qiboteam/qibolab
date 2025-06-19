@@ -4,7 +4,6 @@ How to add a new instrument in Qibolab?
 Currently, Qibolab supports various **controller** instruments:
 
 * Quantum Machines
-* Zurich instruments
 
 and the following **local oscillators**:
 

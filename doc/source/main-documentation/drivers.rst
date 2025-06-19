@@ -8,8 +8,7 @@ A list of all the supported electronics follows:
 
 Controllers (subclasses of :class:`qibolab._core.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.DummyInstrument`
-    - Zurich Instruments: :class:`qibolab.instruments.zhinst.Zurich`
-    - Quantum Machines: :class:`qibolab.instruments.qm.QMController`
+    - Quantum Machines: :class:`qibolab.instruments.qm.QmController`
 
 Other Instruments (subclasses of :class:`qibolab._core.instruments.abstract.Instrument`):
     - Erasynth++: :class:`qibolab.instruments.era.ERASynth`
@@ -24,7 +23,7 @@ Some more detail on the interal functionalities of instruments is given in :doc:
 The following is a table of the currently supported or not supported features (dev stands for `under development`):
 
 .. csv-table:: Supported features
-    :header: "Feature", "RFSoC", "Qblox", "QM", "ZH"
+    :header: "Feature", "RFSoC", "Qblox", "QM"
     :widths: 25, 5, 5, 5, 5
 
     "Arbitrary pulse sequence",     "yes","yes","yes","yes"
@@ -46,16 +45,6 @@ The following is a table of the currently supported or not supported features (d
     "Raw waveform acquisition",     "yes","yes","yes","yes"
 
 
-Zurich Instruments
-^^^^^^^^^^^^^^^^^^
-
-Qibolab has been tested with the following `instrument cluster <https://www.zhinst.com/others/en/instruments/product-finder/type/quantum_computing_systems>`_:
-
-- 1 `SHFQC` (Superconducting Hybrid Frequency Converter)
-- 2 `HDAWGs` (High-Density Arbitrary Waveform Generators)
-- 1 `PQSC` (Programmable Quantum System Controller)
-
-The integration of Qibolab with the instrument cluster is facilitated through the `LabOneQ <https://github.com/zhinst/laboneq>`_ Python library that handles communication and coordination with the instruments.
 
 Quantum Machines
 ^^^^^^^^^^^^^^^^
@@ -143,4 +132,4 @@ by encoding into the :math:`I` component the probabilities and while the :math:`
 We add a Gaussian noise both on :math:`I` and :math:`Q`.
 This should be enough to get some meaningful results by computing the magnitude of the signal :math:`\sqrt{I^2 + Q^2}`.
 
-Example of platforms using the emulator are available `here <https://https://github.com/qiboteam/qibolab/tree/emulator-tests/tests/instruments/emulator/platforms/>`_.
+Example of platforms using the emulator are available `here <https://github.com/qiboteam/qibolab/tree/main/tests/instruments/emulator/platforms/>`_.

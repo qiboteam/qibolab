@@ -150,7 +150,7 @@ Sweeper objects in Qibolab are characterized by a :class:`qibolab.Parameter`. Th
 
 - Amplitude
 - Duration
-- Relative_phase
+- Relative phase
 - Start
 
 --
