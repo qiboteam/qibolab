@@ -32,13 +32,15 @@ author = "The Qibo team"
 
 release = qibolab.__version__
 
+github_username = "qiboteam"
+github_repository = "qibolab"
 
 # -- General configuration ---------------------------------------------------
 
 # https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
 # master_doc = "index"
 
-autodoc_mock_imports = ["icarusq_rfsoc_driver"]
+autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight"]
 try:
     import qibolab.instruments.qm
 except ModuleNotFoundError:
@@ -61,6 +63,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
+    "sphinx_toolbox",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
