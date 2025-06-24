@@ -504,7 +504,8 @@ class QmController(Controller):
     ):
         """Preprocessing and checks needed before executing some sweeps.
 
-        Amplitude and duration sweeps require registering additional pulses in the QM ``config.
+        Amplitude and duration sweeps require registering additional pulses in the QM
+        ``config``.
         """
         for sweeper in find_sweepers(sweepers, Parameter.frequency):
             channels = [(id, self.channels[id]) for id in sweeper.channels]
