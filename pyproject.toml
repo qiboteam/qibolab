@@ -33,7 +33,7 @@ pyserial = { version = "^3.5", optional = true }
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pudb = "^2024.1.3"
+pudb = "^2025.1"
 ipython = "^8.12.0"
 
 [tool.poetry.group.docs]
