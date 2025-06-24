@@ -3,105 +3,66 @@
 Platforms
 =========
 
-Qibolab provides support to different quantum laboratories.
+One of the core goals of Qibolab is to allow the execution of the experiments defined
+with its own :ref:`Experiment API <main_doc_experiment>` on diverse platforms.
 
-Each lab configuration is implemented using a :class:`qibolab.Platform` object which orchestrates instruments,
-qubits and channels and provides the basic features for executing pulses.
-Therefore, the ``Platform`` enables the user to interface with all
-the required lab instruments at the same time with minimum effort.
+In order to do this, the main abstraction introduced is exactly the
+:class:`qibolab.Platform` itself, which is intended to represent a collection of
+instruments, suitably connected to the device operated as a QPU.
 
-The API reference section provides a description of all the attributes and methods of the ``Platform``. Here, let's focus on the main elements.
+The handling of the instruments it will be mainly internal to the Qibolab itself, and it
+is defined by the instruments' drivers.
+The whole workflow is supposed to be the following:
 
-In the platform, the main methods can be divided in different sections:
-
-- functions to coordinate the instruments (``connect``, ``disconnect``)
-- a unique interface to execute experiments (``execute``)
-- functions save parameters (``dump``)
-
-The idea of the ``Platform`` is to serve as the only object exposed to the user, so that we can deploy experiments,
-without any need of going into the low-level instrument-specific code.
-
-For example, let's first define a platform (that we consider to be a single qubit platform) using the ``create`` method presented in :doc:`/tutorials/lab`:
-
-.. testcode::  python
-
-    from qibolab import create_platform
-
-    platform = create_platform("dummy")
-
-Now we connect to the instruments (note that we, the user, do not need to know which instruments are connected).
-
-.. testcode::  python
-
-    platform.connect()
-
-We can easily access the names of channels and other components, and based on the name retrieve the corresponding configuration. As an example let's print some things:
+#. the experiment is defined by the user using the mentioned :ref:`Experiment API
+   <main_doc_experiment>`, together with an optional set of temporary configuration
+   updates
+#. the execution is invoked through :meth:`qibolab.Platform.execute`, which acts as the
+   single entry point
+#. internally, the configurations and experiment definition are shared with all the
+   registered instruments, iterating over those registered in the platform, and
+   converting the instructions to the each instrument's representation (which is the main
+   role of the driver), finally uploading them
+#. the experiment is then triggerred
+#. upon completion, results are downloaded from the relevant sources, and collected into
+   a single collection, which is returned as the output of :meth:`qibolab.Platform.execute`
 
 .. note::
-   If requested component does not exist in a particular platform, its name will be `None`, so watch out for such names, and make sure what you need exists before requesting its configuration.
 
-.. testcode::  python
+    Because of internal Qibolab's limitations, currently it is assumed that there is
+    just a single instrument capable of producing pulses (a
+    :class:`qibolab._core.instruments.abstract.Controller` instance). While all the
+    other instruments will play a passive role (e.g. LOs), which boils down in only
+    supporting configurations, but do not execute any synchronized operation.
 
-    drive_channel_id = platform.qubits[0].drive
-    drive_channel = platform.channels[drive_channel_id]
-    print(f"Drive channel name: {drive_channel_id}")
-    print(f"Drive frequency: {platform.config(drive_channel_id).frequency}")
+    This limitation will be lifted in future releases.
 
-    drive_lo = drive_channel.lo
-    if drive_lo is None:
-        print(f"Drive channel {drive_channel_id} does not use an LO.")
-    else:
-        print(f"Name of LO for channel {drive_channel_id} is {drive_lo}")
-        print(f"LO frequency: {platform.config(drive_lo).frequency}")
+    However, it is mostly affecting the way instruments' drivers are written, since a
+    single driver should span all the active components. Once this is done, it only
+    limits the composability of existing instruments.
 
-.. testoutput:: python
-    :hide:
+The only other active operations which are relevant for the experimental workflow
+consist in instruments' initialization and close up, which are performed through
+:meth:`qibolab.Platform.connect` and :meth:`qibolab.Platform.disconnect` methods.
 
-    Drive channel name: 0/drive
-    Drive frequency: 4000000000.0
-    Drive channel 0/drive does not use an LO.
+.. hint::
 
-Now we can create a simple sequence without explicitly giving any qubit specific parameter,
-as these are loaded automatically from the platform, as defined in the corresponding ``parameters.json``:
+    The platform just exposes the API for pulse-based experiments. However, it is always
+    central for hardware execution.
 
-.. testcode::  python
+    Indeed, Qibolab exposes a Qibo compatible backend for circuits execution,
+    :class:`qibolab.QibolabBackend`. Which at its heart, it is powered by a platform
+    itself.
 
-   from qibolab import Delay, PulseSequence
-   import numpy as np
+    Cf. :ref:`main_doc_backend` and :ref:`main_doc_compiler`.
 
-   ps = PulseSequence()
-   qubit = platform.qubits[0]
-   natives = platform.natives.single_qubit[0]
-   ps.concatenate(natives.RX())
-   ps.concatenate(natives.R(phi=np.pi / 2))
-   ps.append((qubit.probe, Delay(duration=200)))
-   ps.concatenate(natives.MZ())
+However, there is a further relevant role which is performed by the
+:class:`qibolab.Platform`: parameters' persistance.
 
-Now we can execute the sequence on hardware:
+Parameters
+^^^^^^^^^^
 
-.. testcode::  python
-
-    from qibolab import (
-        AcquisitionType,
-        AveragingMode,
-    )
-
-    options = dict(
-        nshots=1000,
-        relaxation_time=10,
-        fast_reset=False,
-        acquisition_type=AcquisitionType.INTEGRATION,
-        averaging_mode=AveragingMode.CYCLIC,
-    )
-    results = platform.execute([ps], **options)
-
-Finally, we can stop instruments and close connections.
-
-.. testcode::  python
-
-    platform.disconnect()
-
-.. _main_doc_parameters:
+----
 
 Parameters
 ^^^^^^^^^^
