@@ -9,7 +9,7 @@ from typing import Optional
 
 import numpy as np
 from qibo.config import log
-from scipy.signal import lfilter
+from scipy.signal import lfilter, windows
 
 SAMPLING_RATE = 1
 """Default sampling rate in gigasamples per second (GSps).
@@ -726,6 +726,116 @@ class eCap(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
+
+
+class Slepian(PulseShape):
+    r"""Slepian pulse shape. The Slepian waveform finds the optimal waveform
+    that minimizes the integrated spectral density above a chosen frequency NW,
+    where an optimal waveform is one that gives low error for any time larger
+    than some chosen time, this definition is essentially equivalent to
+    adiabatic behavior [1].  The ith Slepian is the ith eigenvector of the
+    prolate spheroidal wave functions [2].
+
+    [1] J. M. Martinis and M. R. Geller, Physical Review A 90,022307
+    (2014). [2] Slepian, D. Prolate spheroidal wave functions, Fourier
+    analysis, and uncertainty V: The discrete case. Bell System
+    Technical Journal, Volume 57 (1978), 1371430.
+    """
+
+    def __init__(self, NW: float, ith: int = 1):
+        super().__init__()
+        self.name = "Slepian"
+        self.pulse: Pulse = None
+        self.NW: float = float(NW)
+        self.ith: int = int(ith)
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator."""
+        if super().__eq__(item):
+            return self.NW == item.NW and self.ith == item.ith
+        return False
+
+    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration * sampling_rate)
+            x = np.arange(0, num_samples, 1)
+            window, eig_v = windows.dpss(
+                num_samples, self.NW, self.ith, return_ratios=True
+            )
+
+            waveform = Waveform(
+                self.pulse.amplitude * window.T[:, -1] / np.max(window.T[:, -1])
+            )
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        raise ShapeInitError
+
+    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration * sampling_rate)
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        raise ShapeInitError
+
+    def __repr__(self):
+        return (
+            f"{self.name}({format(self.NW, '.2f').rstrip('0').rstrip('.')},{self.ith})"
+        )
+
+
+class RaisedCosine(PulseShape):
+    r"""Raised Cosine pulse shape.
+
+    Eq (2.8) in Ding, Qi, 2023 https://hdl.handle.net/1721.1/151476
+    """
+
+    def __init__(self, alpha: float):
+        super().__init__()
+        if type(alpha) is str:
+            alpha = eval(alpha)
+        if type(alpha) is not list:
+            alpha = [alpha]
+        self.name = "RaisedCosine"
+        self.pulse: Pulse = None
+        try:
+            self.alpha: list[float] = [float(alpha_k) for alpha_k in alpha]
+        except:
+            raise ValueError("alpha must be a list of floats")
+
+    def __eq__(self, item) -> bool:
+        """Overloads == operator."""
+        if super().__eq__(item):
+            return self.alpha == item.alpha
+        return False
+
+    def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration * sampling_rate)
+            x = np.arange(0, num_samples, 1)
+            y = np.zeros(num_samples)
+            for k, alpha_k in enumerate(self.alpha):
+                y = y + alpha_k * np.cos(2 * np.pi * k * x / num_samples)
+
+            waveform = Waveform(self.pulse.amplitude * y)
+            waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        raise ShapeInitError
+
+    def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
+        if self.pulse:
+            num_samples = int(self.pulse.duration * sampling_rate)
+            x = np.arange(0, num_samples, 1)
+            y = np.zeros(num_samples)
+            # for k, alpha_k in enumerate(self.alpha):
+            #     y = y + alpha_k*np.sin(2*np.pi * k * x / num_samples)
+            waveform = Waveform(np.zeros(num_samples))
+            waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
+            return waveform
+        raise ShapeInitError
+
+    def __repr__(self):
+        return f"{self.name}({[format(alpha_k, '.6f').rstrip('0').rstrip('.') for alpha_k in self.alpha]})"
 
 
 class Custom(PulseShape):

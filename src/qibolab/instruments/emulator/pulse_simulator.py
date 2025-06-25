@@ -284,8 +284,8 @@ class PulseSimulator(Controller):
         execution_parameters: ExecutionParameters,
         *sweeper: Sweeper,
     ) -> dict[Union[str, int], list]:
-        """Performs sweep by recursion. Appends sampled lists and other
-        simulation data obtained from each call of `self._sweep_play`.
+        """Performs sweep by recursion. simulation data obtained from each call
+        of `self._sweep_play`. Appends sampled lists and other.
 
         Args:
             qubits (dict): Qubits involved in the device. Does not affect emulator.
