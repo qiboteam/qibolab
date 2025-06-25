@@ -120,7 +120,46 @@ Channels
 Qubits
 ^^^^^^
 
-x
+The :class:`qibolab.Qubit` class serves as a container for the channels that are used to
+control the corresponding physical qubit.
+
+These channels encompass distinct types, each serving a specific purpose:
+
+- :attr:`qibolab.Qubit.probe`, measurement probe from controller device to the qubits
+- :attr:`qibolab.Qubit.acquisition`, measurement acquisition from qubits to controller
+- :attr:`qibolab.Qubit.drive`, used to control the single qubit Hamiltonian
+- :attr:`qibolab.Qubit.flux`, tuning the qubit frequency through magnetic flux
+- :attr:`qibolab.Qubit.drive_extra`, additional drive channels at different frequencies
+
+The container structure is specifically engineered to match the typical roles in the
+superconducting qubits.
+However, this is just a structured collection for ease of access. Notice how the
+channels (described in the previous section) only retain the information related to
+their operations, but not directly to the role they play in any experiment.
+In this sense, the names above are just established as a convention, but they introduce
+no limitation to the way the :class:`qibolab.Qubit` is used (see the note below).
+
+Indeed, all elements are optional, because not all hardware platforms and elements
+require them.
+E.g., flux channels are typically relevant only for flux-tunable qubits.
+
+Moreover, the :class:`qibolab.Qubit` class is also be used to represent coupler qubits,
+when these are part of the platform. This case is quite complementary to the fixed
+frequency transmon: only the :attr:`qibolab.Qubit.flux` line is used.
+
+.. note::
+
+    While :attr:`qibolab.Qubit.drive_extra` is named after *drive* role, there is no
+    restriction to the type of channels it can contain, playing essentially the role of
+    unadministered free space.
+
+    What is often expected for these channels would be to be used for additional drives
+    to implement further type of gates involving the qubit, and especially the same
+    physical line of the :attr:`qibolab.Qubit.drive` channel. Mainly, this will be used
+    to implement gates supposed to act on higher levels (qudits), and cross-resonance
+    interactions.
+
+    At present time, these guidelines are not enforced anyhow in Qibolab.
 
 ----
 
@@ -158,45 +197,3 @@ Configs also have different specializations that correspond to different channel
 The platform holds default config parameters for all its channels, however the user is able to alter them by passing a config updates dictionary
 when calling :meth:`qibolab.Platform.execute`.
 The final configs are then sent to the controller instrument, which matches them to channels via their ids and ensures they are uploaded to the proper electronics.
-
-
-.. _main_doc_qubits:
-
-Qubits
-------
-
-The :class:`qibolab.Qubit` class serves as a container for the channels that are used to control the corresponding physical qubit.
-These channels encompass distinct types, each serving a specific purpose:
-
-- probe (measurement probe from controller device to the qubits)
-- acquisition (measurement acquisition from qubits to controller)
-- drive
-- flux
-- drive_extra (additional drive channels at different frequencies used to probe higher-level transition)
-
-Some channel types are optional because not all hardware platforms require them.
-For example, flux channels are typically relevant only for flux tunable qubits.
-
-The :class:`qibolab.Qubit` class can also be used to represent coupler qubits, when these are available.
-
-.. _main_doc_native:
-
-Native
-------
-
-Each quantum platform supports a specific set of native gates, which are the quantum operations that have been calibrated.
-If this set is universal any circuit can be transpiled and compiled to a pulse sequence which can then be deployed in the given platform.
-
-:py:mod:`qibolab._core.native` provides data containers for holding the pulse parameters required for implementing every native gate.
-The :class:`qibolab.Platform` provides a natives property that returns the :class:`qibolab._core.native.SingleQubitNatives`
-which holds the single qubit native gates for every qubit and :class:`qibolab._core.native.TwoQubitNatives` for the two-qubit native gates of every qubit pair.
-Each native gate is represented by a :class:`qibolab.PulseSequence` which contains all the calibrated parameters.
-
-Typical single-qubit native gates are the Pauli-X gate, implemented via a pi-pulse which is calibrated using Rabi oscillations and the measurement gate,
-implemented via a pulse sent in the readout line followed by an acquisition.
-For a universal set of single-qubit gates, the RX90 (pi/2-pulse) gate is required,
-which is implemented by halving the amplitude of the calibrated pi-pulse.
-
-Typical two-qubit native gates are the CZ and iSWAP, with their availability being platform dependent.
-These are implemented with a sequence of flux pulses, potentially to multiple qubits, and virtual Z-phases.
-Depending on the platform and the quantum chip architecture, two-qubit gates may require pulses acting on qubits that are not targeted by the gate.
