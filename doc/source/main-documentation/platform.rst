@@ -12,6 +12,10 @@ instruments, suitably connected to the device operated as a QPU.
 
 The handling of the instruments it will be mainly internal to the Qibolab itself, and it
 is defined by the instruments' drivers.
+
+Usage
+-----
+
 The whole workflow is supposed to be the following:
 
 #. the experiment is defined by the user using the mentioned :ref:`Experiment API
@@ -62,29 +66,63 @@ However, there is a further relevant role which is performed by the
 Parameters
 ^^^^^^^^^^
 
+The role of the :class:`qibolab.Platform` is to store all the information required to
+execution.
+While what exactly means execution is possibly debatable, since it is strictly related
+to the purpose the QPU is being used for, to have a clear target we intend as executing
+circuits.
+Most (but not necessarily all) of the information required to perform different
+experiments will be anyhow contained in this.
+
+Specifically, the major ingredient for circuits' execution is the definition of a set of
+native gates as low-level operations that can be achieved by the instruments. In
+practice, each gate is represented by a "pulse" sequence.
+
+.. note::
+
+    There are also operations which are not strictly mapping to a pulse sequence, e.g.
+    the active reset of qubits, where, after a measurement of the qubit, a :math:`pi`
+    rotation is conditionally applied to reset the qubit in its ground state.
+
+    This kind of operations are temporarily not supported by Qibolab, and for this
+    reason the set of native operations reduces to pulse sequences.
+
+The details of the pulse sequences definiton are described in details in the mentioned
+:ref:`Experiment API <main_doc_experiment>`.
+However, the important part is that each experiment supports its serialization, and it
+is stored as such among the platform's so-called *parameters*.
+
+The other main element which constitutes the :class:`qibolab.Parameters` are the
+common hardware configurations.
+E.g., one possible configuration is the frequency of the local oscillator used for the
+upconversion of a certain set of channels.
+
+The main separation between the general hardware configurations and the experiments
+definitions (gates' pulse sequences) is the time in which they play role in the overall
+experiment execution:
+
+- pulse sequences are intended to contain operations which are executed according to a
+  precise schedule, which is often to happen in *real time*
+- the only moment when the general configurations will play a role is in the experiment
+  preparation, thus *ahead of time*
+
+All this information is known by the platform object, and can be arbitrarily queried,
+following the declared schema (which is part of Qibolab's public API).
+Moreover, the parameters are serialized on disk with a single method call
+(:meth:`qibolab.Platform.dump`), for persistence across different runs.
+
+Definition
+----------
+
+Channels
+^^^^^^^^
+
+Qubits
+^^^^^^
+
+x
+
 ----
-
-Parameters
-^^^^^^^^^^
-
-
-.. _main_doc_dummy:
-
-Dummy platform
-^^^^^^^^^^^^^^
-
-In addition to the real instruments presented in the :ref:`main_doc_instruments` section, Qibolab provides the :class:`qibolab.instruments.DummyInstrument`.
-This instrument represents a controller that returns random numbers of the proper shape when executing any pulse sequence.
-This instrument is also part of the dummy platform which is defined in :py:mod:`qibolab._core.dummy` and can be initialized as
-
-.. testcode::  python
-
-    from qibolab import create_platform
-
-    platform = create_platform("dummy")
-
-This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
-It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
 
 
 .. _main_doc_channels:
