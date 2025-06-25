@@ -320,15 +320,15 @@ class QrmRf(ClusterModule):
         if qubit is not None:
             if "mixer_readout_g" in qubits[qubit].characterization:
                 self.device.sequencers[next_sequencer_number].set(
-                "mixer_corr_gain_ratio",
-                qubits[qubit].characterization["mixer_readout_g"]
-                )             
+                    "mixer_corr_gain_ratio",
+                    qubits[qubit].characterization["mixer_readout_g"],
+                )
             if "mixer_readout_phi" in qubits[qubit].characterization:
                 self.device.sequencers[next_sequencer_number].set(
-                "mixer_corr_phase_offset_degree",
-                qubits[qubit].characterization["mixer_readout_phi"]
+                    "mixer_corr_phase_offset_degree",
+                    qubits[qubit].characterization["mixer_readout_phi"],
                 )
-            
+
         # create sequencer wrapper
         sequencer = Sequencer(next_sequencer_number)
         sequencer.qubit = qubit
@@ -446,10 +446,9 @@ class QrmRf(ClusterModule):
                     port=port,
                     frequency=self.get_if(non_overlapping_pulses[0]),
                     qubits=qubits,
-                     qubit=non_overlapping_pulses[0].qubit,
+                    qubit=non_overlapping_pulses[0].qubit,
                 )
 
-                
                 # add the sequencer to the list of sequencers required by the port
                 self._sequencers[port].append(sequencer)
 

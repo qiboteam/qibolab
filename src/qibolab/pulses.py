@@ -276,6 +276,7 @@ class Rectangular(PulseShape):
     def __repr__(self):
         return f"{self.name}()"
 
+
 class Exponential(PulseShape):
     r"""Exponential pulse shape (Square pulse with an exponential decay).
 
@@ -328,6 +329,7 @@ class Exponential(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.tau, '.3f').rstrip('0').rstrip('.')}, {format(self.upsilon, '.3f').rstrip('0').rstrip('.')}, {format(self.g, '.3f').rstrip('0').rstrip('.')})"
+
 
 class Gaussian(PulseShape):
     r"""Gaussian pulse shape.
@@ -383,6 +385,7 @@ class Gaussian(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')})"
+
 
 class GaussianSquare(PulseShape):
     r"""GaussianSquare pulse shape.
@@ -454,6 +457,7 @@ class GaussianSquare(PulseShape):
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.width, '.6f').rstrip('0').rstrip('.')})"
 
+
 class Drag(PulseShape):
     """Derivative Removal by Adiabatic Gate (DRAG) pulse shape.
 
@@ -518,6 +522,7 @@ class Drag(PulseShape):
 
     def __repr__(self):
         return f"{self.name}({format(self.rel_sigma, '.6f').rstrip('0').rstrip('.')}, {format(self.beta, '.6f').rstrip('0').rstrip('.')})"
+
 
 class IIR(PulseShape):
     """IIR Filter using scipy.signal lfilter."""
@@ -605,6 +610,7 @@ class IIR(PulseShape):
         formatted_a = [round(a, 3) for a in self.a]
         return f"{self.name}({formatted_b}, {formatted_a}, {self.target})"
 
+
 class SNZ(PulseShape):
     """Sudden variant Net Zero.
 
@@ -672,6 +678,7 @@ class SNZ(PulseShape):
     def __repr__(self):
         return f"{self.name}({self.t_idling})"
 
+
 class eCap(PulseShape):
     r"""ECap pulse shape.
 
@@ -720,19 +727,22 @@ class eCap(PulseShape):
     def __repr__(self):
         return f"{self.name}({format(self.alpha, '.6f').rstrip('0').rstrip('.')})"
 
-class Slepian(PulseShape):
-    r"""Slepian pulse shape.
-    The Slepian waveform finds the optimal waveform that minimizes the integrated spectral density above a chosen frequency NW, 
-    where an optimal waveform is one that gives low error for any time larger than some chosen time, this definition is 
-    essentially equivalent to adiabatic behavior [1].  The ith Slepian is the ith eigenvector of the prolate spheroidal 
-    wave functions [2].
 
-    [1] J. M. Martinis and M. R. Geller, Physical Review A 90,022307 (2014).
-    [2] Slepian, D. Prolate spheroidal wave functions, Fourier analysis, and uncertainty V: The discrete case. Bell System Technical Journal, Volume 57 (1978), 1371430.
-    
+class Slepian(PulseShape):
+    r"""Slepian pulse shape. The Slepian waveform finds the optimal waveform
+    that minimizes the integrated spectral density above a chosen frequency NW,
+    where an optimal waveform is one that gives low error for any time larger
+    than some chosen time, this definition is essentially equivalent to
+    adiabatic behavior [1].  The ith Slepian is the ith eigenvector of the
+    prolate spheroidal wave functions [2].
+
+    [1] J. M. Martinis and M. R. Geller, Physical Review A 90,022307
+    (2014). [2] Slepian, D. Prolate spheroidal wave functions, Fourier
+    analysis, and uncertainty V: The discrete case. Bell System
+    Technical Journal, Volume 57 (1978), 1371430.
     """
 
-    def __init__(self, NW: float, ith: int=1):
+    def __init__(self, NW: float, ith: int = 1):
         super().__init__()
         self.name = "Slepian"
         self.pulse: Pulse = None
@@ -744,21 +754,22 @@ class Slepian(PulseShape):
         if super().__eq__(item):
             return self.NW == item.NW and self.ith == item.ith
         return False
-    
+
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration * sampling_rate)
             x = np.arange(0, num_samples, 1)
-            window, eig_v = windows.dpss(num_samples, self.NW, self.ith, return_ratios=True)
-            
+            window, eig_v = windows.dpss(
+                num_samples, self.NW, self.ith, return_ratios=True
+            )
+
             waveform = Waveform(
-                self.pulse.amplitude
-                * window.T[:,-1]/np.max(window.T[:,-1])
+                self.pulse.amplitude * window.T[:, -1] / np.max(window.T[:, -1])
             )
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
-    
+
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration * sampling_rate)
@@ -766,15 +777,19 @@ class Slepian(PulseShape):
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
-    
+
     def __repr__(self):
-        return f"{self.name}({format(self.NW, '.2f').rstrip('0').rstrip('.')},{self.ith})"
+        return (
+            f"{self.name}({format(self.NW, '.2f').rstrip('0').rstrip('.')},{self.ith})"
+        )
+
 
 class RaisedCosine(PulseShape):
     r"""Raised Cosine pulse shape.
 
     Eq (2.8) in Ding, Qi, 2023 https://hdl.handle.net/1721.1/151476
     """
+
     def __init__(self, alpha: float):
         super().__init__()
         if type(alpha) is str:
@@ -793,20 +808,20 @@ class RaisedCosine(PulseShape):
         if super().__eq__(item):
             return self.alpha == item.alpha
         return False
-    
+
     def envelope_waveform_i(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration * sampling_rate)
             x = np.arange(0, num_samples, 1)
             y = np.zeros(num_samples)
             for k, alpha_k in enumerate(self.alpha):
-                y = y + alpha_k*np.cos(2*np.pi * k*x / num_samples)
-            
-            waveform = Waveform(self.pulse.amplitude*y)
+                y = y + alpha_k * np.cos(2 * np.pi * k * x / num_samples)
+
+            waveform = Waveform(self.pulse.amplitude * y)
             waveform.serial = f"Envelope_Waveform_I(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
-    
+
     def envelope_waveform_q(self, sampling_rate=SAMPLING_RATE) -> Waveform:
         if self.pulse:
             num_samples = int(self.pulse.duration * sampling_rate)
@@ -818,9 +833,10 @@ class RaisedCosine(PulseShape):
             waveform.serial = f"Envelope_Waveform_Q(num_samples = {num_samples}, amplitude = {format(self.pulse.amplitude, '.6f').rstrip('0').rstrip('.')}, shape = {repr(self)})"
             return waveform
         raise ShapeInitError
-    
+
     def __repr__(self):
         return f"{self.name}({[format(alpha_k, '.6f').rstrip('0').rstrip('.') for alpha_k in self.alpha]})"
+
 
 class Custom(PulseShape):
     """Arbitrary shape."""
