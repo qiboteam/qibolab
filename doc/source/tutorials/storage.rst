@@ -1,3 +1,5 @@
+.. _main_doc_storage:
+
 Platforms storage
 =================
 
