@@ -111,11 +111,89 @@ following the declared schema (which is part of Qibolab's public API).
 Moreover, the parameters are serialized on disk with a single method call
 (:meth:`qibolab.Platform.dump`), for persistence across different runs.
 
+.. important::
+
+   The serialization is so frequent, and such a relevant part of the platform's
+   operations, which Qibolab supports as a pattern their loading from a file named
+   ``parameters.json``, through the :meth:`qibolab.Platform.load` method.
+
+   However, this pattern is fully optional, as it is described in depth in
+   :ref:`main_doc_storage`.
+
 Definition
 ----------
 
+In the last section, the structure of platform's parameters has been described. These
+are not the only constituent of the platform, since there is another important
+information which needs to be defined: the hardware layer.
+
+Indeed, to actually use a platform, a crucial information regards how to address each
+involved instrument, and how to route the pulses to the correct channels.
+
+This complementary information is represented by the :class:`qibolab.Hardware` class,
+which can be promoted to full-fledged :class:`qibolab.Platform` by providing an instance
+of :class:`qibolab.Parameters`.
+The information contain by a :class:`qibolab.Hardware` is the following:
+
+- :attr:`qibolab.Hardware.instruments`, an identifier to instrument instance mapping,
+  which may require further parameters to be instantiated
+- :attr:`qibolab.Hardware.qubits` and :attr:`qibolab.Hardware.couplers`, which are
+  just collections of channels identifiers, to easily retrieve channels from their role
+  (described in the section below)
+
+These two objects are mainly used to manage and access channels, which are then
+described in the next two sections.
+Indeed, the information of instruments may vary according to specific instrument kind
+(i.e. class), but the common minimal content are:
+
+- the network address, use to communicate with the device
+- the information regarding the controlled channels - cf. next section
+
+Other than the data they hold, the :class:`qibolab.Instrument`, and especially the
+:class:`qibolab.Controller` (those instruments generating pulses and acquiring signals),
+are the computational units used by Qibolab to delegate the compilation of experiments
+instructions and configurations over a diverse set of possible instruments.
+More on this topic will be described in the :ref:`main_doc_instruments` section.
+
+.. note::
+
+   While this section intends to describe the concepts behind platforms' definition, a
+   practical guide can be found in a :ref:`dedicated tutorial <tutorial_platform>`.
+
 Channels
 ^^^^^^^^
+
+The mentioned *channels identifiers* label are the central ingredient to pulse routing
+in the instruments' drivers. Indeed, one of the few parameters common to all instruments
+instances is exactly the channel mapping.
+Indeed, the channels are intended to be "owned" by the instrument generating the pulses
+for that channel. This is true both at a conceptual and practical level, since the
+instrument instance will then contain the only :class:`qibolab.Channel` instance, which
+store the information related to:
+
+- the *path* specifier, which is required to direct instructions to the correct location
+  within the instrument
+- other related instrument and channels (e.g. the *probe* channel on the same
+  transmission line of an *acquisition* channel, or the mixer and local oscillator
+  related to a certain modulated channel)
+
+Because of this second point, different kind of channels may be defined.
+E.g. a :class:`qibolab.DcChannel` is distinguished from an :class:`qibolab.IqChannel`
+because of modulation, which potentially requires to coordinate the operation of such a
+channel with an external mixer (identified by :attr:`.IqChannel.mixer`).
+
+Channels' configurations
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Notice that channel identifiers play even a further role: they identify the channels'
+configurations in the overall configuration mapping, part of the platform's parameters
+(as described above).
+
+
+- only common attribute is path, used to route in the driver
+- the rest only store configurations
+- main distinction built-in ones: output DC and RF, and input
+- they can be further specialized
 
 Qubits
 ^^^^^^
@@ -134,8 +212,8 @@ These channels encompass distinct types, each serving a specific purpose:
 The container structure is specifically engineered to match the typical roles in the
 superconducting qubits.
 However, this is just a structured collection for ease of access. Notice how the
-channels (described in the previous section) only retain the information related to
-their operations, but not directly to the role they play in any experiment.
+channels (described in the section above) only retain the information related to their
+operations, but not directly to the role they play in any experiment.
 In this sense, the names above are just established as a convention, but they introduce
 no limitation to the way the :class:`qibolab.Qubit` is used (see the note below).
 
