@@ -250,41 +250,4 @@ frequency transmon: only the :attr:`.Qubit.flux` line is used.
     to implement gates supposed to act on higher levels (qudits), and cross-resonance
     interactions.
 
-    At present time, these guidelines are not enforced anyhow in .
-
-----
-
-
-.. _main_doc_channels:
-
-Channels
---------
-
-Channels play a pivotal role in connecting the quantum system to the control infrastructure.
-Various types of channels are typically present in a quantum laboratory setup, including:
-
-- the probe line (from device to qubit)
-- the acquire line (from qubit to device)
-- the drive line
-- the flux line
-- the TWPA pump line
-
-Qibolab provides a general :class:`.Channel` object, as well as specializations depending on the channel role.
-A channel is typically associated with a specific port on a control instrument, with port-specific properties like "attenuation" and "gain" that can be managed using provided getter and setter methods.
-Channels are uniquely identified within the platform through their id.
-
-The idea of channels is to streamline the pulse execution process.
-The :class:`.PulseSequence` is a list of ``(channel_id, pulse)`` tuples, so that the platform identifies the channel that every pulse plays
-and directs it to the appropriate port on the control instrument.
-
-In setups involving frequency-specific pulses, a local oscillator (LO) might be required for up-conversion.
-Although logically distinct from the qubit, the LO's frequency must align with the pulse requirements.
-Qibolab accommodates this by enabling the assignment of a :class:`._core.instruments.oscillator.LocalOscillator` object
-to the relevant channel :class:`.IqChannel`.
-The controller's driver ensures the correct pulse frequency is set based on the LO's configuration.
-
-Each channel has a :class:`._core.components.configs.Config` associated to it, which is a container of parameters related to the channel.
-Configs also have different specializations that correspond to different channel types.
-The platform holds default config parameters for all its channels, however the user is able to alter them by passing a config updates dictionary
-when calling :meth:`.Platform.execute`.
-The final configs are then sent to the controller instrument, which matches them to channels via their ids and ensures they are uploaded to the proper electronics.
+    At present time, these guidelines are not enforced anyhow in Qibolab.
