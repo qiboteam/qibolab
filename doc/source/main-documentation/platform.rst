@@ -182,18 +182,31 @@ E.g. a :class:`.DcChannel` is distinguished from an :class:`.IqChannel`
 because of modulation, which potentially requires to coordinate the operation of such a
 channel with an external mixer (identified by :attr:`.IqChannel.mixer`).
 
-Channels' configurations
-~~~~~~~~~~~~~~~~~~~~~~~~
+Configurations
+~~~~~~~~~~~~~~
 
 Notice that channel identifiers play even a further role: they identify the channels'
 configurations in the overall configuration mapping, part of the platform's parameters
 (as described above).
 
+There is clear distinction between channels, which are owned by instruments, and
+represented by the class :class:`.Channel`, and configurations, denoted by
+subclasses :class:`.Config`.
 
-- only common attribute is path, used to route in the driver
-- the rest only store configurations
-- main distinction built-in ones: output DC and RF, and input
-- they can be further specialized
+- channels only contain identifiers to other instruments or channels, and their
+  :attr:`.Channel.path`
+- all channel-related configurations are instead stored in :class:`.Config` subclasses
+
+Moreover, the configurations are stored among :attr:`.Parameters.configurations`, while
+the channels , as discussed in the previous section.
+
+Other than the conceptual distinction, the classifiction is pretty much mirrored, since
+there are both :class:`.DcChannel` and :class:`.DcConfig`, :class:`.IqChannel` and
+:class:`.IqConfig`, :class:`.AcquisitionChannel` and :class:`.AcquisitionConfig`.
+However, not all the configurations have to be channel configurations, e.g.
+:class:`OscillatorConfig` used for local oscillators.
+Moreover, since the configurations host actual parameters, it is pretty common that they
+are further specialized by instruments to add room for device-specific parameters.
 
 Qubits
 ^^^^^^
