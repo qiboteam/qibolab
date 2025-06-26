@@ -54,12 +54,13 @@ class BaseEnvelope(ABC, Model):
     def envelopes(self, samples: int) -> IqWaveform:
         """Stacked i and q envelope waveforms of the pulse."""
         return np.array([self.i(samples), self.q(samples)])
-    
+
     @staticmethod
-    def normalize_trim_pulse(pulse:Waveform)->Waveform:
-        """Normalize the pulse relative to its first sample, then remove the 
+    def normalize_trim_pulse(pulse: Waveform) -> Waveform:
+        """Normalize the pulse relative to its first sample, then remove the
         first and last samples."""
         return ((pulse - pulse[0]) / (1 - pulse[0]))[1:-1]
+
 
 class Rectangular(BaseEnvelope):
     """Rectangular envelope."""
