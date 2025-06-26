@@ -19,7 +19,7 @@ from qibolab._core.pulses import (
     [
         Rectangular(),
         Gaussian(rel_sigma=5),
-        GaussianSquare(risefall=5, sigma=0.9),
+        GaussianSquare(risefall=5, sigma=1),
         Drag(rel_sigma=5, beta=1),
     ],
 )
