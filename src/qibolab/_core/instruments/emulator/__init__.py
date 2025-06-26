@@ -1,4 +1,7 @@
-from .emulator import EmulatorController
-from .hamiltonians import HamiltonianConfig
+from . import emulator, hamiltonians
+from .emulator import *
+from .hamiltonians import *
 
-__all__ = ["EmulatorController", "HamiltonianConfig"]
+__all__ = []
+__all__ += emulator.__all__
+__all__ += hamiltonians.__all__

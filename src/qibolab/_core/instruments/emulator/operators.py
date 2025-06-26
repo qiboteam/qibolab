@@ -1,6 +1,23 @@
 """Useful operators in qutip for n levels transmon."""
 
-from qutip import Qobj, basis, create, destroy, tensor
+from qutip import (
+    Qobj,
+    QobjEvo,
+    basis,
+    create,
+    destroy,
+    expand_operator,
+    mesolve,
+    qeye,
+    tensor,
+)
+
+Operator = Qobj
+"""Generic operator."""
+TimeDependentOperator = QobjEvo
+"""Generic time dependent operator."""
+evolve = mesolve
+"""Generic time evolution function."""
 
 
 def transmon_create(n: int) -> Qobj:
@@ -11,6 +28,16 @@ def transmon_create(n: int) -> Qobj:
 def transmon_destroy(n: int) -> Qobj:
     """Destruction operator for n levels system."""
     return destroy(n)
+
+
+identity = qeye
+"""Identity operator for n levels system."""
+
+tensor_product = tensor
+"""Tensor product of a list of operators using Qutip."""
+
+expand = expand_operator
+"""Expand operator in larger Hilber space using Qutip."""
 
 
 def relaxation(final_state: int, initial_state: int, n: int) -> Qobj:

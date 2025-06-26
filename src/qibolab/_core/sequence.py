@@ -97,9 +97,11 @@ class PulseSequence(UserList[_Element]):
         """Concatenate two sequences.
 
         Appends ``other`` in-place such that the result is:
+
             - ``self``
             - necessary delays to synchronize channels
             - ``other``
+
         Guarantees that the all the channels in the concatenated
         sequence will start simultaneously
         """
@@ -129,9 +131,11 @@ class PulseSequence(UserList[_Element]):
         """Juxtapose two sequences.
 
         Appends ``other`` in-place such that the result is:
+
             - ``self``
             - necessary delays to synchronize channels
             - ``other``
+
         Guarantee simultaneous start and no overlap.
         """
         _synchronize(self, PulseSequence(other).channels | self.channels)

@@ -17,7 +17,7 @@ def create_dummy_hardware() -> Hardware:
     pump_name = "twpa_pump"
     for q in range(5):
         drive12 = f"{q}/drive12"
-        qubits[q] = qubit = Qubit.default(q, drive_qudits={(1, 2): drive12})
+        qubits[q] = qubit = Qubit.default(q, drive_extra={(1, 2): drive12})
         channels |= {
             qubit.probe: IqChannel(mixer=None, lo=None),
             qubit.acquisition: AcquisitionChannel(

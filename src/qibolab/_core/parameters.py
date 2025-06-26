@@ -37,6 +37,7 @@ __all__ = [
     "QubitMap",
     "InstrumentMap",
     "Hardware",
+    "Parameters",
     "initialize_parameters",
 ]
 
@@ -242,7 +243,7 @@ def _gate_channel(qubit: Qubit, gate: str) -> str:
     if gate in ("RX", "RX90", "CNOT"):
         return qubit.drive
     if gate == "RX12":
-        return qubit.drive_qudits[(1, 2)]
+        return qubit.drive_extra[(1, 2)]
     if gate == "MZ":
         return qubit.acquisition
     if gate in ("CP", "CZ", "iSWAP"):

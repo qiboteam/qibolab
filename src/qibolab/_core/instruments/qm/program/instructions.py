@@ -4,7 +4,6 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, Delay, Pulse, Readout, VirtualZ
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
@@ -24,11 +23,20 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
         duration = parameters.duration + 1
         qua.wait(duration, element)
     else:
-        duration = parameters.duration / 4
+        duration = parameters.duration / (4 * parameters.sampling_rate)
         with qua.if_(duration < 4):
             qua.wait(4, element)
         with qua.else_():
             qua.wait(duration, element)
+
+
+def _virtualz(pulse: VirtualZ, element: str, parameters: Parameters):
+    phase = (
+        parameters.phase
+        if parameters.phase is not None
+        else normalize_phase(pulse.phase)
+    )
+    qua.frame_rotation_2pi(phase, element)
 
 
 def _play_multiple_waveforms(element: str, parameters: Parameters):
@@ -97,15 +105,15 @@ def play(args: ExecutionArguments):
         element = str(channel_id)
         op = operation(pulse)
         params = args.parameters[pulse.id]
-        if isinstance(pulse, Delay):
-            _delay(pulse, element, params)
-        elif isinstance(pulse, Pulse):
+        if isinstance(pulse, Pulse):
             _play(op, element, params)
         elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
             _play(op, element, params, acquisition)
+        elif isinstance(pulse, Delay):
+            _delay(pulse, element, params)
         elif isinstance(pulse, VirtualZ):
-            qua.frame_rotation_2pi(normalize_phase(pulse.phase), element)
+            _virtualz(pulse, element, params)
         elif isinstance(pulse, Align) and pulse.id not in processed_aligns:
             channel_ids = args.sequence.pulse_channels(pulse.id)
             qua.align(*(str(ch) for ch in channel_ids))
@@ -122,7 +130,11 @@ def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
 
     if parameter in INT_TYPE:
         variable = declare(int)
-        values = sweeper.values.astype(int)
+        if parameter is Parameter.duration:
+            sampling_rate = args.parameters[sweeper.pulses[0].id].sampling_rate
+            values = (sampling_rate * sweeper.values).astype(int)
+        else:
+            values = sweeper.values.astype(int)
     else:
         variable = declare(fixed)
         values = sweeper.values
@@ -177,14 +189,9 @@ def program(
     args: ExecutionArguments,
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
-    offsets: list[tuple[ChannelId, float]],
 ):
     """QUA program implementing the required experiment."""
     with qua.program() as experiment:
-        # FIXME: force offset setting due to a bug in QUA 1.2.1a2 and OPX1000
-        for channel_id, offset in offsets:
-            qua.set_dc_offset(channel_id, "single", offset)
-
         n = declare(int)
         # declare acquisition variables
         for acquisition in args.acquisitions.values():
