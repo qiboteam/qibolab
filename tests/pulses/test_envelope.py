@@ -19,7 +19,7 @@ from qibolab._core.pulses import (
     [
         Rectangular(),
         Gaussian(rel_sigma=5),
-        GaussianSquare(rel_sigma=5, width=0.9),
+        GaussianSquare(risefall=5, sigma=1),
         Drag(rel_sigma=5, beta=1),
     ],
 )
@@ -170,11 +170,11 @@ def test_eq():
     assert shape1 == shape2
     assert not shape1 == shape3
 
-    shape1 = GaussianSquare(rel_sigma=4, width=0.01)
-    shape2 = GaussianSquare(rel_sigma=4, width=0.01)
-    shape3 = GaussianSquare(rel_sigma=5, width=0.01)
-    shape4 = GaussianSquare(rel_sigma=4, width=0.05)
-    shape5 = GaussianSquare(rel_sigma=5, width=0.05)
+    shape1 = GaussianSquare(risefall=4, sigma=0.01)
+    shape2 = GaussianSquare(risefall=4, sigma=0.01)
+    shape3 = GaussianSquare(risefall=5, sigma=0.01)
+    shape4 = GaussianSquare(risefall=4, sigma=0.05)
+    shape5 = GaussianSquare(risefall=5, sigma=0.05)
     assert shape1 == shape2
     assert not shape1 == shape3
     assert not shape1 == shape4

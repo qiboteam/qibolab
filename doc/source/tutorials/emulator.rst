@@ -98,11 +98,7 @@ the section ``configs``. Here is an example
                                     "probe": {
                                         "duration": 100.0,
                                         "amplitude": 0.1,
-                                        "envelope": {
-                                            "kind": "gaussian_square",
-                                            "rel_sigma": 0.2,
-                                            "width": 0.75,
-                                        },
+                                        "envelope": {"kind": "gaussian", "rel_sigma": 0.2},
                                         "relative_phase": 0.0,
                                         "kind": "pulse",
                                     },
