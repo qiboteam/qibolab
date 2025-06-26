@@ -153,17 +153,16 @@ class GaussianSquare(BaseEnvelope):
     def i(self, samples: int):
         """Generate a Gaussian envelope, with a flat central window."""
         width = self.width(samples)
-        gaussian_pulse = gaussian(2 * self.risefall + 1, std=self.sigma)
-        plateau = np.ones(width) * gaussian_pulse[self.risefall]
+        gaussian_pulse = gaussian(2 * self.risefall + 2, std=self.sigma)
+        plateau = np.ones(width)
         pulse = np.concatenate(
             [
-                gaussian_pulse[: self.risefall],
+                gaussian_pulse[: self.risefall+1],
                 plateau,
                 gaussian_pulse[self.risefall + 1 :],
             ]
         )
-        pulse -= pulse[0]
-        return pulse / np.max(pulse)
+        return ((pulse - pulse[0]) / (1 - pulse[0]))[1:-1]
 
 
 class Drag(BaseEnvelope):
