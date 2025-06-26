@@ -157,7 +157,7 @@ class GaussianSquare(BaseEnvelope):
         plateau = np.ones(width)
         pulse = np.concatenate(
             [
-                gaussian_pulse[: self.risefall+1],
+                gaussian_pulse[: self.risefall + 1],
                 plateau,
                 gaussian_pulse[self.risefall + 1 :],
             ]
