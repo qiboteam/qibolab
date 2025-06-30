@@ -135,6 +135,7 @@ class Gaussian(BaseEnvelope):
         """Generate a Gaussian window."""
         return gaussian(samples, _samples_sigma(self.rel_sigma, samples))
 
+
 class GaussianSquare(BaseEnvelope):
     r"""Rectangular envelope with Gaussian rise and fall.
 
