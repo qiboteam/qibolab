@@ -29,7 +29,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import unroll_sequences
 
 from .components import MwFemOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
-from .config import SAMPLING_RATE, Configuration, ControllerId, ModuleTypes
+from .config import Configuration, ControllerId, ModuleTypes
 from .program import ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
@@ -43,6 +43,8 @@ MAX_VOLTAGE = 0.5
 MAX_VOLTAGE_AMPLIFIED = 2.5
 """Maximum output of Quantum Machines OPX1000 FEMs in amplified mode in
 Volts."""
+SAMPLING_RATE = 1
+"""Sampling rate of Quantum Machines OPX+ in GSps."""
 
 
 def channel_max_voltage(config: Config):
@@ -50,6 +52,12 @@ def channel_max_voltage(config: Config):
     if hasattr(config, "output_mode") and config.output_mode == "amplified":
         return MAX_VOLTAGE_AMPLIFIED
     return MAX_VOLTAGE
+
+
+def channel_sampling_rate(config: Config):
+    if hasattr(config, "sampling_rate"):
+        return int(config.sampling_rate / 1e9)
+    return SAMPLING_RATE
 
 
 @dataclass(frozen=True)
@@ -149,6 +157,8 @@ class QmController(Controller):
     where ``fems`` are not given.
     """
 
+    keep_dc_offsets_on: bool = True
+    """Keep DC offsets on after disconnecting from Quantum Machines."""
     cluster_name: Optional[str] = None
     """Name of the Quantum Machines clusters to use.
 
@@ -247,7 +257,8 @@ class QmController(Controller):
         """Disconnect from QM manager."""
         self._reset_temporary_calibration()
         if self.manager is not None:
-            self.manager.close_all_quantum_machines()
+            if not self.keep_dc_offsets_on:
+                self.manager.close_all_quantum_machines()
             self.manager = None
 
     def configure_device(self, device: str):
@@ -343,14 +354,21 @@ class QmController(Controller):
         """
         ch = self.channels[channel]
         max_voltage = channel_max_voltage(config)
+        sampling_rate = channel_sampling_rate(config)
         if isinstance(ch, DcChannel):
             assert isinstance(pulse, Pulse)
-            return self.config.register_dc_pulse(channel, pulse, max_voltage)
+            return self.config.register_dc_pulse(
+                channel, pulse, sampling_rate, max_voltage
+            )
         if isinstance(ch, IqChannel):
             assert isinstance(pulse, Pulse)
-            return self.config.register_iq_pulse(channel, pulse, max_voltage)
+            return self.config.register_iq_pulse(
+                channel, pulse, sampling_rate, max_voltage
+            )
         assert isinstance(pulse, Readout)
-        return self.config.register_acquisition_pulse(channel, pulse, max_voltage)
+        return self.config.register_acquisition_pulse(
+            channel, pulse, sampling_rate, max_voltage
+        )
 
     def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
         """Adds all pulses except measurements of a given sequence in the QM
@@ -360,13 +378,6 @@ class QmController(Controller):
             acquisitions (dict): Map from measurement instructions to acquisition objects.
         """
         for id, pulse in sequence:
-            if hasattr(pulse, "duration") and not (
-                isinstance(pulse.duration, int) or pulse.duration.is_integer()
-            ):
-                raise ValueError(
-                    f"Quantum Machines cannot play pulse with duration {pulse.duration}. "
-                    "Only integer duration in ns is supported."
-                )
             if isinstance(pulse, Pulse):
                 self.register_pulse(id, configs[id], pulse)
             elif isinstance(pulse, Readout):
@@ -390,25 +401,38 @@ class QmController(Controller):
             if isinstance(pulse, (Align, Delay)):
                 continue
 
-            params = args.parameters[pulse.id]
             ids = args.sequence.pulse_channels(pulse.id)
+            sampling_rate = channel_sampling_rate(configs[ids[0]])
+
+            if not abs(sweeper.values[1] - sweeper.values[0]).is_integer():
+                assert sweeper.parameter is Parameter.duration
+                assert sampling_rate > 1
+            for _id in ids:
+                assert channel_sampling_rate(configs[_id]) == sampling_rate
+
+            params = args.parameters[pulse.id]
+
+            params.sampling_rate = sampling_rate
             original_pulse = (
                 pulse if params.amplitude_pulse is None else params.amplitude_pulse
             )
-            values = sweeper.values.astype(int)
+
             if sweeper.parameter is Parameter.duration_interpolated:
                 sweep_pulse = original_pulse.model_copy(
-                    update={"duration": min(values)}
+                    update={"duration": int(min(sweeper.values))}
                 )
                 params.interpolated_op = self.register_pulse(
                     ids[0], configs[ids[0]], sweep_pulse
                 )
             else:
                 assert sweeper.parameter is Parameter.duration
-                for value in values:
-                    sweep_pulse = original_pulse.model_copy(update={"duration": value})
+                for duration in sweeper.values:
+                    sweep_pulse = original_pulse.model_copy(
+                        update={"duration": duration}
+                    )
                     sweep_op = self.register_pulse(ids[0], configs[ids[0]], sweep_pulse)
-                    params.duration_ops.append((value, sweep_op))
+                    nsamples = int(sampling_rate * duration)
+                    params.duration_ops.append((nsamples, sweep_op))
 
     def register_amplitude_sweeper_pulses(
         self, args: ExecutionArguments, configs: dict[str, Config], sweeper: Sweeper
@@ -451,8 +475,9 @@ class QmController(Controller):
 
             probe_id = self.channels[channel_id].probe
             max_voltage = channel_max_voltage(configs[probe_id])
+            sampling_rate = channel_sampling_rate(configs[probe_id])
             op = self.config.register_acquisition_pulse(
-                channel_id, readout, max_voltage
+                channel_id, readout, sampling_rate, max_voltage
             )
 
             acq_config = configs[channel_id]
@@ -521,11 +546,9 @@ class QmController(Controller):
 
         # register DC elements so that all qubits are
         # sweetspot even when they are not used
-        offsets = []
         for id, channel in self.channels.items():
             if isinstance(channel, DcChannel):
                 self.configure_channel(id, configs)
-                offsets.append((id, configs[id].offset))
 
         probe_map = self.configure_channels(configs, sequence.channels)
         self.register_pulses(configs, sequence)
@@ -533,7 +556,7 @@ class QmController(Controller):
 
         args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
         self.preprocess_sweeps(sweepers, configs, args, probe_map)
-        experiment = program(args, options, sweepers, offsets)
+        experiment = program(args, options, sweepers)
 
         if self.script_file_name is not None:
             script = generate_qua_script(experiment, asdict(self.config))

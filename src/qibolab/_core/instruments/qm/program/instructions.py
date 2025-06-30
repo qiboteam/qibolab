@@ -4,7 +4,6 @@ from qm import qua
 from qm.qua import declare, fixed, for_
 
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
-from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, Delay, Pulse, Readout, VirtualZ
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 
@@ -24,7 +23,7 @@ def _delay(pulse: Delay, element: str, parameters: Parameters):
         duration = parameters.duration + 1
         qua.wait(duration, element)
     else:
-        duration = parameters.duration / 4
+        duration = parameters.duration / (4 * parameters.sampling_rate)
         with qua.if_(duration < 4):
             qua.wait(4, element)
         with qua.else_():
@@ -131,7 +130,11 @@ def _process_sweeper(sweeper: Sweeper, args: ExecutionArguments):
 
     if parameter in INT_TYPE:
         variable = declare(int)
-        values = sweeper.values.astype(int)
+        if parameter is Parameter.duration:
+            sampling_rate = args.parameters[sweeper.pulses[0].id].sampling_rate
+            values = (sampling_rate * sweeper.values).astype(int)
+        else:
+            values = sweeper.values.astype(int)
     else:
         variable = declare(fixed)
         values = sweeper.values
@@ -186,14 +189,9 @@ def program(
     args: ExecutionArguments,
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
-    offsets: list[tuple[ChannelId, float]],
 ):
     """QUA program implementing the required experiment."""
     with qua.program() as experiment:
-        # FIXME: force offset setting due to a bug in QUA 1.2.1a2 and OPX1000
-        for channel_id, offset in offsets:
-            qua.set_dc_offset(channel_id, "single", offset)
-
         n = declare(int)
         # declare acquisition variables
         for acquisition in args.acquisitions.values():

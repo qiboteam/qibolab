@@ -14,8 +14,11 @@ gpi2(0.3) q[1];
 cz q[1],q[2];
 measure q[0] -> a[0];
 measure q[2] -> a[1];"""
-    c = Circuit.from_qasm(qasm_string)
-    backend = QibolabBackend("dummy")
     qasm_res = execute_qasm(qasm_string, platform="dummy")
+
+    backend = QibolabBackend("dummy")
+    c = Circuit.from_qasm(qasm_string)
+    c.wire_names = [0, 1, 2]
     res = backend.execute_circuit(c)
+
     backend.assert_allclose(qasm_res.probabilities(), res.probabilities(), atol=1e-1)

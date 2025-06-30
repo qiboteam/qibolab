@@ -1,5 +1,5 @@
-Installation instructions
-=========================
+Install
+=======
 
 .. _installing-qibolab:
 
@@ -15,10 +15,6 @@ After updating ``pip``, if needed, install Qibolab with:
 
    pip install qibolab
 
-.. note::
-
-    Remember that Qibolab is compatible with Pyhon >= 3.9 and < 3.12.
-
 
 Installing from source
 """"""""""""""""""""""
@@ -33,18 +29,20 @@ In order to install ``qibolab`` from source, you have to clone the GitHub reposi
       git clone https://github.com/qiboteam/qibolab.git
       cd qibolab
 
-Then, to install the package in standard mode (recommended if no changes on the source code are needed) one can still use ``pip``:
+Then, to install the package
 
-.. code-block:: bash
+- if no changes on the source code are needed, one can still use ``pip``
 
-      pip install . # or pip install -e .
+  .. code-block:: bash
 
-For developers, in order to modify the source code, it is possible to install using ``poetry`` or ``pip``:
+        pip install .
 
-.. code-block:: bash
+- otherwise, to modify the source code, it is possible to install using ``poetry`` or ``pip``
 
-      poetry install    # recommended
-      pip install -e .  # not recommended
+  .. code-block:: bash
+
+        poetry install    # recommended
+        pip install -e .  # not recommended
 
 _______________________
 
@@ -52,8 +50,6 @@ _______________________
 
 Supported instruments
 ^^^^^^^^^^^^^^^^^^^^^
-
-.. image:: qibolab_instruments.svg
 
 Qibolab supports the following control instruments:
 
@@ -63,3 +59,15 @@ Qibolab supports the following control instruments:
 
 In order to use Qibolab on with one of these instruments chosen instrument,
 additional dependencies need to be installed.
+
+.. note::
+
+    Some packages are available which collect and pin the required compatible
+    dependencies, such as ``qibolab-qm`` and ``qibolab-qblox``. Search on `PyPI
+    <https://pypi.org/search/?q=%22qibolab-%22&o=>`_ for them
+
+.. note::
+
+    The ``qcodes`` package is also required to operate some local oscillators (e.g. TWPA
+    pumps). While there is no dedicated package to restrict the dependency yet, any
+    available version is supposed to be suitable to control them
