@@ -133,8 +133,7 @@ class Gaussian(BaseEnvelope):
 
     def i(self, samples: int) -> Waveform:
         """Generate a Gaussian window."""
-        pulse = gaussian(samples+2, _samples_sigma(self.rel_sigma, samples+2))
-        return self.normalize_trim_pulse(pulse)
+        return gaussian(samples, _samples_sigma(self.rel_sigma, samples))
 
 class GaussianSquare(BaseEnvelope):
     r"""Rectangular envelope with Gaussian rise and fall.
