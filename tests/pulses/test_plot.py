@@ -55,7 +55,7 @@ def test_plot_functions():
     p6 = Pulse(
         duration=40,
         amplitude=0.9,
-        envelope=GaussianSquare(rel_sigma=0.2, width=0.9),
+        envelope=GaussianSquare(sigma=0.2, risefall=2),
         relative_phase=0,
     )
     ps = PulseSequence(
