@@ -52,6 +52,11 @@ def cz_rule(gate: Gate, natives: TwoQubitNatives) -> PulseSequence:
     return natives.ensure("CZ").create_sequence()
 
 
+def iswap_rule(gate: Gate, natives: TwoQubitNatives) -> PulseSequence:
+    """iSWAP applied as defined in the platform runcard."""
+    return natives.ensure("iSWAP").create_sequence()
+
+
 def cnot_rule(gate: Gate, natives: TwoQubitNatives) -> PulseSequence:
     """CNOT applied as defined in the platform runcard."""
     return natives.ensure("CNOT").create_sequence()

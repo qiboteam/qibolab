@@ -15,6 +15,7 @@ from .default import (
     gpi2_rule,
     gpi_rule,
     identity_rule,
+    iswap_rule,
     measurement_rule,
     rz_rule,
     z_rule,
@@ -45,6 +46,7 @@ class Compiler:
                 gates.Z: z_rule,
                 gates.RZ: rz_rule,
                 gates.CZ: cz_rule,
+                gates.iSWAP: iswap_rule,
                 gates.CNOT: cnot_rule,
                 gates.GPI2: gpi2_rule,
                 gates.GPI: gpi_rule,
@@ -69,7 +71,9 @@ class Compiler:
 
         return inner
 
-    def get_sequence(self, gate: gates.Gate, platform: Platform) -> PulseSequence:
+    def get_sequence(
+        self, gate: gates.Gate, platform: Platform, wire_names: list[QubitId]
+    ) -> PulseSequence:
         """Get pulse sequence implementing the given gate.
 
         The sequence is obtained using the registered rules.
@@ -82,25 +86,27 @@ class Compiler:
         rule = self.rules[type(gate)]
 
         natives = platform.natives
+        qubits_ids = [wire_names[q] for q in gate.qubits]
+        target_qubits_ids = [wire_names[q] for q in gate.target_qubits]
 
         if isinstance(gate, (gates.M)):
-            qubits = [natives.single_qubit[platform.qubit(q)[0]] for q in gate.qubits]
+            qubits = [natives.single_qubit[platform.qubit(q)[0]] for q in qubits_ids]
             return rule(gate, qubits)
 
         if isinstance(gate, (gates.Align)):
-            qubits = [platform.qubit(q)[1] for q in gate.qubits]
+            qubits = [platform.qubit(q)[1] for q in qubits_ids]
             return rule(gate, qubits)
 
         if isinstance(gate, (gates.Z, gates.RZ)):
-            qubit = platform.qubit(gate.target_qubits[0])[1]
+            qubit = platform.qubit(target_qubits_ids[0])[1]
             return rule(gate, qubit)
 
         if len(gate.qubits) == 1:
-            qubit = platform.qubit(gate.target_qubits[0])[0]
+            qubit = platform.qubit(target_qubits_ids[0])[0]
             return rule(gate, natives.single_qubit[qubit])
 
         if len(gate.qubits) == 2:
-            pair = tuple(platform.qubit(q)[0] for q in gate.qubits)
+            pair = tuple(platform.qubit(q)[0] for q in qubits_ids)
             assert len(pair) == 2
             return rule(gate, natives.two_qubit[pair])
 
@@ -111,6 +117,7 @@ class Compiler:
         gate: gates.Gate,
         platform: Platform,
         channel_clock: defaultdict[ChannelId, float],
+        wire_names: list[QubitId],
     ) -> PulseSequence:
         def qubit_clock(el: QubitId):
             return max(channel_clock[ch] for ch in platform.qubits[el].channels)
@@ -118,7 +125,7 @@ class Compiler:
         def coupler_clock(el: QubitId):
             return max(channel_clock[ch] for ch in platform.couplers[el].channels)
 
-        gate_seq = self.get_sequence(gate, platform)
+        gate_seq = self.get_sequence(gate, platform, wire_names)
         # qubits receiving pulses
         qubits = {
             q
@@ -183,7 +190,9 @@ class Compiler:
         # process circuit gates
         for moment in circuit.queue.moments:
             for gate in {x for x in moment if x is not None}:
-                gate_seq = self._compile_gate(gate, platform, channel_clock)
+                gate_seq = self._compile_gate(
+                    gate, platform, channel_clock, circuit.wire_names
+                )
 
                 # register readout sequences to ``measurement_map`` so that we can
                 # properly map acquisition results to measurement gates

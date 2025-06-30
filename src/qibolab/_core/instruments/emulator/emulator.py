@@ -31,7 +31,7 @@ from .hamiltonians import (
     Modulated,
     waveform,
 )
-from .results import acquisitions, results, select_acquisitions
+from .results import acquisitions, index, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
@@ -126,9 +126,10 @@ class EmulatorController(Controller):
         """
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate)
-
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
+        config = config.update_from_configs(configs_)
+        configs_.update({"hamiltonian": config})
         hamiltonian = config.hamiltonian(self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         results = self.engine.evolve(
@@ -209,7 +210,15 @@ def hamiltonian(
     n = hamiltonian.transmon_levels
     op = engine.expand(config.operator(n=n, engine=engine), hamiltonian.dims, qubit)
     waveforms = (
-        waveform(pulse, config)
+        waveform(
+            pulse,
+            config,
+            hamiltonian.single_qubit[qubit]
+            if qubit in hamiltonian.single_qubit
+            else hamiltonian.two_qubit[
+                list(hamiltonian.two_qubit)[qubit - hamiltonian.nqubits]
+            ].coupler,
+        )
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
@@ -221,10 +230,13 @@ def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config], engine: SimulationEngine
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    # TODO: pass qubit in a better way
     return (
         hamiltonian(
-            sequence.channel(ch), configs[ch], hconfig, int(ch[0]), engine=engine
+            sequence.channel(ch),
+            configs[ch],
+            hconfig,
+            index(ch, hconfig),
+            engine,
         )
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels

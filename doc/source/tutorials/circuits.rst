@@ -17,7 +17,7 @@ circuits definition that we leave to the `Qibo
     np.random.seed(0)
 
     # create a single qubit circuit
-    circuit = Circuit(1)
+    circuit = Circuit(1, wire_names=[0])
 
     # attach Hadamard gate and a measurement
     circuit.add(gates.GPI2(0, phi=np.pi / 2))
@@ -77,7 +77,7 @@ results:
 
     def execute_rotation():
         # create single qubit circuit
-        circuit = Circuit(1)
+        circuit = Circuit(1, wire_names=[0])
 
         # attach Rotation on X-Pauli with angle = 0
         circuit.add(gates.GPI2(0, phi=0))

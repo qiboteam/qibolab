@@ -17,8 +17,6 @@ class AcquisitionType(Enum):
     """Demodulate and integrate the waveform."""
     RAW = auto()
     """Acquire the waveform as it is."""
-    SPECTROSCOPY = auto()
-    """Zurich Integration mode for RO frequency sweeps."""
 
 
 class AveragingMode(Enum):

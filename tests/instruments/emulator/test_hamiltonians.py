@@ -9,6 +9,7 @@ from qibolab._core.instruments.emulator.hamiltonians import (
     ModulatedDelay,
     ModulatedDrive,
     ModulatedVirtualZ,
+    Qubit,
     waveform,
 )
 from qibolab._core.pulses.envelope import Rectangular
@@ -18,8 +19,9 @@ from qibolab._core.pulses.pulse import Delay, Pulse, VirtualZ, _PulseLike
 def test_dummy_waveform():
     acq_config = AcquisitionConfig(delay=0, smearing=0)
     dc_config = DcConfig(offset=0)
-    assert waveform(pulse=_PulseLike(), config=acq_config) is None
-    assert waveform(pulse=_PulseLike(), config=dc_config) is None
+    qubit = Qubit()
+    assert waveform(pulse=_PulseLike(), config=acq_config, qubit=qubit) is None
+    assert waveform(pulse=_PulseLike(), config=dc_config, qubit=qubit) is None
 
 
 @pytest.mark.parametrize(
@@ -33,7 +35,8 @@ def test_dummy_waveform():
 @pytest.mark.parametrize("level", [1, 2])
 def test_iq_waveform(pulse, level):
     iq_config = DriveEmulatorConfig(frequency=5e9)
-    modulated = waveform(pulse=pulse, config=iq_config)
+    qubit = Qubit(frequency=5e9)
+    modulated = waveform(pulse=pulse, config=iq_config, qubit=qubit)
     if isinstance(pulse, Pulse):
         assert isinstance(modulated, ModulatedDrive)
         assert pytest.approx(modulated.omega) == 2 * np.pi * 5

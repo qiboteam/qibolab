@@ -8,11 +8,12 @@ from scipy.constants import giga
 
 from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
+from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .engine import Operator, SimulationEngine
 
-__all__ = ["DriveEmulatorConfig", "HamiltonianConfig"]
+__all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 
 
 class DriveEmulatorConfig(Config):
@@ -32,13 +33,34 @@ class DriveEmulatorConfig(Config):
         return -1j * (engine.destroy(n) - engine.create(n))
 
 
+class FluxEmulatorConfig(Config):
+    """Configuration for a flux line."""
+
+    kind: Literal["flux-emulator"] = "flux-emulator"
+
+    offset: float
+    """DC offset of the channel."""
+    voltage_to_flux: float = 1
+    """Convert voltarget to flux."""
+
+    @staticmethod
+    def operator(n: int, engine: SimulationEngine) -> Operator:
+        return engine.create(n) * engine.destroy(n)
+
+
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
+    dynamical_frequency: float = 0
+    """Frequency to be used during evolution (could be different from frequency due to static offset.)"""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
+    sweetspot: float = 0
+    """Sweetspot point."""
+    asymmetry: float = 0
+    """Asymmetry."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -47,7 +69,14 @@ class Qubit(Config):
     @property
     def omega(self) -> float:
         """Angular velocity."""
-        return 2 * np.pi * self.frequency
+        return 2 * np.pi * self.dynamical_frequency
+
+    def detuned_frequency(self, flux: float) -> float:
+        """Return frequency of the qubit modified by the flux."""
+        return (self.frequency - self.anharmonicity) * (
+            self.asymmetry**2
+            + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
+        ) ** (1 / 4) + self.anharmonicity
 
     def operator(self, n: int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
@@ -92,22 +121,99 @@ class Qubit(Config):
         return self.relaxation(n=n, engine=engine) + self.dephasing(n=n, engine=engine)
 
 
+class Coupler(Qubit):
+    """Coupler configuration."""
+
+    coupling: list[float] = Field(default_factory=list)
+    """Coupling between coupler and qubit."""
+
+
 class QubitPair(Config):
     """Hamiltonian parameters for qubit pair."""
 
-    coupling: float
+    coupling: float = 0
     """Qubit-qubit coupling."""
+    coupler: Optional[Coupler] = None
+    """Coupler mediating the interaction."""
+
+    @staticmethod
+    def _operator(n: int, engine: SimulationEngine) -> Operator:
+        """Time independent operator."""
+        op = engine.tensor(
+            [
+                engine.destroy(n),
+                engine.create(n),
+            ]
+        ) + engine.tensor(
+            [
+                engine.create(n),
+                engine.destroy(n),
+            ]
+        )
+        return 2 * np.pi * op / giga
 
     def operator(self, n: int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
-        op = engine.tensor(
-            engine.destroy(n),
-            engine.create(n),
-        ) + engine.tensor(
-            engine.create(n),
-            engine.destroy(n),
+        if self.coupler is None:
+            return self.coupling * self._operator(n, engine)
+
+        dim = [n, n, n]
+        op = engine.expand(
+            self.coupling * self._operator(n, engine=engine), dim, (0, 1)
         )
-        return 2 * np.pi * self.coupling / giga * op
+        op += engine.expand(
+            self.coupler.coupling[0] * self._operator(n=n, engine=engine), dim, (0, 2)
+        )
+        op += engine.expand(
+            self.coupler.coupling[1] * self._operator(n=n, engine=engine), dim, (1, 2)
+        )
+        op += engine.expand(self.coupler.operator(n=n, engine=engine), dim, 2)
+        return op
+
+
+class FluxPulse(Model):
+    """Flux pulse term in Hamiltonian."""
+
+    pulse: Pulse
+    """Flux pulse to be played."""
+    config: FluxEmulatorConfig
+    """Flux emulator configuration."""
+    qubit: Qubit
+    """Qubit affected by the flux pulse."""
+    sampling_rate: float = 1
+    """Sampling rate."""
+
+    @cached_property
+    def envelopes(self):
+        """Pulse envelopes."""
+        return self.pulse.envelopes(self.sampling_rate)
+
+    @property
+    def duration(self):
+        """Duration of the pulse."""
+        return self.pulse.duration
+
+    @property
+    def phase(self):
+        """Virtual Z phase."""
+        return 0
+
+    def __call__(self, t, sample, phase):
+        i, _ = self.envelopes
+        # we are passing the relative frequency because the term with the offset
+        # is already included in the time-independent part of the Hamiltonian
+        # and it corresponds to changing the static bias
+        return (
+            2
+            * np.pi
+            * (
+                self.qubit.detuned_frequency(
+                    self.config.voltage_to_flux * (i[sample] + self.config.offset)
+                )
+                - self.qubit.dynamical_frequency
+            )
+            / giga
+        )
 
 
 class ModulatedDrive(Model):
@@ -177,6 +283,7 @@ class ModulatedVirtualZ(Model):
 
 
 Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
+ControlLine = Union[Modulated, FluxPulse]
 
 
 class HamiltonianConfig(Config):
@@ -185,22 +292,72 @@ class HamiltonianConfig(Config):
     kind: Literal["hamiltonian"] = "hamiltonian"
     transmon_levels: int = 2
     single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
-    pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+    two_qubit: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+
+    def replace(self, update: Update) -> "HamiltonianConfig":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+
+        return self.model_validate(d)
+
+    def update_from_configs(self, config: dict[str, Config]) -> "HamiltonianConfig":
+        """Update hamiltonian parameters from configs."""
+
+        config_update = {}
+        for qubit in self.single_qubit:
+            # setting static bias
+            flux = config.get(f"{qubit}/flux")
+            config_update.update(
+                {
+                    f"single_qubit.{qubit}.dynamical_frequency": self.single_qubit[
+                        qubit
+                    ].detuned_frequency(
+                        flux.offset * flux.voltage_to_flux if flux is not None else 0
+                    )
+                }
+            )
+
+        for i, pair in enumerate(self.two_qubit):
+            if self.two_qubit[pair].coupler is not None:
+                flux = config.get(f"coupler_{i}/flux")
+                config_update.update(
+                    {
+                        f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": self.two_qubit[
+                            pair
+                        ].coupler.detuned_frequency(
+                            flux.offset * flux.voltage_to_flux
+                            if flux is not None
+                            else 0
+                        )
+                    }
+                )
+        return self.replace(update=config_update)
 
     @property
-    def nqubits(self):
+    def qubits(self) -> list[QubitId]:
+        return list(self.single_qubit)
+
+    @property
+    def nqubits(self) -> int:
         return len(self.single_qubit)
 
     def initial_state(self, engine: SimulationEngine) -> Operator:
         """Initial state as ground state of the system."""
-        return engine.tensor(
-            engine.basis(state=0, dim=self.transmon_levels) for i in range(self.nqubits)
-        )
+        return engine.basis(self.dims, (self.nqubits + self.ncouplers) * [0])
+
+    @property
+    def ncouplers(self):
+        coupler_pairs = [
+            pair for pair in self.two_qubit.values() if pair.coupler is not None
+        ]
+        return len(coupler_pairs)
 
     @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
-        return [self.transmon_levels] * self.nqubits
+        return [self.transmon_levels] * (self.nqubits + self.ncouplers)
 
     def hamiltonian(self, engine: SimulationEngine) -> Operator:
         """Time independent part of Hamiltonian."""
@@ -212,11 +369,13 @@ class HamiltonianConfig(Config):
         )
         two_qubit_terms = sum(
             engine.expand(
-                pair.operator(n=self.transmon_levels, engine=engine),
+                pair.operator(self.transmon_levels, engine),
                 self.dims,
-                list(pair_id),
+                list(pair_id)
+                if pair.coupler is None
+                else list(pair_id) + [self.nqubits + i],  # TODO: fix coupler indices
             )
-            for pair_id, pair in self.pairs.items()
+            for i, (pair_id, pair) in enumerate(self.two_qubit.items())
         )
         return single_qubit_terms + two_qubit_terms
 
@@ -233,12 +392,24 @@ class HamiltonianConfig(Config):
         )
 
 
-def waveform(pulse: PulseLike, config: Config) -> Optional[Modulated]:
+def waveform(
+    pulse: PulseLike,
+    config: Config,
+    qubit: Qubit,
+) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
-    if not isinstance(config, DriveEmulatorConfig):
+    if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         return None
+
     if isinstance(pulse, Pulse):
-        return ModulatedDrive(pulse=pulse, config=config)
+        if isinstance(config, DriveEmulatorConfig):
+            return ModulatedDrive(pulse=pulse, config=config)
+        if isinstance(config, FluxEmulatorConfig):
+            return FluxPulse(
+                pulse=pulse,
+                config=config,
+                qubit=qubit,
+            )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
     if isinstance(pulse, VirtualZ):
