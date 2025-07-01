@@ -126,7 +126,7 @@ class Coupler(Qubit):
     """Coupler configuration."""
 
     coupling: list[float] = Field(default_factory=list)
-    """Coupling between coupler and qubit."""
+    """Coupling between coupler and each qubit in the pair."""
 
 
 class QubitPair(Config):
@@ -292,8 +292,11 @@ class HamiltonianConfig(Config):
 
         return self.model_validate(d)
 
-    def update_from_configs(self, config: dict[str, Config]) -> "HamiltonianConfig":
-        """Update hamiltonian parameters from configs."""
+    def update_from_configs(
+        self, config: dict[str, Config]
+    ) -> tuple["HamiltonianConfig", dict[str, Config]]:
+        """Update hamiltonian parameters from configs.
+        Also the configs itself are updated if they contain an HamiltonianConfig."""
 
         config_update = {}
         for qubit in self.single_qubit:
@@ -323,7 +326,10 @@ class HamiltonianConfig(Config):
                         )
                     }
                 )
-        return self.replace(update=config_update)
+        new_hamiltonian_config = self.replace(update=config_update)
+        if "hamiltonian" in config:
+            config["hamiltonian"] = new_hamiltonian_config
+        return new_hamiltonian_config, config
 
     @property
     def qubits(self) -> list[QubitId]:
