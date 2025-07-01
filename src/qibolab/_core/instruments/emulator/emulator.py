@@ -204,18 +204,18 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    i: int,
+    hilbert_space_index: int,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = expand(config.operator(n), hamiltonian.dims, i)
+    op = expand(config.operator(n), hamiltonian.dims, hilbert_space_index)
     waveforms = (
         waveform(
             pulse,
             config,
-            hamiltonian.single_qubit[i]
-            if i in hamiltonian.single_qubit
+            hamiltonian.single_qubit[hilbert_space_index]
+            if hilbert_space_index in hamiltonian.single_qubit
             else hamiltonian.two_qubit[
-                list(hamiltonian.two_qubit)[i - hamiltonian.nqubits]
+                list(hamiltonian.two_qubit)[hilbert_space_index - hamiltonian.nqubits]
             ].coupler,
         )
         for pulse in pulses
