@@ -3,6 +3,16 @@
 Compiler
 ========
 
+.. attention::
+
+   Despite the compiler being a fundamental part of Qibolab, for the time being it is
+   mainly meant for internal use, as part of the :class:`qibolab.QibolabBackend`, which
+   is the only public interface intended to handle circuits.
+
+   The aim is to expose a stable and customizable compiler as soon as possible.
+
+   Nevertheless, beware that this is not yet the case.
+
 While pulse sequences can be directly deployed using a platform, circuits need to first be transpiled and compiled to the equivalent pulse sequence.
 This procedure typically involves the following steps:
 
