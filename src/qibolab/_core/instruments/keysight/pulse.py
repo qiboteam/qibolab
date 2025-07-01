@@ -6,7 +6,7 @@ from typing import Union
 
 from keysight import qcs
 
-from qibolab._core.pulses import Envelope, PulseId
+from qibolab._core.pulses import Drag, Envelope, Gaussian, PulseId, Rectangular
 from qibolab._core.pulses.pulse import PulseLike
 
 NS_TO_S = 1e-9
@@ -14,10 +14,10 @@ NS_TO_S = 1e-9
 
 def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
     """Converts a Qibolab pulse envelope to a QCS Envelope object."""
-    if shape.kind == "rectangular":
+    if isinstance(shape, Rectangular):
         return qcs.ConstantEnvelope()
 
-    elif shape.kind == "gaussian" or shape.kind == "drag":
+    elif isinstance(shape, (Gaussian, Drag)):
         return qcs.GaussianEnvelope(shape.rel_sigma)
 
     else:
