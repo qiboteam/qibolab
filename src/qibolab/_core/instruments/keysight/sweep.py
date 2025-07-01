@@ -45,8 +45,9 @@ def process_sweepers(
     for idx, parallel_sweeper in enumerate(reversed(sweepers)):
         sweep_values: list[qcs.Array] = []
         sweep_variables: list[qcs.Variable] = []
-        # Currently nested hardware sweeping is not supported
-        hardware_sweeping = len(hardware_sweepers + software_sweepers) == 0
+        # Hardware sweeping is supported up to 8 sweepers
+        # If a software sweeper has been declared, every sweeper after must be swept in software
+        hardware_sweeping = len(hardware_sweepers) < 8 and len(software_sweepers) == 0
 
         for idx2, sweeper in enumerate(parallel_sweeper):
             qcs_variable = qcs.Scalar(
@@ -61,8 +62,10 @@ def process_sweepers(
                 if not probe_channel_ids.isdisjoint(sweeper.channels):
                     hardware_sweeping = False
             elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
-                # Duration is not supported with hardware sweeping
-                if sweeper.parameter is Parameter.duration:
+                # Duration is not supported with hardware sweeping for non-delay pulses
+                if sweeper.parameter is Parameter.duration and any(
+                    [pulse.kind != "delay" for pulse in sweeper.pulses]
+                ):
                     hardware_sweeping = False
 
                 for pulse in sweeper.pulses:

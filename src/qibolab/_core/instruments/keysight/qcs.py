@@ -156,14 +156,18 @@ class KeysightQCS(Controller):
 
             averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
             for channel, input_ops in acquisition_map.items():
-                raw = fetch_result(
-                    results=results,
-                    channel=channel,
-                    acquisition_type=options.acquisition_type,
-                    averaging=averaging,
+                raw = next(
+                    iter(
+                        fetch_result(
+                            results=results,
+                            channel=channel,
+                            acquisition_type=options.acquisition_type,
+                            averaging=averaging,
+                        ).values()
+                    )
                 )
 
-                for result, input_op in zip(raw.values(), input_ops):
+                for result, input_op in zip(np.atleast_2d(raw.T), input_ops):
                     ret[input_op.id] = parse_result(result, options)
 
         return ret
