@@ -128,8 +128,8 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        config = config.update_from_configs(configs_)
-        configs_.update({"hamiltonian": config})
+        config, configs_ = config.update_from_configs(configs_)
+
         hamiltonian = config.hamiltonian(self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         results = self.engine.evolve(
@@ -204,23 +204,16 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    qubit: int,
+    hilbert_space_index: int,
     engine: SimulationEngine,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = engine.expand(config.operator(n=n, engine=engine), hamiltonian.dims, qubit)
+    op = engine.expand(
+        config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+    )
     waveforms = (
-        waveform(
-            pulse,
-            config,
-            hamiltonian.single_qubit[qubit]
-            if qubit in hamiltonian.single_qubit
-            else hamiltonian.two_qubit[
-                list(hamiltonian.two_qubit)[qubit - hamiltonian.nqubits]
-            ].coupler,
-        )
+        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index])
         for pulse in pulses
-        # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
     return (op, [w for w in waveforms if w is not None])

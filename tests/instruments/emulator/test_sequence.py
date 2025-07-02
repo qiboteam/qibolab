@@ -139,8 +139,6 @@ def test_cz_sequence(
     """Test CZ sequence with emulator."""
     if platform.nqubits < 2:
         pytest.skip(f"Plaform {platform} requires at least two qubits.")
-    if platform.config("hamiltonian").ncouplers > 0:
-        pytest.skip(f"Plaform {platform} with couplers unsupported.")
     if platform.natives.two_qubit[0, 1].CZ is None:
         pytest.skip(f"Skipping due to missing CZ for platform {platform}.")
     q0 = platform.natives.single_qubit[0]

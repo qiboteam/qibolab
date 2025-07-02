@@ -116,25 +116,12 @@ class Qubit(Config):
             for pair in self.t2
         )
 
-    def dissipation(self, n: int, engine: SimulationEngine) -> Operator:
-        """Decoherence operator."""
-        return self.relaxation(n=n, engine=engine) + self.dephasing(n=n, engine=engine)
 
-
-class Coupler(Qubit):
-    """Coupler configuration."""
-
-    coupling: list[float] = Field(default_factory=list)
-    """Coupling between coupler and qubit."""
-
-
-class QubitPair(Config):
+class CapacitiveCoupling(Config):
     """Hamiltonian parameters for qubit pair."""
 
-    coupling: float = 0
+    coupling: float
     """Qubit-qubit coupling."""
-    coupler: Optional[Coupler] = None
-    """Coupler mediating the interaction."""
 
     @staticmethod
     def _operator(n: int, engine: SimulationEngine) -> Operator:
@@ -154,21 +141,7 @@ class QubitPair(Config):
 
     def operator(self, n: int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
-        if self.coupler is None:
-            return self.coupling * self._operator(n, engine)
-
-        dim = [n, n, n]
-        op = engine.expand(
-            self.coupling * self._operator(n, engine=engine), dim, (0, 1)
-        )
-        op += engine.expand(
-            self.coupler.coupling[0] * self._operator(n=n, engine=engine), dim, (0, 2)
-        )
-        op += engine.expand(
-            self.coupler.coupling[1] * self._operator(n=n, engine=engine), dim, (1, 2)
-        )
-        op += engine.expand(self.coupler.operator(n=n, engine=engine), dim, 2)
-        return op
+        return self.coupling * self._operator(n, engine)
 
 
 class FluxPulse(Model):
@@ -291,27 +264,33 @@ class HamiltonianConfig(Config):
 
     kind: Literal["hamiltonian"] = "hamiltonian"
     transmon_levels: int = 2
-    single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
-    two_qubit: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+    qubits: dict[QubitId, Qubit] = Field(default_factory=dict)
+    pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
+
+    @property
+    def nqubits(self):
+        """Number of qubits."""
+        return len(self.qubits)
 
     def replace(self, update: Update) -> "HamiltonianConfig":
         """Update parameters' values."""
         d = self.model_dump()
         for path, val in update.items():
             _setvalue(d, path, val)
-
         return self.model_validate(d)
 
-    def update_from_configs(self, config: dict[str, Config]) -> "HamiltonianConfig":
-        """Update hamiltonian parameters from configs."""
+    def update_from_configs(
+        self, config: dict[str, Config]
+    ) -> tuple["HamiltonianConfig", dict[str, Config]]:
+        """Update hamiltonian parameters from configs.
+        Also the configs itself are updated if they contain an HamiltonianConfig."""
 
         config_update = {}
-        for qubit in self.single_qubit:
-            # setting static bias
+        for qubit in self.qubits:
             flux = config.get(f"{qubit}/flux")
             config_update.update(
                 {
-                    f"single_qubit.{qubit}.dynamical_frequency": self.single_qubit[
+                    f"qubits.{qubit}.dynamical_frequency": self.qubits[
                         qubit
                     ].detuned_frequency(
                         flux.offset * flux.voltage_to_flux if flux is not None else 0
@@ -319,77 +298,70 @@ class HamiltonianConfig(Config):
                 }
             )
 
-        for i, pair in enumerate(self.two_qubit):
-            if self.two_qubit[pair].coupler is not None:
-                flux = config.get(f"coupler_{i}/flux")
-                config_update.update(
-                    {
-                        f"two_qubit.{pair[0]}-{pair[1]}.coupler.dynamical_frequency": self.two_qubit[
-                            pair
-                        ].coupler.detuned_frequency(
-                            flux.offset * flux.voltage_to_flux
-                            if flux is not None
-                            else 0
-                        )
-                    }
-                )
-        return self.replace(update=config_update)
-
-    @property
-    def qubits(self) -> list[QubitId]:
-        return list(self.single_qubit)
-
-    @property
-    def nqubits(self) -> int:
-        return len(self.single_qubit)
+        new_hamiltonian_config = self.replace(update=config_update)
+        if "hamiltonian" in config:
+            config["hamiltonian"] = new_hamiltonian_config
+        return new_hamiltonian_config, config
 
     def initial_state(self, engine: SimulationEngine) -> Operator:
         """Initial state as ground state of the system."""
-        return engine.basis(self.dims, (self.nqubits + self.ncouplers) * [0])
+        return engine.basis(self.dims, self.nqubits * [0])
 
-    @property
-    def ncouplers(self):
-        coupler_pairs = [
-            pair for pair in self.two_qubit.values() if pair.coupler is not None
-        ]
-        return len(coupler_pairs)
+    def hilbert_space_index(self, qubit: QubitId) -> int:
+        """Return Hilbert space index from qubit id."""
+        return list(self.qubits).index(qubit)
 
     @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
-        return [self.transmon_levels] * (self.nqubits + self.ncouplers)
+        return [self.transmon_levels] * len(self.qubits)
 
     def hamiltonian(self, engine: SimulationEngine) -> Operator:
         """Time independent part of Hamiltonian."""
-        single_qubit_terms = sum(
+        qubit_terms = sum(
             engine.expand(
-                qubit.operator(n=self.transmon_levels, engine=engine), self.dims, i
+                qubit.operator(self.transmon_levels, engine),
+                self.dims,
+                self.hilbert_space_index(i),
             )
-            for i, qubit in self.single_qubit.items()
+            for i, qubit in self.qubits.items()
         )
-        two_qubit_terms = sum(
+        coupling = sum(
             engine.expand(
                 pair.operator(self.transmon_levels, engine),
                 self.dims,
-                list(pair_id)
-                if pair.coupler is None
-                else list(pair_id) + [self.nqubits + i],  # TODO: fix coupler indices
+                [
+                    self.hilbert_space_index(pair_id[0]),
+                    self.hilbert_space_index(pair_id[1]),
+                ],
             )
-            for i, (pair_id, pair) in enumerate(self.two_qubit.items())
+            for (pair_id, pair) in self.pairs.items()
         )
-        return single_qubit_terms + two_qubit_terms
+        return qubit_terms + coupling
 
     def dissipation(self, engine: SimulationEngine) -> Operator:
         """Dissipation operators for the hamiltonian.
 
         They are going to be passed to mesolve as collapse operators."""
-        return sum(
-            engine.expand(
-                qubit.dissipation(n=self.transmon_levels, engine=engine), self.dims, i
-            )
-            for i, qubit in self.single_qubit.items()
-            if not isinstance(qubit, list)
-        )
+        collapse_operators = []
+        for i, qubit in self.qubits.items():
+            if len(qubit.t1) > 0:
+                collapse_operators.append(
+                    engine.expand(
+                        qubit.relaxation(self.transmon_levels, engine),
+                        self.dims,
+                        self.hilbert_space_index(i),
+                    )
+                )
+            if len(qubit.t2) > 0:
+                collapse_operators.append(
+                    engine.expand(
+                        qubit.dephasing(self.transmon_levels, engine),
+                        self.dims,
+                        self.hilbert_space_index(i),
+                    )
+                )
+        return collapse_operators
 
 
 def waveform(

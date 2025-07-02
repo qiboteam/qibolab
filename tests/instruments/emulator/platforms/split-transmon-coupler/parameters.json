@@ -12,7 +12,7 @@
     },
     "hamiltonian":{
       "transmon_levels": 2,
-      "single_qubit": {
+      "qubits": {
                 "0": {
                     "frequency": 4.961e9,
                     "anharmonicity": -206e6,
@@ -34,18 +34,23 @@
                     "t2": {
                         "0-1": 4e3
                     }
+                },
+                "2": {
+                    "frequency": 5.977e9,
+                    "anharmonicity": -254e6,
+                    "asymmetry": 0.1
                 }
             },
-      "two_qubit":{
+      "pairs":{
         "0-1": {
-          "coupling": 6.74e6,
-          "coupler": {
-            "frequency": 5.977e9,
-            "anharmonicity": -254e6,
-            "sweetspot": 0,
-            "asymmetry": 0.1,
-            "coupling": [76.9e6, 76.9e6]
-          }
+          "coupling": 6.74e6
+
+        },
+        "0-2": {
+          "coupling": 76.9e6
+        },
+        "1-2": {
+          "coupling": 76.9e6
         }
       },
       "kind": "hamiltonian"
@@ -70,7 +75,7 @@
         "kind": "flux-emulator",
         "offset": 0
       },
-      "coupler_0/flux":{
+      "2/flux":{
         "kind": "flux-emulator",
         "offset": -0.1
       },
@@ -217,14 +222,14 @@
           ],
           "CP": null
         },
-        "coupler_0": {
+        "2": {
           "RX": null,
           "RX90": null,
           "RX12": null,
           "MZ": null,
           "CP": [
             [
-              "coupler_0/flux",
+              "2/flux",
               {
                 "duration": 40,
                 "amplitude":0,
@@ -254,7 +259,7 @@
                       }
                   ],
                   [
-                    "coupler_0/flux",
+                    "2/flux",
                     {
                         "kind": "pulse",
                         "duration": 40,
