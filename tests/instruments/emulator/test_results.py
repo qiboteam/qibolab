@@ -74,7 +74,7 @@ def former_results(
     """
     probabilities = calculate_probabilities_from_density_matrix(
         states,
-        tuple(hamiltonian.single_qubit),
+        tuple(hamiltonian.qubits),
         hamiltonian.nqubits,
         hamiltonian.transmon_levels,
     )
@@ -150,7 +150,7 @@ def test_resultz():
     sequence = PulseSequence(
         [("0/drive", Pulse(duration=20, amplitude=0.8, envelope=Rectangular()))]
     ) | PulseSequence([("0/acquisition", Acquisition(duration=1000))])
-    hamiltonian = HamiltonianConfig(single_qubit={q: Qubit() for q in range(2)})
+    hamiltonian = HamiltonianConfig(qubits={q: Qubit() for q in range(2)})
     options = ExecutionParameters(nshots=1000)
 
     fres = former_results(
