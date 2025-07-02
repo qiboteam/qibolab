@@ -209,15 +209,7 @@ def hamiltonian(
     n = hamiltonian.transmon_levels
     op = expand(config.operator(n), hamiltonian.dims, hilbert_space_index)
     waveforms = (
-        waveform(
-            pulse,
-            config,
-            hamiltonian.single_qubit[hilbert_space_index]
-            if hilbert_space_index in hamiltonian.single_qubit
-            else hamiltonian.two_qubit[
-                list(hamiltonian.two_qubit)[hilbert_space_index - hamiltonian.nqubits]
-            ].coupler,
-        )
+        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index])
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
