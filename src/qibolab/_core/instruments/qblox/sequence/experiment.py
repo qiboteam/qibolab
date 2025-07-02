@@ -21,6 +21,7 @@ from ..q1asm.ast_ import (
     Register,
     SetPhDelta,
     Wait,
+    WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
 from .asm import Registers, convert
@@ -39,13 +40,19 @@ __all__ = []
 PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
-def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
+def play_pulse(
+    pulse: Pulse, waveforms: WaveformIndices, duration: Optional[int] = None
+) -> Line:
     uid = pulse.id
     w0 = waveforms[(uid, 0)]
     w1 = waveforms[(uid, 1)]
     assert w0[1] == w1[1]
     return Line(
-        instruction=Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1]),
+        instruction=Play(
+            wave_0=w0[0],
+            wave_1=w1[0],
+            duration=w0[1] if duration is None else duration,
+        ),
         comment=f"id: 0x{uid.hex[:5]}",
     )
 
@@ -117,11 +124,11 @@ def play(
         acq = acquisitions[pulse.id]
         delay = int(time_of_flight) if time_of_flight is not None else 4
         return [
-            play_pulse(pulse.probe, waveforms).model_copy(update={"duration": delay}),
+            play_pulse(pulse.probe, waveforms, duration=delay),
             Acquire(
                 acquisition=acq.acquisition.index,
                 bin=Registers.bin.value,
-                duration=int(pulse.duration) - delay,
+                duration=int(pulse.duration),
             ),
         ]
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
@@ -152,7 +159,7 @@ def experiment(
     time_of_flight: Optional[float],
 ) -> Block:
     """Representation of the actual experiment to be executed."""
-    return [
+    return [WaitSync(duration=4)] + [
         inst
         for block in (
             event(pulse, waveforms, acquisitions, time_of_flight) for pulse in sequence
