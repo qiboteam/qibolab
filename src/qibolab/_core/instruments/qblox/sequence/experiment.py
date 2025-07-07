@@ -40,19 +40,13 @@ __all__ = []
 PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
-def play_pulse(
-    pulse: Pulse, waveforms: WaveformIndices, duration: Optional[int] = None
-) -> Line:
+def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
     uid = pulse.id
     w0 = waveforms[(uid, 0)]
     w1 = waveforms[(uid, 1)]
     assert w0[1] == w1[1]
     return Line(
-        instruction=Play(
-            wave_0=w0[0],
-            wave_1=w1[0],
-            duration=w0[1] if duration is None else duration,
-        ),
+        instruction=Play(wave_0=w0[0], wave_1=w1[0], duration=w0[1]),
         comment=f"id: 0x{uid.hex[:5]}",
     )
 
@@ -124,7 +118,7 @@ def play(
         acq = acquisitions[pulse.id]
         delay = int(time_of_flight) if time_of_flight is not None else 4
         return [
-            play_pulse(pulse.probe, waveforms, duration=delay),
+            play_pulse(pulse.probe, waveforms).update({"duration": delay}),
             Acquire(
                 acquisition=acq.acquisition.index,
                 bin=Registers.bin.value,

@@ -737,6 +737,11 @@ class Line(Model):
         """Shortcut for simple lines instantiation."""
         return cls(instruction=instruction)
 
+    def update(self, update: dict[str, Any]) -> "Line":
+        """Update parameters in the underlying instructions keeping the same comments."""
+        new_instr = self.instruction.model_copy(update=update)
+        return self.model_copy(update={"instruction": new_instr})
+
     def asm(
         self,
         width: Optional[int] = None,
