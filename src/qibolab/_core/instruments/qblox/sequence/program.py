@@ -73,7 +73,7 @@ def setup(
             inst
             for p in params
             if p.channel in channel
-            for inst in update_instructions(p.role, p.start)
+            for inst in update_instructions(p.role, p.reg)
         ]
     )
 
