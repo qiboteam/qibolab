@@ -192,7 +192,7 @@ def _sweep_iteration(
     - loop, i.e. decrement iteration counter and jump
     - reset iteration counter, after a whole cycle is completed
     """
-    return [
+    loops_ = [
         *_sweep_updates(lp, params, channel, pulses),
         Line(
             instruction=Loop(a=lp.reg, address=Reference(label=START)),
@@ -201,6 +201,21 @@ def _sweep_iteration(
         ),
         Move(source=lp.length, destination=lp.reg),
     ]
+    if lp.id is not None:
+        loops_ += [
+            Line(
+                instruction=Move(source=p.start, destination=p.reg),
+                comment=f"init {p.description}",
+            )
+            for p in (params[lp.id][0] + params[lp.id][1])
+            if p.channel in channel or p.pulse in pulses
+        ] + [
+            inst
+            for p in (params[lp.id][0] + params[lp.id][1])
+            if p.channel in channel
+            for inst in update_instructions(p.role, p.reg)
+        ]
+    return loops_
 
 
 def _loop_machinery(
