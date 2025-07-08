@@ -14,7 +14,6 @@ from ..q1asm.ast_ import (
     Program,
     Stop,
     Wait,
-    WaitSync,
 )
 from .acquisition import AcquisitionSpec, MeasureId
 from .experiment import experiment
@@ -76,7 +75,6 @@ def setup(
             if p.channel in channel
             for inst in update_instructions(p.role, p.start)
         ]
-        + [WaitSync(duration=4)]
     )
 
 
