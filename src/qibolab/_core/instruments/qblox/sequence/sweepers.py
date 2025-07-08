@@ -15,6 +15,7 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
 from ..q1asm.ast_ import (
     Instruction,
+    Nop,
     Register,
     SetPhDelta,
     Value,
@@ -175,7 +176,7 @@ def update_instructions(
 ) -> list[Instruction]:
     wrapper = _SWEEP_UPDATE[role.kind]
     up = wrapper.update if not reset else wrapper.reset
-    return [up(value)] if up is not None else []
+    return [Nop(), up(value)] if up is not None else []
 
 
 def reset_instructions(role: ParamRole, value: Value) -> list[Instruction]:

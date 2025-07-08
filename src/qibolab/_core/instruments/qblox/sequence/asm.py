@@ -52,7 +52,8 @@ def convert(value: float, kind: Parameter) -> float:
     if kind is Parameter.relative_phase:
         return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind]
     if kind is Parameter.frequency:
-        return value / 500e6 * MAX_PARAM[kind]
+        # return value / 500e6 * MAX_PARAM[kind]
+        return int(4 * value) % (2**32)
     if kind is Parameter.offset:
         return value * MAX_PARAM[kind]
     if kind is Parameter.duration:
