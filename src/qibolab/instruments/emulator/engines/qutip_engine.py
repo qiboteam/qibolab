@@ -176,6 +176,16 @@ class QutipSimulator:
                 channel_op += self.make_operator(op_instruction)
             self.operators.update({channel_name: channel_op})
 
+        ### flux ###
+        try:
+            for channel_name, op_instruction_list in self.model_config["flux"].items():
+                channel_op = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
+                for op_instruction in op_instruction_list:
+                    channel_op += self.make_operator(op_instruction)
+                self.operators.update({channel_name: channel_op})
+        except:
+            pass
+
         ### dissipation ###
         for op_instruction in self.model_config["dissipation"]["t1"]:
             self.static_dissipators += [self.make_operator(op_instruction)]
@@ -397,16 +407,17 @@ class QutipSimulator:
                 )
 
         basis_list = self.op_dict["basis"]
-        fullstate = Qobj(1)
-
         combined_basis_vector = cbasis_vector + basis_vector
         combined_list = self.couplers_list + self.qubits_list
+
         for ind, coeff in enumerate(combined_basis_vector):
             qind = combined_list[ind]
-            fullstate = tensor(
-                basis_list[qind][coeff], fullstate
-            )  # constructs little endian HS, qubits first then couplers, as per evolution
-
+            if ind == 0:
+                fullstate = basis_list[qind][coeff]
+            else:
+                fullstate = tensor(
+                    basis_list[qind][coeff], fullstate
+                )  # constructs little endian HS, qubits first then couplers, as per evolution
         return fullstate
 
     def compute_overlaps(
