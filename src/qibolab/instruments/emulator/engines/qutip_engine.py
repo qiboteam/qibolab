@@ -37,8 +37,8 @@ def get_default_qutip_sim_opts():
 
 
 class QutipSimulator:
-    """Builds pulse simulator components in qutip engine. Pulse simulation is
-    implemented by `qevolve` method. QutipSimulator does not interact with
+    """Builds pulse simulator components in qutip engine. implemented by
+    `qevolve` method. QutipSimulator does not interact with Pulse simulation is
     Qibolab.
 
     Note that objects have either little or big endian order.
