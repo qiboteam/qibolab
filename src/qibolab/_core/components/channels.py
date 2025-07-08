@@ -38,6 +38,23 @@ class Channel(Model):
     def port(self) -> int:
         return int(self.path)
 
+    def iqout(self, id_: ChannelId) -> Optional[ChannelId]:
+        """Extract associated IQ output channel.
+
+        This is the identity for each IQ output channel identifier, while it retrieves the
+        associated probe channel for acquisition ones, and :obj:`None` for any other one
+        (essentially, non-RF channels).
+
+        The argument is the identifier of the present channel, since it is not stored within
+        the objec itself, as it is only relevant to address it in a collection (and so,
+        out of the scope of the object itself).
+        """
+        return (
+            id_
+            if isinstance(self, IqChannel)
+            else (self.probe if isinstance(self, AcquisitionChannel) else None)
+        )
+
 
 class DcChannel(Channel):
     """Channel that can be used to send DC pulses."""
@@ -46,13 +63,13 @@ class DcChannel(Channel):
 class IqChannel(Channel):
     """Channel that can be used to send IQ pulses."""
 
-    mixer: Optional[str]
+    mixer: Optional[str] = None
     """Name of the IQ mixer component corresponding to this channel.
 
     None, if the channel does not have a mixer, or it does not need
     configuration.
     """
-    lo: Optional[str]
+    lo: Optional[str] = None
     """Name of the local oscillator component corresponding to this channel.
 
     None, if the channel does not have an LO, or it is not configurable.
@@ -60,7 +77,7 @@ class IqChannel(Channel):
 
 
 class AcquisitionChannel(Channel):
-    twpa_pump: Optional[str]
+    twpa_pump: Optional[str] = None
     """Name of the TWPA pump component.
 
     None, if there is no TWPA, or it is not configurable.

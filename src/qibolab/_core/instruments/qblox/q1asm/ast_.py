@@ -1,17 +1,24 @@
 import inspect
 import re
+import shutil
 import textwrap
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any, Iterable, Optional, Sequence, Union
 
 from pydantic import (
     AfterValidator,
     BeforeValidator,
+    ConfigDict,
+    GetCoreSchemaHandler,
+    computed_field,
     field_validator,
     model_serializer,
     model_validator,
 )
+from pydantic_core import core_schema
 
-from ...serialize import Model
+from ....serialize import Model
+
+__all__ = ["Program"]
 
 
 class Register(Model):
@@ -20,8 +27,17 @@ class Register(Model):
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
-        assert data[0] == "R"
-        num = int(data[1:])
+        if isinstance(data, str):
+            try:
+                assert data[0] == "R"
+            except TypeError:
+                raise ValueError("Register representation is not a string")
+            num = int(data[1:])
+        elif isinstance(data, dict):
+            num = data["number"]
+        else:
+            raise ValueError(f"Register not recognized '{data}'")
+
         assert 0 <= num < 64
         return {"number": num}
 
@@ -36,15 +52,29 @@ class Reference(Model):
     @model_validator(mode="before")
     @classmethod
     def load(cls, data: Any) -> Any:
-        assert data[0] == "@"
-        return {"label": data[1:]}
+        if isinstance(data, str):
+            assert data[0] == "@"
+            return {"label": data[1:]}
+        if isinstance(data, dict):
+            return data
+        raise ValueError(f"Reference not recognized '{data}'")
 
     @model_serializer
     def dump(self) -> str:
         return f"@{self.label}"
 
 
-MultiBaseInt = Annotated[int, BeforeValidator(lambda n: int(n, 0))]
+def _value_bounds(n: int):
+    if abs(n) > 2**31:
+        raise ValueError("Register value out of bounds")
+    return n
+
+
+MultiBaseInt = Annotated[
+    int,
+    BeforeValidator(lambda n: int(n, 0) if isinstance(n, str) else n),
+    BeforeValidator(lambda n: _value_bounds(n) if isinstance(n, int) else n),
+]
 Immediate = Union[MultiBaseInt, Reference]
 Value = Union[Register, Immediate]
 
@@ -52,6 +82,34 @@ CAMEL_TO_SNAKE = re.compile("(?<=[a-z0-9])(?=[A-Z])(?!^)(?=[A-Z][a-z])")
 
 
 class Instr(Model):
+    model_config = ConfigDict(extra="ignore")
+
+    @model_validator(mode="before")
+    @classmethod
+    def load(cls, data: Any) -> Any:
+        """Leverage automated tagging to resolve conflicts.
+
+        This is required to unambiguously deserialize the instruction. Cf.
+        :meth:`instr`.
+
+        It is kind of surrogate of Pyantic's discriminated unions, without the need of
+        manually labeling each class, since the label is derived from the type.
+        """
+        if "instr" in data:
+            assert data["instr"] == cls.keyword()
+        return data
+
+    @computed_field
+    @property
+    def instr(self) -> str:
+        """Store instruction information in the serialization.
+
+        The instruction is non-uniquely identified by the attributes
+        structure, thus logging its identity is required, but the
+        information at runtime is only contained in the model's type.
+        """
+        return self.keyword()
+
     @classmethod
     def keyword(cls) -> str:
         return CAMEL_TO_SNAKE.sub("_", cls.__name__).lower()
@@ -62,7 +120,9 @@ class Instr(Model):
 
     @property
     def args(self) -> list:
-        return list(self.model_dump().values())
+        return list(
+            {k: v for k, v in self.model_dump().items() if k != "instr"}.values()
+        )
 
     def asm(self, key_width: Optional[int] = None) -> str:
         key = self.keyword()
@@ -652,19 +712,30 @@ def _format_comment(text: str, width: Optional[int] = None) -> str:
 
 
 class Comment(str):
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source: type[Any], handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
     def asm(self, width: Optional[int] = None) -> str:
         return _format_comment(self, width) + "\n"
 
 
 class Line(Model):
     instruction: Instruction
-    label: Optional[str]
-    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]]
+    label: Optional[str] = None
+    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]] = None
 
     def __rich_repr__(self):
         yield self.instruction
         yield "label", self.label, None
         yield "comment", self.comment, None
+
+    @classmethod
+    def instr(cls, instruction: Instruction):
+        """Shortcut for simple lines instantiation."""
+        return cls(instruction=instruction)
 
     def asm(
         self,
@@ -686,12 +757,18 @@ class Line(Model):
         comment = _format_comment(
             self.comment, width - len(code) if width is not None else None
         ).splitlines()
+        if len(comment) == 0:
+            return code
         return "\n".join(
             [code + comment[0]] + [" " * len(code) + c for c in comment[1:]]
         )
 
 
 Element = Union[Line, Comment]
+Lineable = Union[Line, Instruction]
+Block = Sequence[Lineable]
+BlockList = list[Lineable]
+BlockIter = Iterable[Lineable]
 
 
 class Program(Model):
@@ -756,3 +833,6 @@ class Program(Model):
         return (
             code if comments else re.sub("^\n*", "", re.sub("\n+", "\n", code))
         ) + "\n"
+
+    def __rich__(self):
+        return self.asm(width=shutil.get_terminal_size((None, None)).columns)
