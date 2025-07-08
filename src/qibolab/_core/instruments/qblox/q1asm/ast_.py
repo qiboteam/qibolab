@@ -65,7 +65,7 @@ class Reference(Model):
 
 
 def _value_bounds(n: int):
-    if abs(n) > 2**31:
+    if abs(n) >= 2**32:
         raise ValueError("Register value out of bounds")
     return n
 
