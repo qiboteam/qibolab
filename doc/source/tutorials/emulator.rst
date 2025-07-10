@@ -29,7 +29,7 @@ the section ``configs``. Here is an example
                 },
                 "hamiltonian": {
                     "transmon_levels": 2,
-                    "single_qubit": {
+                    "qubits": {
                         "0": {
                             "frequency": 5e9,
                             "sweetspot": 0.02,

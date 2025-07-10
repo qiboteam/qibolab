@@ -83,8 +83,8 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
 
 def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
     """Returns Hilbert space index from channel id."""
-    target = ch.split("/")[0]
-    return hconfig.qubits.index(int(target) if target.isdigit() else target)
+    target = int(ch.split("/")[0])
+    return hconfig.hilbert_space_index(target)
 
 
 def select_acquisitions(
@@ -117,7 +117,7 @@ def results(
     """
     probabilities = calculate_probabilities_from_density_matrix(
         states,
-        tuple(hamiltonian.single_qubit),
+        range(hamiltonian.nqubits),
         hamiltonian.nqubits,
         hamiltonian.transmon_levels,
     )

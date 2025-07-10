@@ -95,23 +95,54 @@ It is possible to switch extractor when instantiating the :class:`qibolab.instru
 
 .. _main_doc_emulator:
 
-Simulation of QPU platforms
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Emulation of QPU platforms
+---------------------------
 
 Although Qibolab is mostly dedicated to providing hardware drivers for self-hosted quantum computing setups,
 it is also possible to simulate the outcome of a pulse sequence with an emulator.
 The emulator currently available is based on `QuTiP <https://qutip.org/>`_, the simulation is performed
 by solving the master equation for a given Hamiltonian including dissipation using `mesolve <https://qutip.readthedocs.io/en/qutip-5.1.x/apidoc/solver.html#qutip.solver.mesolve.mesolve>`_.
 
-Qibolab currently support a model consisting of a single transmon with a drive term whose Hamiltonian is the following
+With Qibolab it is currently possible to emulate a system of split-transmon qubits capacitively coupled. The Hamiltonian solved numerically in the case
+of two transmon qubits is given by
 
 .. math::
 
-    \frac{H}{\hbar} =  a^\dagger a \omega_q + \frac{\alpha}{2} a^\dagger a^\dagger a a - i \Omega(t) (a - a^\dagger)
+    \frac{H}{\hbar} =  \sum_{i=1}^2 \Big[ a^\dagger_i a_i \omega_i (\Phi_i) + \frac{\alpha_i}{2} a_i^\dagger a_i^\dagger a_i a_i - i \Omega_i(t) (a_i - a_i^\dagger) \Big] + g (a_1^\dagger a_2 + a_1 a_2^\dagger)
 
-where :math:`a (a^\dagger)` are the destruction (creation) operators for the transmon,
-:math:`\omega_q` is the transmon frequency, :math:`\alpha / 2 \pi` is the anharmonicity of the transmon and :math:`\Omega(t)` is a time-dependent
-term for driving the transmon.
+where :math:`a_i (a_i^\dagger)` are the destruction (creation) operators for the transmon  :math:`i`,
+:math:`\omega_i` and :math:`\alpha_i / 2 \pi` are the frequency and the anharmoncity of the transmon  :math:`i`.
+Each transmon is controlled with a drive term with a Rabi frequency :math:`\Omega_i(t)` and it is flux-tunable, meaning
+that the frequency of the transmon can be changed by applying flux :math:`\Phi_i`
+
+.. math::
+
+    \omega_i(\Phi_i) = (\omega_i^{\text{max}} - \alpha_i)
+    \sqrt[4]{d_i^2 + (1 - d_i^2)\cos^2\left( \pi k(\Phi_i - \Phi^{\text{sweetspot}}_i) \right)} + \alpha_i
+
+where :math:`\omega_i^{\text{max}}` is the maximum frequency of the transmon, :math:`d_i` is the junctions asymmetry
+and :math:`\Phi^{\text{sweetspot}}_i` is the flux value at which the transmon frequency is maximum
+Currently neither drive or crosstalk effects are considered.
+The coupling strength between the two transmons :math:`g` .
+
+.. note::
+
+    In most of the setups the sweetspot is identified by the offset value selected on the flux line connected to the qubit. Within the emulator
+    it is possible to configure how to convert the offset value :math:`V` to the flux value using the entry ``voltage_to_flux``, which we denote with :math:`k` in the flux line configuration.
+    The flux is computed from the offset value as
+
+    .. math::
+
+        \Phi = k \cdot V
+
+
+The emulator supports also tunable based architecture, where the Hamiltonian is given by
+
+.. math::
+
+    \frac{H}{\hbar} =  \sum_{i=1,2,c} \Big[ a^\dagger_i a_i \omega_i + \frac{\alpha_i}{2} a_i^\dagger a_i^\dagger a_i a_i \Big] - \sum_{i=1,2} i \Omega_i(t) (a_i - a_i^\dagger)  + g_{12} (a_1^\dagger a_2 + a_1 a_2^\dagger) + g_{1c} (a_1^\dagger a_c + a_1 a_c^\dagger) + g_{2c} (a_2^\dagger a_c + a_2 a_c^\dagger) ,
+
+where the index :math:`c` refers to the coupler.
 
 The readout pulses parameters are ignored, given that the Hamiltonian doesn't include a resonator. The only information
 used when the readout pulse is placed in the sequence which is necessary to determine for how long the system should be evolved.
@@ -132,4 +163,4 @@ by encoding into the :math:`I` component the probabilities and while the :math:`
 We add a Gaussian noise both on :math:`I` and :math:`Q`.
 This should be enough to get some meaningful results by computing the magnitude of the signal :math:`\sqrt{I^2 + Q^2}`.
 
-Example of platforms using the emulator are available `here <https://github.com/qiboteam/qibolab/tree/main/tests/instruments/emulator/platforms/>`_.
+Example of platforms using the emulator are available `here <https://https://github.com/qiboteam/qibolab/tree/emulator-tests/tests/instruments/emulator/platforms/>`_.
