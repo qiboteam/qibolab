@@ -112,7 +112,7 @@ class SequencerConfig(Model):
             if config.iq_angle is not None:
                 cfg.thresholded_acq_rotation = np.degrees(config.iq_angle % (2 * np.pi))
             if config.threshold is not None:
-                cfg.thresholded_acq_threshold = config.threshold
+                cfg.thresholded_acq_threshold = config.threshold * length
             # demodulation
             cfg.demod_en_acq = acquisition is not AcquisitionType.RAW
 
