@@ -13,7 +13,6 @@ from ..q1asm.ast_ import (
     BlockIter,
     BlockList,
     Instruction,
-    Jge,
     Line,
     Loop,
     Move,
@@ -114,10 +113,6 @@ def _experiment_end(relaxation_time: int) -> list[Line]:
 
 
 _SHOTS_BIN_RESET: list[Line] = [
-    Line(
-        instruction=Jge(a=Registers.shots.value, b=1, address=Reference(label=SHOTS)),
-        comment="skip bin reset - advance both counters",
-    ),
     Line(
         instruction=Move(
             source=Registers.bin_reset.value,
