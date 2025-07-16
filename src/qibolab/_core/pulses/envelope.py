@@ -55,6 +55,12 @@ class BaseEnvelope(ABC, Model):
         """Stacked i and q envelope waveforms of the pulse."""
         return np.array([self.i(samples), self.q(samples)])
 
+    @staticmethod
+    def normalize_trim_pulse(pulse: Waveform) -> Waveform:
+        """Normalize the pulse relative to its first sample, then remove the
+        first and last samples."""
+        return ((pulse - pulse[0]) / (1 - pulse[0]))[1:-1]
+
 
 class Rectangular(BaseEnvelope):
     """Rectangular envelope."""
@@ -133,31 +139,36 @@ class Gaussian(BaseEnvelope):
 class GaussianSquare(BaseEnvelope):
     r"""Rectangular envelope with Gaussian rise and fall.
 
+    .. note::
+        The `risefall` and `sigma` are absolute values.
+
     .. math::
 
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Rise] + Flat + A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}[Decay]
     """
 
     kind: Literal["gaussian_square"] = "gaussian_square"
+    risefall: int = 0
+    """Risefall time, in number of samples."""
+    sigma: float = 0
+    """Gaussian standard deviation."""
 
-    rel_sigma: float
-    """Relative Gaussian standard deviation.
-
-    In units of the interval duration.
-    """
-    width: float
-    """Length of the flat portion."""
+    def width(self, samples: int) -> float:
+        return samples - 2 * self.risefall
 
     def i(self, samples: int) -> Waveform:
         """Generate a Gaussian envelope, with a flat central window."""
-
-        pulse = np.ones(samples)
-        u, hw = samples / 2, self.width / 2
-        ts = np.arange(samples)
-        tails = (ts < (u - hw)) | ((u + hw) < ts)
-        pulse[tails] = gaussian(len(ts[tails]), _samples_sigma(self.rel_sigma, samples))
-
-        return pulse
+        width = self.width(samples)
+        gaussian_pulse = gaussian(2 * self.risefall + 2, std=self.sigma)
+        plateau = np.ones(width)
+        pulse = np.concatenate(
+            [
+                gaussian_pulse[: self.risefall + 1],
+                plateau,
+                gaussian_pulse[self.risefall + 1 :],
+            ]
+        )
+        return self.normalize_trim_pulse(pulse)
 
 
 class Drag(BaseEnvelope):

@@ -1,9 +1,10 @@
 """Pulse class."""
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal, Union, cast
+from uuid import uuid4
 
 import numpy as np
-from pydantic import Field
+from pydantic import UUID4, Field
 
 from ..serialize import Model
 from .envelope import Envelope, IqWaveform, Waveform
@@ -19,15 +20,35 @@ __all__ = [
     "VirtualZ",
 ]
 
-PulseId = int
+PulseId = UUID4
 """Unique identifier for a pulse."""
 
 
 class _PulseLike(Model):
+    id_: PulseId = Field(default_factory=uuid4, exclude=True)
+
     @property
     def id(self) -> PulseId:
         """Instruction identifier."""
-        return id(self)
+        return self.id_
+
+    def new(self) -> "PulseLike":
+        return cast(PulseLike, self.model_copy(deep=True, update={"id_": uuid4()}))
+
+    def __eq__(self, other: object) -> bool:
+        """Compare instances."""
+        # TODO: for the time being, Pydantic does not support fields
+        # inclusion/exclusion in comparison, otherwise it would be much better to
+        # exclude them rather then applying this recursive definition
+        # https://github.com/pydantic/pydantic/discussions/6717
+        s = vars(self)
+        o = vars(other)
+        return isinstance(other, type(self)) and all(
+            s[k] == o[k] for k in s if k != "id_"
+        )
+
+    def __hash__(self) -> int:
+        return hash(tuple(v for k, v in vars(self).items() if k != "id_"))
 
 
 class Pulse(_PulseLike):
@@ -143,9 +164,22 @@ class Readout(_PulseLike):
         return self.acquisition.duration
 
     @property
-    def id(self) -> int:
+    def id(self) -> PulseId:
         """Instruction identifier."""
         return self.acquisition.id
+
+    def new(self) -> "PulseLike":
+        return cast(
+            PulseLike,
+            self.model_copy(
+                deep=True,
+                update={
+                    "id_": uuid4(),
+                    "acquisition": self.acquisition.new(),
+                    "probe": self.probe.new(),
+                },
+            ),
+        )
 
 
 class Align(_PulseLike):
