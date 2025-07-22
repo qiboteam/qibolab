@@ -45,6 +45,29 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 """
 
 
+# FIXME: Copied from 0.1
+def convert_offset(offset: float):
+    """Converts offset values to the encoding used in qblox FPGAs.
+
+    Both offset values are divided in 2**sample path width steps. QCM
+    DACs resolution 16bits, QRM DACs and ADCs 12 bit QCM 5Vpp, QRM 2Vpp
+    https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
+    """
+    scale_factor = 1.25 * np.sqrt(2)
+    normalised_offset = offset / scale_factor
+
+    if not (normalised_offset >= -1 and normalised_offset <= 1):
+        raise ValueError(
+            f"offset must be a float between {-scale_factor:.3f} and {scale_factor:.3f} V"
+        )
+    if normalised_offset == 1:
+        return 2**15 - 1
+    else:
+        return (
+            int(np.floor(normalised_offset * 2**15)) % 2**32
+        )  # two's complement 32 bit number? or 12 or 24?
+
+
 def convert(value: float, kind: Parameter) -> float:
     """Convert sweeper value in assembly units."""
     if kind is Parameter.amplitude:
@@ -55,7 +78,8 @@ def convert(value: float, kind: Parameter) -> float:
         # return value / 500e6 * MAX_PARAM[kind]
         return int(4 * value) % (2**32)
     if kind is Parameter.offset:
-        return value * MAX_PARAM[kind]
+        # return value * MAX_PARAM[kind]
+        return convert_offset(value)
     if kind is Parameter.duration:
         return value
     raise ValueError(f"Unsupported sweeper: {kind.name}")
