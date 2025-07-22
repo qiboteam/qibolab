@@ -169,10 +169,16 @@ def compile(
     time_of_flights: dict[ChannelId, float],
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
+    sweeper_channels = {
+        channel: []
+        for ps in sweepers
+        for sweeper in ps
+        for channel in (sweeper.channels if sweeper.channels is not None else [])
+    }
     return {
         ch: Q1Sequence.from_pulses(
             seq,
-            sweepers,
+            sweepers[::-1],
             options,
             sampling_rate,
             _effective_channels(ch, seq),
@@ -180,5 +186,5 @@ def compile(
             time_of_flights.get(ch),
             duration,
         )
-        for ch, seq in sequence.by_channel.items()
+        for ch, seq in (sweeper_channels | sequence.by_channel).items()
     }
