@@ -8,7 +8,7 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
-from qibolab._core.components import AcquisitionChannel, Configs, IqChannel
+from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
@@ -105,6 +105,11 @@ class Cluster(Controller):
                     sweepers,
                     options_,
                     self.sampling_rate,
+                    {
+                        ch: cfg.offset
+                        for ch, cfg in configs.items()
+                        if isinstance(cfg, DcConfig)
+                    },
                     lo_configs(self._los, configs),
                     time_of_flights(configs),
                 )
