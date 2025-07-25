@@ -83,7 +83,10 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
 
 def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
     """Returns Hilbert space index from channel id."""
-    target = int(ch.split("/")[0])
+    if "coupler" in ch:
+        target = int(ch.split("coupler_")[1].split("/")[0])
+    else:
+        target = int(ch.split("/")[0])
     return hconfig.hilbert_space_index(target)
 
 

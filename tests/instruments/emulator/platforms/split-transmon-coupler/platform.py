@@ -23,7 +23,7 @@ def create() -> Hardware:
             qubits[q].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
         }
 
-    couplers[0] = Qubit.default(2)
+    couplers[0] = Qubit.coupler(2)
     channels |= {couplers[0].flux: DcChannel()}
     # register the instruments
     instruments = {

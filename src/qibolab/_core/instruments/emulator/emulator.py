@@ -127,9 +127,7 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        config, configs_ = config.update_from_configs(configs_)
-
-        hamiltonian = config.hamiltonian
+        hamiltonian = config.hamiltonian(config=configs_)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
             hamiltonian += time_hamiltonian
