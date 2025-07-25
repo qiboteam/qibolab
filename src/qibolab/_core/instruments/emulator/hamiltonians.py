@@ -47,14 +47,17 @@ class FluxEmulatorConfig(Config):
     def operator(n: int, engine: SimulationEngine) -> Operator:
         return engine.create(n) * engine.destroy(n)
 
+    @property
+    def flux(self) -> float:
+        """Returns flux."""
+        return self.offset * self.voltage_to_flux
+
 
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
-    dynamical_frequency: float = 0
-    """Frequency to be used during evolution (could be different from frequency due to static offset.)"""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
     sweetspot: float = 0
@@ -66,10 +69,9 @@ class Qubit(Config):
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
 
-    @property
-    def omega(self) -> float:
+    def omega(self, flux: float = 0) -> float:
         """Angular velocity."""
-        return 2 * np.pi * self.dynamical_frequency
+        return 2 * np.pi * self.detuned_frequency(flux)
 
     def detuned_frequency(self, flux: float) -> float:
         """Return frequency of the qubit modified by the flux."""
@@ -78,9 +80,9 @@ class Qubit(Config):
             + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
         ) ** (1 / 4) + self.anharmonicity
 
-    def operator(self, n: int, engine: SimulationEngine) -> Operator:
+    def operator(self, n: int, engine: SimulationEngine, flux: float = 0):
         """Time independent operator."""
-        quadratic_term = engine.create(n) * engine.destroy(n) * self.omega / giga
+        quadratic_term = engine.create(n) * engine.destroy(n) * self.omega(flux) / giga
         quartic_term = (
             self.anharmonicity
             * np.pi
@@ -183,7 +185,7 @@ class FluxPulse(Model):
                 self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * (i[sample] + self.config.offset)
                 )
-                - self.qubit.dynamical_frequency
+                - self.qubit.detuned_frequency(self.config.flux)
             )
             / giga
         )
@@ -279,30 +281,6 @@ class HamiltonianConfig(Config):
             _setvalue(d, path, val)
         return self.model_validate(d)
 
-    def update_from_configs(
-        self, config: dict[str, Config]
-    ) -> tuple["HamiltonianConfig", dict[str, Config]]:
-        """Update hamiltonian parameters from configs.
-        Also the configs itself are updated if they contain an HamiltonianConfig."""
-
-        config_update = {}
-        for qubit in self.qubits:
-            flux = config.get(f"{qubit}/flux")
-            config_update.update(
-                {
-                    f"qubits.{qubit}.dynamical_frequency": self.qubits[
-                        qubit
-                    ].detuned_frequency(
-                        flux.offset * flux.voltage_to_flux if flux is not None else 0
-                    )
-                }
-            )
-
-        new_hamiltonian_config = self.replace(update=config_update)
-        if "hamiltonian" in config:
-            config["hamiltonian"] = new_hamiltonian_config
-        return new_hamiltonian_config, config
-
     def initial_state(self, engine: SimulationEngine) -> Operator:
         """Initial state as ground state of the system."""
         return engine.basis(self.dims, self.nqubits * [0])
@@ -316,11 +294,15 @@ class HamiltonianConfig(Config):
         """Dimensions of the system."""
         return [self.transmon_levels] * len(self.qubits)
 
-    def hamiltonian(self, engine: SimulationEngine) -> Operator:
+    def hamiltonian(self, config: dict, engine: SimulationEngine) -> Operator:
         """Time independent part of Hamiltonian."""
         qubit_terms = sum(
             engine.expand(
-                qubit.operator(self.transmon_levels, engine),
+                qubit.operator(
+                    n=self.transmon_levels,
+                    flux=static_flux(qubit=i, config=config),
+                    engine=engine,
+                ),
                 self.dims,
                 self.hilbert_space_index(i),
             )
@@ -362,6 +344,17 @@ class HamiltonianConfig(Config):
                     )
                 )
         return collapse_operators
+
+
+def static_flux(qubit: QubitId, config: dict) -> float:
+    """Get static flux for qubit given config (offset)."""
+    qubit_config = config.get(f"{qubit}/flux")
+    if qubit_config is not None:
+        return qubit_config.flux
+    coupler_config = config.get(f"coupler_{qubit}/flux")
+    if coupler_config is not None:
+        return coupler_config.flux
+    return 0
 
 
 def waveform(

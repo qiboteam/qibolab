@@ -10,7 +10,7 @@ from qibolab._core.sequence import PulseSequence
 
 from .envelope import Waveform
 from .modulation import modulate
-from .pulse import Delay, Pulse, VirtualZ
+from .pulse import Delay, Pulse, Readout, VirtualZ
 
 SAMPLING_RATE = 1
 """Default sampling rate in gigasamples per second (GSps).
@@ -166,7 +166,8 @@ def sequence(ps: PulseSequence, freq: dict[str, float], filename=None):
                 if isinstance(pulse, (Delay, VirtualZ)):
                     start += pulse.duration
                     continue
-
+                if isinstance(pulse, Readout):
+                    pulse = pulse.probe
                 envelope = pulse.envelopes(SAMPLING_RATE)
                 num_samples = envelope[0].size
                 time = start + np.arange(num_samples) / SAMPLING_RATE

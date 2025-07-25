@@ -1,8 +1,14 @@
 from enum import Enum, auto
-from typing import Any, Optional
+from math import prod
+from typing import Any, Optional, TypeVar
+
+from pydantic import Field
+from scipy.constants import nano
+
+from qibolab._core.sequence import PulseSequence
 
 from .serialize import Model
-from .sweeper import ParallelSweepers
+from .sweeper import ParallelSweepers, iteration_length
 
 __all__ = ["AcquisitionType", "AveragingMode"]
 
@@ -35,12 +41,23 @@ class AveragingMode(Enum):
         return self is not AveragingMode.SINGLESHOT
 
 
-ConfigUpdate = dict[str, dict[str, Any]]
+Update = dict[str, Any]
+
+ConfigUpdate = dict[str, Update]
 """Update for component configs.
 
 Maps component name to corresponding update, which in turn is a map from
 config property name that needs an update to its new value.
 """
+
+# TODO: replace with https://docs.python.org/3/reference/compound_stmts.html#type-params
+T = TypeVar("T")
+
+
+# TODO: lift for general usage in Qibolab
+def default(value: Optional[T], default: T) -> T:
+    """None replacement shortcut."""
+    return value if value is not None else default
 
 
 class ExecutionParameters(Model):
@@ -63,7 +80,7 @@ class ExecutionParameters(Model):
     """Data acquisition type."""
     averaging_mode: AveragingMode = AveragingMode.SINGLESHOT
     """Data averaging mode."""
-    updates: list[ConfigUpdate] = []
+    updates: list[ConfigUpdate] = Field(default_factory=list)
     """List of updates for component configs.
 
     Later entries in the list take precedence over earlier ones (if they
@@ -71,20 +88,37 @@ class ExecutionParameters(Model):
     top of platform defaults.
     """
 
-    def results_shape(
-        self, sweepers: list[ParallelSweepers], samples: Optional[int] = None
-    ) -> tuple[int, ...]:
-        """Compute the expected shape for collected data."""
-
+    def bins(self, sweepers: list[ParallelSweepers]) -> tuple[int, ...]:
+        assert self.nshots is not None
         shots = (
             (self.nshots,) if self.averaging_mode is AveragingMode.SINGLESHOT else ()
         )
-        sweeps = tuple(
-            min(len(sweep.values) for sweep in parsweeps) for parsweeps in sweepers
-        )
+        sweeps = tuple(iteration_length(parsweep) for parsweep in sweepers)
+        return shots + sweeps
+
+    def results_shape(
+        self, sweepers: list[ParallelSweepers], samples: int = -1
+    ) -> tuple[int, ...]:
+        """Compute the expected shape for collected data."""
         inner = {
             AcquisitionType.DISCRIMINATION: (),
             AcquisitionType.INTEGRATION: (2,),
             AcquisitionType.RAW: (samples, 2),
         }[self.acquisition_type]
-        return shots + sweeps + inner
+        return self.bins(sweepers) + inner
+
+    def estimate_duration(
+        self,
+        sequences: list[PulseSequence],
+        sweepers: list[ParallelSweepers],
+    ) -> float:
+        """Estimate experiment duration."""
+        duration = sum(seq.duration for seq in sequences)
+        relaxation = default(self.relaxation_time, 0)
+        nshots = default(self.nshots, 0)
+        return (
+            (duration + len(sequences) * relaxation)
+            * nshots
+            * nano
+            * prod(iteration_length(s) for s in sweepers)
+        )

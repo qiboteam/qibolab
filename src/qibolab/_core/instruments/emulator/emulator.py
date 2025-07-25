@@ -130,9 +130,7 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        config, configs_ = config.update_from_configs(configs_)
-
-        hamiltonian = config.hamiltonian(self.engine)
+        hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
