@@ -4,10 +4,16 @@ The format is explained in the :ref:`Loading platform parameters from
 JSON <parameters_json>` example.
 """
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from typing import Annotated, Any, Optional, Union
 
-from pydantic import BeforeValidator, Field, PlainSerializer, TypeAdapter
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    TypeAdapter,
+    ValidationError,
+)
 from pydantic_core import core_schema
 
 from .components import (
@@ -23,7 +29,7 @@ from .components import (
     IqMixerConfig,
     OscillatorConfig,
 )
-from .execution_parameters import ConfigUpdate, ExecutionParameters
+from .execution_parameters import ConfigUpdate, ExecutionParameters, Update
 from .identifier import ChannelId, QubitId, QubitPairId
 from .instruments.abstract import Instrument, InstrumentId
 from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
@@ -50,12 +56,16 @@ def update_configs(configs: dict[str, Config], updates: list[ConfigUpdate]):
         updates: list of config updates. Later entries in the list take precedence over earlier entries
                  (if they happen to update the same thing).
     """
+    a = ConfigKinds.adapted()
     for update in updates:
         for name, changes in update.items():
             if name not in configs:
-                raise ValueError(
-                    f"Cannot update configuration for unknown component {name}"
-                )
+                try:
+                    configs[name] = a.validate_python(changes)
+                except ValidationError:
+                    raise ValueError(
+                        f"Cannot update configuration for unknown component {name}"
+                    )
             configs[name] = replace(configs[name], **changes)
 
 
@@ -203,9 +213,6 @@ def _setvalue(d: dict, path: str, val: Any):
     current[steps[-1]] = val
 
 
-Update = dict[str, Any]
-
-
 class Parameters(Model):
     """Serializable parameters."""
 
@@ -226,8 +233,8 @@ class Parameters(Model):
         return self.model_validate(d)
 
 
-QubitMap = dict[QubitId, Qubit]
-InstrumentMap = dict[InstrumentId, Instrument]
+QubitMap = Mapping[QubitId, Qubit]
+InstrumentMap = Mapping[InstrumentId, Instrument]
 
 
 class Hardware(Model):

@@ -75,7 +75,7 @@
         "kind": "flux-emulator",
         "offset": 0
       },
-      "2/flux":{
+      "coupler_2/flux":{
         "kind": "flux-emulator",
         "offset": -0.1
       },
@@ -152,9 +152,7 @@
                   "duration": 10.0,
                   "amplitude": 0.2,
                   "envelope": {
-                    "kind": "gaussian_square",
-                    "rel_sigma": 0.2,
-                    "width": 0.75
+                    "kind": "rectangular"
                   },
                   "relative_phase": 0.0,
                   "kind": "pulse"
@@ -210,9 +208,7 @@
                   "duration": 10.0,
                   "amplitude": 0.2,
                   "envelope": {
-                    "kind": "gaussian_square",
-                    "rel_sigma": 0.2,
-                    "width": 0.75
+                    "kind": "rectangular"
                   },
                   "relative_phase": 0.0,
                   "kind": "pulse"
@@ -229,7 +225,7 @@
           "MZ": null,
           "CP": [
             [
-              "2/flux",
+              "coupler_2/flux",
               {
                 "duration": 40,
                 "amplitude":0,
@@ -259,7 +255,7 @@
                       }
                   ],
                   [
-                    "2/flux",
+                    "coupler_2/flux",
                     {
                         "kind": "pulse",
                         "duration": 40,
