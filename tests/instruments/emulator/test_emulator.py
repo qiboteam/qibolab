@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from qibolab._core.execution_parameters import AcquisitionType, AveragingMode
-from qibolab._core.pulses.pulse import Align
 from qibolab._core.sweeper import Parameter, Sweeper
 
 NSHOTS = 1000
@@ -33,14 +32,6 @@ def test_integration_mode(platform):
 
     assert result[acq_handle].shape == (2,)
     assert pytest.approx(result[acq_handle][1], abs=1e-2) == 0
-
-
-def test_align_fail(platform):
-    q0 = platform.natives.single_qubit[0]
-    seq = q0.RX() | q0.MZ()
-    seq += [(platform.qubits[0].drive, Align())]
-    with pytest.raises(ValueError, match="Align not supported in emulator."):
-        platform.execute([seq])
 
 
 def test_sweepers(platform):

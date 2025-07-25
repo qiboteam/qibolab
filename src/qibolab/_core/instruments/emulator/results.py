@@ -9,7 +9,7 @@ from qibolab._core.execution_parameters import (
     ExecutionParameters,
 )
 from qibolab._core.identifier import ChannelId, QubitId, Result
-from qibolab._core.pulses.pulse import Acquisition, Align, PulseId, Readout
+from qibolab._core.pulses.pulse import Acquisition, PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 
 from .hamiltonians import HamiltonianConfig
@@ -75,8 +75,6 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
         for ev in sequence.channel(ch):
             if isinstance(ev, (Acquisition, Readout)):
                 acq[ev.id] = time
-            if isinstance(ev, Align):
-                raise ValueError("Align not supported in emulator.")
             time += ev.duration
     return acq
 
