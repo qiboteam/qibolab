@@ -62,7 +62,7 @@ class EmulatorController(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
         # convert align to delays
-        sequences = [seq.align_to_delays() for seq in sequences]
+        sequences = (seq.align_to_delays() for seq in sequences)
         # just merge the results of multiple executions in a single dictionary
         return reduce(
             or_,
