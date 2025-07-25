@@ -25,13 +25,12 @@ from qibolab._core.pulses import (
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
+from .engine import Operator, OperatorEvolution, QutipEngine, SimulationEngine
 from .hamiltonians import (
     HamiltonianConfig,
     Modulated,
-    Operator,
     waveform,
 )
-from .operators import TimeDependentOperator, evolve, expand
 from .results import acquisitions, index, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
@@ -40,6 +39,8 @@ __all__ = ["EmulatorController"]
 class EmulatorController(Controller):
     """Emulator controller."""
 
+    engine: SimulationEngine = QutipEngine()
+    """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
 
     def connect(self):
@@ -127,15 +128,14 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = config.hamiltonian(config=configs_)
+        hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        if time_hamiltonian is not None:
-            hamiltonian += time_hamiltonian
-        results = evolve(
-            hamiltonian,
-            config.initial_state,
-            tlist_,
-            config.dissipation,
+        results = self.engine.evolve(
+            hamiltonian=hamiltonian,
+            initial_state=config.initial_state(self.engine),
+            time=tlist_,
+            collapse_operators=config.dissipation(self.engine),
+            time_hamiltonian=time_hamiltonian,
         )
         return select_acquisitions(
             results.states,
@@ -145,14 +145,14 @@ class EmulatorController(Controller):
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> Optional[TimeDependentOperator]:
+    ) -> Optional[OperatorEvolution]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         channels = [
             [operator, channel_time(waveforms)]
-            for operator, waveforms in hamiltonians(sequence, configs)
+            for operator, waveforms in hamiltonians(sequence, configs, self.engine)
         ]
-        return TimeDependentOperator(channels) if len(channels) > 0 else None
+        return OperatorEvolution(channels) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -203,20 +203,22 @@ def hamiltonian(
     config: Config,
     hamiltonian: HamiltonianConfig,
     hilbert_space_index: int,
+    engine: SimulationEngine,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = expand(config.operator(n), hamiltonian.dims, hilbert_space_index)
+    op = engine.expand(
+        config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+    )
     waveforms = (
         waveform(pulse, config, hamiltonian.qubits[hilbert_space_index])
         for pulse in pulses
-        # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
     return (op, [w for w in waveforms if w is not None])
 
 
 def hamiltonians(
-    sequence: PulseSequence, configs: dict[str, Config]
+    sequence: PulseSequence, configs: dict[str, Config], engine: SimulationEngine
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
     return (
@@ -225,6 +227,7 @@ def hamiltonians(
             configs[ch],
             hconfig,
             index(ch, hconfig),
+            engine,
         )
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels

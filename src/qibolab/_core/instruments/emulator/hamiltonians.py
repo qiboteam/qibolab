@@ -4,7 +4,6 @@ from typing import Literal, Optional, Union
 import numpy as np
 from pydantic import Field
 from qibo.config import raise_error
-from qutip import state_number_qobj
 from scipy.constants import giga
 
 from ...components import Config
@@ -12,15 +11,7 @@ from ...identifier import QubitId, QubitPairId, TransitionId
 from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
-from .operators import (
-    Operator,
-    dephasing,
-    expand,
-    relaxation,
-    tensor_product,
-    transmon_create,
-    transmon_destroy,
-)
+from .engine import Operator, SimulationEngine
 
 __all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
 
@@ -38,8 +29,8 @@ class DriveEmulatorConfig(Config):
     """Scaling factor."""
 
     @staticmethod
-    def operator(n: int) -> Operator:
-        return -1j * (transmon_destroy(n) - transmon_create(n))
+    def operator(n: int, engine: SimulationEngine) -> Operator:
+        return -1j * (engine.destroy(n) - engine.create(n))
 
 
 class FluxEmulatorConfig(Config):
@@ -53,8 +44,8 @@ class FluxEmulatorConfig(Config):
     """Convert voltarget to flux."""
 
     @staticmethod
-    def operator(n: int) -> Operator:
-        return transmon_create(n) * transmon_destroy(n)
+    def operator(n: int, engine: SimulationEngine) -> Operator:
+        return engine.create(n) * engine.destroy(n)
 
     @property
     def flux(self) -> float:
@@ -89,19 +80,17 @@ class Qubit(Config):
             + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
         ) ** (1 / 4) + self.anharmonicity
 
-    def operator(self, n: int, flux: float = 0):
+    def operator(self, n: int, engine: SimulationEngine, flux: float = 0):
         """Time independent operator."""
-        quadratic_term = (
-            transmon_create(n) * transmon_destroy(n) * self.omega(flux) / giga
-        )
+        quadratic_term = engine.create(n) * engine.destroy(n) * self.omega(flux) / giga
         quartic_term = (
             self.anharmonicity
             * np.pi
             / giga
-            * transmon_create(n)
-            * transmon_create(n)
-            * transmon_destroy(n)
-            * transmon_destroy(n)
+            * engine.create(n)
+            * engine.create(n)
+            * engine.destroy(n)
+            * engine.destroy(n)
         )
         return quadratic_term + quartic_term
 
@@ -109,15 +98,23 @@ class Qubit(Config):
         """T_phi computed from T1 and T2 per transition."""
         return 1 / (1 / self.t2[transition] - 1 / self.t1[transition] / 2)
 
-    def relaxation(self, n: int):
+    def relaxation(self, n: int, engine: SimulationEngine) -> Operator:
         return sum(
-            np.sqrt(1 / t1) * relaxation(pair[0], pair[1], n)
-            for pair, t1 in self.t1.items()
+            np.sqrt(1 / t1)
+            * engine.basis(state=transition[0], dim=n)
+            * engine.basis(state=transition[1], dim=n).dag()
+            for transition, t1 in self.t1.items()
         )
 
-    def dephasing(self, n: int):
+    def dephasing(self, n: int, engine: SimulationEngine) -> Operator:
         return sum(
-            np.sqrt(1 / self.t_phi(pair) / 2) * dephasing(pair[0], pair[1], n)
+            np.sqrt(1 / self.t_phi(pair) / 2)
+            * (
+                engine.basis(state=pair[0], dim=n)
+                * engine.basis(state=pair[0], dim=n).dag()
+                - engine.basis(state=pair[1], dim=n)
+                * engine.basis(state=pair[1], dim=n).dag()
+            )
             for pair in self.t2
         )
 
@@ -129,19 +126,24 @@ class CapacitiveCoupling(Config):
     """Qubit-qubit coupling."""
 
     @staticmethod
-    def _operator(n: int) -> Operator:
-        op = tensor_product(
-            transmon_destroy(n),
-            transmon_create(n),
-        ) + tensor_product(
-            transmon_create(n),
-            transmon_destroy(n),
+    def _operator(n: int, engine: SimulationEngine) -> Operator:
+        """Time independent operator."""
+        op = engine.tensor(
+            [
+                engine.destroy(n),
+                engine.create(n),
+            ]
+        ) + engine.tensor(
+            [
+                engine.create(n),
+                engine.destroy(n),
+            ]
         )
         return 2 * np.pi * op / giga
 
-    def operator(self, n: int) -> Operator:
+    def operator(self, n: int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
-        return self.coupling * self._operator(n)
+        return self.coupling * self._operator(n, engine)
 
 
 class FluxPulse(Model):
@@ -279,10 +281,9 @@ class HamiltonianConfig(Config):
             _setvalue(d, path, val)
         return self.model_validate(d)
 
-    @property
-    def initial_state(self):
+    def initial_state(self, engine: SimulationEngine) -> Operator:
         """Initial state as ground state of the system."""
-        return state_number_qobj(self.dims, (self.nqubits) * [0])
+        return engine.basis(self.dims, self.nqubits * [0])
 
     def hilbert_space_index(self, qubit: QubitId) -> int:
         """Return Hilbert space index from qubit id."""
@@ -293,12 +294,14 @@ class HamiltonianConfig(Config):
         """Dimensions of the system."""
         return [self.transmon_levels] * len(self.qubits)
 
-    def hamiltonian(self, config: dict) -> Operator:
+    def hamiltonian(self, config: dict, engine: SimulationEngine) -> Operator:
         """Time independent part of Hamiltonian."""
         qubit_terms = sum(
-            expand(
+            engine.expand(
                 qubit.operator(
-                    n=self.transmon_levels, flux=static_flux(qubit=i, config=config)
+                    n=self.transmon_levels,
+                    flux=static_flux(qubit=i, config=config),
+                    engine=engine,
                 ),
                 self.dims,
                 self.hilbert_space_index(i),
@@ -306,8 +309,8 @@ class HamiltonianConfig(Config):
             for i, qubit in self.qubits.items()
         )
         coupling = sum(
-            expand(
-                pair.operator(self.transmon_levels),
+            engine.expand(
+                pair.operator(self.transmon_levels, engine),
                 self.dims,
                 [
                     self.hilbert_space_index(pair_id[0]),
@@ -318,8 +321,7 @@ class HamiltonianConfig(Config):
         )
         return qubit_terms + coupling
 
-    @property
-    def dissipation(self) -> Operator:
+    def dissipation(self, engine: SimulationEngine) -> Operator:
         """Dissipation operators for the hamiltonian.
 
         They are going to be passed to mesolve as collapse operators."""
@@ -327,16 +329,16 @@ class HamiltonianConfig(Config):
         for i, qubit in self.qubits.items():
             if len(qubit.t1) > 0:
                 collapse_operators.append(
-                    expand(
-                        qubit.relaxation(self.transmon_levels),
+                    engine.expand(
+                        qubit.relaxation(self.transmon_levels, engine),
                         self.dims,
                         self.hilbert_space_index(i),
                     )
                 )
             if len(qubit.t2) > 0:
                 collapse_operators.append(
-                    expand(
-                        qubit.dephasing(self.transmon_levels),
+                    engine.expand(
+                        qubit.dephasing(self.transmon_levels, engine),
                         self.dims,
                         self.hilbert_space_index(i),
                     )
