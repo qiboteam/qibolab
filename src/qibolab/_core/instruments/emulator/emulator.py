@@ -32,7 +32,7 @@ from .hamiltonians import (
     waveform,
 )
 from .operators import TimeDependentOperator, evolve, expand
-from .results import acquisitions, results, select_acquisitions
+from .results import acquisitions, index, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
@@ -127,9 +127,7 @@ class EmulatorController(Controller):
         tlist_ = tlist(sequence_, self.sampling_rate)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
-        config = config.update_from_configs(configs_)
-
-        hamiltonian = config.hamiltonian
+        hamiltonian = config.hamiltonian(config=configs_)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         if time_hamiltonian is not None:
             hamiltonian += time_hamiltonian
@@ -204,12 +202,12 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    qubit: int,
+    hilbert_space_index: int,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = expand(config.operator(n), hamiltonian.dims, qubit)
+    op = expand(config.operator(n), hamiltonian.dims, hilbert_space_index)
     waveforms = (
-        waveform(pulse, config, hamiltonian.single_qubit[qubit])
+        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index])
         for pulse in pulses
         # only handle pulses (thus no readout)
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
@@ -221,9 +219,13 @@ def hamiltonians(
     sequence: PulseSequence, configs: dict[str, Config]
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    # TODO: pass qubit in a better way
     return (
-        hamiltonian(sequence.channel(ch), configs[ch], hconfig, int(ch[0]))
+        hamiltonian(
+            sequence.channel(ch),
+            configs[ch],
+            hconfig,
+            index(ch, hconfig),
+        )
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig)

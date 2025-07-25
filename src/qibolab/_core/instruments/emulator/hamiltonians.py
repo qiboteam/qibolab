@@ -4,6 +4,7 @@ from typing import Literal, Optional, Union
 import numpy as np
 from pydantic import Field
 from qibo.config import raise_error
+from qutip import state_number_qobj
 from scipy.constants import giga
 
 from ...components import Config
@@ -16,7 +17,6 @@ from .operators import (
     dephasing,
     expand,
     relaxation,
-    state,
     tensor_product,
     transmon_create,
     transmon_destroy,
@@ -56,14 +56,17 @@ class FluxEmulatorConfig(Config):
     def operator(n: int) -> Operator:
         return transmon_create(n) * transmon_destroy(n)
 
+    @property
+    def flux(self) -> float:
+        """Returns flux."""
+        return self.offset * self.voltage_to_flux
+
 
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
-    dynamical_frequency: float = 0
-    """Frequency to be used during evolution (could be different from frequency due to static offset.)"""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
     sweetspot: float = 0
@@ -75,10 +78,9 @@ class Qubit(Config):
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
 
-    @property
-    def omega(self) -> float:
+    def omega(self, flux: float = 0) -> float:
         """Angular velocity."""
-        return 2 * np.pi * self.dynamical_frequency
+        return 2 * np.pi * self.detuned_frequency(flux)
 
     def detuned_frequency(self, flux: float) -> float:
         """Return frequency of the qubit modified by the flux."""
@@ -87,9 +89,11 @@ class Qubit(Config):
             + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
         ) ** (1 / 4) + self.anharmonicity
 
-    def operator(self, n: int):
+    def operator(self, n: int, flux: float = 0):
         """Time independent operator."""
-        quadratic_term = transmon_create(n) * transmon_destroy(n) * self.omega / giga
+        quadratic_term = (
+            transmon_create(n) * transmon_destroy(n) * self.omega(flux) / giga
+        )
         quartic_term = (
             self.anharmonicity
             * np.pi
@@ -117,19 +121,15 @@ class Qubit(Config):
             for pair in self.t2
         )
 
-    def dissipation(self, n: int):
-        """Decoherence operator."""
-        return self.relaxation(n) + self.dephasing(n)
 
-
-class QubitPair(Config):
+class CapacitiveCoupling(Config):
     """Hamiltonian parameters for qubit pair."""
 
     coupling: float
     """Qubit-qubit coupling."""
 
-    def operator(self, n: int) -> Operator:
-        """Time independent operator."""
+    @staticmethod
+    def _operator(n: int) -> Operator:
         op = tensor_product(
             transmon_destroy(n),
             transmon_create(n),
@@ -137,7 +137,11 @@ class QubitPair(Config):
             transmon_create(n),
             transmon_destroy(n),
         )
-        return 2 * np.pi * self.coupling / giga * op
+        return 2 * np.pi * op / giga
+
+    def operator(self, n: int) -> Operator:
+        """Time independent operator."""
+        return self.coupling * self._operator(n)
 
 
 class FluxPulse(Model):
@@ -179,9 +183,7 @@ class FluxPulse(Model):
                 self.qubit.detuned_frequency(
                     self.config.voltage_to_flux * (i[sample] + self.config.offset)
                 )
-                - self.qubit.detuned_frequency(
-                    self.config.voltage_to_flux * self.config.offset
-                )
+                - self.qubit.detuned_frequency(self.config.flux)
             )
             / giga
         )
@@ -262,78 +264,95 @@ class HamiltonianConfig(Config):
 
     kind: Literal["hamiltonian"] = "hamiltonian"
     transmon_levels: int = 2
-    single_qubit: dict[QubitId, Qubit] = Field(default_factory=dict)
-    pairs: dict[QubitPairId, QubitPair] = Field(default_factory=dict)
+    qubits: dict[QubitId, Qubit] = Field(default_factory=dict)
+    pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
+
+    @property
+    def nqubits(self):
+        """Number of qubits."""
+        return len(self.qubits)
 
     def replace(self, update: Update) -> "HamiltonianConfig":
         """Update parameters' values."""
         d = self.model_dump()
         for path, val in update.items():
             _setvalue(d, path, val)
-
         return self.model_validate(d)
-
-    def update_from_configs(self, config: dict[str, Config]) -> "HamiltonianConfig":
-        """Update hamiltonian parameters from configs."""
-
-        config_update = {}
-        for qubit in self.single_qubit:
-            # setting static bias
-            flux = config.get(f"{qubit}/flux")
-            config_update.update(
-                {
-                    f"single_qubit.{qubit}.dynamical_frequency": self.single_qubit[
-                        qubit
-                    ].detuned_frequency(
-                        flux.offset * flux.voltage_to_flux if flux is not None else 0
-                    )
-                }
-            )
-        return self.replace(update=config_update)
 
     @property
     def initial_state(self):
         """Initial state as ground state of the system."""
-        return tensor_product(
-            state(0, self.transmon_levels) for i in range(self.nqubits)
-        )
+        return state_number_qobj(self.dims, (self.nqubits) * [0])
 
-    @property
-    def qubits(self):
-        return list(self.single_qubit)
-
-    @property
-    def nqubits(self):
-        return len(self.single_qubit)
+    def hilbert_space_index(self, qubit: QubitId) -> int:
+        """Return Hilbert space index from qubit id."""
+        return list(self.qubits).index(qubit)
 
     @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
-        return [self.transmon_levels] * self.nqubits
+        return [self.transmon_levels] * len(self.qubits)
 
-    @property
-    def hamiltonian(self) -> Operator:
+    def hamiltonian(self, config: dict) -> Operator:
         """Time independent part of Hamiltonian."""
-        single_qubit_terms = sum(
-            expand(qubit.operator(self.transmon_levels), self.dims, i)
-            for i, qubit in self.single_qubit.items()
+        qubit_terms = sum(
+            expand(
+                qubit.operator(
+                    n=self.transmon_levels, flux=static_flux(qubit=i, config=config)
+                ),
+                self.dims,
+                self.hilbert_space_index(i),
+            )
+            for i, qubit in self.qubits.items()
         )
-        two_qubit_terms = sum(
-            expand(pair.operator(self.transmon_levels), self.dims, list(pair_id))
-            for pair_id, pair in self.pairs.items()
+        coupling = sum(
+            expand(
+                pair.operator(self.transmon_levels),
+                self.dims,
+                [
+                    self.hilbert_space_index(pair_id[0]),
+                    self.hilbert_space_index(pair_id[1]),
+                ],
+            )
+            for (pair_id, pair) in self.pairs.items()
         )
-        return single_qubit_terms + two_qubit_terms
+        return qubit_terms + coupling
 
     @property
     def dissipation(self) -> Operator:
         """Dissipation operators for the hamiltonian.
 
         They are going to be passed to mesolve as collapse operators."""
-        return sum(
-            expand(qubit.dissipation(self.transmon_levels), self.dims, i)
-            for i, qubit in self.single_qubit.items()
-            if not isinstance(qubit, list)
-        )
+        collapse_operators = []
+        for i, qubit in self.qubits.items():
+            if len(qubit.t1) > 0:
+                collapse_operators.append(
+                    expand(
+                        qubit.relaxation(self.transmon_levels),
+                        self.dims,
+                        self.hilbert_space_index(i),
+                    )
+                )
+            if len(qubit.t2) > 0:
+                collapse_operators.append(
+                    expand(
+                        qubit.dephasing(self.transmon_levels),
+                        self.dims,
+                        self.hilbert_space_index(i),
+                    )
+                )
+        return collapse_operators
+
+
+def static_flux(qubit: QubitId, config: dict) -> float:
+    """Get static flux for qubit given config (offset)."""
+    qubit_config = config.get(f"{qubit}/flux")
+    if qubit_config is not None:
+        return qubit_config.flux
+    coupler_config = config.get(f"coupler_{qubit}/flux")
+    if coupler_config is not None:
+        return coupler_config.flux
+    return 0
 
 
 def waveform(
