@@ -93,5 +93,4 @@ class Spi(Instrument):
         """
         for channel_name, config in configs.items():
             module, dac = channel_to_dac(self.channels[channel_name])
-            if module in self.modules:
-                self.modules[module].set_current(dac, config.offset)
+            self.modules[module].set_current(dac, config.offset)
