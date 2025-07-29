@@ -65,6 +65,7 @@ class SimulationEngine(Model, ABC):
         initial_state: Operator,
         time: list[float],
         collapse_operators: list[Operator] = None,
+        **kwargs,
     ) -> EvolutionResult:
         """Evolve the system."""
 

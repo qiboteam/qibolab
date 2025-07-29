@@ -24,11 +24,14 @@ class QutipEngine(SimulationEngine):
         time: list[float],
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
+        **kwargs,
     ):
         """Evolve the system."""
         if time_hamiltonian is not None:
             hamiltonian += self.engine.QobjEvo(time_hamiltonian.operators)
-        return self.engine.mesolve(hamiltonian, initial_state, time, collapse_operators)
+        return self.engine.mesolve(
+            hamiltonian, initial_state, time, collapse_operators, **kwargs
+        )
 
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
