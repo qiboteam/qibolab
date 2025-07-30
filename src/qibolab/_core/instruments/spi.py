@@ -35,9 +35,13 @@ class S4g(Model):
     currents: dict[int, float] = Field(default_factory=dict)
     """Currents cache on software (maintained even when we are not connected to the actual device)."""
 
-    def connect(self, spi: SPI_rack, number: int, reset_currents: bool = False):
+    def connect(
+        self, spi: SPI_rack, number: int, max_current: float, reset_currents: bool
+    ):
         if self.module is None:
-            self.module = S4g_module(spi, number, reset_currents=reset_currents)
+            self.module = S4g_module(
+                spi, number, max_current=max_current, reset_currents=reset_currents
+            )
         self.upload()
 
     def upload(self):
@@ -64,6 +68,8 @@ class Spi(Instrument):
     close_currents: bool = False
     baud: int = 9600
     timeout: int = 1
+    max_current: float = 0.02
+    reset_currents: bool = False
 
     @cached_property
     def modules(self) -> dict[int, S4g_module]:
@@ -75,7 +81,7 @@ class Spi(Instrument):
         spi = SPI_rack(port=self.address, baud=self.baud, timeout=self.timeout)
         spi.unlock()
         for nr, module in self.modules.items():
-            module.connect(spi, nr)
+            module.connect(spi, nr, self.max_current, self.reset_currents)
 
     def disconnect(self):
         if self.close_currents:
