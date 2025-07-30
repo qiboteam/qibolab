@@ -12,7 +12,6 @@ from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, QubitId, QubitPairId, Result
 from ..instruments.abstract import Controller
 from ..parameters import (
-    ComponentId,
     InstrumentMap,
     NativeGates,
     Parameters,
@@ -44,13 +43,6 @@ def _unique_acquisitions(sequences: list[PulseSequence]) -> bool:
         ids += (p.id for _, p in seq.acquisitions)
 
     return len(ids) == len(set(ids))
-
-
-def _filter_configs(
-    channels: dict[ChannelId, Channel], configs: dict[ComponentId, Config]
-) -> dict[ComponentId, Config]:
-    """Filter configs corresponding to a particular set of channels."""
-    return {ch: configs[ch] for ch in channels.keys() & configs.keys()}
 
 
 @dataclass
@@ -205,12 +197,7 @@ class Platform:
 
         for instrument in self.instruments.values():
             if isinstance(instrument, Controller):
-                new_result = instrument.play(
-                    _filter_configs(instrument.channels, configs),
-                    sequences,
-                    options,
-                    sweepers,
-                )
+                new_result = instrument.play(configs, sequences, options, sweepers)
                 if isinstance(new_result, dict):
                     result.update(new_result)
 
@@ -272,7 +259,9 @@ class Platform:
                 if name in configs:
                     instrument.setup(**configs[name].model_dump(exclude={"kind"}))
                 if hasattr(instrument, "channels"):
-                    instrument.setup(_filter_configs(instrument.channels, configs))
+                    instrument.setup(
+                        {ch: configs[ch] for ch in instrument.channels if ch in configs}
+                    )
 
         results = {}
         # pylint: disable=unsubscriptable-object
