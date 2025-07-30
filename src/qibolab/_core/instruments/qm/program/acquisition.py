@@ -12,6 +12,7 @@ from qibolab._core.execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
+from qibolab._core.identifier import ChannelId
 
 
 def _collect(i, q, npulses):
@@ -281,4 +282,4 @@ def create_acquisition(
     return acquisition
 
 
-Acquisitions = dict[tuple[str, str], Acquisition]
+Acquisitions = dict[tuple[str, ChannelId], Acquisition]

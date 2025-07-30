@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from pydantic import Field
-from qm import QuantumMachine, QuantumMachinesManager, generate_qua_script
+from qm import QmPendingJob, QuantumMachine, QuantumMachinesManager, generate_qua_script
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 
@@ -31,7 +31,7 @@ from qibolab._core.unrolling import unroll_sequences
 
 from .components import MwFemOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
 from .config import Configuration, ControllerId, ModuleTypes
-from .program import ExecutionArguments, create_acquisition, program
+from .program import Acquisitions, ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
 CALIBRATION_DB = "calibration_db.json"
@@ -126,10 +126,19 @@ def find_sweepers(
     return [s for ps in sweepers for s in ps if s.parameter is parameter]
 
 
-class Cache(Model):
+class Experiment(Model):
     configs: dict[str, Config]
     sequences: list[PulseSequence]
     sweepers: list[ParallelSweepers]
+
+
+class Cache(Model):
+    machine: QuantumMachine
+    program_id: str
+    acquisitions: Acquisitions
+
+    def run(self) -> QmPendingJob:
+        return self.machine.queue.add_compiled(self.program_id)
 
 
 class QmController(Controller):
@@ -197,9 +206,8 @@ class QmController(Controller):
 
     config: Configuration = Field(default_factory=Configuration)
     """Configuration dictionary required for pulse execution on the OPXs."""
+    experiment: Optional[Experiment] = None
     cache: Optional[Cache] = None
-    machine: Optional[QuantumMachine] = None
-    program_id: Optional[str] = None
 
     simulation_duration: Optional[int] = None
     """Duration for the simulation in ns.
@@ -465,7 +473,7 @@ class QmController(Controller):
         configs: dict[str, Config],
         sequence: PulseSequence,
         options: ExecutionParameters,
-    ):
+    ) -> Acquisitions:
         """Add all measurements of a given sequence in the QM ``config``.
 
         Returns:
@@ -547,8 +555,12 @@ class QmController(Controller):
         if len(sequence) == 0:
             return {}
 
-        new_cache = Cache(configs, sequences, sweepers)
-        if new_cache != self.cache or self.manager is None:
+        new_experiment = Experiment(
+            configs={ch: configs[ch] for ch in configs.keys() & self.channels.keys()},
+            sequences=sequences,
+            sweepers=sweepers,
+        )
+        if new_experiment != self.experiment or self.manager is None:
             # register DC elements so that all qubits are
             # sweetspot even when they are not used
             for id, channel in self.channels.items():
@@ -561,10 +573,10 @@ class QmController(Controller):
 
             args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
             self.preprocess_sweeps(sweepers, configs, args, probe_map)
-            experiment = program(args, options, sweepers)
+            qua_program = program(args, options, sweepers)
 
             if self.script_file_name is not None:
-                script = generate_qua_script(experiment, asdict(self.config))
+                script = generate_qua_script(qua_program, asdict(self.config))
                 with open(self.script_file_name, "w") as file:
                     file.write(script)
 
@@ -572,14 +584,18 @@ class QmController(Controller):
                 warnings.warn(
                     "Not connected to Quantum Machines. Returning program and config."
                 )
-                return {"program": experiment, "config": asdict(self.config)}
+                return {"program": qua_program, "config": asdict(self.config)}
 
-            self.machine = self.manager.open_qm(asdict(self.config))
-            self.program_id = self.machine.compile(experiment)
-            self.cache = new_cache
+            print("Compiling program...")
+            machine = self.manager.open_qm(asdict(self.config))
+            program_id = machine.compile(qua_program)
+            self.cache = Cache(
+                machine=machine, program_id=program_id, acquisitions=acquisitions
+            )
+            self.experiment = new_experiment
 
-        pending_job = self.machine.queue.add_compiled(self.program_id)
+        pending_job = self.cache.run()
         job = pending_job.wait_for_execution()
         handles = job.result_handles
         handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
-        return fetch_results(handles, acquisitions.values())
+        return fetch_results(handles, self.cache.acquisitions.values())
