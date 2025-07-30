@@ -586,7 +586,6 @@ class QmController(Controller):
                 )
                 return {"program": qua_program, "config": asdict(self.config)}
 
-            print("Compiling program...")
             machine = self.manager.open_qm(asdict(self.config))
             program_id = machine.compile(qua_program)
             self.cache = Cache(
