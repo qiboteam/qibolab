@@ -1,6 +1,7 @@
+from functools import cached_property
 from typing import Optional
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from spirack import S4g_module, SPI_rack
 
 from ..components import DcChannel, DcConfig
@@ -27,6 +28,8 @@ class S4g(Model):
 
     Uses https://qtwork.tudelft.nl/~mtiggelman/modules/i-source/s4g.html
     """
+
+    model_config = ConfigDict(frozen=False)
 
     module: Optional[S4g_module] = None
     currents: dict[int, float] = Field(default_factory=dict)
@@ -61,12 +64,11 @@ class Spi(Instrument):
     close_currents: bool = False
     baud: int = 9600
     timeout: int = 1
-    modules: dict[int, S4g_module] = Field(default_factory=dict)
 
-    def __post_init__(self):
-        self.modules = {
-            i: S4g() for i in {channel_to_dac(ch)[0] for ch in self.channels.values()}
-        }
+    @cached_property
+    def modules(self) -> dict[int, S4g_module]:
+        unique_modules = {channel_to_dac(ch)[0] for ch in self.channels.values()}
+        return {m: S4g() for m in unique_modules}
 
     def connect(self):
         """Connect to the instrument."""
