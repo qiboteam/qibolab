@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import cached_property
 from typing import Optional
 
@@ -36,12 +37,19 @@ class S4g(Model):
     """Currents cache on software (maintained even when we are not connected to the actual device)."""
 
     def connect(
-        self, spi: SPI_rack, number: int, max_current: float, reset_currents: bool
+        self,
+        spi: SPI_rack,
+        number: int,
+        dacs: list[int],
+        max_current: float,
+        reset_currents: bool,
     ):
         if self.module is None:
             self.module = S4g_module(
                 spi, number, max_current=max_current, reset_currents=reset_currents
             )
+            for dac in dacs:
+                self.module.change_span_update(dac, self.module.range_min_bi)
         self.upload()
 
     def upload(self):
@@ -68,26 +76,40 @@ class Spi(Instrument):
     close_currents: bool = False
     baud: int = 9600
     timeout: int = 1
-    max_current: float = 0.02
+    max_current: float = 0.05
     reset_currents: bool = False
 
     @cached_property
     def modules(self) -> dict[int, S4g_module]:
-        unique_modules = {channel_to_dac(ch)[0] for ch in self.channels.values()}
-        return {m: S4g() for m in unique_modules}
+        return {m: S4g() for m in self.modules_to_dacs}
+
+    @cached_property
+    def modules_to_dacs(self) -> dict[int, list[int]]:
+        dacs = defaultdict(list)
+        for channel in self.channels.values():
+            module, dac = channel_to_dac(channel)
+            dacs[module].append(dac)
+        return dacs
 
     def connect(self):
         """Connect to the instrument."""
-        spi = SPI_rack(port=self.address, baud=self.baud, timeout=self.timeout)
-        spi.unlock()
-        for nr, module in self.modules.items():
-            module.connect(spi, nr, self.max_current, self.reset_currents)
+        self.spi = SPI_rack(port=self.address, baud=self.baud, timeout=self.timeout)
+        self.spi.unlock()
+        for n, module in self.modules.items():
+            module.connect(
+                self.spi,
+                n,
+                self.modules_to_dacs[n],
+                self.max_current,
+                self.reset_currents,
+            )
 
     def disconnect(self):
         if self.close_currents:
             for module in self.modules.values():
                 for dac in module.currents:
                     module.set_current(dac, 0)
+        self.spi.close()
 
     def channel_module(self, channel_name: ChannelId) -> Optional[S4g_module]:
         """Get ``spirack.S4g_module`` used on a particular channel."""
