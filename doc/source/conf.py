@@ -49,7 +49,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "sphinx_toolbox",
+    "sphinx_design",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

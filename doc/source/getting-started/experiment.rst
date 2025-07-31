@@ -50,7 +50,7 @@ and an input acquisition channel.
 And the we can define the following parameters (the exact content is not yet relevant,
 and it will be explained in the :ref:`related section <main_doc_parameters>`).
 
-.. collapse:: Parameters dictionary
+.. dropdown:: Parameters dictionary
 
     .. testcode:: python
 
