@@ -1,3 +1,10 @@
+.. admonition:: Work in progress
+
+    This page is only partially updated from a previous version of Qibolab.
+
+    In case of doubts, contact the `Qibo developers
+    <https://github.com/qiboteam/qibo#contacts>`_.
+
 .. _tutorial_platform:
 
 How to connect Qibolab to your lab?
@@ -73,7 +80,7 @@ Qibolab provides some utility functions, accessible through
 file with a specific format.
 Here is an example
 
-.. collapse:: Parameters
+.. dropdown:: Parameters
 
   .. code-block::  json
 

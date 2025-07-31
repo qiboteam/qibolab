@@ -1,3 +1,10 @@
+.. admonition:: Work in progress
+
+    This page is only partially updated from a previous version of Qibolab.
+
+    In case of doubts, contact the `Qibo developers
+    <https://github.com/qiboteam/qibo#contacts>`_.
+
 How to emulate a QPU using Qibolab?
 ===================================
 
@@ -14,7 +21,7 @@ platform. All parameters related to the Hamiltonian to be simulated are coded di
 the section ``configs``. Here is an example
 
 
-.. collapse:: Parameters dictionary
+.. dropdown:: Parameters dictionary
 
     .. testcode::  python
 
