@@ -34,13 +34,7 @@ github_repository = "qibolab"
 # https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
 # master_doc = "index"
 
-autodoc_mock_imports = [
-    "icarusq_rfsoc_driver",
-    "keysight",
-    "qm",
-    "qualang_tools",
-    "qibosoq",
-]
+autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight", "qm", "qibosoq"]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
