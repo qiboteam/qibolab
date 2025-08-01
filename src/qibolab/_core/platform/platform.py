@@ -1,5 +1,6 @@
 """A platform for executing quantum algorithms."""
 
+import signal
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Optional
@@ -75,6 +76,8 @@ class Platform:
 
     def __post_init__(self):
         log.info("Loading platform %s", self.name)
+        signal.signal(signal.SIGTERM, self.termination_handler)
+        signal.signal(signal.SIGINT, self.termination_handler)
         if self.resonator_type is None:
             self.resonator_type = "3D" if self.nqubits == 1 else "2D"
 
@@ -167,6 +170,12 @@ class Platform:
             for instrument in self.instruments.values():
                 instrument.disconnect()
         self.is_connected = False
+
+    def termination_handler(self, signum, frame):
+        self.disconnect()
+        raise RuntimeError(
+            f"Platform {self.name} disconnected because job was cancelled. Signal type: {signum}."
+        )
 
     @property
     def _controller(self):
