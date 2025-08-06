@@ -18,12 +18,6 @@ from sphinx.ext import apidoc
 
 import qibolab
 
-# TODO: the following is a workaround for Sphinx doctest, cf.
-# - https://github.com/qiboteam/qibolab/commit/e04a6ab
-# - https://github.com/pydantic/pydantic/discussions/7763
-import qibolab._core.instruments.dummy
-import qibolab._core.instruments.oscillator
-
 # -- Project information -----------------------------------------------------
 
 project = "qibolab"
@@ -40,15 +34,7 @@ github_repository = "qibolab"
 # https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
 # master_doc = "index"
 
-autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight"]
-try:
-    import qibolab.instruments.qm
-except ModuleNotFoundError:
-    autodoc_mock_imports.extend(["qm", "qualang_tools"])
-try:
-    import qibolab.instruments.rfsoc
-except ModuleNotFoundError:
-    autodoc_mock_imports.extend(["qibosoq"])
+autodoc_mock_imports = ["icarusq_rfsoc_driver", "keysight", "qm", "qibosoq"]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -63,7 +49,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "sphinx_toolbox",
+    "sphinx_design",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

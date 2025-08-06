@@ -1,9 +1,17 @@
+.. admonition:: Work in progress
+
+    This page is only partially updated from a previous version of Qibolab.
+
+    In case of doubts, contact the `Qibo developers
+    <https://github.com/qiboteam/qibo#contacts>`_.
+
 How to add a new instrument in Qibolab?
 =======================================
 
 Currently, Qibolab supports various **controller** instruments:
 
 * Quantum Machines
+* Qblox
 
 and the following **local oscillators**:
 
@@ -131,3 +139,20 @@ Let's see a minimal example:
             # also the results are, in qibolab, specific objects that need some kind
             # of conversion. Refer to the results section in the documentation.
             return results
+
+
+Dummy platform
+^^^^^^^^^^^^^^
+
+In addition to the real instruments presented above, Qibolab provides the :class:`qibolab.instruments.DummyInstrument`.
+This instrument represents a controller that returns random numbers of the proper shape when executing any pulse sequence.
+This instrument is also part of the dummy platform which is defined in :py:mod:`qibolab._core.dummy` and can be initialized as
+
+.. testcode::  python
+
+    from qibolab import create_platform
+
+    platform = create_platform("dummy")
+
+This platform is equivalent to real platforms in terms of attributes and functions, but returns just random numbers.
+It is useful for testing parts of the code that do not necessarily require access to an actual quantum hardware platform.
