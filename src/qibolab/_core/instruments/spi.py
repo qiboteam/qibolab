@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import cached_property
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import ConfigDict, Field
 from spirack import S4g_module, SPI_rack
@@ -42,6 +42,7 @@ class S4g(Model):
         number: int,
         dacs: list[int],
         max_current: float,
+        span: Literal[0, 2, 4],
         reset_currents: bool,
     ):
         if self.module is None:
@@ -49,7 +50,7 @@ class S4g(Model):
                 spi, number, max_current=max_current, reset_currents=reset_currents
             )
             for dac in dacs:
-                self.module.change_span_update(dac, self.module.range_min_bi)
+                self.module.change_span_update(dac, span)
         self.upload()
 
     def upload(self):
@@ -78,6 +79,15 @@ class Spi(Instrument):
     timeout: int = 1
     max_current: float = 0.05
     reset_currents: bool = False
+    span: Literal[0, 2, 4] = 4
+    """Choose among the following ranges:
+
+    0: 0 to 50mA: range_max_uni
+    2: -50 to 50 mA: range_max_bi
+    4: -25 to 25 mA: range_min_bi
+
+    Smaller range gives higher step resolution.
+    """
 
     @cached_property
     def modules(self) -> dict[int, S4g_module]:
@@ -101,6 +111,7 @@ class Spi(Instrument):
                 n,
                 self.modules_to_dacs[n],
                 self.max_current,
+                self.span,
                 self.reset_currents,
             )
 
