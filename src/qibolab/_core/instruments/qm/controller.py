@@ -9,6 +9,7 @@ from typing import Optional, Union
 
 from pydantic import Field
 from qm import QmPendingJob, QuantumMachine, QuantumMachinesManager, generate_qua_script
+from qm.api.v2.qm_api_old import QmApiWithDeprecations
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 
@@ -133,7 +134,7 @@ class Experiment(Model):
 
 
 class Cache(Model):
-    machine: QuantumMachine
+    machine: Union[QuantumMachine, QmApiWithDeprecations]
     program_id: str
     acquisitions: Acquisitions
 
