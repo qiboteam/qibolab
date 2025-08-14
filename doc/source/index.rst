@@ -58,6 +58,7 @@ Contents
     main-documentation/experiment
     main-documentation/drivers
     main-documentation/compiler
+    main-documentation/circuits
 
 .. toctree::
     :maxdepth: 2
