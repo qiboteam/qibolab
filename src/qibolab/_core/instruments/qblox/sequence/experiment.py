@@ -74,6 +74,7 @@ def play(
 
     if isinstance(pulse, Pulse):
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
         duration_sweep = {
             p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
         }
@@ -84,7 +85,7 @@ def play(
                 if len(duration_sweep) == 0
                 else play_duration_swept(duration_sweep)
             )
-            + ([SetPhDelta(value=-phase)] if phase != 0 else [])
+            + ([SetPhDelta(value=minus_phase)] if phase != 0 else [])
         )
     if isinstance(pulse, Delay):
         return [
