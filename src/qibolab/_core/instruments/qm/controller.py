@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Optional, Union
 
 from pydantic import Field
-from qm import QuantumMachinesManager, generate_qua_script
+from qm import QmPendingJob, QuantumMachine, QuantumMachinesManager, generate_qua_script
+from qm.api.v2.qm_api_old import QmApiWithDeprecations
 from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 
@@ -25,12 +26,13 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Align, Delay, Pulse, Readout
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
 from qibolab._core.unrolling import unroll_sequences
 
 from .components import MwFemOscillatorConfig, OpxOutputConfig, QmAcquisitionConfig
 from .config import Configuration, ControllerId, ModuleTypes
-from .program import ExecutionArguments, create_acquisition, program
+from .program import Acquisitions, ExecutionArguments, create_acquisition, program
 from .program.sweepers import find_lo_frequencies, sweeper_amplitude
 
 CALIBRATION_DB = "calibration_db.json"
@@ -92,7 +94,7 @@ def declare_octaves(octaves, host, calibration_path=None):
     return config
 
 
-def fetch_results(result, acquisitions):
+def fetch_results(handles, acquisitions):
     """Fetches results from an executed experiment.
 
     Args:
@@ -102,8 +104,6 @@ def fetch_results(result, acquisitions):
     Returns:
         Dictionary with the results in the format required by the platform.
     """
-    handles = result.result_handles
-    handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
     results = defaultdict(list)
     for acquisition in acquisitions:
         data = acquisition.fetch(handles)
@@ -125,6 +125,21 @@ def find_sweepers(
     in the QM ``config``.
     """
     return [s for ps in sweepers for s in ps if s.parameter is parameter]
+
+
+class Experiment(Model):
+    configs: dict[str, Config]
+    sequences: list[PulseSequence]
+    sweepers: list[ParallelSweepers]
+
+
+class Cache(Model):
+    machine: Union[QuantumMachine, QmApiWithDeprecations]
+    program_id: str
+    acquisitions: Acquisitions
+
+    def run(self) -> QmPendingJob:
+        return self.machine.queue.add_compiled(self.program_id)
 
 
 class QmController(Controller):
@@ -192,6 +207,8 @@ class QmController(Controller):
 
     config: Configuration = Field(default_factory=Configuration)
     """Configuration dictionary required for pulse execution on the OPXs."""
+    experiment: Optional[Experiment] = None
+    cache: Optional[Cache] = None
 
     simulation_duration: Optional[int] = None
     """Duration for the simulation in ns.
@@ -457,7 +474,7 @@ class QmController(Controller):
         configs: dict[str, Config],
         sequence: PulseSequence,
         options: ExecutionParameters,
-    ):
+    ) -> Acquisitions:
         """Add all measurements of a given sequence in the QM ``config``.
 
         Returns:
@@ -523,11 +540,6 @@ class QmController(Controller):
         for sweeper in find_sweepers(sweepers, Parameter.duration_interpolated):
             self.register_duration_sweeper_pulses(args, configs, sweeper)
 
-    def execute_program(self, program):
-        """Executes an arbitrary program written in QUA language."""
-        machine = self.manager.open_qm(asdict(self.config))
-        return machine.execute(program)
-
     def play(
         self,
         configs: dict[str, Config],
@@ -545,30 +557,46 @@ class QmController(Controller):
         if len(sequence) == 0:
             return {}
 
-        # register DC elements so that all qubits are
-        # sweetspot even when they are not used
-        for id, channel in self.channels.items():
-            if isinstance(channel, DcChannel):
-                self.configure_channel(id, configs)
+        new_experiment = Experiment(
+            configs={ch: configs[ch] for ch in configs.keys() & self.channels.keys()},
+            sequences=sequences,
+            sweepers=sweepers,
+        )
+        if new_experiment != self.experiment or self.manager is None:
+            # register DC elements so that all qubits are
+            # sweetspot even when they are not used
+            for id, channel in self.channels.items():
+                if isinstance(channel, DcChannel):
+                    self.configure_channel(id, configs)
 
-        probe_map = self.configure_channels(configs, sequence.channels)
-        self.register_pulses(configs, sequence)
-        acquisitions = self.register_acquisitions(configs, sequence, options)
+            probe_map = self.configure_channels(configs, sequence.channels)
+            self.register_pulses(configs, sequence)
+            acquisitions = self.register_acquisitions(configs, sequence, options)
 
-        args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
-        self.preprocess_sweeps(sweepers, configs, args, probe_map)
-        experiment = program(args, options, sweepers)
+            args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
+            self.preprocess_sweeps(sweepers, configs, args, probe_map)
+            qua_program = program(args, options, sweepers)
 
-        if self.script_file_name is not None:
-            script = generate_qua_script(experiment, asdict(self.config))
-            with open(self.script_file_name, "w") as file:
-                file.write(script)
+            if self.script_file_name is not None:
+                script = generate_qua_script(qua_program, asdict(self.config))
+                with open(self.script_file_name, "w") as file:
+                    file.write(script)
 
-        if self.manager is None:
-            warnings.warn(
-                "Not connected to Quantum Machines. Returning program and config."
+            if self.manager is None:
+                warnings.warn(
+                    "Not connected to Quantum Machines. Returning program and config."
+                )
+                return {"program": qua_program, "config": asdict(self.config)}
+
+            machine = self.manager.open_qm(asdict(self.config))
+            program_id = machine.compile(qua_program)
+            self.cache = Cache(
+                machine=machine, program_id=program_id, acquisitions=acquisitions
             )
-            return {"program": experiment, "config": asdict(self.config)}
+            self.experiment = new_experiment
 
-        result = self.execute_program(experiment)
-        return fetch_results(result, acquisitions.values())
+        pending_job = self.cache.run()
+        job = pending_job.wait_for_execution()
+        handles = job.result_handles
+        handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
+        return fetch_results(handles, self.cache.acquisitions.values())
