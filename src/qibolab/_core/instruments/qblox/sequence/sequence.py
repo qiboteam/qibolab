@@ -60,6 +60,18 @@ def _subtract_lo(sweepers: list[ParallelSweepers], lo: float) -> list[ParallelSw
     ]
 
 
+def _subtract_offset(
+    sweepers: list[ParallelSweepers], offset: float
+) -> list[ParallelSweepers]:
+    return [
+        [
+            (sweep - offset) if sweep.parameter is Parameter.offset else sweep
+            for sweep in parsweep
+        ]
+        for parsweep in sweepers
+    ]
+
+
 class Q1Sequence(Model):
     waveforms: Waveforms
     weights: Weights
@@ -78,6 +90,7 @@ class Q1Sequence(Model):
         options: ExecutionParameters,
         sampling_rate: float,
         channel: set[ChannelId],
+        offset: Optional[float],
         lo: Optional[float],
         time_of_flight: Optional[float],
         duration: float,
@@ -100,6 +113,9 @@ class Q1Sequence(Model):
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
         sweepers = _subtract_lo(sweepers, lo) if lo is not None else sweepers
+        sweepers = (
+            _subtract_offset(sweepers, offset) if offset is not None else sweepers
+        )
         acquisitions_ = acquisitions(
             sequence, np.prod(options.bins(sweepers), dtype=int)
         )
@@ -165,20 +181,28 @@ def compile(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
+    offsets: dict[ChannelId, float],
     los: dict[ChannelId, OscillatorConfig],
     time_of_flights: dict[ChannelId, float],
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
+    sweeper_channels = {
+        channel: []
+        for ps in sweepers
+        for sweeper in ps
+        for channel in (sweeper.channels if sweeper.channels is not None else [])
+    }
     return {
         ch: Q1Sequence.from_pulses(
             seq,
-            sweepers,
+            sweepers[::-1],
             options,
             sampling_rate,
             _effective_channels(ch, seq),
+            offsets.get(ch),
             _lo_frequency(los.get(ch)),
             time_of_flights.get(ch),
             duration,
         )
-        for ch, seq in sequence.by_channel.items()
+        for ch, seq in (sweeper_channels | sequence.by_channel).items()
     }
