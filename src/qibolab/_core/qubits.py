@@ -33,6 +33,8 @@ class Qubit(Model):
     """Output channel, to probe the resonator."""
     acquisition: DefaultChannelType = None
     """Input channel, to acquire the readout results."""
+    dc_flux: Annotated[Optional[ChannelId], False] = None
+    """Output channel, to bias the qubit using a DC current source."""
 
     @property
     def channels(self) -> list[ChannelId]:
