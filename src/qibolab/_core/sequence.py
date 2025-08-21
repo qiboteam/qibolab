@@ -313,6 +313,12 @@ class PulseSequence(UserList[_Element]):
         return seq
 
     def collect_vzs(self) -> "PulseSequence":
+        """Collect subsequent :class:`VirtualZ` rotations.
+
+        For each channel, it divides :class:`VirtualZ` in groups delimited by pulses.
+        Each group is collected and transformed in a single :class:`VirtualZ`, just summing
+        the angles.
+        """
         seq = PulseSequence()
         phases = defaultdict(float)
 
