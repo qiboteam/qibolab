@@ -265,6 +265,15 @@ class PulseSequence(UserList[_Element]):
         return seqs
 
     def to_vzs(self) -> "PulseSequence":
+        """Split relative phases to :class:`VirtualZ` elements.
+
+        The basic formula just relies on the composition of Pauli matrices' exponential
+        and it is available from many sources. One of those could be MM p. 626.
+
+        .. todo::
+
+            Add MM as a proper reference, such that it ends up in the bibliography
+        """
         return PulseSequence(
             [
                 el
