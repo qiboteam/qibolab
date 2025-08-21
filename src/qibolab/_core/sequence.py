@@ -290,3 +290,24 @@ class PulseSequence(UserList[_Element]):
                 for el in els
             ]
         )
+
+    def to_relative_phases(self) -> "PulseSequence":
+        seq = PulseSequence()
+        phases = defaultdict(float)
+
+        for ch, ev in self:
+            if isinstance(ev, VirtualZ):
+                phases[ch] += ev.phase
+            elif isinstance(ev, Pulse):
+                seq.append(
+                    (
+                        ch,
+                        ev.model_copy(
+                            update={"relative_phase": ev.relative_phase + phases[ch]}
+                        ),
+                    )
+                )
+            else:
+                seq.append((ch, ev))
+
+        return seq
