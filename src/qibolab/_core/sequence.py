@@ -311,3 +311,27 @@ class PulseSequence(UserList[_Element]):
                 seq.append((ch, ev))
 
         return seq
+
+    def collect_vzs(self) -> "PulseSequence":
+        seq = PulseSequence()
+        phases = defaultdict(float)
+
+        def collect(ch: ChannelId):
+            if not np.isclose(phases[ch], 0.0):
+                seq.append((ch, VirtualZ(phase=phases[ch])))
+                phases[ch] = 0.0
+
+        for ch, ev in self:
+            if isinstance(ev, VirtualZ):
+                phases[ch] += ev.phase
+                continue
+
+            if isinstance(ev, Pulse):
+                collect(ch)
+
+            seq.append((ch, ev))
+
+        for ch in self.channels:
+            collect(ch)
+
+        return seq
