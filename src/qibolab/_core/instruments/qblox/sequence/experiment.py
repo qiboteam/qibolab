@@ -20,6 +20,7 @@ from ..q1asm.ast_ import (
     Play,
     Register,
     SetPhDelta,
+    UpdParam,
     Wait,
     WaitSync,
 )
@@ -74,6 +75,7 @@ def play(
 
     if isinstance(pulse, Pulse):
         phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+        minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
         duration_sweep = {
             p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
         }
@@ -84,7 +86,11 @@ def play(
                 if len(duration_sweep) == 0
                 else play_duration_swept(duration_sweep)
             )
-            + ([SetPhDelta(value=-phase)] if phase != 0 else [])
+            + (
+                [SetPhDelta(value=minus_phase), UpdParam(duration=4)]
+                if phase != 0
+                else []
+            )
         )
     if isinstance(pulse, Delay):
         return [
@@ -101,7 +107,8 @@ def play(
                 value=int(pulse.phase * PHASE_FACTOR)
                 if len(params) == 0
                 else next(iter(params)).reg
-            )
+            ),
+            UpdParam(duration=4),
         ]
     if isinstance(pulse, Acquisition):
         acq = acquisitions[pulse.id]
