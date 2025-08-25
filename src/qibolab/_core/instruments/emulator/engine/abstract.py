@@ -6,7 +6,12 @@ from typing import Callable, Protocol, Union
 
 from ....serialize import Model
 
-__all__ = ["SimulationEngine", "Operator", "TimeDependentOperator", "OperatorEvolution"]
+__all__ = [
+    "SimulationEngine",
+    "Operator",
+    "TimeDependentOperator",
+    "OperatorEvolution",
+]
 
 
 class Operator(Protocol):

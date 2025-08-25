@@ -3,17 +3,16 @@ from collections.abc import Iterable
 import numpy as np
 from numpy.typing import NDArray
 
-from qibolab._core.execution_parameters import (
+from ...execution_parameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.identifier import ChannelId, QubitId, Result
-from qibolab._core.pulses.pulse import Acquisition, PulseId, Readout
-from qibolab._core.sequence import PulseSequence
-
+from ...identifier import ChannelId, QubitId, Result
+from ...pulses import Acquisition, PulseId, Readout
+from ...sequence import PulseSequence
+from .engine import Operator
 from .hamiltonians import HamiltonianConfig
-from .operators import Operator
 
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
