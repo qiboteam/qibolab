@@ -142,6 +142,20 @@ class Cache(Model):
         return self.machine.queue.add_compiled(self.program_id)
 
 
+def _update_pulse_amplitude(
+    pulse: Union[Pulse, Readout], amplitude: float
+) -> Union[Pulse, Readout]:
+    """Update pulse amplitude.
+
+    Needed when sweeping amplitude because the original amplitude
+    may not sufficient to reach all the sweeper values.
+    """
+    if isinstance(pulse, Pulse):
+        return pulse.model_copy(update={"amplitude": amplitude})
+    probe = pulse.probe.model_copy(update={"amplitude": amplitude})
+    return pulse.model_copy(update={"probe": probe})
+
+
 class QmController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
     a Quantum Machines cluster.
@@ -461,7 +475,7 @@ class QmController(Controller):
         """
         amplitude = sweeper_amplitude(sweeper.values)
         for pulse in sweeper.pulses:
-            sweep_pulse = pulse.model_copy(update={"amplitude": amplitude})
+            sweep_pulse = _update_pulse_amplitude(pulse, amplitude)
             ids = args.sequence.pulse_channels(pulse.id)
             params = args.parameters[pulse.id]
             params.amplitude_pulse = sweep_pulse

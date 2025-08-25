@@ -90,7 +90,6 @@ class Sweeper(Model):
     @model_validator(mode="after")
     def check_values(self):
         _alternative_fields((self.pulses, "pulses"), (self.channels, "channels"))
-        _alternative_fields((self.range, "range"), (self.values, "values"))
 
         if self.pulses is not None and self.parameter in Parameter.channels():
             raise ValueError(
