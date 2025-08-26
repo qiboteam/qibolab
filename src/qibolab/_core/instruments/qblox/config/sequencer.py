@@ -18,6 +18,7 @@ from qibolab._core.execution_parameters import AcquisitionType
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
+from ..q1asm.ast_ import Acquire, Line
 from ..sequence import Q1Sequence
 from .port import PortAddress
 
@@ -26,7 +27,12 @@ __all__ = []
 
 def _integration_length(sequence: Q1Sequence) -> Optional[int]:
     """Find integration length based on sequence waveform lengths."""
-    lengths = {len(waveform.data) for waveform in sequence.waveforms.values()}
+    lengths = {
+        line.instruction.duration
+        for line in sequence.program.elements
+        if isinstance(line, Line)
+        if isinstance(line.instruction, Acquire)
+    }
     if len(lengths) == 0:
         return None
     if len(lengths) == 1:
