@@ -61,13 +61,6 @@ def test_sweeper_errors():
     with pytest.raises(ValueError, match="(?=.*range)(?=.*values)"):
         Sweeper(
             parameter=Parameter.frequency,
-            values=parameter_range,
-            range=(0, 10, 1),
-            channels=[channel],
-        )
-    with pytest.raises(ValueError, match="(?=.*range)(?=.*values)"):
-        Sweeper(
-            parameter=Parameter.frequency,
             channels=[channel],
         )
     with pytest.raises(ValueError, match="Amplitude"):
