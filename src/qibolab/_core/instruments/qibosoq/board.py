@@ -58,7 +58,7 @@ class RFSoC(Controller):
             _update_cfg(self.cfg, options)
 
             fw = _firmware_loops(seq, sweepers, configs)
-            res = self._sweep(configs, seq, sweepers, len(sweepers) - fw, options)
+            res = self._sweep(configs, seq, sweepers, len(sweepers) - fw, options, {})
             results |= _reshape_sweep_results(res, sweepers, options)
 
         return results
@@ -151,7 +151,10 @@ class RFSoC(Controller):
         Returns lists of I and Q value measured.
         """
         converted_sweepers = [
-            [convert_units_sweeper(s, sequence) for s in parsweep]
+            [
+                convert_units_sweeper(s, sequence, self.channels, configs)
+                for s in parsweep
+            ]
             for parsweep in sweepers
         ]
         server_commands = {
