@@ -13,7 +13,7 @@ from qibo.config import log
 from qibosoq import client
 from scipy.constants import micro, nano
 
-from qibolab._core.components.channels import AcquisitionChannel
+from qibolab._core.components.channels import AcquisitionChannel, DcChannel
 from qibolab._core.components.configs import AcquisitionConfig, Config, DcConfig
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -57,7 +57,7 @@ class RFSoC(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[int, Result]:  # TODO should this be int or PulseId
         """Play a pulse sequence and retrieve feedback."""
         results = {}
 
@@ -160,21 +160,28 @@ class RFSoC(Controller):
         Returns lists of I and Q value measured.
         """
         converted_sweepers = [
-            [
-                convert_units_sweeper(s, sequence, self.channels, configs)
-                for s in parsweep
-            ]
+            [convert_units_sweeper(s, self.channels, configs) for s in parsweep]
             for parsweep in sweepers
         ]
         if len(sweepers) > 0:
             if opcode == rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW:
                 raise RuntimeError("Sweep not permitted in RAW mode.")
             opcode = rfsoc.OperationCode.EXECUTE_SWEEPS
+
+        qubits = []
+        for ch in self.channels:
+            if isinstance(self.channels[ch], DcChannel):
+                qubits.append(
+                    rfsoc.Qubit(
+                        bias=configs[ch].offset, dac=int(self.channels[ch].path)
+                    )
+                )
+
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
             "sequence": convert(sequence, self.sampling_rate, self.channels, configs),
-            "qubits": [{}],  # TODO: flux ?
+            "qubits": [asdict(q) for q in qubits],
             "sweepers": [
                 convert(parsweep, sequence, self.channels).serialized
                 for parsweep in converted_sweepers
@@ -326,11 +333,10 @@ def _reshape_sweep_results(results, sweepers, execution_parameters):
 
     if execution_parameters.acquisition_type is AcquisitionType.RAW:
         return results
-    else:
-        if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-            shape.insert(0, execution_parameters.nshots)
-        if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
-            shape.append(2)  # I/Q last axis
+    if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+        shape.insert(0, execution_parameters.nshots)
+    if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
+        shape.append(2)  # I/Q last axis
 
     reshaped = {}
     for key, value in results.items():

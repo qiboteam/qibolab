@@ -66,7 +66,6 @@ def get_lo_frequency(ch: Channel, configs: dict[str, Config]) -> float:
 
 def convert_units_sweeper(
     sweeper: Sweeper,
-    sequence: PulseSequence,
     channels: dict[ChannelId, Channel],
     configs: dict[str, Config],
 ) -> Sweeper:
@@ -110,6 +109,7 @@ def convert(*args) -> Any:
     raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")
 
 
+# TODO: is this useless with the current config?
 @convert.register
 def _(qubit: Qubit, configs: dict[str, Config], ports: dict[str, int]) -> rfsoc.Qubit:
     """Convert `qibolab.platforms.abstract.Qubit` to
@@ -175,7 +175,7 @@ def _(
         rel_ph = pulse.relative_phase
         envelope = pulse.envelope
         freq = getattr(configs[ch_id], "frequency", 0)
-        type = "drive"  # TODO Flux?
+        type = "drive" if freq != 0 else "flux"
 
     dac = int(ch.path)  # In any case, add pulse channel for DAC
     lo_frequency = get_lo_frequency(ch, configs)
