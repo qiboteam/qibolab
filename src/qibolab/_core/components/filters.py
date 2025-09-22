@@ -1,29 +1,14 @@
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Union
 
 import numpy as np
+from pydantic import Field
 
 from ..serialize import Model
 
 __all__ = ["Filters", "ExponentialFilter", "FiniteImpulseResponseFilter"]
 
 
-class Filter(Model):
-    """Filter class."""
-
-    @property
-    def feedback(self) -> Optional[List]:
-        return None
-
-    @property
-    def feedforward(self) -> Optional[List]:
-        return None
-
-
-Filters = List[Filter]
-"""List of filters."""
-
-
-class ExponentialFilter(Filter):
+class ExponentialFilter(Model):
     """Exponential filter."""
 
     kind: Literal["exp"] = "exp"
@@ -53,7 +38,7 @@ class ExponentialFilter(Filter):
         return self._compute_filter()[1]
 
 
-class FiniteImpulseResponseFilter(Filter):
+class FiniteImpulseResponseFilter(Model):
     """FIR filter."""
 
     kind: Literal["fir"] = "fir"
@@ -62,3 +47,11 @@ class FiniteImpulseResponseFilter(Filter):
     @property
     def feedforward(self):
         return self.coefficients
+
+
+Filter = Annotated[
+    Union[ExponentialFilter, FiniteImpulseResponseFilter],
+    Field(discriminator="kind"),
+]
+Filters = List[Filter]
+"""List of filters."""
