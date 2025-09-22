@@ -174,13 +174,13 @@ class RFSoC(Controller):
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
             "sequence": convert(sequence, self.sampling_rate, self.channels, configs),
-            "qubits": [{}],
+            "qubits": [{}],  # TODO: flux ?
             "sweepers": [
                 convert(parsweep, sequence, self.channels).serialized
                 for parsweep in converted_sweepers
             ],
         }
-        print(f"{server_commands = }")
+        # print(f"{server_commands = }")
         host, port_ = self.address.split(":")
         port = int(port_)
 

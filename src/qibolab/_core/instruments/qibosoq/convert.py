@@ -169,16 +169,17 @@ def _(
         rel_ph = pulse.probe.relative_phase
         envelope = pulse.probe.envelope
         type = "readout"
+        freq = getattr(configs[probe_id], "frequency", 0)
     else:
         amp = pulse.amplitude
         rel_ph = pulse.relative_phase
         envelope = pulse.envelope
-        type = "drive"
+        freq = getattr(configs[ch_id], "frequency", 0)
+        type = "drive"  # TODO Flux?
 
     dac = int(ch.path)  # In any case, add pulse channel for DAC
     lo_frequency = get_lo_frequency(ch, configs)
 
-    freq = getattr(configs[ch_id], "frequency", 0)
     freq = (freq - lo_frequency) / mega
 
     rfsoc_pulse = rfsoc_pulses.Pulse(
