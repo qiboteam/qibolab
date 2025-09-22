@@ -7,12 +7,15 @@ users, but in general any user tool should try to depend only on the
 configuration defined by these classes.
 """
 
+from functools import reduce
 from pathlib import Path
 from typing import Annotated, Literal, Optional, Union
 
+import numpy as np
 from pydantic import Field
 
 from ..serialize import Model, NdArray
+from .filters import Filters
 
 __all__ = [
     "DcConfig",
@@ -43,6 +46,16 @@ class DcConfig(Config):
 
     offset: float
     """DC offset/bias of the channel."""
+    filters: Filters = Field(default_factory=list)
+    """List of filters."""
+
+    @property
+    def feedback(self) -> list[float]:
+        reduce(np.convolve, [i.feedback for i in self.filters if i is not None])
+
+    @property
+    def feedforward(self) -> list[float]:
+        reduce(np.convolve, [i.feedforward for i in self.filters if i is not None])
 
 
 class OscillatorConfig(Config):
