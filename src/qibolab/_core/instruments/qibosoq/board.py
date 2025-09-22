@@ -35,6 +35,7 @@ __all__ = ["RFSoC"]
 class RFSoC(Controller):
     """Instrument controlling RFSoC FPGAs."""
 
+    bounds: str = "rfsoc/bounds"
     _sampling_rate: float = 10e9
     cfg: rfsoc.Config = Field(default_factory=rfsoc.Config)
     """Configuration dictionary required for pulse execution."""
@@ -121,11 +122,14 @@ class RFSoC(Controller):
             options.acquisition_type is not AcquisitionType.DISCRIMINATION
             and options.averaging_mode is AveragingMode.CYCLIC
         )
-        opcode = (
-            rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
-            if options.acquisition_type is AcquisitionType.RAW
-            else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
-        )
+        if len(sweepers) > 0:
+            opcode = rfsoc.OperationCode.EXECUTE_SWEEPS
+        else:
+            opcode = (
+                rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
+                if options.acquisition_type is AcquisitionType.RAW
+                else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+            )
         toti, totq = self._execute(
             _update_configs(configs, updates),
             _update_sequence(sequence, updates),
@@ -139,7 +143,7 @@ class RFSoC(Controller):
                 angle, threshold = config.iq_angle, config.threshold
                 assert angle is not None
                 assert threshold is not None
-                result = _classify_shots(i, q, angle, threshold)
+                result = _classify_shots(np.array(i), np.array(q), angle, threshold)
             else:
                 result = np.stack([i, q], axis=-1)
             results[acq.id] = result
@@ -167,10 +171,10 @@ class RFSoC(Controller):
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
-            "sequence": convert(sequence, configs, self.sampling_rate),
+            "sequence": convert(sequence, self.sampling_rate, self.channels, configs),
             "qubits": [{}],
             "sweepers": [
-                convert(parsweep, sequence, self.channels)
+                convert(parsweep, sequence, self.channels).serialized
                 for parsweep in converted_sweepers
             ],
         }
@@ -312,7 +316,7 @@ def _merge_sweep_results(
 
 
 def _reshape_sweep_results(results, sweepers, execution_parameters):
-    shape = [len(sweeper.values) for sweeper in sweepers]
+    shape = [len(sweeper[0].values) for sweeper in sweepers]
     if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
         shape.insert(0, execution_parameters.nshots)
 

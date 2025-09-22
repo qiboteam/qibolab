@@ -20,7 +20,7 @@ from qibolab._core.pulses.envelope import (
     Gaussian,
     Rectangular,
 )
-from qibolab._core.pulses.pulse import Delay, Pulse
+from qibolab._core.pulses.pulse import Delay, PulseLike
 from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
@@ -120,7 +120,6 @@ def _(qubit: Qubit, configs: dict[str, Config], ports: dict[str, int]) -> rfsoc.
 @convert.register
 def _(
     sequence: PulseSequence,
-    qubits: dict[int, Qubit],
     sampling_rate: float,
     channels: dict[ChannelId, Channel],
     configs: dict[str, Config],
@@ -133,19 +132,18 @@ def _(
         if isinstance(pulse, Delay):
             start_delay = pulse.duration * nano / micro
         else:
+            pulse_dict = asdict(
+                convert(pulse, start_delay, ch, channels, sampling_rate, configs)
+            )
             start_delay = 0
-        pulse_dict = asdict(
-            convert(pulse, qubits, start_delay, ch, channels, sampling_rate, configs)
-        )
-        list_sequence.append(pulse_dict)
+            list_sequence.append(pulse_dict)
 
     return list_sequence
 
 
 @convert.register
 def _(
-    pulse: Pulse,
-    qubits: dict[int, Qubit],
+    pulse: PulseLike,
     start_delay: float,
     ch_id: ChannelId,
     channels: dict[ChannelId, Channel],
@@ -164,6 +162,16 @@ def _(
         probe_ch = channels[probe_id]
         adc = int(probe_ch.path)
 
+        amp = pulse.probe.amplitude
+        rel_ph = pulse.probe.relative_phase
+        envelope = pulse.probe.envelope
+        type = "readout"
+    else:
+        amp = pulse.amplitude
+        rel_ph = pulse.relative_phase
+        envelope = pulse.envelope
+        type = "drive"
+
     dac = int(ch.path)  # In any case, add pulse channel for DAC
     lo_frequency = get_lo_frequency(ch, configs)
 
@@ -172,17 +180,17 @@ def _(
 
     rfsoc_pulse = rfsoc_pulses.Pulse(
         frequency=freq,
-        amplitude=pulse.amplitude,
-        relative_phase=np.degrees(pulse.relative_phase),
+        amplitude=amp,
+        relative_phase=np.degrees(rel_ph),
         start_delay=start_delay,
         duration=pulse.duration * nano / micro,
         dac=dac,
         adc=adc,
         name=str(pulse.id),
-        type=pulse.envelope.kind,
+        type=type,
     )
     num_samples = int(sampling_rate * pulse.duration)
-    return replace_pulse_shape(rfsoc_pulse, pulse.envelope, num_samples)
+    return replace_pulse_shape(rfsoc_pulse, envelope, num_samples)
 
 
 @convert.register
@@ -196,7 +204,7 @@ def _(
     sweeperlist: list,  # Should be ParallelSweepers, but functools encounters an error
     sequence: PulseSequence,
     channels: dict[ChannelId, Channel],
-) -> list[rfsoc.Sweeper]:
+) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
     Note that any unit conversion is not done in this function (to avoid
@@ -204,16 +212,14 @@ def _(
     `convert_units_sweeper`.
     """
 
-    sweeperlist_converted = []
     pulse_sequence = [pulse for ch, pulse in sequence]
 
+    parameters = []
+    starts = []
+    stops = []
+    indexes = []
+    expts = 0
     for sweeper in sweeperlist:
-        parameters = []
-        starts = []
-        stops = []
-        indexes = []
-        expts = 0
-
         if sweeper.parameter is Parameter.offset:
             assert sweeper.channels is not None
             for ch_id in sweeper.channels:
@@ -222,7 +228,7 @@ def _(
                 start, stop, step = sweeper.irange
                 starts.append(start)
                 stops.append(stop)
-                expts = int((stop - start) / step)
+                expts = len(sweeper.values)
 
             if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
                 raise ValueError(
@@ -241,7 +247,7 @@ def _(
                 start, stop, step = sweeper.irange
                 starts.append(start)
                 stops.append(stop)
-                expts = int((stop - start) / step)
+                expts = len(sweeper.values)
 
         elif sweeper.parameter is Parameter.amplitude:
             assert sweeper.pulses is not None
@@ -251,7 +257,7 @@ def _(
                 start, stop, step = sweeper.irange
                 starts.append(start)
                 stops.append(stop)
-                expts = int((stop - start) / step)
+                expts = len(sweeper.values)
 
             if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
                 raise ValueError(
@@ -266,7 +272,7 @@ def _(
                 start, stop, step = sweeper.irange
                 starts.append(start)
                 stops.append(stop)
-                expts = int((stop - start) / step)
+                expts = len(sweeper.values)
         # elif sweeper.parameter is Parameter.duration:
         else:
             # pass
@@ -274,13 +280,10 @@ def _(
                 "In sweeper conversion function, I received a non-convertible sweeper."
             )
 
-        sweeperlist_converted.append(
-            rfsoc.Sweeper(
-                parameters=parameters,
-                indexes=indexes,
-                starts=np.asarray(starts),
-                stops=np.asarray(stops),
-                expts=expts,
-            )
-        )
-    return sweeperlist_converted
+    return rfsoc.Sweeper(
+        parameters=parameters,
+        indexes=indexes,
+        starts=np.asarray(starts),
+        stops=np.asarray(stops),
+        expts=expts,
+    )
