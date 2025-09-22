@@ -105,6 +105,7 @@ class RFSoC(Controller):
                 configs, sequence, sweepers[1:], software - 1, options, updates
             )
             results = _merge_sweep_results(results, res)
+
         return results
 
     def _play(
@@ -122,14 +123,11 @@ class RFSoC(Controller):
             options.acquisition_type is not AcquisitionType.DISCRIMINATION
             and options.averaging_mode is AveragingMode.CYCLIC
         )
-        if len(sweepers) > 0:
-            opcode = rfsoc.OperationCode.EXECUTE_SWEEPS
-        else:
-            opcode = (
-                rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
-                if options.acquisition_type is AcquisitionType.RAW
-                else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
-            )
+        opcode = (
+            rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW
+            if options.acquisition_type is AcquisitionType.RAW
+            else rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE
+        )
         toti, totq = self._execute(
             _update_configs(configs, updates),
             _update_sequence(sequence, updates),
@@ -168,6 +166,10 @@ class RFSoC(Controller):
             ]
             for parsweep in sweepers
         ]
+        if len(sweepers) > 0:
+            if opcode == rfsoc.OperationCode.EXECUTE_PULSE_SEQUENCE_RAW:
+                raise RuntimeError("Sweep not permitted in RAW mode.")
+            opcode = rfsoc.OperationCode.EXECUTE_SWEEPS
         server_commands = {
             "operation_code": opcode,
             "cfg": asdict(self.cfg),
@@ -178,6 +180,7 @@ class RFSoC(Controller):
                 for parsweep in converted_sweepers
             ],
         }
+        print(f"{server_commands = }")
         host, port_ = self.address.split(":")
         port = int(port_)
 
@@ -264,7 +267,10 @@ def _firmware_loops(
         if any(
             s.parameter is Parameter.frequency
             and s.channels is not None
-            and any(isinstance(ch, AcquisitionChannel) for ch in s.channels)
+            and any(
+                (isinstance(ch, AcquisitionChannel) or "probe" in ch)
+                for ch in s.channels
+            )
             for s in parsweep
         ):
             # if it's a sweep on the readout freq do a python sweep
@@ -317,7 +323,20 @@ def _merge_sweep_results(
 
 def _reshape_sweep_results(results, sweepers, execution_parameters):
     shape = [len(sweeper[0].values) for sweeper in sweepers]
-    if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-        shape.insert(0, execution_parameters.nshots)
 
-    return {key: value.reshape(shape) for key, value in results.items()}
+    if execution_parameters.acquisition_type is AcquisitionType.RAW:
+        return results
+    else:
+        if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
+            shape.insert(0, execution_parameters.nshots)
+        if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
+            shape.append(2)  # I/Q last axis
+
+    reshaped = {}
+    for key, value in results.items():
+        assert value.size == np.prod(shape), (
+            f"Size mismatch: value.size={value.size}, expected {np.prod(shape)}, shape={shape}"
+        )
+        reshaped[key] = value.reshape(shape)
+
+    return reshaped

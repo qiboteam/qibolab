@@ -1,6 +1,5 @@
 """Convert helper functions for qibosoq driver."""
 
-from copy import deepcopy
 from dataclasses import asdict
 from functools import singledispatch
 from typing import Any, cast
@@ -72,9 +71,6 @@ def convert_units_sweeper(
     configs: dict[str, Config],
 ) -> Sweeper:
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
-    sweeper = deepcopy(sweeper)
-
-    # if sweeper.parameter is Parameter.delay TODO
 
     if sweeper.parameter is Parameter.frequency:
         start, stop, step = sweeper.irange
@@ -83,10 +79,14 @@ def convert_units_sweeper(
         lo_frequency = get_lo_frequency(channels[sweeper.channels[0]], configs)
 
         new_start = (start - lo_frequency) / mega
-        new_stop = (start - lo_frequency) / mega
+        new_stop = (stop - lo_frequency) / mega
         new_step = step / mega
 
-        sweeper.range = (new_start, new_stop, new_step)
+        return Sweeper(
+            parameter=sweeper.parameter,
+            range=(new_start, new_stop, new_step),
+            channels=sweeper.channels,
+        )
 
     elif sweeper.parameter in (Parameter.phase, Parameter.relative_phase):
         start, stop, step = sweeper.irange
@@ -95,8 +95,11 @@ def convert_units_sweeper(
         new_stop = np.degrees(stop)
         new_step = np.degrees(step)
 
-        sweeper.range = (new_start, new_stop, new_step)
-        return sweeper
+        return Sweeper(
+            parameter=sweeper.parameter,
+            range=(new_start, new_stop, new_step),
+            pulses=sweeper.pulses,
+        )
 
     return sweeper
 
@@ -240,7 +243,7 @@ def _(
             for ch_id in sweeper.channels:
                 parameters.append(rfsoc.Parameter.FREQUENCY)
 
-                pulse = sequence.channel(ch_id)[0]
+                pulse = list(sequence.channel(ch_id))[0]
                 # TODO what happens if more than one pulse are on the same channel?
                 indexes.append(int(channels[ch_id].path))
 
