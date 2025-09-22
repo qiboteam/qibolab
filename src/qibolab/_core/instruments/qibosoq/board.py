@@ -29,13 +29,20 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 from .convert import convert, convert_units_sweeper
 
+__all__ = ["RFSoC"]
+
 
 class RFSoC(Controller):
     """Instrument controlling RFSoC FPGAs."""
 
-    sampling_rate: float
+    _sampling_rate: float = 10e9
     cfg: rfsoc.Config = Field(default_factory=rfsoc.Config)
     """Configuration dictionary required for pulse execution."""
+
+    @property
+    def sampling_rate(self):
+        """Sampling rate of RFSoC."""
+        return self._sampling_rate
 
     def connect(self):
         """Empty method to comply with Instrument interface."""
@@ -163,7 +170,8 @@ class RFSoC(Controller):
             "sequence": convert(sequence, configs, self.sampling_rate),
             "qubits": [{}],
             "sweepers": [
-                convert(parsweep).serialized for parsweep in converted_sweepers
+                convert(parsweep, sequence, self.channels)
+                for parsweep in converted_sweepers
             ],
         }
         host, port_ = self.address.split(":")

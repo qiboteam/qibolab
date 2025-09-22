@@ -23,7 +23,7 @@ from qibolab._core.pulses.envelope import (
 from qibolab._core.pulses.pulse import Delay, Pulse
 from qibolab._core.qubits import Qubit
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
+from qibolab._core.sweeper import Parameter, Sweeper
 
 
 def replace_pulse_shape(
@@ -193,11 +193,9 @@ def _(par: Parameter) -> rfsoc.Parameter:
 
 @convert.register
 def _(
-    sweeperlist: ParallelSweepers,
+    sweeperlist: list,  # Should be ParallelSweepers, but functools encounters an error
     sequence: PulseSequence,
-    qubits: dict[int, Qubit],
     channels: dict[ChannelId, Channel],
-    configs: dict[ChannelId, Config],
 ) -> list[rfsoc.Sweeper]:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
