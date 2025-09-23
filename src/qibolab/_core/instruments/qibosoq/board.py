@@ -23,7 +23,6 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
-from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -57,7 +56,7 @@ class RFSoC(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:  # TODO should this be int or PulseId
+    ) -> dict[int, Result]:
         """Play a pulse sequence and retrieve feedback."""
         results = {}
 
@@ -79,7 +78,7 @@ class RFSoC(Controller):
         software: int,
         options: ExecutionParameters,
         updates: dict,
-    ) -> dict[PulseId, Result]:
+    ) -> dict[int, Result]:
         """Execute a sweep of an arbitrary number of sweepers via recursion."""
         # If there are no software sweepers send experiment.
         # Last layer for recursion.
@@ -173,7 +172,8 @@ class RFSoC(Controller):
             if isinstance(self.channels[ch], DcChannel):
                 qubits.append(
                     rfsoc.Qubit(
-                        bias=configs[ch].offset, dac=int(self.channels[ch].path)
+                        bias=getattr(configs[ch], "offset", 0.0),
+                        dac=int(self.channels[ch].path),
                     )
                 )
 
@@ -284,11 +284,13 @@ def _firmware_loops(
             return n
 
         for s in parsweep:
-            channels = (
-                s.channels
-                if s.channels is not None
-                else [ch for p in s.pulses for ch in sequence.pulse_channels(p.id)]
-            )
+            if s.channels is not None:
+                channels = s.channels
+            else:
+                assert s.pulses is not None
+                channels = [
+                    ch for p in s.pulses for ch in sequence.pulse_channels(p.id)
+                ]
 
             if any(sequence.channel(ch) for ch in channels) > 1:
                 return n
@@ -329,10 +331,11 @@ def _merge_sweep_results(
 
 
 def _reshape_sweep_results(results, sweepers, execution_parameters):
-    shape = [len(sweeper[0].values) for sweeper in sweepers]
-
     if execution_parameters.acquisition_type is AcquisitionType.RAW:
         return results
+
+    shape = [len(sweeper[0].values) for sweeper in sweepers]
+
     if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
         shape.insert(0, execution_parameters.nshots)
     if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
