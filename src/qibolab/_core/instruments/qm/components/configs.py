@@ -32,7 +32,7 @@ DEFAULT_FEEDBACK_MAX = 1 - 2**-20
 def normalize_feedforward(taps: list[float], threshold: float):
     max_value = np.max(np.abs(taps))
     if max_value > threshold:
-        return threshold * np.array(taps / max_value).tolist()
+        return (threshold * np.array(taps / max_value)).tolist()
     else:
         return taps
 
