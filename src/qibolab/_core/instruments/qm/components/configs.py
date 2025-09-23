@@ -42,7 +42,7 @@ def normalize_feedback(taps: list[float], threshold: float):
     if np.any(np.abs(taps) > threshold):
         new_taps[new_taps > threshold] = threshold
         new_taps[new_taps < -threshold] = -threshold
-    return new_taps
+    return new_taps.tolist()
 
 
 class OpxOutputConfig(DcConfig):
@@ -67,10 +67,16 @@ class OpxOutputConfig(DcConfig):
             -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
         ]
         return {
-            "feedback": normalize_feedback(feedback_filters, self.feedback_max),
-            "feedforward": normalize_feedforward(
-                self.feedforward, self.feedforward_max
-            ),
+            "filter": {
+                "feedback": normalize_feedback(feedback_filters, self.feedback_max)
+                if len(feedback_filters) > 0
+                else [],
+                "feedforward": normalize_feedforward(
+                    self.feedforward, self.feedforward_max
+                )
+                if len(self.feedforward) > 0
+                else [],
+            }
         }
 
 

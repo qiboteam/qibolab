@@ -51,11 +51,17 @@ class DcConfig(Config):
 
     @property
     def feedback(self) -> list[float]:
-        reduce(np.convolve, [i.feedback for i in self.filters if i is not None])
+        feedback_coeff = [i.feedback for i in self.filters if i is not None]
+        if len(feedback_coeff) > 0:
+            return reduce(np.convolve, feedback_coeff)
+        return []
 
     @property
     def feedforward(self) -> list[float]:
-        reduce(np.convolve, [i.feedforward for i in self.filters if i is not None])
+        feedforward_coeff = [i.feedforward for i in self.filters if i is not None]
+        if len(feedforward_coeff) > 0:
+            return reduce(np.convolve, feedforward_coeff)
+        return []
 
 
 class OscillatorConfig(Config):
@@ -136,7 +142,7 @@ class AcquisitionConfig(Config):
             and (self.smearing == other.smearing)
             and (self.threshold == other.threshold)
             and (self.iq_angle == other.iq_angle)
-            and (self.kernel == other.kernel).all()
+            and self.kernel == other.kernel
         )
 
 
