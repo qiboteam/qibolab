@@ -122,7 +122,7 @@ def _(
     sampling_rate: float,
     channels: dict[ChannelId, Channel],
     configs: dict[str, Config],
-) -> list[rfsoc_pulses.Pulse]:
+) -> list[rfsoc_pulses.Element]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
 
     start_delay = 0
@@ -148,33 +148,39 @@ def _(
     channels: dict[ChannelId, Channel],
     sampling_rate: float,
     configs: dict[str, Config],
-) -> rfsoc_pulses.Pulse:
+) -> rfsoc_pulses.Element:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
 
     if isinstance(pulse, Align):
         raise NotImplementedError(
             "Pulse of type Align is currently not supported by the qibosoq driver."
         )
-    if isinstance(pulse, Acquisition):
-        raise NotImplementedError(
-            "Pulse of type Acquisition is currently not supported by the qibosoq driver."
-        )
 
     ch = channels[ch_id]
+    lo_frequency = get_lo_frequency(ch, configs)
 
     adc = 0  # Assign adc 0 to ensure frequency matching
+    if isinstance(pulse, Acquisition):
+        freq = (getattr(configs[ch_id], "frequency") - lo_frequency) / mega
+        return rfsoc_pulses.Measurement(
+            type="readout",
+            frequency=freq,
+            start_delay=start_delay,
+            duration=pulse.duration * nano / micro,
+            dac=0,  # Fix frequency matching to 0-dac
+            adc=int(ch.path),
+        )
     if isinstance(pulse, Readout):
         assert isinstance(ch, AcquisitionChannel)
         probe_id = ch.probe
         assert probe_id is not None
         probe_ch = channels[probe_id]
         adc = int(probe_ch.path)
-
+        ptype = "readout"
+        freq = (getattr(configs[probe_id], "frequency") - lo_frequency) / mega
         amp = pulse.probe.amplitude
         rel_ph = pulse.probe.relative_phase
         envelope = pulse.probe.envelope
-        ptype = "readout"
-        freq = getattr(configs[probe_id], "frequency")
     else:
         assert not isinstance(pulse, VirtualZ), (
             "VirtualZ pulse is not convertible to qibosoq.pulse"
@@ -187,11 +193,10 @@ def _(
         envelope = pulse.envelope
         freq = getattr(configs[ch_id], "frequency", 0)
         ptype = "drive" if freq != 0 else "flux"
+        if freq != 0:
+            freq = (freq - lo_frequency) / mega
 
     dac = int(ch.path)  # In any case, add pulse channel for DAC
-    lo_frequency = get_lo_frequency(ch, configs)
-
-    freq = (freq - lo_frequency) / mega
 
     rfsoc_pulse = rfsoc_pulses.Pulse(
         frequency=freq,
@@ -299,6 +304,7 @@ def _(
                         is_this_delay = True
                     if not isinstance(p, Delay):
                         pulse_idx += 1
+
                 starts.append(start)
                 stops.append(stop)
         else:
