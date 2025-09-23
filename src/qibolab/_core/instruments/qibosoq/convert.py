@@ -83,7 +83,7 @@ def convert_units_sweeper(
         lo_frequency = get_lo_frequency(channels[sweeper.channels[0]], configs)
 
         new_start = (start - lo_frequency) / mega
-        new_stop = (stop + step - lo_frequency) / mega
+        new_stop = (stop - lo_frequency) / mega
         new_step = step / mega
 
         return Sweeper(
@@ -95,14 +95,12 @@ def convert_units_sweeper(
     new_start, new_stop, new_step = sweeper.irange
     if sweeper.parameter in (Parameter.phase, Parameter.relative_phase):
         new_start = np.degrees(start)
-        new_stop = np.degrees(stop + step)
+        new_stop = np.degrees(stop)
         new_step = np.degrees(step)
 
     elif sweeper.parameter is Parameter.duration:
-        start, stop, step = sweeper.irange
-
         new_start = start / micro * nano
-        new_stop = (stop) / micro * nano  # TODO: why this is not + step?
+        new_stop = stop / micro * nano
         new_step = step / micro * nano
 
     return Sweeper(
