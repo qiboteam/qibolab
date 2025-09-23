@@ -33,11 +33,11 @@ def replace_pulse_shape(
         return rfsoc_pulses.Rectangular(**asdict(rfsoc_pulse))
     if isinstance(envelope, Gaussian):
         return rfsoc_pulses.Gaussian(
-            **asdict(rfsoc_pulse), rel_sigma=envelope.rel_sigma
+            **asdict(rfsoc_pulse), rel_sigma=1 / envelope.rel_sigma
         )
     if isinstance(envelope, Drag):
         return rfsoc_pulses.Drag(
-            **asdict(rfsoc_pulse), rel_sigma=envelope.rel_sigma, beta=envelope.beta
+            **asdict(rfsoc_pulse), rel_sigma=1 / envelope.rel_sigma, beta=envelope.beta
         )
     if isinstance(envelope, Exponential):
         return rfsoc_pulses.FluxExponential(
@@ -78,7 +78,7 @@ def convert_units_sweeper(
         lo_frequency = get_lo_frequency(channels[sweeper.channels[0]], configs)
 
         new_start = (start - lo_frequency) / mega
-        new_stop = (stop - lo_frequency) / mega
+        new_stop = (stop + step - lo_frequency) / mega
         new_step = step / mega
 
         return Sweeper(
@@ -91,8 +91,20 @@ def convert_units_sweeper(
         start, stop, step = sweeper.irange
 
         new_start = np.degrees(start)
-        new_stop = np.degrees(stop)
+        new_stop = np.degrees(stop + step)
         new_step = np.degrees(step)
+
+        return Sweeper(
+            parameter=sweeper.parameter,
+            range=(new_start, new_stop, new_step),
+            pulses=sweeper.pulses,
+        )
+    elif sweeper.parameter is Parameter.duration:
+        start, stop, step = sweeper.irange
+
+        new_start = start / micro * nano
+        new_stop = (stop) / micro * nano  # TODO: why this is not + step?
+        new_step = step / micro * nano
 
         return Sweeper(
             parameter=sweeper.parameter,
@@ -277,7 +289,28 @@ def _(
                 starts.append(start)
                 stops.append(stop)
                 expts = len(sweeper.values)
-        # elif sweeper.parameter is Parameter.duration:
+        elif sweeper.parameter is Parameter.duration:
+            assert sweeper.pulses is not None
+            if not isinstance(sweeper.pulses[0], Delay):
+                raise RuntimeError("Only delay sweepers are convertible.")
+            print(f"{pulse_sequence = }")
+            pulse_idx = 0
+            for pulse in sweeper.pulses:
+                parameters.append(rfsoc.Parameter.DELAY)
+                is_this_delay = False
+                for p in pulse_sequence:
+                    if is_this_delay:
+                        if not isinstance(p, Delay):
+                            indexes.append(pulse_idx)
+                    elif p == pulse:
+                        is_this_delay = True
+                    if not isinstance(p, Delay):
+                        pulse_idx += 1
+                # indexes.append(pulse_sequence.index(pulse) - 1)
+                start, stop, step = sweeper.irange
+                starts.append(start)
+                stops.append(stop)
+                expts = len(sweeper.values)
         else:
             # pass
             raise RuntimeError(
