@@ -127,9 +127,21 @@ def _(
 
     start_delay = 0
     list_sequence = []
+    pulse_sequence = [p for _, p in sequence]
     for ch, pulse in sequence:
         if isinstance(pulse, Delay):
-            start_delay = pulse.duration * nano / micro
+            # multiple consecutive delays are summed
+            start_delay += pulse.duration * nano / micro
+        elif isinstance(pulse, Align):
+            reached = False
+            # find last real pulse before align and delay with its duration
+            for rev_p in pulse_sequence[::-1]:
+                if reached:
+                    if not (isinstance(rev_p, Delay) or isinstance(rev_p, Align)):
+                        start_delay = rev_p.duration * nano / micro
+                        break
+                else:
+                    reached = rev_p == pulse
         else:
             pulse_dict = asdict(
                 convert(pulse, start_delay, ch, channels, sampling_rate, configs)
@@ -150,11 +162,6 @@ def _(
     configs: dict[str, Config],
 ) -> rfsoc_pulses.Element:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
-
-    if isinstance(pulse, Align):
-        raise NotImplementedError(
-            "Pulse of type Align is currently not supported by the qibosoq driver."
-        )
 
     ch = channels[ch_id]
     lo_frequency = get_lo_frequency(ch, configs)
@@ -183,11 +190,15 @@ def _(
         envelope = pulse.probe.envelope
     else:
         assert not isinstance(pulse, VirtualZ), (
-            "VirtualZ pulse is not convertible to qibosoq.pulse"
+            "VirtualZ pulse is not convertible to qibosoq.pulse (should not reach this line)"
         )
         assert not isinstance(pulse, Delay), (
-            "Delay pulse is currently not convertible to qibosoq.pulse"
+            "Delay pulse is currently not convertible to qibosoq.pulse (should not reach this line)"
         )
+        assert not isinstance(pulse, Align), (
+            "Align pulse is currently not convertible to qibosoq.pulse (should not reach this line)"
+        )
+
         amp = pulse.amplitude
         rel_ph = pulse.relative_phase
         envelope = pulse.envelope
