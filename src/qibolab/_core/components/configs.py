@@ -142,7 +142,7 @@ class AcquisitionConfig(Config):
             and (self.smearing == other.smearing)
             and (self.threshold == other.threshold)
             and (self.iq_angle == other.iq_angle)
-            and self.kernel == other.kernel
+            and (self.kernel == other.kernel).all()
         )
 
 
