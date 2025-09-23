@@ -9,7 +9,12 @@ import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 from scipy.constants import mega, micro, nano
 
-from qibolab._core.components.channels import AcquisitionChannel, Channel, IqChannel
+from qibolab._core.components.channels import (
+    AcquisitionChannel,
+    Channel,
+    DcChannel,
+    IqChannel,
+)
 from qibolab._core.components.configs import Config, OscillatorConfig
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses.envelope import (
@@ -78,6 +83,7 @@ def convert_units_sweeper(
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
 
     start, stop, step = sweeper.irange
+    new_start, new_stop, new_step = sweeper.irange
     if sweeper.parameter is Parameter.frequency:
         assert sweeper.channels is not None
         lo_frequency = get_lo_frequency(channels[sweeper.channels[0]], configs)
@@ -86,14 +92,7 @@ def convert_units_sweeper(
         new_stop = (stop - lo_frequency) / mega
         new_step = step / mega
 
-        return Sweeper(
-            parameter=sweeper.parameter,
-            range=(new_start, new_stop, new_step),
-            channels=sweeper.channels,
-        )
-
-    new_start, new_stop, new_step = sweeper.irange
-    if sweeper.parameter in (Parameter.phase, Parameter.relative_phase):
+    elif sweeper.parameter in (Parameter.phase, Parameter.relative_phase):
         new_start = np.degrees(start)
         new_stop = np.degrees(stop)
         new_step = np.degrees(step)
@@ -107,6 +106,7 @@ def convert_units_sweeper(
         parameter=sweeper.parameter,
         range=(new_start, new_stop, new_step),
         pulses=sweeper.pulses,
+        channels=sweeper.channels,
     )
 
 
@@ -257,7 +257,13 @@ def _(
             assert sweeper.channels is not None
             for ch_id in sweeper.channels:
                 parameters.append(rfsoc.Parameter.BIAS)
-                indexes.append(int(channels[ch_id].path))
+                qubit_idx = 0
+                for ch in channels:
+                    if isinstance(channels[ch], DcChannel):
+                        if channels[ch] == channels[ch_id]:
+                            indexes.append(qubit_idx)
+                        else:
+                            qubit_idx += 1
                 starts.append(start)
                 stops.append(stop)
 
