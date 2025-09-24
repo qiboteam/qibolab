@@ -16,6 +16,7 @@ A list of all the supported electronics follows:
 Controllers (subclasses of :class:`qibolab._core.instruments.abstract.Controller`):
     - Dummy Instrument: :class:`qibolab.instruments.DummyInstrument`
     - Quantum Machines: :class:`qibolab.instruments.qm.QmController`
+    - Qibosoq-controlled RFSoC: :class:`qibolab.instruments.qibosoq.RFSoC`
 
 Other Instruments (subclasses of :class:`qibolab._core.instruments.abstract.Instrument`):
     - Erasynth++: :class:`qibolab.instruments.era.ERASynth`

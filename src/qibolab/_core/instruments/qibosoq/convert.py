@@ -126,45 +126,39 @@ def order_pulse_sequence(sequence: PulseSequence) -> PulseSequence:
                 channel_time[ch] += pulse.duration
 
             elif isinstance(pulse, Align):
-                # portiamo tutti i canali al max
                 tmax = max(channel_time.values())
                 for c in channel_time:
                     channel_time[c] = tmax
                 result.append((ch, pulse, tmax))
 
             else:
-                # pulse normale / readout
                 start = channel_time[ch]
                 result.append((ch, pulse, start))
                 channel_time[ch] += pulse.duration
 
     def sort_key(x):
+        """Sort pulse first by time and then by type (delays/align later)."""
         ch, pulse, t = x
-        # priority: pulses/readout = 0, delay/align = 1
-        if isinstance(pulse, (Delay, Align)):
-            priority = 1
-        else:
-            priority = 0
+        priority = 1 if isinstance(pulse, (Delay, Align)) else 0
         return (t, priority, channel_order[ch])
 
     result.sort(key=sort_key)
-
-    compressed = simplify_delays(result)
-    ps = PulseSequence([(ch, p) for ch, p, _ in compressed])
-    return ps
+    result = simplify_delays(result)
+    return PulseSequence([(ch, p) for ch, p, _ in result])
 
 
-def simplify_delays(result):
+def simplify_delays(
+    timed_sequence: list[tuple[ChannelId, PulseLike, float]],
+) -> list[tuple[ChannelId, PulseLike, float]]:
     """Merge consecutive delays at the same start time by subtracting the minimum delay."""
     compressed = []
 
     last_delay = 0
-    for ch, pulse, t in result:
+    for ch, pulse, t in timed_sequence:
         if not isinstance(pulse, Delay):
             compressed.append((ch, pulse, t))
             last_delay = 0
             continue
-
         if pulse.duration == last_delay:
             continue
         if pulse.duration > last_delay:
@@ -205,7 +199,6 @@ def _(
 
     for ch, pulse in ordered_sequence:
         if isinstance(pulse, Delay):
-            # multiple consecutive delays are summed
             start_delay += pulse.duration * nano / micro
         elif isinstance(pulse, Align):
             reached = False
@@ -282,15 +275,13 @@ def _(
         if freq != 0:
             freq = (freq - lo_frequency) / mega
 
-    dac = int(ch.path)  # In any case, add pulse channel for DAC
-
     rfsoc_pulse = rfsoc_pulses.Pulse(
         frequency=freq,
         amplitude=amp,
         relative_phase=np.degrees(rel_ph),
         start_delay=start_delay,
         duration=pulse.duration * nano / micro,
-        dac=dac,
+        dac=int(ch.path),  # Add DAC in any case, for frequency matching
         adc=adc,
         name=str(pulse.id),
         type=ptype,
