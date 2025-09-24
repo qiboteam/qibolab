@@ -134,16 +134,22 @@ class RFSoC(Controller):
             opcode,
         )
 
-        for i, q, (ch, acq) in zip(toti[0], totq[0], sequence.acquisitions):
-            if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-                config = cast(AcquisitionConfig, configs[ch])
-                angle, threshold = config.iq_angle, config.threshold
-                assert angle is not None
-                assert threshold is not None
-                result = _classify_shots(np.array(i), np.array(q), angle, threshold)
-            else:
-                result = np.stack([i, q], axis=-1)
-            results[acq.id] = result
+        acq_chs = np.unique([acq[0] for acq in sequence.acquisitions])
+
+        for idx, this_ch in enumerate(acq_chs):
+            this_ch_acq = [
+                (ch, acq) for ch, acq in sequence.acquisitions if ch == this_ch
+            ]
+            for i, q, (ch, acq) in zip(toti[idx], totq[idx], this_ch_acq):
+                if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+                    config = cast(AcquisitionConfig, configs[ch])
+                    angle, threshold = config.iq_angle, config.threshold
+                    assert angle is not None
+                    assert threshold is not None
+                    result = _classify_shots(np.array(i), np.array(q), angle, threshold)
+                else:
+                    result = np.stack([i, q], axis=-1)
+                results[acq.id] = result
 
         return results
 

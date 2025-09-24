@@ -110,6 +110,79 @@ def convert_units_sweeper(
     )
 
 
+def order_pulse_sequence(sequence: PulseSequence) -> PulseSequence:
+    """Order pulse sequence by execution time."""
+
+    channel_time: dict[str, float] = {}
+    channel_order = {ch: i for i, ch in enumerate(sequence.by_channel.keys())}
+    result = []
+
+    for ch, subseq in sequence.by_channel.items():
+        channel_time[ch] = 0
+        for pulse in subseq:
+            if isinstance(pulse, Delay):
+                start = channel_time[ch]
+                result.append((ch, pulse, start))
+                channel_time[ch] += pulse.duration
+
+            elif isinstance(pulse, Align):
+                # portiamo tutti i canali al max
+                tmax = max(channel_time.values())
+                for c in channel_time:
+                    channel_time[c] = tmax
+                result.append((ch, pulse, tmax))
+
+            else:
+                # pulse normale / readout
+                start = channel_time[ch]
+                result.append((ch, pulse, start))
+                channel_time[ch] += pulse.duration
+
+    def sort_key(x):
+        ch, pulse, t = x
+        # priority: pulses/readout = 0, delay/align = 1
+        if isinstance(pulse, (Delay, Align)):
+            priority = 1
+        else:
+            priority = 0
+        return (t, priority, channel_order[ch])
+
+    result.sort(key=sort_key)
+
+    compressed = simplify_delays(result)
+    ps = PulseSequence([(ch, p) for ch, p, _ in compressed])
+    return ps
+
+
+def simplify_delays(result):
+    """Merge consecutive delays at the same start time by subtracting the minimum delay."""
+    compressed = []
+
+    last_delay = 0
+    for ch, pulse, t in result:
+        if not isinstance(pulse, Delay):
+            compressed.append((ch, pulse, t))
+            last_delay = 0
+            continue
+
+        if pulse.duration == last_delay:
+            continue
+        if pulse.duration > last_delay:
+            new_duration = pulse.duration - last_delay
+            last_delay = pulse.duration
+            pulse = Delay(duration=new_duration)
+            compressed.append((ch, pulse, t))
+    return compressed
+
+
+def get_index(sequence: list[PulseLike], pulse: PulseLike) -> int:
+    """Get pulse index from a sequence."""
+    for idx, p in enumerate(sequence):
+        if p.id == pulse.id:
+            return idx
+    raise RuntimeError("Pulse not in sequence.")
+
+
 @singledispatch
 def convert(*args) -> Any:
     """Convert from qibolab obj to qibosoq obj, overloaded."""
@@ -127,8 +200,10 @@ def _(
 
     start_delay = 0
     list_sequence = []
-    pulse_sequence = [p for _, p in sequence]
-    for ch, pulse in sequence:
+    ordered_sequence = order_pulse_sequence(sequence)
+    pulse_sequence = [p for _, p in ordered_sequence]
+
+    for ch, pulse in ordered_sequence:
         if isinstance(pulse, Delay):
             # multiple consecutive delays are summed
             start_delay += pulse.duration * nano / micro
@@ -181,8 +256,8 @@ def _(
         assert isinstance(ch, AcquisitionChannel)
         probe_id = ch.probe
         assert probe_id is not None
-        probe_ch = channels[probe_id]
-        adc = int(probe_ch.path)
+        # probe_ch = channels[probe_id]
+        adc = int(ch.path)
         ptype = "readout"
         freq = (getattr(configs[probe_id], "frequency") - lo_frequency) / mega
         amp = pulse.probe.amplitude
@@ -243,7 +318,8 @@ def _(
     `convert_units_sweeper`.
     """
 
-    pulse_sequence = [pulse for _, pulse in sequence]
+    ordered_sequence = order_pulse_sequence(sequence)
+    pulse_sequence = [pulse for _, pulse in ordered_sequence]
 
     parameters = []
     starts = []
@@ -276,9 +352,9 @@ def _(
             assert sweeper.channels is not None
             for ch_id in sweeper.channels:
                 parameters.append(rfsoc.Parameter.FREQUENCY)
-                pulse = list(sequence.channel(ch_id))[0]
+                pulse = list(ordered_sequence.channel(ch_id))[0]
                 # TODO what happens if more than one pulse are on the same channel?
-                indexes.append(int(channels[ch_id].path))
+                indexes.append(get_index(pulse_sequence, pulse))
                 starts.append(start)
                 stops.append(stop)
 
@@ -286,7 +362,7 @@ def _(
             assert sweeper.pulses is not None
             for pulse in sweeper.pulses:
                 parameters.append(rfsoc.Parameter.AMPLITUDE)
-                indexes.append(pulse_sequence.index(pulse))
+                indexes.append(get_index(pulse_sequence, pulse))
                 starts.append(start)
                 stops.append(stop)
 
@@ -299,7 +375,7 @@ def _(
             assert sweeper.pulses is not None
             for pulse in sweeper.pulses:
                 parameters.append(rfsoc.Parameter.RELATIVE_PHASE)
-                indexes.append(pulse_sequence.index(pulse))
+                indexes.append(get_index(pulse_sequence, pulse))
                 starts.append(start)
                 stops.append(stop)
 
