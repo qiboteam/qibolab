@@ -194,7 +194,6 @@ class RFSoC(Controller):
                 for parsweep in converted_sweepers
             ],
         }
-        # print(f"{server_commands = }")
         host, port_ = self.address.split(":")
         port = int(port_)
 
