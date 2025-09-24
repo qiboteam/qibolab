@@ -23,6 +23,7 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -56,7 +57,7 @@ class RFSoC(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Play a pulse sequence and retrieve feedback."""
         results = {}
 
@@ -78,7 +79,7 @@ class RFSoC(Controller):
         software: int,
         options: ExecutionParameters,
         updates: dict,
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Execute a sweep of an arbitrary number of sweepers via recursion."""
         # If there are no software sweepers send experiment.
         # Last layer for recursion.
@@ -114,7 +115,7 @@ class RFSoC(Controller):
         sweepers: list[ParallelSweepers],
         options: ExecutionParameters,
         updates: dict,
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         results = {}
 
         # TODO: why not averaging for discrimination?
@@ -328,22 +329,27 @@ def _classify_shots(
 
 
 def _merge_sweep_results(
-    a: dict[int, Result], b: dict[int, Result]
-) -> dict[int, Result]:
+    a: dict[PulseId, Result], b: dict[PulseId, Result]
+) -> dict[PulseId, Result]:
     """Merge two results dictionaries, appending common keys."""
     return {
         key: np.append(a.get(key, []), b.get(key, [])) for key in a.keys() | b.keys()
     }
 
 
-def _reshape_sweep_results(results, sweepers, execution_parameters):
+def _reshape_sweep_results(
+    results: dict[PulseId, Result],
+    sweepers: list[ParallelSweepers],
+    execution_parameters: ExecutionParameters,
+) -> dict[PulseId, Result]:
+    """Reshape result to correct Qibolab shape."""
     if execution_parameters.acquisition_type is AcquisitionType.RAW:
         return results
 
-    shape = [len(sweeper[0].values) for sweeper in sweepers]
+    shape = [len(sweeper[0].values) for sweeper in sweepers]  # pyright: ignore
 
     if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-        shape.insert(0, execution_parameters.nshots)
+        shape.insert(0, getattr(execution_parameters, "nshots", 1))
     if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
         shape.append(2)  # I/Q last axis
 
