@@ -1,23 +1,29 @@
-from typing import Annotated, List, Literal, Union
+from typing import Annotated, Literal, Union
 
 import numpy as np
 from pydantic import Field
 
 from ..serialize import Model
 
-__all__ = ["Filters", "ExponentialFilter", "FiniteImpulseResponseFilter"]
+__all__ = ["ExponentialFilter", "FiniteImpulseResponseFilter"]
 
 
 class ExponentialFilter(Model):
-    """Exponential filter."""
+    """Exponential filter.
+
+    Correct filters for signal with behavior
+    1 + amplitude * e^(-t/tau).
+    """
 
     kind: Literal["exp"] = "exp"
     amplitude: float
+    """Amplitude for exponential term."""
     tau: float
-    sampling_rate: float = 1
+    """Time decay in exponential in samples unit."""
 
-    def _compute_filter(self):
-        alpha = 1 - np.exp(-1 / (self.sampling_rate * self.tau * (1 + self.amplitude)))
+    def _compute_filter(self) -> tuple[list[float], list[float]]:
+        """Computing feedback and feedforward taps."""
+        alpha = 1 - np.exp(-1 / (self.tau * (1 + self.amplitude)))
         k = (
             self.amplitude / ((1 + self.amplitude) * (1 - alpha))
             if self.amplitude < 0
@@ -30,11 +36,11 @@ class ExponentialFilter(Model):
         return [a0, a1], [b0, b1]
 
     @property
-    def feedback(self):
+    def feedback(self) -> list[float]:
         return self._compute_filter()[0]
 
     @property
-    def feedforward(self):
+    def feedforward(self) -> list[float]:
         return self._compute_filter()[1]
 
 
@@ -42,7 +48,7 @@ class FiniteImpulseResponseFilter(Model):
     """FIR filter."""
 
     kind: Literal["fir"] = "fir"
-    coefficients: List[float]
+    coefficients: list[float]
 
     @property
     def feedforward(self):
@@ -53,5 +59,3 @@ Filter = Annotated[
     Union[ExponentialFilter, FiniteImpulseResponseFilter],
     Field(discriminator="kind"),
 ]
-Filters = List[Filter]
-"""List of filters."""

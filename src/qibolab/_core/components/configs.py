@@ -15,7 +15,7 @@ import numpy as np
 from pydantic import Field
 
 from ..serialize import Model, NdArray
-from .filters import Filters
+from .filters import Filter
 
 __all__ = [
     "DcConfig",
@@ -46,22 +46,20 @@ class DcConfig(Config):
 
     offset: float
     """DC offset/bias of the channel."""
-    filters: Filters = Field(default_factory=list)
+    filters: list[Filter] = Field(default_factory=list)
     """List of filters."""
 
     @property
     def feedback(self) -> list[float]:
         feedback_coeff = [i.feedback for i in self.filters if i is not None]
-        if len(feedback_coeff) > 0:
-            return reduce(np.convolve, feedback_coeff)
-        return []
+        return reduce(np.convolve, feedback_coeff, [1])
 
     @property
     def feedforward(self) -> list[float]:
         feedforward_coeff = [i.feedforward for i in self.filters if i is not None]
-        if len(feedforward_coeff) > 0:
-            return reduce(np.convolve, feedforward_coeff)
-        return []
+        if len(feedforward_coeff) == 0:
+            return []
+        return reduce(np.convolve, feedforward_coeff)
 
 
 class OscillatorConfig(Config):

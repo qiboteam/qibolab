@@ -86,13 +86,12 @@ class Configuration:
     ):
         controller = self.controllers[channel.device]
         if controller.type == "opx1":
-            keys = ["offset"]
+            keys = ["offset", "filter"]
         else:
             keys = list(config.model_fields.keys())
             keys.remove("kind")
         config_values = config.model_dump()
         values = {k: config_values[k] for k in keys}
-        values.update(config.filter)
         if config.sampling_rate > 1e9:
             del values["upsampling_mode"]
         controller.analog_outputs[channel.port] = values

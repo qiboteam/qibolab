@@ -29,19 +29,15 @@ DEFAULT_FEEDBACK_MAX = 1 - 2**-20
 """Maximum feedback tap value"""
 
 
-def normalize_feedforward(taps: list[float], threshold: float):
-    max_value = np.max(np.abs(taps))
-    if max_value > threshold:
-        return (threshold * np.array(taps / max_value)).tolist()
-    else:
-        return taps
+def normalize_feedforward(taps: list[float], threshold: float) -> list[float]:
+    """Feedforward coefficient normalization required by QM."""
+    scale = np.max(np.abs(taps) / threshold, initial=1)
+    return (np.array(taps) / scale).tolist()
 
 
-def normalize_feedback(taps: list[float], threshold: float):
-    new_taps = np.array(taps)
-    if np.any(np.abs(taps) > threshold):
-        new_taps[new_taps > threshold] = threshold
-        new_taps[new_taps < -threshold] = -threshold
+def normalize_feedback(taps: list[float], threshold: float) -> list[float]:
+    """Feedback coefficient normalization required by QM."""
+    new_taps = np.clip(taps, -threshold, threshold)
     return new_taps.tolist()
 
 
@@ -67,16 +63,12 @@ class OpxOutputConfig(DcConfig):
             -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
         ]
         return {
-            "filter": {
-                "feedback": normalize_feedback(feedback_filters, self.feedback_max)
-                if len(feedback_filters) > 0
-                else [],
-                "feedforward": normalize_feedforward(
-                    self.feedforward, self.feedforward_max
-                )
-                if len(self.feedforward) > 0
-                else [],
-            }
+            "feedback": normalize_feedback(feedback_filters, self.feedback_max)
+            if len(feedback_filters) > 0
+            else [],
+            "feedforward": normalize_feedforward(self.feedforward, self.feedforward_max)
+            if len(self.feedforward) > 0
+            else [],
         }
 
 
