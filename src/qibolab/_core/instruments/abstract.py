@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import ConfigDict, Field
 
+from qibolab._core.pulses.pulse import PulseId
+
 from ..components import Channel, Config
 from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, Result
@@ -74,7 +76,7 @@ class Controller(Instrument):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Play a pulse sequence and retrieve feedback.
 
         If :class:`qibolab.Sweeper` objects are passed as arguments, they are

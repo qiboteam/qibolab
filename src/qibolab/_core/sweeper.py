@@ -126,7 +126,8 @@ class Sweeper(Model):
         if self.range is not None:
             return self.range
         assert self.values is not None
-        return (self.values[0], self.values[-1], self.values[1] - self.values[0])
+        step = self.values[1] - self.values[0]
+        return (self.values[0], self.values[-1] + step, step)
 
     def __len__(self) -> int:
         """Compute number of iterations."""
