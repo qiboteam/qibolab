@@ -28,6 +28,7 @@ from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
     Delay,
+    PulseId,
     PulseLike,
     Readout,
     VirtualZ,
@@ -110,63 +111,95 @@ def convert_units_sweeper(
     )
 
 
-def order_pulse_sequence(sequence: PulseSequence) -> PulseSequence:
+def order_pulse_sequence(
+    sequence: PulseSequence,
+) -> tuple[list[tuple[ChannelId, PulseLike, float]], dict[PulseId, list[PulseId]]]:
     """Order pulse sequence by execution time."""
 
     channel_time: dict[str, float] = {}
     channel_order = {ch: i for i, ch in enumerate(sequence.by_channel.keys())}
     result = []
 
+    delay_equivalence = {}
+
     for ch, subseq in sequence.by_channel.items():
         channel_time[ch] = 0
-        for pulse in subseq:
+        delays_before_pulse = []
+        for idx, pulse in enumerate(subseq):
             if isinstance(pulse, Delay):
                 start = channel_time[ch]
-                result.append((ch, pulse, start))
-                channel_time[ch] += pulse.duration
+                channel_time[ch] = stop = start + pulse.duration
+                # result.append((ch, pulse, start, stop, idx))
+                delays_before_pulse.append(pulse.id)
 
             elif isinstance(pulse, Align):
-                tmax = max(channel_time.values())
+                start = channel_time[ch]
+                stop = max(channel_time.values())
                 for c in channel_time:
-                    channel_time[c] = tmax
-                result.append((ch, pulse, tmax))
+                    channel_time[c] = stop
+                delays_before_pulse.append(pulse.id)
+                # result.append((ch, pulse, start, stop, idx))
 
             else:
                 start = channel_time[ch]
-                result.append((ch, pulse, start))
-                channel_time[ch] += pulse.duration
+                channel_time[ch] = stop = start + pulse.duration
+                result.append((ch, pulse, start, stop, idx))
+                if len(delays_before_pulse) > 0:
+                    delay_equivalence[pulse.id] = delays_before_pulse
+                delays_before_pulse = []
 
     def sort_key(x):
         """Sort pulse first by time and then by type (delays/align later)."""
-        ch, pulse, t = x
-        priority = 1 if isinstance(pulse, (Delay, Align)) else 0
-        return (t, priority, channel_order[ch])
+        ch, _, start, stop, idx = x
+        return (start, stop, idx, channel_order[ch])
 
     result.sort(key=sort_key)
-    result = simplify_delays(result)
-    return PulseSequence([(ch, p) for ch, p, _ in result])
+
+    rt_result = []
+    rst = 0  # relative start time
+    last_start = 0
+    for ch, pulse, start, stop, _ in result:
+        rst = start - last_start
+        rt_result.append((ch, pulse, rst))
+        last_start = start
+
+    return rt_result, delay_equivalence
 
 
 def simplify_delays(
     timed_sequence: list[tuple[ChannelId, PulseLike, float]],
-) -> list[tuple[ChannelId, PulseLike, float]]:
+) -> tuple[list[tuple[ChannelId, PulseLike, float]], dict[PulseId, list[PulseId]]]:
     """Merge consecutive delays at the same start time by subtracting the minimum delay."""
     compressed = []
+    delay_equivalence = {}
+    last_id = None
 
     last_delay = 0
     for ch, pulse, t in timed_sequence:
         if not isinstance(pulse, Delay):
             compressed.append((ch, pulse, t))
             last_delay = 0
+            last_id = None
             continue
-        if pulse.duration == last_delay:
+        if pulse.duration <= last_delay:
+            if last_id is None:
+                delay_equivalence[pulse.id] = [pulse.id]
+                last_id = pulse.id
+            else:
+                delay_equivalence[last_id].append(pulse.id)
             continue
         if pulse.duration > last_delay:
             new_duration = pulse.duration - last_delay
             last_delay = pulse.duration
-            pulse = Delay(duration=new_duration)
+            pulse = Delay(duration=new_duration, id_=pulse.id)
             compressed.append((ch, pulse, t))
-    return compressed
+
+            if last_id is None:
+                delay_equivalence[pulse.id] = [pulse.id]
+                last_id = pulse.id
+            else:
+                delay_equivalence[last_id].append(pulse.id)
+    return compressed, delay_equivalence
 
 
 def get_index(sequence: list[PulseLike], pulse: PulseLike) -> int:
@@ -192,30 +225,14 @@ def _(
 ) -> list[rfsoc_pulses.Element]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
 
-    start_delay = 0
     list_sequence = []
-    ordered_sequence = order_pulse_sequence(sequence)
-    pulse_sequence = [p for _, p in ordered_sequence]
+    ordered_sequence, _ = order_pulse_sequence(sequence)
 
-    for ch, pulse in ordered_sequence:
-        if isinstance(pulse, Delay):
-            start_delay += pulse.duration * nano / micro
-        elif isinstance(pulse, Align):
-            reached = False
-            # find last real pulse before align and delay with its duration
-            for rev_p in pulse_sequence[::-1]:
-                if reached:
-                    if not (isinstance(rev_p, Delay) or isinstance(rev_p, Align)):
-                        start_delay = rev_p.duration * nano / micro
-                        break
-                else:
-                    reached = rev_p == pulse
-        else:
-            pulse_dict = asdict(
-                convert(pulse, start_delay, ch, channels, sampling_rate, configs)
-            )
-            start_delay = 0
-            list_sequence.append(pulse_dict)
+    for ch, pulse, rst in ordered_sequence:
+        pulse_dict = asdict(
+            convert(pulse, rst * nano / micro, ch, channels, sampling_rate, configs)
+        )
+        list_sequence.append(pulse_dict)
 
     return list_sequence
 
@@ -309,8 +326,8 @@ def _(
     `convert_units_sweeper`.
     """
 
-    ordered_sequence = order_pulse_sequence(sequence)
-    pulse_sequence = [pulse for _, pulse in ordered_sequence]
+    ordered_sequence, delay_equivalence = order_pulse_sequence(sequence)
+    pulse_sequence = [pulse for _, pulse, _ in ordered_sequence]
 
     parameters = []
     starts = []
@@ -343,7 +360,7 @@ def _(
             assert sweeper.channels is not None
             for ch_id in sweeper.channels:
                 parameters.append(rfsoc.Parameter.FREQUENCY)
-                pulse = list(ordered_sequence.channel(ch_id))[0]
+                pulse = [p for ch, p, _ in ordered_sequence if ch == ch_id][0]
                 # TODO what happens if more than one pulse are on the same channel?
                 indexes.append(get_index(pulse_sequence, pulse))
                 starts.append(start)
@@ -374,20 +391,14 @@ def _(
             assert sweeper.pulses is not None
             if not isinstance(sweeper.pulses[0], Delay):
                 raise RuntimeError("Only delay sweepers are convertible.")
-            pulse_idx = 0
+
             for pulse in sweeper.pulses:
                 parameters.append(rfsoc.Parameter.DELAY)
-
                 # counting the index of the pulse (without delay pulses)
-                is_this_delay = False
-                for p in pulse_sequence:
-                    if is_this_delay:
-                        if not isinstance(p, Delay):
-                            indexes.append(pulse_idx)
-                    elif p == pulse:
-                        is_this_delay = True
-                    if not isinstance(p, Delay):
-                        pulse_idx += 1
+                for idx, p in enumerate(pulse_sequence):
+                    if p.id in delay_equivalence:
+                        if pulse.id in delay_equivalence[p.id]:
+                            indexes.append(idx)
 
                 starts.append(start)
                 stops.append(stop)

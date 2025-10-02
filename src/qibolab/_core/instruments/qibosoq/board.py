@@ -23,7 +23,7 @@ from qibolab._core.execution_parameters import (
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses.pulse import Align, Delay, PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -84,6 +84,8 @@ class RFSoC(Controller):
         # If there are no software sweepers send experiment.
         # Last layer for recursion.
         if software == 0:
+            if len(dict(updates)) > 0:
+                log.info(f"Executing sequence with updates: {dict(updates)}")
             return self._play(configs, sequence, sweepers, options, updates)
 
         # use a default dictionary, merging existing values
@@ -118,7 +120,6 @@ class RFSoC(Controller):
     ) -> dict[PulseId, Result]:
         results = {}
 
-        # TODO: why not averaging for discrimination?
         self.cfg.average = (
             options.acquisition_type is not AcquisitionType.DISCRIMINATION
             and options.averaging_mode is AveragingMode.CYCLIC
@@ -148,6 +149,9 @@ class RFSoC(Controller):
                     assert angle is not None
                     assert threshold is not None
                     result = _classify_shots(np.array(i), np.array(q), angle, threshold)
+                    if options.averaging_mode is AveragingMode.CYCLIC:
+                        result = np.mean(result, axis=0)
+
                 else:
                     result = np.stack([i, q], axis=-1)
                 results[acq.id] = result
@@ -194,6 +198,7 @@ class RFSoC(Controller):
                 for parsweep in converted_sweepers
             ],
         }
+        # print("\n\n", server_commands, "\n\n")
         host, port_ = self.address.split(":")
         port = int(port_)
 
@@ -298,7 +303,17 @@ def _firmware_loops(
                     ch for p in s.pulses for ch in sequence.pulse_channels(p.id)
                 ]
 
-            if any(sequence.channel(ch) for ch in channels) > 1:
+            if any(
+                len(
+                    [
+                        p
+                        for p in list(sequence.channel(ch))
+                        if (not isinstance(p, Delay)) and (not isinstance(p, Align))
+                    ]
+                )
+                > 1
+                for ch in channels
+            ):
                 return n
 
         # if not disallowed, increase the amount of firmware loops
@@ -348,7 +363,8 @@ def _reshape_sweep_results(
     shape = [len(sweeper[0].values) for sweeper in sweepers]  # pyright: ignore
 
     if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-        shape.insert(0, getattr(execution_parameters, "nshots", 1))
+        # shape.insert(0, getattr(execution_parameters, "nshots", 1))
+        shape.append(getattr(execution_parameters, "nshots", 1))
     if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
         shape.append(2)  # I/Q last axis
 
@@ -357,6 +373,13 @@ def _reshape_sweep_results(
         assert value.size == np.prod(shape), (
             f"Size mismatch: value.size={value.size}, expected {np.prod(shape)}, shape={shape}"
         )
+
         reshaped[key] = value.reshape(shape)
+        if (
+            execution_parameters.averaging_mode is not AveragingMode.CYCLIC
+            and execution_parameters.acquisition_type
+            is not AcquisitionType.DISCRIMINATION
+        ):
+            reshaped[key] = np.moveaxis(reshaped[key], 0, -2)
 
     return reshaped
