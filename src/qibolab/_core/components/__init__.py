@@ -15,10 +15,12 @@ have unique names, and in any relevant context can be referred to by
 their name.
 """
 
-from . import channels, configs
+from . import channels, configs, filters
 from .channels import *
 from .configs import *
+from .filters import *
 
 __all__ = []
 __all__ += channels.__all__
 __all__ += configs.__all__
+__all__ += filters.__all__

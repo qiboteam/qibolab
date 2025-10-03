@@ -1,12 +1,13 @@
 from typing import Literal, Union
 
-from pydantic import Field
+import numpy as np
 
 from qibolab._core.components import (
     AcquisitionConfig,
     DcConfig,
     OscillatorConfig,
 )
+from qibolab._core.components.filters import ExponentialFilter
 
 __all__ = [
     "OpxOutputConfig",
@@ -22,6 +23,23 @@ OctaveOutputModes = Literal[
 
 DEFAULT_SAMPLING_RATE = 1e9
 
+DEFAULT_FEEDFORWARD_MAX = 2 - 2**-16
+"""Maximum feedforward tap value"""
+DEFAULT_FEEDBACK_MAX = 1 - 2**-20
+"""Maximum feedback tap value"""
+
+
+def normalize_feedforward(taps: list[float], threshold: float) -> list[float]:
+    """Feedforward coefficient normalization required by QM."""
+    scale = np.max(np.abs(taps) / threshold, initial=1)
+    return (np.array(taps) / scale).tolist()
+
+
+def normalize_feedback(taps: list[float], threshold: float) -> list[float]:
+    """Feedback coefficient normalization required by QM."""
+    new_taps = np.clip(taps, -threshold, threshold)
+    return new_taps.tolist()
+
 
 class OpxOutputConfig(DcConfig):
     """DC channel config using QM OPX+."""
@@ -33,17 +51,25 @@ class OpxOutputConfig(DcConfig):
 
     Possible values are -0.5V to 0.5V.
     """
-    filter: dict[str, list[float]] = Field(default_factory=dict)
-    """FIR and IIR filters to be applied for correcting signal distortions.
-
-    See
-    https://docs.quantum-machines.co/1.1.7/qm-qua-sdk/docs/Guides/output_filter/?h=filter#output-filter
-    for more details.
-    Changing the filters affects the calibration of single shot discrimination (threshold and angle).
-    """
     output_mode: Literal["direct", "amplified"] = "direct"
     sampling_rate: float = DEFAULT_SAMPLING_RATE
     upsampling_mode: Literal["mw", "pulse"] = "mw"
+    feedback_max: float = DEFAULT_FEEDBACK_MAX
+    feedforward_max: float = DEFAULT_FEEDFORWARD_MAX
+
+    @property
+    def filter(self):
+        feedback_filters = [
+            -i.feedback[1] for i in self.filters if isinstance(i, ExponentialFilter)
+        ]
+        return {
+            "feedback": normalize_feedback(feedback_filters, self.feedback_max)
+            if len(feedback_filters) > 0
+            else [],
+            "feedforward": normalize_feedforward(self.feedforward, self.feedforward_max)
+            if len(self.feedforward) > 0
+            else [],
+        }
 
 
 class OctaveOscillatorConfig(OscillatorConfig):
