@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from functools import cache, cached_property
+from functools import cache
 from typing import Any, Collection, Optional
 
 import numpy as np
@@ -116,7 +116,7 @@ class Sweeper(Model):
 
         return self
 
-    @cached_property
+    @property
     def irange(self) -> tuple[float, float, float]:
         """Inferred range.
 
