@@ -118,6 +118,7 @@ class RFSoC(Controller):
         options: ExecutionParameters,
         updates: dict,
     ) -> dict[PulseId, Result]:
+        """Execute pulse sequence or on-hardware sweep."""
         results = {}
 
         self.cfg.average = (
@@ -146,9 +147,9 @@ class RFSoC(Controller):
                 if options.acquisition_type is AcquisitionType.DISCRIMINATION:
                     config = cast(AcquisitionConfig, configs[ch])
                     angle, threshold = config.iq_angle, config.threshold
-                    assert angle is not None
-                    assert threshold is not None
+                    assert angle is not None and threshold is not None
                     result = _classify_shots(np.array(i), np.array(q), angle, threshold)
+
                     if options.averaging_mode is AveragingMode.CYCLIC:
                         result = np.mean(result, axis=0)
 
@@ -198,11 +199,13 @@ class RFSoC(Controller):
                 for parsweep in converted_sweepers
             ],
         }
-        # print("\n\n", server_commands, "\n\n")
         host, port_ = self.address.split(":")
         port = int(port_)
 
         try:
+            return client.connect(server_commands, host, port)
+        except KeyboardInterrupt:
+            log.warning("Manual interrupt detected, re-trying once.")
             return client.connect(server_commands, host, port)
         except RuntimeError as e:
             if "exception in readout loop" in str(e):

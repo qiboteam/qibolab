@@ -228,10 +228,25 @@ def _(
     list_sequence = []
     ordered_sequence, _ = order_pulse_sequence(sequence)
 
+    ch_vz_phases = {}
+
     for ch, pulse, rst in ordered_sequence:
-        pulse_dict = asdict(
-            convert(pulse, rst * nano / micro, ch, channels, sampling_rate, configs)
+        if ch not in ch_vz_phases:
+            ch_vz_phases[ch] = 0.0
+        if isinstance(pulse, VirtualZ):
+            ch_vz_phases[ch] += pulse.phase
+            continue
+
+        pulse = convert(
+            pulse,
+            rst * nano / micro,
+            ch,
+            channels,
+            sampling_rate,
+            configs,
+            ch_vz_phases[ch],
         )
+        pulse_dict = asdict(pulse)
         list_sequence.append(pulse_dict)
 
     return list_sequence
@@ -245,6 +260,7 @@ def _(
     channels: dict[ChannelId, Channel],
     sampling_rate: float,
     configs: dict[str, Config],
+    ch_vz_phase: float,
 ) -> rfsoc_pulses.Element:
     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
 
@@ -271,7 +287,7 @@ def _(
         ptype = "readout"
         freq = (getattr(configs[probe_id], "frequency") - lo_frequency) / mega
         amp = pulse.probe.amplitude
-        rel_ph = pulse.probe.relative_phase
+        rel_ph = pulse.probe.relative_phase + ch_vz_phase
         envelope = pulse.probe.envelope
     else:
         assert not isinstance(pulse, VirtualZ), (
@@ -285,7 +301,7 @@ def _(
         )
 
         amp = pulse.amplitude
-        rel_ph = pulse.relative_phase
+        rel_ph = pulse.relative_phase + ch_vz_phase
         envelope = pulse.envelope
         freq = getattr(configs[ch_id], "frequency", 0)
         ptype = "drive" if freq != 0 else "flux"
