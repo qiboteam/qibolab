@@ -204,9 +204,11 @@ class RFSoC(Controller):
 
         try:
             return client.connect(server_commands, host, port)
-        except KeyboardInterrupt:
-            log.warning("Manual interrupt detected, re-trying once.")
-            return client.connect(server_commands, host, port)
+            # next qibosoq version:
+            # logs, (i, q) = client.connect(server_commands, host, port)
+            # for board_log in logs:
+            #     log.info(board_log)
+            # return  (i, q)
         except RuntimeError as e:
             if "exception in readout loop" in str(e):
                 log.warning(
