@@ -13,17 +13,17 @@ from qibo.config import log
 from qibosoq import client
 from scipy.constants import micro, nano
 
-from qibolab._core.components.channels import AcquisitionChannel, DcChannel
+from qibolab._core.components.channels import AcquisitionChannel, Channel, DcChannel
 from qibolab._core.components.configs import AcquisitionConfig, Config, DcConfig
 from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
 )
-from qibolab._core.identifier import Result
+from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Pulse
-from qibolab._core.pulses.pulse import Align, Delay, PulseId
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
@@ -65,9 +65,9 @@ class RFSoC(Controller):
             _validate_input_command(seq, options, sweepers)
             _update_cfg(self.cfg, options)
 
-            fw = _firmware_loops(seq, sweepers, configs)
+            fw = _firmware_loops(seq, sweepers, configs, self.channels)
             res = self._sweep(configs, seq, sweepers, len(sweepers) - fw, options, {})
-            results |= _reshape_sweep_results(res, sweepers, options)
+            results |= _reshape_sweep_results(res, sweepers, options, fw)
 
         return results
 
@@ -256,12 +256,14 @@ def _firmware_loops(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     configs: dict[str, Config],
+    channels: dict[ChannelId, Channel],
 ) -> int:
     """Check if a sweeper must be run with python loop or on hardware.
 
     To be run on qick internal loop a sweep must:
         * not be on the readout frequency
         * not be a duration sweeper
+        * not be a duration_interpolated sweeper
         * only one pulse per channel supported
         * flux pulses are not compatible with sweepers
 
@@ -279,12 +281,9 @@ def _firmware_loops(
 
     n = 0
     for parsweep in reversed(sweepers):
-        if any(
-            s.parameter is Parameter.duration
-            and s.pulses is not None
-            and any(isinstance(p, Pulse) for p in s.pulses)
-            for s in parsweep
-        ):
+        if any(s.parameter is Parameter.duration_interpolated for s in parsweep):
+            return n
+        if any(s.parameter is Parameter.duration for s in parsweep):
             return n
 
         if any(
@@ -301,25 +300,26 @@ def _firmware_loops(
 
         for s in parsweep:
             if s.channels is not None:
-                channels = s.channels
+                this_channels = s.channels
             else:
                 assert s.pulses is not None
-                channels = [
+                this_channels = [
                     ch for p in s.pulses for ch in sequence.pulse_channels(p.id)
                 ]
 
-            if any(
-                len(
-                    [
-                        p
-                        for p in list(sequence.channel(ch))
-                        if (not isinstance(p, Delay)) and (not isinstance(p, Align))
-                    ]
-                )
-                > 1
-                for ch in channels
-            ):
-                return n
+            # If more than a pulse is on the sweeped channel this is a soft loop
+            # What matters is the DAC number. Not the qibolab channel but the path
+            for ch in this_channels:
+                path = channels[ch].path
+                pulses_in_path = []
+                for p_ch, pulse in sequence:
+                    # Type check so that ADC and DACs are not compared
+                    if type(channels[p_ch]) is type(channels[ch]):
+                        if channels[p_ch].path == path:
+                            pulses_in_path.append(pulse)
+
+                if len(pulses_in_path) > 1:
+                    return n
 
         # if not disallowed, increase the amount of firmware loops
         n += 1
@@ -336,7 +336,8 @@ def _update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
 
 def _update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Config]:
     """Apply sweep updates to base configs."""
-    return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
+    new_dict = {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
+    return new_dict
 
 
 def _classify_shots(
@@ -360,6 +361,7 @@ def _reshape_sweep_results(
     results: dict[PulseId, Result],
     sweepers: list[ParallelSweepers],
     execution_parameters: ExecutionParameters,
+    firmware_loops: int,
 ) -> dict[PulseId, Result]:
     """Reshape result to correct Qibolab shape."""
     if execution_parameters.acquisition_type is AcquisitionType.RAW:
@@ -367,11 +369,16 @@ def _reshape_sweep_results(
 
     shape = [len(sweeper[0].values) for sweeper in sweepers]  # pyright: ignore
 
-    if execution_parameters.averaging_mode is not AveragingMode.CYCLIC:
-        # shape.insert(0, getattr(execution_parameters, "nshots", 1))
+    is_not_cyclic = execution_parameters.averaging_mode is not AveragingMode.CYCLIC
+    is_discrim = execution_parameters.acquisition_type is AcquisitionType.DISCRIMINATION
+
+    if is_not_cyclic:
         shape.append(getattr(execution_parameters, "nshots", 1))
-    if execution_parameters.acquisition_type is not AcquisitionType.DISCRIMINATION:
+
+    if not is_discrim:
         shape.append(2)  # I/Q last axis
+    elif is_not_cyclic and firmware_loops != 0:
+        shape = [shape[-1]] + shape[:-1]
 
     reshaped = {}
     for key, value in results.items():
@@ -380,11 +387,13 @@ def _reshape_sweep_results(
         )
 
         reshaped[key] = value.reshape(shape)
-        if (
-            execution_parameters.averaging_mode is not AveragingMode.CYCLIC
-            and execution_parameters.acquisition_type
-            is not AcquisitionType.DISCRIMINATION
-        ):
-            reshaped[key] = np.moveaxis(reshaped[key], 0, -2)
+        if is_not_cyclic:
+            if is_discrim and firmware_loops == 0:
+                reshaped[key] = np.moveaxis(reshaped[key], 0, -1)
+            elif is_discrim and firmware_loops == 1:
+                reshaped[key] = np.moveaxis(reshaped[key], 0, -1)
+                reshaped[key] = value.reshape([shape[0], shape[2], shape[1]])
+            else:
+                reshaped[key] = np.moveaxis(reshaped[key], 0, -2)
 
     return reshaped

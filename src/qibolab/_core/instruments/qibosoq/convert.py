@@ -129,7 +129,6 @@ def order_pulse_sequence(
             if isinstance(pulse, Delay):
                 start = channel_time[ch]
                 channel_time[ch] = stop = start + pulse.duration
-                # result.append((ch, pulse, start, stop, idx))
                 delays_before_pulse.append(pulse.id)
 
             elif isinstance(pulse, Align):
@@ -138,7 +137,6 @@ def order_pulse_sequence(
                 for c in channel_time:
                     channel_time[c] = stop
                 delays_before_pulse.append(pulse.id)
-                # result.append((ch, pulse, start, stop, idx))
 
             else:
                 start = channel_time[ch]
@@ -180,15 +178,13 @@ def simplify_delays(
             compressed.append((ch, pulse, t))
             last_delay = 0
             last_id = None
-            continue
-        if pulse.duration <= last_delay:
+        elif pulse.duration <= last_delay:
             if last_id is None:
                 delay_equivalence[pulse.id] = [pulse.id]
                 last_id = pulse.id
             else:
                 delay_equivalence[last_id].append(pulse.id)
-            continue
-        if pulse.duration > last_delay:
+        elif pulse.duration > last_delay:
             new_duration = pulse.duration - last_delay
             last_delay = pulse.duration
             pulse = Delay(duration=new_duration, id_=pulse.id)
@@ -216,13 +212,27 @@ def convert(*args) -> Any:
     raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")
 
 
+def check_sequence_overlaps(sequence: list[dict]):
+    """Check that the sequence has no overlapping pulses on same dac."""
+    # placeholders
+    last_duration = 0
+    last_dac = -1
+
+    for pulse in sequence:
+        if pulse["dac"] == last_dac:
+            if pulse["start_delay"] <= last_duration:
+                raise RuntimeError("Pulse sequence incompatible with current setup.")
+        last_dac = pulse["dac"]
+        last_duration = pulse["duration"]
+
+
 @convert.register
 def _(
     sequence: PulseSequence,
     sampling_rate: float,
     channels: dict[ChannelId, Channel],
     configs: dict[str, Config],
-) -> list[rfsoc_pulses.Element]:
+) -> list[dict]:
     """Convert PulseSequence to list of rfosc pulses with relative time."""
 
     list_sequence = []
@@ -249,6 +259,7 @@ def _(
         pulse_dict = asdict(pulse)
         list_sequence.append(pulse_dict)
 
+    check_sequence_overlaps(list_sequence)
     return list_sequence
 
 
@@ -282,7 +293,6 @@ def _(
         assert isinstance(ch, AcquisitionChannel)
         probe_id = ch.probe
         assert probe_id is not None
-        # probe_ch = channels[probe_id]
         adc = int(ch.path)
         ptype = "readout"
         freq = (getattr(configs[probe_id], "frequency") - lo_frequency) / mega
