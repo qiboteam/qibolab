@@ -212,20 +212,6 @@ def convert(*args) -> Any:
     raise ValueError(f"Convert function received bad parameters ({type(args[0])}).")
 
 
-def check_sequence_overlaps(sequence: list[dict]):
-    """Check that the sequence has no overlapping pulses on same dac."""
-    # placeholders
-    last_duration = 0
-    last_dac = -1
-
-    for pulse in sequence:
-        if pulse["dac"] == last_dac:
-            if pulse["start_delay"] <= last_duration:
-                raise RuntimeError("Pulse sequence incompatible with current setup.")
-        last_dac = pulse["dac"]
-        last_duration = pulse["duration"]
-
-
 @convert.register
 def _(
     sequence: PulseSequence,
@@ -259,7 +245,6 @@ def _(
         pulse_dict = asdict(pulse)
         list_sequence.append(pulse_dict)
 
-    check_sequence_overlaps(list_sequence)
     return list_sequence
 
 
