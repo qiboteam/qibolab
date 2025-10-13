@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import ConfigDict, Field
 
+from qibolab._core.pulses.pulse import PulseId
+
 from ..components import Channel, Config
 from ..execution_parameters import ExecutionParameters
 from ..identifier import ChannelId, Result
@@ -61,9 +63,11 @@ class Controller(Instrument):
 
     @property
     @abstractmethod
-    def sampling_rate(self) -> int:
-        """Sampling rate of control electronics in giga samples per second
-        (GSps)."""
+    def sampling_rate(self) -> float:
+        """Sampling rate of control electronics.
+
+        Expressed in giga samples per second (GSps).
+        """
 
     @abstractmethod
     def play(
@@ -72,7 +76,7 @@ class Controller(Instrument):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Play a pulse sequence and retrieve feedback.
 
         If :class:`qibolab.Sweeper` objects are passed as arguments, they are
