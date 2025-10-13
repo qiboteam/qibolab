@@ -1,16 +1,22 @@
 """Convert helper functions for qibosoq driver."""
 
-from copy import deepcopy
 from dataclasses import asdict
 from functools import singledispatch
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import qibosoq.components.base as rfsoc
 import qibosoq.components.pulses as rfsoc_pulses
 from scipy.constants import mega, micro, nano
 
-from qibolab._core.components.configs import Config, DcConfig
+from qibolab._core.components.channels import (
+    AcquisitionChannel,
+    Channel,
+    DcChannel,
+    IqChannel,
+)
+from qibolab._core.components.configs import Config, OscillatorConfig
+from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses.envelope import (
     Drag,
     Envelope,
@@ -18,9 +24,17 @@ from qibolab._core.pulses.envelope import (
     Gaussian,
     Rectangular,
 )
-from qibolab._core.qubits import Qubit
+from qibolab._core.pulses.pulse import (
+    Acquisition,
+    Align,
+    Delay,
+    PulseId,
+    PulseLike,
+    Readout,
+    VirtualZ,
+)
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
+from qibolab._core.sweeper import Parameter, Sweeper
 
 
 def replace_pulse_shape(
@@ -31,11 +45,11 @@ def replace_pulse_shape(
         return rfsoc_pulses.Rectangular(**asdict(rfsoc_pulse))
     if isinstance(envelope, Gaussian):
         return rfsoc_pulses.Gaussian(
-            **asdict(rfsoc_pulse), rel_sigma=envelope.rel_sigma
+            **asdict(rfsoc_pulse), rel_sigma=1 / envelope.rel_sigma
         )
     if isinstance(envelope, Drag):
         return rfsoc_pulses.Drag(
-            **asdict(rfsoc_pulse), rel_sigma=envelope.rel_sigma, beta=envelope.beta
+            **asdict(rfsoc_pulse), rel_sigma=1 / envelope.rel_sigma, beta=envelope.beta
         )
     if isinstance(envelope, Exponential):
         return rfsoc_pulses.FluxExponential(
@@ -52,22 +66,144 @@ def replace_pulse_shape(
     )
 
 
-def convert_units_sweeper(sweeper: Sweeper, sequence: PulseSequence) -> Sweeper:
+def get_lo_frequency(ch: Channel, configs: dict[str, Config]) -> float:
+    """Return LO frequency from channel, if applicable."""
+    if isinstance(ch, IqChannel):
+        if ch.lo is not None:
+            conf = configs[ch.lo]
+            if isinstance(conf, OscillatorConfig):
+                return conf.frequency
+    return 0
+
+
+def convert_units_sweeper(
+    sweeper: Sweeper,
+    channels: dict[ChannelId, Channel],
+    configs: dict[str, Config],
+) -> Sweeper:
     """Convert units for `qibosoq.abstract.Sweeper` considering also LOs."""
-    sweeper = deepcopy(sweeper)
-    for idx, jdx in enumerate(sweeper.indexes):
-        parameter = sweeper.parameters[idx]
-        if parameter is rfsoc.Parameter.FREQUENCY:
-            lo_frequency = ...
-            sweeper.starts[idx] = (sweeper.starts[idx] - lo_frequency) / mega
-            sweeper.stops[idx] = (sweeper.stops[idx] - lo_frequency) / mega
-        elif parameter is rfsoc.Parameter.DELAY:
-            sweeper.starts[idx] *= nano / micro
-            sweeper.stops[idx] *= nano / micro
-        elif parameter is rfsoc.Parameter.RELATIVE_PHASE:
-            sweeper.starts[idx] = np.degrees(sweeper.starts[idx])
-            sweeper.stops[idx] = np.degrees(sweeper.stops[idx])
-    return sweeper
+
+    start, stop, step = sweeper.irange
+    new_start, new_stop, new_step = sweeper.irange
+    if sweeper.parameter is Parameter.frequency:
+        assert sweeper.channels is not None
+        lo_frequency = get_lo_frequency(channels[sweeper.channels[0]], configs)
+
+        new_start = (start - lo_frequency) / mega
+        new_stop = (stop - lo_frequency) / mega
+        new_step = step / mega
+
+    elif sweeper.parameter in (Parameter.phase, Parameter.relative_phase):
+        new_start = np.degrees(start)
+        new_stop = np.degrees(stop)
+        new_step = np.degrees(step)
+
+    elif sweeper.parameter is Parameter.duration:
+        new_start = start / micro * nano
+        new_stop = stop / micro * nano
+        new_step = step / micro * nano
+
+    return Sweeper(
+        parameter=sweeper.parameter,
+        range=(new_start, new_stop, new_step),
+        pulses=sweeper.pulses,
+        channels=sweeper.channels,
+    )
+
+
+def order_pulse_sequence(
+    sequence: PulseSequence,
+) -> tuple[list[tuple[ChannelId, PulseLike, float]], dict[PulseId, list[PulseId]]]:
+    """Order pulse sequence by execution time."""
+
+    channel_time: dict[str, float] = {}
+    channel_order = {ch: i for i, ch in enumerate(sequence.by_channel.keys())}
+    result = []
+
+    delay_equivalence = {}
+
+    for ch, subseq in sequence.by_channel.items():
+        channel_time[ch] = 0
+        delays_before_pulse = []
+        for idx, pulse in enumerate(subseq):
+            if isinstance(pulse, Delay):
+                start = channel_time[ch]
+                channel_time[ch] = stop = start + pulse.duration
+                delays_before_pulse.append(pulse.id)
+
+            elif isinstance(pulse, Align):
+                start = channel_time[ch]
+                stop = max(channel_time.values())
+                for c in channel_time:
+                    channel_time[c] = stop
+                delays_before_pulse.append(pulse.id)
+
+            else:
+                start = channel_time[ch]
+                channel_time[ch] = stop = start + pulse.duration
+                result.append((ch, pulse, start, stop, idx))
+                if len(delays_before_pulse) > 0:
+                    delay_equivalence[pulse.id] = delays_before_pulse
+                delays_before_pulse = []
+
+    def sort_key(x):
+        """Sort pulse first by time and then by type (delays/align later)."""
+        ch, _, start, stop, idx = x
+        return (start, stop, idx, channel_order[ch])
+
+    result.sort(key=sort_key)
+
+    rt_result = []
+    rst = 0  # relative start time
+    last_start = 0
+    for ch, pulse, start, stop, _ in result:
+        rst = start - last_start
+        rt_result.append((ch, pulse, rst))
+        last_start = start
+
+    return rt_result, delay_equivalence
+
+
+def simplify_delays(
+    timed_sequence: list[tuple[ChannelId, PulseLike, float]],
+) -> tuple[list[tuple[ChannelId, PulseLike, float]], dict[PulseId, list[PulseId]]]:
+    """Merge consecutive delays at the same start time by subtracting the minimum delay."""
+    compressed = []
+    delay_equivalence = {}
+    last_id = None
+
+    last_delay = 0
+    for ch, pulse, t in timed_sequence:
+        if not isinstance(pulse, Delay):
+            compressed.append((ch, pulse, t))
+            last_delay = 0
+            last_id = None
+        elif pulse.duration <= last_delay:
+            if last_id is None:
+                delay_equivalence[pulse.id] = [pulse.id]
+                last_id = pulse.id
+            else:
+                delay_equivalence[last_id].append(pulse.id)
+        elif pulse.duration > last_delay:
+            new_duration = pulse.duration - last_delay
+            last_delay = pulse.duration
+            pulse = Delay(duration=new_duration, id_=pulse.id)
+            compressed.append((ch, pulse, t))
+
+            if last_id is None:
+                delay_equivalence[pulse.id] = [pulse.id]
+                last_id = pulse.id
+            else:
+                delay_equivalence[last_id].append(pulse.id)
+    return compressed, delay_equivalence
+
+
+def get_index(sequence: list[PulseLike], pulse: PulseLike) -> int:
+    """Get pulse index from a sequence."""
+    for idx, p in enumerate(sequence):
+        if p.id == pulse.id:
+            return idx
+    raise RuntimeError("Pulse not in sequence.")
 
 
 @singledispatch
@@ -77,53 +213,109 @@ def convert(*args) -> Any:
 
 
 @convert.register
-def _(qubit: Qubit, configs: dict[str, Config], ports: dict[str, int]) -> rfsoc.Qubit:
-    """Convert `qibolab.platforms.abstract.Qubit` to
-    `qibosoq.abstract.Qubit`."""
-    if qubit.flux is not None:
-        flux = cast(DcConfig, configs[qubit.flux])
-        return rfsoc.Qubit(flux.offset, ports[qubit.flux])
-    return rfsoc.Qubit(0.0, None)
+def _(
+    sequence: PulseSequence,
+    sampling_rate: float,
+    channels: dict[ChannelId, Channel],
+    configs: dict[str, Config],
+) -> list[dict]:
+    """Convert PulseSequence to list of rfosc pulses with relative time."""
+
+    list_sequence = []
+    ordered_sequence, _ = order_pulse_sequence(sequence)
+
+    ch_vz_phases = {}
+
+    for ch, pulse, rst in ordered_sequence:
+        if ch not in ch_vz_phases:
+            ch_vz_phases[ch] = 0.0
+        if isinstance(pulse, VirtualZ):
+            ch_vz_phases[ch] += pulse.phase
+            continue
+
+        pulse = convert(
+            pulse,
+            rst * nano / micro,
+            ch,
+            channels,
+            sampling_rate,
+            configs,
+            ch_vz_phases[ch],
+        )
+        pulse_dict = asdict(pulse)
+        list_sequence.append(pulse_dict)
+
+    return list_sequence
 
 
 @convert.register
 def _(
-    sequence: PulseSequence, qubits: dict[int, Qubit], sampling_rate: float
-) -> list[rfsoc_pulses.Pulse]:
-    """Convert PulseSequence to list of rfosc pulses with relative time."""
-    # last_pulse_start = 0
-    list_sequence = []
-    # for pulse in sorted(sequence):
-    #     start_delay = (pulse.start - last_pulse_start) * nano / micro
-    #     pulse_dict = asdict(convert(pulse, qubits, start_delay, sampling_rate))
-    #     list_sequence.append(pulse_dict)
-    #
-    #     last_pulse_start = pulse.start
-    return list_sequence
+    pulse: PulseLike,
+    start_delay: float,
+    ch_id: ChannelId,
+    channels: dict[ChannelId, Channel],
+    sampling_rate: float,
+    configs: dict[str, Config],
+    ch_vz_phase: float,
+) -> rfsoc_pulses.Element:
+    """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
 
+    ch = channels[ch_id]
+    lo_frequency = get_lo_frequency(ch, configs)
 
-# @convert.register
-# def _(
-#     pulse: Pulse, qubits: dict[int, Qubit], start_delay: float, sampling_rate: float
-# ) -> rfsoc_pulses.Pulse:
-#     """Convert `qibolab.pulses.pulse` to `qibosoq.abstract.Pulse`."""
-#     pulse_type = pulse.type.name.lower()
-#     dac = getattr(qubits[pulse.qubit], pulse_type).port.name
-#     adc = qubits[pulse.qubit].feedback.port.name if pulse_type == "readout" else None
-#     lo_frequency = pulse_lo_frequency(pulse, qubits)
-#
-#     rfsoc_pulse = rfsoc_pulses.Pulse(
-#         frequency=(pulse.frequency - lo_frequency) / mega,
-#         amplitude=pulse.amplitude,
-#         relative_phase=np.degrees(pulse.relative_phase),
-#         start_delay=start_delay,
-#         duration=pulse.duration * nano / micro,
-#         dac=dac,
-#         adc=adc,
-#         name=pulse.serial,
-#         type=pulse_type,
-#     )
-#     return replace_pulse_shape(rfsoc_pulse, pulse.shape, sampling_rate)
+    adc = 0  # Assign adc 0 to ensure frequency matching
+    if isinstance(pulse, Acquisition):
+        freq = (getattr(configs[ch_id], "frequency") - lo_frequency) / mega
+        return rfsoc_pulses.Measurement(
+            type="readout",
+            frequency=freq,
+            start_delay=start_delay,
+            duration=pulse.duration * nano / micro,
+            dac=0,  # Fix frequency matching to 0-dac
+            adc=int(ch.path),
+        )
+    if isinstance(pulse, Readout):
+        assert isinstance(ch, AcquisitionChannel)
+        probe_id = ch.probe
+        assert probe_id is not None
+        adc = int(ch.path)
+        ptype = "readout"
+        freq = (getattr(configs[probe_id], "frequency") - lo_frequency) / mega
+        amp = pulse.probe.amplitude
+        rel_ph = pulse.probe.relative_phase + ch_vz_phase
+        envelope = pulse.probe.envelope
+    else:
+        assert not isinstance(pulse, VirtualZ), (
+            "VirtualZ pulse is not convertible to qibosoq.pulse (should not reach this line)"
+        )
+        assert not isinstance(pulse, Delay), (
+            "Delay pulse is currently not convertible to qibosoq.pulse (should not reach this line)"
+        )
+        assert not isinstance(pulse, Align), (
+            "Align pulse is currently not convertible to qibosoq.pulse (should not reach this line)"
+        )
+
+        amp = pulse.amplitude
+        rel_ph = pulse.relative_phase + ch_vz_phase
+        envelope = pulse.envelope
+        freq = getattr(configs[ch_id], "frequency", 0)
+        ptype = "drive" if freq != 0 else "flux"
+        if freq != 0:
+            freq = (freq - lo_frequency) / mega
+
+    rfsoc_pulse = rfsoc_pulses.Pulse(
+        frequency=freq,
+        amplitude=amp,
+        relative_phase=np.degrees(rel_ph),
+        start_delay=start_delay,
+        duration=pulse.duration * nano / micro,
+        dac=int(ch.path),  # Add DAC in any case, for frequency matching
+        adc=adc,
+        name=str(pulse.id),
+        type=ptype,
+    )
+    num_samples = int(sampling_rate * pulse.duration)
+    return replace_pulse_shape(rfsoc_pulse, envelope, num_samples)
 
 
 @convert.register
@@ -134,7 +326,9 @@ def _(par: Parameter) -> rfsoc.Parameter:
 
 @convert.register
 def _(
-    sweeper: ParallelSweepers, sequence: PulseSequence, qubits: dict[int, Qubit]
+    sweeperlist: list,  # Should be ParallelSweepers, but functools encounters an error
+    sequence: PulseSequence,
+    channels: dict[ChannelId, Channel],
 ) -> rfsoc.Sweeper:
     """Convert `qibolab.sweeper.Sweeper` to `qibosoq.abstract.Sweeper`.
 
@@ -142,48 +336,92 @@ def _(
     to do it multiple times). Conversion will be done in
     `convert_units_sweeper`.
     """
+
+    ordered_sequence, delay_equivalence = order_pulse_sequence(sequence)
+    pulse_sequence = [pulse for _, pulse, _ in ordered_sequence]
+
     parameters = []
     starts = []
     stops = []
     indexes = []
+    expts = 0
+    for sweeper in sweeperlist:
+        start, stop, _ = sweeper.irange
+        expts = len(sweeper.values)
+        if sweeper.parameter is Parameter.offset:
+            assert sweeper.channels is not None
+            for ch_id in sweeper.channels:
+                parameters.append(rfsoc.Parameter.BIAS)
+                qubit_idx = 0
+                for ch in channels:
+                    if isinstance(channels[ch], DcChannel):
+                        if channels[ch] == channels[ch_id]:
+                            indexes.append(qubit_idx)
+                        else:
+                            qubit_idx += 1
+                starts.append(start)
+                stops.append(stop)
 
-    if sweeper.parameter is Parameter.offset:
-        # for qubit in sweeper.qubits:
-        #     parameters.append(rfsoc.Parameter.BIAS)
-        #     indexes.append(list(qubits.values()).index(qubit))
-        #     base_value = qubit.flux.offset
-        #     values = sweeper.get_values(base_value)
-        #     starts.append(values[0])
-        #     stops.append(values[-1])
+            if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
+                raise ValueError(
+                    "Sweeper amplitude is set to reach values higher than 1"
+                )
 
-        if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
-            raise ValueError("Sweeper amplitude is set to reach values higher than 1")
-    else:
-        # for pulse in sweeper.pulses:
-        #     idx_sweep = sequence.index(pulse)
-        #     indexes.append(idx_sweep)
-        #     start, stop, step = sweeper.irange
-        #     starts.append(start)
-        #     stops.append(step)
-        #
-        #     if sweeper.parameter is Parameter.duration:
-        #         parameters.append(rfsoc.Parameter.DURATION)
-        #
-        #         if len(sequence) > idx_sweep + 1:
-        #             # if duration-swept pulse is not last
-        #             indexes.append(idx_sweep + 1)
-        #             t_start = sequence[idx_sweep + 1].start - sequence[idx_sweep].start
-        #             parameters.append(rfsoc.Parameter.DELAY)
-        #             starts.append(t_start + delta_start)
-        #             stops.append(t_start + delta_stop)
-        #     else:
-        #         parameters.append(convert(sweeper.parameter))
-        pass
+        elif sweeper.parameter is Parameter.frequency:
+            assert sweeper.channels is not None
+            for ch_id in sweeper.channels:
+                parameters.append(rfsoc.Parameter.FREQUENCY)
+                pulse = [p for ch, p, _ in ordered_sequence if ch == ch_id][0]
+                # TODO what happens if more than one pulse are on the same channel?
+                indexes.append(get_index(pulse_sequence, pulse))
+                starts.append(start)
+                stops.append(stop)
+
+        elif sweeper.parameter is Parameter.amplitude:
+            assert sweeper.pulses is not None
+            for pulse in sweeper.pulses:
+                parameters.append(rfsoc.Parameter.AMPLITUDE)
+                indexes.append(get_index(pulse_sequence, pulse))
+                starts.append(start)
+                stops.append(stop)
+
+            if max(np.abs(starts)) > 1 or max(np.abs(stops)) > 1:
+                raise ValueError(
+                    "Sweeper amplitude is set to reach values higher than 1"
+                )
+
+        elif sweeper.parameter in (Parameter.phase, Parameter.relative_phase):
+            assert sweeper.pulses is not None
+            for pulse in sweeper.pulses:
+                parameters.append(rfsoc.Parameter.RELATIVE_PHASE)
+                indexes.append(get_index(pulse_sequence, pulse))
+                starts.append(start)
+                stops.append(stop)
+
+        elif sweeper.parameter is Parameter.duration:
+            assert sweeper.pulses is not None
+            if not isinstance(sweeper.pulses[0], Delay):
+                raise RuntimeError("Only delay sweepers are convertible.")
+
+            for pulse in sweeper.pulses:
+                parameters.append(rfsoc.Parameter.DELAY)
+                # counting the index of the pulse (without delay pulses)
+                for idx, p in enumerate(pulse_sequence):
+                    if p.id in delay_equivalence:
+                        if pulse.id in delay_equivalence[p.id]:
+                            indexes.append(idx)
+
+                starts.append(start)
+                stops.append(stop)
+        else:
+            raise RuntimeError(
+                f"In the sweeper conversion function, sweeper of type {type(sweeper)} is not convertible."
+            )
 
     return rfsoc.Sweeper(
         parameters=parameters,
         indexes=indexes,
         starts=np.asarray(starts),
         stops=np.asarray(stops),
-        expts=0,  # len(sweeper.values),
+        expts=expts,
     )
