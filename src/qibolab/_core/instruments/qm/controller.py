@@ -10,7 +10,6 @@ from typing import Optional, Union
 from pydantic import Field
 from qm import QmPendingJob, QuantumMachine, QuantumMachinesManager, generate_qua_script
 from qm.api.v2.qm_api_old import QmApiWithDeprecations
-from qm.octave import QmOctaveConfig
 from qm.simulate.credentials import create_credentials
 
 from qibolab._core.components import (
@@ -72,26 +71,6 @@ class Octave:
     """Network port of the Octave in the cluster configuration."""
     connectivity: ControllerId
     """OPXplus that acts as the waveform generator for the Octave."""
-
-
-def declare_octaves(octaves, host, calibration_path=None):
-    """Initiate Octave configuration and add octaves info.
-
-    Args:
-        octaves (dict): Dictionary containing :class:`qibolab.instruments.qm.devices.Octave` objects
-            for each Octave device in the experiment configuration.
-        host (str): IP of the Quantum Machines controller.
-        calibration_path (str): Path to the JSON file with the mixer calibration.
-    """
-    if len(octaves) == 0:
-        return None
-
-    config = QmOctaveConfig()
-    if calibration_path is not None:
-        config.set_calibration_db(calibration_path)
-    for octave in octaves.values():
-        config.add_device_info(octave.name, host, octave.port)
-    return config
 
 
 def fetch_results(handles, acquisitions):
@@ -272,16 +251,15 @@ class QmController(Controller):
         """Connect to the Quantum Machines manager."""
         host, port = self.address.split(":")
         self._temporary_calibration()
-        octave = declare_octaves(self.octaves, host, self._calibration_path)
         credentials = None
         if self.cloud:
             credentials = create_credentials()
         self.manager = QuantumMachinesManager(
             host=host,
             port=int(port),
-            octave=octave,
             credentials=credentials,
             cluster_name=self.cluster_name,
+            octave_calibration_db_path=self._calibration_path,
         )
 
     def disconnect(self):
@@ -294,7 +272,7 @@ class QmController(Controller):
 
     def configure_device(self, device: str):
         """Add device in the ``config``."""
-        if "octave" in device:
+        if "oct" in device:
             self.config.add_octave(device, self.octaves[device].connectivity, self.fems)
         else:
             self.config.add_controller(device, self.fems)
