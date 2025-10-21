@@ -1,4 +1,5 @@
 import time
+import warnings
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
@@ -210,8 +211,10 @@ class Cluster(Controller):
             for ch, seq in seqs.items():
                 # wait all sequencers
                 status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
-                if status.status is not qblox.SequencerStatuses.OKAY:
-                    raise RuntimeError(status)
+                if status.status is qblox.SequencerStatuses.ERROR:
+                    raise RuntimeError(f"slot: {slot}, seq: {seq}\n{status}")
+                if status.status is qblox.SequencerStatuses.WARNING:
+                    warnings.warn(f"slot: {slot}, seq: {seq}\n{status}")
 
                 # skip results retrieval for passive or inactive sequencers...
                 sequence = sequences.get(ch)
