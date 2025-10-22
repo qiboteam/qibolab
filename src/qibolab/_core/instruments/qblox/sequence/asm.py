@@ -51,7 +51,10 @@ def convert_offset(offset: float):
 
     Both offset values are divided in 2**sample path width steps. QCM
     DACs resolution 16bits, QRM DACs and ADCs 12 bit QCM 5Vpp, QRM 2Vpp
-    https://qblox-qblox-instruments.readthedocs-hosted.com/en/master/api_reference/sequencer.html
+
+    https://docs.qblox.com/en/main/cluster/qcm.html#specifications
+    https://docs.qblox.com/en/main/cluster/qcm_rf.html#specifications
+    https://docs.qblox.com/en/main/cluster/qrm_rf.html#specifications
     """
     scale_factor = 1.25 * np.sqrt(2)
     normalised_offset = offset / scale_factor
