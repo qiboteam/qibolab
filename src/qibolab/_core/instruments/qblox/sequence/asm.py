@@ -76,9 +76,11 @@ def convert(value: float, kind: Parameter) -> float:
     if kind is Parameter.amplitude:
         return value * MAX_PARAM[kind]
     if kind is Parameter.relative_phase:
+        # TODO: the following is actually redundant, choose what to keep
+        # most likely the maximum value, set to 1e9, is something like 2**30 (not sure
+        # why not 2**32), and the three % operations are all doing the same
         return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind] % (2**32)
     if kind is Parameter.frequency:
-        # return value / 500e6 * MAX_PARAM[kind]
         return 4 * value % (2**32)
     if kind is Parameter.offset:
         return convert_offset(value) % (2**32)
