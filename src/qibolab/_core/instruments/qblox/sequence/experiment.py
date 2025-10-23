@@ -1,7 +1,5 @@
 from typing import Optional
 
-import numpy as np
-
 from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
@@ -36,9 +34,6 @@ from .sweepers import (
 from .waveforms import WaveformIndices
 
 __all__ = []
-
-
-PHASE_FACTOR = 1e9 / (2 * np.pi)
 
 
 def play_pulse(pulse: Pulse, waveforms: WaveformIndices) -> Line:
@@ -104,7 +99,7 @@ def play(
     if isinstance(pulse, VirtualZ):
         return [
             SetPhDelta(
-                value=int(pulse.phase * PHASE_FACTOR)
+                value=int(convert(pulse.phase, Parameter.relative_phase))
                 if len(params) == 0
                 else next(iter(params)).reg
             ),
