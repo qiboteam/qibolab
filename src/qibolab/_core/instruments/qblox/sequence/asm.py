@@ -45,16 +45,45 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 """
 
 
+def convert_offset(offset: float):
+    """Converts offset values to the encoding used in qblox FPGAs.
+
+    Both offset values are divided in 2**sample path width steps. QCM
+    DACs resolution 16bits, QRM DACs and ADCs 12 bit QCM 5Vpp, QRM 2Vpp
+
+    https://docs.qblox.com/en/main/cluster/qcm.html#specifications
+    https://docs.qblox.com/en/main/cluster/qcm_rf.html#specifications
+    https://docs.qblox.com/en/main/cluster/qrm_rf.html#specifications
+    """
+    # FIXME: Copied from Qibolab 0.1 - no idea where the conversion is coming from
+    scale_factor = 1.25 * np.sqrt(2)
+    normalised_offset = offset / scale_factor
+
+    # TODO: move validation closer to user input
+    if (normalised_offset <= -1) or (1 <= normalised_offset):
+        raise ValueError(
+            f"offset must be a float between {-scale_factor:.3f} and {scale_factor:.3f} V"
+        )
+
+    max = MAX_PARAM[Parameter.offset]
+    mapped = np.floor(normalised_offset * (max + 1)).astype(int)
+    # clipping required to avoid wrapping offset == 1 to a negative value
+    return np.maximum(mapped, max)
+
+
 def convert(value: float, kind: Parameter) -> float:
     """Convert sweeper value in assembly units."""
     if kind is Parameter.amplitude:
         return value * MAX_PARAM[kind]
     if kind is Parameter.relative_phase:
-        return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind]
+        # TODO: the following is actually redundant, choose what to keep
+        # most likely the maximum value, set to 1e9, is something like 2**30 (not sure
+        # why not 2**32), and the three % operations are all doing the same
+        return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind] % (2**32)
     if kind is Parameter.frequency:
-        return value / 500e6 * MAX_PARAM[kind]
+        return 4 * value % (2**32)
     if kind is Parameter.offset:
-        return value * MAX_PARAM[kind]
+        return convert_offset(value) % (2**32)
     if kind is Parameter.duration:
         return value
     raise ValueError(f"Unsupported sweeper: {kind.name}")

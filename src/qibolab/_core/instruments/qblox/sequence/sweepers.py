@@ -15,8 +15,10 @@ from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
 from ..q1asm.ast_ import (
     Instruction,
+    Nop,
     Register,
     SetPhDelta,
+    UpdParam,
     Value,
 )
 from .asm import MAX_PARAM, convert
@@ -93,7 +95,44 @@ class Param(Model):
         )
 
 
-IndexedParams = dict[int, tuple[list[Param], list[Param]]]
+class LoopParams(Model):
+    """Parameters involved in a single loop level."""
+
+    channel: list[Param]
+    pulse: list[Param]
+
+    @property
+    def all(self):
+        return self.channel + self.pulse
+
+
+IndexedParams = dict[int, LoopParams]
+"""Sweep parameters, organized by loop.
+
+Keys are going to be loop counters.
+"""
+
+
+def _channels_pulses(
+    pars: Iterable[Param],
+) -> LoopParams:
+    channels = []
+    pulses = []
+    for p in pars:
+        (channels if p.channel is not None else pulses).append(p)
+    return LoopParams(channel=channels, pulse=pulses)
+
+
+def params_reshape(params: list[Param]) -> IndexedParams:
+    """Split parameters related to channels and pulses.
+
+    Moreover, it reorganize them by loop, to group the updates.
+    """
+    return {
+        key: _channels_pulses(pars)
+        for key, pars in groupby(params, key=lambda p: p.loop)
+        if key is not None
+    }
 
 
 def _pulse_duration(sweep: Sweeper) -> list[tuple[Range, "ParamRole"]]:
@@ -175,33 +214,14 @@ def update_instructions(
 ) -> list[Instruction]:
     wrapper = _SWEEP_UPDATE[role.kind]
     up = wrapper.update if not reset else wrapper.reset
-    return [up(value)] if up is not None else []
+    instr = [Nop(), up(value)] if up is not None else []
+    if role.kind is Parameter.offset:
+        instr.append(UpdParam(duration=1000))
+    return instr
 
 
 def reset_instructions(role: ParamRole, value: Value) -> list[Instruction]:
     return update_instructions(role, value, reset=True)
-
-
-def _channels_pulses(
-    pars: Iterable[Param],
-) -> tuple[list[Param], list[Param]]:
-    channels = []
-    pulses = []
-    for p in pars:
-        (channels if p.channel is not None else pulses).append(p)
-    return channels, pulses
-
-
-def params_reshape(params: list[Param]) -> IndexedParams:
-    """Split parameters related to channels and pulses.
-
-    Moreover, it reorganize them by loop, to group the updates.
-    """
-    return {
-        key: _channels_pulses(pars)
-        for key, pars in groupby(params, key=lambda p: p.loop)
-        if key is not None
-    }
 
 
 ParameterizedPulse = tuple[PulseLike, set[Param]]

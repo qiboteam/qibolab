@@ -1,4 +1,5 @@
 import time
+import warnings
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
@@ -8,7 +9,7 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
-from qibolab._core.components import AcquisitionChannel, Configs, IqChannel
+from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
@@ -105,6 +106,11 @@ class Cluster(Controller):
                     sweepers,
                     options_,
                     self.sampling_rate,
+                    {
+                        ch: cfg.offset
+                        for ch, cfg in configs.items()
+                        if isinstance(cfg, DcConfig)
+                    },
                     lo_configs(self._los, configs),
                     time_of_flights(configs),
                 )
@@ -205,8 +211,10 @@ class Cluster(Controller):
             for ch, seq in seqs.items():
                 # wait all sequencers
                 status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
-                if status.status is not qblox.SequencerStatuses.OKAY:
-                    raise RuntimeError(status)
+                if status.status is qblox.SequencerStatuses.ERROR:
+                    raise RuntimeError(f"slot: {slot}, seq: {seq}\n{status}")
+                if status.status is qblox.SequencerStatuses.WARNING:
+                    warnings.warn(f"slot: {slot}, seq: {seq}\n{status}")
 
                 # skip results retrieval for passive or inactive sequencers...
                 sequence = sequences.get(ch)
