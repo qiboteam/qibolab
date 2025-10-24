@@ -108,7 +108,7 @@ def program(
     params_ = params(sweepers, allocated=max(lp.reg.number for lp in loops_))
     indexed_params = params_reshape(params_)
     sweepseq = sweep_sequence(
-        sequence, [p for v in indexed_params.values() for p in v[1]]
+        sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
     experiment_ = [
         *experiment(sweepseq, waveforms, acquisitions, time_of_flight),
