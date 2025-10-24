@@ -164,14 +164,44 @@ def _sweep_updates(
         (
             line
             for block in (
-                _sweep_update(p, channel, pulses)
-                for p in (params[lp.id][0] + params[lp.id][1])
+                _sweep_update(p, channel, pulses) for p in (params[lp.id].all)
             )
             for line in block
         )
         if lp.id is not None
         else ()
     )
+
+
+def _sweep_reset(
+    params: list[Param], channel: set[ChannelId], pulses: set[PulseId]
+) -> BlockList:
+    """Reset sweeper register value.
+
+    Once the loop is completed, the parameter value, which is hold in the respective
+    register, needs to be reset to its original value. To be ready when a new loop will
+    possibly start (which is always the case, but for the outermost loop).
+
+    .. note::
+
+        Channel parameters are also updated immediately, in order for the change to take
+        effect.
+        Pulse parameters will anyhow act around the suitable pulse, so the update is
+        always performed when needed.
+    """
+    return [
+        Line(
+            instruction=Move(source=p.start, destination=p.reg),
+            comment=f"init {p.description}",
+        )
+        for p in params
+        if p.channel in channel or p.pulse in pulses
+    ] + [
+        inst
+        for p in params
+        if p.channel in channel
+        for inst in update_instructions(p.role, p.reg)
+    ]
 
 
 def _sweep_iteration(
@@ -183,9 +213,19 @@ def _sweep_iteration(
 ) -> BlockList:
     """Sweep loop.
 
-    - sweepers update
-    - loop, i.e. decrement iteration counter and jump
+    The operations performed by the looping machinery are divided in internal to loop,
+    and those happening right after completing all loops.
+
+    The internal ones consist of:
+
+    - update the parameters for all the sweepers set at the selected loop level
+    - loop, i.e. decrement iteration counter and jump back to experiment start
+
+    While the closing operations include:
+
     - reset iteration counter, after a whole cycle is completed
+    - reset the parameters' values, to possibly get ready for an entire new iteration,
+      triggered by an external loop
     """
     loops_ = [
         *_sweep_updates(lp, params, channel, pulses),
@@ -196,21 +236,10 @@ def _sweep_iteration(
         ),
         Move(source=lp.length, destination=lp.reg),
     ]
-    if lp.id is not None:
-        loops_ += [
-            Line(
-                instruction=Move(source=p.start, destination=p.reg),
-                comment=f"init {p.description}",
-            )
-            for p in (params[lp.id][0] + params[lp.id][1])
-            if p.channel in channel or p.pulse in pulses
-        ] + [
-            inst
-            for p in (params[lp.id][0] + params[lp.id][1])
-            if p.channel in channel
-            for inst in update_instructions(p.role, p.reg)
-        ]
-    return loops_
+    # no parameter reset for the shots loop, since, by definition, that's just an unaltered
+    # repetition of the experiment
+    reset = [] if lp.id is None else _sweep_reset(params[lp.id].all, channel, pulses)
+    return loops_ + reset
 
 
 def _loop_machinery(
