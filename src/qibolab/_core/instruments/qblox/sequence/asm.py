@@ -68,7 +68,7 @@ def convert_offset(offset: float):
     max = MAX_PARAM[Parameter.offset]
     mapped = np.floor(normalised_offset * (max + 1)).astype(int)
     # clipping required to avoid wrapping offset == 1 to a negative value
-    return np.maximum(mapped, max)
+    return np.minimum(mapped, max)
 
 
 def convert(value: float, kind: Parameter) -> float:
