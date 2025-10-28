@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import model_validator
 
+from .components.configs import OscillatorConfig
 from .identifier import ChannelId
 from .pulses import PulseLike, VirtualZ
 from .serialize import Model
@@ -197,3 +198,61 @@ def swept_pulses(
         if sweep.parameter in parameters and sweep.pulses is not None
         for p in sweep.pulses
     }
+
+
+def _split_sweeper(sweeper: Sweeper) -> ParallelSweepers:
+    return (
+        [sweeper.model_copy(update={"pulses": [pulse]}) for pulse in sweeper.pulses]
+        if sweeper.pulses is not None
+        else [sweeper.model_copy(update={"channels": [ch]}) for ch in sweeper.channels]
+    )
+
+
+def _split_sweepers(sweepers: list[ParallelSweepers]) -> list[ParallelSweepers]:
+    return [
+        [s for sweep in parsweep for s in _split_sweeper(sweep)]
+        for parsweep in sweepers
+    ]
+
+
+def _lo_frequency(lo: Optional[OscillatorConfig]) -> float:
+    return lo.frequency if lo is not None else 0.0
+
+
+def _subtract_lo(
+    sweepers: list[ParallelSweepers], los: dict[ChannelId, OscillatorConfig]
+) -> list[ParallelSweepers]:
+    return [
+        [
+            (sweep - _lo_frequency(los.get(sweep.channels[0])))
+            if sweep.parameter is Parameter.frequency
+            else sweep
+            for sweep in parsweep
+        ]
+        for parsweep in sweepers
+    ]
+
+
+def _subtract_offset(
+    sweepers: list[ParallelSweepers], offsets: dict[ChannelId, float]
+) -> list[ParallelSweepers]:
+    return [
+        [
+            (sweep - offsets.get(sweep.channels[0], 0.0))
+            if sweep.parameter is Parameter.offset
+            else sweep
+            for sweep in parsweep
+        ]
+        for parsweep in sweepers
+    ]
+
+
+def normalize_sweepers(
+    sweepers: list[ParallelSweepers],
+    los: dict[ChannelId, OscillatorConfig],
+    offsets: dict[ChannelId, float],
+) -> list[ParallelSweepers]:
+    sweepers = _split_sweepers(sweepers)
+    sweepers = _subtract_lo(sweepers, los)
+    sweepers = _subtract_offset(sweepers, offsets)
+    return sweepers
