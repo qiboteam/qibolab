@@ -42,6 +42,32 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
     )
 
 
+SCALE_FACTOR = 1.25 * np.sqrt(2)
+"""Maximum allowed tension per component.
+
+Taking as a reference the value of the QCM below, this scaling factor is obtained
+considering the root mean square (RMS) sum of the two channels I and Q.
+
+.. note::
+    Actually, the limit by Qblox is specified as peak-to-peak for the QCM, which then
+    does not impose a further limitation on the RMS value, or the average power.
+
+The maximum tension allowed for the various modules are:
+
+- *for the QCM:* 5 Vpp, documented as +/-2.5 V
+
+    https://docs.qblox.com/en/main/cluster/qcm.html#specifications
+
+- *for the QCM-RF II:* 2 Vpp, documented as +10 dBm in a 50 Ohm load
+
+    https://docs.qblox.com/en/main/cluster/qcm_rf.html#specifications
+
+- *for the QRM-RF and QCM-RF:* sqrt(2) Vpp, documented as +5 dBm in a 50 Ohm load
+
+    https://docs.qblox.com/en/main/cluster/qrm_rf.html#specifications
+"""
+
+
 class SequencerConfig(Model):
     # disable freeze, to be able to construct instance with optional fields, but also
     # static validation
@@ -81,7 +107,7 @@ class SequencerConfig(Model):
         # set parameters
         # offsets
         if isinstance(config, DcConfig):
-            module[f"out{index}_offset"] = config.offset
+            module[f"out{index}_offset"] = config.offset * SCALE_FACTOR
 
         # avoid sequence operations for inactive sequencers, including synchronization
         if sequence.is_empty:
