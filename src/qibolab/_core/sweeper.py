@@ -249,10 +249,9 @@ def _subtract_offset(
 
 def normalize_sweepers(
     sweepers: list[ParallelSweepers],
-    los: dict[ChannelId, OscillatorConfig],
-    offsets: dict[ChannelId, float],
+    los: Optional[dict[ChannelId, OscillatorConfig]] = None,
+    offsets: Optional[dict[ChannelId, float]] = None,
 ) -> list[ParallelSweepers]:
     sweepers = _split_sweepers(sweepers)
-    sweepers = _subtract_lo(sweepers, los)
-    sweepers = _subtract_offset(sweepers, offsets)
-    return sweepers
+    sweepers = _subtract_lo(sweepers, los) if los is not None else sweepers
+    return _subtract_offset(sweepers, offsets) if offsets is not None else sweepers
