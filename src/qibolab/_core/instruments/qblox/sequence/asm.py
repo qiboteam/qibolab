@@ -44,51 +44,15 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 :func:`convert`.
 """
 
-SCALE_FACTOR = 1.25 * np.sqrt(2)
-"""Maximum allowed tension per component.
 
-Taking as a reference the value of the QCM below, this scaling factor is obtained
-considering the root mean square (RMS) sum of the two channels I and Q.
-
-.. note::
-
-    Actually, the limit by Qblox is specified as peak-to-peak for the QCM, which then
-    does not impose a further limitation on the RMS value, or the average power.
-
-The maximum tension allowed for the various modules are:
-
-- *for the QCM:* 5 Vpp, documented as +/-2.5 V
-
-    https://docs.qblox.com/en/main/cluster/qcm.html#specifications
-
-- *for the QCM-RF II:* 2 Vpp, documented as +10 dBm in a 50 Ohm load
-
-    https://docs.qblox.com/en/main/cluster/qcm_rf.html#specifications
-
-- *for the QRM-RF and QCM-RF:* sqrt(2) Vpp, documented as +5 dBm in a 50 Ohm load
-
-    https://docs.qblox.com/en/main/cluster/qrm_rf.html#specifications
-"""
-
-
-def convert_offset(offset: float):
-    """Converts offset values to the encoding used in qblox FPGAs.
-
-    Both offset values are divided in 2**sample path width steps. QCM
-    DACs resolution 16bits, QRM DACs and ADCs 12 bit QCM 5Vpp, QRM 2Vpp
-    """
-    normalised_offset = offset / SCALE_FACTOR
+def _convert_offset(offset: float) -> float:
+    """Converts offset values to the encoding used in qblox FPGAs."""
 
     # TODO: move validation closer to user input
-    if abs(normalised_offset) >= 1:
-        raise ValueError(
-            f"offset must be a float between {-SCALE_FACTOR:.3f} and {SCALE_FACTOR:.3f} V"
-        )
+    if abs(offset) >= 1:
+        raise ValueError("Offset must be a float between -1 and 1.")
 
-    max = MAX_PARAM[Parameter.offset]
-    mapped = np.floor(normalised_offset * (max + 1)).astype(int)
-    # clipping required to avoid wrapping offset == 1 to a negative value
-    return np.minimum(mapped, max)
+    return np.floor(offset * MAX_PARAM[Parameter.offset])
 
 
 def convert(value: float, kind: Parameter) -> float:
@@ -103,7 +67,7 @@ def convert(value: float, kind: Parameter) -> float:
     if kind is Parameter.frequency:
         return 4 * value % (2**32)
     if kind is Parameter.offset:
-        return convert_offset(value) % (2**32)
+        return _convert_offset(value) % (2**32)
     if kind is Parameter.duration:
         return value
     raise ValueError(f"Unsupported sweeper: {kind.name}")
