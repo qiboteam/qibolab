@@ -14,7 +14,7 @@ from qibolab._core.execution_parameters import AcquisitionType, ExecutionParamet
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.sequence import PulseSequence
-from qibolab._core.sweeper import ParallelSweepers
+from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
 from . import config
 from .config import PortAddress
@@ -99,19 +99,22 @@ class Cluster(Controller):
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
-                # first compile pulses and sweepers into Qblox sequences
-                assert_channels_exclusion(ps, self._probes)
-                sequences_ = compile(
-                    ps,
+                sweepers_ = normalize_sweepers(
                     sweepers,
-                    options_,
-                    self.sampling_rate,
+                    lo_configs(self._los, configs),
                     {
                         ch: cfg.offset
                         for ch, cfg in configs.items()
                         if isinstance(cfg, DcConfig)
                     },
-                    lo_configs(self._los, configs),
+                )
+                # first compile pulses and sweepers into Qblox sequences
+                assert_channels_exclusion(ps, self._probes)
+                sequences_ = compile(
+                    ps,
+                    sweepers_,
+                    options_,
+                    self.sampling_rate,
                     time_of_flights(configs),
                 )
                 for seq in sequences_.values():
@@ -126,7 +129,7 @@ class Cluster(Controller):
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
-                duration = options.estimate_duration([ps], sweepers)
+                duration = options.estimate_duration([ps], sweepers_)
                 data = self._execute(
                     sequencers, sequences_, duration, options.acquisition_type
                 )
@@ -139,7 +142,7 @@ class Cluster(Controller):
                         data,
                         lenghts,
                         options_.acquisition_type,
-                        options_.results_shape(sweepers),
+                        options_.results_shape(sweepers_),
                     )
                 )
 
