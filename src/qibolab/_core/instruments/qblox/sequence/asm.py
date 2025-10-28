@@ -44,25 +44,45 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 :func:`convert`.
 """
 
+SCALE_FACTOR = 1.25 * np.sqrt(2)
+"""Maximum allowed tension per component.
+
+Taking as a reference the value of the QCM below, this scaling factor is obtained
+considering the root mean square (RMS) sum of the two channels I and Q.
+
+.. note::
+
+    Actually, the limit by Qblox is specified as peak-to-peak for the QCM, which then
+    does not impose a further limitation on the RMS value, or the average power.
+
+The maximum tension allowed for the various modules are:
+
+- *for the QCM:* 5 Vpp, documented as +/-2.5 V
+
+    https://docs.qblox.com/en/main/cluster/qcm.html#specifications
+
+- *for the QCM-RF II:* 2 Vpp, documented as +10 dBm in a 50 Ohm load
+
+    https://docs.qblox.com/en/main/cluster/qcm_rf.html#specifications
+
+- *for the QRM-RF and QCM-RF:* sqrt(2) Vpp, documented as +5 dBm in a 50 Ohm load
+
+    https://docs.qblox.com/en/main/cluster/qrm_rf.html#specifications
+"""
+
 
 def convert_offset(offset: float):
     """Converts offset values to the encoding used in qblox FPGAs.
 
     Both offset values are divided in 2**sample path width steps. QCM
     DACs resolution 16bits, QRM DACs and ADCs 12 bit QCM 5Vpp, QRM 2Vpp
-
-    https://docs.qblox.com/en/main/cluster/qcm.html#specifications
-    https://docs.qblox.com/en/main/cluster/qcm_rf.html#specifications
-    https://docs.qblox.com/en/main/cluster/qrm_rf.html#specifications
     """
-    # FIXME: Copied from Qibolab 0.1 - no idea where the conversion is coming from
-    scale_factor = 1.25 * np.sqrt(2)
-    normalised_offset = offset / scale_factor
+    normalised_offset = offset / SCALE_FACTOR
 
     # TODO: move validation closer to user input
-    if (normalised_offset <= -1) or (1 <= normalised_offset):
+    if abs(normalised_offset) >= 1:
         raise ValueError(
-            f"offset must be a float between {-scale_factor:.3f} and {scale_factor:.3f} V"
+            f"offset must be a float between {-SCALE_FACTOR:.3f} and {SCALE_FACTOR:.3f} V"
         )
 
     max = MAX_PARAM[Parameter.offset]
