@@ -135,6 +135,8 @@ class AcquisitionConfig(Config):
             the expliciti definition is required in order to solve the ambiguity about
             the arrays equality
         """
+        # FIXME: temporary solution to avoid error described in
+        # https://github.com/qiboteam/qibolab/pull/1312
         raw_kernel_comparison = self.kernel == other.kernel
         return (
             (self.delay == other.delay)
