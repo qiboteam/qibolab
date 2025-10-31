@@ -53,19 +53,22 @@ There are two different ways to add an offset to the waveform played by the QCM 
 
 
 Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
-<https://docs.qblox.com/en/main/cluster/qcm.html#specifications>`_), a conversion is
-neeeded, because the first option will be defined in the interval (-1, 1) in the
-parameters (internally mapping the floats on a suitable integers range), while the
-second is directly expressed in Volt.
+<https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
+a conversion is neeeded, because the first option will be defined in the interval (-1,
+1) in the parameters (internally mapping the floats on a suitable integers range), while
+the second is directly expressed in Volt.
 Hence, the conversion factor of ``2.5``.
 
-However, these two ways are not equivalent, especially because of the NCO mixing
+However, these two ways are not equivalent, especially because of the NCO and LO mixing
 process.
 Indeed, the first one is happening upstream to the mixing process, and the second
 downstream.
 Since we are sweeping only one of the two components of the signal (the in-phase,
 I), it will result multiplied by a sine-wave, which reduces its root mean square (RMS)
 power by a factor of `sqrt(2)`. Which is then accounted for in the conversion range.
+
+https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg
+https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram
 
 Notice that sweeping both of the components is also viable. But even without any flux
 pulse, the sum of sine and cosine with maximal amplitude will saturate the power supply,
