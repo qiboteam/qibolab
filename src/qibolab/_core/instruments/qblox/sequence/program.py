@@ -71,7 +71,7 @@ def setup(
             if p.channel in channel or p.pulse in pulses
         ]
         # wait one clock cycle before parameters' update
-        # cf .loops._sweep_update
+        # cf. .loops._sweep_update()
         + [Nop()]
         + [
             inst

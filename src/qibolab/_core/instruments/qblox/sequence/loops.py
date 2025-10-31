@@ -210,19 +210,25 @@ def _sweep_reset(
         Pulse parameters will anyhow act around the suitable pulse, so the update is
         always performed when needed.
     """
-    return [
-        Line(
-            instruction=Move(source=p.start, destination=p.reg),
-            comment=f"init {p.description}",
-        )
-        for p in params
-        if p.channel in channel or p.pulse in pulses
-    ] + [
-        inst
-        for p in params
-        if p.channel in channel
-        for inst in update_instructions(p.role, p.reg)
-    ]
+    return (
+        [
+            Line(
+                instruction=Move(source=p.start, destination=p.reg),
+                comment=f"init {p.description}",
+            )
+            for p in params
+            if p.channel in channel or p.pulse in pulses
+        ]
+        # wait one clock cycle before parameters' update
+        # cf. _sweep_update()
+        + [Nop()]
+        + [
+            inst
+            for p in params
+            if p.channel in channel
+            for inst in update_instructions(p.role, p.reg)
+        ]
+    )
 
 
 def _sweep_iteration(
