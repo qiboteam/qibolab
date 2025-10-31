@@ -160,7 +160,7 @@ def compile(
     return {
         ch: Q1Sequence.from_pulses(
             seq,
-            sweepers[::-1],
+            sweepers,
             options,
             sampling_rate,
             _effective_channels(ch, seq),

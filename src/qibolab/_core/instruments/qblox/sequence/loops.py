@@ -74,7 +74,9 @@ def loops(
             length=iteration_length(parsweep),
             id=i,
         )
-        for i, parsweep in enumerate(sweepers)
+        # the first sweeper should be the outermost, thus reverse them during the
+        # enumeration
+        for i, parsweep in enumerate(sweepers[::-1])
     ]
     return [shots] + sweep if inner_shots else sweep + [shots]
 

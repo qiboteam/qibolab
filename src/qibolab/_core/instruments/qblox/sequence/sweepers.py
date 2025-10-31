@@ -167,7 +167,9 @@ def _unravel_sweeps(sweepers: list[ParallelSweepers]) -> Iterable[tuple[int, Par
                 role=role,
             ),
         )
-        for j, parsweep in enumerate(sweepers)
+        # the first sweeper should be the outermost, thus reverse them during the
+        # enumeration
+        for j, parsweep in enumerate(sweepers[::-1])
         for sweep in parsweep
         for irange, role in _registers(sweep)
         for pulse in (sweep.pulses if sweep.pulses is not None else [None])
