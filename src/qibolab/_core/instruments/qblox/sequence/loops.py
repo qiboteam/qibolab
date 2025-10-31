@@ -17,6 +17,7 @@ from ..q1asm.ast_ import (
     Line,
     Loop,
     Move,
+    Nop,
     Reference,
     Register,
     ResetPh,
@@ -140,6 +141,10 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
 
     - increment the parameter register
     - set new parameter value (if channel-wise)
+        - an additional `nop` instruction is plugged to wait one further clock cycle in
+          between the register increment and the parameter update, to ensure the value
+          is correctly propagated
+          https://docs.qblox.com/en/main/products/architecture/sequencers/sequencer.html#registers
     """
     return (
         *(
@@ -156,7 +161,16 @@ def _sweep_update(p: Param, channel: set[ChannelId], pulses: set[PulseId]) -> Bl
             if p.channel in channel or p.pulse in pulses
             else ()
         ),
-        *(update_instructions(p.role, p.reg) if p.channel in channel else ()),
+        *(
+            (
+                # wait one more clock cycle
+                [Nop()]
+                # then update the value
+                + update_instructions(p.role, p.reg)
+            )
+            if p.channel in channel
+            else ()
+        ),
     )
 
 
