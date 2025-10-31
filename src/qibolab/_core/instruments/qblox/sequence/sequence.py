@@ -9,7 +9,12 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, Pulse, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, Parameter, swept_pulses
+from qibolab._core.sweeper import (
+    ParallelSweepers,
+    Parameter,
+    swept_channels,
+    swept_pulses,
+)
 
 from ..q1asm import Program, parse
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
@@ -151,12 +156,7 @@ def compile(
     time_of_flights: dict[ChannelId, float],
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
-    sweeper_channels = {
-        channel: []
-        for ps in sweepers
-        for sweeper in ps
-        for channel in (sweeper.channels if sweeper.channels is not None else [])
-    }
+    sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
     return {
         ch: Q1Sequence.from_pulses(
             seq,

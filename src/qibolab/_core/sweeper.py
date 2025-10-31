@@ -191,12 +191,24 @@ def swept_pulses(
     If `parameters` is passed, it limits the selection to pulses whose parameter swept
     is among those listed. By default, all swept pulses are returned.
     """
+    # TODO: this is assuming a pulse is only swept by a single sweeper. Which is not
+    # always the case. A list of `Sweeper` objects should be returned instead
     return {
         p: sweep
         for parsweep in sweepers
         for sweep in parsweep
         if sweep.parameter in parameters and sweep.pulses is not None
         for p in sweep.pulses
+    }
+
+
+def swept_channels(sweepers: list[ParallelSweepers]) -> set[ChannelId]:
+    """Identify channels involved in a sweeper suite."""
+    return {
+        channel
+        for ps in sweepers
+        for sweeper in ps
+        for channel in (sweeper.channels if sweeper.channels is not None else [])
     }
 
 
