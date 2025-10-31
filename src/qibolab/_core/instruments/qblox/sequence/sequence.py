@@ -4,13 +4,17 @@ from typing import Annotated, Optional
 import numpy as np
 from pydantic import PlainSerializer, PlainValidator
 
-from qibolab._core.components.configs import OscillatorConfig
 from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import Align, Pulse, PulseLike, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, Parameter, swept_pulses
+from qibolab._core.sweeper import (
+    ParallelSweepers,
+    Parameter,
+    swept_channels,
+    swept_pulses,
+)
 
 from ..q1asm import Program, parse
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
@@ -50,16 +54,6 @@ def _apply_sampling_rate(
     return (sequence_, sweepers_)
 
 
-def _subtract_lo(sweepers: list[ParallelSweepers], lo: float) -> list[ParallelSweepers]:
-    return [
-        [
-            (sweep - lo) if sweep.parameter is Parameter.frequency else sweep
-            for sweep in parsweep
-        ]
-        for parsweep in sweepers
-    ]
-
-
 class Q1Sequence(Model):
     waveforms: Waveforms
     weights: Weights
@@ -78,7 +72,6 @@ class Q1Sequence(Model):
         options: ExecutionParameters,
         sampling_rate: float,
         channel: set[ChannelId],
-        lo: Optional[float],
         time_of_flight: Optional[float],
         duration: float,
     ) -> "Q1Sequence":
@@ -99,7 +92,6 @@ class Q1Sequence(Model):
             },
         )
         sequence, sweepers = _apply_sampling_rate(sequence, sweepers, sampling_rate)
-        sweepers = _subtract_lo(sweepers, lo) if lo is not None else sweepers
         acquisitions_ = acquisitions(
             sequence, np.prod(options.bins(sweepers), dtype=int)
         )
@@ -143,10 +135,6 @@ class Q1Sequence(Model):
         return {acq: _weight_len(self.weights.get(acq)) for acq in self.acquisitions}
 
 
-def _lo_frequency(lo: Optional[OscillatorConfig]) -> Optional[float]:
-    return lo.frequency if lo is not None else None
-
-
 def _effective_channels(ch: ChannelId, seq: Iterable[PulseLike]) -> set[ChannelId]:
     """Identify effective channels related to a subsequence.
 
@@ -165,10 +153,10 @@ def compile(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
-    los: dict[ChannelId, OscillatorConfig],
     time_of_flights: dict[ChannelId, float],
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
+    sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
     return {
         ch: Q1Sequence.from_pulses(
             seq,
@@ -176,9 +164,8 @@ def compile(
             options,
             sampling_rate,
             _effective_channels(ch, seq),
-            _lo_frequency(los.get(ch)),
             time_of_flights.get(ch),
             duration,
         )
-        for ch, seq in sequence.by_channel.items()
+        for ch, seq in (sweeper_channels | sequence.by_channel).items()
     }

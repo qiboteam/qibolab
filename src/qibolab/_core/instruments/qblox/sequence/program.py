@@ -11,6 +11,7 @@ from ..q1asm.ast_ import (
     Instruction,
     Line,
     Move,
+    Nop,
     Program,
     Stop,
     Wait,
@@ -69,11 +70,14 @@ def setup(
             for p in params
             if p.channel in channel or p.pulse in pulses
         ]
+        # wait one clock cycle before parameters' update
+        # cf. .loops._sweep_update()
+        + [Nop()]
         + [
             inst
             for p in params
             if p.channel in channel
-            for inst in update_instructions(p.role, p.start)
+            for inst in update_instructions(p.role, p.reg)
         ]
     )
 
@@ -108,7 +112,7 @@ def program(
     params_ = params(sweepers, allocated=max(lp.reg.number for lp in loops_))
     indexed_params = params_reshape(params_)
     sweepseq = sweep_sequence(
-        sequence, [p for v in indexed_params.values() for p in v[1]]
+        sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
     experiment_ = [
         *experiment(sweepseq, waveforms, acquisitions, time_of_flight),

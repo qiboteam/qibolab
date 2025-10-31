@@ -45,16 +45,29 @@ Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 """
 
 
+def _convert_offset(offset: float) -> float:
+    """Converts offset values to the encoding used in qblox FPGAs."""
+
+    # TODO: move validation closer to user input
+    if abs(offset) >= 1:
+        raise ValueError("Offset must be a float between -1 and 1.")
+
+    return np.floor(offset * MAX_PARAM[Parameter.offset])
+
+
 def convert(value: float, kind: Parameter) -> float:
     """Convert sweeper value in assembly units."""
     if kind is Parameter.amplitude:
         return value * MAX_PARAM[kind]
     if kind is Parameter.relative_phase:
-        return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind]
+        # TODO: the following is actually redundant, choose what to keep
+        # most likely the maximum value, set to 1e9, is something like 2**30 (not sure
+        # why not 2**32), and the three % operations are all doing the same
+        return ((value % (2 * np.pi)) / (2 * np.pi)) % 1.0 * MAX_PARAM[kind] % (2**32)
     if kind is Parameter.frequency:
-        return value / 500e6 * MAX_PARAM[kind]
+        return 4 * value % (2**32)
     if kind is Parameter.offset:
-        return value * MAX_PARAM[kind]
+        return _convert_offset(value) % (2**32)
     if kind is Parameter.duration:
         return value
     raise ValueError(f"Unsupported sweeper: {kind.name}")
