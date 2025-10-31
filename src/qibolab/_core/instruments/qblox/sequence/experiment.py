@@ -154,8 +154,17 @@ def experiment(
     acquisitions: dict[MeasureId, AcquisitionSpec],
     time_of_flight: Optional[float],
 ) -> Block:
-    """Representation of the actual experiment to be executed."""
-    return [WaitSync(duration=4)] + [
+    """Representation of the actual experiment to be executed.
+
+    The parameters' update (`upd_param`) in front of everything is needed to ensure that
+    the parameter values for sweepers targeting channels have been updated. The updates
+    for those targeting pulses will be triggered by the `play` instruction (and they
+    *have to* be local).
+
+    The synchronization (`wait_sync`) will guarantee the common start of all involved
+    channels, which is otherwise hard to control (and debug).
+    """
+    return [UpdParam(duration=4), WaitSync(duration=4)] + [
         inst
         for block in (
             event(pulse, waveforms, acquisitions, time_of_flight) for pulse in sequence
