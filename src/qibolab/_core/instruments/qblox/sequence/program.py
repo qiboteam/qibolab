@@ -11,6 +11,7 @@ from ..q1asm.ast_ import (
     Instruction,
     Line,
     Move,
+    Nop,
     Program,
     Stop,
     Wait,
@@ -69,6 +70,9 @@ def setup(
             for p in params
             if p.channel in channel or p.pulse in pulses
         ]
+        # wait one clock cycle before parameters' update
+        # cf .loops._sweep_update
+        + [Nop()]
         + [
             inst
             for p in params
