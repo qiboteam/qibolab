@@ -18,7 +18,6 @@ from ..q1asm.ast_ import (
     Nop,
     Register,
     SetPhDelta,
-    UpdParam,
     Value,
 )
 from .asm import MAX_PARAM, convert
@@ -217,8 +216,6 @@ def update_instructions(
     wrapper = _SWEEP_UPDATE[role.kind]
     up = wrapper.update if not reset else wrapper.reset
     instr = [Nop(), up(value)] if up is not None else []
-    if role.kind is Parameter.offset:
-        instr.append(UpdParam(duration=1000))
     return instr
 
 
