@@ -183,7 +183,7 @@ class Cluster(Controller):
                 zip(chs, module.sequencers)
             ):
                 seq = sequences.get(ch, Q1Sequence.empty())
-                config.SequencerConfig.build(
+                config.SequencerConfig.compute(
                     address, seq, ch, self.channels, configs, acquisition, idx, rf
                 ).apply(sequencer)
                 # only collect active sequencers

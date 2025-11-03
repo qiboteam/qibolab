@@ -61,7 +61,7 @@ class SequencerConfig(Model):
     mod_en_awg: Optional[bool] = None
 
     @classmethod
-    def build(
+    def compute(
         cls,
         address: PortAddress,
         sequence: Q1Sequence,
