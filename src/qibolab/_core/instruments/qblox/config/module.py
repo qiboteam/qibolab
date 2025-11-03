@@ -26,6 +26,19 @@ def los(
     }
 
 
+def mixers(
+    all: dict[ChannelId, str],
+    configs: Configs,
+    module_channels: list[tuple[ChannelId, PortAddress]],
+) -> dict[ChannelId, IqMixerConfig]:
+    # TODO: identical to the `.los()` function, deduplicate it please...
+    return {
+        id_: cast(IqMixerConfig, configs[lo])
+        for id_, lo in all.items()
+        if id_ in {ch[0] for ch in module_channels}
+    }
+
+
 class ModuleType(Flag):
     """Module types, used to declaratively restrict configurations scope."""
 
