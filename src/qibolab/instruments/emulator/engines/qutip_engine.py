@@ -220,7 +220,7 @@ class QutipSimulator:
                 channel_op = Qobj(dims=[self.nlevels_HS, self.nlevels_HS])
                 for op_instruction in op_instruction_list:
                     channel_op += self.make_operator(op_instruction)
-            self.operators.update({channel_name: channel_op})
+                self.operators.update({channel_name: channel_op})
             
         except:
             pass
