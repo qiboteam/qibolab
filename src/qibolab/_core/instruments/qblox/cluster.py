@@ -124,14 +124,14 @@ class Cluster(Controller):
                 # then configure modules and sequencers
                 # (including sequences upload)
                 sequencers = self._configure(
-                    sequences_, configs, options.acquisition_type
+                    sequences_, configs, options_.acquisition_type
                 )
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
-                duration = options.estimate_duration([ps], sweepers_)
+                duration = options_.estimate_duration([ps], sweepers_)
                 data = self._execute(
-                    sequencers, sequences_, duration, options.acquisition_type
+                    sequencers, sequences_, duration, options_.acquisition_type
                 )
                 log.data(data)
 
