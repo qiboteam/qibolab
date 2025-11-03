@@ -4,7 +4,8 @@ from typing import Annotated, Any, Literal, cast
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
-from qibolab._core.components.configs import Configs
+from qibolab._core.components.channels import AcquisitionChannel
+from qibolab._core.components.configs import Configs, IqMixerConfig
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
@@ -62,16 +63,40 @@ class ModuleConfig(Model):
         cls,
         channels: dict[ChannelId, Channel],
         los: dict[ChannelId, OscillatorConfig],
+        mixers: dict[ChannelId, IqMixerConfig],
         qrm: bool,
     ) -> "ModuleConfig":
         los_ = {}
+
+        # TODO: input mixers unused, but available in Qblox
+        # at the moment, it would share Qibolab configurations with the output one,
+        # but there is no reason why the attenuation should be the same
+        # we would need a separate `AcquisitionChannel.mixer` entry
+
+        def in_(iq: ChannelId) -> bool:
+            return isinstance(channels[iq], AcquisitionChannel)
+
         # set lo frequencies
         for iq, lo in los.items():
             n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+
             path = f"out{n}_in{n}" if qrm else f"out{n}"
             los_[f"{path}_lo_en"] = True
             los_[f"{path}_lo_freq"] = int(lo.frequency)
-            los_[f"out{n}_att"] = int(lo.power)
+            in__ = in_(iq)
+            path_ = ("in" if in__ else "out") + str(n)
+            if not in__:
+                los_[f"{path_}_att"] = int(lo.power)
+
+        # set mixer calibration
+        for iq, mixer in mixers.items():
+            n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+            in__ = in_(iq)
+            path_ = ("in" if in__ else "out") + str(n)
+            # cf. TODO above
+            if not in__:
+                los_[f"{path_}_offset_path0"] = mixer.offset_i
+                los_[f"{path_}_offset_path1"] = mixer.offset_q
 
         return cls(los=los_)
 

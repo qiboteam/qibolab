@@ -171,9 +171,9 @@ class Cluster(Controller):
 
             # compute module configurations, and apply them
             los = config.module.los(self._los, configs, chs)
-            config.ModuleConfig.compute(self.channels, los, module.is_qrm_type).apply(
-                module
-            )
+            config.ModuleConfig.compute(
+                self.channels, los, {}, module.is_qrm_type
+            ).apply(module)
 
             # configure all sequencers, and store active ones' association to channels
             rf = module.is_rf_type
