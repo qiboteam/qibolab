@@ -55,12 +55,25 @@ eventually clipping the signal and reducing the power range.
 def los(
     all: dict[ChannelId, str],
     configs: Configs,
-    module_channels: list[ChannelId],
+    module_channels: set[ChannelId],
 ) -> dict[ChannelId, OscillatorConfig]:
     return {
         id_: cast(OscillatorConfig, configs[lo])
         for id_, lo in all.items()
-        if id_ in {ch for ch in module_channels}
+        if id_ in module_channels
+    }
+
+
+def mixers(
+    all: dict[ChannelId, str],
+    configs: Configs,
+    module_channels: set[ChannelId],
+) -> dict[ChannelId, IqMixerConfig]:
+    # TODO: identical to the `.los()` function, deduplicate it please...
+    return {
+        id_: cast(IqMixerConfig, configs[lo])
+        for id_, lo in all.items()
+        if id_ in module_channels
     }
 
 
