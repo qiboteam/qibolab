@@ -216,5 +216,5 @@ class ModuleConfig(Model):
             mod.set(config, value)
 
         # apply all the other configurations
-        for name, field in self.model_fields.items():
+        for name, field in type(self).model_fields.items():
             self._set_option(mod, name, field.metadata, getattr(self, name))
