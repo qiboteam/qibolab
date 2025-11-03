@@ -171,11 +171,11 @@ class Cluster(Controller):
 
             ids = [ch for ch, _ in chs]
             channels = {id: ch for id, ch in self.channels.items() if id in ids}
-            # compute module configurations, and apply them
             los = config.module.los(self._los, configs, ids)
-            config.ModuleConfig.build(channels, configs, los, module.is_qrm_type).apply(
-                module
-            )
+            # compute module configurations, and apply them
+            config.ModuleConfig.build(
+                channels, configs, los, {}, module.is_qrm_type
+            ).apply(module)
 
             # configure all sequencers, and store active ones' association to channels
             rf = module.is_rf_type

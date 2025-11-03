@@ -5,7 +5,8 @@ import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
-from qibolab._core.components.configs import Configs, DcConfig
+from qibolab._core.components.channels import AcquisitionChannel
+from qibolab._core.components.configs import Configs, DcConfig, IqMixerConfig
 from qibolab._core.components.filters import (
     ExponentialFilter,
     FiniteImpulseResponseFilter,
@@ -107,17 +108,41 @@ class ModuleConfig(Model):
         channels: dict[ChannelId, Channel],
         configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
+        mixers: dict[ChannelId, IqMixerConfig],
         qrm: bool,
     ) -> "ModuleConfig":
         ports = {}
 
+        # TODO: input mixers unused, but available in Qblox
+        # at the moment, it would share Qibolab configurations with the output one,
+        # but there is no reason why the attenuation should be the same
+        # we would need a separate `AcquisitionChannel.mixer` entry
+
+        def in_(iq: ChannelId) -> bool:
+            return isinstance(channels[iq], AcquisitionChannel)
+
         # set lo frequencies
         for iq, lo in los.items():
             n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+
             path = f"out{n}_in{n}" if qrm else f"out{n}"
             ports[f"{path}_lo_en"] = True
             ports[f"{path}_lo_freq"] = int(lo.frequency)
             ports[f"out{n}_att"] = int(lo.power)
+            in__ = in_(iq)
+            path_ = ("in" if in__ else "out") + str(n)
+            if not in__:
+                ports[f"{path_}_att"] = int(lo.power)
+
+        # set mixer calibration
+        for iq, mixer in mixers.items():
+            n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+            in__ = in_(iq)
+            path_ = ("in" if in__ else "out") + str(n)
+            # cf. TODO above
+            if not in__:
+                ports[f"{path_}_offset_path0"] = mixer.offset_i
+                ports[f"{path_}_offset_path1"] = mixer.offset_q
 
         for id, ch in channels.items():
             n = PortAddress.from_path(ch.path).ports[0] - 1
