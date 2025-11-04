@@ -22,7 +22,7 @@ include = ["src/*.lark"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
-qibo = "^0.2.16"
+qibo = { git="https://github.com/qiboteam/qibo" , branch = "backends" }
 numpy = ">=1.26.4,<3"
 scipy = "^1.13.0"
 pydantic = "^2.6.4"
