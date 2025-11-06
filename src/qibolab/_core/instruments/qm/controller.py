@@ -477,11 +477,6 @@ class QmController(Controller):
             if not isinstance(readout, Readout):
                 continue
 
-            if readout.probe.duration != readout.acquisition.duration:
-                raise ValueError(
-                    "Quantum Machines does not support acquisition with different duration than probe."
-                )
-
             probe_id = self.channels[channel_id].probe
             max_voltage = channel_max_voltage(configs[probe_id])
             sampling_rate = channel_sampling_rate(configs[probe_id])
