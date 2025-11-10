@@ -66,9 +66,7 @@ def calculate_probabilities_from_density_matrix(
     return np.abs(marginal).reshape((*states.shape[:-2], -1))
 
 
-def acquisitions(
-    sequence: PulseSequence, sampling_rate: int = 1, per_sample: int = 2
-) -> dict[PulseId, float]:
+def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
     """Compute acquisitions' times."""
     acq = {}
     for ch in sequence.channels:
