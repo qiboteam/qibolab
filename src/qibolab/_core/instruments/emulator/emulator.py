@@ -8,6 +8,7 @@ from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import Field
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -39,20 +40,26 @@ __all__ = ["EmulatorController"]
 class EmulatorController(Controller):
     """Emulator controller."""
 
+    sampling_rate_: float = Field(..., exclude=True)
+    """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
+    """Bounds for emulator."""
+
+    @property
+    def sampling_rate(self) -> float:
+        return self.sampling_rate_
+
+    @sampling_rate.setter
+    def sampling_rate(self, value: float):
+        self.sampling_rate_ = value
 
     def connect(self):
         """Dummy connect method."""
 
     def disconnect(self):
         """Dummy disconnect method."""
-
-    @property
-    def sampling_rate(self):
-        """Sampling rate of emulator."""
-        return 1
 
     def play(
         self,
@@ -127,7 +134,7 @@ class EmulatorController(Controller):
         the various measurements included in the sequence.
         """
         sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate)
+        tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
@@ -141,7 +148,7 @@ class EmulatorController(Controller):
         )
         return select_acquisitions(
             results.states,
-            acquisitions(sequence_).values(),
+            acquisitions(sequence_, self.sampling_rate, per_sample=2).values(),
             tlist_,
         )
 
@@ -151,8 +158,13 @@ class EmulatorController(Controller):
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         channels = [
-            [operator, channel_time(waveforms)]
-            for operator, waveforms in hamiltonians(sequence, configs, self.engine)
+            [
+                operator,
+                channel_time(waveforms, sampling_rate=self.sampling_rate),
+            ]
+            for operator, waveforms in hamiltonians(
+                sequence, configs, self.engine, self.sampling_rate
+            )
         ]
         return OperatorEvolution(channels) if len(channels) > 0 else None
 
@@ -206,13 +218,14 @@ def hamiltonian(
     hamiltonian: HamiltonianConfig,
     hilbert_space_index: int,
     engine: SimulationEngine,
+    sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
     op = engine.expand(
         config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
     )
     waveforms = (
-        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index])
+        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
@@ -220,7 +233,10 @@ def hamiltonian(
 
 
 def hamiltonians(
-    sequence: PulseSequence, configs: dict[str, Config], engine: SimulationEngine
+    sequence: PulseSequence,
+    configs: dict[str, Config],
+    engine: SimulationEngine,
+    sampling_rate: float,
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
     return (
@@ -230,6 +246,7 @@ def hamiltonians(
             hconfig,
             index(ch, hconfig),
             engine,
+            sampling_rate,
         )
         for ch in sequence.channels
         # TODO: drop the following, and treat acquisitions just as empty channels
@@ -237,7 +254,10 @@ def hamiltonians(
     )
 
 
-def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
+def channel_time(
+    waveforms: Iterable[Modulated],
+    sampling_rate: int,
+) -> Callable[[float], float]:
     """Wrap time function for specific channel.
 
     Used to avoid late binding issues.
@@ -247,13 +267,12 @@ def channel_time(waveforms: Iterable[Modulated]) -> Callable[[float], float]:
         cumulative_time = 0
         cumulative_phase = 0
         for pulse in waveforms:
-            pulse_duration = pulse.duration  # TODO: pass sampling rate
             pulse_phase = pulse.phase
-            if cumulative_time <= t < cumulative_time + pulse_duration:
+            if cumulative_time <= t < cumulative_time + pulse.duration:
                 relative_time = t - cumulative_time
-                index = int(relative_time)  # TODO: pass sampling rate
+                index = int(np.floor(relative_time * sampling_rate))
                 return pulse(t, index, cumulative_phase)
-            cumulative_time += pulse_duration
+            cumulative_time += pulse.duration
             cumulative_phase += pulse_phase
         return 0
 
