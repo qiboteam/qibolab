@@ -148,7 +148,7 @@ class EmulatorController(Controller):
         )
         return select_acquisitions(
             results.states,
-            acquisitions(sequence_, self.sampling_rate, per_sample=2).values(),
+            acquisitions(sequence_).values(),
             tlist_,
         )
 
