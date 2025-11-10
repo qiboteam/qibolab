@@ -66,7 +66,9 @@ def calculate_probabilities_from_density_matrix(
     return np.abs(marginal).reshape((*states.shape[:-2], -1))
 
 
-def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
+def acquisitions(
+    sequence: PulseSequence, sampling_rate: int = 1, per_sample: int = 2
+) -> dict[PulseId, float]:
     """Compute acquisitions' times."""
     acq = {}
     for ch in sequence.channels:
@@ -75,6 +77,7 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
             if isinstance(ev, (Acquisition, Readout)):
                 acq[ev.id] = time
             time += ev.duration
+
     return acq
 
 
@@ -121,7 +124,6 @@ def results(
         hamiltonian.nqubits,
         hamiltonian.transmon_levels,
     )
-
     assert options.nshots is not None
     sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
     # move measurements dimension to the front, getting ready for extraction
