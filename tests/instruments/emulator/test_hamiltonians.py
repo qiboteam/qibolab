@@ -20,8 +20,14 @@ def test_dummy_waveform():
     acq_config = AcquisitionConfig(delay=0, smearing=0)
     dc_config = DcConfig(offset=0)
     qubit = Qubit()
-    assert waveform(pulse=_PulseLike(), config=acq_config, qubit=qubit) is None
-    assert waveform(pulse=_PulseLike(), config=dc_config, qubit=qubit) is None
+    assert (
+        waveform(pulse=_PulseLike(), config=acq_config, qubit=qubit, sampling_rate=1)
+        is None
+    )
+    assert (
+        waveform(pulse=_PulseLike(), config=dc_config, qubit=qubit, sampling_rate=1)
+        is None
+    )
 
 
 @pytest.mark.parametrize(
@@ -36,7 +42,7 @@ def test_dummy_waveform():
 def test_iq_waveform(pulse, level):
     iq_config = DriveEmulatorConfig(frequency=5e9)
     qubit = Qubit(frequency=5e9)
-    modulated = waveform(pulse=pulse, config=iq_config, qubit=qubit)
+    modulated = waveform(pulse=pulse, config=iq_config, qubit=qubit, sampling_rate=1)
     if isinstance(pulse, Pulse):
         assert isinstance(modulated, ModulatedDrive)
         assert pytest.approx(modulated.omega) == 2 * np.pi * 5

@@ -40,7 +40,7 @@ __all__ = ["EmulatorController"]
 class EmulatorController(Controller):
     """Emulator controller."""
 
-    sampling_rate_: float = Field(..., exclude=True)
+    sampling_rate_: float = Field(1, exclude=True)
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
