@@ -29,8 +29,12 @@ class DriveEmulatorConfig(Config):
     """Scaling factor."""
 
     @staticmethod
-    def operator(n: int, engine: SimulationEngine) -> Operator:
-        return -1j * (engine.destroy(n) - engine.create(n))
+    def operator(
+        n: int, engine: SimulationEngine, qubit_frame: bool = False
+    ) -> list[Operator]:
+        if qubit_frame:
+            return [-engine.create(n), engine.destroy(n)]
+        return [-1j * (engine.destroy(n) - engine.create(n))]
 
 
 class FluxEmulatorConfig(Config):
@@ -44,8 +48,10 @@ class FluxEmulatorConfig(Config):
     """Convert voltarget to flux."""
 
     @staticmethod
-    def operator(n: int, engine: SimulationEngine) -> Operator:
-        return engine.create(n) * engine.destroy(n)
+    def operator(
+        n: int, engine: SimulationEngine, qubit_frame: Optional[bool] = None
+    ) -> Operator:
+        return [engine.create(n) * engine.destroy(n)]
 
     @property
     def flux(self) -> float:
@@ -58,6 +64,8 @@ class Qubit(Config):
 
     frequency: float = 0
     """Qubit frequency for 0->1."""
+    drive_frequency: float = 0
+    """Qubit frequency for 0->1."""
     anharmonicity: float = 0
     """Qubit anharmonicity."""
     sweetspot: float = 0
@@ -69,8 +77,13 @@ class Qubit(Config):
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
 
-    def omega(self, flux: float = 0) -> float:
+    def omega(self, flux: float = 0, qubit_frame: bool = False) -> float:
         """Angular velocity."""
+        if qubit_frame:
+            return (
+                2 * np.pi * self.detuned_frequency(flux)
+                - 2 * np.pi * self.drive_frequency
+            )
         return 2 * np.pi * self.detuned_frequency(flux)
 
     def detuned_frequency(self, flux: float) -> float:
@@ -80,9 +93,17 @@ class Qubit(Config):
             + (1 - self.asymmetry**2) * np.cos(np.pi * (flux - self.sweetspot)) ** 2
         ) ** (1 / 4) + self.anharmonicity
 
-    def operator(self, n: int, engine: SimulationEngine, flux: float = 0):
+    def operator(
+        self,
+        n: int,
+        engine: SimulationEngine,
+        flux: float = 0,
+        qubit_frame: bool = False,
+    ):
         """Time independent operator."""
-        quadratic_term = engine.create(n) * engine.destroy(n) * self.omega(flux) / giga
+        quadratic_term = (
+            engine.create(n) * engine.destroy(n) * self.omega(flux, qubit_frame) / giga
+        )
         quartic_term = (
             self.anharmonicity
             * np.pi
@@ -141,9 +162,22 @@ class CapacitiveCoupling(Config):
         )
         return 2 * np.pi * op / giga
 
-    def operator(self, n: int, engine: SimulationEngine) -> Operator:
+    def operator(
+        self, n: int, engine: SimulationEngine, qubit_frame: bool = False
+    ) -> Operator:
         """Time independent operator."""
-        return self.coupling * self._operator(n, engine)
+        if not qubit_frame:
+            return self.coupling * self._operator(n, engine)
+        return [
+            2
+            * np.pi
+            * self.coupling
+            * engine.tensor([engine.destroy(n), engine.create(n)]),
+            2
+            * np.pi
+            * self.coupling
+            * engine.tensor([engine.create(n), engine.destroy(n)]),
+        ]
 
 
 class FluxPulse(Model):
@@ -231,6 +265,34 @@ class ModulatedDrive(Model):
         )
 
 
+class QubitFrameDriveDestroy(ModulatedDrive):
+    def __call__(self, t, sample, phase):
+        i, q = self.envelopes
+        phi = self.pulse.relative_phase + phase
+        return (
+            -1j
+            * self.rabi_omega
+            * self.config.scale_factor
+            * (i[sample] - 1j * q[sample])
+            / 2
+            * np.exp(1j * phi)
+        )
+
+
+class QubitFrameDriveCreate(ModulatedDrive):
+    def __call__(self, t, sample, phase):
+        i, q = self.envelopes
+        phi = self.pulse.relative_phase + phase
+        return (
+            -1j
+            * self.rabi_omega
+            * self.config.scale_factor
+            * (i[sample] + 1j * q[sample])
+            / 2
+            * np.exp(-1j * phi)
+        )
+
+
 class ModulatedDelay(Model):
     """Modulated delay."""
 
@@ -268,6 +330,7 @@ class HamiltonianConfig(Config):
     transmon_levels: int = 2
     qubits: dict[QubitId, Qubit] = Field(default_factory=dict)
     pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
+    qubit_frame: bool = False
 
     @property
     def nqubits(self):
@@ -302,6 +365,7 @@ class HamiltonianConfig(Config):
                     n=self.transmon_levels,
                     flux=static_flux(qubit=i, config=config),
                     engine=engine,
+                    qubit_frame=self.qubit_frame,
                 ),
                 self.dims,
                 self.hilbert_space_index(i),
@@ -319,7 +383,9 @@ class HamiltonianConfig(Config):
             )
             for (pair_id, pair) in self.pairs.items()
         )
-        return qubit_terms + coupling
+        if not self.qubit_frame:
+            return qubit_terms + coupling
+        return qubit_terms
 
     def dissipation(self, engine: SimulationEngine) -> Operator:
         """Dissipation operators for the hamiltonian.
@@ -362,24 +428,47 @@ def waveform(
     config: Config,
     qubit: Qubit,
     sampling_rate: float,
-) -> Optional[ControlLine]:
+    qubit_frame: bool = False,
+) -> Optional[Union[ControlLine, list[ControlLine]]]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         return None
 
     if isinstance(pulse, Pulse):
         if isinstance(config, DriveEmulatorConfig):
-            return ModulatedDrive(
-                pulse=pulse, config=config, sampling_rate=sampling_rate
-            )
+            if not qubit_frame:
+                return [
+                    ModulatedDrive(
+                        pulse=pulse, config=config, sampling_rate=sampling_rate
+                    )
+                ]
+            else:
+                return [
+                    QubitFrameDriveCreate(
+                        pulse=pulse, config=config, sampling_rate=sampling_rate
+                    ),
+                    QubitFrameDriveDestroy(
+                        pulse=pulse, config=config, sampling_rate=sampling_rate
+                    ),
+                ]
         if isinstance(config, FluxEmulatorConfig):
-            return FluxPulse(
-                pulse=pulse,
-                config=config,
-                qubit=qubit,
-                sampling_rate=sampling_rate,
-            )
+            return [
+                FluxPulse(
+                    pulse=pulse,
+                    config=config,
+                    qubit=qubit,
+                    sampling_rate=sampling_rate,
+                )
+            ]
     if isinstance(pulse, Delay):
-        return ModulatedDelay(duration=pulse.duration)
+        return (
+            [ModulatedDelay(duration=pulse.duration)]
+            if not qubit_frame
+            else 2 * [ModulatedDelay(duration=pulse.duration)]
+        )
     if isinstance(pulse, VirtualZ):
-        return ModulatedVirtualZ(phase=pulse.phase)
+        return (
+            [ModulatedVirtualZ(phase=pulse.phase)]
+            if not qubit_frame
+            else 2 * [ModulatedVirtualZ(phase=pulse.phase)]
+        )
