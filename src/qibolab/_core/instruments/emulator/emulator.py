@@ -9,6 +9,7 @@ from typing import Callable, Optional, cast
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import Field
+from scipy.constants import giga
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -166,6 +167,54 @@ class EmulatorController(Controller):
                 sequence, configs, self.engine, self.sampling_rate
             )
         ]
+
+        hamiltonian = configs["hamiltonian"]
+        if hamiltonian.qubit_frame:
+            for pair, term in hamiltonian.pairs.items():
+                delta = (
+                    2
+                    * np.pi
+                    * (
+                        hamiltonian.qubits[pair[0]].drive_frequency
+                        - hamiltonian.qubits[pair[1]].drive_frequency
+                    )
+                    / giga
+                )
+                channels.append(
+                    [
+                        self.engine.expand(
+                            term.operator(
+                                n=hamiltonian.transmon_levels,
+                                engine=self.engine,
+                                qubit_frame=True,
+                            )[0],
+                            hamiltonian.dims,
+                            [
+                                hamiltonian.hilbert_space_index(pair[0]),
+                                hamiltonian.hilbert_space_index(pair[1]),
+                            ],
+                        ),
+                        lambda t: np.exp(-1.0j * delta * t) / giga,
+                    ]
+                )
+
+                channels.append(
+                    [
+                        self.engine.expand(
+                            term.operator(
+                                n=hamiltonian.transmon_levels,
+                                engine=self.engine,
+                                qubit_frame=True,
+                            )[1],
+                            hamiltonian.dims,
+                            [
+                                hamiltonian.hilbert_space_index(pair[0]),
+                                hamiltonian.hilbert_space_index(pair[1]),
+                            ],
+                        ),
+                        lambda t: np.exp(1.0j * delta * t) / giga,
+                    ]
+                )
         return OperatorEvolution(channels) if len(channels) > 0 else None
 
 
@@ -221,15 +270,25 @@ def hamiltonian(
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = engine.expand(
-        config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
-    )
-    waveforms = (
-        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
+    terms = []
+
+    op = config.operator(n=n, engine=engine, qubit_frame=hamiltonian.qubit_frame)
+    ops = [engine.expand(op_, hamiltonian.dims, hilbert_space_index) for op_ in op]
+    waveforms = [
+        waveform(
+            pulse,
+            config,
+            hamiltonian.qubits[hilbert_space_index],
+            sampling_rate,
+            hamiltonian.qubit_frame,
+        )
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
-    )
-    return (op, [w for w in waveforms if w is not None])
+    ]
+    for i in range(len(ops)):
+        wave = [waveform_[i] for waveform_ in waveforms]
+        terms.append((ops[i], [w for w in wave if w is not None]))
+    return terms
 
 
 def hamiltonians(
@@ -239,19 +298,22 @@ def hamiltonians(
     sampling_rate: float,
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    return (
-        hamiltonian(
-            sequence.channel(ch),
-            configs[ch],
-            hconfig,
-            index(ch, hconfig),
-            engine,
-            sampling_rate,
-        )
-        for ch in sequence.channels
-        # TODO: drop the following, and treat acquisitions just as empty channels
-        if not isinstance(configs[ch], AcquisitionConfig)
-    )
+    terms = []
+    for ch in sequence.channels:
+        if not isinstance(configs[ch], AcquisitionConfig):
+            raw_terms = hamiltonian(
+                sequence.channel(ch),
+                configs[ch],
+                hconfig,
+                index(ch, hconfig),
+                engine,
+                sampling_rate,
+            )
+            if isinstance(raw_terms, list):
+                terms += raw_terms
+            else:
+                terms.append(raw_terms)
+    return terms
 
 
 def channel_time(
