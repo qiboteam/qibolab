@@ -4,7 +4,11 @@ from typing import Annotated, Any, Literal, cast
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
-from qibolab._core.components.configs import Configs
+from qibolab._core.components.configs import Configs, DcConfig
+from qibolab._core.components.filters import (
+    ExponentialFilter,
+    FiniteImpulseResponseFilter,
+)
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
@@ -81,14 +85,35 @@ class ModuleConfig(Model):
             ports[f"{path}_lo_freq"] = int(lo.frequency)
             ports[f"out{n}_att"] = int(lo.power)
 
-        # set all active channels to filter delay compensation by default
-        for _, ch in channels.items():
+        for id, ch in channels.items():
             n = PortAddress.from_path(ch.path).ports[0] - 1
-            # for the FIR
+            # first set all active channels to filter delay compensation by default
+            # - for the FIR
             ports[f"out{n}_fir_config"] = "delay_comp"
-            # and for all exponentials
+            # - and for all exponentials
             for m in range(4):
                 ports[f"out{n}_exp{m}_config"] = "delay_comp"
+
+            # then let's enable them only for the available filters, and store the
+            # coefficients
+            config = configs[id]
+            if isinstance(config, DcConfig):
+                filters = config.filters
+                firs = [
+                    f for f in filters if isinstance(f, FiniteImpulseResponseFilter)
+                ]
+                assert len(firs) <= 1, "At most 1 FIR filter available"
+                if len(firs) == 1:
+                    fir = firs[0]
+                    ports[f"out{n}_fir_config"] = "enabled"
+                    ports[f"out{n}_fir_coeffs"] = fir.coefficients
+
+                exps = [f for f in filters if isinstance(f, ExponentialFilter)]
+                assert len(exps) <= 4, "At most 4 exponential filters available"
+                for m, exp in enumerate(exps):
+                    ports[f"out{n}_exp{m}_config"] = "enabled"
+                    ports[f"out{n}_exp{m}_amplitude"] = exp.amplitude
+                    ports[f"out{n}_exp{m}_time_constant"] = exp.tau
 
         # set input attenuation
         if qrm:
