@@ -37,7 +37,7 @@ def _long_wait(duration: int, n: int) -> Block:
     iterations = duration // MAX_WAIT
     remainder = duration % MAX_WAIT
     register = Registers.wait.value
-    label = f"wait{register.number}"
+    label = f"wait{n}"
     return [Wait(duration=remainder)] + [
         Move(source=iterations, destination=register),
         Line(instruction=Wait(duration=MAX_WAIT), label=label),
