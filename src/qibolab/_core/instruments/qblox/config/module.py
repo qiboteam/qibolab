@@ -35,7 +35,7 @@ class ModuleType(Flag):
 
 
 class ModuleConfig(Model):
-    los: dict[str, Any]
+    outs: dict[str, Any]
     """Local oscillators configurations."""
     # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
@@ -65,22 +65,23 @@ class ModuleConfig(Model):
         los: dict[ChannelId, OscillatorConfig],
         qrm: bool,
     ) -> "ModuleConfig":
-        los_ = {}
+        outs = {}
+
         # set lo frequencies
         for iq, lo in los.items():
             n = PortAddress.from_path(channels[iq].path).ports[0] - 1
             path = f"out{n}_in{n}" if qrm else f"out{n}"
-            los_[f"{path}_lo_en"] = True
-            los_[f"{path}_lo_freq"] = int(lo.frequency)
-            los_[f"out{n}_att"] = int(lo.power)
+            outs[f"{path}_lo_en"] = True
+            outs[f"{path}_lo_freq"] = int(lo.frequency)
+            outs[f"out{n}_att"] = int(lo.power)
 
-        return cls(los=los_)
+        return cls(outs=outs)
 
     @staticmethod
     def _set_option(mod: Module, name: str, metadata: list, value: Any) -> None:
         # - avoid configuring not explicitly set values
-        # - los configurations have dynamical names, they are handled separately
-        if value is None or name == "los":
+        # - outs configurations have dynamical names, they are handled separately
+        if value is None or name == "outs":
             return
 
         flag = [m for m in metadata if isinstance(m, ModuleType)]
@@ -103,9 +104,7 @@ class ModuleConfig(Model):
             # including input ones, if QRM
             mod.disconnect_inputs()
 
-        # only RF modules have LOs configured
-        assert mod.is_rf_type or len(self.los) == 0
-        for config, value in self.los.items():
+        for config, value in self.outs.items():
             mod.set(config, value)
 
         # apply all the other configurations
