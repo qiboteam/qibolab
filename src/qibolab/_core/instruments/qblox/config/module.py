@@ -16,12 +16,12 @@ __all__ = []
 def los(
     all: dict[ChannelId, str],
     configs: Configs,
-    module_channels: list[tuple[ChannelId, PortAddress]],
+    module_channels: list[ChannelId],
 ) -> dict[ChannelId, OscillatorConfig]:
     return {
         id_: cast(OscillatorConfig, configs[lo])
         for id_, lo in all.items()
-        if id_ in {ch[0] for ch in module_channels}
+        if id_ in {ch for ch in module_channels}
     }
 
 
@@ -58,9 +58,10 @@ class ModuleConfig(Model):
     """Input attenuation."""
 
     @classmethod
-    def compute(
+    def build(
         cls,
         channels: dict[ChannelId, Channel],
+        configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
         qrm: bool,
     ) -> "ModuleConfig":
