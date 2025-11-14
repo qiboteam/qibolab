@@ -8,7 +8,6 @@ from typing import Callable, Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import Field
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -40,7 +39,7 @@ __all__ = ["EmulatorController"]
 class EmulatorController(Controller):
     """Emulator controller."""
 
-    sampling_rate_: float = Field(1, exclude=True)
+    sampling_rate_: float = 1
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
