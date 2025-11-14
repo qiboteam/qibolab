@@ -35,8 +35,16 @@ class ModuleType(Flag):
 
 
 class ModuleConfig(Model):
-    outs: dict[str, Any]
-    """Local oscillators configurations."""
+    ports: dict[str, Any]
+    """Port-level configurations.
+
+    These configurations do not exactly apply to the whole module, but not even to the
+    individual sequencers.
+    Instead, they are applying to the physical ports.
+
+    So, they are defined at the module-level, but dynamically prefixed for the physical
+    port.
+    """
     # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
         Literal["sequencer", "level"], ModuleType.QRM
@@ -54,8 +62,6 @@ class ModuleConfig(Model):
 
     Cf. :attr:`scope_acq_trigger_mode_path0`.
     """
-    in0_att: Annotated[int, ModuleType.QRM] = 0
-    """Input attenuation."""
 
     @classmethod
     def build(
@@ -65,23 +71,27 @@ class ModuleConfig(Model):
         los: dict[ChannelId, OscillatorConfig],
         qrm: bool,
     ) -> "ModuleConfig":
-        outs = {}
+        ports = {}
 
         # set lo frequencies
         for iq, lo in los.items():
             n = PortAddress.from_path(channels[iq].path).ports[0] - 1
             path = f"out{n}_in{n}" if qrm else f"out{n}"
-            outs[f"{path}_lo_en"] = True
-            outs[f"{path}_lo_freq"] = int(lo.frequency)
-            outs[f"out{n}_att"] = int(lo.power)
+            ports[f"{path}_lo_en"] = True
+            ports[f"{path}_lo_freq"] = int(lo.frequency)
+            ports[f"out{n}_att"] = int(lo.power)
 
-        return cls(outs=outs)
+        # set input attenuation
+        if qrm:
+            ports["in0_att"] = 0
+
+        return cls(ports=ports)
 
     @staticmethod
     def _set_option(mod: Module, name: str, metadata: list, value: Any) -> None:
         # - avoid configuring not explicitly set values
-        # - outs configurations have dynamical names, they are handled separately
-        if value is None or name == "outs":
+        # - ports configurations have dynamical prefixes, they are handled separately
+        if value is None or name == "ports":
             return
 
         flag = [m for m in metadata if isinstance(m, ModuleType)]
@@ -104,7 +114,7 @@ class ModuleConfig(Model):
             # including input ones, if QRM
             mod.disconnect_inputs()
 
-        for config, value in self.outs.items():
+        for config, value in self.ports.items():
             mod.set(config, value)
 
         # apply all the other configurations
