@@ -81,6 +81,15 @@ class ModuleConfig(Model):
             ports[f"{path}_lo_freq"] = int(lo.frequency)
             ports[f"out{n}_att"] = int(lo.power)
 
+        # set all active channels to filter delay compensation by default
+        for _, ch in channels.items():
+            n = PortAddress.from_path(ch.path).ports[0] - 1
+            # for the FIR
+            ports[f"out{n}_fir_config"] = "delay_comp"
+            # and for all exponentials
+            for m in range(4):
+                ports[f"out{n}_exp{m}_config"] = "delay_comp"
+
         # set input attenuation
         if qrm:
             ports["in0_att"] = 0
