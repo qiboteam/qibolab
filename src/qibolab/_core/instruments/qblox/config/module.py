@@ -4,7 +4,11 @@ from typing import Annotated, Any, Literal, cast
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
-from qibolab._core.components.configs import Configs
+from qibolab._core.components.configs import Configs, DcConfig
+from qibolab._core.components.filters import (
+    ExponentialFilter,
+    FiniteImpulseResponseFilter,
+)
 from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
@@ -16,12 +20,12 @@ __all__ = []
 def los(
     all: dict[ChannelId, str],
     configs: Configs,
-    module_channels: list[tuple[ChannelId, PortAddress]],
+    module_channels: list[ChannelId],
 ) -> dict[ChannelId, OscillatorConfig]:
     return {
         id_: cast(OscillatorConfig, configs[lo])
         for id_, lo in all.items()
-        if id_ in {ch[0] for ch in module_channels}
+        if id_ in {ch for ch in module_channels}
     }
 
 
@@ -35,8 +39,16 @@ class ModuleType(Flag):
 
 
 class ModuleConfig(Model):
-    los: dict[str, Any]
-    """Local oscillators configurations."""
+    ports: dict[str, Any]
+    """Port-level configurations.
+
+    These configurations do not exactly apply to the whole module, but not even to the
+    individual sequencers.
+    Instead, they are applying to the physical ports.
+
+    So, they are defined at the module-level, but dynamically prefixed for the physical
+    port.
+    """
     # the following attributes are automatically processed and set
     scope_acq_trigger_mode_path0: Annotated[
         Literal["sequencer", "level"], ModuleType.QRM
@@ -54,32 +66,66 @@ class ModuleConfig(Model):
 
     Cf. :attr:`scope_acq_trigger_mode_path0`.
     """
-    in0_att: Annotated[int, ModuleType.QRM] = 0
-    """Input attenuation."""
 
     @classmethod
-    def compute(
+    def build(
         cls,
         channels: dict[ChannelId, Channel],
+        configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
         qrm: bool,
     ) -> "ModuleConfig":
-        los_ = {}
+        ports = {}
+
         # set lo frequencies
         for iq, lo in los.items():
             n = PortAddress.from_path(channels[iq].path).ports[0] - 1
             path = f"out{n}_in{n}" if qrm else f"out{n}"
-            los_[f"{path}_lo_en"] = True
-            los_[f"{path}_lo_freq"] = int(lo.frequency)
-            los_[f"out{n}_att"] = int(lo.power)
+            ports[f"{path}_lo_en"] = True
+            ports[f"{path}_lo_freq"] = int(lo.frequency)
+            ports[f"out{n}_att"] = int(lo.power)
 
-        return cls(los=los_)
+        for id, ch in channels.items():
+            n = PortAddress.from_path(ch.path).ports[0] - 1
+            # first set all active channels to filter delay compensation by default
+            # - for the FIR
+            ports[f"out{n}_fir_config"] = "delay_comp"
+            # - and for all exponentials
+            for m in range(4):
+                ports[f"out{n}_exp{m}_config"] = "delay_comp"
+
+            # then let's enable them only for the available filters, and store the
+            # coefficients
+            config = configs[id]
+            if isinstance(config, DcConfig):
+                filters = config.filters
+                firs = [
+                    f for f in filters if isinstance(f, FiniteImpulseResponseFilter)
+                ]
+                assert len(firs) <= 1, "At most 1 FIR filter available"
+                if len(firs) == 1:
+                    fir = firs[0]
+                    ports[f"out{n}_fir_config"] = "enabled"
+                    ports[f"out{n}_fir_coeffs"] = fir.coefficients
+
+                exps = [f for f in filters if isinstance(f, ExponentialFilter)]
+                assert len(exps) <= 4, "At most 4 exponential filters available"
+                for m, exp in enumerate(exps):
+                    ports[f"out{n}_exp{m}_config"] = "enabled"
+                    ports[f"out{n}_exp{m}_amplitude"] = exp.amplitude
+                    ports[f"out{n}_exp{m}_time_constant"] = exp.tau
+
+        # set input attenuation
+        if qrm:
+            ports["in0_att"] = 0
+
+        return cls(ports=ports)
 
     @staticmethod
     def _set_option(mod: Module, name: str, metadata: list, value: Any) -> None:
         # - avoid configuring not explicitly set values
-        # - los configurations have dynamical names, they are handled separately
-        if value is None or name == "los":
+        # - ports configurations have dynamical prefixes, they are handled separately
+        if value is None or name == "ports":
             return
 
         flag = [m for m in metadata if isinstance(m, ModuleType)]
@@ -102,9 +148,7 @@ class ModuleConfig(Model):
             # including input ones, if QRM
             mod.disconnect_inputs()
 
-        # only RF modules have LOs configured
-        assert mod.is_rf_type or len(self.los) == 0
-        for config, value in self.los.items():
+        for config, value in self.ports.items():
             mod.set(config, value)
 
         # apply all the other configurations
