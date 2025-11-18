@@ -75,6 +75,7 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
             if isinstance(ev, (Acquisition, Readout)):
                 acq[ev.id] = time
             time += ev.duration
+
     return acq
 
 
@@ -121,7 +122,6 @@ def results(
         hamiltonian.nqubits,
         hamiltonian.transmon_levels,
     )
-
     assert options.nshots is not None
     sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
     # move measurements dimension to the front, getting ready for extraction
