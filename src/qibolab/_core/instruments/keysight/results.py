@@ -31,9 +31,9 @@ def fetch_result(
     if acquisition_type is AcquisitionType.RAW:
         raw = results.get_trace(channel, averaging)
     elif acquisition_type is AcquisitionType.INTEGRATION:
-        raw = results.get_iq(channel, averaging)
+        raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
-        raw = results.get_classified(channel, averaging)
+        raw = results.get_classified(channel, averaging, acq_index=None)
     else:
         raise ValueError("Acquisition type unrecognized")
     return raw
