@@ -25,7 +25,7 @@ python = ">=3.10,<3.14"
 qibo = "^0.2.16"
 numpy = ">=1.26.4,<3"
 scipy = "^1.13.0"
-pydantic = "^2.6.4"
+pydantic = "^2.4.0"
 qutip = { version = "^5.0.2", optional = true }
 pyserial = { version = "^3.5", optional = true }
 
