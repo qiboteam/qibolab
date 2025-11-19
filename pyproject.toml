@@ -22,7 +22,7 @@ include = ["src/*.lark"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
-qibo = "^0.2.16"
+# qibo = "^0.2.16"
 numpy = ">=1.26.0,<3"
 scipy = "^1.13.0"
 pydantic = "^2.4.0"
