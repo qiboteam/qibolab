@@ -1,6 +1,5 @@
 from . import (
     components,
-    dummy,
     execution_parameters,
     parameters,
     platform,
@@ -10,7 +9,6 @@ from . import (
     sweeper,
 )
 from .components import *
-from .dummy import *
 from .execution_parameters import *
 from .parameters import *
 from .platform import *
@@ -21,7 +19,6 @@ from .sweeper import *
 
 __all__ = []
 __all__ += components.__all__
-__all__ += dummy.__all__
 __all__ += execution_parameters.__all__
 __all__ += parameters.__all__
 __all__ += platform.__all__
