@@ -1,5 +1,4 @@
 from . import (
-    backends,
     components,
     dummy,
     execution_parameters,
@@ -10,7 +9,6 @@ from . import (
     sequence,
     sweeper,
 )
-from .backends import *
 from .components import *
 from .dummy import *
 from .execution_parameters import *
@@ -22,7 +20,6 @@ from .sequence import *
 from .sweeper import *
 
 __all__ = []
-__all__ += backends.__all__
 __all__ += components.__all__
 __all__ += dummy.__all__
 __all__ += execution_parameters.__all__
