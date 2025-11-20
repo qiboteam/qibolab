@@ -4,6 +4,8 @@ import numpy as np
 import numpy.typing as npt
 from pydantic import BeforeValidator, Field, PlainSerializer
 
+__all__ = ["Result"]
+
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Qubit name."""
 
