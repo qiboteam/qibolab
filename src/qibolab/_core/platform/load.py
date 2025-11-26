@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 from typing import Optional, Union
 
-from qibo.config import raise_error
-
 from ..parameters import Hardware
 from .platform import Platform
 
@@ -21,7 +19,7 @@ def _platforms_paths() -> list[Path]:
     """
     paths = os.environ.get(PLATFORMS)
     if paths is None:
-        raise_error(RuntimeError, f"Platforms path ${PLATFORMS} unset.")
+        raise RuntimeError(f"Platforms path ${PLATFORMS} unset.")
 
     return [Path(p) for p in paths.split(os.pathsep)]
 
@@ -33,8 +31,7 @@ def _search(name: str, paths: list[Path]) -> Path:
         if platform.exists():
             return platform
 
-    raise_error(
-        ValueError,
+    raise ValueError(
         f"Platform {name} not found. Check ${PLATFORMS} environment variable.",
     )
 

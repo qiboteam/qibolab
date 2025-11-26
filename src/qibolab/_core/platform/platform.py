@@ -1,11 +1,10 @@
 """A platform for executing quantum algorithms."""
 
+import logging
 import signal
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Optional
-
-from qibo.config import log, raise_error
 
 from ..components import Config
 from ..components.channels import Channel
@@ -30,6 +29,8 @@ from ..unrolling import Bounds, batch
 __all__ = ["Platform"]
 
 PARAMETERS = "parameters.json"
+
+log = logging.getLogger(__name__)
 
 
 def _channels_map(elements: QubitMap) -> dict[ChannelId, QubitId]:
@@ -158,8 +159,7 @@ class Platform:
                 try:
                     instrument.connect()
                 except Exception as exception:
-                    raise_error(
-                        RuntimeError,
+                    raise RuntimeError(
                         f"Cannot establish connection to instrument {name}. Error captured: '{exception}'",
                     )
         self.is_connected = True
@@ -229,7 +229,8 @@ class Platform:
             .. testcode::
 
                 import numpy as np
-                from qibolab import Parameter, PulseSequence, Sweeper, create_dummy
+                from qibolab import Parameter, PulseSequence, Sweeper
+                from qibolab.instruments.dummy import create_dummy
 
 
                 platform = create_dummy()

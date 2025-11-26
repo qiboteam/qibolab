@@ -7,9 +7,10 @@ import pytest
 from qibo import gates
 from qibo.models import Circuit
 
-from qibolab import MetaBackend, create_platform
+from qibolab import create_platform
 from qibolab._core.backends import QibolabBackend
 from qibolab._core.platform.platform import Platform
+from qibolab.backend import MetaBackend
 
 
 def generate_circuit_with_gate(nqubits, gate, **kwargs):
