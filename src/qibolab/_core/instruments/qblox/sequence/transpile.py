@@ -1,3 +1,4 @@
+from functools import reduce
 from typing import Optional, cast
 
 from pydantic import BaseModel, Field
@@ -21,11 +22,22 @@ __all__ = []
 MAX_WAIT = 2**16 - 1
 
 
-def _long_wait(duration: int) -> Block:
+class State(BaseModel):
+    nwait: int = 0
+
+
+def _long_wait(duration: int, n: int) -> Block:
+    """Split a statically long wait.
+
+    It accounts for the wait instruction limit, defined by :const:`MAX_WAIT`.
+
+    ``n`` is used for labelling the loop, and it should be different for each wait
+    instruction in a sequencer.
+    """
     iterations = duration // MAX_WAIT
     remainder = duration % MAX_WAIT
     register = Registers.wait.value
-    label = f"wait{register.number}"
+    label = f"wait{n}"
     return [Wait(duration=remainder)] + [
         Move(source=iterations, destination=register),
         Line(instruction=Wait(duration=MAX_WAIT), label=label),
@@ -33,11 +45,11 @@ def _long_wait(duration: int) -> Block:
     ]
 
 
-def _decompose_wait(instr: Wait) -> Optional[Block]:
+def _decompose_wait(instr: Wait, n: int) -> Optional[Block]:
     duration = instr.duration
     if not isinstance(duration, int) or duration <= MAX_WAIT:
         return None
-    return _long_wait(duration)
+    return _long_wait(duration, n)
 
 
 def _negative_move(instr: Move):
@@ -70,19 +82,25 @@ def _decompose_move(instr: Move) -> Optional[Block]:
     return _negative_move(instr)
 
 
-def _line_transform(line: Line) -> list[Line]:
+LineTransformed = list[Line]
+
+
+def _line_transform(line: Line, state: State) -> tuple[LineTransformed, State]:
     instr = line.instruction
-    block = (
-        _decompose_wait(instr)
+    block, state = (
+        (
+            _decompose_wait(instr, state.nwait),
+            state.model_copy(update={"nwait": state.nwait + 1}),
+        )
         if isinstance(instr, Wait)
-        else _decompose_move(instr)
+        else (_decompose_move(instr), state)
         if isinstance(instr, Move)
-        else None
+        else (None, state)
     )
 
     # default
     if block is None:
-        return [line]
+        return [line], state
 
     assert isinstance(block[0], Instruction)
     return [
@@ -95,7 +113,15 @@ def _line_transform(line: Line) -> list[Line]:
             if block is not None
             else [line]
         )
-    ]
+    ], state
+
+
+def _line_transform_apply(
+    value: tuple[list[LineTransformed], State], line: Line
+) -> tuple[list[LineTransformed], State]:
+    """Accumulate."""
+    transformed, state = _line_transform(line, value[1])
+    return (value[0] + [transformed]), state
 
 
 class _WaitBatch(BaseModel):
@@ -127,10 +153,11 @@ class _WaitBatch(BaseModel):
         )
 
 
-def _merge_wait(prog: list[Line]) -> list[Line]:
+def _merge_wait(block: list[Line]) -> list[Line]:
+    """Merge subsequent static (immediate) waits."""
     batch = _WaitBatch()
     new = []
-    for line in prog:
+    for line in block:
         instr = line.instruction
         intwait = isinstance(instr, Wait) and isinstance(instr.duration, int)
         if not intwait or line.label is not None:
@@ -142,12 +169,14 @@ def _merge_wait(prog: list[Line]) -> list[Line]:
     return new + batch.lines
 
 
-def _block_transform(prog: Block) -> list[Line]:
-    lines = [el if isinstance(el, Line) else Line.instr(el) for el in prog]
+def _block_transform(block: Block) -> list[Line]:
+    lines = [el if isinstance(el, Line) else Line.instr(el) for el in block]
     return _merge_wait(lines)
 
 
 def transpile(prog: Block) -> Program:
-    return Program(
-        elements=[el for oel in _block_transform(prog) for el in _line_transform(oel)]
+    block_replaced = _block_transform(prog)
+    lines_replaced, _state = reduce(
+        _line_transform_apply, block_replaced, ([], State())
     )
+    return Program(elements=[line for block in lines_replaced for line in block])
