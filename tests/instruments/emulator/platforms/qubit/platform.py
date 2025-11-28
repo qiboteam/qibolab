@@ -27,7 +27,9 @@ def create() -> Platform:
 
     # register the instruments
     instruments = {
-        "dummy": EmulatorController(address="0.0.0.0", channels=channels),
+        "dummy": EmulatorController(
+            address="0.0.0.0", channels=channels, sampling_rate_=1
+        ),
     }
 
     return Platform.load(
