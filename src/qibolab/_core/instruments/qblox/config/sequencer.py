@@ -12,6 +12,7 @@ from qibolab._core.components.configs import (
     Configs,
     DcConfig,
     IqConfig,
+    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -96,9 +97,11 @@ class SequencerConfig(Model):
     demod_en_acq: Optional[bool] = None
     nco_freq: Optional[int] = None
     mod_en_awg: Optional[bool] = None
+    mixer_corr_gain_ratio: Optional[float] = None
+    mixer_corr_phase_offset_degree: Optional[float] = None
 
     @classmethod
-    def build(
+    def compute(
         cls,
         address: PortAddress,
         sequence: Q1Sequence,
@@ -165,10 +168,14 @@ class SequencerConfig(Model):
         probe = channels[channel_id].iqout(channel_id)
         if probe is not None:
             freq = cast(IqConfig, configs[probe]).frequency
-            lo = cast(IqChannel, channels[probe]).lo
-            assert lo is not None
-            lo_freq = cast(OscillatorConfig, configs[lo]).frequency
+            probe_ = cast(IqChannel, channels[probe])
+            assert probe_.lo is not None
+            lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(freq - lo_freq)
+            if probe_.mixer is not None:
+                mixer = cast(IqMixerConfig, configs[probe_.mixer])
+                cfg.mixer_corr_gain_ratio = mixer.scale_q
+                cfg.mixer_corr_phase_offset_degree = mixer.phase_q
 
         return cfg
 
