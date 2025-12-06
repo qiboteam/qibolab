@@ -169,9 +169,11 @@ class Cluster(Controller):
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
+            ids = [ch for ch, _ in chs]
+            channels = {id: ch for id, ch in self.channels.items() if id in ids}
             # compute module configurations, and apply them
-            los = config.module.los(self._los, configs, chs)
-            config.ModuleConfig.compute(self.channels, los, module.is_qrm_type).apply(
+            los = config.module.los(self._los, configs, ids)
+            config.ModuleConfig.build(channels, configs, los, module.is_qrm_type).apply(
                 module
             )
 
