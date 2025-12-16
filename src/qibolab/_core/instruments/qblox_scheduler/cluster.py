@@ -1,5 +1,6 @@
 import xarray as xr
 from qblox_scheduler import HardwareAgent, Schedule
+from qblox_scheduler.schedules.schedule import TimeableSchedule
 
 from qibolab._core.components import Configs
 from qibolab._core.execution_parameters import ExecutionParameters
@@ -23,29 +24,7 @@ class QBSchedulerController(Controller):
         """Provide instrument's sampling rate."""
         return SAMPLING_RATE
 
-    def connect(self):
-        """Connect and initialize the instrument."""
-
-        cluster_name = (
-            "cluster"  # we only support machines consisting of a single cluster
-        )
-
-        # https://docs.qblox.com/en/main/products/qblox_scheduler/user_guide/hardware_config.html
-        hardware_cfg = {
-            "hardware_description": {
-                cluster_name: {
-                    "instrument_type": "Cluster",
-                    "ip": self.address,
-                    "sequence_to_file": False,
-                    "ref": "internal",
-                }
-            }
-        }
-
-        for key, value in self.channels.items():
-            print(key)
-            print(value)
-
+    def _get_graph(self, cluster_name):
         graph = []
         for key, value in self.channels.items():
             qubit = key.split("/")[0]
@@ -82,19 +61,29 @@ class QBSchedulerController(Controller):
                     f"q{qubit}:{port_name}",
                 )
             )
+        return graph
 
-        hardware_cfg["connectivity"] = {"graph": graph}
+    def connect(self):
+        """Connect and initialize the instrument."""
 
-        hardware_cfg["hardware_options"] = {
-            "output_att": {
-                "q0:mw-q0.01": 0,
-                "q1:mw-q1.01": 0,
+        cluster_name = (
+            "cluster"  # we only support machines consisting of a single cluster
+        )
+
+        # https://docs.qblox.com/en/main/products/qblox_scheduler/user_guide/hardware_config.html
+        hardware_cfg = {
+            "hardware_description": {
+                cluster_name: {
+                    "instrument_type": "Cluster",
+                    "ip": self.address,
+                    "sequence_to_file": False,
+                    "ref": "internal",
+                }
             },
-            "modulation_frequencies": {
-                "q0:mw-q0.01": {"interm_freq": None},
-                "q1:mw-q1.01": {"interm_freq": None},
-            },
+            "hardware_options": {},  # can be empty but has to exist
+            "connectivity": {"graph": self._get_graph(cluster_name)},
         }
+
         self.agent = HardwareAgent(hardware_cfg)
         self.agent.connect_clusters()
 
@@ -102,11 +91,13 @@ class QBSchedulerController(Controller):
         """Disconnect and reset the instrument."""
         # NOTE: HardwareAgent does not have a disconnect function
 
-    def timetable_schedule(pulse_sequence: PulseSequence) -> Schedule:
+    def _timeable_schedule(
+        self, pulse_sequence: PulseSequence
+    ) -> Schedule | TimeableSchedule:
         ...
         return
 
-    def reshape_results(scheduler_result: xr.Dataset) -> dict:
+    def _reshape_results(self, scheduler_result: xr.Dataset) -> dict:
         ...
         return
 
@@ -127,13 +118,13 @@ class QBSchedulerController(Controller):
 
         results = {}
         for ps in sequences:
-            # pulse sequence -> Schedule | TimeableSchedule
-            sch = self.timetable_schedule(ps)
+            # _PulseLike -> Schedule | TimeableSchedule
+            sch = self._timeable_schedule(ps)
             schedule = self.agent.compile(sch)
             res = self.agent.run(schedule)
             # res: xarray
             # psres: dict[key: array]
-            psres = self.reshape_results(res)
+            psres = self._reshape_results(res)
 
             results |= psres
         return results
