@@ -1,13 +1,13 @@
+import xarray as xr
+from qblox_scheduler import HardwareAgent, Schedule
+
+from qibolab._core.components import Configs
+from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
-from qibolab._core.execution_parameters import ExecutionParameters
-from qblox_scheduler import Schedule
-from qblox_scheduler import HardwareAgent
-import xarray as xr
-from qibolab._core.components import Configs
-from qibolab._core.identifier import Result
-from qibolab._core.pulses import PulseId
 
 SAMPLING_RATE = 1
 
@@ -26,7 +26,9 @@ class QBSchedulerController(Controller):
     def connect(self):
         """Connect and initialize the instrument."""
 
-        cluster_name = "cluster"  # we only support machines consisting of a single cluster
+        cluster_name = (
+            "cluster"  # we only support machines consisting of a single cluster
+        )
 
         # https://docs.qblox.com/en/main/products/qblox_scheduler/user_guide/hardware_config.html
         hardware_cfg = {
