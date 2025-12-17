@@ -3,7 +3,6 @@ from typing import Optional, cast
 
 import numpy as np
 from pydantic import ConfigDict
-from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
 from qibolab._core.components.channels import Channel, IqChannel
@@ -42,46 +41,11 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
     )
 
 
-QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
-"""Conversion factor between swept value and configuration.
-
-There are two different ways to add an offset to the waveform played by the QCM module:
-
-- digitally summing an offset, which could be controlled both in real-time and by
-  conifgurations
-- adding an offset directly to the outcoming signal
-
-
-Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
-<https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
-a conversion is neeeded, because the first option will be defined in the interval (-1,
-1) in the parameters (internally mapping the floats on a suitable integers range), while
-the second is directly expressed in Volt.
-Hence, the conversion factor of ``2.5``.
-
-However, these two ways are not equivalent, especially because of the NCO and LO mixing
-process.
-Indeed, the first one is happening upstream to the mixing process, and the second
-downstream.
-Since we are sweeping only one of the two components of the signal (the in-phase,
-I), it will result multiplied by a sine-wave, which reduces its root mean square (RMS)
-power by a factor of `sqrt(2)`. Which is then accounted for in the conversion range.
-
-https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg
-https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram
-
-Notice that sweeping both of the components is also viable. But even without any flux
-pulse, the sum of sine and cosine with maximal amplitude will saturate the power supply,
-eventually clipping the signal and reducing the power range.
-"""
-
-
 class SequencerConfig(Model):
     # disable freeze, to be able to construct instance with optional fields, but also
     # static validation
     model_config = ConfigDict(frozen=False)
 
-    module: dict
     address: Optional[str] = None
     # the following attributes are automatically processed and set
     sequence: Optional[dict] = None
@@ -109,21 +73,14 @@ class SequencerConfig(Model):
         index: int,
         rf: bool,
     ) -> "SequencerConfig":
-        module = {}
         config = configs[channel_id]
-
-        # set parameters
-        # offsets
-        if isinstance(config, DcConfig):
-            module[f"out{index}_offset"] = config.offset * QCM_SWEEP_TO_OFFSET
 
         # avoid sequence operations for inactive sequencers, including synchronization
         if sequence.is_empty:
-            return cls(module=module)
+            return cls()
 
         # conditional configurations
         cfg = cls(
-            module=module,
             # connect to physical address
             address=address.local_address,
             # TODO: mixer calibration not yet propagated
@@ -174,16 +131,11 @@ class SequencerConfig(Model):
 
     def apply(self, seq: Sequencer):
         """Configure sequencer-wide settings."""
-
-        mod = cast(Module, seq.ancestors[1])
-        for name, value in self.module.items():
-            mod.set(name, value)
-
         if self.address is not None:
             seq.connect_sequencer(self.address)
 
         # values already applied
-        applied = {"module", "address"}
+        applied = {"address"}
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None:

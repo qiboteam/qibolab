@@ -1,6 +1,7 @@
 from enum import Flag, auto
 from typing import Annotated, Any, Literal, cast
 
+import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
@@ -15,6 +16,39 @@ from qibolab._core.serialize import Model
 from .port import PortAddress
 
 __all__ = []
+
+QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
+"""Conversion factor between swept value and configuration.
+
+There are two different ways to add an offset to the waveform played by the QCM module:
+
+- digitally summing an offset, which could be controlled both in real-time and by
+  conifgurations
+- adding an offset directly to the outcoming signal
+
+
+Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
+<https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
+a conversion is neeeded, because the first option will be defined in the interval (-1,
+1) in the parameters (internally mapping the floats on a suitable integers range), while
+the second is directly expressed in Volt.
+Hence, the conversion factor of ``2.5``.
+
+However, these two ways are not equivalent, especially because of the NCO and LO mixing
+process.
+Indeed, the first one is happening upstream to the mixing process, and the second
+downstream.
+Since we are sweeping only one of the two components of the signal (the in-phase,
+I), it will result multiplied by a sine-wave, which reduces its root mean square (RMS)
+power by a factor of `sqrt(2)`. Which is then accounted for in the conversion range.
+
+https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg
+https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram
+
+Notice that sweeping both of the components is also viable. But even without any flux
+pulse, the sum of sine and cosine with maximal amplitude will saturate the power supply,
+eventually clipping the signal and reducing the power range.
+"""
 
 
 def los(
@@ -87,6 +121,12 @@ class ModuleConfig(Model):
 
         for id, ch in channels.items():
             n = PortAddress.from_path(ch.path).ports[0] - 1
+            config = configs[id]
+
+            # offsets
+            if isinstance(config, DcConfig):
+                ports[f"out{n}_offset"] = config.offset * QCM_SWEEP_TO_OFFSET
+
             # first set all active channels to filter delay compensation by default
             # - for the FIR
             ports[f"out{n}_fir_config"] = "delay_comp"
@@ -96,7 +136,6 @@ class ModuleConfig(Model):
 
             # then let's enable them only for the available filters, and store the
             # coefficients
-            config = configs[id]
             if isinstance(config, DcConfig):
                 filters = config.filters
                 firs = [
