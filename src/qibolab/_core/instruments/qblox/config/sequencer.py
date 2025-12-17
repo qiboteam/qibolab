@@ -9,7 +9,6 @@ from qibolab._core.components.channels import Channel, IqChannel
 from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
-    DcConfig,
     IqConfig,
     OscillatorConfig,
 )
