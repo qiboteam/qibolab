@@ -14,13 +14,13 @@ from qibolab._core.sweeper import ParallelSweepers
 
 
 class QBDelay(Operation):
-    def __init__(self, duration: float, port: str) -> None:
+    def __init__(self, duration: float, port: str, clock: str) -> None:
         super().__init__(name=self.__class__.__name__)
         self.data["pulse_info"] = {
             "wf_func": None,
             "t0": 0,
             "duration": duration,
-            "clock": None,
+            "clock": clock,
             "port": port,
         }
 
@@ -93,9 +93,11 @@ class QBSchedulerController(Controller):
             )
 
             if key.endswith("acquisition"):
-                # import ipdb; ipdb.set_trace()
                 ...
-            if key.endswith("drive") or key.endswith("probe") or key.endswith("flux"):
+            if key.endswith("flux"):
+                # For the flux channel we don't set frequencies
+                pass
+            if key.endswith("drive") or key.endswith("probe"):
                 lo_key = self.channels[key].lo
                 lo_freq = configs[lo_key].frequency
                 clock_freq = configs[key].frequency
@@ -140,10 +142,13 @@ class QBSchedulerController(Controller):
 
         port = f"q{channel.split('/')[0]}:{port_name}"
 
+        clock = f"q{channel.split('/')[0]}:01"
+
         schedule.add(
             SimpleNumericalPulse(
                 samples=samples,
                 port=port,
+                clock=clock,
             )
         )
 
@@ -162,8 +167,8 @@ class QBSchedulerController(Controller):
 
     def _timeable_schedule(self, pulse_sequence: PulseSequence, configs) -> Schedule:
         schedule = Schedule("translated from PulseSequence")
-        basebandclock = ClockResource(name="cl0.baseband", freq=0.0)
-        schedule.add_resource(basebandclock)
+        # basebandclock = ClockResource(name="cl0.baseband", freq=0.0)
+        # schedule.add_resource(basebandclock)
         for channel, pulse in pulse_sequence:
             qubit = channel.split("/")[0]
             if pulse.kind == "readout":
@@ -187,7 +192,11 @@ class QBSchedulerController(Controller):
                     port_name = "mw"
                 if channel.endswith("flux"):
                     port_name = "fl"
-                schedule.add(QBDelay(duration, f"q{qubit}:{port_name}"))
+                schedule.add(
+                    QBDelay(
+                        duration, port=f"q{qubit}:{port_name}", clock=f"q{qubit}.01"
+                    )
+                )
             if pulse.kind == "acquisition":
                 self._handle_acquisition(schedule, channel, pulse.acquisition, configs)
             if pulse.kind == "align":
