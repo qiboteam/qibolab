@@ -1,3 +1,4 @@
+import json
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -52,7 +53,7 @@ class Logger:
         status = self.path / "status"
         status.mkdir(exist_ok=True)
 
-        (status / "cluster.json").write_text(str(cluster.snapshot()))
+        (status / "cluster.json").write_text(json.dumps(cluster.snapshot()))
 
         with _dump_stdout(status / "cluster.txt"):
             cluster.print_readable_snapshot()
