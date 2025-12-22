@@ -75,6 +75,7 @@ class LocalOscillator(Instrument):
     settings: Optional[InstrumentSettings] = Field(
         default_factory=lambda: LocalOscillatorSettings()
     )
+    power_down_on_disconnect: Optional[bool] = True
 
     frequency = _property("frequency")
     power = _property("power")
@@ -97,7 +98,8 @@ class LocalOscillator(Instrument):
 
     def disconnect(self):
         if self.device is not None:
-            self.device.off()
+            if self.power_down_on_disconnect:
+                self.device.off()
             self.device.close()
             self.device = None
 
