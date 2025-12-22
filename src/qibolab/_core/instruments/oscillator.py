@@ -26,7 +26,7 @@ class Device(Protocol):
         """Turn device on."""
 
     def off(self):
-        """Turn device on."""
+        """Turn device off."""
 
     def close(self):
         """Close connection with device."""
@@ -75,7 +75,7 @@ class LocalOscillator(Instrument):
     settings: Optional[InstrumentSettings] = Field(
         default_factory=lambda: LocalOscillatorSettings()
     )
-    power_down_on_disconnect: Optional[bool] = True
+    turn_off_on_disconnect: Optional[bool] = True
 
     frequency = _property("frequency")
     power = _property("power")
@@ -98,7 +98,7 @@ class LocalOscillator(Instrument):
 
     def disconnect(self):
         if self.device is not None:
-            if self.power_down_on_disconnect:
+            if self.turn_off_on_disconnect:
                 self.device.off()
             self.device.close()
             self.device = None
