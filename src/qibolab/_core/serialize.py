@@ -56,8 +56,8 @@ def eq(obj1: BaseModel, obj2: BaseModel) -> bool:
             comparisons.append(
                 (value1.shape == value2.shape) and (value1 == value2).all()
             )
-
-        comparisons.append(value1 == value2)
+        else:
+            comparisons.append(eq(value1, value2))
 
     return all(comparisons)
 
