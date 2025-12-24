@@ -82,10 +82,10 @@ def test_array_nested_comparison():
     assert n0 == n0
     # otherwise, it is going for the nested comparison, and failing
     with pytest.raises(ValueError):
-        n0 == n1
+        assert n0 != n1
     # even with an exact copy
     with pytest.raises(ValueError):
-        n0 == n0.model_copy(deep=True)
+        assert n0 == n0.model_copy(deep=True)
     # but it is actually checking array identity, not just the overall object, so it is
     # even succeeding with a shallow copy
     assert n0 == n0.model_copy()
