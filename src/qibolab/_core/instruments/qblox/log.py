@@ -1,3 +1,6 @@
+import json
+import sys
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional
 
@@ -23,6 +26,14 @@ def _sanitize(name: str) -> str:
     return name.replace("/", "-")
 
 
+@contextmanager
+def _dump_stdout(path):
+    original_stdout = sys.stdout
+    with open(path, "w") as sys.stdout:
+        yield
+    sys.stdout = original_stdout
+
+
 class Logger:
     def __init__(self, configs: Configs) -> None:
         self.path = _check(configs)
@@ -42,7 +53,11 @@ class Logger:
         status = self.path / "status"
         status.mkdir(exist_ok=True)
 
-        (status / "cluster.json").write_text(str(cluster.snapshot()))
+        (status / "cluster.json").write_text(json.dumps(cluster.snapshot()))
+
+        with _dump_stdout(status / "cluster.txt"):
+            cluster.print_readable_snapshot()
+
         for slot, seqs in sequencers.items():
             for ch, seq_idx in seqs.items():
                 (status / _sanitize(f"{ch}.log")).write_text(

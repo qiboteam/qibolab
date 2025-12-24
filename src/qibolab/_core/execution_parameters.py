@@ -10,7 +10,7 @@ from qibolab._core.sequence import PulseSequence
 from .serialize import Model
 from .sweeper import ParallelSweepers, iteration_length
 
-__all__ = ["AcquisitionType", "AveragingMode"]
+__all__ = ["AcquisitionType", "AveragingMode", "ExecutionParameters"]
 
 
 class AcquisitionType(Enum):

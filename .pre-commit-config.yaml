@@ -10,7 +10,7 @@ repos:
       - id: check-toml
       - id: debug-statements
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.0
+    rev: v0.14.10
     hooks:
       # Run the linter.
       - id: ruff
@@ -21,11 +21,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
   - repo: https://github.com/hadialqattan/pycln
-    rev: v2.5.0
+    rev: v2.6.0
     hooks:
       - id: pycln
         args:

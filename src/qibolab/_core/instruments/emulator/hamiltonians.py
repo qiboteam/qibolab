@@ -361,6 +361,7 @@ def waveform(
     pulse: PulseLike,
     config: Config,
     qubit: Qubit,
+    sampling_rate: float,
 ) -> Optional[ControlLine]:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
@@ -368,12 +369,15 @@ def waveform(
 
     if isinstance(pulse, Pulse):
         if isinstance(config, DriveEmulatorConfig):
-            return ModulatedDrive(pulse=pulse, config=config)
+            return ModulatedDrive(
+                pulse=pulse, config=config, sampling_rate=sampling_rate
+            )
         if isinstance(config, FluxEmulatorConfig):
             return FluxPulse(
                 pulse=pulse,
                 config=config,
                 qubit=qubit,
+                sampling_rate=sampling_rate,
             )
     if isinstance(pulse, Delay):
         return ModulatedDelay(duration=pulse.duration)
