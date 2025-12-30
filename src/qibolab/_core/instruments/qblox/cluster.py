@@ -13,6 +13,7 @@ from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqCh
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
@@ -92,7 +93,7 @@ class Cluster(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
         results = {}
         log = Logger(configs)
