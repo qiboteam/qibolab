@@ -75,7 +75,6 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
-        self._cluster.reset()
 
     def disconnect(self):
         """Disconnect and reset the instrument."""
