@@ -13,6 +13,7 @@ from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqCh
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
@@ -61,6 +62,11 @@ class Cluster(Controller):
         """Determine connections status."""
         return self._cluster is not None
 
+    def reset(self) -> None:
+        """Reset cluster parameters."""
+        assert self._cluster is not None
+        self._cluster.reset()
+
     def connect(self):
         """Connect and initialize the instrument."""
         if self.is_connected:
@@ -69,7 +75,6 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
-        self._cluster.reset()
 
     def disconnect(self):
         """Disconnect and reset the instrument."""
@@ -87,13 +92,19 @@ class Cluster(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
         results = {}
         log = Logger(configs)
 
         # no unrolling yet: act one sequence at a time, and merge results
         for ps in sequences:
+            # full reset of the cluster, to erase leftover configurations and sequencer
+            # synchronization registration
+            # NOTE: until not unrolled, each sequence execution should be independent
+            # TODO: once unrolled, this reset should be preserved, since it is required
+            # for multiple experiments sharing the same connection
+            self.reset()
             # split shots in batches, in case the required experiment exceeds the
             # allowed memory
             psres = []
