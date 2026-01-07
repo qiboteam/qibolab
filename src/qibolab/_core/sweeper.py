@@ -9,7 +9,7 @@ from pydantic import model_validator
 from .components.configs import OscillatorConfig
 from .identifier import ChannelId
 from .pulses import PulseLike, VirtualZ
-from .serialize import Model
+from .serialize import Model, eq
 
 __all__ = ["Parameter", "ParallelSweepers", "Sweeper"]
 
@@ -137,6 +137,14 @@ class Sweeper(Model):
             return len(self.values)
         assert self.range is not None
         return int((self.range[1] - self.range[0]) // self.range[2] + 1)
+
+    def __eq__(self, other: "Sweeper") -> bool:
+        """Compare sweepers.
+
+        The comparison requires adaption, since it may involve NumPy arrays, which do
+        not generate a single boolean as output of the comparison operator.
+        """
+        return eq(self, other)
 
     def __add__(self, value: float) -> "Sweeper":
         """Add value to sweeper ones."""
