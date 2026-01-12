@@ -100,7 +100,7 @@ def _scope(data: ScopeData) -> Result:
 
 
 def _classification(data: Thresholded) -> Result:
-    return np.array(data, dtype=int)
+    return np.array(data, dtype=float)
 
 
 def extract(
