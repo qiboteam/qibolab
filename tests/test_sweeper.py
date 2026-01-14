@@ -115,7 +115,7 @@ def test_sweepers_equivalence():
     # removing channnels field and adding pulses field
     assert sweeper1 != sweeper2
 
-    # chaging number of pulses
+    # changing number of pulses
     sweeper2 = sweeper1.model_copy(update={"pulses": [pulse_1] * 2})
     assert sweeper1 != sweeper2
 
