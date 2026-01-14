@@ -250,7 +250,7 @@ class Cluster(Controller):
 
         return acquisitions
 
-    @cached_property
+    @property
     def _modules(self) -> dict[SlotId, Module]:
         """Retrieve slot to module object mapping."""
         return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
