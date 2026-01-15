@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from qibolab._core.native import Native, TwoQubitNatives, rotation
+from qibolab._core.native import Native, SingleQubitNatives, TwoQubitNatives, rotation
 from qibolab._core.pulses import Drag, Gaussian, Pulse, Rectangular
 from qibolab._core.sequence import PulseSequence
 
@@ -142,3 +142,42 @@ def test_two_qubit_natives_symmetric():
         iSWAP=Native(PulseSequence()),
     )
     assert natives.symmetric is False
+
+
+def test_single_qubit_natives_r_uuid_uniqueness():
+    """Test that multiple calls to SingleQubitNatives.R() return sequences with unique pulse UUIDs."""
+    # Create a native gate
+    seq = PulseSequence(
+        [
+            (
+                "1/drive",
+                Pulse(duration=40, amplitude=0.3, envelope=Gaussian(rel_sigma=3.0)),
+            )
+        ]
+    )
+    native_rx90 = Native(seq)
+
+    # Test with RX90
+    natives_rx90 = SingleQubitNatives(RX90=native_rx90)
+    r1 = natives_rx90.R(theta=np.pi / 2, phi=0.0)
+    r2 = natives_rx90.R(theta=np.pi / 2, phi=0.0)
+    # Different calls should have unique UUIDs
+    assert r1[0][1].id != r2[0][1].id
+
+    # Test with different parameters
+    r3 = natives_rx90.R(theta=np.pi, phi=np.pi / 4)
+    assert r1[0][1].id != r3[0][1].id
+    assert r2[0][1].id != r3[0][1].id
+
+    # Test with RX
+    native_rx = Native(seq)
+    natives_rx = SingleQubitNatives(RX=native_rx)
+    r4 = natives_rx.R(theta=np.pi / 2, phi=0.0)
+    r5 = natives_rx.R(theta=np.pi / 2, phi=0.0)
+    # Different calls should have unique UUIDs
+    assert r4[0][1].id != r5[0][1].id
+
+    # Test with different parameters
+    r6 = natives_rx.R(theta=np.pi, phi=np.pi / 4)
+    assert r4[0][1].id != r6[0][1].id
+    assert r5[0][1].id != r6[0][1].id
