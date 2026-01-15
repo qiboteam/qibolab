@@ -94,9 +94,9 @@ class SingleQubitNatives(NativeContainer):
         ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
         """
         if self.RX90 is not None:
-            return rotation(self.RX90, theta, phi, rx90=True)
+            return rotation(self.RX90(), theta, phi, rx90=True)
         assert self.RX is not None
-        return rotation(self.RX, theta, phi)
+        return rotation(self.RX(), theta, phi)
 
 
 class TwoQubitNatives(NativeContainer):
