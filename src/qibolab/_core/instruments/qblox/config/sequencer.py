@@ -64,7 +64,7 @@ class SequencerConfig(Model):
     mixer_corr_phase_offset_degree: Optional[float] = None
 
     @classmethod
-    def compute(
+    def build(
         cls,
         address: PortAddress,
         sequence: Q1Sequence,
