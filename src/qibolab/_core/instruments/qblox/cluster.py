@@ -180,13 +180,14 @@ class Cluster(Controller):
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
-            ids = [ch for ch, _ in chs]
+            ids = {id for id, _ in chs}
             channels = {id: ch for id, ch in self.channels.items() if id in ids}
-            # compute module configurations, and apply them
             los = config.module.los(self._los, configs, ids)
-            config.ModuleConfig.build(channels, configs, los, module.is_qrm_type).apply(
-                module
-            )
+            mixers = config.module.mixers(self._mixers, configs, ids)
+            # compute module configurations, and apply them
+            config.ModuleConfig.build(
+                channels, configs, los, mixers, module.is_qrm_type
+            ).apply(module)
 
             # configure all sequencers, and store active ones' association to channels
             rf = module.is_rf_type
@@ -299,8 +300,23 @@ class Cluster(Controller):
             ch: lo
             for ch, lo in (
                 (ch, cast(IqChannel, channels[iq]).lo)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in self.channels)
+                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
                 if iq is not None
             )
             if lo is not None
+        }
+
+    @cached_property
+    def _mixers(self) -> dict[ChannelId, str]:
+        """Extract channel to mixer mapping."""
+        # TODO: identical to the `._los` property, deduplicate it please...
+        channels = self.channels
+        return {
+            ch: mix
+            for ch, mix in (
+                (ch, cast(IqChannel, channels[iq]).mixer)
+                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
+                if iq is not None
+            )
+            if mix is not None
         }

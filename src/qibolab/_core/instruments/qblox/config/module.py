@@ -5,7 +5,8 @@ import numpy as np
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
-from qibolab._core.components.configs import Configs, DcConfig
+from qibolab._core.components.channels import AcquisitionChannel
+from qibolab._core.components.configs import Configs, DcConfig, IqMixerConfig
 from qibolab._core.components.filters import (
     ExponentialFilter,
     FiniteImpulseResponseFilter,
@@ -54,12 +55,25 @@ eventually clipping the signal and reducing the power range.
 def los(
     all: dict[ChannelId, str],
     configs: Configs,
-    module_channels: list[ChannelId],
+    module_channels: set[ChannelId],
 ) -> dict[ChannelId, OscillatorConfig]:
     return {
         id_: cast(OscillatorConfig, configs[lo])
         for id_, lo in all.items()
-        if id_ in {ch for ch in module_channels}
+        if id_ in module_channels
+    }
+
+
+def mixers(
+    all: dict[ChannelId, str],
+    configs: Configs,
+    module_channels: set[ChannelId],
+) -> dict[ChannelId, IqMixerConfig]:
+    # TODO: identical to the `.los()` function, deduplicate it please...
+    return {
+        id_: cast(IqMixerConfig, configs[lo])
+        for id_, lo in all.items()
+        if id_ in module_channels
     }
 
 
@@ -107,17 +121,41 @@ class ModuleConfig(Model):
         channels: dict[ChannelId, Channel],
         configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
+        mixers: dict[ChannelId, IqMixerConfig],
         qrm: bool,
     ) -> "ModuleConfig":
         ports = {}
 
+        # TODO: input mixers unused, but available in Qblox
+        # at the moment, it would share Qibolab configurations with the output one,
+        # but there is no reason why the attenuation should be the same
+        # we would need a separate `AcquisitionChannel.mixer` entry
+
+        def in_(iq: ChannelId) -> bool:
+            return isinstance(channels[iq], AcquisitionChannel)
+
         # set lo frequencies
         for iq, lo in los.items():
             n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+
             path = f"out{n}_in{n}" if qrm else f"out{n}"
             ports[f"{path}_lo_en"] = True
             ports[f"{path}_lo_freq"] = int(lo.frequency)
             ports[f"out{n}_att"] = int(lo.power)
+            in__ = in_(iq)
+            path_ = ("in" if in__ else "out") + str(n)
+            if not in__:
+                ports[f"{path_}_att"] = int(lo.power)
+
+        # set mixer calibration
+        for iq, mixer in mixers.items():
+            n = PortAddress.from_path(channels[iq].path).ports[0] - 1
+            in__ = in_(iq)
+            path_ = ("in" if in__ else "out") + str(n)
+            # cf. TODO above
+            if not in__:
+                ports[f"{path_}_offset_path0"] = mixer.offset_i
+                ports[f"{path_}_offset_path1"] = mixer.offset_q
 
         for id, ch in channels.items():
             n = PortAddress.from_path(ch.path).ports[0] - 1
@@ -191,5 +229,5 @@ class ModuleConfig(Model):
             mod.set(config, value)
 
         # apply all the other configurations
-        for name, field in self.model_fields.items():
+        for name, field in type(self).model_fields.items():
             self._set_option(mod, name, field.metadata, getattr(self, name))
