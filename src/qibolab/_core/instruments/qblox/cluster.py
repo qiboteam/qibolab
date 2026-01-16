@@ -169,7 +169,7 @@ class Cluster(Controller):
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
-            ids = {ch for ch, _ in chs}
+            ids = {id for id, _ in chs}
             channels = {id: ch for id, ch in self.channels.items() if id in ids}
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
