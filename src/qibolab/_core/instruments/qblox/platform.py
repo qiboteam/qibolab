@@ -127,3 +127,22 @@ def infer_los(cluster: dict) -> dict[tuple[QubitId, bool], str]:
         for port, qs in specs[1].items()
         for q in qs
     }
+
+
+def infer_mixers(cluster: dict) -> dict[tuple[QubitId, bool], str]:
+    """Infer mixer names for output channels.
+
+    ``cluster`` should be a mapping compatible with the same input of :func:`map_ports`.
+
+    The result is a mapping from ``(qubit, channel)``, where ``qubit`` is the identifier,
+    and ``channel`` is a boolean toggle: ``True`` for probe channels, ``False`` for
+    drive.
+    """
+    # NOTE: same as LOs maybe avoid duplicating
+    return {
+        (q, "qrm" in mod): f"{mod}/o{_out_port(port)}/mixer"
+        for mod, specs in cluster.items()
+        if "_rf" in mod
+        for port, qs in specs[1].items()
+        for q in qs
+    }
