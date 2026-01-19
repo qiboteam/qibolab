@@ -71,9 +71,9 @@ def mixers(
 ) -> dict[ChannelId, IqMixerConfig]:
     # TODO: identical to the `.los()` function, deduplicate it please...
     return {
-        id_: cast(IqMixerConfig, configs[lo])
-        for id_, lo in all.items()
-        if id_ in module_channels
+        id_: cast(IqMixerConfig, configs[mixer])
+        for id_, mixer in all.items()
+        if id_ in module_channels and mixer in configs
     }
 
 
