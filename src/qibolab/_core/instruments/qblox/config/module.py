@@ -73,7 +73,7 @@ def mixers(
     return {
         id_: cast(IqMixerConfig, configs[mixer])
         for id_, mixer in all.items()
-        if id_ in module_channels and mixer in configs
+        if id_ in module_channels
     }
 
 
