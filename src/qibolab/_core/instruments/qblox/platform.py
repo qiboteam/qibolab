@@ -138,7 +138,7 @@ def infer_mixers(cluster: dict) -> dict[tuple[QubitId, bool], str]:
     and ``channel`` is a boolean toggle: ``True`` for probe channels, ``False`` for
     drive.
     """
-    # NOTE: same as LOs maybe avoid duplicating
+    # TODO: same as infer_los, avoid duplicating
     return {
         (q, "qrm" in mod): f"{mod}/o{_out_port(port)}/mixer"
         for mod, specs in cluster.items()
