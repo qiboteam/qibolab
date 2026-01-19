@@ -549,7 +549,8 @@ class QmController(Controller):
             sequences=sequences,
             sweepers=sweepers,
         )
-        if new_experiment != self.experiment or self.manager is None:
+
+        if True:  # TODO: new_experiment != self.experiment or self.manager is None:
             # register DC elements so that all qubits are
             # sweetspot even when they are not used
             for id, channel in self.channels.items():
