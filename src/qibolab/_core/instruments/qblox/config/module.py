@@ -92,8 +92,14 @@ class ModuleConfig(Model):
             return (p.path, p.model_dump(exclude_unset=True))
 
         # extend channel list to include probe channels
+        # NOTE: the channel associated is still an `AcquisitionChannel`, to retain the
+        # connection to the readout operation; this is later used to prevent separate
+        # configuration of the "output LO", since there is only one LO for the probe and
+        # acquisition (i.e. read-out and read-in)
+        # since the identifier is the one of the probe channel, all retrieved
+        # configurations will be related to the channel
         all_channels: list[tuple[ChannelId, Channel]] = list(channels.items()) + [
-            (ch.probe, channels[ch.probe])
+            (ch.probe, ch)
             for ch in channels.values()
             if isinstance(ch, AcquisitionChannel) and ch.probe is not None
         ]

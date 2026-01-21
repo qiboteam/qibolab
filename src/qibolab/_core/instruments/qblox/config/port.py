@@ -200,7 +200,7 @@ class PortConfig(BaseModel):
                 # while drive channels are only configured for output
                 drive_out = isinstance(channel, IqChannel) and out
                 if acq_inout or drive_out:
-                    port.lo(lo, in_, out)
+                    port.lo(lo)
                 # the attenuation is only configured for individual physical ports,
                 # since always separated (also on QRM)
                 if not in_out:
@@ -219,7 +219,7 @@ class PortConfig(BaseModel):
     def offset_(self, dc: DcConfig) -> None:
         self.offset = dc.offset * QCM_SWEEP_TO_OFFSET
 
-    def lo(self, lo: OscillatorConfig, in_: bool, out: bool) -> None:
+    def lo(self, lo: OscillatorConfig) -> None:
         self.lo_en = True
         self.lo_freq = int(lo.frequency)
 
