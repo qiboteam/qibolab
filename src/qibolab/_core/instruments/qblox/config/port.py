@@ -260,14 +260,14 @@ def groupitems(items: list[tuple[str, Any]]) -> dict[str, list[Any]]:
     The result is dictionary, mapping each unique first element to the set of associated
     second elements (i.e. that appear together within a pair).
     """
-    return dict(
+    return {
         # since groupby will return the result of the `key` function in association to
         # the iterable elemnts, let's slice the iterable to retain just the second
         # elements - since our `key` is actually the first one
-        (name, [value for _, value in grouped])
+        name: [value for _, value in grouped]
         # groupby only groups adjacent items, so let's sort them first
         for name, grouped in groupby(sorted(items), key=lambda item: item[0])
-    )
+    }
 
 
 def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict]:
@@ -299,19 +299,20 @@ def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict
         items = [(k, v) for cfg in cfgs for k, v in cfg.items()]
         # ... and group it together according to their key
         grouped = groupitems(items)
-        d = {}
-        for k, vals in grouped:
-            uvals = set(vals)
-            if len(uvals) > 1:
+
+        port = {}
+        # check for values compatibility
+        for k, vals in grouped.items():
+            val = vals[0]
+            if any(v != val for v in vals[1:]):
                 raise ValueError(
                     f"Multiple inconsistent occurences of '{k}' for '{path}'\n"
-                    f"Unique values:\n  {uvals}"
+                    f"Values:\n  {vals}"
                 )
-            d[k] = vals[0]
-        return d
+            # append to port configurations
+            port[k] = val
+        return port
 
     # configurations are grouped by port path (e.g. `out2` or `out0_in0`) and then the
     # values associated to this port are deduplicated
-    return dict(
-        [(path, dedup(config, path)) for path, config in groupitems(configs).items()]
-    )
+    return {path: dedup(config, path) for path, config in groupitems(configs).items()}
