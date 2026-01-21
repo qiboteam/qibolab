@@ -1,6 +1,7 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+import numpy as np
+from pydantic import BaseModel, ConfigDict, Field
 
 from qibolab._core.components.channels import AcquisitionChannel, Channel, IqChannel
 from qibolab._core.components.configs import (
@@ -18,6 +19,40 @@ from qibolab._core.serialize import Model
 from ..identifiers import SlotId
 
 __all__ = []
+
+
+QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
+"""Conversion factor between swept value and configuration.
+
+There are two different ways to add an offset to the waveform played by the QCM module:
+
+- digitally summing an offset, which could be controlled both in real-time and by
+  conifgurations
+- adding an offset directly to the outcoming signal
+
+
+Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
+<https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
+a conversion is neeeded, because the first option will be defined in the interval (-1,
+1) in the parameters (internally mapping the floats on a suitable integers range), while
+the second is directly expressed in Volt.
+Hence, the conversion factor of ``2.5``.
+
+However, these two ways are not equivalent, especially because of the NCO and LO mixing
+process.
+Indeed, the first one is happening upstream to the mixing process, and the second
+downstream.
+Since we are sweeping only one of the two components of the signal (the in-phase,
+I), it will result multiplied by a sine-wave, which reduces its root mean square (RMS)
+power by a factor of `sqrt(2)`. Which is then accounted for in the conversion range.
+
+https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg
+https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram
+
+Notice that sweeping both of the components is also viable. But even without any flux
+pulse, the sum of sine and cosine with maximal amplitude will saturate the power supply,
+eventually clipping the signal and reducing the power range.
+"""
 
 
 class PortAddress(Model):
@@ -92,7 +127,7 @@ FilterConfig = Literal["bypassed", "enabled", "delay_comp"]
 class PortConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    path: str
+    path: str = Field(exclude=True)
     # DC offset
     offset: Optional[float] = None
     # LO parameters
@@ -124,12 +159,16 @@ class PortConfig(BaseModel):
         cls,
         channel: Channel,
         config: Config,
-        out: bool,
         in_: bool,
+        out: bool,
         lo: Optional[OscillatorConfig],
         mixer: Optional[IqMixerConfig],
     ) -> "PortConfig":
-        """Create port configuration for the desired channel."""
+        """Create port configuration for the desired channel.
+
+        Multiple channels can share the same port, in which case they should set
+        consistent configurations.
+        """
         n = PortAddress.from_path(channel.path).ports[0] - 1
         # the port configureation should be used either for input or output - or "both",
         # which is possible on QRM modules
@@ -167,13 +206,17 @@ class PortConfig(BaseModel):
                     port.att_(lo)
 
             # but we do have separate mixers for input and output
+            # TODO: input mixers unused, but available in Qblox
+            # at the moment, it would share Qibolab configurations with the output one,
+            # but there is no reason why the attenuation should be the same
+            # we would need a separate `AcquisitionChannel.mixer` entry
             if mixer is not None and not in_out:
                 port.mixer(mixer)
 
         return port
 
     def offset_(self, dc: DcConfig) -> None:
-        self.offset = dc.offset
+        self.offset = dc.offset * QCM_SWEEP_TO_OFFSET
 
     def lo(self, lo: OscillatorConfig, in_: bool, out: bool) -> None:
         self.lo_en = True
