@@ -254,16 +254,50 @@ class PortConfig(BaseModel):
 StrDict = dict[str, Any]
 
 
-def groupitems(items: list[tuple[Any, Any]]) -> list[tuple[Any, list[Any]]]:
-    return [
+def groupitems(items: list[tuple[str, Any]]) -> dict[str, list[Any]]:
+    """Group a list of pairs according to their first elements.
+
+    The result is dictionary, mapping each unique first element to the set of associated
+    second elements (i.e. that appear together within a pair).
+    """
+    return dict(
+        # since groupby will return the result of the `key` function in association to
+        # the iterable elemnts, let's slice the iterable to retain just the second
+        # elements - since our `key` is actually the first one
         (name, [value for _, value in grouped])
+        # groupby only groups adjacent items, so let's sort them first
         for name, grouped in groupby(sorted(items), key=lambda item: item[0])
-    ]
+    )
 
 
 def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict]:
+    """Deduplicate port configurations.
+
+    Configurations could be repeated after initial generation, for two different
+    reasons:
+
+        - because they appear multiple times in the original platform's parameters, e.g.
+          since different LO objects are associated to channels connected to the same
+          port
+        - or because they can be reached through different paths, as in the case in
+          which the LO object is a single one, but referenced by all associated channels
+
+    then we need to ensure compatibility.
+
+    This function is checking that all configurations targeted to the same object have
+    compatible values, and raises otherwise.
+    Compatible here means equal (by comparison) among values which are set. For a value
+    which may appear multiple times is allowed to be unset some of them, in which case
+    is implicitly set by the other occurences (as opposed to be compatible with its
+    reset value).
+    """
+
     def dedup(cfgs: list[StrDict], path: str) -> StrDict:
+        """Deduplicate multiple configurations for the same path."""
+        # concatenate all the configs items in a single list
+        # - this could contain repeated keys
         items = [(k, v) for cfg in cfgs for k, v in cfg.items()]
+        # ... and group it together according to their key
         grouped = groupitems(items)
         d = {}
         for k, vals in grouped:
@@ -276,5 +310,8 @@ def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict
             d[k] = vals[0]
         return d
 
-    grouped = [(path, dedup(config, path)) for path, config in groupitems(configs)]
-    return dict(grouped)
+    # configurations are grouped by port path (e.g. `out2` or `out0_in0`) and then the
+    # values associated to this port are deduplicated
+    return dict(
+        [(path, dedup(config, path)) for path, config in groupitems(configs).items()]
+    )
