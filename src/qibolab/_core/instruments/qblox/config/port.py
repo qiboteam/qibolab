@@ -2,7 +2,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from qibolab._core.components.channels import Channel
+from qibolab._core.components.channels import AcquisitionChannel, Channel, IqChannel
 from qibolab._core.components.configs import (
     Config,
     DcConfig,
@@ -122,39 +122,69 @@ class PortConfig(BaseModel):
     @classmethod
     def build(
         cls,
-        out: bool,
-        in_: bool,
         channel: Channel,
         config: Config,
+        out: bool,
+        in_: bool,
         lo: Optional[OscillatorConfig],
         mixer: Optional[IqMixerConfig],
     ) -> "PortConfig":
+        """Create port configuration for the desired channel."""
         n = PortAddress.from_path(channel.path).ports[0] - 1
-        path = (f"out{n}_in{n}" if in_ else f"out{n}") if out else f"in{n}"
+        # the port configureation should be used either for input or output - or "both",
+        # which is possible on QRM modules
+        assert in_ or out
+        only_out = out and not in_
+        in_out = in_ and out
+
+        path = f"in{n}" if not out else (f"out{n}" if not in_ else f"out{n}_in{n}")
         port = cls(path=path)
 
-        port.delay_compensation()
+        # delay compensation is applied by default on all output ports - time-of-flight
+        # will be adjusted separately for input
+        if only_out:
+            port.delay_compensation()
+
+        # DC channels are configured for static offsets and pre-distortions
         if isinstance(config, DcConfig):
-            port.offset_(config)
-            port.filters(config)
-        if lo is not None:
-            port.lo(lo, in_)
-        if mixer is not None:
-            port.mixer(mixer)
+            if only_out:
+                port.offset_(config)
+                port.filters(config)
+        else:
+            # on QRM-RF, we do not configure separately the LO for the input port, since
+            # it is shared with the output one
+            if lo is not None:
+                # acquisition LO are then configured only for in-out, since related to
+                # both
+                acq_inout = isinstance(channel, AcquisitionChannel) and in_out
+                # while drive channels are only configured for output
+                drive_out = isinstance(channel, IqChannel) and out
+                if acq_inout or drive_out:
+                    port.lo(lo, in_, out)
+                # the attenuation is only configured for individual physical ports,
+                # since always separated (also on QRM)
+                if not in_out:
+                    port.att_(lo)
+
+            # but we do have separate mixers for input and output
+            if mixer is not None and not in_out:
+                port.mixer(mixer)
 
         return port
 
     def offset_(self, dc: DcConfig) -> None:
         self.offset = dc.offset
 
-    def lo(self, lo: OscillatorConfig, in_: bool) -> None:
+    def lo(self, lo: OscillatorConfig, in_: bool, out: bool) -> None:
         self.lo_en = True
         self.lo_freq = int(lo.frequency)
-        self.att = int(lo.power) if not in_ else 0
 
-    def mixer(self, lo: IqMixerConfig) -> None:
-        self.offset_path0 = lo.offset_i
-        self.offset_path1 = lo.offset_q
+    def att_(self, lo: OscillatorConfig) -> None:
+        self.att = int(lo.power)
+
+    def mixer(self, mixer: IqMixerConfig) -> None:
+        self.offset_path0 = mixer.offset_i
+        self.offset_path1 = mixer.offset_q
 
     def delay_compensation(self) -> None:
         self.fir_config = "delay_comp"
