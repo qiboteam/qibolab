@@ -141,7 +141,6 @@ class ModuleConfig(Model):
             path = f"out{n}_in{n}" if qrm else f"out{n}"
             ports[f"{path}_lo_en"] = True
             ports[f"{path}_lo_freq"] = int(lo.frequency)
-            ports[f"out{n}_att"] = int(lo.power)
             in__ = in_(iq)
             path_ = ("in" if in__ else "out") + str(n)
             if not in__:
