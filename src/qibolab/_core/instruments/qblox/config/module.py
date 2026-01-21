@@ -6,6 +6,7 @@ from qblox_instruments.qcodes_drivers.module import Module
 from qibolab._core.components import Channel, OscillatorConfig
 from qibolab._core.components.configs import Configs, IqMixerConfig
 from qibolab._core.identifier import ChannelId
+from qibolab._core.instruments.qblox.config.port import PortConfig
 from qibolab._core.serialize import Model
 
 __all__ = []
@@ -83,7 +84,40 @@ class ModuleConfig(Model):
         mixers: dict[ChannelId, IqMixerConfig],
         qrm: bool,
     ) -> "ModuleConfig":
-        pass
+        # generate port configurations as a dictionary
+        def portconfig(*args, **kwargs) -> tuple[str, dict[str, Any]]:
+            p = PortConfig.build(*args, **kwargs)
+            return (p.path, p.model_dump(exclude_unset=True))
+
+        ports = [
+            (path, port)
+            for path, port in (
+                portconfig(
+                    channel=ch,
+                    config=configs[id],
+                    in_=in_,
+                    out=out,
+                    lo=los.get(id),
+                    mixers=mixers.get(id),
+                )
+                # scrape all channels for port configurations
+                for id, ch in channels.items()
+                # attempt all possible port usage - the `PortConfig` builder contains
+                # all the logic to decide which is actually relevant for the given
+                # channel
+                for (in_, out) in [(True, False), (False, True), (True, True)]
+            )
+            # only retain non-empty configurations
+            if len(port) > 0
+        ]
+
+        return cls(
+            ports={
+                f"{path}_{k}": v
+                for path, configs in dict(ports).items()
+                for k, v in configs.items()
+            }
+        )
 
     @staticmethod
     def _set_option(mod: Module, name: str, metadata: list, value: Any) -> None:
