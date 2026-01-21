@@ -7,8 +7,9 @@ from qibolab._core.components import Channel, OscillatorConfig
 from qibolab._core.components.channels import AcquisitionChannel
 from qibolab._core.components.configs import Configs, IqMixerConfig
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox.config.port import PortConfig
 from qibolab._core.serialize import Model
+
+from . import port
 
 __all__ = []
 
@@ -83,11 +84,10 @@ class ModuleConfig(Model):
         configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
         mixers: dict[ChannelId, IqMixerConfig],
-        qrm: bool,
     ) -> "ModuleConfig":
         # generate port configurations as a dictionary
-        def portconfig(*args, **kwargs) -> tuple[str, dict[str, Any]]:
-            p = PortConfig.build(*args, **kwargs)
+        def portconfig(*args, **kwargs) -> tuple[str, port.StrDict]:
+            p = port.PortConfig.build(*args, **kwargs)
             return (p.path, p.model_dump(exclude_unset=True))
 
         # extend channel list to include probe channels
@@ -118,6 +118,7 @@ class ModuleConfig(Model):
             # only retain non-empty configurations
             if len(port) > 0
         ]
+        ports = port.deduplicate_configs(ports)
 
         return cls(
             ports={
