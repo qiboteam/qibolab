@@ -4,6 +4,7 @@ from typing import Annotated, Any, Literal, cast
 from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
+from qibolab._core.components.channels import AcquisitionChannel
 from qibolab._core.components.configs import Configs, IqMixerConfig
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.config.port import PortConfig
@@ -89,6 +90,13 @@ class ModuleConfig(Model):
             p = PortConfig.build(*args, **kwargs)
             return (p.path, p.model_dump(exclude_unset=True))
 
+        # extend channel list to include probe channels
+        all_channels: list[tuple[ChannelId, Channel]] = list(channels.items()) + [
+            (ch.probe, channels[ch.probe])
+            for ch in channels.values()
+            if isinstance(ch, AcquisitionChannel) and ch.probe is not None
+        ]
+
         ports = [
             (path, port)
             for path, port in (
@@ -101,7 +109,7 @@ class ModuleConfig(Model):
                     mixers=mixers.get(id),
                 )
                 # scrape all channels for port configurations
-                for id, ch in channels.items()
+                for id, ch in all_channels
                 # attempt all possible port usage - the `PortConfig` builder contains
                 # all the logic to decide which is actually relevant for the given
                 # channel
