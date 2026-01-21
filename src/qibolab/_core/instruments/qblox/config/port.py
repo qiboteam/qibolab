@@ -1,4 +1,5 @@
-from typing import Literal, Optional
+from itertools import groupby
+from typing import Any, Literal, Optional
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -248,3 +249,32 @@ class PortConfig(BaseModel):
             setattr(self, f"exp{m}_config", "enabled")
             setattr(self, f"exp{m}_amplitude", exp.amplitude)
             setattr(self, f"exp{m}_time_constant", exp.tau)
+
+
+StrDict = dict[str, Any]
+
+
+def groupitems(items: list[tuple[Any, Any]]) -> list[tuple[Any, list[Any]]]:
+    return [
+        (name, [value for _, value in grouped])
+        for name, grouped in groupby(sorted(items), key=lambda item: item[0])
+    ]
+
+
+def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict]:
+    def dedup(cfgs: list[StrDict], path: str) -> StrDict:
+        items = [(k, v) for cfg in cfgs for k, v in cfg.items()]
+        grouped = groupitems(items)
+        d = {}
+        for k, vals in grouped:
+            uvals = set(vals)
+            if len(uvals) > 1:
+                raise ValueError(
+                    f"Multiple inconsistent occurences of '{k}' for '{path}'\n"
+                    f"Unique values:\n  {uvals}"
+                )
+            d[k] = vals[0]
+        return d
+
+    grouped = [(path, dedup(config, path)) for path, config in groupitems(configs)]
+    return dict(grouped)
