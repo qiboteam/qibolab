@@ -76,6 +76,7 @@ class ModuleConfig(Model):
 
     Cf. :attr:`scope_acq_trigger_mode_path0`.
     """
+    # TODO: support scope acquisition average
 
     @classmethod
     def build(
@@ -97,6 +98,9 @@ class ModuleConfig(Model):
             if isinstance(ch, AcquisitionChannel) and ch.probe is not None
         ]
 
+        # since the configurations for the same path could be generated from multiple
+        # channels, we keep a list of pairs, instead of a dictionary, to allow for
+        # repeated keys, that will be merged later
         ports = [
             (path, port)
             for path, port in (
@@ -118,9 +122,15 @@ class ModuleConfig(Model):
             # only retain non-empty configurations
             if len(port) > 0
         ]
+        # since port configurations can be set or referenced through multiple paths,
+        # let's check consistency, and deduplicate them
         ports = port.deduplicate_configs(ports)
 
         return cls(
+            # since in Qblox port configurations are actually module configurations, we
+            # "unroll" them here, just merging all the configurations for the present
+            # module in a signle dictionary, in which port configurations are just
+            # prefixed by their path
             ports={
                 f"{path}_{k}": v
                 for path, configs in dict(ports).items()
