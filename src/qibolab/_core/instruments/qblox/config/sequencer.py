@@ -8,9 +8,9 @@ from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 from qibolab._core.components.channels import Channel, IqChannel
 from qibolab._core.components.configs import (
     AcquisitionConfig,
+    Config,
     Configs,
     IqConfig,
-    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -24,10 +24,20 @@ from .port import PortAddress
 __all__ = []
 
 
-class QbloxIqMixerConfig(IqMixerConfig):
+class QbloxIqMixerConfig(Config):
     kind: Literal["qblox-iq-mixer"] = "qblox-iq-mixer"
 
-    """qblox has 6 sequencers per module."""
+    offset_i: float = 0.0
+    """DC offset for the I component."""
+    offset_q: float = 0.0
+    """DC offset for the Q component."""
+
+    """qblox has 6 sequencers per module.
+    scale_q_*: The relative amplitude scale/factor of the q channel, to account for I-Q
+    amplitude imbalance.
+    phase_q_*: The phase offset of the q channel, to account for I-Q phase
+    imbalance.
+    """
     scale_q_sequencer0: float = 1.0
     phase_q_sequencer0: float = 0.0
     scale_q_sequencer1: float = 1.0
