@@ -187,18 +187,31 @@ class Cluster(Controller):
             # compute module configurations, and apply them
             config.ModuleConfig.build(channels, configs, los, mixers).apply(module)
 
-            # configure all sequencers, and store active ones' association to channels
+            # configure all sequencers, and store association to channels
             rf = module.is_rf_type
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
-                seq = sequences.get(ch, Q1Sequence.empty())
+                # only configure and register sequencer for active channels
+                # for passive channels the sequencer operations are not relevant, e.g. a
+                # flux channel with no registered pulse will still set an offset, but
+                # this will happen at port level, and it is consumed in the
+                # `ModuleConfig` above
+                if ch not in sequences:
+                    continue
+
                 config.SequencerConfig.build(
-                    address, seq, ch, self.channels, configs, acquisition, idx, rf
+                    address,
+                    ch,
+                    self.channels,
+                    configs,
+                    acquisition,
+                    idx,
+                    rf,
+                    sequence=sequences[ch],
                 ).apply(sequencer)
-                # only collect active sequencers
-                if not seq.is_empty:
-                    sequencers[slot][ch] = idx
+                # populate channel-to-sequencer mapping
+                sequencers[slot][ch] = idx
 
         return sequencers
 

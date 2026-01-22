@@ -67,19 +67,15 @@ class SequencerConfig(Model):
     def build(
         cls,
         address: PortAddress,
-        sequence: Q1Sequence,
         channel_id: ChannelId,
         channels: dict[ChannelId, Channel],
         configs: Configs,
         acquisition: AcquisitionType,
         index: int,
         rf: bool,
+        sequence: Optional[Q1Sequence] = None,
     ) -> "SequencerConfig":
         config = configs[channel_id]
-
-        # avoid sequence operations for inactive sequencers, including synchronization
-        if sequence.is_empty:
-            return cls()
 
         # conditional configurations
         cfg = cls(
