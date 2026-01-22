@@ -15,6 +15,7 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
 from . import config
@@ -29,6 +30,11 @@ from .validate import assert_channels_exclusion, validate_sequence
 __all__ = ["Cluster"]
 
 SAMPLING_RATE = 1
+
+
+class ClusterConfigs(Model):
+    modules: dict[int, config.ModuleConfig]
+    sequencers: dict[int, config.SequencerConfig]
 
 
 class Cluster(Controller):
@@ -134,7 +140,7 @@ class Cluster(Controller):
 
                 # then configure modules and sequencers
                 # (including sequences upload)
-                sequencers = self.configure(
+                sequencers, _ = self.configure(
                     configs, options_.acquisition_type, sequences=sequences_
                 )
                 log.status(self.cluster, sequencers)
@@ -166,7 +172,7 @@ class Cluster(Controller):
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
         sequences: Optional[dict[ChannelId, Q1Sequence]] = None,
-    ) -> SequencerMap:
+    ) -> tuple[SequencerMap, ClusterConfigs]:
         """Configure modules and sequencers.
 
         The return value consists of the association map from channels
@@ -185,6 +191,9 @@ class Cluster(Controller):
         exec_mode = sequences is not None
         sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
 
+        modcfgs = {}
+        seqcfgs = {}
+
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -197,7 +206,11 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             # compute module configurations, and apply them
-            config.ModuleConfig.build(channels, configs, los, mixers).apply(module)
+            modcfg = modcfgs[slot] = config.ModuleConfig.build(
+                channels, configs, los, mixers
+            )
+            modcfg.apply(module)
+            seqcfgs[slot] = {}
 
             # configure all sequencers, and store association to channels
             rf = module.is_rf_type
@@ -214,7 +227,7 @@ class Cluster(Controller):
                 if exec_mode and ch not in sequences:
                     continue
 
-                config.SequencerConfig.build(
+                seqcfg = seqcfgs[idx] = config.SequencerConfig.build(
                     address,
                     ch,
                     self.channels,
@@ -223,11 +236,12 @@ class Cluster(Controller):
                     idx,
                     rf,
                     sequence=sequences_[ch],
-                ).apply(sequencer)
+                )
+                seqcfg.apply(sequencer)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
 
-        return sequencers
+        return sequencers, ClusterConfigs(modules=modcfgs, sequencers=seqcfgs)
 
     def _execute(
         self,
