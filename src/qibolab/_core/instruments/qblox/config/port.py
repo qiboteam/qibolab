@@ -227,7 +227,7 @@ class PortConfig(BaseModel):
         self.lo_freq = int(lo.frequency)
 
     def att_(self, lo: OscillatorConfig) -> None:
-        self.att = int(lo.power)
+        self.att = -int(lo.power)
 
     def mixer(self, mixer: IqMixerConfig) -> None:
         self.offset_path0 = mixer.offset_i
