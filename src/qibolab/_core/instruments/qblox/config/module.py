@@ -5,8 +5,9 @@ from qblox_instruments.qcodes_drivers.module import Module
 
 from qibolab._core.components import Channel, OscillatorConfig
 from qibolab._core.components.channels import AcquisitionChannel
-from qibolab._core.components.configs import Configs, IqMixerConfig
+from qibolab._core.components.configs import Configs
 from qibolab._core.identifier import ChannelId
+from qibolab._core.instruments.qblox.config.sequencer import QbloxIqMixerConfig
 from qibolab._core.serialize import Model
 
 from . import port
@@ -30,10 +31,10 @@ def mixers(
     all: dict[ChannelId, str],
     configs: Configs,
     module_channels: set[ChannelId],
-) -> dict[ChannelId, IqMixerConfig]:
+) -> dict[ChannelId, QbloxIqMixerConfig]:
     # TODO: identical to the `.los()` function, deduplicate it please...
     return {
-        id_: cast(IqMixerConfig, configs[mixer])
+        id_: cast(QbloxIqMixerConfig, configs[mixer])
         for id_, mixer in all.items()
         if id_ in module_channels
     }
@@ -84,7 +85,7 @@ class ModuleConfig(Model):
         channels: dict[ChannelId, Channel],
         configs: Configs,
         los: dict[ChannelId, OscillatorConfig],
-        mixers: dict[ChannelId, IqMixerConfig],
+        mixers: dict[ChannelId, QbloxIqMixerConfig],
     ) -> "ModuleConfig":
         # generate port configurations as a dictionary
         def portconfig(*args, **kwargs) -> tuple[str, port.StrDict]:
