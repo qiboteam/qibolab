@@ -171,6 +171,15 @@ class Cluster(Controller):
 
         The return value consists of the association map from channels
         to sequencers, for each module.
+
+        For configuration testing purpose, it is possible to also configure modules and
+        sequencers with no sequence provided. In which case, it will attempt to assign
+        sequencers to all available channels (as opposed to just those involved in the
+        experiment, and thus in the sequences).
+        For the sake of simplifiying the usage of this function, a default acquisition
+        type is provided (:attr:`AcquisitionType.INTEGRATION`). The only true
+        alternative to this value is :attr:`AcquisitionType.RAW`, since further
+        configurations are required to operate in scope mode.
         """
         sequencers = defaultdict(dict)
         exec_mode = sequences is not None
