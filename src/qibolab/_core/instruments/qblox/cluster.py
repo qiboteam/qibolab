@@ -134,8 +134,8 @@ class Cluster(Controller):
 
                 # then configure modules and sequencers
                 # (including sequences upload)
-                sequencers = self._configure(
-                    sequences_, configs, options_.acquisition_type
+                sequencers = self.configure(
+                    configs, options_.acquisition_type, sequences=sequences_
                 )
                 log.status(self.cluster, sequencers)
 
@@ -161,11 +161,11 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _configure(
+    def configure(
         self,
-        sequences: dict[ChannelId, Q1Sequence],
         configs: Configs,
-        acquisition: AcquisitionType,
+        acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
+        sequences: Optional[dict[ChannelId, Q1Sequence]] = None,
     ) -> SequencerMap:
         """Configure modules and sequencers.
 
@@ -173,6 +173,9 @@ class Cluster(Controller):
         to sequencers, for each module.
         """
         sequencers = defaultdict(dict)
+        exec_mode = sequences is not None
+        sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
+
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -197,7 +200,9 @@ class Cluster(Controller):
                 # flux channel with no registered pulse will still set an offset, but
                 # this will happen at port level, and it is consumed in the
                 # `ModuleConfig` above
-                if ch not in sequences:
+                # if not in execution mode, cnfigure all channels, to test the
+                # configuration itself
+                if exec_mode and ch not in sequences:
                     continue
 
                 config.SequencerConfig.build(
@@ -208,7 +213,7 @@ class Cluster(Controller):
                     acquisition,
                     idx,
                     rf,
-                    sequence=sequences[ch],
+                    sequence=sequences_[ch],
                 ).apply(sequencer)
                 # populate channel-to-sequencer mapping
                 sequencers[slot][ch] = idx
