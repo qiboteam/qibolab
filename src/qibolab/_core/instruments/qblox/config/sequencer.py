@@ -1,5 +1,5 @@
 import json
-from typing import Optional, cast
+from typing import Literal, Optional, cast
 
 import numpy as np
 from pydantic import ConfigDict
@@ -22,6 +22,24 @@ from ..sequence import Q1Sequence
 from .port import PortAddress
 
 __all__ = []
+
+
+class QbloxIqMixerConfig(IqMixerConfig):
+    kind: Literal["qblox-iq-mixer"] = "qblox-iq-mixer"
+
+    """qblox has 6 sequencers per module."""
+    scale_q_sequencer0: float = 1.0
+    phase_q_sequencer0: float = 0.0
+    scale_q_sequencer1: float = 1.0
+    phase_q_sequencer1: float = 0.0
+    scale_q_sequencer2: float = 1.0
+    phase_q_sequencer2: float = 0.0
+    scale_q_sequencer3: float = 1.0
+    phase_q_sequencer3: float = 0.0
+    scale_q_sequencer4: float = 1.0
+    phase_q_sequencer4: float = 0.0
+    scale_q_sequencer5: float = 1.0
+    phase_q_sequencer5: float = 0.0
 
 
 def _integration_length(sequence: Q1Sequence) -> Optional[int]:
@@ -127,9 +145,11 @@ class SequencerConfig(Model):
             lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(freq - lo_freq)
             assert probe_.mixer is not None
-            mixer = cast(IqMixerConfig, configs[probe_.mixer])
-            cfg.mixer_corr_gain_ratio = mixer.scale_q
-            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
+            mixer = cast(QbloxIqMixerConfig, configs[probe_.mixer])
+            cfg.mixer_corr_gain_ratio = getattr(mixer, f"scale_q_sequencer{index}")
+            cfg.mixer_corr_phase_offset_degree = getattr(
+                mixer, f"phase_q_sequencer{index}"
+            )
 
         return cfg
 
