@@ -205,7 +205,8 @@ class PortConfig(BaseModel):
                 # since always separated (also on QRM)
                 # of course, input attenuation is only available on QRM
                 if (acq and not in_out) or only_out:
-                    port.att_(lo)
+                    # TODO: input attenuation unused, but available in Qblox
+                    port.att_(lo if not in_ else lo.model_copy(update={"power": 0.0}))
 
             # but we do have separate mixers for input and output (on QRM, and only out
             # on QCM)
