@@ -90,7 +90,9 @@ class SequencerConfig(Model):
             marker_ovr_value=15,
             # upload sequence
             # - ensure JSON compatibility of the sent dictionary
-            sequence=json.loads(sequence.model_dump_json()),
+            sequence=(
+                json.loads(sequence.model_dump_json()) if sequence is not None else None
+            ),
             # configure the sequencers to synchronize
             sync_en=True,
             # modulation, only disable for QCM - always used for flux pulses
