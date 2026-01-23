@@ -135,11 +135,11 @@ class ModuleConfig(Model):
         return cls(
             # since in Qblox port configurations are actually module configurations, we
             # "unroll" them here, just merging all the configurations for the present
-            # module in a signle dictionary, in which port configurations are just
+            # module in a single dictionary, in which port configurations are just
             # prefixed by their path
             ports={
                 f"{path}_{k}": v
-                for path, configs in dict(ports).items()
+                for path, configs in ports.items()
                 for k, v in configs.items()
             }
         )

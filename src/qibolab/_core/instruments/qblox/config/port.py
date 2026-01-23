@@ -172,7 +172,7 @@ class PortConfig(BaseModel):
         """
         n = PortAddress.from_path(channel.path).ports[0] - 1
 
-        # the port configureation should be used either for input or output - or "both",
+        # the port configuration should be used either for input or output - or "both",
         # which is possible on QRM modules
         assert in_ or out
         only_out = out and not in_
