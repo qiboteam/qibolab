@@ -262,13 +262,17 @@ def groupitems(items: list[tuple[str, Any]]) -> dict[str, list[Any]]:
     The result is dictionary, mapping each unique first element to the set of associated
     second elements (i.e. that appear together within a pair).
     """
+
+    def first(item: tuple[Any, Any]) -> Any:
+        return item[0]
+
     return {
         # since groupby will return the result of the `key` function in association to
         # the iterable elemnts, let's slice the iterable to retain just the second
         # elements - since our `key` is actually the first one
         name: [value for _, value in grouped]
         # groupby only groups adjacent items, so let's sort them first
-        for name, grouped in groupby(sorted(items), key=lambda item: item[0])
+        for name, grouped in groupby(sorted(items, key=first), key=first)
     }
 
 
