@@ -7,10 +7,10 @@ from qibolab._core.components import Channel, OscillatorConfig
 from qibolab._core.components.channels import AcquisitionChannel
 from qibolab._core.components.configs import Configs
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox.config.sequencer import QbloxIqMixerConfig
 from qibolab._core.serialize import Model
 
 from . import port
+from .mixer import QbloxIqMixerConfig
 
 __all__ = []
 
