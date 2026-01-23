@@ -116,7 +116,7 @@ class ModuleConfig(Model):
                     in_=in_,
                     out=out,
                     lo=los.get(id),
-                    mixers=mixers.get(id),
+                    mixer=mixers.get(id),
                 )
                 # scrape all channels for port configurations
                 for id, ch in all_channels
