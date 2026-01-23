@@ -178,8 +178,7 @@ class PortConfig(BaseModel):
         only_out = out and not in_
         in_out = in_ and out
         acq = isinstance(channel, AcquisitionChannel)
-        acq_inout = acq and in_out
-        drive_out = isinstance(channel, IqChannel) and out
+        drive = isinstance(channel, IqChannel)
 
         path = f"in{n}" if not out else (f"out{n}" if not in_ else f"out{n}_in{n}")
         port = cls(path=path)
@@ -200,7 +199,7 @@ class PortConfig(BaseModel):
             if lo is not None:
                 # acquisition LO are then configured only for in-out, since related to
                 # both, while drive channels are only configured for output
-                if acq_inout or drive_out:
+                if (acq and in_out) or (drive and only_out):
                     port.lo(lo)
                 # the attenuation is only configured for individual physical ports,
                 # since always separated (also on QRM)
@@ -208,12 +207,13 @@ class PortConfig(BaseModel):
                 if (acq and not in_out) or only_out:
                     port.att_(lo)
 
-            # but we do have separate mixers for input and output
+            # but we do have separate mixers for input and output (on QRM, and only out
+            # on QCM)
             # TODO: input mixers unused, but available in Qblox
             # at the moment, it would share Qibolab configurations with the output one,
             # but there is no reason why the attenuation should be the same
             # we would need a separate `AcquisitionChannel.mixer` entry
-            if mixer is not None and ((acq and not in_out) or drive_out):
+            if mixer is not None and ((acq and not in_out) or (drive and only_out)):
                 port.mixer(mixer)
 
         return port
