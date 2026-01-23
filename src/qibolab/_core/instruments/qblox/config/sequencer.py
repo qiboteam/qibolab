@@ -102,13 +102,13 @@ class SequencerConfig(Model):
         # acquisition
         if address.input:
             assert isinstance(config, AcquisitionConfig)
-            length = _integration_length(sequence)
+            length = _integration_length(sequence) if sequence is not None else None
             if length is not None:
                 cfg.integration_length_acq = length
             # discrimination
             if config.iq_angle is not None:
                 cfg.thresholded_acq_rotation = np.degrees(config.iq_angle % (2 * np.pi))
-            if config.threshold is not None:
+            if config.threshold is not None and length is not None:
                 # threshold needs to be compensated by length
                 # see: https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.thresholded_acq_threshold
                 cfg.thresholded_acq_threshold = config.threshold * length
