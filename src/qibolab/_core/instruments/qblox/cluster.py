@@ -34,7 +34,7 @@ SAMPLING_RATE = 1
 
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
-    sequencers: dict[int, config.SequencerConfig]
+    sequencers: dict[int, dict[int, config.SequencerConfig]]
 
 
 class Cluster(Controller):
@@ -227,7 +227,7 @@ class Cluster(Controller):
                 if exec_mode and ch not in sequences:
                     continue
 
-                seqcfg = seqcfgs[idx] = config.SequencerConfig.build(
+                seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
                     address,
                     ch,
                     self.channels,
