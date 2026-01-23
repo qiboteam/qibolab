@@ -66,7 +66,7 @@ def lo_configs(
 def time_of_flights(configs: Configs) -> dict[ChannelId, float]:
     """Extract time of flights configurations."""
     return {
-        ch: max(config.delay, 4.0)
+        ch: max(config.delay, 4.0) + 340
         for ch, config in configs.items()
         if isinstance(config, AcquisitionConfig)
     }
