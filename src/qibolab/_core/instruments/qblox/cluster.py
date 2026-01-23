@@ -185,9 +185,7 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             # compute module configurations, and apply them
-            config.ModuleConfig.build(
-                channels, configs, los, mixers, module.is_qrm_type
-            ).apply(module)
+            config.ModuleConfig.build(channels, configs, los, mixers).apply(module)
 
             # configure all sequencers, and store active ones' association to channels
             rf = module.is_rf_type
