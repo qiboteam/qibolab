@@ -214,7 +214,7 @@ class PortConfig(BaseModel):
             # at the moment, it would share Qibolab configurations with the output one,
             # but there is no reason why the attenuation should be the same
             # we would need a separate `AcquisitionChannel.mixer` entry
-            if mixer is not None and ((acq and not in_out) or (drive and only_out)):
+            if mixer is not None and ((acq and only_out) or (drive and only_out)):
                 port.mixer(mixer)
 
         return port
