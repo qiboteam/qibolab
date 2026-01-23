@@ -176,6 +176,7 @@ class PortConfig(BaseModel):
         assert in_ or out
         only_out = out and not in_
         in_out = in_ and out
+        acq = isinstance(channel, AcquisitionChannel)
 
         path = f"in{n}" if not out else (f"out{n}" if not in_ else f"out{n}_in{n}")
         port = cls(path=path)
@@ -196,14 +197,15 @@ class PortConfig(BaseModel):
             if lo is not None:
                 # acquisition LO are then configured only for in-out, since related to
                 # both
-                acq_inout = isinstance(channel, AcquisitionChannel) and in_out
+                acq_inout = acq and in_out
                 # while drive channels are only configured for output
                 drive_out = isinstance(channel, IqChannel) and out
                 if acq_inout or drive_out:
                     port.lo(lo)
                 # the attenuation is only configured for individual physical ports,
                 # since always separated (also on QRM)
-                if not in_out:
+                # of course, input attenuation is only available on QRM
+                if (acq and not in_out) or only_out:
                     port.att_(lo)
 
             # but we do have separate mixers for input and output
