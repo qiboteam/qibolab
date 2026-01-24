@@ -35,7 +35,7 @@ from .results import acquisitions, index, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
-
+       
 class EmulatorController(Controller):
     """Emulator controller."""
 
@@ -138,17 +138,22 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        dimensions = config.hilbert_space_dims(self.engine.has_flipped_index)
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
             time=tlist_,
-            collapse_operators=config.dissipation(self.engine),
+            collapse_operators=[], ##config.dissipation(self.engine), ## temporary disable dissipation
             time_hamiltonian=time_hamiltonian,
+            dimensions=dimensions,
         )
+        evolution_states = self.engine.get_evolution_states(results)
+        
         return select_acquisitions(
-            results.states,
+            evolution_states,
             acquisitions(sequence_).values(),
             tlist_,
+            engine=self.engine,
         )
 
     def _pulse_hamiltonian(
@@ -166,6 +171,115 @@ class EmulatorController(Controller):
             )
         ]
         return OperatorEvolution(channels) if len(channels) > 0 else None
+
+
+class CudaqEmulatorController(EmulatorController):
+    def _sweep(
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        sweepers: list[ParallelSweepers],
+        updates: Optional[dict] = None,
+    ) -> list:
+        """Processes sweepers using _make_sweep_list to reconstruct the corresponding list of hamiltonians for batch execution."""
+        
+        output_list = self._make_sweep_list(sequence, configs, sweepers, updates)
+        
+        # retrieve dimensions from default config
+        config = cast(HamiltonianConfig, configs["hamiltonian"])
+        dimensions = config.hilbert_space_dims(self.engine.has_flipped_index)
+
+        # for non-sweep executions, reshape output_list
+        if isinstance(output_list, tuple):
+            output_list = [output_list]
+        
+        hamiltonian_list = list(get_flattened_list(output_list, 0))
+        duration_list = list(get_flattened_list(output_list, 2))
+        sequence_list = list(get_flattened_list(output_list, 1))
+        max_duration_index = int(np.argmax(duration_list))
+        max_duration_sequence = sequence_list[max_duration_index]
+        tlist_ = tlist(max_duration_sequence, self.sampling_rate, per_sample=2)
+
+        results = self.engine.evolve(
+            hamiltonian=hamiltonian_list,
+            initial_state=config.initial_state(self.engine),
+            time=tlist_,
+            collapse_operators=[],
+            #collapse_operators=[config.dissipation(self.engine) for _ in hamiltonian_list], ## temporary disable dissipation
+            time_hamiltonian=None,
+            dimensions=dimensions,
+        )
+        
+        # for non-sweep executions, reshape output_list
+        if not isinstance(results, list):
+            results = [results]
+
+        sweep_acquisitions = [
+            select_acquisitions(
+                self.engine.get_evolution_states(results[i]), 
+                acquisitions(sequence).values(), 
+                tlist_,
+                engine=self.engine,
+                statevector_dimension=np.prod(list(dimensions.values())),
+            ) 
+            for i, sequence in enumerate(sequence_list)]
+
+        # stack all slices in a single array, along the current outermost dimension
+        sweep_acquisitions = np.stack(sweep_acquisitions)
+
+        sweepers_shape = []
+        for sweeper in sweepers:
+            sweepers_shape.append(len(sweeper[0].values))
+        sweepers_shape += list(sweep_acquisitions.shape[1:])
+        sweep_acquisitions = np.stack(sweep_acquisitions).reshape(sweepers_shape)
+        self.sweep_acquisitions = sweep_acquisitions
+        
+        return sweep_acquisitions
+
+    def _make_sweep_list(
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        sweepers: list[ParallelSweepers],
+        updates: Optional[dict] = None,
+    ) -> list:
+        """Adapted method from EmulatorController._sweep to generate list of evolve input tuples from sweepers."""  
+        
+        # use a default dictionary, merging existing values
+        updates = defaultdict(dict) | ({} if updates is None else updates)
+
+        if len(sweepers) == 0:
+            sequence_ = update_sequence(sequence, updates)
+            tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
+            configs_ = update_configs(configs, updates)
+            config = cast(HamiltonianConfig, configs_["hamiltonian"])
+            hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
+            time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+            if time_hamiltonian:
+                for op, waveform in time_hamiltonian.operators:
+                    hamiltonian += self.engine.engine.ScalarOperator(waveform) * op
+            
+            return (hamiltonian, sequence_, tlist_[-1])
+
+        parsweep = sweepers[0]
+        # collect slices of results, corresponding to the current iteration
+        output_list = []
+        # execute once for each parallel value
+        for values in zip(*(s.values for s in parsweep)):
+            # update all parallel sweepers with the respective values
+            for sweeper, value in zip(parsweep, values):
+                if sweeper.pulses is not None:
+                    for pulse in sweeper.pulses:
+                        updates[pulse.id].update({sweeper.parameter.name: value})
+                if sweeper.channels is not None:
+                    for channel in sweeper.channels:
+                        updates[channel].update({sweeper.parameter.name: value})
+
+            # append new slice for the current parallel value
+            current_output = self._make_sweep_list(sequence, configs, sweepers[1:], updates)
+            output_list.append(current_output)
+
+        return output_list
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -215,16 +329,17 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
+    pulse_index: int,
     hilbert_space_index: int,
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
     op = engine.expand(
-        config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+        config.operator(n=n, target=hilbert_space_index, engine=engine), hamiltonian.dims, hilbert_space_index
     )
     waveforms = (
-        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
+        waveform(pulse, config, hamiltonian.qubits[pulse_index], sampling_rate)
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
@@ -244,6 +359,7 @@ def hamiltonians(
             configs[ch],
             hconfig,
             index(ch, hconfig),
+            index(ch, hconfig, engine.has_flipped_index),
             engine,
             sampling_rate,
         )
@@ -267,8 +383,8 @@ def channel_time(
         cumulative_phase = 0
         for pulse in waveforms:
             pulse_phase = pulse.phase
-            if cumulative_time <= t < cumulative_time + pulse.duration:
-                relative_time = t - cumulative_time
+            if cumulative_time <= abs(t) < cumulative_time + pulse.duration:
+                relative_time = np.real(t - cumulative_time)
                 index = int(np.floor(relative_time * sampling_rate))
                 return pulse(t, index, cumulative_phase)
             cumulative_time += pulse.duration
@@ -276,3 +392,11 @@ def channel_time(
         return 0
 
     return time
+
+def get_flattened_list(lst, index):
+    # index = 0 for hamiltonian, 1 for sequence, 2 for sequence duration
+    for item in lst:
+        if isinstance(item, list):
+            yield from get_flattened_list(item, index)
+        else:
+            yield item[index]

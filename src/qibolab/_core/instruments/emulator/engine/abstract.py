@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Callable, Protocol, Union
+from numpy.typing import NDArray
 
 from ....serialize import Model
 
@@ -57,7 +58,8 @@ class OperatorEvolution:
 
 class SimulationEngine(Model, ABC):
     """Parent class for generic simulation engine."""
-
+    has_flipped_index: bool = False
+    
     @property
     @abstractmethod
     def engine(self):
@@ -75,16 +77,16 @@ class SimulationEngine(Model, ABC):
         """Evolve the system."""
 
     @abstractmethod
-    def create(self, n: int) -> Operator:
-        """Create operator for n levels system."""
+    def create(self, **kwargs) -> Operator:
+        """Abstract create operator."""
 
     @abstractmethod
-    def destroy(self, n: int) -> Operator:
-        """Destroy operator for n levels system."""
+    def destroy(self, **kwargs) -> Operator:
+        """Abstract destroy operator."""
 
     @abstractmethod
-    def identity(self, n: int) -> Operator:
-        """Identity operator for n levels system."""
+    def identity(self, **kwargs) -> Operator:
+        """Abstract identity operator."""
 
     @abstractmethod
     def tensor(self, operators: list[Operator]) -> Operator:
@@ -97,5 +99,9 @@ class SimulationEngine(Model, ABC):
         """Expand operator in larger Hilbert space."""
 
     @abstractmethod
-    def basis(self, n: int, state: int) -> Operator:
+    def basis(self, n: list, state: list) -> Operator:
         """Basis operator for n levels system."""
+
+    @abstractmethod
+    def get_state_dm(state: Operator, **kwargs) -> NDArray:
+        """Get density matrix array from state."""
