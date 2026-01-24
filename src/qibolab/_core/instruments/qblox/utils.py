@@ -64,7 +64,12 @@ def lo_configs(
 
 
 def time_of_flights(configs: Configs) -> dict[ChannelId, float]:
-    """Extract time of flights configurations."""
+    """Extract time of flights configurations.
+
+    An additional 340 ns are supplemented, to account for the extra delay caused by
+    usage of all pre-distortion filters, and consequent delay compensations. Cf.
+    https://docs.qblox.com/en/v0.17.1/cluster/real_time_predistortions.html#bypasses-and-delays
+    """
     return {
         ch: max(config.delay, 4.0) + 340
         for ch, config in configs.items()
