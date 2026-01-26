@@ -10,6 +10,7 @@ from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
     IqConfig,
+    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -18,7 +19,6 @@ from qibolab._core.serialize import Model
 
 from ..q1asm.ast_ import Acquire, Line
 from ..sequence import Q1Sequence
-from .mixer import QbloxIqMixerConfig
 from .port import PortAddress
 
 __all__ = []
@@ -127,11 +127,9 @@ class SequencerConfig(Model):
             lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(freq - lo_freq)
             assert probe_.mixer is not None
-            mixer = cast(QbloxIqMixerConfig, configs[probe_.mixer])
-            cfg.mixer_corr_gain_ratio = getattr(mixer, f"scale_q_sequencer{index}")
-            cfg.mixer_corr_phase_offset_degree = getattr(
-                mixer, f"phase_q_sequencer{index}"
-            )
+            mixer = cast(IqMixerConfig, configs[probe_.mixer])
+            cfg.mixer_corr_gain_ratio = mixer.scale_q
+            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
 
         return cfg
 

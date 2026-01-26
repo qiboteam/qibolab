@@ -8,6 +8,7 @@ from qibolab._core.components.channels import AcquisitionChannel, Channel, IqCha
 from qibolab._core.components.configs import (
     Config,
     DcConfig,
+    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.components.filters import (
@@ -17,7 +18,6 @@ from qibolab._core.components.filters import (
 from qibolab._core.serialize import Model
 
 from ..identifiers import SlotId
-from .mixer import QbloxIqMixerConfig
 
 __all__ = []
 
@@ -163,7 +163,7 @@ class PortConfig(BaseModel):
         in_: bool,
         out: bool,
         lo: Optional[OscillatorConfig],
-        mixer: Optional[QbloxIqMixerConfig],
+        mixer: Optional[IqMixerConfig],
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
@@ -229,7 +229,7 @@ class PortConfig(BaseModel):
     def att_(self, lo: OscillatorConfig) -> None:
         self.att = int(lo.power)
 
-    def mixer(self, mixer: QbloxIqMixerConfig) -> None:
+    def mixer(self, mixer: IqMixerConfig) -> None:
         self.offset_path0 = mixer.offset_i
         self.offset_path1 = mixer.offset_q
 
