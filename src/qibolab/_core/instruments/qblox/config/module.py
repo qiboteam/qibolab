@@ -10,7 +10,6 @@ from qibolab._core.identifier import ChannelId
 from qibolab._core.serialize import Model
 
 from . import port
-from .mixer import QbloxIqMixerConfig
 
 __all__ = []
 
