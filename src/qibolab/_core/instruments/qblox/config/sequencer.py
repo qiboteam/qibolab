@@ -10,6 +10,7 @@ from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
     IqConfig,
+    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -18,7 +19,6 @@ from qibolab._core.serialize import Model
 
 from ..q1asm.ast_ import Acquire, Line
 from ..sequence import Q1Sequence
-from .mixer import QbloxIqMixerConfig
 from .port import PortAddress
 
 __all__ = []
