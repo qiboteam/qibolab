@@ -19,7 +19,7 @@ from qibolab._core.sweeper import (
 from ..q1asm import Program, parse
 from .acquisition import Acquisitions, MeasureId, Weight, Weights, acquisitions
 from .program import program
-from .waveforms import Waveforms, waveform_indices, waveforms
+from .waveforms import Waveform, WaveformInd, waveforms
 
 __all__ = ["Q1Sequence"]
 
@@ -55,7 +55,7 @@ def _apply_sampling_rate(
 
 
 class Q1Sequence(Model):
-    waveforms: Waveforms
+    waveforms: dict[WaveformInd, Waveform]
     weights: Weights
     acquisitions: Acquisitions
     program: Annotated[
@@ -79,7 +79,7 @@ class Q1Sequence(Model):
             duration
             - sum(p.duration if not isinstance(p, Align) else 0 for p in sequence)
         ) * sampling_rate
-        waveforms_ = waveforms(
+        waveform_specs, indices_map = waveforms(
             sequence,
             sampling_rate,
             amplitude_swept={
@@ -96,12 +96,12 @@ class Q1Sequence(Model):
             sequence, np.prod(options.bins(sweepers), dtype=int)
         )
         return cls(
-            waveforms={k: w.waveform for k, w in waveforms_.items()},
+            waveforms={k: w.waveform for k, w in waveform_specs.items()},
             weights={},
             acquisitions={k: a.acquisition for k, a in acquisitions_.items()},
             program=program(
                 sequence,
-                waveform_indices(waveforms_),
+                indices_map,
                 acquisitions_,
                 options,
                 sweepers,

@@ -10,7 +10,8 @@ from qibolab._core.sweeper import Sweeper
 __all__ = []
 
 ComponentId = tuple[UUID4, int]
-WaveformIndices = dict[ComponentId, tuple[int, int]]
+WaveformInd = int
+WaveformIndices = dict[ComponentId, tuple[WaveformInd, int]]
 
 
 class Waveform(Model):
@@ -23,9 +24,6 @@ class WaveformSpec(Model):
     duration: int
 
 
-Waveforms = dict[ComponentId, Waveform]
-
-
 def _pulse(event: Union[Pulse, Readout]) -> Pulse:
     return event.probe if isinstance(event, Readout) else event
 
@@ -35,7 +33,7 @@ def waveforms(
     sampling_rate: float,
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
-) -> dict[ComponentId, WaveformSpec]:
+) -> Union[dict[WaveformInd, WaveformSpec], WaveformIndices]:
     def _waveform(
         pulse: Pulse, component: str, duration: Optional[float] = None
     ) -> WaveformSpec:
@@ -85,13 +83,27 @@ def waveforms(
         for k, v in d.items()
     }
 
-    return {
-        k: WaveformSpec(
-            waveform=Waveform(data=v.waveform.data, index=i), duration=v.duration
+    cid_to_key = {cid: spec.waveform.data.tobytes() for cid, spec in indexless.items()}
+    unique_keys = set(cid_to_key.values())
+    key_to_index = {k: i for i, k in enumerate(unique_keys)}
+
+    unique_specs = {
+        k: (
+            indexless[next(cid for cid, kk in cid_to_key.items() if kk == k)],
+            key_to_index[k],
         )
-        for i, (k, v) in enumerate(indexless.items())
+        for k in unique_keys
     }
 
+    indices_map = {
+        cid: (key_to_index[k], indexless[cid].duration) for cid, k in cid_to_key.items()
+    }
 
-def waveform_indices(waveforms: dict[ComponentId, WaveformSpec]) -> WaveformIndices:
-    return {k: (w.waveform.index, w.duration) for k, w in waveforms.items()}
+    waveform_specs = {
+        i: WaveformSpec(
+            waveform=Waveform(data=spec.waveform.data, index=i), duration=spec.duration
+        )
+        for spec, i in unique_specs.values()
+    }
+
+    return waveform_specs, indices_map
