@@ -85,6 +85,7 @@ def waveforms(
 
     cid_to_key = {cid: spec.waveform.data.tobytes() for cid, spec in indexless.items()}
     unique_keys = set(cid_to_key.values())
+    # key_to_index serves no puropse other than to make the output more readable.
     key_to_index = {k: i for i, k in enumerate(unique_keys)}
 
     unique_specs = {
