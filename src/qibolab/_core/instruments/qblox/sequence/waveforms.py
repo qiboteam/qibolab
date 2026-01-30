@@ -50,12 +50,21 @@ def waveforms(
             duration=int(duration_),
         )
 
+    # we do this since pulse is not hashable
+    cache = {}
+
+    def waveform_cached(pulse, component, duration=None):
+        key = (pulse, component, duration)
+        if key not in cache:
+            cache[key] = _waveform(pulse, component, duration)
+        return cache[key]
+
     indexless = {
         k: v
         for d in (
             {
-                (pulse.id, 0): _waveform(pulse, "i"),
-                (pulse.id, 1): _waveform(pulse, "q"),
+                (pulse.id, 0): waveform_cached(pulse, "i"),
+                (pulse.id, 1): waveform_cached(pulse, "q"),
             }
             for pulse in (
                 _pulse(event)
@@ -69,8 +78,8 @@ def waveforms(
         k: v
         for d in (
             {
-                (pulse.id, 2 * i): _waveform(pulse, "i", duration),
-                (pulse.id, 2 * i + 1): _waveform(pulse, "q", duration),
+                (pulse.id, 2 * i): waveform_cached(pulse, "i", duration),
+                (pulse.id, 2 * i + 1): waveform_cached(pulse, "q", duration),
             }
             for pulse, sweep in (
                 (_pulse(event), duration_swept[event])
