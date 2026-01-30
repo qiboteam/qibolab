@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from typing import Annotated, Optional, Union
 
+import numpy as np
 from pydantic import UUID4, AfterValidator
 
 from qibolab._core.pulses import Pulse, PulseId, PulseLike, Readout
@@ -33,7 +34,7 @@ def waveforms(
     sampling_rate: float,
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
-) -> Union[dict[WaveformInd, WaveformSpec], WaveformIndices]:
+) -> tuple[dict[WaveformInd, WaveformSpec], WaveformIndices]:
     def _waveform(
         pulse: Pulse, component: str, duration: Optional[float] = None
     ) -> WaveformSpec:
@@ -83,28 +84,21 @@ def waveforms(
         for k, v in d.items()
     }
 
-    cid_to_key = {cid: spec.waveform.data.tobytes() for cid, spec in indexless.items()}
-    unique_keys = set(cid_to_key.values())
-    # key_to_index serves no puropse other than to make the output more readable.
-    key_to_index = {k: i for i, k in enumerate(unique_keys)}
+    cids = list(indexless.keys())
+    bytes_ = [spec.waveform.data.tobytes() for spec in indexless.values()]
+    durations = [spec.duration for spec in indexless.values()]
+    waveforms = [spec.waveform for spec in indexless.values()]
 
-    unique_specs = {
-        k: (
-            indexless[next(cid for cid, kk in cid_to_key.items() if kk == k)],
-            key_to_index[k],
-        )
-        for k in unique_keys
-    }
+    _, unique_idx, inverse_idx = np.unique(
+        bytes_, return_index=True, return_inverse=True
+    )
 
-    indices_map = {
-        cid: (key_to_index[k], indexless[cid].duration) for cid, k in cid_to_key.items()
+    waveform_indices = {
+        cid: (inverse_idx[i], durations[i]) for i, cid in enumerate(cids)
     }
 
     waveform_specs = {
-        i: WaveformSpec(
-            waveform=Waveform(data=spec.waveform.data, index=i), duration=spec.duration
-        )
-        for spec, i in unique_specs.values()
+        idx: waveforms[np.where(inverse_idx == idx)[0][0]] for idx in unique_idx
     }
 
-    return waveform_specs, indices_map
+    return waveform_specs, waveform_indices
