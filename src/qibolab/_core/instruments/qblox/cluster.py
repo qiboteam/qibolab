@@ -36,7 +36,12 @@ from .utils import (
     lo_configs,
     time_of_flights,
 )
-from .validate import ACQUISITION_MEMORY, assert_channels_exclusion, validate_sequence
+from .validate import (
+    ACQUISITION_MEMORY,
+    ACQUISITION_NUMBER,
+    assert_channels_exclusion,
+    validate_sequence,
+)
 
 __all__ = ["Cluster"]
 
@@ -147,11 +152,17 @@ class Cluster(Controller):
 
         if options.averaging_mode == AveragingMode.SINGLESHOT:
             batch_memory = 0
+            acquisitions = 0
             batched_list: list[list[PulseSequence]] = [[]]
             for ps in sequences:
+                # BUG: this assumtion does not hold generally
+                acquisitions += 1  # assume 1 acquisition per shot
                 per_shot_memory = get_per_shot_memory(ps, sweepers, options)
 
-                if batch_memory + per_shot_memory > ACQUISITION_MEMORY:
+                if (
+                    batch_memory + per_shot_memory > ACQUISITION_MEMORY
+                    or acquisitions > ACQUISITION_NUMBER
+                ):
                     batched_list.append([])
                     batch_memory = 0
 
