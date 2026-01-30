@@ -144,7 +144,6 @@ class Cluster(Controller):
                     configs, options_.acquisition_type, sequences=sequences_
                 )
                 log.status(self.cluster, sequencers)
-
                 # finally execute the experiment, and fetch results
                 duration = options_.estimate_duration([ps], sweepers_)
                 data = self._execute(
