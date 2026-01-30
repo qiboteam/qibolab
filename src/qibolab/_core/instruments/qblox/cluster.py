@@ -9,8 +9,13 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
+from qibolab import Delay
 from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
-from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    AveragingMode,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId
@@ -24,8 +29,14 @@ from .identifiers import SequencerMap, SlotId
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
-from .utils import batch_shots, concat_shots, lo_configs, time_of_flights
-from .validate import assert_channels_exclusion, validate_sequence
+from .utils import (
+    batch_shots,
+    concat_shots,
+    get_per_shot_memory,
+    lo_configs,
+    time_of_flights,
+)
+from .validate import ACQUISITION_MEMORY, assert_channels_exclusion, validate_sequence
 
 __all__ = ["Cluster"]
 
@@ -129,19 +140,40 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
+        assert options.relaxation_time is not None
+
         results = {}
         log = Logger(configs)
 
-        # no unrolling yet: act one sequence at a time, and merge results
-        for ps in sequences:
+        if options.averaging_mode == AveragingMode.SINGLESHOT:
+            batch_memory = 0
+            batched_list: list[list[PulseSequence]] = [[]]
+            for ps in sequences:
+                per_shot_memory = get_per_shot_memory(ps, sweepers, options)
+
+                if batch_memory + per_shot_memory > ACQUISITION_MEMORY:
+                    batched_list.append([])
+                    batch_memory = 0
+
+                batch_memory += per_shot_memory
+                batched_list[-1].append(ps)
+
+            batched_seqs = []
+            for batch in batched_list:
+                batched = batch[0]
+                for ps in batch[1:]:
+                    # the pipe operation aligns all channels so we only have to add the
+                    # Delay to a single channel
+                    batched |= [(ps[0][0], Delay(duration=options.relaxation_time))]
+                    batched |= ps
+                batched_seqs.append(batched)
+        else:
+            batched_seqs = sequences
+
+        for ps in batched_seqs:
             # full reset of the cluster, to erase leftover configurations and sequencer
             # synchronization registration
-            # NOTE: until not unrolled, each sequence execution should be independent
-            # TODO: once unrolled, this reset should be preserved, since it is required
-            # for multiple experiments sharing the same connection
             self.reset()
-            # split shots in batches, in case the required experiment exceeds the
-            # allowed memory
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
