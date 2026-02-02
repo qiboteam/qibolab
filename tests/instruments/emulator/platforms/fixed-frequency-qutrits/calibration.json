@@ -1,0 +1,32 @@
+{
+    "single_qubits": {
+        "0": {
+            "resonator": {
+                "bare_frequency": 0.0,
+                "dressed_frequency": 5200000000.0,
+                "depletion_time": 0
+            },
+            "qubit": {
+                "frequency_01": 5000000000.0,
+                "frequency_12": 4700000000.0,
+                "maximum_frequency": 5000000000.0,
+                "asymmetry": 0.0,
+                "sweetspot": 0.0
+            },
+            "readout": {
+                "fidelity": 0.0,
+                "ground_state": [
+                    0.0,
+                    1.0
+                ],
+                "excited_state": [
+                    1.0,
+                    0.0
+                ]
+            },
+            "rb_fidelity": null
+        }
+    },
+    "two_qubits": {
+    }
+}
