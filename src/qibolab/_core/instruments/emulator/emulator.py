@@ -220,6 +220,14 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
             state_slices.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
+        # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
+        # STILL NOT WORKING FOR 'qutrits' PLATFORM
+        # t = datetime.datetime.now().strftime("%H:%M:%S")
+        # np.savez(f'{t}_raw_qutip_evolution.npz', np.stack(results))
+
+        # stack all slices in a single array, along the current outermost dimension
+        # breakpoint()
+
         # stack all slices in a single array, along the current outermost dimension
         return np.stack(state_slices)
 
