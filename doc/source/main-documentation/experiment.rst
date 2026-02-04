@@ -69,7 +69,6 @@ To organize pulses into sequences, Qibolab provides the :class:`qibolab.PulseSeq
 
     from qibolab import Pulse, PulseSequence, Rectangular
 
-
     pulse1 = Pulse(
         duration=40,  # timing, in all qibolab, is expressed in ns
         amplitude=0.5,  # this amplitude is relative to the range of the instrument

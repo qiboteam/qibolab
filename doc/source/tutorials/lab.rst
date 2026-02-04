@@ -276,7 +276,6 @@ Here is the ``create()`` method that loads the parameters from the JSON:
     )
     from qibolab.instruments import DummyInstrument
 
-
     FOLDER = Path.cwd()
 
 
@@ -364,7 +363,6 @@ the instrument dictionary when instantiating the :class:`qibolab.Platform`, in t
         Qubit,
     )
     from qibolab.instruments import DummyInstrument
-
 
     FOLDER = Path.cwd()
 
