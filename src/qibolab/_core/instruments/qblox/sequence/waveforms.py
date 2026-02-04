@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Annotated, Optional, Union
+from typing import Annotated, Union
 
 import numpy as np
 from pydantic import UUID4, AfterValidator
@@ -35,117 +35,77 @@ def waveforms(
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
-    def _waveform(
-        pulse: Pulse, component: str, duration: Optional[float] = None
+    def _make_waveform(
+        pulse: Pulse, component: str, duration: float | None = None, index: int = 0
     ) -> WaveformSpec:
         duration_ = pulse.duration if duration is None else duration
-        update = {"duration": duration_} | (
-            {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
+        update = (
+            {"duration": duration_} | {"amplitude": 1.0}
+            if pulse.id in amplitude_swept
+            else {}
         )
         return WaveformSpec(
             waveform=Waveform(
                 data=getattr(pulse.model_copy(update=update), component)(sampling_rate),
-                index=0,
+                index=index,
             ),
             duration=int(duration_),
         )
 
-    pulses_not_swept = np.array(
-        [
-            pulse
-            for pulse in (
-                _pulse(event)
-                for event in sequence
-                if isinstance(event, (Pulse, Readout))
-            )
-            if pulse not in duration_swept
-        ]
-    )
-    hashes_pulse_not_swept = [hash(pulse) for pulse in pulses_not_swept]
-    _unique_hashes, unique_indices_not_swept, inverse_indices_not_swept = np.unique(
-        hashes_pulse_not_swept, return_index=True, return_inverse=True
-    )
+    def _sweep_durations(sweep: Sweeper):
+        start, _, step = sweep.irange
+        return [start + step * i for i in range(len(sweep))]
 
+    pulses = [_pulse(e) for e in sequence if isinstance(e, (Pulse, Readout))]
+
+    pulses_not_swept = [p for p in pulses if p not in duration_swept]
     pulses_swept = [
-        (pulse, sweep)
-        for pulse, sweep in (
-            (_pulse(event), duration_swept[event])
-            for event in duration_swept
-            if isinstance(event, (Pulse, Readout))
-        )
+        (_pulse(p), duration_swept[p])
+        for p in duration_swept
+        if isinstance(p, (Pulse, Readout))
     ]
 
-    indexless = {
-        k: v
-        for d in (
-            {
-                (pulse.id, 0): _waveform(pulse, "i"),
-                (pulse.id, 1): _waveform(pulse, "q"),
-            }
-            for pulse in pulses_not_swept[unique_indices_not_swept]
-        )
-        for k, v in d.items()
-    } | {
-        k: v
-        for d in (
-            {
-                (pulse.id, 2 * i): _waveform(pulse, "i", duration),
-                (pulse.id, 2 * i + 1): _waveform(pulse, "q", duration),
-            }
-            for pulse, sweep in pulses_swept
-            for i, duration in (
-                (i, sweep.irange[0] + sweep.irange[2] * i) for i in range(len(sweep))
-            )
-        )
-        for k, v in d.items()
-    }
+    # deduplicate non-swept pulses
+    # NOTE: the reason swept pulses are not deduplicated is that they are swept over
+    # duration so there will be no duplicates. It is still possible that a swept pulse
+    # is the same as a non-swept pulse but this is not a prominent enough use-case to
+    # justify accounting for it.
+    hashes = np.array([hash(p) for p in pulses_not_swept])
+    _, unique_idx, inverse_idx = np.unique(
+        hashes, return_index=True, return_inverse=True
+    )
+    unique_pulses = [pulses_not_swept[i] for i in unique_idx]
 
-    indices_not_swept = {
-        (pulse.id, ch): (int(i * 2 + ch), pulse.duration)
-        for pulse, i in zip(pulses_not_swept, inverse_indices_not_swept)
-        for ch in (0, 1)
-    }
+    # the ids for the swept pulses start counting from `base` since up to here we need
+    # two indices (i and q) for each unique non-swept pulse
+    base = 2 * len(unique_pulses)
 
-    specs_not_swept = {
-        int(inv * 2 + ch): WaveformSpec(
-            waveform=Waveform(
-                data=indexless[(pulse.id, ch)].waveform.data, index=int(inv * 2 + ch)
-            ),
-            duration=indexless[(pulse.id, ch)].duration,
-        )
-        for pulse, inv in zip(
-            pulses_not_swept[unique_indices_not_swept], unique_indices_not_swept
-        )
-        for ch in (0, 1)
-    }
-
-    base = 2 * len(unique_indices_not_swept)
-
-    indices_swept = {
-        (pulse.id, ch + 2 * i): (base + 2 * k + ch, int(duration))
-        for k, (pulse, sweep) in enumerate(pulses_swept)
-        for i, duration in (
-            (i, sweep.irange[0] + sweep.irange[2] * i) for i in range(len(sweep))
-        )
-        for ch in (0, 1)
-    }
-
-    specs_swept = {
-        base + 2 * k + ch: WaveformSpec(
-            waveform=Waveform(
-                data=indexless[(pulse.id, 2 * i + ch)].waveform.data,
-                index=base + 2 * k + ch,
-            ),
-            duration=int(duration),
+    # mapping from integer to unique WaveformSpec
+    waveform_specs: dict[int, WaveformSpec] = {  # non-swept
+        i * 2 + ch: _make_waveform(pulse, comp, index=i * 2 + ch)
+        for i, pulse in enumerate(unique_pulses)
+        for ch, comp in enumerate(("i", "q"))
+    } | {  # swept
+        base + 2 * k + ch: _make_waveform(
+            pulse, comp, duration, index=base + 2 * k + ch
         )
         for k, (pulse, sweep) in enumerate(pulses_swept)
-        for i, duration in (
-            (i, sweep.irange[0] + sweep.irange[2] * i) for i in range(len(sweep))
-        )
-        for ch in (0, 1)
+        for duration in _sweep_durations(sweep)
+        for ch, comp in enumerate(("i", "q"))
     }
 
-    waveform_indices = indices_not_swept | indices_swept
-    waveform_specs = specs_not_swept | specs_swept
+    # mapping that associate each element in the full list of pulses identified by
+    # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
+    # waveform_specs
+    idices_map: WaveformIndices = {  # non-swept
+        (pulse.id, ch): (inv * 2 + ch, int(pulse.duration))
+        for inv, pulse in zip(inverse_idx, pulses_not_swept)
+        for ch, _ in enumerate(("i", "q"))
+    } | {  # swept
+        (pulse.id, 2 * i + ch): (base + 2 * k + ch, int(duration))
+        for k, (pulse, sweep) in enumerate(pulses_swept)
+        for i, duration in enumerate(_sweep_durations(sweep))
+        for ch, _ in enumerate(("i", "q"))
+    }
 
-    return waveform_specs, waveform_indices
+    return waveform_specs, idices_map
