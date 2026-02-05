@@ -28,6 +28,8 @@ from ...execution_parameters import (
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig
 
+# DEBUG
+import datetime
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
     """Sample elements with n-dimensional probabilities.
