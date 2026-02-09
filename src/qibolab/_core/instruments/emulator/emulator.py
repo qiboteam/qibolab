@@ -33,6 +33,11 @@ from .hamiltonians import (
 )
 from .results import acquisitions, index, results, select_acquisitions
 
+
+# DEBUG
+import datetime
+
+
 __all__ = ["EmulatorController"]
 
 
@@ -153,6 +158,11 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
+
+        # t = datetime.datetime.now().strftime("%H:%M:%S")
+        # complete_qutip_evo = np.stack([s.full() for s in results.states])
+        # np.savez(f'{t}_complete_qutip_evolution.npz', complete_qutip_evo)
+
         return select_acquisitions(
             results.states,
             acquisitions(sequence_).values(),
