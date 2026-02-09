@@ -239,8 +239,8 @@ def results(
 
         # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
         # STILL NOT WORKING FOR 'qutrits' PLATFORM
-        list_res = [v for v in results.values()]
-        t = datetime.datetime.now().strftime("%H:%M:%S")
-        np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(list_res))
+        # list_res = [v for v in results.values()]
+        # t = datetime.datetime.now().strftime("%H:%M:%S")
+        # np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(list_res))
 
     return results
