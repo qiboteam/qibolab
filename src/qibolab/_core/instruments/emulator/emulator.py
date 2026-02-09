@@ -41,6 +41,11 @@ SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
 """Minimum time the emulator can resolve"""
 
 
+
+# DEBUG
+import datetime
+
+
 __all__ = ["EmulatorController"]
 
 
