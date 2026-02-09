@@ -13,7 +13,6 @@ from qibolab import Delay
 from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
 from qibolab._core.execution_parameters import (
     AcquisitionType,
-    AveragingMode,
     ExecutionParameters,
 )
 from qibolab._core.identifier import ChannelId, Result
@@ -150,7 +149,7 @@ class Cluster(Controller):
         results = {}
         log = Logger(configs)
 
-        if options.averaging_mode == AveragingMode.SINGLESHOT:
+        if options.averaging_mode.average:
             batch_memory = 0
             acquisitions = 0
             batched_list: list[list[PulseSequence]] = [[]]
