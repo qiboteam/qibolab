@@ -277,7 +277,9 @@ class Cluster(Controller):
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 # wait all sequencers
-                status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
+                # BUG: timeout should set lower, but for this the time.sleep duration
+                # has to be computed more carefully
+                status = self.cluster.get_sequencer_status(slot, seq, timeout=3600 * 24)
                 if status.status is qblox.SequencerStatuses.ERROR:
                     raise RuntimeError(f"slot: {slot}, seq: {seq}\n{status}")
                 if status.status is qblox.SequencerStatuses.WARNING:
