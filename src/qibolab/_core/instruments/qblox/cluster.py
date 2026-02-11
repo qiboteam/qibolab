@@ -156,7 +156,15 @@ class Cluster(Controller):
                     ],
                     default=0.0,
                 )
-                duration = options_.estimate_duration([ps], sweepers_, time_of_flight)
+
+                # TODO: wait_sync duration is determined as explained in this comment
+                # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
+                # It should be checked with Qblox if the sync time can indeed be of the
+                # order of 1000 ns.
+                wait_sync_duration = 1000
+                duration = options_.estimate_duration(
+                    [ps], sweepers_, time_of_flight + wait_sync_duration
+                )
                 # finally execute the experiment, and fetch results
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
@@ -277,9 +285,7 @@ class Cluster(Controller):
         for slot, seqs in sequencers.items():
             for ch, seq in seqs.items():
                 # wait all sequencers
-                # BUG: timeout should set lower, but for this the time.sleep duration
-                # has to be computed more carefully
-                status = self.cluster.get_sequencer_status(slot, seq, timeout=3600 * 24)
+                status = self.cluster.get_sequencer_status(slot, seq, timeout=1)
                 if status.status is qblox.SequencerStatuses.ERROR:
                     raise RuntimeError(f"slot: {slot}, seq: {seq}\n{status}")
                 if status.status is qblox.SequencerStatuses.WARNING:
