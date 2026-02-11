@@ -3,7 +3,11 @@
         "0": {
             "resonator": {
                 "bare_frequency": 0.0,
+<<<<<<< HEAD
                 "dressed_frequency": 5500000000.0,
+=======
+                "dressed_frequency": 5200000000.0,
+>>>>>>> 87f8fef5 (fixed emulator for multiple sweepers in INTEGRATION acquisition type (simply returning density matrices diagonals from qutip solution) and updated fixed-frequency qutrits platform)
                 "depletion_time": 0,
                 "bare_frequency_amplitude": null
             },
