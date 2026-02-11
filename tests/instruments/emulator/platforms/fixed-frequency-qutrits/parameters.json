@@ -414,6 +414,58 @@
                             "kind": "delay",
                             "duration": 20.0
                         }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "readout",
+                            "acquisition": {
+                                "kind": "acquisition",
+                                "duration": 10.0
+                            },
+                            "probe": {
+                                "kind": "pulse",
+                                "duration": 10.0,
+                                "amplitude": 0.1,
+                                "envelope": {
+                                    "kind": "rectangular"
+                                },
+                                "relative_phase": 0.0
+                            }
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "readout",
+                            "acquisition": {
+                                "kind": "acquisition",
+                                "duration": 10.0
+                            },
+                            "probe": {
+                                "kind": "pulse",
+                                "duration": 10.0,
+                                "amplitude": 0.1,
+                                "envelope": {
+                                    "kind": "rectangular"
+                                },
+                                "relative_phase": 0.0
+                            }
+                        }
                     ]
                 ],
                 "iSWAP": null
