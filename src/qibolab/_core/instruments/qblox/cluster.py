@@ -145,8 +145,19 @@ class Cluster(Controller):
                 )
                 log.status(self.cluster, sequencers)
 
+                # TODO: include the time of flight calculation at the level of
+                # Platform.execute rather than in the qblox driver. This will require
+                # propagating the changes also to qibocal.
+                time_of_flight = max(
+                    [
+                        time_of_flights(configs)[ch[0]]
+                        for ch in ps
+                        if hasattr(ch[1], "acquisition")
+                    ],
+                    default=0.0,
+                )
+                duration = options_.estimate_duration([ps], sweepers_, time_of_flight)
                 # finally execute the experiment, and fetch results
-                duration = options_.estimate_duration([ps], sweepers_)
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
                 )

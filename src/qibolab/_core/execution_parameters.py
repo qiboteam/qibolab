@@ -111,13 +111,14 @@ class ExecutionParameters(Model):
         self,
         sequences: list[PulseSequence],
         sweepers: list[ParallelSweepers],
+        time_of_flight: float = 0.0,
     ) -> float:
         """Estimate experiment duration."""
         duration = sum(seq.duration for seq in sequences)
         relaxation = default(self.relaxation_time, 0)
         nshots = default(self.nshots, 0)
         return (
-            (duration + len(sequences) * relaxation)
+            (duration + len(sequences) * relaxation + time_of_flight)
             * nshots
             * nano
             * prod(iteration_length(s) for s in sweepers)
