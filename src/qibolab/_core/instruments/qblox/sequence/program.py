@@ -116,8 +116,8 @@ def program(
     )
     experiment_ = [
         *experiment(sweepseq, waveforms, acquisitions, time_of_flight),
-        # add 4 spare ns to ensure minimum duration
-        Wait(duration=padding + 4),
+        # cut to minimum of 4 ns for the clock cycle
+        Wait(duration=min(padding, 4)),
     ]
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
