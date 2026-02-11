@@ -203,17 +203,14 @@ def results(
     results = {}
     if options.acquisition_type is AcquisitionType.INTEGRATION:
 
-        probabilities = np.moveaxis(probabilities,0,-1)
-        states_idx = [*range(probabilities.shape[1])]
+        states_computational_idx = np.stack(
+                np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
+            )
 
         for ro_id in acquisitions(sequence).keys():
             i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
 
-            states_computational_idx = np.stack(
-                np.unravel_index(states_idx, hamiltonian.dims)
-            )
-
-            res = np.sum(probabilities[i,states_computational_idx[i]==1,:],axis=0)
+            res = np.sum(probabilities[..., i,states_computational_idx[i]==1],axis=-1)
             res = np.random.normal(res, scale=0.001)
 
             results[ro_id] = res

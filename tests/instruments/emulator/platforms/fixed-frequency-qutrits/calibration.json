@@ -4,17 +4,21 @@
             "resonator": {
                 "bare_frequency": 0.0,
                 "dressed_frequency": 5200000000.0,
-                "depletion_time": 0
+                "depletion_time": 0,
+                "bare_frequency_amplitude": null
             },
             "qubit": {
                 "frequency_01": 5000000000.0,
                 "frequency_12": 4700000000.0,
                 "maximum_frequency": 5000000000.0,
                 "asymmetry": 0.0,
-                "sweetspot": 0.0
+                "sweetspot": 0.0,
+                "flux_coefficients": null
             },
             "readout": {
                 "fidelity": 0.0,
+                "coupling": null,
+                "effective_temperature": null,
                 "ground_state": [
                     0.0,
                     1.0
@@ -22,11 +26,16 @@
                 "excited_state": [
                     1.0,
                     0.0
-                ]
+                ],
+                "qudits_frequency": {}
             },
+            "t1": null,
+            "t2": null,
+            "t2_spin_echo": null,
             "rb_fidelity": null
         }
     },
-    "two_qubits": {
-    }
+    "two_qubits": {},
+    "readout_mitigation_matrix": null,
+    "flux_crosstalk_matrix": null
 }

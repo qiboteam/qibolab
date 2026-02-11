@@ -17,6 +17,8 @@
                 "0": {
                     "frequency": 5114000000.0,
                     "anharmonicity": -330000000.0,
+                    "sweetspot": 0.0,
+                    "asymmetry": 0.0,
                     "t1": {
                         "0-1": 38000.0,
                         "1-2": 19000.0
@@ -28,6 +30,8 @@
                 "1": {
                     "frequency": 4914000000.0,
                     "anharmonicity": -330000000.0,
+                    "sweetspot": 0.0,
+                    "asymmetry": 0.0,
                     "t1": {
                         "0-1": 42000.0,
                         "1-2": 21000.0
@@ -252,7 +256,7 @@
                         "0/drive1",
                         {
                             "kind": "pulse",
-                            "duration": 50.0,
+                            "duration": 56.0,
                             "amplitude": 0.1,
                             "envelope": {
                                 "kind": "rectangular"
@@ -264,7 +268,19 @@
                         "0/drive",
                         {
                             "kind": "delay",
-                            "duration": 50.0
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "1/drive",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.0,
+                            "amplitude": 0.0,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 0.0
                         }
                     ],
                     [
@@ -289,22 +305,41 @@
                         }
                     ],
                     [
+                        "1/drive",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
                         "0/drive1",
                         {
                             "kind": "pulse",
-                            "duration": 50.0,
-                            "amplitude": -0.1,
+                            "duration": 56.0,
+                            "amplitude": 0.1,
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.0
+                            "relative_phase": 3.141592653589793
                         }
                     ],
                     [
                         "0/drive",
                         {
                             "kind": "delay",
-                            "duration": 50.0
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "1/drive",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.0,
+                            "amplitude": 0.0,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 3.141592653589793
                         }
                     ],
                     [
@@ -325,7 +360,49 @@
                         "1/drive",
                         {
                             "kind": "delay",
-                            "duration": 140.0
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 40.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 40.0
                         }
                     ],
                     [
@@ -347,6 +424,58 @@
                         {
                             "kind": "virtualz",
                             "phase": -1.5707963267948966
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
+                        }
+                    ],
+                    [
+                        "1/acquisition",
+                        {
+                            "kind": "readout",
+                            "acquisition": {
+                                "kind": "acquisition",
+                                "duration": 10.0
+                            },
+                            "probe": {
+                                "kind": "pulse",
+                                "duration": 10.0,
+                                "amplitude": 0.1,
+                                "envelope": {
+                                    "kind": "rectangular"
+                                },
+                                "relative_phase": 0.0
+                            }
+                        }
+                    ],
+                    [
+                        "0/acquisition",
+                        {
+                            "kind": "readout",
+                            "acquisition": {
+                                "kind": "acquisition",
+                                "duration": 10.0
+                            },
+                            "probe": {
+                                "kind": "pulse",
+                                "duration": 10.0,
+                                "amplitude": 0.1,
+                                "envelope": {
+                                    "kind": "rectangular"
+                                },
+                                "relative_phase": 0.0
+                            }
                         }
                     ]
                 ],
