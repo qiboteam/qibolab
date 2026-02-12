@@ -277,8 +277,8 @@ class Cluster(Controller):
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
-        # approximately wait for experiment completion
-        time.sleep(duration + 1)
+        # wait for experiment completion
+        time.sleep(duration)
 
         # fetch acquired results
         acquisitions = {}
