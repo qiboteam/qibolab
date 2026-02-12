@@ -103,6 +103,38 @@ class Cluster(Controller):
         results = {}
         log = Logger(configs)
 
+        def _compute_duration(
+            ps: PulseSequence,
+            sweepers: list[ParallelSweepers],
+            options: ExecutionParameters,
+            configs: Configs,
+        ) -> float:
+            """Compute the total program duration including time of flight and
+            synchronization waiting time.
+            """
+
+            # TODO: include the time of flight calculation at the level of
+            # Platform.execute rather than in the qblox driver. This will require
+            # propagating the changes also to qibocal.
+            time_of_flight = max(
+                [
+                    time_of_flights(configs)[ch[0]]
+                    for ch in ps
+                    if hasattr(ch[1], "acquisition")
+                ],
+                default=0.0,
+            )
+
+            # TODO: wait_sync duration is determined as explained in this comment
+            # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
+            # It should be checked with Qblox if the sync time can indeed be of the
+            # order of 1000 ns.
+            wait_sync_duration = 1000
+            duration = options.estimate_duration(
+                [ps], sweepers, time_of_flight + wait_sync_duration
+            )
+            return duration
+
         # no unrolling yet: act one sequence at a time, and merge results
         for ps in sequences:
             # full reset of the cluster, to erase leftover configurations and sequencer
@@ -145,27 +177,8 @@ class Cluster(Controller):
                 )
                 log.status(self.cluster, sequencers)
 
-                # TODO: include the time of flight calculation at the level of
-                # Platform.execute rather than in the qblox driver. This will require
-                # propagating the changes also to qibocal.
-                time_of_flight = max(
-                    [
-                        time_of_flights(configs)[ch[0]]
-                        for ch in ps
-                        if hasattr(ch[1], "acquisition")
-                    ],
-                    default=0.0,
-                )
-
-                # TODO: wait_sync duration is determined as explained in this comment
-                # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
-                # It should be checked with Qblox if the sync time can indeed be of the
-                # order of 1000 ns.
-                wait_sync_duration = 1000
-                duration = options_.estimate_duration(
-                    [ps], sweepers_, time_of_flight + wait_sync_duration
-                )
                 # finally execute the experiment, and fetch results
+                duration = _compute_duration(ps, sweepers_, options_, configs)
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
                 )
