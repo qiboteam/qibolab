@@ -23,9 +23,7 @@ Qibolab offers a range of pre-defined pulse shapes which can be found in :py:mod
 - Exponential (:class:`qibolab.Exponential`)
 - Gaussian (:class:`qibolab.Gaussian`)
 - Drag (:class:`qibolab.Drag`)
-- IIR (:class:`qibolab.Iir`)
 - SNZ (:class:`qibolab.Snz`)
-- eCap (:class:`qibolab.ECap`)
 - Custom (:class:`qibolab.Custom`)
 
 To illustrate, here is an examples of how to instantiate a pulse using the Qibolab API:
