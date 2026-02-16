@@ -36,6 +36,7 @@ from .results import acquisitions, index, results, select_acquisitions
 
 # DEBUG
 import datetime
+import rich
 
 
 __all__ = ["EmulatorController"]
@@ -132,9 +133,6 @@ class EmulatorController(Controller):
         # np.savez(f'{t}_raw_qutip_evolution.npz', np.stack(results))
 
         # stack all slices in a single array, along the current outermost dimension
-        # breakpoint()
-
-        # stack all slices in a single array, along the current outermost dimension
         return np.stack(results)
 
     def _play_sequence(
@@ -145,6 +143,13 @@ class EmulatorController(Controller):
         The array returned by this function has a single dimension, over
         the various measurements included in the sequence.
         """
+
+        # try:
+        #     phase = updates[list(updates.keys())[0]]['relative_phase']
+        # except Exception:
+        #     phase = 0
+        # duration = updates[list(updates.keys())[0]]['duration']
+
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
         configs_ = update_configs(configs, updates)
@@ -158,10 +163,12 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
-
-        # t = datetime.datetime.now().strftime("%H:%M:%S")
+        
+        # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
+        # STILL NOT WORKING FOR 'qutrits' PLATFORM
+        # t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
         # complete_qutip_evo = np.stack([s.full() for s in results.states])
-        # np.savez(f'{t}_complete_qutip_evolution.npz', complete_qutip_evo)
+        # np.savez(f'./phase_tom/{t}_complete_qutip_evolution_phi_{phase}_duration_{duration}.npz', complete_qutip_evo)
 
         return select_acquisitions(
             results.states,
@@ -177,6 +184,7 @@ class EmulatorController(Controller):
         channels = [
             [
                 operator,
+                # ChannelTime(waveforms, sampling_rate=self.sampling_rate),
                 channel_time(waveforms, sampling_rate=self.sampling_rate),
             ]
             for operator, waveforms in hamiltonians(
@@ -294,3 +302,29 @@ def channel_time(
         return 0
 
     return time
+
+class ChannelTime:
+    def __init__(
+            self,
+            waveforms: Iterable[Modulated],
+            sampling_rate: int,):
+        
+        self.waveforms = waveforms
+        self.sampling_rate = sampling_rate
+
+    def __call__(self, t: float) -> float:
+        cumulative_time = 0
+        cumulative_phase = 0
+
+        for pulse in self.waveforms:
+            pulse_phase = pulse.phase
+
+            if cumulative_time <= t < cumulative_time + pulse.duration:
+                relative_time = t - cumulative_time
+                index = int(np.floor(relative_time * self.sampling_rate))
+                return pulse(t, index, cumulative_phase)
+
+            cumulative_time += pulse.duration
+            cumulative_phase += pulse_phase
+
+        return 0

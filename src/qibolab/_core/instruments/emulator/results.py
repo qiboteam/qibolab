@@ -118,6 +118,7 @@ def select_acquisitions(
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
     return np.stack([states[n].full() for n in samples])
+    # return np.stack([s.full() for s in states])
 
 
 # def results(
@@ -234,10 +235,10 @@ def results(
 
             results[ro_id] = res
 
-        # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-        # STILL NOT WORKING FOR 'qutrits' PLATFORM
-        # list_res = [v for v in results.values()]
-        # t = datetime.datetime.now().strftime("%H:%M:%S")
-        # np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(list_res))
+    # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
+    # STILL NOT WORKING FOR 'qutrits' PLATFORM
+    # list_res = [v for v in results.values()]
+    # t = datetime.datetime.now().strftime("%H:%M:%S")
+    # np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(list_res))
 
     return results
