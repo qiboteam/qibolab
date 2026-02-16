@@ -3,6 +3,13 @@ from typing import Union
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
+# DEBUG
+import rich
+import qutip as qt
+import datetime
+import inspect
+import numpy as np
+
 __all__ = ["QutipEngine"]
 
 
@@ -26,9 +33,14 @@ class QutipEngine(SimulationEngine):
         collapse_operators: list[Operator] = None,
         **kwargs,
     ):
+        
         """Evolve the system."""
         if time_hamiltonian is not None:
             hamiltonian += self.engine.QobjEvo(time_hamiltonian.operators)
+
+        # t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
+        # qt.fileio.qsave(hamiltonian, f'total_hamiltonian_{t}')
+
         return self.engine.mesolve(
             hamiltonian, initial_state, time, collapse_operators, **kwargs
         )
