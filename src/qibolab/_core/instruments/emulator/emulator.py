@@ -44,6 +44,7 @@ SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
 
 # DEBUG
 import datetime
+import rich
 
 
 __all__ = ["EmulatorController"]
@@ -164,9 +165,6 @@ class EmulatorController(Controller):
         # np.savez(f'{t}_raw_qutip_evolution.npz', np.stack(results))
 
         # stack all slices in a single array, along the current outermost dimension
-        # breakpoint()
-
-        # stack all slices in a single array, along the current outermost dimension
         return np.stack(results)
 
     def _evolve(
@@ -178,6 +176,13 @@ class EmulatorController(Controller):
         the time-dependent Hamiltonian, evolves the initial state with optional collapse
         operators, and returns the resulting measurement data.
         """
+
+        # try:
+        #     phase = updates[list(updates.keys())[0]]['relative_phase']
+        # except Exception:
+        #     phase = 0
+        # duration = updates[list(updates.keys())[0]]['duration']
+
         sequence_ = update_sequence(sequence, updates)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])

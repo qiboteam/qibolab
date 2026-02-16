@@ -7,6 +7,13 @@ import numpy as np
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
+# DEBUG
+import rich
+import qutip as qt
+import datetime
+import inspect
+import numpy as np
+
 __all__ = ["QutipEngine"]
 
 INTEGRATION_MAX_TIME_STEP = 0.02
@@ -65,6 +72,7 @@ class QutipEngine(SimulationEngine):
         save_evolution: Path | None = None,
         **kwargs,
     ):
+        
         """Evolve the system."""
 
         time_diff = np.diff(time)
