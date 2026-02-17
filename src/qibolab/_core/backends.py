@@ -8,6 +8,7 @@ from qibo.result import MeasurementOutcomes
 from qibolab._version import __version__ as qibolab_version
 
 from .compilers import Compiler
+from .execution_parameters import AveragingMode
 from .identifier import QubitId, QubitPairId
 from .native import TwoQubitNatives
 from .platform import Platform, create_platform
@@ -110,7 +111,13 @@ class QibolabBackend(NumpyBackend):
             gate.result.backend = self
             gate.result.register_samples(np.array(samples).T)
 
-    def execute_circuit(self, circuit, initial_state=None, nshots=1000):
+    def execute_circuit(
+        self,
+        circuit,
+        initial_state=None,
+        nshots=1000,
+        averaging_mode=AveragingMode.SINGLESHOT,
+    ):
         """Executes a quantum circuit.
 
         Args:
@@ -126,6 +133,7 @@ class QibolabBackend(NumpyBackend):
             return self.execute_circuit(
                 circuit=initial_state + circuit,
                 nshots=nshots,
+                averaging_mode=averaging_mode,
             )
         if initial_state is not None:
             raise_error(
@@ -137,7 +145,9 @@ class QibolabBackend(NumpyBackend):
 
         self.platform.connect()
 
-        readout_ = self.platform.execute([sequence], nshots=nshots)
+        readout_ = self.platform.execute(
+            [sequence], nshots=nshots, averaging_mode=averaging_mode
+        )
         readout = {k: v for k, v in readout_.items()}
 
         self.platform.disconnect()
@@ -146,7 +156,13 @@ class QibolabBackend(NumpyBackend):
         self.assign_measurements(measurement_map, readout)
         return result
 
-    def execute_circuits(self, circuits, initial_states=None, nshots=1000):
+    def execute_circuits(
+        self,
+        circuits,
+        initial_states=None,
+        nshots=1000,
+        averaging_mode=AveragingMode.SINGLESHOT,
+    ):
         """Executes multiple quantum circuits with a single communication with
         the control electronics.
 
@@ -179,7 +195,9 @@ class QibolabBackend(NumpyBackend):
 
         self.platform.connect()
 
-        readout = self.platform.execute(sequences, nshots=nshots)
+        readout = self.platform.execute(
+            sequences, nshots=nshots, averaging_mode=averaging_mode
+        )
 
         self.platform.disconnect()
 
