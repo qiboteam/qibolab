@@ -6,6 +6,8 @@ from .pulses import Pulse
 from .sequence import PulseSequence
 from .serialize import Model, replace
 
+__all__ = ["NativeContainer"]
+
 
 class Native(PulseSequence):
     def create_sequence(self) -> PulseSequence:
