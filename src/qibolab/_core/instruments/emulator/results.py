@@ -118,71 +118,6 @@ def select_acquisitions(
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
     return np.stack([states[n].full() for n in samples])
-    # return np.stack([s.full() for s in states])
-
-
-# def results(
-#     states: NDArray,
-#     sequence: PulseSequence,
-#     hamiltonian: HamiltonianConfig,
-#     options: ExecutionParameters,
-# ) -> dict[int, Result]:
-#     """Collect results for a single pulse sequence.
-
-#     The dictionary returned is already compliant with the expected
-#     result for the execution of this single sequence, thus suitable
-#     to be returned as is.
-#     """
-
-#     probabilities = calculate_probabilities_from_density_matrix(
-#         states,
-#     )
-#     # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-#     # STILL NOT WORKING FOR 'qutrits' PLATFORM
-#     # t = datetime.datetime.now().strftime("%H:%M:%S")
-#     # np.savez(f'{t}_raw_qutip_evolution.npz', np.stack(results))
-
-#     assert options.nshots is not None
-#     sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
-#     # move measurements dimension to the front, getting ready for extraction
-#     measurements = np.moveaxis(sampled, 1, 0)
-
-#     probabilities = np.moveaxis(probabilities,0,-1)
-#     states_idx = [*range(probabilities.shape[1])]
-#     results = {}
-#     qutip_res = []
-#     # introduce cached measurements to avoid losing correlations
-#     cache_measurements = {}
-#     # for (ro_id, sample), meas in zip(acquisitions(sequence).items(), measurements):
-#     for (ro_id, sample), probs in zip(acquisitions(sequence).items(), probabilities):
-#         i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
-#         # cache_measurements.setdefault(sample, meas)
-
-#         # res = np.stack(
-#         #     np.unravel_index(cache_measurements[sample], hamiltonian.dims)
-#         # )[i]
-
-#         states_computational_idx = np.stack(
-#             np.unravel_index(states_idx, hamiltonian.dims)
-#         )
-        
-#         res = np.sum(probabilities[i,states_computational_idx[i]==1,:],axis=0)
-#         # if options.acquisition_type is AcquisitionType.INTEGRATION:
-#         #     res = np.stack((res, np.zeros_like(res)), axis=-1)
-#         #     res = np.random.normal(res, scale=0.001)
-
-#         # if options.averaging_mode == AveragingMode.CYCLIC:
-#         #     res = np.mean(res, axis=0)
-
-#         results[ro_id] = res
-#         qutip_res.append(res)
-
-#     # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-#     # STILL NOT WORKING FOR 'qutrits' PLATFORM
-#     # t = datetime.datetime.now().strftime("%H:%M:%S")
-#     # np.savez(f'{t}_resultspy_qutip_evolution.npz', np.stack(qutip_res))
-        
-#     return results
 
 
 def results(
@@ -231,7 +166,7 @@ def results(
             ]
 
             if options.averaging_mode == AveragingMode.CYCLIC:
-                res = np.mean(res, axis=0)
+                res = np.mean(res[res <= 1], axis=0)
 
             results[ro_id] = res
 
