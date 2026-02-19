@@ -144,12 +144,6 @@ class EmulatorController(Controller):
         the various measurements included in the sequence.
         """
 
-        # try:
-        #     phase = updates[list(updates.keys())[0]]['relative_phase']
-        # except Exception:
-        #     phase = 0
-        # duration = updates[list(updates.keys())[0]]['duration']
-
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
         configs_ = update_configs(configs, updates)
