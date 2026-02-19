@@ -177,12 +177,6 @@ class EmulatorController(Controller):
         operators, and returns the resulting measurement data.
         """
 
-        # try:
-        #     phase = updates[list(updates.keys())[0]]['relative_phase']
-        # except Exception:
-        #     phase = 0
-        # duration = updates[list(updates.keys())[0]]['duration']
-
         sequence_ = update_sequence(sequence, updates)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
