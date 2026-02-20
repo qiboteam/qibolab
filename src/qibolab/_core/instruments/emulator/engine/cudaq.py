@@ -10,7 +10,7 @@ __all__ = ["CudaqEngine"]
 
 class CudaqEngine(SimulationEngine):
     """CudaQ simulation engine."""
-    max_qubit_dim: int = 2
+    max_qubit_dim: int = 3
     has_flipped_index: bool = True
     
     @cached_property
@@ -37,7 +37,8 @@ class CudaqEngine(SimulationEngine):
             return op
         
         for target_dim in range(2,self.max_qubit_dim+1):
-            for transition in [[0,1]]:
+            available_transitions = [[nlevel, nlevel+1] for nlevel in range(target_dim-1)]
+            for transition in available_transitions:
                 cudaq.operators.define(f"relax_op_{target_dim}_{transition[0]}_{transition[1]}", [target_dim], relax_op_mat(target_dim, transition))
             for pair in [[0,1]]:
                 cudaq.operators.define(f"deph_op_{target_dim}_{pair[0]}_{pair[1]}", [target_dim], deph_op_mat(target_dim, pair))
@@ -52,6 +53,7 @@ class CudaqEngine(SimulationEngine):
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
         dimensions: dict = None,
+        max_step_size: float = 0.003, 
         **kwargs,
     ):  
         # convert time to schedule
@@ -71,7 +73,8 @@ class CudaqEngine(SimulationEngine):
             initial_state, 
             collapse_operators,
             store_intermediate_results=self.engine.IntermediateResultSave.ALL,
-            integrator=self.engine.ScipyZvodeIntegrator(),
+            ##integrator=self.engine.ScipyZvodeIntegrator(),
+            integrator=self.engine.RungeKuttaIntegrator(max_step_size=max_step_size),
             **kwargs
         )
 

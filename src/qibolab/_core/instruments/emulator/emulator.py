@@ -143,7 +143,7 @@ class EmulatorController(Controller):
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
             time=tlist_,
-            collapse_operators=[], ##config.dissipation(self.engine), ## temporary disable dissipation
+            collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
             dimensions=dimensions,
         )
@@ -204,8 +204,7 @@ class CudaqEmulatorController(EmulatorController):
             hamiltonian=hamiltonian_list,
             initial_state=config.initial_state(self.engine),
             time=tlist_,
-            collapse_operators=[],
-            #collapse_operators=[config.dissipation(self.engine) for _ in hamiltonian_list], ## temporary disable dissipation
+            collapse_operators=[config.dissipation(self.engine) for _ in hamiltonian_list],
             time_hamiltonian=None,
             dimensions=dimensions,
         )
