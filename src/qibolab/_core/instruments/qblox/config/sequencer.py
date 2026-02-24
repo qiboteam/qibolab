@@ -67,19 +67,15 @@ class SequencerConfig(Model):
     def build(
         cls,
         address: PortAddress,
-        sequence: Q1Sequence,
         channel_id: ChannelId,
         channels: dict[ChannelId, Channel],
         configs: Configs,
         acquisition: AcquisitionType,
         index: int,
         rf: bool,
+        sequence: Optional[Q1Sequence] = None,
     ) -> "SequencerConfig":
         config = configs[channel_id]
-
-        # avoid sequence operations for inactive sequencers, including synchronization
-        if sequence.is_empty:
-            return cls()
 
         # conditional configurations
         cfg = cls(
@@ -94,7 +90,9 @@ class SequencerConfig(Model):
             marker_ovr_value=15,
             # upload sequence
             # - ensure JSON compatibility of the sent dictionary
-            sequence=json.loads(sequence.model_dump_json()),
+            sequence=(
+                json.loads(sequence.model_dump_json()) if sequence is not None else None
+            ),
             # configure the sequencers to synchronize
             sync_en=True,
             # modulation, only disable for QCM - always used for flux pulses
@@ -104,13 +102,13 @@ class SequencerConfig(Model):
         # acquisition
         if address.input:
             assert isinstance(config, AcquisitionConfig)
-            length = _integration_length(sequence)
+            length = _integration_length(sequence) if sequence is not None else None
             if length is not None:
                 cfg.integration_length_acq = length
             # discrimination
             if config.iq_angle is not None:
                 cfg.thresholded_acq_rotation = np.degrees(config.iq_angle % (2 * np.pi))
-            if config.threshold is not None:
+            if config.threshold is not None and length is not None:
                 # threshold needs to be compensated by length
                 # see: https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.thresholded_acq_threshold
                 cfg.thresholded_acq_threshold = config.threshold * length

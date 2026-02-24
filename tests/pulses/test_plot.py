@@ -5,10 +5,8 @@ import numpy as np
 
 from qibolab._core.pulses import (
     Drag,
-    ECap,
     Gaussian,
     GaussianSquare,
-    Iir,
     Pulse,
     Rectangular,
     Snz,
@@ -40,18 +38,7 @@ def test_plot_functions():
         envelope=Drag(rel_sigma=0.2, beta=2),
         relative_phase=0,
     )
-    p3 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        envelope=Iir(a=np.array([-0.5, 2]), b=np.array([1]), target=Rectangular()),
-    )
     p4 = Pulse(duration=40, amplitude=0.9, envelope=Snz(t_idling=10))
-    p5 = Pulse(
-        duration=40,
-        amplitude=0.9,
-        envelope=ECap(alpha=2),
-        relative_phase=0,
-    )
     p6 = Pulse(
         duration=40,
         amplitude=0.9,
@@ -63,9 +50,7 @@ def test_plot_functions():
             ("q0/flux", p0),
             ("q2/drive", p1),
             ("q200/drive", p2),
-            ("q200/flux", p3),
             ("q200/flux", p4),
-            ("q0/drive", p5),
             ("q2/drive", p6),
         ]
     )

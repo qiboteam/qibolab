@@ -6,7 +6,6 @@ from typing import Annotated, Literal, Union
 import numpy as np
 import numpy.typing as npt
 from pydantic import Field
-from scipy.signal import lfilter
 from scipy.signal.windows import gaussian
 
 from ..serialize import Model, NdArray, eq
@@ -21,9 +20,7 @@ __all__ = [
     "Gaussian",
     "GaussianSquare",
     "Drag",
-    "Iir",
     "Snz",
-    "ECap",
     "Custom",
 ]
 
@@ -212,59 +209,6 @@ class Drag(BaseEnvelope):
         return self.beta * (-(ts - mu) / (sigma**2)) * self.i(samples)
 
 
-class Iir(BaseEnvelope):
-    """IIR Filter using scipy.signal lfilter.
-
-    https://arxiv.org/pdf/1907.04818.pdf (page 11 - filter formula S22)::
-
-        p = [A, tau_iir]
-        p = [b0 = 1−k +k ·α, b1 = −(1−k)·(1−α),a0 = 1 and a1 = −(1−α)]
-        p = [b0, b1, a0, a1]
-    """
-
-    kind: Literal["iir"] = "iir"
-
-    a: NdArray
-    b: NdArray
-    target: BaseEnvelope
-
-    def _data(self, target: npt.NDArray) -> npt.NDArray:
-        a = self.a / self.a[0]
-        gain = np.sum(self.b) / np.sum(a)
-        b = self.b / gain if gain != 0 else self.b
-
-        data = lfilter(b=b, a=a, x=target)
-        if np.max(np.abs(data)) != 0:
-            data /= np.max(np.abs(data))
-        return data
-
-    def i(self, samples: int) -> Waveform:
-        """I.
-
-        .. todo::
-
-            Add docstring
-        """
-        return self._data(self.target.i(samples))
-
-    def q(self, samples: int) -> Waveform:
-        """Q.
-        .. todo::
-
-            Add docstring
-        """
-        return self._data(self.target.q(samples))
-
-    def __eq__(self, other) -> bool:
-        """Eq.
-
-        .. todo::
-
-            Add docstring
-        """
-        return eq(self, other)
-
-
 class Snz(BaseEnvelope):
     """Sudden variant Net Zero.
 
@@ -317,40 +261,6 @@ class Snz(BaseEnvelope):
                 [-self.b_amplitude],
                 -square_pulse,
             ]
-        )
-
-
-class ECap(BaseEnvelope):
-    r"""ECap pulse envelope.
-
-    .. todo::
-
-        - add reference
-
-    .. math::
-
-        e_{\cap(t,\alpha)} &=& A[1 + \tanh(\alpha t/t_\theta)][1 + \tanh(\alpha (1 - t/t_\theta))]\\
-        &\times& [1 + \tanh(\alpha/2)]^{-2}
-    """
-
-    kind: Literal["ecap"] = "ecap"
-
-    alpha: float
-    """In units of the inverse interval duration."""
-
-    def i(self, samples: int) -> Waveform:
-        """I.
-
-        .. todo::
-
-            Add docstring
-        """
-        ss = np.arange(samples)
-        x = ss / samples
-        return (
-            (1 + np.tanh(self.alpha * ss))
-            * (1 + np.tanh(self.alpha * (1 - x)))
-            / (1 + np.tanh(self.alpha / 2)) ** 2
         )
 
 
@@ -412,9 +322,7 @@ Envelope = Annotated[
         Gaussian,
         GaussianSquare,
         Drag,
-        Iir,
         Snz,
-        ECap,
         Custom,
     ],
     Field(discriminator="kind"),

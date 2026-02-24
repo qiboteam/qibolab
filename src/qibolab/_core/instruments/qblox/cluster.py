@@ -15,6 +15,7 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
 from . import config
@@ -29,6 +30,40 @@ from .validate import assert_channels_exclusion, validate_sequence
 __all__ = ["Cluster"]
 
 SAMPLING_RATE = 1
+
+
+def _compute_duration(
+    ps: PulseSequence,
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    configs: Configs,
+) -> float:
+    """Compute the total program duration including time of flight and
+    synchronization waiting time.
+    """
+
+    # TODO: include the time of flight calculation at the level of
+    # Platform.execute rather than in the qblox driver. This will require
+    # propagating the changes also to qibocal.
+    time_of_flight = max(
+        [time_of_flights(configs)[ch[0]] for ch in ps if hasattr(ch[1], "acquisition")],
+        default=0.0,
+    )
+
+    # TODO: wait_sync duration is determined as explained in this comment
+    # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
+    # It should be checked with Qblox if the sync time can indeed be of the
+    # order of 1000 ns.
+    wait_sync_duration = 1000
+    duration = options.estimate_duration(
+        [ps], sweepers, time_of_flight + wait_sync_duration
+    )
+    return duration
+
+
+class ClusterConfigs(Model):
+    modules: dict[int, config.ModuleConfig]
+    sequencers: dict[int, dict[int, config.SequencerConfig]]
 
 
 class Cluster(Controller):
@@ -134,13 +169,13 @@ class Cluster(Controller):
 
                 # then configure modules and sequencers
                 # (including sequences upload)
-                sequencers = self._configure(
-                    sequences_, configs, options_.acquisition_type
+                sequencers, _ = self.configure(
+                    configs, options_.acquisition_type, sequences=sequences_
                 )
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
-                duration = options_.estimate_duration([ps], sweepers_)
+                duration = _compute_duration(ps, sweepers_, options_, configs)
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
                 )
@@ -161,18 +196,33 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _configure(
+    def configure(
         self,
-        sequences: dict[ChannelId, Q1Sequence],
         configs: Configs,
-        acquisition: AcquisitionType,
-    ) -> SequencerMap:
+        acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
+        sequences: Optional[dict[ChannelId, Q1Sequence]] = None,
+    ) -> tuple[SequencerMap, ClusterConfigs]:
         """Configure modules and sequencers.
 
         The return value consists of the association map from channels
         to sequencers, for each module.
+
+        For configuration testing purpose, it is possible to also configure modules and
+        sequencers with no sequence provided. In which case, it will attempt to assign
+        sequencers to all available channels (as opposed to just those involved in the
+        experiment, and thus in the sequences).
+        For the sake of simplifiying the usage of this function, a default acquisition
+        type is provided (:attr:`AcquisitionType.INTEGRATION`). The only true
+        alternative to this value is :attr:`AcquisitionType.RAW`, since further
+        configurations are required to operate in scope mode.
         """
         sequencers = defaultdict(dict)
+        exec_mode = sequences is not None
+        sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
+
+        modcfgs = {}
+        seqcfgs = {}
+
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -185,24 +235,42 @@ class Cluster(Controller):
             los = config.module.los(self._los, configs, ids)
             mixers = config.module.mixers(self._mixers, configs, ids)
             # compute module configurations, and apply them
-            config.ModuleConfig.build(
-                channels, configs, los, mixers, module.is_qrm_type
-            ).apply(module)
+            modcfg = modcfgs[slot] = config.ModuleConfig.build(
+                channels, configs, los, mixers
+            )
+            modcfg.apply(module)
+            seqcfgs[slot] = {}
 
-            # configure all sequencers, and store active ones' association to channels
+            # configure all sequencers, and store association to channels
             rf = module.is_rf_type
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
-                seq = sequences.get(ch, Q1Sequence.empty())
-                config.SequencerConfig.build(
-                    address, seq, ch, self.channels, configs, acquisition, idx, rf
-                ).apply(sequencer)
-                # only collect active sequencers
-                if not seq.is_empty:
-                    sequencers[slot][ch] = idx
+                # only configure and register sequencer for active channels
+                # for passive channels the sequencer operations are not relevant, e.g. a
+                # flux channel with no registered pulse will still set an offset, but
+                # this will happen at port level, and it is consumed in the
+                # `ModuleConfig` above
+                # if not in execution mode, cnfigure all channels, to test the
+                # configuration itself
+                if exec_mode and ch not in sequences:
+                    continue
 
-        return sequencers
+                seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
+                    address,
+                    ch,
+                    self.channels,
+                    configs,
+                    acquisition,
+                    idx,
+                    rf,
+                    sequence=sequences_[ch],
+                )
+                seqcfg.apply(sequencer)
+                # populate channel-to-sequencer mapping
+                sequencers[slot][ch] = idx
+
+        return sequencers, ClusterConfigs(modules=modcfgs, sequencers=seqcfgs)
 
     def _execute(
         self,
@@ -219,8 +287,8 @@ class Cluster(Controller):
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
-        # approximately wait for experiment completion
-        time.sleep(duration + 1)
+        # wait for experiment completion
+        time.sleep(duration)
 
         # fetch acquired results
         acquisitions = {}

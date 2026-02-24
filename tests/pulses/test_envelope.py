@@ -4,10 +4,8 @@ import pytest
 from qibolab._core.pulses import (
     Custom,
     Drag,
-    ECap,
     Gaussian,
     GaussianSquare,
-    Iir,
     Pulse,
     Rectangular,
     Snz,
@@ -190,18 +188,6 @@ def test_eq():
     assert not shape1 == shape4
     assert not shape1 == shape5
 
-    shape1 = Iir(a=np.array([-0.5, 2]), b=np.array([1]), target=Rectangular())
-    shape2 = Iir(a=np.array([-0.5, 2]), b=np.array([1]), target=Rectangular())
-    shape3 = Iir(a=np.array([-0.5, 4]), b=np.array([1]), target=Rectangular())
-    shape4 = Iir(a=np.array([-0.4, 2]), b=np.array([1]), target=Rectangular())
-    shape5 = Iir(a=np.array([-0.5, 2]), b=np.array([2]), target=Rectangular())
-    shape6 = Iir(a=np.array([-0.5, 2]), b=np.array([2]), target=Gaussian(rel_sigma=5))
-    assert shape1 == shape2
-    assert not shape1 == shape3
-    assert not shape1 == shape4
-    assert not shape1 == shape5
-    assert not shape1 == shape6
-
     shape1 = Snz(t_idling=5)
     shape2 = Snz(t_idling=5)
     shape3 = Snz(t_idling=2)
@@ -211,12 +197,6 @@ def test_eq():
     assert not shape1 == shape3
     assert not shape1 == shape4
     assert not shape1 == shape5
-
-    shape1 = ECap(alpha=4)
-    shape2 = ECap(alpha=4)
-    shape3 = ECap(alpha=5)
-    assert shape1 == shape2
-    assert not shape1 == shape3
 
 
 def test_hash_custom():
