@@ -232,7 +232,6 @@ class Platform:
                 from qibolab import Parameter, PulseSequence, Sweeper
                 from qibolab.instruments.dummy import create_dummy
 
-
                 platform = create_dummy()
                 qubit = platform.qubits[0]
                 natives = platform.natives.single_qubit[0]

@@ -3,15 +3,14 @@ from typing import Optional, cast
 
 import numpy as np
 from pydantic import ConfigDict
-from qblox_instruments.qcodes_drivers.module import Module
 from qblox_instruments.qcodes_drivers.sequencer import Sequencer
 
 from qibolab._core.components.channels import Channel, IqChannel
 from qibolab._core.components.configs import (
     AcquisitionConfig,
     Configs,
-    DcConfig,
     IqConfig,
+    IqMixerConfig,
     OscillatorConfig,
 )
 from qibolab._core.execution_parameters import AcquisitionType
@@ -42,46 +41,11 @@ def _integration_length(sequence: Q1Sequence) -> Optional[int]:
     )
 
 
-QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
-"""Conversion factor between swept value and configuration.
-
-There are two different ways to add an offset to the waveform played by the QCM module:
-
-- digitally summing an offset, which could be controlled both in real-time and by
-  conifgurations
-- adding an offset directly to the outcoming signal
-
-
-Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
-<https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
-a conversion is neeeded, because the first option will be defined in the interval (-1,
-1) in the parameters (internally mapping the floats on a suitable integers range), while
-the second is directly expressed in Volt.
-Hence, the conversion factor of ``2.5``.
-
-However, these two ways are not equivalent, especially because of the NCO and LO mixing
-process.
-Indeed, the first one is happening upstream to the mixing process, and the second
-downstream.
-Since we are sweeping only one of the two components of the signal (the in-phase,
-I), it will result multiplied by a sine-wave, which reduces its root mean square (RMS)
-power by a factor of `sqrt(2)`. Which is then accounted for in the conversion range.
-
-https://docs.qblox.com/en/main/products/architecture/sequencers/control.html#arbitrary-waveform-generator-awg
-https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#block-diagram
-
-Notice that sweeping both of the components is also viable. But even without any flux
-pulse, the sum of sine and cosine with maximal amplitude will saturate the power supply,
-eventually clipping the signal and reducing the power range.
-"""
-
-
 class SequencerConfig(Model):
     # disable freeze, to be able to construct instance with optional fields, but also
     # static validation
     model_config = ConfigDict(frozen=False)
 
-    module: dict
     address: Optional[str] = None
     # the following attributes are automatically processed and set
     sequence: Optional[dict] = None
@@ -96,34 +60,25 @@ class SequencerConfig(Model):
     demod_en_acq: Optional[bool] = None
     nco_freq: Optional[int] = None
     mod_en_awg: Optional[bool] = None
+    mixer_corr_gain_ratio: Optional[float] = None
+    mixer_corr_phase_offset_degree: Optional[float] = None
 
     @classmethod
     def build(
         cls,
         address: PortAddress,
-        sequence: Q1Sequence,
         channel_id: ChannelId,
         channels: dict[ChannelId, Channel],
         configs: Configs,
         acquisition: AcquisitionType,
         index: int,
         rf: bool,
+        sequence: Optional[Q1Sequence] = None,
     ) -> "SequencerConfig":
-        module = {}
         config = configs[channel_id]
-
-        # set parameters
-        # offsets
-        if isinstance(config, DcConfig):
-            module[f"out{index}_offset"] = config.offset * QCM_SWEEP_TO_OFFSET
-
-        # avoid sequence operations for inactive sequencers, including synchronization
-        if sequence.is_empty:
-            return cls(module=module)
 
         # conditional configurations
         cfg = cls(
-            module=module,
             # connect to physical address
             address=address.local_address,
             # TODO: mixer calibration not yet propagated
@@ -135,7 +90,9 @@ class SequencerConfig(Model):
             marker_ovr_value=15,
             # upload sequence
             # - ensure JSON compatibility of the sent dictionary
-            sequence=json.loads(sequence.model_dump_json()),
+            sequence=(
+                json.loads(sequence.model_dump_json()) if sequence is not None else None
+            ),
             # configure the sequencers to synchronize
             sync_en=True,
             # modulation, only disable for QCM - always used for flux pulses
@@ -145,13 +102,13 @@ class SequencerConfig(Model):
         # acquisition
         if address.input:
             assert isinstance(config, AcquisitionConfig)
-            length = _integration_length(sequence)
+            length = _integration_length(sequence) if sequence is not None else None
             if length is not None:
                 cfg.integration_length_acq = length
             # discrimination
             if config.iq_angle is not None:
                 cfg.thresholded_acq_rotation = np.degrees(config.iq_angle % (2 * np.pi))
-            if config.threshold is not None:
+            if config.threshold is not None and length is not None:
                 # threshold needs to be compensated by length
                 # see: https://docs.qblox.com/en/main/api_reference/sequencer.html#Sequencer.thresholded_acq_threshold
                 cfg.thresholded_acq_threshold = config.threshold * length
@@ -165,25 +122,24 @@ class SequencerConfig(Model):
         probe = channels[channel_id].iqout(channel_id)
         if probe is not None:
             freq = cast(IqConfig, configs[probe]).frequency
-            lo = cast(IqChannel, channels[probe]).lo
-            assert lo is not None
-            lo_freq = cast(OscillatorConfig, configs[lo]).frequency
+            probe_ = cast(IqChannel, channels[probe])
+            assert probe_.lo is not None
+            lo_freq = cast(OscillatorConfig, configs[probe_.lo]).frequency
             cfg.nco_freq = int(freq - lo_freq)
+            assert probe_.mixer is not None
+            mixer = cast(IqMixerConfig, configs[probe_.mixer])
+            cfg.mixer_corr_gain_ratio = mixer.scale_q
+            cfg.mixer_corr_phase_offset_degree = mixer.phase_q
 
         return cfg
 
     def apply(self, seq: Sequencer):
         """Configure sequencer-wide settings."""
-
-        mod = cast(Module, seq.ancestors[1])
-        for name, value in self.module.items():
-            mod.set(name, value)
-
         if self.address is not None:
             seq.connect_sequencer(self.address)
 
         # values already applied
-        applied = {"module", "address"}
+        applied = {"address"}
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None:

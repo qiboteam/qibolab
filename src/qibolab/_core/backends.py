@@ -52,7 +52,7 @@ class QibolabBackend(NumpyBackend):
             self.platform = create_platform(platform)
         self.versions = {
             "qibo": qibo_version,
-            "numpy": self.np.__version__,
+            "numpy": self.engine.__version__,
             "qibolab": qibolab_version,
         }
         self.compiler = Compiler.default()

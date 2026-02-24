@@ -13,7 +13,9 @@ from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqCh
 from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.pulses.pulse import PulseId
 from qibolab._core.sequence import PulseSequence
+from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
 from . import config
@@ -28,6 +30,40 @@ from .validate import assert_channels_exclusion, validate_sequence
 __all__ = ["Cluster"]
 
 SAMPLING_RATE = 1
+
+
+def _compute_duration(
+    ps: PulseSequence,
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    configs: Configs,
+) -> float:
+    """Compute the total program duration including time of flight and
+    synchronization waiting time.
+    """
+
+    # TODO: include the time of flight calculation at the level of
+    # Platform.execute rather than in the qblox driver. This will require
+    # propagating the changes also to qibocal.
+    time_of_flight = max(
+        [time_of_flights(configs)[ch[0]] for ch in ps if hasattr(ch[1], "acquisition")],
+        default=0.0,
+    )
+
+    # TODO: wait_sync duration is determined as explained in this comment
+    # https://github.com/qiboteam/qibolab/pull/1389#issuecomment-3884129213.
+    # It should be checked with Qblox if the sync time can indeed be of the
+    # order of 1000 ns.
+    wait_sync_duration = 1000
+    duration = options.estimate_duration(
+        [ps], sweepers, time_of_flight + wait_sync_duration
+    )
+    return duration
+
+
+class ClusterConfigs(Model):
+    modules: dict[int, config.ModuleConfig]
+    sequencers: dict[int, dict[int, config.SequencerConfig]]
 
 
 class Cluster(Controller):
@@ -61,6 +97,11 @@ class Cluster(Controller):
         """Determine connections status."""
         return self._cluster is not None
 
+    def reset(self) -> None:
+        """Reset cluster parameters."""
+        assert self._cluster is not None
+        self._cluster.reset()
+
     def connect(self):
         """Connect and initialize the instrument."""
         if self.is_connected:
@@ -69,7 +110,6 @@ class Cluster(Controller):
         self._cluster = find_or_create_instrument(
             qblox.Cluster, recreate=True, name=self.name, identifier=self.address
         )
-        self._cluster.reset()
 
     def disconnect(self):
         """Disconnect and reset the instrument."""
@@ -87,13 +127,19 @@ class Cluster(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
         results = {}
         log = Logger(configs)
 
         # no unrolling yet: act one sequence at a time, and merge results
         for ps in sequences:
+            # full reset of the cluster, to erase leftover configurations and sequencer
+            # synchronization registration
+            # NOTE: until not unrolled, each sequence execution should be independent
+            # TODO: once unrolled, this reset should be preserved, since it is required
+            # for multiple experiments sharing the same connection
+            self.reset()
             # split shots in batches, in case the required experiment exceeds the
             # allowed memory
             psres = []
@@ -123,13 +169,13 @@ class Cluster(Controller):
 
                 # then configure modules and sequencers
                 # (including sequences upload)
-                sequencers = self._configure(
-                    sequences_, configs, options_.acquisition_type
+                sequencers, _ = self.configure(
+                    configs, options_.acquisition_type, sequences=sequences_
                 )
                 log.status(self.cluster, sequencers)
 
                 # finally execute the experiment, and fetch results
-                duration = options_.estimate_duration([ps], sweepers_)
+                duration = _compute_duration(ps, sweepers_, options_, configs)
                 data = self._execute(
                     sequencers, sequences_, duration, options_.acquisition_type
                 )
@@ -150,18 +196,33 @@ class Cluster(Controller):
             results |= concat_shots(psres, options)
         return results
 
-    def _configure(
+    def configure(
         self,
-        sequences: dict[ChannelId, Q1Sequence],
         configs: Configs,
-        acquisition: AcquisitionType,
-    ) -> SequencerMap:
+        acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
+        sequences: Optional[dict[ChannelId, Q1Sequence]] = None,
+    ) -> tuple[SequencerMap, ClusterConfigs]:
         """Configure modules and sequencers.
 
         The return value consists of the association map from channels
         to sequencers, for each module.
+
+        For configuration testing purpose, it is possible to also configure modules and
+        sequencers with no sequence provided. In which case, it will attempt to assign
+        sequencers to all available channels (as opposed to just those involved in the
+        experiment, and thus in the sequences).
+        For the sake of simplifiying the usage of this function, a default acquisition
+        type is provided (:attr:`AcquisitionType.INTEGRATION`). The only true
+        alternative to this value is :attr:`AcquisitionType.RAW`, since further
+        configurations are required to operate in scope mode.
         """
         sequencers = defaultdict(dict)
+        exec_mode = sequences is not None
+        sequences_ = defaultdict(lambda: None, sequences if exec_mode else {})
+
+        modcfgs = {}
+        seqcfgs = {}
+
         for slot, chs in self._channels_by_module.items():
             module = self._modules[slot]
 
@@ -169,26 +230,47 @@ class Cluster(Controller):
             # not be outnumbered
             assert len(module.sequencers) >= len(chs)
 
+            ids = {id for id, _ in chs}
+            channels = {id: ch for id, ch in self.channels.items() if id in ids}
+            los = config.module.los(self._los, configs, ids)
+            mixers = config.module.mixers(self._mixers, configs, ids)
             # compute module configurations, and apply them
-            los = config.module.los(self._los, configs, chs)
-            config.ModuleConfig.compute(self.channels, los, module.is_qrm_type).apply(
-                module
+            modcfg = modcfgs[slot] = config.ModuleConfig.build(
+                channels, configs, los, mixers
             )
+            modcfg.apply(module)
+            seqcfgs[slot] = {}
 
-            # configure all sequencers, and store active ones' association to channels
+            # configure all sequencers, and store association to channels
             rf = module.is_rf_type
             for idx, ((ch, address), sequencer) in enumerate(
                 zip(chs, module.sequencers)
             ):
-                seq = sequences.get(ch, Q1Sequence.empty())
-                config.SequencerConfig.build(
-                    address, seq, ch, self.channels, configs, acquisition, idx, rf
-                ).apply(sequencer)
-                # only collect active sequencers
-                if not seq.is_empty:
-                    sequencers[slot][ch] = idx
+                # only configure and register sequencer for active channels
+                # for passive channels the sequencer operations are not relevant, e.g. a
+                # flux channel with no registered pulse will still set an offset, but
+                # this will happen at port level, and it is consumed in the
+                # `ModuleConfig` above
+                # if not in execution mode, cnfigure all channels, to test the
+                # configuration itself
+                if exec_mode and ch not in sequences:
+                    continue
 
-        return sequencers
+                seqcfg = seqcfgs[slot][idx] = config.SequencerConfig.build(
+                    address,
+                    ch,
+                    self.channels,
+                    configs,
+                    acquisition,
+                    idx,
+                    rf,
+                    sequence=sequences_[ch],
+                )
+                seqcfg.apply(sequencer)
+                # populate channel-to-sequencer mapping
+                sequencers[slot][ch] = idx
+
+        return sequencers, ClusterConfigs(modules=modcfgs, sequencers=seqcfgs)
 
     def _execute(
         self,
@@ -205,8 +287,8 @@ class Cluster(Controller):
                 module.arm_sequencer(seq)
             module.start_sequencer()
 
-        # approximately wait for experiment completion
-        time.sleep(duration + 1)
+        # wait for experiment completion
+        time.sleep(duration)
 
         # fetch acquired results
         acquisitions = {}
@@ -237,7 +319,7 @@ class Cluster(Controller):
 
         return acquisitions
 
-    @cached_property
+    @property
     def _modules(self) -> dict[SlotId, Module]:
         """Retrieve slot to module object mapping."""
         return {mod.slot_idx: mod for mod in self.cluster.modules if mod.present()}
@@ -286,8 +368,23 @@ class Cluster(Controller):
             ch: lo
             for ch, lo in (
                 (ch, cast(IqChannel, channels[iq]).lo)
-                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in self.channels)
+                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
                 if iq is not None
             )
             if lo is not None
+        }
+
+    @cached_property
+    def _mixers(self) -> dict[ChannelId, str]:
+        """Extract channel to mixer mapping."""
+        # TODO: identical to the `._los` property, deduplicate it please...
+        channels = self.channels
+        return {
+            ch: mix
+            for ch, mix in (
+                (ch, cast(IqChannel, channels[iq]).mixer)
+                for ch, iq in ((ch, channels[ch].iqout(ch)) for ch in channels)
+                if iq is not None
+            )
+            if mix is not None
         }

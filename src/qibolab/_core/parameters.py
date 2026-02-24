@@ -131,6 +131,10 @@ class NativeGates(Model):
     coupler: dict[QubitId, SingleQubitNatives] = Field(default_factory=dict)
     two_qubit: TwoQubitContainer = Field(default_factory=dict)
 
+    @property
+    def element(self) -> dict[QubitId, SingleQubitNatives]:
+        return self.single_qubit | self.coupler
+
 
 ComponentId = str
 """Identifier of a generic component.

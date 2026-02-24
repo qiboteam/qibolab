@@ -557,7 +557,7 @@ class Acquire(Instr):
 
     acquisition: Immediate
     bin: Value
-    duration: Immediate
+    duration: MultiBaseInt
 
 
 class AcquireWeighed(Instr):
