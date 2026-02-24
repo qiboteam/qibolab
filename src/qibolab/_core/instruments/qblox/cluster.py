@@ -164,6 +164,7 @@ class Cluster(Controller):
                 ):
                     batched_list.append([])
                     batch_memory = 0
+                    acquisitions = 0
 
                 batch_memory += per_shot_memory
                 batched_list[-1].append(ps)
