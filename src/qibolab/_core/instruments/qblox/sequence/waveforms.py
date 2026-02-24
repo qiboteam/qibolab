@@ -97,7 +97,7 @@ def waveforms(
     # mapping that associate each element in the full list of pulses identified by
     # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
     # waveform_specs
-    idices_map: WaveformIndices = {  # non-swept
+    indices_map: WaveformIndices = {  # non-swept
         (pulse.id, ch): (inv * 2 + ch, int(pulse.duration))
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
         for ch, _ in enumerate(("i", "q"))
@@ -108,4 +108,4 @@ def waveforms(
         for ch, _ in enumerate(("i", "q"))
     }
 
-    return waveform_specs, idices_map
+    return waveform_specs, indices_map
