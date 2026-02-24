@@ -150,24 +150,29 @@ class Cluster(Controller):
         log = Logger(configs)
 
         if options.averaging_mode.average:
+            batched_list: list[list[PulseSequence]] = []
+
+            batch = []
             batch_memory = 0
-            acquisitions = 0
-            batched_list: list[list[PulseSequence]] = [[]]
+            batch_acquisitions = 0
             for ps in sequences:
-                # BUG: this assumtion does not hold generally
-                acquisitions += 1  # assume 1 acquisition per shot
+                acquisitions = len(ps.acquisitions)
                 per_shot_memory = get_per_shot_memory(ps, sweepers, options)
 
                 if (
                     batch_memory + per_shot_memory > ACQUISITION_MEMORY
-                    or acquisitions > ACQUISITION_NUMBER
+                    or batch_acquisitions + acquisitions > ACQUISITION_NUMBER
                 ):
-                    batched_list.append([])
+                    batched_list.append(batch)
+                    batch = []
                     batch_memory = 0
-                    acquisitions = 0
+                    batch_acquisitions = 0
 
+                batch_acquisitions += acquisitions
                 batch_memory += per_shot_memory
-                batched_list[-1].append(ps)
+                batch.append(ps)
+            if batch:
+                batched_list.append(batch)
 
             batched_seqs = []
             for batch in batched_list:
