@@ -263,9 +263,14 @@ class Platform:
 
         # for components that represent aux external instruments (e.g. lo) to the main
         # control instrument set the config directly
-        for name, cfg in configs.items():
-            if name in self.instruments:
-                self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
+        for name, instrument in self.instruments.items():
+            if not isinstance(instrument, Controller):
+                if name in configs:
+                    instrument.setup(**configs[name].model_dump(exclude={"kind"}))
+                if hasattr(instrument, "channels"):
+                    instrument.setup(
+                        {ch: configs[ch] for ch in instrument.channels if ch in configs}
+                    )
 
         results = {}
         # pylint: disable=unsubscriptable-object
