@@ -38,6 +38,7 @@ from .utils import (
 from .validate import (
     ACQUISITION_MEMORY,
     ACQUISITION_NUMBER,
+    QCM_INSTRUCTION_MEMORY,
     assert_channels_exclusion,
     validate_sequence,
 )
@@ -144,7 +145,6 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
-        assert options.relaxation_time is not None
 
         results = {}
         log = Logger(configs)
@@ -155,25 +155,38 @@ class Cluster(Controller):
             batch = []
             batch_memory = 0
             batch_acquisitions = 0
+            # an offset number of lines that is always there regardless of the nubmer of
+            # pulses played.
+            bach_instructions_memory = 50
             for ps in sequences:
                 acquisitions = len(ps.acquisitions)
                 per_shot_memory = get_per_shot_memory(ps, sweepers, options)
+                # the factor 1.59 is determined heuristically, for large number of gates
+                # and iterations the ratio of ps.data objects to Lines is approx 1.56
+                instructions_memory = len(ps.data) * 1.59
 
                 if (
-                    batch_memory + per_shot_memory > ACQUISITION_MEMORY
+                    # we take the QCM memory as limit since that is likely to have
+                    # a larger number of instructions
+                    bach_instructions_memory + instructions_memory
+                    > QCM_INSTRUCTION_MEMORY
+                    or batch_memory + per_shot_memory > ACQUISITION_MEMORY
                     or batch_acquisitions + acquisitions > ACQUISITION_NUMBER
                 ):
                     batched_list.append(batch)
                     batch = []
                     batch_memory = 0
                     batch_acquisitions = 0
+                    bach_instructions_memory = 50
 
                 batch_acquisitions += acquisitions
                 batch_memory += per_shot_memory
+                bach_instructions_memory += instructions_memory
                 batch.append(ps)
             if batch:
                 batched_list.append(batch)
 
+            assert options.relaxation_time is not None
             batched_seqs = []
             for batch in batched_list:
                 batched = batch[0]

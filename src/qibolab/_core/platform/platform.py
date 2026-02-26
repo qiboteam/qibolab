@@ -24,7 +24,6 @@ from ..pulses import PulseId
 from ..qubits import Qubit
 from ..sequence import PulseSequence
 from ..sweeper import ParallelSweepers
-from ..unrolling import Bounds, batch
 
 __all__ = ["Platform"]
 
@@ -267,12 +266,7 @@ class Platform:
             if name in self.instruments:
                 self.instruments[name].setup(**cfg.model_dump(exclude={"kind"}))
 
-        results = {}
-        # pylint: disable=unsubscriptable-object
-        bounds = self.parameters.configs[self._controller.bounds]
-        assert isinstance(bounds, Bounds)
-        for b in batch(sequences, bounds):
-            results |= self._execute(b, options, configs, sweepers)
+        results = self._execute(sequences, options, configs, sweepers)
 
         return results
 

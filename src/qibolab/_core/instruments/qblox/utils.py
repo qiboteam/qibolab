@@ -39,7 +39,7 @@ def batch_shots(
     """
     assert options.nshots is not None
 
-    if options.averaging_mode is not AveragingMode.SINGLESHOT:
+    if options.averaging_mode.average:
         return [options.nshots]
 
     per_shot_memory = get_per_shot_memory(sequence, sweepers, options)

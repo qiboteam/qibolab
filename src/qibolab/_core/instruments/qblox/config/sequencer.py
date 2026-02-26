@@ -143,4 +143,4 @@ class SequencerConfig(Model):
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None:
-                seq.set(name, value)
+                seq.parameters[name].set(value)
