@@ -13,6 +13,20 @@ from qibolab._core.sweeper import ParallelSweepers
 from .validate import ACQUISITION_MEMORY
 
 
+def get_per_shot_memory(
+    sequence: PulseSequence,
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+) -> float:
+    """Compute the memory per shot."""
+    bins = np.prod(options.bins(sweepers)[1:])
+    acquisitions = max(
+        sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
+        for pulses in sequence.by_channel.values()
+    )
+    return float(bins * acquisitions)
+
+
 def batch_shots(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
@@ -25,15 +39,10 @@ def batch_shots(
     """
     assert options.nshots is not None
 
-    if options.averaging_mode is not AveragingMode.SINGLESHOT:
+    if options.averaging_mode.average:
         return [options.nshots]
 
-    bins = np.prod(options.bins(sweepers)[1:])
-    acquisitions = max(
-        sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
-        for pulses in sequence.by_channel.values()
-    )
-    per_shot_memory = bins * acquisitions
+    per_shot_memory = get_per_shot_memory(sequence, sweepers, options)
     max_shots = int(ACQUISITION_MEMORY // per_shot_memory)
     nfull, remainder = np.divmod(options.nshots, max_shots)
     return [max_shots] * int(nfull) + [int(remainder)]
