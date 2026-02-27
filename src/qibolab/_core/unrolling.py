@@ -84,6 +84,7 @@ class Bounds(Config):
         }
 
 
+# TODO: leave batching at the driver-level and scrap it here
 def batch(sequences: list[PulseSequence], bounds: Bounds):
     """Split a list of sequences to batches.
 
@@ -103,6 +104,7 @@ def batch(sequences: list[PulseSequence], bounds: Bounds):
     yield batch
 
 
+# TODO: leave unrolling at the driver-level and scrap it here
 def unroll_sequences(
     sequences: list[PulseSequence], relaxation_time: int
 ) -> tuple[PulseSequence, dict[int, list[int]]]:
