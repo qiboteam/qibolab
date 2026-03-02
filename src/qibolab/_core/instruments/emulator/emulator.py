@@ -22,6 +22,7 @@ from qibolab._core.pulses import (
     Readout,
     VirtualZ,
 )
+from qibolab._core.instruments.emulator.hamiltonians import DriveEmulatorConfig
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -258,19 +259,52 @@ def hamiltonians(
     sampling_rate: float,
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    return (
-        hamiltonian(
-            sequence.channel(ch),
-            configs[ch],
-            hconfig,
-            index(ch, hconfig),
-            engine,
-            sampling_rate,
-        )
-        for ch in sequence.channels
+    
+    hamiltonians_array = ()
+    for ch in sequence.channels:
         # TODO: drop the following, and treat acquisitions just as empty channels
-        if not isinstance(configs[ch], AcquisitionConfig)
-    )
+        if not isinstance(configs[ch], AcquisitionConfig):
+            new_terms = [hamiltonian(
+                            sequence.channel(ch),
+                            configs[ch],
+                            hconfig,
+                            index(ch, hconfig),
+                            engine,
+                            sampling_rate,
+                        )]
+            if isinstance(configs[ch], DriveEmulatorConfig):
+                drive_q = int(ch.split("/")[0])
+                for crosstalk_ch, crosstalk_mu in hconfig.qubits[drive_q].classical_crosstalk.items():
+                    crosstalk_pulses = sequence.channel(ch)
+                    for pulse in crosstalk_pulses:
+                        if isinstance(pulse, Pulse):
+                            pulse = pulse.model_copy(update={"amplitude": pulse.amplitude * crosstalk_mu})
+                        new_terms.append(hamiltonian(
+                                            pulse,
+                                            configs[ch],
+                                            hconfig,
+                                            index(crosstalk_ch, hconfig),
+                                            engine,
+                                            sampling_rate,
+                                            )
+                                        )   
+            hamiltonians_array += (*new_terms, )
+
+    return hamiltonians_array
+
+    # return (
+    #     hamiltonian(
+    #         sequence.channel(ch),
+    #         configs[ch],
+    #         hconfig,
+    #         index(ch, hconfig),
+    #         engine,
+    #         sampling_rate,
+    #     )
+    #     for ch in sequence.channels
+    #     # TODO: drop the following, and treat acquisitions just as empty channels
+    #     if not isinstance(configs[ch], AcquisitionConfig)
+    # )         
 
 
 def channel_time(

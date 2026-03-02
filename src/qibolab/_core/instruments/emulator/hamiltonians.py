@@ -68,6 +68,8 @@ class Qubit(Config):
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
+    classical_crosstalk: dict[str, float] = Field(default_factory=dict)
+    """Dictionary with classical crosstalk coefficients per drive channel."""
 
     def omega(self, flux: float = 0) -> float:
         """Angular velocity."""
