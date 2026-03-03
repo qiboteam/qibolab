@@ -48,6 +48,8 @@ class KeysightQCS(Controller):
     sampling_rate: ClassVar[float] = (
         qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * NS_TO_S
     )
+    offset_channels: list[ChannelId] = []
+    """Subset of channels that require offset"""
 
     def connect(self):
         self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=True)
@@ -139,6 +141,15 @@ class KeysightQCS(Controller):
     ) -> dict[int, Result]:
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
+
+        # Configure channel offsets
+        for virtual_channel_id in self.offset_channels:
+            offset = configs[virtual_channel_id].offset
+            virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
+            physical_channel = self.backend.channel_mapper.get_physical_channels(
+                virtual_channel
+            )[0]
+            physical_channel.settings.offset.value = offset
 
         ret: dict[PulseId, np.ndarray] = {}
         for sequence in sequences:
