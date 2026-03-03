@@ -121,6 +121,11 @@ class KeysightQCS(Controller):
             self.backend._init_time = int(options.relaxation_time)
 
         # Configure channel offsets
+        workaround_layer = qcs.Layer()
+        empty_pulse = qcs.DCWaveform(
+            duration=20e-9, amplitude=0, envelope=qcs.ConstantEnvelope()
+        )
+
         for virtual_channel_id in self.offset_channels:
             offset = configs[virtual_channel_id].offset
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
@@ -129,7 +134,8 @@ class KeysightQCS(Controller):
             )[0]
             physical_channel.settings.offset.value = offset
 
-        program = qcs.Program()
+            workaround_layer.insert(target=virtual_channel, operations=empty_pulse)
+
         probe_channel_ids = {
             chan.probe
             for chan in self.channels.values()
@@ -156,7 +162,7 @@ class KeysightQCS(Controller):
         # For each sequence, we assign it to a layer
         # Each layer indicates a sequence of pulses/operations that are synchronized to start at the same time
         # The program will perform all channel operations in a layer before progressing to the next layer
-        layers = []
+        layers = [workaround_layer]
         for sequence in sequences:
             layers.append(
                 self.create_layer(
