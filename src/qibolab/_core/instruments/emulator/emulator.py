@@ -372,34 +372,19 @@ def hamiltonians(
                 for crosstalk_ch, crosstalk_mu in hconfig.qubits[drive_q].classical_crosstalk.items():
                     crosstalk_pulses = sequence.channel(ch)
                     for pulse in crosstalk_pulses:
+                        cross_term = hamiltonian(
+                            [pulse],
+                            configs[ch],
+                            hconfig,
+                            index(crosstalk_ch, hconfig),
+                            engine,
+                            sampling_rate,
+                        )
                         if isinstance(pulse, Pulse):
-                            pulse = pulse.model_copy(update={"amplitude": pulse.amplitude * crosstalk_mu})
-                        new_terms.append(hamiltonian(
-                                            pulse,
-                                            configs[ch],
-                                            hconfig,
-                                            index(crosstalk_ch, hconfig),
-                                            engine,
-                                            sampling_rate,
-                                            )
-                                        )   
-            hamiltonians_array += (*new_terms, )
+                            new_terms.append((cross_term[0]* crosstalk_mu, cross_term[1]))
+            hamiltonians_array += (*new_terms, )   
 
     return hamiltonians_array
-
-    # return (
-    #     hamiltonian(
-    #         sequence.channel(ch),
-    #         configs[ch],
-    #         hconfig,
-    #         index(ch, hconfig),
-    #         engine,
-    #         sampling_rate,
-    #     )
-    #     for ch in sequence.channels
-    #     # TODO: drop the following, and treat acquisitions just as empty channels
-    #     if not isinstance(configs[ch], AcquisitionConfig)
-    # )         
 
 
 def channel_coefficients(
