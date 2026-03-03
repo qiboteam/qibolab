@@ -1,5 +1,6 @@
 """Qibolab driver for Keysight QCS instrument set."""
 
+import time
 from collections import defaultdict
 from functools import reduce
 from typing import ClassVar
@@ -141,11 +142,13 @@ class KeysightQCS(Controller):
 
         ret: dict[PulseId, np.ndarray] = {}
         for sequence in sequences:
-            results = self.backend.apply(
-                self.create_program(
-                    sequence.align_to_delays(), configs, sweepers, options.nshots
-                )
-            ).results
+            program = self.create_program(sequence, configs, sweepers, options.nshots)
+            # Retry running the sequence if the program fails at runtime
+            try:
+                results = self.backend.apply(program).results
+                time.sleep(0.2)
+            except:
+                results = self.backend.apply(program).results
             acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(
                 list
             )
@@ -156,15 +159,22 @@ class KeysightQCS(Controller):
 
             averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
             for channel, input_ops in acquisition_map.items():
-                raw = fetch_result(
-                    results=results,
-                    channel=channel,
-                    acquisition_type=options.acquisition_type,
-                    averaging=averaging,
+                raw = next(
+                    iter(
+                        fetch_result(
+                            results=results,
+                            channel=channel,
+                            acquisition_type=options.acquisition_type,
+                            averaging=averaging,
+                        ).values()
+                    )
                 )
 
-                for result, input_op in zip(raw.values(), input_ops):
-                    ret[input_op.id] = parse_result(result, options)
+                if len(input_ops) == 1:
+                    ret[input_ops[0].id] = parse_result(raw, options)
+                else:
+                    for result, input_op in zip(raw.T, input_ops):
+                        ret[input_op.id] = parse_result(result, options)
 
         return ret
 
