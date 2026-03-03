@@ -55,37 +55,15 @@ class KeysightQCS(Controller):
         self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=True)
         self.backend.is_system_ready()
 
-    def create_program(
+    def create_layer(
         self,
         sequence: PulseSequence,
         configs: dict[str, Config],
-        sweepers: list[ParallelSweepers],
-        num_shots: int,
+        sweeper_channel_map: dict[ChannelId, qcs.Scalar],
+        sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
     ) -> tuple[qcs.Program, list[tuple[int, int]]]:
-        # SWEEPER MANAGEMENT
-        probe_channel_ids = {
-            chan.probe
-            for chan in self.channels.values()
-            if isinstance(chan, AcquisitionChannel)
-        }
 
-        (
-            hardware_sweepers,
-            software_sweepers,
-            sweeper_channel_map,
-            sweeper_pulse_map,
-        ) = process_sweepers(sweepers, probe_channel_ids)
-        # Here we are telling the program to run hardware sweepers first, then software sweepers
-        # It is essential that we match the original sweeper order to the modified sweeper order
-        # to reconcile the results at the end
-        program = reduce(
-            sweeper_reducer,
-            software_sweepers,
-            reduce(sweeper_reducer, hardware_sweepers, qcs.Program()).n_shots(
-                num_shots
-            ),
-        )
-
+        layer = qcs.Layer()
         # WAVEFORM COMPILATION
         # Iterate over channels and convert qubit pulses to QCS waveforms
         for channel_id, pulse in sequence:
@@ -96,7 +74,7 @@ class KeysightQCS(Controller):
                 probe_channel_id = channel.probe
                 classifier_reference = configs[channel_id].state_iq_values
                 process_acquisition_channel_pulse(
-                    program=program,
+                    layer=layer,
                     pulse=pulse,
                     frequency=sweeper_channel_map.get(
                         probe_channel_id, configs[probe_channel_id].frequency
@@ -113,7 +91,7 @@ class KeysightQCS(Controller):
 
             elif isinstance(channel, IqChannel):
                 process_iq_channel_pulse(
-                    program=program,
+                    layer=layer,
                     pulse=pulse,
                     frequency=sweeper_channel_map.get(
                         channel_id, configs[channel_id].frequency
@@ -124,13 +102,13 @@ class KeysightQCS(Controller):
 
             elif isinstance(channel, DcChannel):
                 process_dc_channel_pulse(
-                    program=program,
+                    layer=layer,
                     pulses=pulse,
                     virtual_channel=virtual_channel,
                     sweeper_pulse_map=sweeper_pulse_map,
                 )
 
-        return program
+        return layer
 
     def play(
         self,
@@ -151,41 +129,80 @@ class KeysightQCS(Controller):
             )[0]
             physical_channel.settings.offset.value = offset
 
-        ret: dict[PulseId, np.ndarray] = {}
-        for sequence in sequences:
-            program = self.create_program(sequence, configs, sweepers, options.nshots)
-            # Retry running the sequence if the program fails at runtime
-            try:
-                results = self.backend.apply(program).results
-                time.sleep(0.2)
-            except Exception:
-                results = self.backend.apply(program).results
-            acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(
-                list
-            )
+        program = qcs.Program()
+        probe_channel_ids = {
+            chan.probe
+            for chan in self.channels.values()
+            if isinstance(chan, AcquisitionChannel)
+        }
+        (
+            hardware_sweepers,
+            software_sweepers,
+            sweeper_channel_map,
+            sweeper_pulse_map,
+        ) = process_sweepers(sweepers, probe_channel_ids)
+        # Here we are telling the program to run hardware sweepers first, then software sweepers
+        # It is essential that we match the original sweeper order to the modified sweeper order
+        # to reconcile the results at the end
+        program = reduce(
+            sweeper_reducer,
+            software_sweepers,
+            reduce(sweeper_reducer, hardware_sweepers, qcs.Program()).n_shots(
+                options.nshots
+            ),
+        )
 
+        acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(list)
+        # For each sequence, we assign it to a layer
+        # Each layer indicates a sequence of pulses/operations that are synchronized to start at the same time
+        # The program will perform all channel operations in a layer before progressing to the next layer
+        layers = []
+        for sequence in sequences:
+            layers.append(
+                self.create_layer(
+                    sequence, configs, sweeper_channel_map, sweeper_pulse_map
+                )
+            )
             for channel_id, input_op in sequence.acquisitions:
                 channel = self.virtual_channel_map[channel_id]
                 acquisition_map[channel].append(input_op)
 
-            averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
-            for channel, input_ops in acquisition_map.items():
-                raw = next(
-                    iter(
-                        fetch_result(
-                            results=results,
-                            channel=channel,
-                            acquisition_type=options.acquisition_type,
-                            averaging=averaging,
-                        ).values()
-                    )
+            # Pad relaxation time delay after each sequence
+            if len(sequences) > 1 and sequence != sequences[-1]:
+                layer = qcs.Layer()
+                layer.insert(
+                    next(iter(self.virtual_channel_map.values())),
+                    qcs.Delay(duration=options.relaxation_time * NS_TO_S),
                 )
+                layers.append(layer)
 
-                if len(input_ops) == 1:
-                    ret[input_ops[0].id] = parse_result(raw, options)
-                else:
-                    for result, input_op in zip(raw.T, input_ops):
-                        ret[input_op.id] = parse_result(result, options)
+        program.extend(*layers)
+        # Retry running the sequence if the program fails at runtime
+        try:
+            results = self.backend.apply(program).results
+            time.sleep(0.2)
+        except Exception:
+            results = self.backend.apply(program).results
+
+        ret: dict[PulseId, np.ndarray] = {}
+        averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
+        for channel, input_ops in acquisition_map.items():
+            raw = next(
+                iter(
+                    fetch_result(
+                        results=results,
+                        channel=channel,
+                        acquisition_type=options.acquisition_type,
+                        averaging=averaging,
+                    ).values()
+                )
+            )
+
+            if len(input_ops) == 1:
+                ret[input_ops[0].id] = parse_result(raw, options)
+            else:
+                for result, input_op in zip(raw.T, input_ops):
+                    ret[input_op.id] = parse_result(result, options)
 
         return ret
 

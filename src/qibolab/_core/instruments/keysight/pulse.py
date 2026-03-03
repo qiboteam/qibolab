@@ -32,7 +32,7 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
 
 
 def process_acquisition_channel_pulse(
-    program: qcs.Program,
+    layer: qcs.Layer,
     pulse: PulseLike,
     frequency: Union[float, qcs.Scalar],
     virtual_channel: qcs.Channels,
@@ -44,7 +44,7 @@ def process_acquisition_channel_pulse(
     instructions and adds it to the current program.
 
     Arguments:
-        program (qcs.Program): Program object for the current sequence.
+        layer (qcs.Layer): Layer object for the current sequence.
         pulses (Iterable[PulseLike]): Array of pulse objects to be processed.
         frequency (Union[float, qcs.Scalar]): Frequency of the channel.
         virtual_channel (qcs.Channels): QCS virtual digitizer channel.
@@ -56,15 +56,16 @@ def process_acquisition_channel_pulse(
     sweep_param_map = sweeper_pulse_map.get(pulse.id, {})
 
     if pulse.kind == "delay":
-        qcs_pulse = qcs.Delay(
+        delay = qcs.Delay(
             duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S)
         )
-        program.add_waveform(qcs_pulse, virtual_channel)
-        program.add_waveform(qcs_pulse, probe_virtual_channel)
+        layer.insert(virtual_channel, delay)
+        layer.insert(probe_virtual_channel, delay)
 
     elif pulse.kind == "acquisition":
         duration = sweep_param_map.get("duration", pulse.duration * NS_TO_S)
-        program.add_acquisition(duration, virtual_channel)
+        op = qcs.Acquisition(duration)
+        layer.insert(virtual_channel, op)
 
     elif pulse.kind == "readout":
         sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
@@ -79,16 +80,18 @@ def process_acquisition_channel_pulse(
                 "relative_phase", pulse.probe.relative_phase
             ),
         )
-        program.add_waveform(qcs_pulse, probe_virtual_channel)
-        program.add_acquisition(
-            integration_filter=qcs.IntegrationFilter(qcs_pulse),
-            channels=virtual_channel,
-            classifier=classifier,
+        layer.insert(probe_virtual_channel, qcs_pulse)
+        layer.insert(
+            virtual_channel,
+            qcs.Acquisition(
+                integration_filter=qcs.IntegrationFilter(qcs_pulse),
+                classifier=classifier,
+            ),
         )
 
 
 def process_iq_channel_pulse(
-    program: qcs.Program,
+    layer: qcs.Layer,
     pulse: PulseLike,
     frequency: Union[float, qcs.Scalar],
     virtual_channel: qcs.Channels,
@@ -98,7 +101,7 @@ def process_iq_channel_pulse(
     instructions and adds it to the current program.
 
     Arguments:
-        program (qcs.Program): Program object for the current sequence.
+        layer (qcs.Layer): Layer object for the current sequence.
         pulses (Iterable[PulseLike]): Array of pulse objects to be processed.
         frequency (Union[float, qcs.Scalar]): Frequency of the channel.
         virtual_channel (qcs.Channels): QCS virtual RF AWG channel.
@@ -127,11 +130,11 @@ def process_iq_channel_pulse(
     else:
         raise ValueError("Unrecognized pulse type", pulse.kind)
 
-    program.add_waveform(qcs_pulse, virtual_channel)
+    layer.insert(virtual_channel, qcs_pulse)
 
 
 def process_dc_channel_pulse(
-    program: qcs.Program,
+    layer: qcs.Layer,
     pulse: PulseLike,
     virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
@@ -140,7 +143,7 @@ def process_dc_channel_pulse(
     instructions and adds it to the current program.
 
     Arguments:
-        program (qcs.Program): Program object for the current sequence.
+        layer (qcs.Layer): Layer object for the current sequence.
         pulses (Iterable[PulseLike]): Array of pulse objects to be processed.
         virtual_channel (qcs.Channels): QCS virtual baseband AWG channel.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
@@ -186,4 +189,4 @@ def process_dc_channel_pulse(
     else:
         raise ValueError("Unrecognized pulse type", pulse.kind)
 
-    program.add_waveform(qcs_pulse, virtual_channel)
+    layer.insert(virtual_channel, qcs_pulse)
