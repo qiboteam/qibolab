@@ -27,10 +27,11 @@ class DriveEmulatorConfig(Config):
     """Rabi frequency [Hz]"""
     scale_factor: float = 1
     """Scaling factor."""
+    crosstalk: dict[QubitId, float] = Field(default_factory=dict)
 
     @staticmethod
-    def operator(n: int, engine: SimulationEngine) -> Operator:
-        return -1j * (engine.destroy(n) - engine.create(n))
+    def operator(n: int, cross_dict:dict[QubitId, float], engine: SimulationEngine) -> Operator:
+        return ((q, -1j * mu * (engine.destroy(n) - engine.create(n))) for q, mu in  cross_dict.items())
 
 
 class FluxEmulatorConfig(Config):
@@ -42,10 +43,12 @@ class FluxEmulatorConfig(Config):
     """DC offset of the channel."""
     voltage_to_flux: float = 1
     """Convert voltarget to flux."""
+    crosstalk: dict[QubitId, float] = Field(default_factory=dict)
+    """Dictionary with classical crosstalk coefficients per flux channel."""
 
     @staticmethod
-    def operator(n: int, engine: SimulationEngine) -> Operator:
-        return engine.create(n) * engine.destroy(n)
+    def operator(n: int, cross_dict:dict[QubitId, float], engine: SimulationEngine) -> Operator:
+        return ((q, -1j * mu * (engine.create(n) * engine.destroy(n))) for q, mu in  cross_dict.items())
 
     @property
     def flux(self) -> float:
@@ -68,7 +71,7 @@ class Qubit(Config):
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
-    classical_crosstalk: dict[str, float] = Field(default_factory=dict)
+    classical_crosstalk: dict[QubitId, float] = Field(default_factory=dict)
     """Dictionary with classical crosstalk coefficients per drive channel."""
 
     def omega(self, flux: float = 0) -> float:
