@@ -24,7 +24,7 @@ from qibolab._core.pulses import (
     PulseLike,
     VirtualZ,
 )
-from qibolab._core.instruments.emulator.hamiltonians import DriveEmulatorConfig
+from qibolab._core.instruments.emulator.hamiltonians import DriveEmulatorConfig, FluxEmulatorConfig
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -299,7 +299,6 @@ class EmulatorController(Controller):
 
         return OperatorEvolution(operators=channels, times=times)
 
-
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
     """Apply sweep updates to base sequence."""
     return PulseSequence(
@@ -334,11 +333,21 @@ def hamiltonian(
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
-    op = engine.expand(
-        op=config.operator(n=n, engine=engine),
-        targets=hilbert_space_index,
-        dims=hamiltonian.dims,
-    )
+    if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
+        op = sum((
+            engine.expand(
+                op=o, 
+                targets=hamiltonian.dims, 
+                dim=hamiltonian.hilbert_space_index(int(q))
+            ) 
+            for (q, o) in config.operator(n=n, cross_dict=config.crosstalk, engine=engine))
+        )
+    else:
+        op = engine.expand(
+            op=config.operator(n=n, engine=engine),
+            targets=hilbert_space_index,
+            dims=hamiltonian.dims,
+        )
     waveforms = (
         waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
         for pulse in pulses
@@ -359,31 +368,19 @@ def hamiltonians(
     for ch in sequence.channels:
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig):
-            new_terms = [hamiltonian(
+            if isinstance(configs[ch], (DriveEmulatorConfig, FluxEmulatorConfig)):
+                drive_q = int(ch.split("/")[0])
+                configs[ch] = configs[ch].model_copy(update={"crosstalk": hconfig.qubits[drive_q].classical_crosstalk})
+            
+            new_terms = hamiltonian(
                             sequence.channel(ch),
                             configs[ch],
                             hconfig,
                             index(ch, hconfig),
                             engine,
                             sampling_rate,
-                        )]
-            if isinstance(configs[ch], DriveEmulatorConfig):
-                drive_q = int(ch.split("/")[0])
-                for crosstalk_ch, crosstalk_mu in hconfig.qubits[drive_q].classical_crosstalk.items():
-                    crosstalk_pulses = sequence.channel(ch)
-                    for pulse in crosstalk_pulses:
-                        cross_term = hamiltonian(
-                            [pulse],
-                            configs[ch],
-                            hconfig,
-                            index(crosstalk_ch, hconfig),
-                            engine,
-                            sampling_rate,
                         )
-                        if isinstance(pulse, Pulse):
-                            new_terms.append((cross_term[0]* crosstalk_mu, cross_term[1]))
-            hamiltonians_array += (*new_terms, )   
-
+            hamiltonians_array += (new_terms, )
     return hamiltonians_array
 
 
