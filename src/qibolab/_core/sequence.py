@@ -5,13 +5,14 @@ from collections.abc import Callable, Iterable
 from functools import cache
 from typing import Any, Union
 
+import numpy as np
 from pydantic import TypeAdapter
 from pydantic_core import core_schema
 
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses.pulse import PulseId, VirtualZ
 
 from .identifier import ChannelId
-from .pulses import Acquisition, Align, Delay, PulseLike, Readout
+from .pulses import Acquisition, Align, Delay, Pulse, PulseLike, Readout
 
 __all__ = ["PulseSequence"]
 
@@ -262,3 +263,81 @@ class PulseSequence(UserList[_Element]):
             seqs[ch].append(pulse)
 
         return seqs
+
+    def to_vzs(self) -> "PulseSequence":
+        """Split relative phases to :class:`VirtualZ` elements.
+
+        The basic formula just relies on the composition of Pauli matrices' exponential
+        and it is available from many sources. One of those could be MM p. 626.
+
+        .. todo::
+
+            Add MM as a proper reference, such that it ends up in the bibliography
+        """
+        return PulseSequence(
+            [
+                el
+                for els in (
+                    [(ch, ev)]
+                    if not isinstance(ev, Pulse) or np.isclose(ev.relative_phase, 0)
+                    else [
+                        (ch, VirtualZ(phase=ev.relative_phase)),
+                        (ch, ev.model_copy(update={"relative_phase": 0})),
+                        (ch, VirtualZ(phase=-ev.relative_phase)),
+                    ]
+                    for ch, ev in self
+                )
+                for el in els
+            ]
+        )
+
+    def to_relative_phases(self) -> "PulseSequence":
+        seq = PulseSequence()
+        phases = defaultdict(float)
+
+        for ch, ev in self:
+            if isinstance(ev, VirtualZ):
+                phases[ch] += ev.phase
+            elif isinstance(ev, Pulse):
+                seq.append(
+                    (
+                        ch,
+                        ev.model_copy(
+                            update={"relative_phase": ev.relative_phase + phases[ch]}
+                        ),
+                    )
+                )
+            else:
+                seq.append((ch, ev))
+
+        return seq
+
+    def collect_vzs(self) -> "PulseSequence":
+        """Collect subsequent :class:`VirtualZ` rotations.
+
+        For each channel, it divides :class:`VirtualZ` in groups delimited by pulses.
+        Each group is collected and transformed in a single :class:`VirtualZ`, just summing
+        the angles.
+        """
+        seq = PulseSequence()
+        phases = defaultdict(float)
+
+        def collect(ch: ChannelId):
+            if not np.isclose(phases[ch], 0.0):
+                seq.append((ch, VirtualZ(phase=phases[ch])))
+                phases[ch] = 0.0
+
+        for ch, ev in self:
+            if isinstance(ev, VirtualZ):
+                phases[ch] += ev.phase
+                continue
+
+            if isinstance(ev, Pulse):
+                collect(ch)
+
+            seq.append((ch, ev))
+
+        for ch in self.channels:
+            collect(ch)
+
+        return seq
