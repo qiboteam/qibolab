@@ -132,20 +132,17 @@ class AcquisitionConfig(Config):
 
         .. note::
 
-            the expliciti definition is required in order to solve the ambiguity about
+            the explicit definition is required in order to solve the ambiguity about
             the arrays equality
         """
-        # FIXME: temporary solution to avoid error described in
-        # https://github.com/qiboteam/qibolab/pull/1312
-        raw_kernel_comparison = self.kernel == other.kernel
         return (
             (self.delay == other.delay)
             and (self.smearing == other.smearing)
             and (self.threshold == other.threshold)
             and (self.iq_angle == other.iq_angle)
-            and raw_kernel_comparison
-            if isinstance(raw_kernel_comparison, bool)
-            else raw_kernel_comparison.all(),
+            # FIXME: temporary solution to avoid error described in
+            # https://github.com/qiboteam/qibolab/pull/1312
+            and np.array_equal(self.kernel, other.kernel)
         )
 
 
