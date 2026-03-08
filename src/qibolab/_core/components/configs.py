@@ -140,9 +140,7 @@ class AcquisitionConfig(Config):
             and (self.smearing == other.smearing)
             and (self.threshold == other.threshold)
             and (self.iq_angle == other.iq_angle)
-            # FIXME: temporary solution to avoid error described in
-            # https://github.com/qiboteam/qibolab/pull/1312
-            and np.array_equal(self.kernel, other.kernel)
+            and np.array_equal(np.asarray(self.kernel), np.asarray(other.kernel))
         )
 
 
