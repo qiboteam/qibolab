@@ -14,7 +14,7 @@ from typing import Annotated, Literal, Optional, Union
 import numpy as np
 from pydantic import Field
 
-from ..serialize import Model, NdArray
+from ..serialize import Model, NdArray, eq
 from .filters import Filter
 
 __all__ = [
@@ -128,20 +128,7 @@ class AcquisitionConfig(Config):
     signal."""
 
     def __eq__(self, other) -> bool:
-        """Explicit configuration equality.
-
-        .. note::
-
-            the explicit definition is required in order to solve the ambiguity about
-            the arrays equality
-        """
-        return (
-            (self.delay == other.delay)
-            and (self.smearing == other.smearing)
-            and (self.threshold == other.threshold)
-            and (self.iq_angle == other.iq_angle)
-            and np.array_equal(np.asarray(self.kernel), np.asarray(other.kernel))
-        )
+        return eq(self, other)
 
 
 class LogConfig(Config):
