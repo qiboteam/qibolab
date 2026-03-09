@@ -54,11 +54,6 @@ SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
 
 
 
-# DEBUG
-import datetime
-import rich
-
-
 __all__ = ["EmulatorController"]
 
 

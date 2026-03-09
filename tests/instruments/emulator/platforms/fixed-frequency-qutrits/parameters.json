@@ -9,7 +9,23 @@
             "qubits": {
                 "0": {
                     "transmon_levels": 3,
-                    "confusion_matrix": [[1,0,0], [0,1,1], [0,0,0]],
+                    "confusion_matrix": [
+                        [
+                            1,
+                            0,
+                            0
+                        ],
+                        [
+                            0,
+                            1,
+                            1
+                        ],
+                        [
+                            0,
+                            0,
+                            0
+                        ]
+                    ],
                     "frequency": 5114000000.0,
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
@@ -28,7 +44,23 @@
                 },
                 "1": {
                     "transmon_levels": 3,
-                    "confusion_matrix": [[1,0,0], [0,1,1], [0,0,0]],
+                    "confusion_matrix": [
+                        [
+                            1,
+                            0,
+                            0
+                        ],
+                        [
+                            0,
+                            1,
+                            1
+                        ],
+                        [
+                            0,
+                            0,
+                            0
+                        ]
+                    ],
                     "frequency": 4914000000.0,
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,

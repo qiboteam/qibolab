@@ -28,9 +28,6 @@ from ...execution_parameters import (
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig, Qubit
 
-# DEBUG
-import datetime
-
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
     """Sample elements with n-dimensional probabilities.
 
@@ -250,8 +247,8 @@ def _singleshot_results(
     return dict(zip(acq_id, res))
 
 
-def add_noise_and_diff_acquisition(exp_data:np.ndarray, acquisition_type:AcquisitionType) -> np.ndarray:
-    """Add Gaussian noise to experimental data and format it according to the acquisition type.
+def diff_acquisition(exp_data:np.ndarray, acquisition_type:AcquisitionType) -> np.ndarray:
+    """Format data according to the acquisition type.
 
     In case of :const:`AcquisitionType.INTEGRATION` the data is formatted as if we are running a SIGNAL experiment on real hardware, 
     hence the single point is composed by the 2 IQ components; in the case of the emulator one component is simply null since all the information
@@ -262,12 +259,10 @@ def add_noise_and_diff_acquisition(exp_data:np.ndarray, acquisition_type:Acquisi
     out of the probability definition interval 0 <= p <= 1.
     """
 
-    np.random.seed(123456)
-    exp_data = np.random.normal(exp_data, scale=0.001)
-
     if acquisition_type is AcquisitionType.INTEGRATION:
-                zeros = np.zeros(exp_data.shape)
-                exp_data = np.stack((exp_data, zeros), axis=-1)
+        np.random.seed(123456)
+        zeros = np.zeros(exp_data.shape)
+        exp_data = np.stack((exp_data, zeros), axis=-1)
             
     if acquisition_type is AcquisitionType.DISCRIMINATION:
         exp_data = np.clip(exp_data, 0, 1)
