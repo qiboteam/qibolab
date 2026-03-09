@@ -162,7 +162,6 @@ class EmulatorController(Controller):
         channels = [
             [
                 operator,
-                # ChannelTime(waveforms, sampling_rate=self.sampling_rate),
                 channel_time(waveforms, sampling_rate=self.sampling_rate),
             ]
             for operator, waveforms in hamiltonians(
@@ -292,29 +291,3 @@ def channel_time(
         return 0
 
     return time
-
-class ChannelTime:
-    def __init__(
-            self,
-            waveforms: Iterable[Modulated],
-            sampling_rate: int,):
-        
-        self.waveforms = waveforms
-        self.sampling_rate = sampling_rate
-
-    def __call__(self, t: float) -> float:
-        cumulative_time = 0
-        cumulative_phase = 0
-
-        for pulse in self.waveforms:
-            pulse_phase = pulse.phase
-
-            if cumulative_time <= t < cumulative_time + pulse.duration:
-                relative_time = t - cumulative_time
-                index = int(np.floor(relative_time * self.sampling_rate))
-                return pulse(t, index, cumulative_phase)
-
-            cumulative_time += pulse.duration
-            cumulative_phase += pulse_phase
-
-        return 0
