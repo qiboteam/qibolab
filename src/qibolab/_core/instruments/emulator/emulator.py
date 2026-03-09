@@ -144,7 +144,6 @@ class EmulatorController(Controller):
         The array returned by this function has a single dimension, over
         the various measurements included in the sequence.
         """
-
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
         configs_ = update_configs(configs, updates)
@@ -239,17 +238,22 @@ def hamiltonian(
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
-    n = hamiltonian.transmon_levels
+    
+    ham_qubit = hamiltonian.qubits[hilbert_space_index]
+    n = ham_qubit.transmon_levels
     if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         op = sum((engine.expand(o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))) 
-            for (q, o) in config.operator(n=n, cross_dict=config.crosstalk, engine=engine))
+            for (q, o) in config.operator(
+                n=n, 
+                cross_dict=ham_qubit.classical_crosstalk, 
+                engine=engine))
         )
     else:
         op = engine.expand(
             config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
         )
     waveforms = (
-        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
+        waveform(pulse, config, ham_qubit, sampling_rate)
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
@@ -268,9 +272,6 @@ def hamiltonians(
     for ch in sequence.channels:
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig):
-            if isinstance(configs[ch], (DriveEmulatorConfig, FluxEmulatorConfig)):
-                drive_q = int(ch.split("/")[0])
-                configs[ch] = configs[ch].model_copy(update={"crosstalk": hconfig.qubits[drive_q].classical_crosstalk})
             
             new_terms = hamiltonian(
                             sequence.channel(ch),
