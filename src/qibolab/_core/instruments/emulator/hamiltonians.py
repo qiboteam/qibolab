@@ -56,9 +56,22 @@ class FluxEmulatorConfig(Config):
         return self.offset * self.voltage_to_flux
 
 
+def compute_dummy_confusion_matrix(n: int, p_into_0: float) -> list:
+    matrix = np.zeros((n, n))
+    matrix[0, 0] = 1
+    matrix[1, 1] = 1 
+    matrix[0, 1:] = p_into_0
+    matrix[1, 1:] = 1 - p_into_0
+    return matrix.tolist()
+
+
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
+    transmon_levels: int = 2
+    """Number of energy eigenstates to simulate"""
+    confusion_matrix: list | None = compute_dummy_confusion_matrix(transmon_levels, 0.0)
+    """Confusion matrix for state classification"""
     frequency: float = 0
     """Qubit frequency for 0->1."""
     anharmonicity: float = 0
@@ -137,24 +150,24 @@ class CapacitiveCoupling(Config):
     """Qubit-qubit coupling."""
 
     @staticmethod
-    def _operator(n: int, engine: SimulationEngine) -> Operator:
+    def _operator(n0: int, n1:int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
         op = engine.tensor(
             [
-                engine.destroy(n),
-                engine.create(n),
+                engine.destroy(n0),
+                engine.create(n1),
             ]
         ) + engine.tensor(
             [
-                engine.create(n),
-                engine.destroy(n),
+                engine.create(n0),
+                engine.destroy(n1),
             ]
         )
         return 2 * np.pi * op / giga
 
-    def operator(self, n: int, engine: SimulationEngine) -> Operator:
+    def operator(self, n0: int, n1: int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
-        return self.coupling * self._operator(n, engine)
+        return self.coupling * self._operator(n0, n1, engine)
 
 
 class FluxPulse(Model):
@@ -272,7 +285,6 @@ class HamiltonianConfig(Config):
     """Hamiltonian configuration."""
 
     kind: Literal["hamiltonian"] = "hamiltonian"
-    transmon_levels: int = 2
     qubits: dict[QubitId, Qubit] = Field(default_factory=dict)
     pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
 
@@ -299,14 +311,14 @@ class HamiltonianConfig(Config):
     @property
     def dims(self) -> list[int]:
         """Dimensions of the system."""
-        return [self.transmon_levels] * len(self.qubits)
+        return [q.transmon_levels for q in self.qubits.values()]
 
     def hamiltonian(self, config: dict, engine: SimulationEngine) -> Operator:
         """Time independent part of Hamiltonian."""
         qubit_terms = sum(
             engine.expand(
-                op=qubit.operator(
-                    n=self.transmon_levels,
+                qubit.operator(
+                    n=qubit.transmon_levels,
                     flux=static_flux(qubit=i, config=config),
                     engine=engine,
                 ),
@@ -317,7 +329,11 @@ class HamiltonianConfig(Config):
         )
         coupling = sum(
             engine.expand(
-                op=pair.operator(self.transmon_levels, engine),
+                op=pair.operator(
+                    self.qubits[pair_id[0]].transmon_levels, 
+                    self.qubits[pair_id[1]].transmon_levels,
+                    engine
+                    ),
                 dims=self.dims,
                 targets=[
                     self.hilbert_space_index(pair_id[0]),
@@ -337,7 +353,7 @@ class HamiltonianConfig(Config):
             if len(qubit.t1) > 0:
                 collapse_operators.append(
                     engine.expand(
-                        op=qubit.relaxation(self.transmon_levels, engine),
+                        op=qubit.relaxation(qubit.transmon_levels, engine),
                         dims=self.dims,
                         targets=self.hilbert_space_index(i),
                     )
@@ -345,7 +361,7 @@ class HamiltonianConfig(Config):
             if len(qubit.t2) > 0:
                 collapse_operators.append(
                     engine.expand(
-                        op=qubit.dephasing(self.transmon_levels, engine),
+                        op=qubit.dephasing(qubit.transmon_levels, engine),
                         dims=self.dims,
                         targets=self.hilbert_space_index(i),
                     )
