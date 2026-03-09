@@ -8,14 +8,11 @@ from ...execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from ...identifier import ChannelId, QubitId, Result
+from ...identifier import ChannelId, Result
 from ...pulses import Acquisition, PulseId, Readout
 from ...sequence import PulseSequence
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig, Qubit
-
-# DEBUG
-import datetime
 
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
     """Sample elements with n-dimensional probabilities.
@@ -51,21 +48,6 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
     shots = ndchoice(probabilities, nshots)
     # move shots from innermost to outermost dimension
     return np.moveaxis(shots, -1, 0)
-
-
-# def calculate_probabilities_from_density_matrix(
-#     states: NDArray, subsystems: Iterable[QubitId], nsubsystems: int, d: int
-# ) -> NDArray:
-#     """Compute probabilities from density matrix."""
-#     states_ = np.reshape(states, states.shape[:-2] + 2 * nsubsystems * (d,))
-#     marginal = np.einsum(
-#         states_,
-#         # TODO: the `np.array()` wrapping call is only needed because of NumPy's type
-#         # annotation - in practice, it also works without
-#         np.array([...] + list(range(nsubsystems)) * 2),
-#         np.array([...] + list(subsystems)),
-#     )
-#     return np.abs(marginal).reshape((*states.shape[:-2], -1))
 
 
 def calculate_probabilities_from_density_matrix(
@@ -121,8 +103,8 @@ def select_acquisitions(
     return np.stack([states[n].full() for n in samples])
 
 
-def add_noise_and_diff_acquisition(exp_data:np.ndarray, acquisition_type:AcquisitionType) -> np.ndarray:
-    """Add Gaussian noise to experimental data and format it according to the acquisition type.
+def diff_acquisition(exp_data:np.ndarray, acquisition_type:AcquisitionType) -> np.ndarray:
+    """Format data according to the acquisition type.
 
     In case of :const:`AcquisitionType.INTEGRATION` the data is formatted as if we are running a SIGNAL experiment on real hardware, 
     hence the single point is composed by the 2 IQ components; in the case of the emulator one component is simply null since all the information
@@ -133,12 +115,10 @@ def add_noise_and_diff_acquisition(exp_data:np.ndarray, acquisition_type:Acquisi
     out of the probability definition interval 0 <= p <= 1.
     """
 
-    np.random.seed(123456)
-    exp_data = np.random.normal(exp_data, scale=0.001)
-
     if acquisition_type is AcquisitionType.INTEGRATION:
-                zeros = np.zeros(exp_data.shape)
-                exp_data = np.stack((exp_data, zeros), axis=-1)
+        np.random.seed(123456)
+        zeros = np.zeros(exp_data.shape)
+        exp_data = np.stack((exp_data, zeros), axis=-1)
             
     if acquisition_type is AcquisitionType.DISCRIMINATION:
         exp_data = np.clip(exp_data, 0, 1)
@@ -195,9 +175,9 @@ def results(
 
             res = np.sum(probabilities[..., i,states_computational_idx[i]==1],axis=-1)
 
-            res = add_noise_and_diff_acquisition(res, options.acquisition_type)
+            res = np.random.normal(res, scale=0.001)
+            res = diff_acquisition(res, options.acquisition_type)
             results[ro_id] = res
-
 
     if options.averaging_mode is AveragingMode.SINGLESHOT:
 
@@ -214,13 +194,7 @@ def results(
                 i
             ]
 
-            res = add_noise_and_diff_acquisition(res, options.acquisition_type)
+            res = diff_acquisition(res, options.acquisition_type)
             results[ro_id] = res
-
-    # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-    # STILL NOT WORKING FOR 'qutrits' PLATFORM
-    # list_res = [v for v in results.values()]
-    # t = datetime.datetime.now().strftime("%H:%M:%S")
-    # np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(list_res))
 
     return results

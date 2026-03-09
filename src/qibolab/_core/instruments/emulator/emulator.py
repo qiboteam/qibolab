@@ -35,11 +35,6 @@ from .hamiltonians import (
 from .results import acquisitions, index, results, select_acquisitions
 
 
-# DEBUG
-import datetime
-import rich
-
-
 __all__ = ["EmulatorController"]
 
 
@@ -128,11 +123,6 @@ class EmulatorController(Controller):
             # append new slice for the current parallel value
             results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
-        # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-        # STILL NOT WORKING FOR 'qutrits' PLATFORM
-        # t = datetime.datetime.now().strftime("%H:%M:%S")
-        # np.savez(f'{t}_raw_qutip_evolution.npz', np.stack(results))
-
         # stack all slices in a single array, along the current outermost dimension
         return np.stack(results)
 
@@ -158,12 +148,6 @@ class EmulatorController(Controller):
             time_hamiltonian=time_hamiltonian,
         )
         
-        # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-        # STILL NOT WORKING FOR 'qutrits' PLATFORM
-        # t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
-        # complete_qutip_evo = np.stack([s.full() for s in results.states])
-        # np.savez(f'./phase_tom/{t}_complete_qutip_evolution_phi_{phase}_duration_{duration}.npz', complete_qutip_evo)
-
         return select_acquisitions(
             results.states,
             acquisitions(sequence_).values(),
@@ -282,22 +266,7 @@ def hamiltonians(
                             sampling_rate,
                         )
             hamiltonians_array += (new_terms, )
-    return hamiltonians_array
-
-    # else:
-    #     return (
-    #         hamiltonian(
-    #             sequence.channel(ch),
-    #             configs[ch],
-    #             hconfig,
-    #             index(ch, hconfig),
-    #             engine,
-    #             sampling_rate,
-    #         )
-    #         for ch in sequence.channels
-    #         # TODO: drop the following, and treat acquisitions just as empty channels
-    #         if not isinstance(configs[ch], AcquisitionConfig)
-    #     )         
+    return hamiltonians_array     
 
 
 def channel_time(
