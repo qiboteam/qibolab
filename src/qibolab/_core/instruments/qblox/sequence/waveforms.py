@@ -10,9 +10,18 @@ from qibolab._core.sweeper import Sweeper
 
 __all__ = []
 
-ComponentId = tuple[UUID4, int]
+QuadratureIndex = int
+"""Index of the quadrature component (0=I, 1=Q)."""
+ComponentId = tuple[UUID4, QuadratureIndex]
+"""Index of an individual pulse component.
+
+Each pulse is labeled by a unique identifier, but it is associated to two components,
+corresponding to its quadratures (I, Q).
+"""
 WaveformIndex = int
+"""Index of the memory block containing the given waveform samples."""
 WaveformIndices = dict[ComponentId, tuple[WaveformIndex, int]]
+"""Map pulses' components to waveforms memory indices, and related duration."""
 
 
 class Waveform(Model):
