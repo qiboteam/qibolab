@@ -78,7 +78,6 @@ class QutipEngine(SimulationEngine):
         collapse_operators: list[Operator] | None = None,
         **kwargs,
     ):
-        
         """Evolve the system."""
 
         # force the qutip engine (and, on GPU, its data-layer plugin) to be

@@ -24,8 +24,6 @@ from ..sequence import PulseSequence
 from ..sweeper import ParallelSweepers
 
 # DEBUG
-import numpy as np
-import datetime
 
 __all__ = ["Platform"]
 
