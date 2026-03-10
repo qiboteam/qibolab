@@ -372,7 +372,11 @@ class Cluster(Controller):
                     continue
 
                 # ensure acquisition status, and fetch results
-                self.cluster.get_acquisition_status(slot, seq, timeout=1)
+                acq_status = self.cluster.get_acquisition_status(slot, seq, timeout=1)
+                if acq_status is False:
+                    raise RuntimeError(
+                        f"Acquisition not completed. slot: {slot}, seq: {seq}."
+                    )
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
                         self.cluster.store_scope_acquisition(slot, seq, str(name))
