@@ -37,10 +37,11 @@
                     "t2": {
                         "0-1": 50000.0
                     },
-                    "classical_crosstalk": {
+                    "drive_crosstalk": {
                         "0": 1.0,
-                        "1": 0.01
-                    }
+                        "1": 0.0
+                    },
+                    "flux_crosstalk": {}
                 },
                 "1": {
                     "transmon_levels": 3,
@@ -72,10 +73,11 @@
                     "t2": {
                         "0-1": 61000.0
                     },
-                    "classical_crosstalk": {
-                        "0": 0.01,
+                    "drive_crosstalk": {
+                        "0": 0.0,
                         "1": 1.0
-                    }
+                    },
+                    "flux_crosstalk": {}
                 }
             },
             "pairs": {
