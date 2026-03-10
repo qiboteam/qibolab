@@ -16,13 +16,16 @@ from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.instruments.emulator.hamiltonians import (
+    DriveEmulatorConfig,
+    FluxEmulatorConfig,
+)
 from qibolab._core.pulses import (
     Delay,
     Pulse,
     PulseLike,
     VirtualZ,
 )
-from qibolab._core.instruments.emulator.hamiltonians import DriveEmulatorConfig, FluxEmulatorConfig
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
@@ -40,7 +43,6 @@ NYQUIST_FREQUENCY = 20
 """GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
 SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
 """Minimum time the emulator can resolve"""
-
 
 
 __all__ = ["EmulatorController"]
@@ -214,6 +216,7 @@ class EmulatorController(Controller):
         ]
         return OperatorEvolution(channels) if len(channels) > 0 else None
 
+
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
     """Apply sweep updates to base sequence."""
     return PulseSequence(
@@ -246,22 +249,24 @@ def hamiltonian(
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
-    
+
     ham_qubit = hamiltonian.qubits[hilbert_space_index]
     n = ham_qubit.transmon_levels
 
     crosstalk_terms = {
         DriveEmulatorConfig: ham_qubit.drive_crosstalk,
-        FluxEmulatorConfig: ham_qubit.flux_crosstalk
+        FluxEmulatorConfig: ham_qubit.flux_crosstalk,
     }
     crosstalk_factor = crosstalk_terms.get(type(config))
-    
+
     if crosstalk_factor:
-        op = sum((engine.expand(o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))) 
-            for (q, o) in config.operator(
-                n=n, 
-                cross_dict=crosstalk_factor, 
-                engine=engine))
+        op = sum(
+                engine.expand(
+                    o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))
+                )
+                for (q, o) in config.operator(
+                    n=n, cross_dict=crosstalk_factor, engine=engine
+                )
         )
 
     else:
@@ -285,20 +290,19 @@ def hamiltonians(
     sampling_rate: float,
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    
+
     hamiltonians_array = ()
     for ch in sequence.channels:
         # TODO: drop the following, and treat acquisitions just as empty channels
         if not isinstance(configs[ch], AcquisitionConfig):
-            
             new_terms = hamiltonian(
-                            sequence.channel(ch),
-                            configs[ch],
-                            hconfig,
-                            index(ch, hconfig),
-                            engine,
-                            sampling_rate,
-                        )
+                sequence.channel(ch),
+                configs[ch],
+                hconfig,
+                index(ch, hconfig),
+                engine,
+                sampling_rate,
+            )
             hamiltonians_array += (new_terms, )
     return hamiltonians_array
 
@@ -317,6 +321,7 @@ def channel_coefficients(
 
     pulse_waveforms = np.zeros_like(times)
 
+<<<<<<< HEAD
     cumulative_phase = 0
     cumulative_time = 0
     for pulse in waveforms:
@@ -338,3 +343,6 @@ def channel_coefficients(
 
     # return pulse_waveforms
     return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)
+=======
+    return time
+>>>>>>> a1cc1257 ([pre-commit.ci] auto fixes from pre-commit.com hooks)

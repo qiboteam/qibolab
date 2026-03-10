@@ -65,7 +65,6 @@ class QutipEngine(SimulationEngine):
         save_evolution: Path | None = None,
         **kwargs,
     ):
-        
         """Evolve the system."""
 
         time_diff = np.diff(time)

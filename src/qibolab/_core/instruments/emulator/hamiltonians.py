@@ -28,8 +28,13 @@ class DriveEmulatorConfig(Config):
     """Rabi frequency [Hz]"""
 
     @staticmethod
-    def operator(n: int, cross_dict:dict[QubitId, float], engine: SimulationEngine) -> Operator:
-        return ((q, -1j * mu * (engine.destroy(n) - engine.create(n))) for q, mu in  cross_dict.items())
+    def operator(
+        n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
+    ) -> Operator:
+        return (
+            (q, -1j * mu * (engine.destroy(n) - engine.create(n)))
+            for q, mu in cross_dict.items()
+        )
 
 
 class FluxEmulatorConfig(Config):
@@ -43,8 +48,13 @@ class FluxEmulatorConfig(Config):
     """Convert voltarget to flux."""
 
     @staticmethod
-    def operator(n: int, cross_dict:dict[QubitId, float], engine: SimulationEngine) -> Operator:
-        return ((q, -1j * mu * (engine.create(n) * engine.destroy(n))) for q, mu in  cross_dict.items())
+    def operator(
+        n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
+    ) -> Operator:
+        return (
+            (q, -1j * mu * (engine.create(n) * engine.destroy(n)))
+            for q, mu in cross_dict.items()
+        )
 
     @property
     def flux(self) -> float:
@@ -55,7 +65,7 @@ class FluxEmulatorConfig(Config):
 def compute_dummy_confusion_matrix(n: int, p_into_0: float) -> list:
     matrix = np.zeros((n, n))
     matrix[0, 0] = 1
-    matrix[1, 1] = 1 
+    matrix[1, 1] = 1
     matrix[0, 1:] = p_into_0
     matrix[1, 1:] = 1 - p_into_0
     return matrix.tolist()
@@ -142,7 +152,7 @@ class CapacitiveCoupling(Config):
     """Qubit-qubit coupling."""
 
     @staticmethod
-    def _operator(n0: int, n1:int, engine: SimulationEngine) -> Operator:
+    def _operator(n0: int, n1: int, engine: SimulationEngine) -> Operator:
         """Time independent operator."""
         op = engine.tensor(
             [
@@ -322,10 +332,10 @@ class HamiltonianConfig(Config):
         coupling = sum(
             engine.expand(
                 pair.operator(
-                    self.qubits[pair_id[0]].transmon_levels, 
+                    self.qubits[pair_id[0]].transmon_levels,
                     self.qubits[pair_id[1]].transmon_levels,
-                    engine
-                    ),
+                    engine,
+                ),
                 self.dims,
                 [
                     self.hilbert_space_index(pair_id[0]),
