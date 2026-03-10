@@ -39,7 +39,7 @@
                     },
                     "drive_crosstalk": {
                         "0": 1.0,
-                        "1": 0.0
+                        "1": 0.75
                     },
                     "flux_crosstalk": {}
                 },
@@ -74,7 +74,7 @@
                         "0-1": 61000.0
                     },
                     "drive_crosstalk": {
-                        "0": 0.0,
+                        "0": 0.01,
                         "1": 1.0
                     },
                     "flux_crosstalk": {}
