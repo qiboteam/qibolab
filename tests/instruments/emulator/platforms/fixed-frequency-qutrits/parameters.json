@@ -45,7 +45,7 @@
                     },
                     "drive_crosstalk": {
                         "0": 1.0,
-                        "1": 0.0
+                        "1": 0.75
                     },
                     "flux_crosstalk": {}
                 },
@@ -80,7 +80,7 @@
                         "0-1": 61000.0
                     },
                     "drive_crosstalk": {
-                        "0": 0.0,
+                        "0": 0.01,
                         "1": 1.0
                     },
                     "flux_crosstalk": {}
@@ -306,7 +306,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.11131199155193991
+                            "relative_phase": 0.20688823560764114
                         }
                     ],
                     [
@@ -325,7 +325,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 4.023409598774549
+                            "relative_phase": 4.488480242568204
                         }
                     ],
                     [
@@ -365,7 +365,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 3.252904645141733
+                            "relative_phase": 3.3484808891974343
                         }
                     ],
                     [
@@ -384,7 +384,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.881816945184756
+                            "relative_phase": 1.3468875889784107
                         }
                     ],
                     [
