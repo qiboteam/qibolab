@@ -43,10 +43,11 @@
                     "t2": {
                         "0-1": 50000.0
                     },
-                    "classical_crosstalk": {
+                    "drive_crosstalk": {
                         "0": 1.0,
-                        "1": 0.01
-                    }
+                        "1": 0.0
+                    },
+                    "flux_crosstalk": {}
                 },
                 "1": {
                     "transmon_levels": 3,
@@ -78,10 +79,11 @@
                     "t2": {
                         "0-1": 61000.0
                     },
-                    "classical_crosstalk": {
-                        "0": 0.01,
+                    "drive_crosstalk": {
+                        "0": 0.0,
                         "1": 1.0
-                    }
+                    },
+                    "flux_crosstalk": {}
                 }
             },
             "pairs": {
@@ -94,36 +96,31 @@
             "kind": "drive-emulator",
             "frequency": 5114000000.0,
             "rabi_frequency": 50000000.0,
-            "scale_factor": 10.0,
-            "crosstalk": {}
+            "scale_factor": 10.0
         },
         "0/drive1": {
             "kind": "drive-emulator",
             "frequency": 4914000000.0,
             "rabi_frequency": 50000000.0,
-            "scale_factor": 10.0,
-            "crosstalk": {}
+            "scale_factor": 10.0
         },
         "0/drive12": {
             "kind": "drive-emulator",
             "frequency": 4784000000.0,
             "rabi_frequency": 50000000.0,
-            "scale_factor": 10.0,
-            "crosstalk": {}
+            "scale_factor": 10.0
         },
         "1/drive": {
             "kind": "drive-emulator",
             "frequency": 4914000000.0,
             "rabi_frequency": 50000000.0,
-            "scale_factor": 10.0,
-            "crosstalk": {}
+            "scale_factor": 10.0
         },
         "1/drive12": {
             "kind": "drive-emulator",
             "frequency": 4584000000.0,
             "rabi_frequency": 50000000.0,
-            "scale_factor": 10.0,
-            "crosstalk": {}
+            "scale_factor": 10.0
         },
         "0/probe": {
             "kind": "iq",
@@ -309,7 +306,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.0
+                            "relative_phase": 0.11131199155193991
                         }
                     ],
                     [
@@ -328,7 +325,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.0
+                            "relative_phase": 4.023409598774549
                         }
                     ],
                     [
@@ -368,7 +365,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 3.141592653589793
+                            "relative_phase": 3.252904645141733
                         }
                     ],
                     [
@@ -387,7 +384,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 3.141592653589793
+                            "relative_phase": 0.881816945184756
                         }
                     ],
                     [

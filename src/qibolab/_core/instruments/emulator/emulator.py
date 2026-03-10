@@ -224,22 +224,32 @@ def hamiltonian(
     
     ham_qubit = hamiltonian.qubits[hilbert_space_index]
     n = ham_qubit.transmon_levels
-    if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
+
+    crosstalk_terms = {
+        DriveEmulatorConfig: ham_qubit.drive_crosstalk,
+        FluxEmulatorConfig: ham_qubit.flux_crosstalk
+    }
+    crosstalk_factor = crosstalk_terms.get(type(config))
+    
+    if crosstalk_factor:
         op = sum((engine.expand(o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))) 
             for (q, o) in config.operator(
                 n=n, 
-                cross_dict=ham_qubit.classical_crosstalk, 
+                cross_dict=crosstalk_factor, 
                 engine=engine))
         )
+
     else:
         op = engine.expand(
             config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
         )
+
     waveforms = (
         waveform(pulse, config, ham_qubit, sampling_rate)
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
+
     return (op, [w for w in waveforms if w is not None])
 
 
