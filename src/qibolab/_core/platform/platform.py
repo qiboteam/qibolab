@@ -27,8 +27,6 @@ from ..sweeper import ParallelSweepers
 from ..unrolling import Bounds, batch
 
 # DEBUG
-import numpy as np
-import datetime
 
 __all__ = ["Platform"]
 
@@ -282,7 +280,7 @@ class Platform:
         assert isinstance(bounds, Bounds)
         for b in batch(sequences, bounds):
             results |= self._execute(b, options, configs, sweepers)
-            
+
         # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
         # STILL NOT WORKING FOR 'qutrits' PLATFORM
         # qutip_res = [v for v in results.values()]

@@ -26,7 +26,6 @@ class QutipEngine(SimulationEngine):
         collapse_operators: list[Operator] = None,
         **kwargs,
     ):
-        
         """Evolve the system."""
         if time_hamiltonian is not None:
             hamiltonian += self.engine.QobjEvo(time_hamiltonian.operators)
