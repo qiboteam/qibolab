@@ -14,6 +14,7 @@ from ...sequence import PulseSequence
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig, Qubit
 
+
 def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
     """Sample elements with n-dimensional probabilities.
 
@@ -50,9 +51,7 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
     return np.moveaxis(shots, -1, 0)
 
 
-def calculate_probabilities_from_density_matrix(
-    states: NDArray
-) -> NDArray:
+def calculate_probabilities_from_density_matrix(states: NDArray) -> NDArray:
     """Compute probabilities from density matrix."""
     diag = np.einsum(
         states,
@@ -62,7 +61,6 @@ def calculate_probabilities_from_density_matrix(
         np.array([...] + [0]),
     )
     return np.abs(diag)
-
 
 
 def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
@@ -103,14 +101,16 @@ def select_acquisitions(
     return np.stack([states[n].full() for n in samples])
 
 
-def diff_acquisition(exp_data:np.ndarray, acquisition_type:AcquisitionType) -> np.ndarray:
+def diff_acquisition(
+    exp_data: np.ndarray, acquisition_type: AcquisitionType
+) -> np.ndarray:
     """Format data according to the acquisition type.
 
-    In case of :const:`AcquisitionType.INTEGRATION` the data is formatted as if we are running a SIGNAL experiment on real hardware, 
+    In case of :const:`AcquisitionType.INTEGRATION` the data is formatted as if we are running a SIGNAL experiment on real hardware,
     hence the single point is composed by the 2 IQ components; in the case of the emulator one component is simply null since all the information
     is simply carried by the magnitude of the signal.
 
-    In case of :const:`AcquisitionType.DISCRIMINATION` the data is formatted as if we are running a PROBABILITY experiment on real hardware, 
+    In case of :const:`AcquisitionType.DISCRIMINATION` the data is formatted as if we are running a PROBABILITY experiment on real hardware,
     hence the single point is simply the 1-state probability, so we have to be sure that the added gaussian noise does not bring the computed value
     out of the probability definition interval 0 <= p <= 1.
     """
@@ -119,27 +119,32 @@ def diff_acquisition(exp_data:np.ndarray, acquisition_type:AcquisitionType) -> n
         np.random.seed(123456)
         zeros = np.zeros(exp_data.shape)
         exp_data = np.stack((exp_data, zeros), axis=-1)
-            
+
     if acquisition_type is AcquisitionType.DISCRIMINATION:
         exp_data = np.clip(exp_data, 0, 1)
 
     return exp_data
 
 
-def add_confusion_matrix(qubit_list: list[Qubit], matrix_a: np.ndarray | None = None) -> np.ndarray:
-    """Function for applying single qubit confusion matrix from the set of qubit present in the system.
-    """
+def add_confusion_matrix(
+    qubit_list: list[Qubit], matrix_a: np.ndarray | None = None
+) -> np.ndarray:
+    """Function for applying single qubit confusion matrix from the set of qubit present in the system."""
 
     if matrix_a is None:
         matrix_a = qubit_list[0].confusion_matrix
-    
+
     qubit_list.pop(0)
     if len(qubit_list) != 0:
         next_q = qubit_list[0]
-        matrix_b = next_q.confusion_matrix if next_q.confusion_matrix is not None else np.eye(next_q.transmon_levels) 
+        matrix_b = (
+            next_q.confusion_matrix
+            if next_q.confusion_matrix is not None
+            else np.eye(next_q.transmon_levels)
+        )
         matrix_a = np.kron(matrix_a, matrix_b)
         add_confusion_matrix(qubit_list, matrix_a)
-    
+
     return matrix_a
 
 
@@ -160,27 +165,31 @@ def results(
     )
     # apply the confusion matrix to the probability tensor
     # TODO: add also 2 qubit contributions to confusion matrix that spoils the tensor product
-    probabilities = np.einsum('ij,...j', add_confusion_matrix(list(hamiltonian.qubits.values())), probabilities)
+    probabilities = np.einsum(
+        "ij,...j",
+        add_confusion_matrix(list(hamiltonian.qubits.values())),
+        probabilities,
+    )
 
     results = {}
 
     if options.averaging_mode is AveragingMode.CYCLIC:
-
         states_computational_idx = np.stack(
-                np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
-            )
+            np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
+        )
 
         for ro_id in acquisitions(sequence).keys():
             i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
 
-            res = np.sum(probabilities[..., i,states_computational_idx[i]==1],axis=-1)
+            res = np.sum(
+                probabilities[..., i, states_computational_idx[i] == 1], axis=-1
+            )
 
             res = np.random.normal(res, scale=0.001)
             res = diff_acquisition(res, options.acquisition_type)
             results[ro_id] = res
 
     if options.averaging_mode is AveragingMode.SINGLESHOT:
-
         assert options.nshots is not None
         sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
         # move measurements dimension to the front, getting ready for extraction
@@ -190,9 +199,9 @@ def results(
         for (ro_id, sample), meas in zip(acquisitions(sequence).items(), measurements):
             i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
             cache_measurements.setdefault(sample, meas)
-            res = np.stack(np.unravel_index(cache_measurements[sample], hamiltonian.dims))[
-                i
-            ]
+            res = np.stack(
+                np.unravel_index(cache_measurements[sample], hamiltonian.dims)
+            )[i]
 
             res = diff_acquisition(res, options.acquisition_type)
             results[ro_id] = res
