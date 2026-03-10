@@ -48,11 +48,13 @@ def waveforms(
         pulse: Pulse, component: str, duration: float | None = None, index: int = 0
     ) -> WaveformSpec:
         duration_ = pulse.duration if duration is None else duration
-        update = (
-            {"duration": duration_} | {"amplitude": 1.0}
-            if pulse.id in amplitude_swept
-            else {}
-        )
+        # reset amplitude to 1 for swept pulses, to avoid doubly scaling their amplitude
+        # statically and in the sweeper implementation
+        # TODO: lift this to the generic processing in the amplitude
+        # BUG: right now, this is not catching the probe pulses, because hidden in the
+        # Readout operations
+        update_amplitude = {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
+        update = {"duration": duration_} | update_amplitude
         return WaveformSpec(
             waveform=Waveform(
                 data=getattr(pulse.model_copy(update=update), component)(sampling_rate),
