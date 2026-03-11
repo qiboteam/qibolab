@@ -11,9 +11,9 @@
     "instructions": 200
   },
   "hamiltonian":{
-    "transmon_levels": 3,
     "qubits": {
       "0": {
+        "transmon_levels": 3,
         "frequency": 5e9,
         "anharmonicity": -200e6,
         "t1": {

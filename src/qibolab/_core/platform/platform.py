@@ -281,12 +281,6 @@ class Platform:
         for b in batch(sequences, bounds):
             results |= self._execute(b, options, configs, sweepers)
 
-        # HERE I COULD RECOVER THE CORRECT SOLUTION ONLY FOR 'fixed-frequency-qutrits' PLATFORM
-        # STILL NOT WORKING FOR 'qutrits' PLATFORM
-        # qutip_res = [v for v in results.values()]
-        # t = datetime.datetime.now().strftime("%H:%M:%S")
-        # np.savez(f'{t}_platformpy_qutip_evolution.npz', np.stack(qutip_res))
-
         return results
 
     @classmethod

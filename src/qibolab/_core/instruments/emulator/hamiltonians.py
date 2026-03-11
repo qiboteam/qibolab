@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Union, cast
 
 import numpy as np
 from pydantic import Field, model_validator
@@ -124,23 +124,12 @@ class FluxEmulatorConfig(Config):
         return self.offset * self.voltage_to_flux
 
 
-def default_confusion_matrix(n: int, p_into_0: float | int) -> list[list[float | int]]:
-    matrix = np.zeros((n, n))
-    matrix[0, 0] = 1
-    matrix[1, 1] = 1
-    matrix[0, 1:] = p_into_0
-    matrix[1, 1:] = 1 - p_into_0
-    return matrix.tolist()
-
-
 class Qubit(Config):
     """Hamiltonian parameters for single qubit."""
 
     transmon_levels: int = 2
     """Number of energy eigenstates to simulate"""
-    confusion_matrix: list[list[float | int]] = default_confusion_matrix(
-        transmon_levels, 0.0
-    )
+    confusion_matrix: list[list[float | int]] | None = None
     """Confusion matrix for state classification"""
     frequency: float = 0
     """Qubit frequency for 0->1."""
@@ -154,6 +143,41 @@ class Qubit(Config):
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
+
+    @model_validator(mode="after")
+    def _validate_confusion_matrix(self) -> "Qubit":
+        """Validate or initialize crosstalk matrices."""
+        n = self.transmon_levels
+        updates = {}
+
+        if self.confusion_matrix is None:
+            p_into_0 = 0.0
+            matrix = np.zeros((n, n))
+            matrix[0, 0] = 1
+            matrix[1, 1] = 1
+            matrix[0, 1:] = p_into_0
+            matrix[1, 1:] = 1 - p_into_0
+            updates["confusion_matrix"] = matrix.tolist()
+
+        if updates:
+            return self.replace(cast(Update, updates))
+
+        if (
+            any([len(row) != n for row in self.confusion_matrix])
+            or len(self.confusion_matrix) != n
+        ):
+            raise ValueError(
+                "Confusion matrix must be a square matrix with dimension (transmon_levels, transmon_levels)."
+            )
+
+        return self
+
+    def replace(self, update: Update) -> "HamiltonianConfig":
+        """Update parameters' values."""
+        d = self.model_dump()
+        for path, val in update.items():
+            _setvalue(d, path, val)
+        return self.model_validate(d)
 
     def omega(self, flux: float = 0) -> float:
         """Angular velocity."""
@@ -383,7 +407,7 @@ class HamiltonianConfig(Config):
             updates["flux_crosstalk"] = np.eye(n).tolist()
 
         if updates:
-            return self.replace(updates)
+            return self.replace(cast(Update, updates))
 
         if any([len(row) != n for row in self.drive_crosstalk]):
             raise ValueError(
