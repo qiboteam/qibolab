@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Annotated, Union
+from typing import Annotated, Union, cast
 
 import numpy as np
 from pydantic import UUID4, AfterValidator
@@ -44,7 +44,7 @@ def waveforms(
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
-    def _make_waveform(
+    def _waveform(
         pulse: Pulse, component: str, duration: float | None = None, index: int = 0
     ) -> WaveformSpec:
         duration_ = pulse.duration if duration is None else duration
@@ -62,10 +62,6 @@ def waveforms(
             ),
             duration=int(duration_),
         )
-
-    def _sweep_durations(sweep: Sweeper):
-        start, _, step = sweep.irange
-        return [start + step * i for i in range(len(sweep))]
 
     pulses = [_pulse(e) for e in sequence if isinstance(e, (Pulse, Readout))]
 
@@ -93,15 +89,15 @@ def waveforms(
 
     # mapping from integer to unique WaveformSpec
     waveform_specs: dict[int, WaveformSpec] = {  # non-swept
-        i * 2 + ch: _make_waveform(pulse, comp, index=i * 2 + ch)
+        i * 2 + ch: _waveform(pulse, comp, index=i * 2 + ch)
         for i, pulse in enumerate(unique_pulses)
         for ch, comp in enumerate(("i", "q"))
     } | {  # swept
-        base + 2 * k + ch: _make_waveform(
-            pulse, comp, duration, index=base + 2 * k + ch
+        base + 2 * k + ch: _waveform(
+            pulse, comp, cast(float, duration), index=base + 2 * k + ch
         )
         for k, (pulse, sweep) in enumerate(pulses_swept)
-        for duration in _sweep_durations(sweep)
+        for duration in np.arange(*sweep.irange)
         for ch, comp in enumerate(("i", "q"))
     }
 
@@ -115,7 +111,7 @@ def waveforms(
     } | {  # swept
         (pulse.id, 2 * i + ch): (base + 2 * k + ch, int(duration))
         for k, (pulse, sweep) in enumerate(pulses_swept)
-        for i, duration in enumerate(_sweep_durations(sweep))
+        for i, duration in enumerate(np.arange(*sweep.irange))
         for ch, _ in enumerate(("i", "q"))
     }
 
