@@ -96,7 +96,7 @@ def select_acquisitions(
     The return type should be rank-3 array, where the last two are the density
     matrices dimensions, while the first one should correspond to the acquisitions.
     """
-    acq, index_pos = np.unique(list(acquisitions), return_index=True)
+    acq, index_pos = np.unique(list(acquisitions), return_inverse=True)
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
     return np.stack([states[n].full() for n in samples]), index_pos
 
