@@ -16,7 +16,7 @@ from pydantic import model_validator
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
-from qibolab._core.identifier import Result
+from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.instruments.emulator.hamiltonians import (
     DriveEmulatorConfig,
@@ -322,25 +322,61 @@ def tlist(sequence: PulseSequence) -> NDArray:
     return np.arange(0, end, SAMPLING_INTERVAL)
 
 
+# def hamiltonian(
+#     pulses: Iterable[PulseLike],
+#     config: Config,
+#     hamiltonian: HamiltonianConfig,
+#     hilbert_space_index: int,
+#     engine: SimulationEngine,
+#     sampling_rate: float,
+# ) -> tuple[Operator, list[Modulated]]:
+
+#     ham_qubit = hamiltonian.qubits[hilbert_space_index]
+#     n = ham_qubit.transmon_levels
+
+#     crosstalk_terms = {
+#         DriveEmulatorConfig: ham_qubit.drive_crosstalk,
+#         FluxEmulatorConfig: ham_qubit.flux_crosstalk,
+#     }
+#     crosstalk_factor = crosstalk_terms.get(type(config))
+
+#     if crosstalk_factor:
+#         op = sum(
+#                 engine.expand(
+#                     o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))
+#                 )
+#                 for (q, o) in config.operator(
+#                     n=n, cross_dict=crosstalk_factor, engine=engine
+#                 )
+#         )
+
+#     else:
+#         op = engine.expand(
+#             config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+#         )
+
+#     waveforms = (
+#         waveform(pulse, config, ham_qubit, sampling_rate)
+#         for pulse in pulses
+#         if isinstance(pulse, (Pulse, Delay, VirtualZ))
+#     )
+
+#     return (op, [w for w in waveforms if w is not None])
+
+
 def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    hilbert_space_index: int,
+    channel: ChannelId,
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
 
+    hilbert_space_index = index(channel, hamiltonian)
     ham_qubit = hamiltonian.qubits[hilbert_space_index]
-    n = ham_qubit.transmon_levels
 
-    crosstalk_terms = {
-        DriveEmulatorConfig: ham_qubit.drive_crosstalk,
-        FluxEmulatorConfig: ham_qubit.flux_crosstalk,
-    }
-    crosstalk_factor = crosstalk_terms.get(type(config))
-
-    if crosstalk_factor:
+    if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         op = sum(
             (
                 engine.expand(
@@ -348,13 +384,13 @@ def hamiltonian(
                     dims=hamiltonian.dims, 
                     targets=hamiltonian.hilbert_space_index(int(q)),
                 ) 
-                for (q, o) in config.operator(n=n, cross_dict=crosstalk_factor, engine=engine)
+                for (q, o) in config.operator(hamiltonian=hamiltonian, channel=channel, engine=engine)
             )
         )
 
     else:
         op = engine.expand(
-            op=config.operator(n=n, engine=engine),
+            op=config.operator(n=ham_qubit.transmon_levels, engine=engine),
             dims=hamiltonian.dims,
             targets=hilbert_space_index,
         )
@@ -384,7 +420,7 @@ def hamiltonians(
                 sequence.channel(ch),
                 configs[ch],
                 hconfig,
-                index(ch, hconfig),
+                ch,  # index(ch, hconfig),
                 engine,
                 sampling_rate,
             )
@@ -430,4 +466,9 @@ def channel_coefficients(
         cumulative_phase += pulse.phase
         cumulative_time += pulse.duration
 
+<<<<<<< HEAD
     return pulse_waveforms
+=======
+    # return pulse_waveforms
+    return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)
+>>>>>>> 2f08a495 (refactoring crosstalk - now both flux and drive crosstalk are defined as matrices mapping lines to qubits.)

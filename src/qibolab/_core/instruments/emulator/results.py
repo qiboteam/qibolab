@@ -296,6 +296,7 @@ def add_confusion_matrix(
 
 def results(
     states: NDArray,
+    measurement_mapping: np.ndarray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -316,6 +317,7 @@ def results(
         if options.averaging_mode is AveragingMode.SINGLESHOT
         else _cyclic_results
     )
+
     # apply the confusion matrix to the probability tensor
     # TODO: add also 2 qubit contributions to confusion matrix that spoils the tensor product
     probabilities = np.einsum(
