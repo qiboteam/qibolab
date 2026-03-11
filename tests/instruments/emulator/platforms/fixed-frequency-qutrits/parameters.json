@@ -42,12 +42,7 @@
                     },
                     "t2": {
                         "0-1": 50000.0
-                    },
-                    "drive_crosstalk": {
-                        "0": 1.0,
-                        "1": 0.75
-                    },
-                    "flux_crosstalk": {}
+                    }
                 },
                 "1": {
                     "transmon_levels": 3,
@@ -60,12 +55,12 @@
                         [
                             0,
                             1,
-                            1
+                            0
                         ],
                         [
                             0,
                             0,
-                            0
+                            1
                         ]
                     ],
                     "frequency": 4914000000.0,
@@ -78,19 +73,34 @@
                     },
                     "t2": {
                         "0-1": 61000.0
-                    },
-                    "drive_crosstalk": {
-                        "0": 0.01,
-                        "1": 1.0
-                    },
-                    "flux_crosstalk": {}
+                    }
                 }
             },
             "pairs": {
                 "0-1": {
-                    "coupling": 3800000.0
+                    "coupling": 0.0
                 }
-            }
+            },
+            "drive_crosstalk": [
+                [
+                    1.0,
+                    0.75
+                ],
+                [
+                    0.01,
+                    1.0
+                ]
+            ],
+            "flux_crosstalk": [
+                [
+                    1.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1.0
+                ]
+            ]
         },
         "0/drive": {
             "kind": "drive-emulator",

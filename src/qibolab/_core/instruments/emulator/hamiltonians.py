@@ -2,12 +2,12 @@ from functools import cached_property
 from typing import Literal, Optional, Union
 
 import numpy as np
-from pydantic import Field
+from pydantic import Field, model_validator
 from qibo.config import raise_error
 from scipy.constants import giga
 
 from ...components import Config
-from ...identifier import QubitId, QubitPairId, TransitionId
+from ...identifier import ChannelId, QubitId, QubitPairId, TransitionId
 from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
@@ -28,14 +28,46 @@ class DriveEmulatorConfig(Config):
     scale_factor: float = 1
     """Scaling factor."""
 
+    # @staticmethod
+    # def operator(
+    #     n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
+    # ) -> Operator:
+    #     if cross_dict:
+    #         return (
+    #             (q, -1j * mu * (engine.destroy(n) - engine.create(n)))
+    #             for q, mu in cross_dict.items()
+    #         )
+
+    #     return -1j * (engine.destroy(n) - engine.create(n))
+
     @staticmethod
     def operator(
-        n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
+        hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
     ) -> Operator:
-        return (
-            (q, -1j * mu * (engine.destroy(n) - engine.create(n)))
-            for q, mu in cross_dict.items()
+
+        channel_idx = int(channel.split("/")[0])
+        operator_tuple = ()
+
+        drive_line = hamiltonian.drive_crosstalk[channel_idx]
+        assert len(drive_line) == len(hamiltonian.qubits), (
+            """Crosstalk matrix should have as many columns as qubits in the system."""
         )
+
+        for mu, (q_idx, qubit) in zip(drive_line, hamiltonian.qubits.items()):
+            if mu != 0:
+                operator_tuple += (
+                    (
+                        q_idx,
+                        -1j
+                        * mu
+                        * (
+                            engine.destroy(qubit.transmon_levels)
+                            - engine.create(qubit.transmon_levels)
+                        ),
+                    ),
+                )
+
+        return operator_tuple
 
 
 class FluxEmulatorConfig(Config):
@@ -48,14 +80,43 @@ class FluxEmulatorConfig(Config):
     voltage_to_flux: float = 1
     """Convert voltarget to flux."""
 
+    # @staticmethod
+    # def operator(
+    #     n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
+    # ) -> Operator:
+    #     return (
+    #         (q, -1j * mu * (engine.create(n) * engine.destroy(n)))
+    #         for q, mu in cross_dict.items()
+    #     )
+
     @staticmethod
     def operator(
-        n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
+        hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
     ) -> Operator:
-        return (
-            (q, -1j * mu * (engine.create(n) * engine.destroy(n)))
-            for q, mu in cross_dict.items()
+
+        channel_idx = int(channel.split("/")[0])
+        operator_tuple = ()
+
+        drive_line = hamiltonian.drive_crosstalk[channel_idx]
+        assert len(drive_line) == len(hamiltonian.qubits), (
+            """Crosstalk matrix should have as many columns as qubits in the system."""
         )
+
+        for mu, (q_idx, qubit) in zip(drive_line, hamiltonian.qubits.items()):
+            if mu != 0:
+                operator_tuple += (
+                    (
+                        q_idx,
+                        -1j
+                        * mu
+                        * (
+                            engine.create(qubit.transmon_levels)
+                            * engine.destroy(qubit.transmon_levels)
+                        ),
+                    ),
+                )
+
+        return operator_tuple
 
     @property
     def flux(self) -> float:
@@ -63,7 +124,7 @@ class FluxEmulatorConfig(Config):
         return self.offset * self.voltage_to_flux
 
 
-def compute_dummy_confusion_matrix(n: int, p_into_0: float) -> list:
+def default_confusion_matrix(n: int, p_into_0: float | int) -> list[list[float | int]]:
     matrix = np.zeros((n, n))
     matrix[0, 0] = 1
     matrix[1, 1] = 1
@@ -77,7 +138,9 @@ class Qubit(Config):
 
     transmon_levels: int = 2
     """Number of energy eigenstates to simulate"""
-    confusion_matrix: list | None = compute_dummy_confusion_matrix(transmon_levels, 0.0)
+    confusion_matrix: list[list[float | int]] = default_confusion_matrix(
+        transmon_levels, 0.0
+    )
     """Confusion matrix for state classification"""
     frequency: float = 0
     """Qubit frequency for 0->1."""
@@ -91,10 +154,6 @@ class Qubit(Config):
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with dephasing time per transition."""
-    drive_crosstalk: dict[QubitId, float] = Field(default_factory=dict)
-    """Dictionary with classical crosstalk coefficients per drive channel."""
-    flux_crosstalk: dict[QubitId, float] = Field(default_factory=dict)
-    """Dictionary with classical crosstalk coefficients per flux channel."""
 
     def omega(self, flux: float = 0) -> float:
         """Angular velocity."""
@@ -293,12 +352,50 @@ class HamiltonianConfig(Config):
 
     kind: Literal["hamiltonian"] = "hamiltonian"
     qubits: dict[QubitId, Qubit] = Field(default_factory=dict)
+    """Dictionary with classical crosstalk coefficients per flux channel."""
     pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
+
+    drive_crosstalk: list[list[float | int]] | None = None
+    """Matrix with classical crosstalk coefficients per drive channel.
+    NOTE: the number or row (length of the outer list) is the number of channels in the system,
+    while the number of columns (length of the inner lists) is the number of qubits in the system."""
+
+    flux_crosstalk: list[list[float | int]] | None = None
+    """Matrix with classical crosstalk coefficients per flux channel.
+    NOTE: the number or row (length of the outer list) is the number of channels in the system,
+    while the number of columns (length of the inner lists) is the number of qubits in the system."""
 
     @property
     def nqubits(self):
         """Number of qubits."""
         return len(self.qubits)
+
+    @model_validator(mode="after")
+    def _validate_crosstalk(self) -> "HamiltonianConfig":
+        """Validate or initialize crosstalk matrices."""
+        n = self.nqubits
+        updates = {}
+
+        if self.drive_crosstalk is None:
+            updates["drive_crosstalk"] = np.eye(n).tolist()
+
+        if self.flux_crosstalk is None:
+            updates["flux_crosstalk"] = np.eye(n).tolist()
+
+        if updates:
+            return self.replace(updates)
+
+        if any([len(row) != n for row in self.drive_crosstalk]):
+            raise ValueError(
+                "Drive crosstalk matrix must have as many columns as qubits."
+            )
+
+        if any([len(row) != n for row in self.flux_crosstalk]):
+            raise ValueError(
+                "Flux crosstalk matrix must have as many columns as qubits."
+            )
+
+        return self
 
     def replace(self, update: Update) -> "HamiltonianConfig":
         """Update parameters' values."""

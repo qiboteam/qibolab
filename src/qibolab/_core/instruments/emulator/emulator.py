@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import ExecutionParameters
-from qibolab._core.identifier import Result
+from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.instruments.emulator.hamiltonians import (
     DriveEmulatorConfig,
@@ -74,19 +74,22 @@ class EmulatorController(Controller):
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
         # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
+
+        results_to_process = ()
+        for sequence in sequences_:
+            sweep_results = self._sweep(sequence, configs, sweepers)
+            results_to_process += (
                 results(
                     # states in computational basis
-                    self._sweep(sequence, configs, sweepers),
-                    sequence,
-                    cast(HamiltonianConfig, configs["hamiltonian"]),
-                    options,
-                )
-                for sequence in sequences_
-            ),
-        )
+                    states=sweep_results[0],
+                    measurement_mapping=sweep_results[1],
+                    sequence=sequence,
+                    hamiltonian=cast(HamiltonianConfig, configs["hamiltonian"]),
+                    options=options,
+                ),
+            )
+
+        return reduce(or_, results_to_process)
 
     def _sweep(
         self,
@@ -123,10 +126,12 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
+            results.append(sweep_sim[0])
+            measurement_indices = sweep_sim[1]
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
+        return np.stack(results), measurement_indices
 
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -216,37 +221,73 @@ def tlist(
     return np.arange(0, end, 1 / rate)
 
 
+# def hamiltonian(
+#     pulses: Iterable[PulseLike],
+#     config: Config,
+#     hamiltonian: HamiltonianConfig,
+#     hilbert_space_index: int,
+#     engine: SimulationEngine,
+#     sampling_rate: float,
+# ) -> tuple[Operator, list[Modulated]]:
+
+#     ham_qubit = hamiltonian.qubits[hilbert_space_index]
+#     n = ham_qubit.transmon_levels
+
+#     crosstalk_terms = {
+#         DriveEmulatorConfig: ham_qubit.drive_crosstalk,
+#         FluxEmulatorConfig: ham_qubit.flux_crosstalk,
+#     }
+#     crosstalk_factor = crosstalk_terms.get(type(config))
+
+#     if crosstalk_factor:
+#         op = sum(
+#                 engine.expand(
+#                     o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))
+#                 )
+#                 for (q, o) in config.operator(
+#                     n=n, cross_dict=crosstalk_factor, engine=engine
+#                 )
+#         )
+
+#     else:
+#         op = engine.expand(
+#             config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+#         )
+
+#     waveforms = (
+#         waveform(pulse, config, ham_qubit, sampling_rate)
+#         for pulse in pulses
+#         if isinstance(pulse, (Pulse, Delay, VirtualZ))
+#     )
+
+#     return (op, [w for w in waveforms if w is not None])
+
+
 def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    hilbert_space_index: int,
+    channel: ChannelId,
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
 
+    hilbert_space_index = index(channel, hamiltonian)
     ham_qubit = hamiltonian.qubits[hilbert_space_index]
-    n = ham_qubit.transmon_levels
 
-    crosstalk_terms = {
-        DriveEmulatorConfig: ham_qubit.drive_crosstalk,
-        FluxEmulatorConfig: ham_qubit.flux_crosstalk,
-    }
-    crosstalk_factor = crosstalk_terms.get(type(config))
-
-    if crosstalk_factor:
+    if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         op = sum(
-                engine.expand(
-                    o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))
-                )
-                for (q, o) in config.operator(
-                    n=n, cross_dict=crosstalk_factor, engine=engine
-                )
+            engine.expand(o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q)))
+            for (q, o) in config.operator(
+                hamiltonian=hamiltonian, channel=channel, engine=engine
+            )
         )
 
     else:
         op = engine.expand(
-            config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
+            config.operator(n=ham_qubit.transmon_levels, engine=engine),
+            hamiltonian.dims,
+            hilbert_space_index,
         )
 
     waveforms = (
@@ -274,7 +315,7 @@ def hamiltonians(
                 sequence.channel(ch),
                 configs[ch],
                 hconfig,
-                index(ch, hconfig),
+                ch,  # index(ch, hconfig),
                 engine,
                 sampling_rate,
             )
