@@ -35,7 +35,7 @@ class WaveformSpec(Model):
     duration: int
 
 
-def _pulse(event: Union[Pulse, Readout], amplitude_swept) -> Pulse:
+def _pulse(event: Union[Pulse, Readout], amplitude_swept: bool) -> Pulse:
     """Extract pulse from event.
 
     Accounts for nested pulses within :class:`Readout` operations.
@@ -76,11 +76,22 @@ def _waveform(
 def _deduplicate(
     pulses: Sequence[Pulse],
 ) -> tuple[list[Pulse], npt.NDArray[np.int_]]:
-    # deduplicate non-swept pulses
-    # NOTE: the reason swept pulses are not deduplicated is that they are swept over
-    # duration so there will be no duplicates. It is still possible that a swept pulse
-    # is the same as a non-swept pulse but this is not a prominent enough use-case to
-    # justify accounting for it.
+    """Deduplicate non-swept pulses
+
+    The reason swept pulses are not deduplicated is that they are swept over duration so
+    there will be no duplicates. It is still possible that a swept pulse is the same as
+    a non-swept pulse but this is not a prominent enough use-case to justify accounting
+    for it.
+
+    Args:
+        pulses: A sequence of Pulse objects to deduplicate.
+
+    Returns:
+        A tuple containing:
+            - list[Pulse]: A list of unique pulses in order of first appearance.
+            - npt.NDArray[np.int_]: An array of indices mapping each original pulse to
+              its corresponding index in the deduplicated list.
+    """
     hashes = np.array([hash(p) for p in pulses])
     _, unique_idx, inverse_idx = np.unique(
         hashes, return_index=True, return_inverse=True
