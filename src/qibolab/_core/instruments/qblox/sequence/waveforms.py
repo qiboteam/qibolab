@@ -1,7 +1,8 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Annotated, Union, cast
 
 import numpy as np
+import numpy.typing as npt
 from pydantic import UUID4, AfterValidator
 
 from qibolab._core.pulses import Pulse, PulseId, PulseLike, Readout
@@ -72,6 +73,22 @@ def _waveform(
     )
 
 
+def _deduplicate(
+    pulses: Sequence[Pulse],
+) -> tuple[list[Pulse], npt.NDArray[np.int_]]:
+    # deduplicate non-swept pulses
+    # NOTE: the reason swept pulses are not deduplicated is that they are swept over
+    # duration so there will be no duplicates. It is still possible that a swept pulse
+    # is the same as a non-swept pulse but this is not a prominent enough use-case to
+    # justify accounting for it.
+    hashes = np.array([hash(p) for p in pulses])
+    _, unique_idx, inverse_idx = np.unique(
+        hashes, return_index=True, return_inverse=True
+    )
+    unique_pulses = np.array(pulses)[unique_idx]
+    return list(unique_pulses), inverse_idx
+
+
 def waveforms(
     sequence: Iterable[PulseLike],
     sampling_rate: float,
@@ -89,29 +106,29 @@ def waveforms(
         if isinstance(p, (Pulse, Readout))
     ]
 
-    # deduplicate non-swept pulses
-    # NOTE: the reason swept pulses are not deduplicated is that they are swept over
-    # duration so there will be no duplicates. It is still possible that a swept pulse
-    # is the same as a non-swept pulse but this is not a prominent enough use-case to
-    # justify accounting for it.
-    hashes = np.array([hash(p) for p in pulses_not_swept])
-    _, unique_idx, inverse_idx = np.unique(
-        hashes, return_index=True, return_inverse=True
-    )
-    unique_pulses = [pulses_not_swept[i] for i in unique_idx]
+    unique_pulses, inverse_idx = _deduplicate(pulses_not_swept)
 
-    # the ids for the swept pulses start counting from `base` since up to here we need
+    # the ids for the swept pulses start counting from `static` since up to here we need
     # two indices (i and q) for each unique non-swept pulse
-    base = 2 * len(unique_pulses)
+    static = 2 * len(unique_pulses)
 
     # mapping from integer to unique WaveformSpec
     waveform_specs: dict[int, WaveformSpec] = {  # non-swept
-        i * 2 + ch: _waveform(pulse, comp, sampling_rate, index=i * 2 + ch)
-        for i, pulse in enumerate(unique_pulses)
+        2 * k + ch: _waveform(
+            pulse,
+            comp,
+            sampling_rate,
+            index=k * 2 + ch,
+        )
+        for k, pulse in enumerate(unique_pulses)
         for ch, comp in enumerate(("i", "q"))
     } | {  # swept
-        base + 2 * k + ch: _waveform(
-            pulse, comp, cast(float, duration), index=base + 2 * k + ch
+        static + 2 * k + ch: _waveform(
+            pulse,
+            comp,
+            sampling_rate,
+            duration=cast(float, duration),
+            index=static + 2 * k + ch,
         )
         for k, (pulse, sweep) in enumerate(pulses_swept)
         for duration in np.arange(*sweep.irange)
@@ -126,7 +143,7 @@ def waveforms(
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
         for ch, _ in enumerate(("i", "q"))
     } | {  # swept
-        (pulse.id, 2 * i + ch): (base + 2 * k + ch, int(duration))
+        (pulse.id, 2 * i + ch): (static + 2 * k + ch, int(duration))
         for k, (pulse, sweep) in enumerate(pulses_swept)
         for i, duration in enumerate(np.arange(*sweep.irange))
         for ch, _ in enumerate(("i", "q"))
