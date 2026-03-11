@@ -96,9 +96,9 @@ def select_acquisitions(
     The return type should be rank-3 array, where the last two are the density
     matrices dimensions, while the first one should correspond to the acquisitions.
     """
-    acq = np.array(list(acquisitions))
+    acq, index_pos = np.unique(list(acquisitions), return_index=True)
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([states[n].full() for n in samples])
+    return np.stack([states[n].full() for n in samples]), index_pos
 
 
 def diff_acquisition(
@@ -150,6 +150,7 @@ def add_confusion_matrix(
 
 def results(
     states: NDArray,
+    measurement_mapping: np.ndarray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -163,6 +164,7 @@ def results(
     probabilities = calculate_probabilities_from_density_matrix(
         states,
     )
+
     # apply the confusion matrix to the probability tensor
     # TODO: add also 2 qubit contributions to confusion matrix that spoils the tensor product
     probabilities = np.einsum(
@@ -178,11 +180,11 @@ def results(
             np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
         )
 
-        for ro_id in acquisitions(sequence).keys():
+        for ro_dim, ro_id in zip(measurement_mapping, acquisitions(sequence).keys()):
             i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
 
             res = np.sum(
-                probabilities[..., i, states_computational_idx[i] == 1], axis=-1
+                probabilities[..., ro_dim, states_computational_idx[i] == 1], axis=-1
             )
 
             res = np.random.normal(res, scale=0.001)
