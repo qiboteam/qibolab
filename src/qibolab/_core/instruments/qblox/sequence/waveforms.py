@@ -34,8 +34,42 @@ class WaveformSpec(Model):
     duration: int
 
 
-def _pulse(event: Union[Pulse, Readout]) -> Pulse:
-    return event.probe if isinstance(event, Readout) else event
+def _pulse(event: Union[Pulse, Readout], amplitude_swept) -> Pulse:
+    """Extract pulse from event.
+
+    Accounts for nested pulses within :class:`Readout` operations.
+
+    Also reset amplitude to 1 for swept pulses, to avoid doubly scaling their amplitude
+    statically and in the sweeper implementation.
+
+    .. todo:
+
+        Lift amplitude rescaling to the generic platform sequence pre-processing, since
+        driver-independent.
+
+    """
+    update = {"amplitude": 1.0} if amplitude_swept else {}
+    return (event.probe if isinstance(event, Readout) else event).model_copy(
+        update=update
+    )
+
+
+def _waveform(
+    pulse: Pulse,
+    component: str,
+    sampling_rate: float,
+    duration: float | None = None,
+    index: int = 0,
+) -> WaveformSpec:
+    duration_ = pulse.duration if duration is None else duration
+    update = {"duration": duration_}
+    return WaveformSpec(
+        waveform=Waveform(
+            data=getattr(pulse.model_copy(update=update), component)(sampling_rate),
+            index=index,
+        ),
+        duration=int(duration_),
+    )
 
 
 def waveforms(
@@ -44,30 +78,13 @@ def waveforms(
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
-    def _waveform(
-        pulse: Pulse, component: str, duration: float | None = None, index: int = 0
-    ) -> WaveformSpec:
-        duration_ = pulse.duration if duration is None else duration
-        # reset amplitude to 1 for swept pulses, to avoid doubly scaling their amplitude
-        # statically and in the sweeper implementation
-        # TODO: lift this to the generic processing in the amplitude
-        # BUG: right now, this is not catching the probe pulses, because hidden in the
-        # Readout operations
-        update_amplitude = {"amplitude": 1.0} if pulse.id in amplitude_swept else {}
-        update = {"duration": duration_} | update_amplitude
-        return WaveformSpec(
-            waveform=Waveform(
-                data=getattr(pulse.model_copy(update=update), component)(sampling_rate),
-                index=index,
-            ),
-            duration=int(duration_),
-        )
-
-    pulses = [_pulse(e) for e in sequence if isinstance(e, (Pulse, Readout))]
+    pulses = [
+        _pulse(e, amplitude_swept) for e in sequence if isinstance(e, (Pulse, Readout))
+    ]
 
     pulses_not_swept = [p for p in pulses if p not in duration_swept]
     pulses_swept = [
-        (_pulse(p), duration_swept[p])
+        (_pulse(p, amplitude_swept), duration_swept[p])
         for p in duration_swept
         if isinstance(p, (Pulse, Readout))
     ]
@@ -89,7 +106,7 @@ def waveforms(
 
     # mapping from integer to unique WaveformSpec
     waveform_specs: dict[int, WaveformSpec] = {  # non-swept
-        i * 2 + ch: _waveform(pulse, comp, index=i * 2 + ch)
+        i * 2 + ch: _waveform(pulse, comp, sampling_rate, index=i * 2 + ch)
         for i, pulse in enumerate(unique_pulses)
         for ch, comp in enumerate(("i", "q"))
     } | {  # swept
