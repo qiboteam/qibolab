@@ -55,12 +55,12 @@
                         [
                             0,
                             1,
-                            0
+                            1
                         ],
                         [
                             0,
                             0,
-                            1
+                            0
                         ]
                     ],
                     "frequency": 4914000000.0,
@@ -78,13 +78,13 @@
             },
             "pairs": {
                 "0-1": {
-                    "coupling": 0.0
+                    "coupling": 3800000.0
                 }
             },
             "drive_crosstalk": [
                 [
                     1.0,
-                    0.75
+                    0.01
                 ],
                 [
                     0.01,
@@ -316,7 +316,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.20688823560764114
+                            "relative_phase": 6.260415131882972
                         }
                     ],
                     [
@@ -335,7 +335,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 4.488480242568204
+                            "relative_phase": 1.5021733538303277
                         }
                     ],
                     [
@@ -375,7 +375,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 3.3484808891974343
+                            "relative_phase": 3.118822478293179
                         }
                     ],
                     [
@@ -394,7 +394,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 1.3468875889784107
+                            "relative_phase": 4.643766007420121
                         }
                     ],
                     [
