@@ -43,8 +43,6 @@ class EmulatorController(Controller):
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
-    bounds: str = "emulator/bounds"
-    """Bounds for emulator."""
 
     @property
     def sampling_rate(self) -> float:
