@@ -60,12 +60,6 @@ it will be explained in the :ref:`related section <main_doc_parameters>`).
         parameters = {
             "settings": {"nshots": 1000, "relaxation_time": 70000},
             "configs": {
-                "dummy/bounds": {
-                    "kind": "bounds",
-                    "waveforms": 0,
-                    "readout": 0,
-                    "instructions": 0,
-                },
                 "0/drive": {"kind": "iq", "frequency": 4833726197},
                 "0/probe": {"kind": "iq", "frequency": 7320000000},
                 "0/acquisition": {
