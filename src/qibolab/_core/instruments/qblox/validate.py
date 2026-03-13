@@ -1,9 +1,9 @@
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox.q1asm.ast_ import Line
-from qibolab._core.instruments.qblox.sequence.acquisition import Acquisition, Weight
-from qibolab._core.instruments.qblox.sequence.sequence import Q1Sequence
 from qibolab._core.sequence import PulseSequence
 
+from .q1asm.ast_ import Line
+from .sequence.acquisition import Acquisition, Weight
+from .sequence.sequence import Q1Sequence
 from .sequence.waveforms import Waveform
 
 __all__ = []
@@ -83,13 +83,13 @@ def assert_acquisition_memory(acquisitions: list[Acquisition]) -> None:
     assert sum(a.num_bins for a in acquisitions) <= ACQUISITION_MEMORY
 
 
-def assert_instruction_memory(elements: list[Line]):
-    assert len(elements) <= QCM_INSTRUCTION_MEMORY
+def assert_instruction_memory(lines: list[Line]):
+    assert len(lines) <= QCM_INSTRUCTION_MEMORY
 
 
 def validate_sequence(sequence: Q1Sequence) -> None:
     """Validate sequence elements."""
-    assert_instruction_memory(list(sequence.program.elements))
+    assert_instruction_memory(sequence.program.lines)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))
