@@ -72,7 +72,6 @@ class DummyInstrument(Controller):
     """
 
     address: str
-    bounds: str = "dummy/bounds"
     channels: dict[ChannelId, Channel] = Field(default_factory=dict)
 
     @property

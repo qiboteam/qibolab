@@ -57,8 +57,6 @@ class Instrument(Model, ABC):
 class Controller(Instrument):
     """Instrument that can play pulses (using waveform generator)."""
 
-    bounds: str
-    """Estimated limitations of the device memory."""
     channels: dict[ChannelId, Channel] = Field(default_factory=dict)
 
     @property

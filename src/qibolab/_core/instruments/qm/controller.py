@@ -135,6 +135,48 @@ def _update_pulse_amplitude(
     return pulse.model_copy(update={"probe": probe})
 
 
+QM_BOUNDS = {
+    "kind": "bounds",
+    "waveforms": 40000.0,
+    "readout": 30,
+    "instructions": 1000000,
+}
+
+
+def _batch(sequences: list[PulseSequence], bounds: dict = QM_BOUNDS):
+    """Split a list of sequences to batches.
+
+    Takes into account the various limitations specified by the `bounds` argument.
+    """
+
+    def update(sequence):
+        # Replicates Bounds.update functionality
+        # You may need to adjust these counters based on your actual sequence structure
+        waveforms = sum(1 for _, pulse in sequence if hasattr(pulse, "waveform"))
+        readout = sum(1 for _, pulse in sequence if hasattr(pulse, "acquisition"))
+        instructions = len(sequence)
+        return {
+            "waveforms": waveforms,
+            "readout": readout,
+            "instructions": instructions,
+        }
+
+    counters = {"waveforms": 0, "readout": 0, "instructions": 0}
+    batch = []
+    for sequence in sequences:
+        update_vals = update(sequence)
+        exceeded = any(counters[k] + update_vals[k] > bounds[k] for k in bounds)
+        if exceeded:
+            yield batch
+            counters = update_vals.copy()
+            batch = [sequence]
+        else:
+            batch.append(sequence)
+            for k in bounds:
+                counters[k] += update_vals[k]
+    yield batch
+
+
 class QmController(Controller):
     """:class:`qibolab.instruments.abstract.Controller` object for controlling
     a Quantum Machines cluster.
@@ -175,8 +217,6 @@ class QmController(Controller):
     https://docs.quantum-machines.co/latest/docs/Hardware/network_and_router/#accessing-the-cluster
     for more details.
     """
-    bounds: str = "qm/bounds"
-    """Maximum bounds used for batching in sequence unrolling."""
     calibration_path: Optional[PathLike] = None
     """Path to the JSON file that contains the mixer calibration."""
     write_calibration: bool = False
@@ -534,57 +574,66 @@ class QmController(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ):
-        if len(sequences) == 0:
-            return {}
-        elif len(sequences) == 1:
-            sequence = sequences[0]
-        else:
-            sequence, _ = unroll_sequences(sequences, options.relaxation_time)
-
-        if len(sequence) == 0:
-            return {}
-
-        new_experiment = Experiment(
-            configs={ch: configs[ch] for ch in configs.keys() & self.channels.keys()},
-            sequences=sequences,
-            sweepers=sweepers,
-        )
-
-        if True:  # TODO: new_experiment != self.experiment or self.manager is None:
-            # register DC elements so that all qubits are
-            # sweetspot even when they are not used
-            for id, channel in self.channels.items():
-                if isinstance(channel, DcChannel):
-                    self.configure_channel(id, configs)
-
-            probe_map = self.configure_channels(configs, sequence.channels)
-            self.register_pulses(configs, sequence)
-            acquisitions = self.register_acquisitions(configs, sequence, options)
-
-            args = ExecutionArguments(sequence, acquisitions, options.relaxation_time)
-            self.preprocess_sweeps(sweepers, configs, args, probe_map)
-            qua_program = program(args, options, sweepers)
-
-            if self.script_file_name is not None:
-                script = generate_qua_script(qua_program, asdict(self.config))
-                with open(self.script_file_name, "w") as file:
-                    file.write(script)
-
-            if self.manager is None:
-                warnings.warn(
-                    "Not connected to Quantum Machines. Returning program and config."
+        results = {}
+        for batched_sequences in _batch(sequences):
+            if len(batched_sequences) == 0:
+                return {}
+            elif len(batched_sequences) == 1:
+                sequence = batched_sequences[0]
+            else:
+                sequence, _ = unroll_sequences(
+                    batched_sequences, options.relaxation_time
                 )
-                return {"program": qua_program, "config": asdict(self.config)}
 
-            machine = self.manager.open_qm(asdict(self.config))
-            program_id = machine.compile(qua_program)
-            self.cache = Cache(
-                machine=machine, program_id=program_id, acquisitions=acquisitions
+            if len(sequence) == 0:
+                return {}
+
+            new_experiment = Experiment(
+                configs={
+                    ch: configs[ch] for ch in configs.keys() & self.channels.keys()
+                },
+                sequences=batched_sequences,
+                sweepers=sweepers,
             )
-            self.experiment = new_experiment
 
-        pending_job = self.cache.run()
-        job = pending_job.wait_for_execution()
-        handles = job.result_handles
-        handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
-        return fetch_results(handles, self.cache.acquisitions.values())
+            if True:  # TODO: new_experiment != self.experiment or self.manager is None:
+                # register DC elements so that all qubits are
+                # sweetspot even when they are not used
+                for id, channel in self.channels.items():
+                    if isinstance(channel, DcChannel):
+                        self.configure_channel(id, configs)
+
+                probe_map = self.configure_channels(configs, sequence.channels)
+                self.register_pulses(configs, sequence)
+                acquisitions = self.register_acquisitions(configs, sequence, options)
+
+                args = ExecutionArguments(
+                    sequence, acquisitions, options.relaxation_time
+                )
+                self.preprocess_sweeps(sweepers, configs, args, probe_map)
+                qua_program = program(args, options, sweepers)
+
+                if self.script_file_name is not None:
+                    script = generate_qua_script(qua_program, asdict(self.config))
+                    with open(self.script_file_name, "w") as file:
+                        file.write(script)
+
+                if self.manager is None:
+                    warnings.warn(
+                        "Not connected to Quantum Machines. Returning program and config."
+                    )
+                    return {"program": qua_program, "config": asdict(self.config)}
+
+                machine = self.manager.open_qm(asdict(self.config))
+                program_id = machine.compile(qua_program)
+                self.cache = Cache(
+                    machine=machine, program_id=program_id, acquisitions=acquisitions
+                )
+                self.experiment = new_experiment
+
+            pending_job = self.cache.run()
+            job = pending_job.wait_for_execution()
+            handles = job.result_handles
+            handles.wait_for_all_values()  # for async replace with ``handles.is_processing()``
+            results |= fetch_results(handles, self.cache.acquisitions.values())
+        return results
