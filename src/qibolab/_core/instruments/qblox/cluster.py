@@ -91,7 +91,6 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    bounds: str = "qblox/bounds"
     _cluster: Optional[qblox.Cluster] = None
 
     @property

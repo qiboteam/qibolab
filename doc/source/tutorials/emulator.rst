@@ -28,12 +28,6 @@ the section ``configs``. Here is an example
         parameters = {
             "settings": {"nshots": 1024, "relaxation_time": 0},
             "configs": {
-                "emulator/bounds": {
-                    "kind": "bounds",
-                    "waveforms": 1000000,
-                    "readout": 50,
-                    "instructions": 200,
-                },
                 "hamiltonian": {
                     "transmon_levels": 2,
                     "qubits": {

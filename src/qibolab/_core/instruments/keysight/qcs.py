@@ -38,8 +38,6 @@ def sweeper_reducer(
 class KeysightQCS(Controller):
     """Driver for interacting with QCS controller server."""
 
-    bounds: str = "qcs/bounds"
-
     qcs_channel_map: qcs.ChannelMapper
     """Map of QCS virtual channels to QCS physical channels."""
     virtual_channel_map: dict[ChannelId, qcs.Channels]
