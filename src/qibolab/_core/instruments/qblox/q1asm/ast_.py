@@ -779,6 +779,10 @@ BlockIter = Iterable[Lineable]
 class Program(Model):
     elements: list[Element]
 
+    @property
+    def lines(self) -> list[Line]:
+        return [e for e in self.elements if isinstance(e, Line)]
+
     @classmethod
     def from_elements(cls, elements: list[Element]):
         comments = []

@@ -71,7 +71,6 @@ class SequencerConfig(Model):
         channels: dict[ChannelId, Channel],
         configs: Configs,
         acquisition: AcquisitionType,
-        index: int,
         rf: bool,
         sequence: Optional[Q1Sequence] = None,
     ) -> "SequencerConfig":
@@ -143,4 +142,4 @@ class SequencerConfig(Model):
         for name in self.model_fields_set - applied:
             value = getattr(self, name)
             if value is not None:
-                seq.set(name, value)
+                seq.parameters[name].set(value)
