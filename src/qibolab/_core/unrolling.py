@@ -84,26 +84,6 @@ class Bounds(Config):
         }
 
 
-# TODO: leave batching at the driver-level and scrap it here
-def batch(sequences: list[PulseSequence], bounds: Bounds):
-    """Split a list of sequences to batches.
-
-    Takes into account the various limitations throught the mechanics defined in
-    :class:`Bounds`, and the numerical limitations specified by the `bounds` argument.
-    """
-    counters = Bounds(waveforms=0, readout=0, instructions=0)
-    batch = []
-    for sequence in sequences:
-        update = Bounds.update(sequence)
-        if counters + update > bounds:
-            yield batch
-            counters, batch = update, [sequence]
-        else:
-            batch.append(sequence)
-            counters += update
-    yield batch
-
-
 # TODO: leave unrolling at the driver-level and scrap it here
 def unroll_sequences(
     sequences: list[PulseSequence], relaxation_time: int
