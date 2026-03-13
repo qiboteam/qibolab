@@ -323,7 +323,6 @@ class Cluster(Controller):
                     self.channels,
                     configs,
                     acquisition,
-                    idx,
                     rf,
                     sequence=sequences_[ch],
                 )

@@ -71,7 +71,6 @@ class SequencerConfig(Model):
         channels: dict[ChannelId, Channel],
         configs: Configs,
         acquisition: AcquisitionType,
-        index: int,
         rf: bool,
         sequence: Optional[Q1Sequence] = None,
     ) -> "SequencerConfig":
