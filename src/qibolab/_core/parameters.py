@@ -36,7 +36,6 @@ from .native import Native, NativeContainer, SingleQubitNatives, TwoQubitNatives
 from .pulses import Acquisition, Pulse, Readout, Rectangular
 from .qubits import Qubit
 from .serialize import Model, replace
-from .unrolling import Bounds
 
 __all__ = [
     "ConfigKinds",
@@ -145,7 +144,7 @@ This is assumed to always be in its serialized form.
 # TODO: replace _UnionType with UnionType, once py3.9 will be abandoned
 _UnionType = Any
 _ChannelConfigT = Union[_UnionType, type[Config]]
-_BUILTIN_CONFIGS: tuple[_ChannelConfigT, ...] = (ChannelConfig, Bounds)
+_BUILTIN_CONFIGS: tuple[_ChannelConfigT, ...] = (ChannelConfig,)
 
 
 class ConfigKinds:
