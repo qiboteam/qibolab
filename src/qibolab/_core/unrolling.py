@@ -4,84 +4,9 @@ May be reused by different instruments.
 """
 
 from collections import defaultdict
-from functools import total_ordering
-from typing import Annotated, Literal
 
-from pydantic.fields import FieldInfo
-
-from .components.configs import Config
-from .pulses import Delay, Pulse
-from .pulses.envelope import Rectangular
+from .pulses import Delay
 from .sequence import PulseSequence
-
-
-def _waveform(sequence: PulseSequence):
-    # TODO: deduplicate pulses (Not yet as drivers may not support it yet)
-    # TODO: VirtualZ deserves a separate handling
-    # TODO: any constant part of a pulse should be counted only once (Zurich Instruments supports this)
-    # TODO: handle multiple qubits or do all devices have the same memory for each channel ?
-    return sum(
-        (
-            (pulse.duration if not isinstance(pulse.envelope, Rectangular) else 1)
-            if isinstance(pulse, Pulse)
-            else 1
-        )
-        for _, pulse in sequence
-    )
-
-
-def _readout(sequence: PulseSequence):
-    # TODO: Do we count 1 readout per pulse or 1 readout per multiplexed readout ?
-    return len(sequence.acquisitions)
-
-
-def _instructions(sequence: PulseSequence):
-    return len(sequence)
-
-
-@total_ordering
-class Bounds(Config):
-    """Instument memory limitations proxies."""
-
-    kind: Literal["bounds"] = "bounds"
-
-    waveforms: Annotated[float, {"count": _waveform}]
-    """Waveforms estimated size."""
-    readout: Annotated[int, {"count": _readout}]
-    """Number of readouts."""
-    instructions: Annotated[int, {"count": _instructions}]
-    """Instructions estimated size."""
-
-    @classmethod
-    def update(cls, sequence: PulseSequence):
-        up = {}
-        for name, info in cls._entries().items():
-            up[name] = info.metadata[0]["count"](sequence)
-
-        return cls(**up)
-
-    def __add__(self, other: "Bounds") -> "Bounds":
-        """Sum bounds element by element."""
-        new = {}
-        for (k, x), (_, y) in zip(
-            self.model_dump().items(), other.model_dump().items()
-        ):
-            if k in type(self)._entries():
-                new[k] = x + y
-
-        return type(self)(**new)
-
-    def __gt__(self, other: "Bounds") -> bool:
-        """Define ordering as exceeding any bound."""
-        return any(getattr(self, f) > getattr(other, f) for f in type(self)._entries())
-
-    @classmethod
-    def _entries(cls) -> dict[str, FieldInfo]:
-        return {
-            n: f
-            for n, f in cls.model_fields.items()
-            if "count" in next(iter(f.metadata), {})
-        }
 
 
 # TODO: leave unrolling at the driver-level and scrap it here
