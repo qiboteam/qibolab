@@ -160,7 +160,7 @@ class ModuleConfig(Model):
             if ModuleType.RF in modtype and not mod.is_rf_type:
                 return
 
-        mod.set(name, value)
+        mod.parameters[name].set(value)
 
     def apply(self, mod: Module) -> None:
         """Configure module-wide settings."""
@@ -172,7 +172,7 @@ class ModuleConfig(Model):
             mod.disconnect_inputs()
 
         for config, value in self.ports.items():
-            mod.set(config, value)
+            mod.parameters[config].set(value)
 
         # apply all the other configurations
         for name, field in type(self).model_fields.items():
