@@ -10,7 +10,7 @@ from ...components import Config
 from ...identifier import ChannelId, QubitId, QubitPairId, TransitionId
 from ...parameters import Update, _setvalue
 from ...pulses import Delay, Pulse, PulseLike, VirtualZ
-from ...serialize import Model
+from ...serialize import ArrayList, Model
 from .engine import Operator, SimulationEngine
 
 __all__ = ["DriveEmulatorConfig", "FluxEmulatorConfig", "HamiltonianConfig"]
@@ -45,9 +45,12 @@ class DriveEmulatorConfig(Config):
         hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
     ) -> Operator:
 
-        channel_idx = int(channel.split("/")[0])
-        operator_tuple = ()
+        channel_idx = channel.split("/")[0]
+        if "coupler" in channel_idx:
+            channel_idx = channel_idx.split("_")[1]
+        channel_idx = int(channel_idx)
 
+        operator_tuple = ()
         drive_line = hamiltonian.drive_crosstalk[channel_idx]
         assert len(drive_line) == len(hamiltonian.qubits), (
             """Crosstalk matrix should have as many columns as qubits in the system."""
@@ -94,21 +97,23 @@ class FluxEmulatorConfig(Config):
         hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
     ) -> Operator:
 
-        channel_idx = int(channel.split("/")[0])
-        operator_tuple = ()
+        channel_idx = channel.split("/")[0]
+        if "coupler" in channel_idx:
+            channel_idx = channel_idx.split("_")[1]
+        channel_idx = int(channel_idx)
 
-        drive_line = hamiltonian.drive_crosstalk[channel_idx]
-        assert len(drive_line) == len(hamiltonian.qubits), (
+        operator_tuple = ()
+        flux_line = hamiltonian.flux_crosstalk[channel_idx]
+        assert len(flux_line) == len(hamiltonian.qubits), (
             """Crosstalk matrix should have as many columns as qubits in the system."""
         )
 
-        for mu, (q_idx, qubit) in zip(drive_line, hamiltonian.qubits.items()):
+        for mu, (q_idx, qubit) in zip(flux_line, hamiltonian.qubits.items()):
             if mu != 0:
                 operator_tuple += (
                     (
                         q_idx,
-                        -1j
-                        * mu
+                        mu
                         * (
                             engine.create(qubit.transmon_levels)
                             * engine.destroy(qubit.transmon_levels)
@@ -129,7 +134,7 @@ class Qubit(Config):
 
     transmon_levels: int = 2
     """Number of energy eigenstates to simulate"""
-    confusion_matrix: list[list[float | int]] | None = None
+    confusion_matrix: ArrayList | None = None
     """Confusion matrix for state classification"""
     frequency: float = 0
     """Qubit frequency for 0->1."""
@@ -139,6 +144,8 @@ class Qubit(Config):
     """Sweetspot point."""
     asymmetry: float = 0
     """Asymmetry."""
+    p_into_0: float | None = None
+    """Probability of misclassifying higher levels as 0."""
     t1: dict[TransitionId, float] = Field(default_factory=dict)
     """Dictionary with relaxation times per transition."""
     t2: dict[TransitionId, float] = Field(default_factory=dict)
@@ -148,36 +155,30 @@ class Qubit(Config):
     def _validate_confusion_matrix(self) -> "Qubit":
         """Validate or initialize crosstalk matrices."""
         n = self.transmon_levels
-        updates = {}
 
         if self.confusion_matrix is None:
-            p_into_0 = 0.0
-            matrix = np.zeros((n, n))
-            matrix[0, 0] = 1
-            matrix[1, 1] = 1
-            matrix[0, 1:] = p_into_0
-            matrix[1, 1:] = 1 - p_into_0
-            updates["confusion_matrix"] = matrix.tolist()
+            if self.p_into_0 is None:
+                matrix = np.eye(n)
+            else:
+                matrix = np.zeros((n, n))
+                matrix[0, 0] = 1
+                matrix[1, 1] = 1
+                matrix[0, 2:] = self.p_into_0
+                matrix[1, 2:] = 1 - self.p_into_0
 
-        if updates:
-            return self.replace(cast(Update, updates))
+            return self.model_copy(update={"confusion_matrix": matrix})
 
-        if (
-            any([len(row) != n for row in self.confusion_matrix])
-            or len(self.confusion_matrix) != n
-        ):
+        if self.confusion_matrix.shape != (n, n):
             raise ValueError(
                 "Confusion matrix must be a square matrix with dimension (transmon_levels, transmon_levels)."
             )
 
-        return self
+        if np.any(self.confusion_matrix.sum(axis=0) != 1):
+            raise ValueError(
+                "Confusion matrix columns must sum to 1. Found column sums."
+            )
 
-    def replace(self, update: Update) -> "HamiltonianConfig":
-        """Update parameters' values."""
-        d = self.model_dump()
-        for path, val in update.items():
-            _setvalue(d, path, val)
-        return self.model_validate(d)
+        return self
 
     def omega(self, flux: float = 0) -> float:
         """Angular velocity."""
@@ -379,12 +380,12 @@ class HamiltonianConfig(Config):
     """Dictionary with classical crosstalk coefficients per flux channel."""
     pairs: dict[QubitPairId, CapacitiveCoupling] = Field(default_factory=dict)
 
-    drive_crosstalk: list[list[float | int]] | None = None
+    drive_crosstalk: ArrayList | None = None
     """Matrix with classical crosstalk coefficients per drive channel.
     NOTE: the number or row (length of the outer list) is the number of channels in the system,
     while the number of columns (length of the inner lists) is the number of qubits in the system."""
 
-    flux_crosstalk: list[list[float | int]] | None = None
+    flux_crosstalk: ArrayList | None = None
     """Matrix with classical crosstalk coefficients per flux channel.
     NOTE: the number or row (length of the outer list) is the number of channels in the system,
     while the number of columns (length of the inner lists) is the number of qubits in the system."""
@@ -401,20 +402,20 @@ class HamiltonianConfig(Config):
         updates = {}
 
         if self.drive_crosstalk is None:
-            updates["drive_crosstalk"] = np.eye(n).tolist()
+            updates["drive_crosstalk"] = np.eye(n)
 
         if self.flux_crosstalk is None:
-            updates["flux_crosstalk"] = np.eye(n).tolist()
+            updates["flux_crosstalk"] = np.eye(n)
 
         if updates:
             return self.replace(cast(Update, updates))
 
-        if any([len(row) != n for row in self.drive_crosstalk]):
+        if self.drive_crosstalk.shape[1] != n:
             raise ValueError(
                 "Drive crosstalk matrix must have as many columns as qubits."
             )
 
-        if any([len(row) != n for row in self.flux_crosstalk]):
+        if self.flux_crosstalk.shape[1] != n:
             raise ValueError(
                 "Flux crosstalk matrix must have as many columns as qubits."
             )
@@ -470,6 +471,7 @@ class HamiltonianConfig(Config):
             )
             for (pair_id, pair) in self.pairs.items()
         )
+
         return qubit_terms + coupling
 
     def dissipation(self, engine: SimulationEngine) -> Operator:

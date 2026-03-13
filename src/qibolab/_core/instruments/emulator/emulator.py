@@ -315,7 +315,7 @@ def hamiltonians(
                 sequence.channel(ch),
                 configs[ch],
                 hconfig,
-                ch,  # index(ch, hconfig),
+                ch,
                 engine,
                 sampling_rate,
             )
