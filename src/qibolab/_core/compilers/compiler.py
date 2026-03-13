@@ -108,7 +108,7 @@ class Compiler:
         if len(gate.qubits) == 2:
             pair = tuple(platform.qubit(q)[0] for q in qubits_ids)
             assert len(pair) == 2
-            if pair not in natives.two_qubit:
+            if pair not in natives.two_qubit and pair[::-1] not in natives.two_qubit:
                 raise ValueError(
                     f"2q gate for qubits {pair} is not defined by the "
                     f"platform. The defined pairs are {list(natives.two_qubit.keys())}."
