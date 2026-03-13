@@ -17,14 +17,14 @@ def get_per_shot_memory(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
-) -> float:
+) -> int:
     """Compute the memory per shot."""
     bins = np.prod(options.bins(sweepers)[1:])
     acquisitions = max(
         sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
         for pulses in sequence.by_channel.values()
     )
-    return float(bins * acquisitions)
+    return round(bins * acquisitions)
 
 
 def batch_shots(
