@@ -47,6 +47,7 @@ def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
         Generalized from https://stackoverflow.com/a/47722393, which presents the
         two-dimensional version.
     """
+    np.random.seed(123456)
     return (
         probabilities.cumsum(-1).reshape(*probabilities.shape, -1)
         > np.random.rand(*probabilities.shape[:-1], 1, samples)
@@ -244,12 +245,8 @@ def diff_acquisition(
     """
 
     if acquisition_type is AcquisitionType.INTEGRATION:
-        np.random.seed(123456)
-        zeros = np.zeros(exp_data.shape)
+        zeros = np.zeros(exp_data.shape) if np.ndim(exp_data) != 0 else 0.0
         exp_data = np.stack((exp_data, zeros), axis=-1)
-
-    if acquisition_type is AcquisitionType.DISCRIMINATION:
-        exp_data = np.clip(exp_data, 0, 1)
 
     return exp_data
 
@@ -270,8 +267,7 @@ def add_confusion_matrix(
             if next_q.confusion_matrix is not None
             else np.eye(next_q.transmon_levels)
         )
-        matrix_a = np.kron(matrix_a, matrix_b)
-        add_confusion_matrix(qubit_list, matrix_a)
+        matrix_a = add_confusion_matrix(qubit_list, np.kron(matrix_a, matrix_b))
 
     return matrix_a
 
@@ -308,9 +304,51 @@ def results(
         probabilities,
     )
 
+<<<<<<< HEAD
     return results(
         state_probs=probabilities,
         sequence=sequence,
         hamiltonian=hamiltonian,
         options=options,
     )
+=======
+    results = {}
+
+    if options.averaging_mode is AveragingMode.CYCLIC:
+        states_computational_idx = np.stack(
+            np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
+        )
+
+        for ro_dim, ro_id in zip(measurement_mapping, acquisitions(sequence).keys()):
+            i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+
+            res = np.sum(
+                probabilities[..., ro_dim, states_computational_idx[i] == 1], axis=-1
+            )
+
+            res = np.random.normal(res, scale=0.001)
+            res = diff_acquisition(res, options.acquisition_type)
+            results[ro_id] = res
+
+    if options.averaging_mode is AveragingMode.SINGLESHOT:
+        assert options.nshots is not None
+        sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
+        # move measurements dimension to the front, getting ready for extraction
+        measurements = np.moveaxis(sampled, 1, 0)
+        # introduce cached measurements to avoid losing correlations
+        cache_measurements = {}
+        for (ro_id, sample), ro_dim in zip(
+            acquisitions(sequence).items(), measurement_mapping
+        ):
+            meas = measurements[ro_dim, :]
+            i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+            cache_measurements.setdefault(sample, meas)
+            res = np.stack(
+                np.unravel_index(cache_measurements[sample], hamiltonian.dims)
+            )[i]
+
+            res = diff_acquisition(res, options.acquisition_type)
+            results[ro_id] = res
+
+    return results
+>>>>>>> 328acf30 (debugging of the emulator for passing all tests - additionally modification and bug correction of tests.)

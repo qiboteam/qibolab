@@ -6,7 +6,7 @@
     "configs": {
     "hamiltonian":{
       "qubits": {
-        "0": {
+                "0": {
                     "transmon_levels": 2,
                     "frequency": 4.961e9,
                     "anharmonicity": -206e6,
@@ -31,6 +31,7 @@
                     }
                 },
                 "2": {
+                    "transmon_levels": 2,
                     "frequency": 5.977e9,
                     "anharmonicity": -254e6,
                     "asymmetry": 0.1
