@@ -30,6 +30,7 @@
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
                     "asymmetry": 0.0,
+                    "p_into_0": null,
                     "t1": {
                         "0-1": 38000.0,
                         "1-2": 19000.0
@@ -61,6 +62,7 @@
                     "anharmonicity": -330000000.0,
                     "sweetspot": 0.0,
                     "asymmetry": 0.0,
+                    "p_into_0": null,
                     "t1": {
                         "0-1": 42000.0,
                         "1-2": 21000.0
@@ -487,44 +489,6 @@
                         {
                             "kind": "delay",
                             "duration": 20.0
-                        }
-                    ],
-                    [
-                        "1/acquisition",
-                        {
-                            "kind": "readout",
-                            "acquisition": {
-                                "kind": "acquisition",
-                                "duration": 10.0
-                            },
-                            "probe": {
-                                "kind": "pulse",
-                                "duration": 10.0,
-                                "amplitude": 0.1,
-                                "envelope": {
-                                    "kind": "rectangular"
-                                },
-                                "relative_phase": 0.0
-                            }
-                        }
-                    ],
-                    [
-                        "0/acquisition",
-                        {
-                            "kind": "readout",
-                            "acquisition": {
-                                "kind": "acquisition",
-                                "duration": 10.0
-                            },
-                            "probe": {
-                                "kind": "pulse",
-                                "duration": 10.0,
-                                "amplitude": 0.1,
-                                "envelope": {
-                                    "kind": "rectangular"
-                                },
-                                "relative_phase": 0.0
-                            }
                         }
                     ]
                 ],
