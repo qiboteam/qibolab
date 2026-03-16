@@ -146,59 +146,63 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
-        assert options.nshots is not None
+        def init_batch():
+            """Helper function to initialise the batch tracking variables."""
+            return {
+                "batch": [],
+                "acq_memory": 0,
+                "acq_number": 0,
+                # an offset number of lines that is always there regardless of the
+                # number of pulses played.
+                # WARNING: this was determined empirically from the lines for QRM and
+                # QCM, so the individual numbers may be lower.
+                "qcm_lines": 50,
+                "qrm_lines": 50,
+            }
 
+        assert options.nshots is not None
         nshots = options.nshots if options.averaging_mode.average else 1
 
-        batch = []
-        batch_acq_memory = 0
-        batch_acq_number = 0
-        # an offset number of lines that is always there regardless of the number of
-        # pulses played.
-        # WARNING: this was determined empirically from the lines for QRM and QCM, so
-        # the individual numbers may be lower.
-        batch_qcm_instruction_lines = 50
-        batch_qrm_instruction_lines = 50
+        # First, split the sequences into batches that fit into the cluster memory
+        batch = init_batch()
         batched_list: list[list[PulseSequence]] = []
         for ps in sequences:
             acq_number = len(ps.acquisitions)
             acq_memory = get_per_shot_memory(ps, sweepers, options) * nshots
 
-            qcm_lines = [psdata for psdata in ps.data if "drive" in psdata[0]]
-            qrm_lines = [psdata for psdata in ps.data if "acquisition" in psdata[0]]
+            qcm_counts = sum(1 for psdata in ps.data if "drive" in psdata[0])
+            qrm_counts = sum(1 for psdata in ps.data if "acquisition" in psdata[0])
             # the factor 1.59 is determined heuristically, for large number of gates
             # and iterations the ratio of ps.data objects to Lines is approx 1.56
             # WARNING: it was determined by combining QRM and QRC instructions, but the
             # the two types of instructions may have a different factor.
             # TODO: use the number of post-compilation lines
-            qcm_instruction_lines = len(qcm_lines) * 1.59
-            qrm_instruction_lines = len(qrm_lines) * 1.59
+            qcm_lines = qcm_counts * 1.59
+            qrm_lines = qrm_counts * 1.59
 
             # TODO: track instruction memory usage per module instead of summing across
             # all modules.
             if (
-                batch_qcm_instruction_lines + qcm_instruction_lines
-                > QCM_INSTRUCTION_MEMORY
-                or batch_qrm_instruction_lines + qrm_instruction_lines
-                > QRM_INSTRUCTION_MEMORY
-                or batch_acq_memory + acq_memory > ACQUISITION_MEMORY
-                or batch_acq_number + acq_number > ACQUISITION_NUMBER
+                batch["qcm_lines"] + qcm_lines > QCM_INSTRUCTION_MEMORY
+                or batch["qrm_lines"] + qrm_lines > QRM_INSTRUCTION_MEMORY
+                or batch["acq_memory"] + acq_memory > ACQUISITION_MEMORY
+                or batch["acq_number"] + acq_number > ACQUISITION_NUMBER
             ):
-                batched_list.append(batch)
-                batch = []
-                batch_acq_memory = 0
-                batch_acq_number = 0
-                batch_qcm_instruction_lines = 50
-                batch_qrm_instruction_lines = 50
+                batched_list.append(batch["batch"])
+                batch = init_batch()
 
-            batch_acq_number += acq_number
-            batch_acq_memory += acq_memory
-            batch_qcm_instruction_lines += qcm_instruction_lines
-            batch_qrm_instruction_lines += qrm_instruction_lines
-            batch.append(ps)
-        if batch:
-            batched_list.append(batch)
+            batch["qcm_lines"] += qcm_lines
+            batch["qrm_lines"] += qrm_lines
+            batch["acq_memory"] += acq_memory
+            batch["acq_number"] += acq_number
+            batch["batch"].append(ps)
 
+        # if the the loop over sequences ended with a non-empty batch, add it to the
+        # list of batches
+        if batch["batch"]:
+            batched_list.append(batch["batch"])
+
+        # Then, align the channels between bathces of sequences
         batched_seqs = []
         for batch in batched_list:
             batched = batch[0]
@@ -210,6 +214,8 @@ class Cluster(Controller):
                 batched |= ps
             batched_seqs.append(batched)
 
+        # TODO: add a progress bar for the batches
+        # Finally, execute each batch sequentially, and concatenate results
         log = Logger(configs)
         results = {}
         for ps in batched_seqs:
