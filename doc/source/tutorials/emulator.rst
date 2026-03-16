@@ -35,9 +35,9 @@ the section ``configs``. Here is an example
                     "instructions": 200,
                 },
                 "hamiltonian": {
-                    "transmon_levels": 2,
                     "qubits": {
                         "0": {
+                            "transmon_levels": 2,
                             "frequency": 5e9,
                             "sweetspot": 0.02,
                             "anharmonicity": -200e6,
