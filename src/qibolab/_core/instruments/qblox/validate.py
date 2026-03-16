@@ -1,3 +1,5 @@
+from qblox_instruments import __version__ as qblox_instruments_version
+
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 
@@ -11,12 +13,12 @@ __all__ = []
 WAVEFORM_MEMORY = 2**14
 """Maximum waveform memory available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#waveform-memory
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#waveform-memory
 """
 WAVEFORM_NUMBER = 2**10
 """Maximum number of waveforms available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#waveform-memory
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#waveform-memory
 """
 
 QCM_INSTRUCTION_MEMORY = 2**14
@@ -30,24 +32,32 @@ https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#instruction
 WEIGHT_MEMORY = 2**14
 """Maximum waveform memory available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#integrator
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#integrator
 """
 WEIGHT_NUMBER = 2**5
 """Maximum number of weights available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#weight-memory
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#weight-memory
 """
 
-ACQUISITION_MEMORY = 2**17
+if qblox_instruments_version >= "1.0.0":
+    ACQUISITION_MEMORY = 3e6
+else:
+    ACQUISITION_MEMORY = 2**17
 """Maximum acquisition memory available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#binning-and-averaging
+..note::
+    Here the qblox instruments version is used as a proxy for the check if the cluster
+    firmware >= 0.13.0, which due to the dependency requirements is an equivalent
+    condition.
+
+https://docs.qblox.com/en/main/releases.html#new-features
 """
 
 ACQUISITION_NUMBER = 2**5
 """Maximum number of acquisitions available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#:~:text=Square%20Weight%20Acquisitions
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#:~:text=Square%20Weight%20Acquisitions
 """
 
 
