@@ -22,7 +22,7 @@ https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#waveform-me
 """
 
 QCM_INSTRUCTION_MEMORY = 2**14
-QRM_INSTRUCTION_MEMROY = 12288
+QRM_INSTRUCTION_MEMORY = 12288
 """Maximum number of instructions per program for the QCM and QRM modules.
 
 https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#instruction-memory
@@ -51,6 +51,7 @@ else:
     firmware >= 0.13.0, which due to the dependency requirements is an equivalent
     condition.
 
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html
 https://docs.qblox.com/en/main/releases.html#new-features
 """
 
@@ -93,13 +94,16 @@ def assert_acquisition_memory(acquisitions: list[Acquisition]) -> None:
     assert sum(a.num_bins for a in acquisitions) <= ACQUISITION_MEMORY
 
 
-def assert_instruction_memory(lines: list[Line]):
-    assert len(lines) <= QCM_INSTRUCTION_MEMORY
+def assert_instruction_memory(channelid, lines: list[Line]):
+    if "drive" in channelid:
+        assert len(lines) <= QCM_INSTRUCTION_MEMORY
+    else:
+        assert len(lines) <= QRM_INSTRUCTION_MEMORY
 
 
-def validate_sequence(sequence: Q1Sequence) -> None:
+def validate_sequence(channelid: ChannelId, sequence: Q1Sequence) -> None:
     """Validate sequence elements."""
-    assert_instruction_memory(sequence.program.lines)
+    assert_instruction_memory(channelid, sequence.program.lines)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))
