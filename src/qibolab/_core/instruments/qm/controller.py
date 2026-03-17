@@ -24,6 +24,7 @@ from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import Align, Delay, Pulse, Readout
+from qibolab._core.pulses.envelope import Rectangular
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Sweeper
@@ -142,36 +143,51 @@ QM_BOUNDS = {
 }
 
 
+def _waveform(sequence: PulseSequence):
+    # TODO: deduplicate pulses (Not yet as drivers may not support it yet)
+    # TODO: VirtualZ deserves a separate handling
+    # TODO: any constant part of a pulse should be counted only once (Zurich Instruments supports this)
+    # TODO: handle multiple qubits or do all devices have the same memory for each channel ?
+    return sum(
+        (
+            (pulse.duration if not isinstance(pulse.envelope, Rectangular) else 1)
+            if isinstance(pulse, Pulse)
+            else 1
+        )
+        for _, pulse in sequence
+    )
+
+
+def _readout(sequence: PulseSequence):
+    # TODO: Do we count 1 readout per pulse or 1 readout per multiplexed readout ?
+    return len(sequence.acquisitions)
+
+
+def _instructions(sequence: PulseSequence):
+    return len(sequence)
+
+
 def _batch(sequences: list[PulseSequence], bounds: dict = QM_BOUNDS):
     """Split a list of sequences to batches.
 
     Takes into account the various limitations specified by the `bounds` argument.
     """
-
-    def update(sequence):
-        # Replicates Bounds.update functionality
-        # You may need to adjust these counters based on your actual sequence structure
-        waveforms = sum(1 for _, pulse in sequence if hasattr(pulse, "waveform"))
-        readout = sum(1 for _, pulse in sequence if hasattr(pulse, "acquisition"))
-        instructions = len(sequence)
-        return {
-            "waveforms": waveforms,
-            "readout": readout,
-            "instructions": instructions,
-        }
-
     counters = {"waveforms": 0, "readout": 0, "instructions": 0}
     batch = []
     for sequence in sequences:
-        update_vals = update(sequence)
-        exceeded = any(counters[k] + update_vals[k] > bounds[k] for k in bounds)
-        if exceeded:
+        update_vals = {
+            "waveforms": _waveform(sequence),
+            "readout": _readout(sequence),
+            "instructions": _instructions(sequence),
+        }
+        bounds_exceeded = any(counters[k] + update_vals[k] > bounds[k] for k in bounds)
+        if bounds_exceeded:
             yield batch
             counters = update_vals.copy()
             batch = [sequence]
         else:
             batch.append(sequence)
-            for k in bounds:
+            for k in counters:
                 counters[k] += update_vals[k]
     yield batch
 
