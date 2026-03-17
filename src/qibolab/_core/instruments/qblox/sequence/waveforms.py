@@ -107,12 +107,14 @@ def waveforms(
     duration_swept: dict[PulseLike, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
     pulses = [
-        _pulse(e, amplitude_swept) for e in sequence if isinstance(e, (Pulse, Readout))
+        _pulse(e, e.id in amplitude_swept)
+        for e in sequence
+        if isinstance(e, (Pulse, Readout))
     ]
 
     pulses_not_swept = [p for p in pulses if p not in duration_swept]
     pulses_swept = [
-        (_pulse(p, amplitude_swept), duration_swept[p])
+        (_pulse(p, p.id in amplitude_swept), duration_swept[p])
         for p in duration_swept
         if isinstance(p, (Pulse, Readout))
     ]
