@@ -258,7 +258,8 @@ class Cluster(Controller):
                     time_of_flights(configs),
                 )
                 for channelid, seq in sequences_.items():
-                    validate_sequence(channelid, seq)
+                    channel = self.channels[channelid]
+                    validate_sequence(channel, seq)
                 log.sequences(sequences_)
 
                 # then configure modules and sequencers
