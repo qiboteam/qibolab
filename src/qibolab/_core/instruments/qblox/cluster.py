@@ -93,7 +93,7 @@ def _init_batch():
     }
 
 
-def batch_sequences_by_cluster_memory_limits(
+def _batch_sequences_by_cluster_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
@@ -223,7 +223,7 @@ class Cluster(Controller):
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
         if options.averaging_mode.average:
-            batched_seqs = batch_sequences_by_cluster_memory_limits(
+            batched_seqs = _batch_sequences_by_cluster_memory_limits(
                 sequences, sweepers, options
             )
         else:
