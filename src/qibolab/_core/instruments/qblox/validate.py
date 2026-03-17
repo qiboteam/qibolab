@@ -1,5 +1,6 @@
-from qblox_instruments import __version__ as qblox_instruments_version
+import qblox_instruments
 
+from qibolab._core.components.channels import AcquisitionChannel, Channel
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 
@@ -40,7 +41,7 @@ WEIGHT_NUMBER = 2**5
 https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#weight-memory
 """
 
-if qblox_instruments_version >= "1.0.0":
+if qblox_instruments.__version__ >= "1.0.0":
     ACQUISITION_MEMORY = 3e6
 else:
     ACQUISITION_MEMORY = 2**17
@@ -94,16 +95,16 @@ def assert_acquisition_memory(acquisitions: list[Acquisition]) -> None:
     assert sum(a.num_bins for a in acquisitions) <= ACQUISITION_MEMORY
 
 
-def assert_instruction_memory(channelid, lines: list[Line]):
-    if "drive" in channelid:
+def assert_instruction_memory(channel: Channel, lines: list[Line]):
+    if isinstance(channel, AcquisitionChannel):
         assert len(lines) <= QCM_INSTRUCTION_MEMORY
     else:
         assert len(lines) <= QRM_INSTRUCTION_MEMORY
 
 
-def validate_sequence(channelid: ChannelId, sequence: Q1Sequence) -> None:
+def validate_sequence(channel: Channel, sequence: Q1Sequence) -> None:
     """Validate sequence elements."""
-    assert_instruction_memory(channelid, sequence.program.lines)
+    assert_instruction_memory(channel, sequence.program.lines)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))
