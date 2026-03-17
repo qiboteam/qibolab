@@ -13,7 +13,7 @@ from qibolab._core.sweeper import ParallelSweepers
 from .validate import ACQUISITION_MEMORY
 
 
-def get_per_shot_memory(
+def per_shot_memory(
     sequence: PulseSequence,
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
@@ -42,8 +42,8 @@ def batch_shots(
     if options.averaging_mode.average:
         return [options.nshots]
 
-    per_shot_memory = get_per_shot_memory(sequence, sweepers, options)
-    max_shots = int(ACQUISITION_MEMORY // per_shot_memory)
+    acq_memory_shot = per_shot_memory(sequence, sweepers, options)
+    max_shots = int(ACQUISITION_MEMORY // acq_memory_shot)
     nfull, remainder = np.divmod(options.nshots, max_shots)
     return [max_shots] * int(nfull) + [int(remainder)]
 

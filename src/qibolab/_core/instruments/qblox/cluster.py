@@ -31,8 +31,8 @@ from .sequence import Q1Sequence, compile
 from .utils import (
     batch_shots,
     concat_shots,
-    get_per_shot_memory,
     lo_configs,
+    per_shot_memory,
     time_of_flights,
 )
 from .validate import (
@@ -103,7 +103,7 @@ def _batch_sequences_by_cluster_memory_limits(
     batched_list: list[list[PulseSequence]] = []
     for ps in sequences:
         acq_number = len(ps.acquisitions)
-        acq_memory = get_per_shot_memory(ps, sweepers, options)
+        acq_memory = per_shot_memory(ps, sweepers, options)
 
         qcm_counts = sum(1 for psdata in ps.data if "drive" in psdata[0])
         qrm_counts = sum(1 for psdata in ps.data if "acquisition" in psdata[0])
