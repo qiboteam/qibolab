@@ -1,5 +1,9 @@
 """Tests ``unrolling.py``."""
 
+import pytest
+
+pytest.importorskip("qm")
+
 from qibolab._core.instruments.qm.controller import _unroll_sequences
 from qibolab._core.platform import Platform
 from qibolab._core.pulses import Delay
