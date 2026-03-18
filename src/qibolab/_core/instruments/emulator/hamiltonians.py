@@ -28,18 +28,6 @@ class DriveEmulatorConfig(Config):
     scale_factor: float = 1
     """Scaling factor."""
 
-    # @staticmethod
-    # def operator(
-    #     n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
-    # ) -> Operator:
-    #     if cross_dict:
-    #         return (
-    #             (q, -1j * mu * (engine.destroy(n) - engine.create(n)))
-    #             for q, mu in cross_dict.items()
-    #         )
-
-    #     return -1j * (engine.destroy(n) - engine.create(n))
-
     @staticmethod
     def operator(
         hamiltonian: Config, channel: ChannelId, engine: SimulationEngine
@@ -82,15 +70,6 @@ class FluxEmulatorConfig(Config):
     """DC offset of the channel."""
     voltage_to_flux: float = 1
     """Convert voltarget to flux."""
-
-    # @staticmethod
-    # def operator(
-    #     n: int, cross_dict: dict[QubitId, float], engine: SimulationEngine
-    # ) -> Operator:
-    #     return (
-    #         (q, -1j * mu * (engine.create(n) * engine.destroy(n)))
-    #         for q, mu in cross_dict.items()
-    #     )
 
     @staticmethod
     def operator(
