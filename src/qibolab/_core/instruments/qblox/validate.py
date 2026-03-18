@@ -1,8 +1,12 @@
+import qblox_instruments
+
+from qibolab._core.components.channels import AcquisitionChannel, Channel
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox.sequence.acquisition import Acquisition, Weight
-from qibolab._core.instruments.qblox.sequence.sequence import Q1Sequence
 from qibolab._core.sequence import PulseSequence
 
+from .q1asm.ast_ import Line
+from .sequence.acquisition import Acquisition, Weight
+from .sequence.sequence import Q1Sequence
 from .sequence.waveforms import Waveform
 
 __all__ = []
@@ -10,35 +14,52 @@ __all__ = []
 WAVEFORM_MEMORY = 2**14
 """Maximum waveform memory available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#waveform-memory
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#waveform-memory
 """
 WAVEFORM_NUMBER = 2**10
 """Maximum number of waveforms available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#waveform-memory
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#waveform-memory
 """
+
+QCM_INSTRUCTION_MEMORY = 2**14
+QRM_INSTRUCTION_MEMORY = 12288
+"""Maximum number of instructions per program for the QCM and QRM modules.
+
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#instruction-memory
+"""
+
 
 WEIGHT_MEMORY = 2**14
 """Maximum waveform memory available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#integrator
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#integrator
 """
 WEIGHT_NUMBER = 2**5
 """Maximum number of weights available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#weight-memory
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#weight-memory
 """
 
-ACQUISITION_MEMORY = 2**17
+if qblox_instruments.__version__ >= "1.0.0":
+    ACQUISITION_MEMORY = 3e6
+else:
+    ACQUISITION_MEMORY = 2**17
 """Maximum acquisition memory available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#binning-and-averaging
+..note::
+    Here the qblox instruments version is used as a proxy for the check if the cluster
+    firmware >= 0.13.0, which due to the dependency requirements is an equivalent
+    condition.
+
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html
+https://docs.qblox.com/en/main/releases.html#new-features
 """
 
 ACQUISITION_NUMBER = 2**5
 """Maximum number of acquisitions available.
 
-https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#:~:text=Square%20Weight%20Acquisitions
+https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#:~:text=Square%20Weight%20Acquisitions
 """
 
 
@@ -74,8 +95,16 @@ def assert_acquisition_memory(acquisitions: list[Acquisition]) -> None:
     assert sum(a.num_bins for a in acquisitions) <= ACQUISITION_MEMORY
 
 
-def validate_sequence(sequence: Q1Sequence) -> None:
+def assert_instruction_memory(channel: Channel, lines: list[Line]):
+    if isinstance(channel, AcquisitionChannel):
+        assert len(lines) <= QRM_INSTRUCTION_MEMORY
+    else:
+        assert len(lines) <= QCM_INSTRUCTION_MEMORY
+
+
+def validate_sequence(channel: Channel, sequence: Q1Sequence) -> None:
     """Validate sequence elements."""
+    assert_instruction_memory(channel, sequence.program.lines)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))

@@ -9,8 +9,12 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
+from qibolab import Delay
 from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
-from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId
@@ -24,8 +28,21 @@ from .identifiers import SequencerMap, SlotId
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
-from .utils import batch_shots, concat_shots, lo_configs, time_of_flights
-from .validate import assert_channels_exclusion, validate_sequence
+from .utils import (
+    batch_shots,
+    concat_shots,
+    lo_configs,
+    per_shot_memory,
+    time_of_flights,
+)
+from .validate import (
+    ACQUISITION_MEMORY,
+    ACQUISITION_NUMBER,
+    QCM_INSTRUCTION_MEMORY,
+    QRM_INSTRUCTION_MEMORY,
+    assert_channels_exclusion,
+    validate_sequence,
+)
 
 __all__ = ["Cluster"]
 
@@ -61,6 +78,84 @@ def _compute_duration(
     return duration
 
 
+def _init_batch():
+    """Helper function to initialise the batch tracking variables."""
+    return {
+        "batch": [],
+        "acq_memory": 0,
+        "acq_number": 0,
+        # an offset number of lines that is always there regardless of the
+        # number of pulses played.
+        # WARNING: this was determined empirically from the lines for QRM and
+        # QCM, so the individual numbers may be lower.
+        "qcm_lines": 50,
+        "qrm_lines": 50,
+    }
+
+
+_memory_limits = {
+    "acq_memory": ACQUISITION_MEMORY,
+    "acq_number": ACQUISITION_NUMBER,
+    "qcm_lines": QCM_INSTRUCTION_MEMORY,
+    "qrm_lines": QRM_INSTRUCTION_MEMORY,
+}
+
+
+def _batch_sequences_by_cluster_memory_limits(
+    sequences: list[PulseSequence],
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+) -> list[PulseSequence]:
+    """Split sequences into batches that fit into the cluster memory"""
+    batch_memory = _init_batch()
+    batched_list: list[list[PulseSequence]] = []
+    for ps in sequences:
+        ps_memory = {
+            "acq_memory": per_shot_memory(ps, sweepers, options),
+            "acq_number": len(ps.acquisitions),
+            # The factor 1.59 is determined heuristically, for large number of gates
+            # and iterations the ratio of ps.data objects to Lines is approx 1.56
+            # WARNING: it was determined by combining QRM and QRC instructions, but the
+            # the two types of instructions may have a different factor.
+            # TODO: use the number of post-compilation lines
+            "qcm_lines": sum(1 for psdata in ps.data if "drive" in psdata[0]) * 1.59,
+            "qrm_lines": sum(1 for psdata in ps.data if "acquisition" in psdata[0])
+            * 1.59,
+        }
+
+        # TODO: track instruction memory usage per module instead of summing across
+        # all modules.
+        memory_exceeded = any(
+            batch_memory[key] + ps_memory[key] > _memory_limits[key]
+            for key in _memory_limits
+        )
+        if memory_exceeded:
+            batched_list.append(batch_memory["batch"])
+            batch_memory = _init_batch()
+
+        for key in ps_memory:
+            batch_memory[key] += ps_memory[key]
+        batch_memory["batch"].append(ps)
+
+    # If the the loop over sequences ended with a non-empty batch, add it to the
+    # list of batches
+    if batch_memory["batch"]:
+        batched_list.append(batch_memory["batch"])
+
+    # Align the channels between bathces of sequences
+    batched_seqs = []
+    for batch_memory in batched_list:
+        batched = batch_memory[0]
+        for ps in batch_memory[1:]:
+            # the pipe operation aligns all channels so we only have to add the
+            # Delay to a single channel
+            assert options.relaxation_time is not None
+            batched |= [(ps[0][0], Delay(duration=options.relaxation_time))]
+            batched |= ps
+        batched_seqs.append(batched)
+    return batched_seqs
+
+
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
     sequencers: dict[int, dict[int, config.SequencerConfig]]
@@ -75,7 +170,6 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    bounds: str = "qblox/bounds"
     _cluster: Optional[qblox.Cluster] = None
 
     @property
@@ -129,19 +223,26 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
-        results = {}
-        log = Logger(configs)
 
-        # no unrolling yet: act one sequence at a time, and merge results
-        for ps in sequences:
+        # If acquisition is cyclic (averaging over shots on hardware), we combine as
+        # many sequences as possible in a single batch, according to the cluster
+        # memory limits.
+        if options.averaging_mode.average:
+            batched_seqs = _batch_sequences_by_cluster_memory_limits(
+                sequences, sweepers, options
+            )
+        else:
+            batched_seqs = sequences
+
+        # Execute each batch sequentially, and concatenate results
+        log = Logger(configs)
+        results = {}
+        for ps in batched_seqs:
             # full reset of the cluster, to erase leftover configurations and sequencer
             # synchronization registration
-            # NOTE: until not unrolled, each sequence execution should be independent
-            # TODO: once unrolled, this reset should be preserved, since it is required
-            # for multiple experiments sharing the same connection
+            # TODO: don't reset unessesarily. In RB with depths 2**np.arange(11) the
+            # reset alone takes 14% of total execution time
             self.reset()
-            # split shots in batches, in case the required experiment exceeds the
-            # allowed memory
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
@@ -163,8 +264,9 @@ class Cluster(Controller):
                     self.sampling_rate,
                     time_of_flights(configs),
                 )
-                for seq in sequences_.values():
-                    validate_sequence(seq)
+                for channelid, seq in sequences_.items():
+                    channel = self.channels[channelid]
+                    validate_sequence(channel, seq)
                 log.sequences(sequences_)
 
                 # then configure modules and sequencers
@@ -262,7 +364,6 @@ class Cluster(Controller):
                     self.channels,
                     configs,
                     acquisition,
-                    idx,
                     rf,
                     sequence=sequences_[ch],
                 )
@@ -311,7 +412,11 @@ class Cluster(Controller):
                     continue
 
                 # ensure acquisition status, and fetch results
-                self.cluster.get_acquisition_status(slot, seq, timeout=1)
+                acq_status = self.cluster.get_acquisition_status(slot, seq, timeout=1)
+                if acq_status is False:
+                    raise RuntimeError(
+                        f"Acquisition not completed. slot: {slot}, seq: {seq}."
+                    )
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
                         self.cluster.store_scope_acquisition(slot, seq, str(name))
