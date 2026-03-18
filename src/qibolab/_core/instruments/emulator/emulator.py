@@ -154,7 +154,7 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
-        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_, tlist_)
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
@@ -169,14 +169,21 @@ class EmulatorController(Controller):
         )
 
     def _pulse_hamiltonian(
-        self, sequence: PulseSequence, configs: dict[str, Config]
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
+        time_evolution: NDArray,
     ) -> Optional[OperatorEvolution]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         channels = [
             [
                 operator,
-                channel_time(waveforms, sampling_rate=self.sampling_rate),
+                channel_time(
+                    waveforms,
+                    sampling_rate=self.sampling_rate,
+                    time_evolution=time_evolution,
+                ),
             ]
             for operator, waveforms in hamiltonians(
                 sequence, configs, self.engine, self.sampling_rate
@@ -198,7 +205,7 @@ def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Confi
 
 
 def tlist(
-    sequence: PulseSequence, sampling_rate: float, per_sample: float = 2
+    sequence: PulseSequence, sampling_rate: float, per_sample: float = 100
 ) -> NDArray:
     """Compute times for evolution.
 
@@ -225,6 +232,7 @@ def tlist(
     )
     end = max(seq.duration, 1)
     rate = sampling_rate * per_sample
+    # breakpoint()
     return np.arange(0, end, 1 / rate)
 
 
@@ -273,11 +281,31 @@ def hamiltonians(
 def channel_time(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
+    time_evolution: NDArray,
 ) -> Callable[[float], float]:
     """Wrap time function for specific channel.
 
     Used to avoid late binding issues.
     """
+
+    pulse_waveforms = np.zeros_like(time_evolution)
+
+    cumulative_phase = 0
+    cumulative_time = 0
+    for pulse in waveforms:
+        next_pulse_time = cumulative_time + pulse.duration
+        pulse_times_idx = (time_evolution >= cumulative_time) & (
+            time_evolution <= next_pulse_time
+        )
+        times_samples = np.floor(
+            (time_evolution[pulse_times_idx] - cumulative_time) * sampling_rate
+        ).astype(int)
+        pulse_waveforms[pulse_times_idx] = pulse(
+            time_evolution[pulse_times_idx], times_samples, cumulative_phase
+        )
+
+        cumulative_phase += pulse.phase
+        cumulative_time = next_pulse_time
 
     def time(t: float) -> float:
         cumulative_time = 0
@@ -292,4 +320,9 @@ def channel_time(
             cumulative_phase += pulse_phase
         return 0
 
-    return time
+    old_w = np.stack([time(t) for t in time_evolution])
+
+    if not np.allclose(old_w, pulse_waveforms):
+        print("non sono uguali")
+    return pulse_waveforms
+    # return time

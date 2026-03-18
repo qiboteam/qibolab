@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Callable, Protocol, Union
+from typing import Iterable, Protocol, Union
 
 from ....serialize import Model
 
@@ -35,7 +35,7 @@ class TimeDependentOperator(Protocol):
 
     operator: Operator
     """Operator."""
-    time: Callable[[float, dict], float]
+    time: Iterable[float]
     """Time function."""
 
 
