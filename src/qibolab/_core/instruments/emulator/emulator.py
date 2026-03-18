@@ -1,5 +1,7 @@
 """Emulator controller."""
 
+import datetime
+import time
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
@@ -78,6 +80,11 @@ class EmulatorController(Controller):
         results_to_process = ()
         for sequence in sequences_:
             sweep_results = self._sweep(sequence, configs, sweepers)
+            time.sleep(2)
+
+            t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
+            np.savez(f"./{t}_data_length_tomography", sweep_results[0])
+
             results_to_process += (
                 results(
                     # states in computational basis
@@ -135,7 +142,7 @@ class EmulatorController(Controller):
 
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray]:
         """Play single sequence on emulator.
 
         The array returned by this function has a single dimension, over
@@ -154,6 +161,11 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
+
+        # breakpoint()
+        # res = np.stack([r.full() for r in results.states])
+        # t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
+        # np.savez(f'qutip_solution_{t}.npz', res)
 
         return select_acquisitions(
             results.states,
@@ -219,48 +231,6 @@ def tlist(
     end = max(seq.duration, 1)
     rate = sampling_rate * per_sample
     return np.arange(0, end, 1 / rate)
-
-
-# def hamiltonian(
-#     pulses: Iterable[PulseLike],
-#     config: Config,
-#     hamiltonian: HamiltonianConfig,
-#     hilbert_space_index: int,
-#     engine: SimulationEngine,
-#     sampling_rate: float,
-# ) -> tuple[Operator, list[Modulated]]:
-
-#     ham_qubit = hamiltonian.qubits[hilbert_space_index]
-#     n = ham_qubit.transmon_levels
-
-#     crosstalk_terms = {
-#         DriveEmulatorConfig: ham_qubit.drive_crosstalk,
-#         FluxEmulatorConfig: ham_qubit.flux_crosstalk,
-#     }
-#     crosstalk_factor = crosstalk_terms.get(type(config))
-
-#     if crosstalk_factor:
-#         op = sum(
-#                 engine.expand(
-#                     o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q))
-#                 )
-#                 for (q, o) in config.operator(
-#                     n=n, cross_dict=crosstalk_factor, engine=engine
-#                 )
-#         )
-
-#     else:
-#         op = engine.expand(
-#             config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
-#         )
-
-#     waveforms = (
-#         waveform(pulse, config, ham_qubit, sampling_rate)
-#         for pulse in pulses
-#         if isinstance(pulse, (Pulse, Delay, VirtualZ))
-#     )
-
-#     return (op, [w for w in waveforms if w is not None])
 
 
 def hamiltonian(

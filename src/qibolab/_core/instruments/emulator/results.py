@@ -88,7 +88,7 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
 
 def select_acquisitions(
     states: list[Operator], acquisitions: Iterable[float], times: NDArray
-) -> NDArray:
+) -> tuple[NDArray, NDArray]:
     """Select density matrices from states.
 
     First, retrieve acquisitions, and locate them in the tlist, to
@@ -119,6 +119,9 @@ def diff_acquisition(
     if acquisition_type is AcquisitionType.INTEGRATION:
         zeros = np.zeros(exp_data.shape) if np.ndim(exp_data) != 0 else 0.0
         exp_data = np.stack((exp_data, zeros), axis=-1)
+
+    if acquisition_type is AcquisitionType.DISCRIMINATION:
+        exp_data = np.clip(exp_data, 0, 1)
 
     return exp_data
 
@@ -170,7 +173,6 @@ def results(
     )
 
     results = {}
-
     if options.averaging_mode is AveragingMode.CYCLIC:
         states_computational_idx = np.stack(
             np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
