@@ -97,9 +97,9 @@ def assert_acquisition_memory(acquisitions: list[Acquisition]) -> None:
 
 def assert_instruction_memory(channel: Channel, lines: list[Line]):
     if isinstance(channel, AcquisitionChannel):
-        assert len(lines) <= QCM_INSTRUCTION_MEMORY
-    else:
         assert len(lines) <= QRM_INSTRUCTION_MEMORY
+    else:
+        assert len(lines) <= QCM_INSTRUCTION_MEMORY
 
 
 def validate_sequence(channel: Channel, sequence: Q1Sequence) -> None:
