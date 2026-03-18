@@ -1,9 +1,8 @@
 """Abstract engine for platform emulation."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, Iterable
 
 from ....serialize import Model
 
@@ -36,7 +35,7 @@ class TimeDependentOperator(Protocol):
 
     operator: Operator
     """Operator."""
-    time: Callable[[float, dict], float]
+    time: Iterable[float]
     """Time function."""
 
 
