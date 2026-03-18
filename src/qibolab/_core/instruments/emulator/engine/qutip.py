@@ -29,6 +29,10 @@ class QutipEngine(SimulationEngine):
         """Evolve the system."""
         if time_hamiltonian is not None:
             hamiltonian += self.engine.QobjEvo(time_hamiltonian.operators)
+
+        # t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
+        # qt.fileio.qsave(hamiltonian, f'total_hamiltonian_{t}')
+
         return self.engine.mesolve(
             hamiltonian, initial_state, time, collapse_operators, **kwargs
         )
