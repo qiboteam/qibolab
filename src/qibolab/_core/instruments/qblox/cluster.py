@@ -93,55 +93,60 @@ def _init_batch():
     }
 
 
+_memory_limits = {
+    "acq_memory": ACQUISITION_MEMORY,
+    "acq_number": ACQUISITION_NUMBER,
+    "qcm_lines": QCM_INSTRUCTION_MEMORY,
+    "qrm_lines": QRM_INSTRUCTION_MEMORY,
+}
+
+
 def _batch_sequences_by_cluster_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
 ) -> list[PulseSequence]:
     """Split sequences into batches that fit into the cluster memory"""
-    batch = _init_batch()
+    batch_memory = _init_batch()
     batched_list: list[list[PulseSequence]] = []
     for ps in sequences:
-        acq_number = len(ps.acquisitions)
-        acq_memory = per_shot_memory(ps, sweepers, options)
-
-        qcm_counts = sum(1 for psdata in ps.data if "drive" in psdata[0])
-        qrm_counts = sum(1 for psdata in ps.data if "acquisition" in psdata[0])
-        # The factor 1.59 is determined heuristically, for large number of gates
-        # and iterations the ratio of ps.data objects to Lines is approx 1.56
-        # WARNING: it was determined by combining QRM and QRC instructions, but the
-        # the two types of instructions may have a different factor.
-        # TODO: use the number of post-compilation lines
-        qcm_lines = qcm_counts * 1.59
-        qrm_lines = qrm_counts * 1.59
+        ps_memory = {
+            "acq_memory": per_shot_memory(ps, sweepers, options),
+            "acq_number": len(ps.acquisitions),
+            # The factor 1.59 is determined heuristically, for large number of gates
+            # and iterations the ratio of ps.data objects to Lines is approx 1.56
+            # WARNING: it was determined by combining QRM and QRC instructions, but the
+            # the two types of instructions may have a different factor.
+            # TODO: use the number of post-compilation lines
+            "qcm_lines": sum(1 for psdata in ps.data if "drive" in psdata[0]) * 1.59,
+            "qrm_lines": sum(1 for psdata in ps.data if "acquisition" in psdata[0])
+            * 1.59,
+        }
 
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
-        if (
-            batch["qcm_lines"] + qcm_lines > QCM_INSTRUCTION_MEMORY
-            or batch["qrm_lines"] + qrm_lines > QRM_INSTRUCTION_MEMORY
-            or batch["acq_memory"] + acq_memory > ACQUISITION_MEMORY
-            or batch["acq_number"] + acq_number > ACQUISITION_NUMBER
-        ):
-            batched_list.append(batch["batch"])
-            batch = _init_batch()
+        memory_exceeded = any(
+            batch_memory[key] + ps_memory[key] > _memory_limits[key]
+            for key in _memory_limits
+        )
+        if memory_exceeded:
+            batched_list.append(batch_memory["batch"])
+            batch_memory = _init_batch()
 
-        batch["qcm_lines"] += qcm_lines
-        batch["qrm_lines"] += qrm_lines
-        batch["acq_memory"] += acq_memory
-        batch["acq_number"] += acq_number
-        batch["batch"].append(ps)
+        for key in ps_memory:
+            batch_memory[key] += ps_memory[key]
+        batch_memory["batch"].append(ps)
 
     # If the the loop over sequences ended with a non-empty batch, add it to the
     # list of batches
-    if batch["batch"]:
-        batched_list.append(batch["batch"])
+    if batch_memory["batch"]:
+        batched_list.append(batch_memory["batch"])
 
     # Align the channels between bathces of sequences
     batched_seqs = []
-    for batch in batched_list:
-        batched = batch[0]
-        for ps in batch[1:]:
+    for batch_memory in batched_list:
+        batched = batch_memory[0]
+        for ps in batch_memory[1:]:
             # the pipe operation aligns all channels so we only have to add the
             # Delay to a single channel
             assert options.relaxation_time is not None
@@ -235,6 +240,8 @@ class Cluster(Controller):
         for ps in batched_seqs:
             # full reset of the cluster, to erase leftover configurations and sequencer
             # synchronization registration
+            # TODO: don't reset unessesarily. In RB with depths 2**np.arange(11) the
+            # reset alone takes 14% of total execution time
             self.reset()
             psres = []
             for shots in batch_shots(ps, sweepers, options):
