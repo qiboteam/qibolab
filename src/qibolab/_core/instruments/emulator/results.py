@@ -20,7 +20,7 @@ from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.pulses import Acquisition, Align, PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 
-from ...execution_parameters import (
+from qibolab._core.execution_parameters import (
     AcquisitionType,
     AveragingMode,
     ExecutionParameters,
@@ -248,27 +248,6 @@ def _singleshot_results(
     return dict(zip(acq_id, res))
 
 
-def diff_acquisition(
-    exp_data: np.ndarray, acquisition_type: AcquisitionType
-) -> np.ndarray:
-    """Format data according to the acquisition type.
-
-    In case of :const:`AcquisitionType.INTEGRATION` the data is formatted as if we are running a SIGNAL experiment on real hardware,
-    hence the single point is composed by the 2 IQ components; in the case of the emulator one component is simply null since all the information
-    is simply carried by the magnitude of the signal.
-
-    In case of :const:`AcquisitionType.DISCRIMINATION` the data is formatted as if we are running a PROBABILITY experiment on real hardware,
-    hence the single point is simply the 1-state probability, so we have to be sure that the added gaussian noise does not bring the computed value
-    out of the probability definition interval 0 <= p <= 1.
-    """
-
-    if acquisition_type is AcquisitionType.INTEGRATION:
-        zeros = np.zeros(exp_data.shape) if np.ndim(exp_data) != 0 else 0.0
-        exp_data = np.stack((exp_data, zeros), axis=-1)
-
-    return exp_data
-
-
 def add_confusion_matrix(
     qubit_list: list[Qubit], matrix_a: np.ndarray | None = None
 ) -> np.ndarray:
@@ -292,7 +271,6 @@ def add_confusion_matrix(
 
 def results(
     states: NDArray,
-    measurement_mapping: np.ndarray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -322,51 +300,9 @@ def results(
         probabilities,
     )
 
-<<<<<<< HEAD
     return results(
         state_probs=probabilities,
         sequence=sequence,
         hamiltonian=hamiltonian,
         options=options,
     )
-=======
-    results = {}
-
-    if options.averaging_mode is AveragingMode.CYCLIC:
-        states_computational_idx = np.stack(
-            np.unravel_index([*range(probabilities.shape[-1])], hamiltonian.dims)
-        )
-
-        for ro_dim, ro_id in zip(measurement_mapping, acquisitions(sequence).keys()):
-            i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
-
-            res = np.sum(
-                probabilities[..., ro_dim, states_computational_idx[i] == 1], axis=-1
-            )
-
-            res = np.random.normal(res, scale=0.001)
-            res = diff_acquisition(res, options.acquisition_type)
-            results[ro_id] = res
-
-    if options.averaging_mode is AveragingMode.SINGLESHOT:
-        assert options.nshots is not None
-        sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
-        # move measurements dimension to the front, getting ready for extraction
-        measurements = np.moveaxis(sampled, 1, 0)
-        # introduce cached measurements to avoid losing correlations
-        cache_measurements = {}
-        for (ro_id, sample), ro_dim in zip(
-            acquisitions(sequence).items(), measurement_mapping
-        ):
-            meas = measurements[ro_dim, :]
-            i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
-            cache_measurements.setdefault(sample, meas)
-            res = np.stack(
-                np.unravel_index(cache_measurements[sample], hamiltonian.dims)
-            )[i]
-
-            res = diff_acquisition(res, options.acquisition_type)
-            results[ro_id] = res
-
-    return results
->>>>>>> 328acf30 (debugging of the emulator for passing all tests - additionally modification and bug correction of tests.)
