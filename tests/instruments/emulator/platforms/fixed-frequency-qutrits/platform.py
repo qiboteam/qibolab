@@ -29,7 +29,7 @@ def create() -> Hardware:
     # register the instruments
     instruments = {
         "emulator": EmulatorController(
-            address="0.0.0.0", channels=channels, sampling_rate_=2
+            address="0.0.0.0", channels=channels, sampling_rate_=2, save_flag=True
         ),
     }
 
