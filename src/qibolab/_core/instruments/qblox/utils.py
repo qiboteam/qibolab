@@ -44,6 +44,7 @@ def batch_shots(
     It assumes an integrated/discriminated acquisition, such that each
     acquisition in an individual loop accounts for a single bin.
     """
+    assert options.nshots is not None
 
     # In this case we just pass the number of shots without subdividing based on the
     # available acquistion memory, since only a single aquisition is performed for all
@@ -51,7 +52,6 @@ def batch_shots(
     if options.averaging_mode.average:
         return [options.nshots]
 
-    assert options.nshots is not None
     acq_memory_shot = per_shot_memory(sequence, sweepers, options)
     max_shots = int(ACQUISITION_MEMORY // acq_memory_shot)
     nfull, remainder = np.divmod(options.nshots, max_shots)
