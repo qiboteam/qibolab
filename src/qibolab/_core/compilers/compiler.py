@@ -113,7 +113,8 @@ class Compiler:
                     f"2q gate for qubits {pair} is not defined by the "
                     f"platform. The defined pairs are {list(natives.two_qubit.keys())}."
                 )
-            return rule(gate, natives.two_qubit[pair])
+            existing_pair = pair if pair in natives.two_qubit else pair[::-1]
+            return rule(gate, natives.two_qubit[existing_pair])
 
         raise NotImplementedError(f"{type(gate)} is not a native gate.")
 
