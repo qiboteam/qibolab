@@ -142,7 +142,7 @@ def _batch_sequences_by_cluster_memory_limits(
     if batch_memory["batch"]:
         batched_list.append(batch_memory["batch"])
 
-    # Align the channels between bathces of sequences
+    # Align the channels between batches of sequences
     batched_seqs = []
     for batch_memory in batched_list:
         batched = batch_memory[0]
@@ -240,7 +240,7 @@ class Cluster(Controller):
         for ps in batched_seqs:
             # full reset of the cluster, to erase leftover configurations and sequencer
             # synchronization registration
-            # TODO: don't reset unessesarily. In RB with depths 2**np.arange(11) the
+            # TODO: don't reset unnecessarily. In RB with depths 2**np.arange(11) the
             # reset alone takes 14% of total execution time
             self.reset()
             psres = []
