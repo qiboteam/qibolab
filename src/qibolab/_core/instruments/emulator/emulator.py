@@ -69,20 +69,23 @@ class EmulatorController(Controller):
     ) -> dict[int, Result]:
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
-        # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
+
+        results_to_process = ()
+        for sequence in sequences_:
+            sweep_results = self._sweep(sequence, configs, sweepers)
+
+            results_to_process += (
                 results(
                     # states in computational basis
-                    self._sweep(sequence, configs, sweepers),
-                    sequence,
-                    cast(HamiltonianConfig, configs["hamiltonian"]),
-                    options,
-                )
-                for sequence in sequences_
-            ),
-        )
+                    states=sweep_results[0],
+                    measurement_mapping=sweep_results[1],
+                    sequence=sequence,
+                    hamiltonian=cast(HamiltonianConfig, configs["hamiltonian"]),
+                    options=options,
+                ),
+            )
+
+        return reduce(or_, results_to_process)
 
     def _sweep(
         self,
@@ -90,7 +93,7 @@ class EmulatorController(Controller):
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray]:
         """Sweep over sequence.
 
         This function invokes itself recursively, adding an array
@@ -119,14 +122,16 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
+            results.append(sweep_sim[0])
+            measurement_indices = sweep_sim[1]
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
+        return np.stack(results), measurement_indices
 
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray]:
         """Play single sequence on emulator.
 
         The array returned by this function has a single dimension, over
