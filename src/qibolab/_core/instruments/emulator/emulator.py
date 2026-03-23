@@ -45,6 +45,9 @@ class EmulatorController(Controller):
     """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
     """Bounds for emulator."""
+    save_flag: bool = False
+    """Flag for saving the full system evolution computed from the simulation
+    backend. In order to set it True modify `platform.py` file in the platform folder."""
 
     @property
     def sampling_rate(self) -> float:
@@ -150,17 +153,19 @@ class EmulatorController(Controller):
         operators, and returns the resulting measurement data.
         """
         sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
+        tlist_ = tlist(sequence_, self.sampling_rate, per_sample=20)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_, tlist_)
+        # breakpoint()
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
             time=tlist_,
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
+            save_evolution=self.save_flag,
         )
         return select_acquisitions(
             results.states,
@@ -232,7 +237,6 @@ def tlist(
     )
     end = max(seq.duration, 1)
     rate = sampling_rate * per_sample
-    # breakpoint()
     return np.arange(0, end, 1 / rate)
 
 
@@ -295,7 +299,7 @@ def channel_time(
     for pulse in waveforms:
         next_pulse_time = cumulative_time + pulse.duration
         pulse_times_idx = (time_evolution >= cumulative_time) & (
-            time_evolution <= next_pulse_time
+            time_evolution < next_pulse_time
         )
         times_samples = np.floor(
             (time_evolution[pulse_times_idx] - cumulative_time) * sampling_rate

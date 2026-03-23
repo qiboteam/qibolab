@@ -1,5 +1,7 @@
 from functools import cached_property
-from typing import Union
+from typing import Iterable, Union
+
+import numpy as np
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
@@ -21,19 +23,52 @@ class QutipEngine(SimulationEngine):
         self,
         hamiltonian: Operator,
         initial_state: Operator,
-        time: list[float],
+        time: Iterable[float],
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
+        save_evolution: bool = False,
         **kwargs,
     ):
+
+        max_time_diff = np.max(np.diff(time))
+        max_step = max_time_diff / 10
+        options = {"max_step": max_step}
+
         """Evolve the system."""
         if time_hamiltonian is not None:
-            # hamiltonian += self.engine.QobjEvo(time_hamiltonian.operators)
             hamiltonian = [hamiltonian] + time_hamiltonian.operators
 
-        return self.engine.mesolve(
-            hamiltonian, initial_state, time, collapse_operators, **kwargs
+        sim_results = self.engine.mesolve(
+            hamiltonian,
+            initial_state,
+            time,
+            collapse_operators,
+            options=options,
+            **kwargs,
         )
+
+        if save_evolution:
+            from pathlib import Path
+
+            directory = Path(".")
+            filename_1 = "System_Hamiltonian"
+            filename_2 = "State_Evolution"
+            count_1 = sum(
+                1
+                for file in directory.iterdir()
+                if file.is_file() and filename_1 in file.name
+            )
+            count_2 = sum(
+                1
+                for file in directory.iterdir()
+                if file.is_file() and filename_2 in file.name
+            )
+            count = max(count_1, count_2)
+
+            self.engine.qsave(hamiltonian, f"{filename_1}_{count}")
+            self.engine.qsave(sim_results, f"{filename_2}_{count}")
+
+        return sim_results
 
     def create(self, n: int) -> Operator:
         """Create operator for n levels system."""
