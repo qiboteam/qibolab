@@ -19,7 +19,14 @@ def per_shot_memory(
     options: ExecutionParameters,
 ) -> int:
     """Compute the memory per shot."""
-    bins = np.prod(options.bins(sweepers)[1:])
+    # If options.averaging_mode.average, options.bins(sweepers) returns only sweep
+    # dimensions (no shots dimension). In that case we must not drop the first entry.
+    if options.averaging_mode.average:
+        bins = np.prod(options.bins(sweepers))
+    else:
+        # Non-averaging (single shot) mode includes the shots dimension as the first
+        # entry. Drop it to get only the per-shot sweep dimensions.
+        bins = np.prod(options.bins(sweepers)[1:])
     acquisitions = max(
         sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
         for pulses in sequence.by_channel.values()
@@ -37,11 +44,14 @@ def batch_shots(
     It assumes an integrated/discriminated acquisition, such that each
     acquisition in an individual loop accounts for a single bin.
     """
-    assert options.nshots is not None
 
+    # In this case we just pass the number of shots without subdividing based on the
+    # available acquistion memory, since only a single aquisition is performed for all
+    # shots.
     if options.averaging_mode.average:
         return [options.nshots]
 
+    assert options.nshots is not None
     acq_memory_shot = per_shot_memory(sequence, sweepers, options)
     max_shots = int(ACQUISITION_MEMORY // acq_memory_shot)
     nfull, remainder = np.divmod(options.nshots, max_shots)
