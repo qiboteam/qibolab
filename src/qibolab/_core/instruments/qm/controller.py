@@ -136,7 +136,6 @@ def _update_pulse_amplitude(
 
 
 QM_BOUNDS = {
-    "kind": "bounds",
     "waveforms": 40000.0,
     "readout": 30,
     "instructions": 1000000,
@@ -182,14 +181,16 @@ def _batch(sequences: list[PulseSequence], bounds: dict = QM_BOUNDS):
         }
         bounds_exceeded = any(counters[k] + update_vals[k] > bounds[k] for k in bounds)
         if bounds_exceeded:
-            yield batch
+            if batch:
+                yield batch
             counters = update_vals.copy()
             batch = [sequence]
         else:
             batch.append(sequence)
             for k in counters:
                 counters[k] += update_vals[k]
-    yield batch
+    if batch:
+        yield batch
 
 
 def _unroll_sequences(
