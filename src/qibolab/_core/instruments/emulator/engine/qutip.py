@@ -45,7 +45,7 @@ class QutipEngine(SimulationEngine):
             else max_step / 10
         )
         nsteps = max(time_diff) / min_step * INTEGRATION_MULTIPLIER
-        options = {"max_step": max_step, "nsteps": nsteps}
+        options = {"min_step": min_step, "max_step": max_step, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
             hamiltonian = [hamiltonian] + time_hamiltonian.operators
