@@ -5,6 +5,12 @@ import numpy as np
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
+INTEGRATION_MAX_TIME_STEP = 0.02  # ns, min resolution of the integrator
+INTEGRATION_MULTIPLIER = (
+    100  # factor for computing max number of steps for the ode solver
+)
+INTEGRATION_MIN_TIME_STEP = 5e-3  # ns, max resolution of the integrator
+
 __all__ = ["QutipEngine"]
 
 
@@ -29,12 +35,18 @@ class QutipEngine(SimulationEngine):
         save_evolution: bool = False,
         **kwargs,
     ):
-
-        max_time_diff = np.max(np.diff(time))
-        max_step = max_time_diff / 10
-        options = {"max_step": max_step}
-
         """Evolve the system."""
+
+        time_diff = np.diff(time)
+        max_step = min(min(time_diff), INTEGRATION_MAX_TIME_STEP)
+        min_step = (
+            INTEGRATION_MIN_TIME_STEP
+            if max_step > INTEGRATION_MIN_TIME_STEP
+            else max_step / 10
+        )
+        nsteps = max(time_diff) / min_step * INTEGRATION_MULTIPLIER
+        options = {"max_step": max_step, "nsteps": nsteps}
+
         if time_hamiltonian is not None:
             hamiltonian = [hamiltonian] + time_hamiltonian.operators
 

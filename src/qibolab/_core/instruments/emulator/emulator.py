@@ -4,10 +4,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.interpolate import BSpline, make_interp_spline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -32,6 +33,8 @@ from .hamiltonians import (
     waveform,
 )
 from .results import acquisitions, index, results, select_acquisitions
+
+SPLINE_INTERP_ORDER = 3
 
 __all__ = ["EmulatorController"]
 
@@ -152,13 +155,13 @@ class EmulatorController(Controller):
         the time-dependent Hamiltonian, evolves the initial state with optional collapse
         operators, and returns the resulting measurement data.
         """
+        # import pdbpp; pdbpp.set_trace()
         sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate, per_sample=20)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
-        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_, tlist_)
-        # breakpoint()
+        tlist_, time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
@@ -167,34 +170,39 @@ class EmulatorController(Controller):
             time_hamiltonian=time_hamiltonian,
             save_evolution=self.save_flag,
         )
-        return select_acquisitions(
-            results.states,
-            acquisitions(sequence_).values(),
-            tlist_,
-        )
+        return np.stack([s.full() for s in results.states])
 
     def _pulse_hamiltonian(
         self,
         sequence: PulseSequence,
         configs: dict[str, Config],
-        time_evolution: NDArray,
     ) -> Optional[OperatorEvolution]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
+
+        time_evolution = tlist(sequence, self.sampling_rate, per_sample=20)
+        measurements_times = select_acquisitions(
+            acquisitions(sequence).values(),
+            time_evolution,
+        )
 
         channels = [
             [
                 operator,
-                channel_time(
+                channel_timings(
                     waveforms,
                     sampling_rate=self.sampling_rate,
                     time_evolution=time_evolution,
+                    interp_order=SPLINE_INTERP_ORDER,
                 ),
             ]
             for operator, waveforms in hamiltonians(
                 sequence, configs, self.engine, self.sampling_rate
             )
         ]
-        return OperatorEvolution(channels) if len(channels) > 0 else None
+        return (
+            measurements_times,
+            (OperatorEvolution(channels) if len(channels) > 0 else None),
+        )
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -210,7 +218,7 @@ def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Confi
 
 
 def tlist(
-    sequence: PulseSequence, sampling_rate: float, per_sample: float = 100
+    sequence: PulseSequence, sampling_rate: float, per_sample: float = 10
 ) -> NDArray:
     """Compute times for evolution.
 
@@ -282,14 +290,17 @@ def hamiltonians(
     )
 
 
-def channel_time(
+def channel_timings(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
     time_evolution: NDArray,
-) -> Callable[[float], float]:
-    """Wrap time function for specific channel.
-
-    Used to avoid late binding issues.
+    interp_order: int = 3,
+) -> BSpline:
+    """
+    Generate a B-spline interpolation of modulated waveforms over a time evolution.
+    This function processes a sequence of modulated pulses, accumulating their waveforms
+    over time and applying phase modulation. The resulting waveform is then interpolated
+    into a smooth B-spline curve for time evolution analysis.
     """
 
     pulse_waveforms = np.zeros_like(time_evolution)
@@ -311,22 +322,10 @@ def channel_time(
         cumulative_phase += pulse.phase
         cumulative_time = next_pulse_time
 
-    def time(t: float) -> float:
-        cumulative_time = 0
-        cumulative_phase = 0
-        for pulse in waveforms:
-            pulse_phase = pulse.phase
-            if cumulative_time <= t < cumulative_time + pulse.duration:
-                relative_time = t - cumulative_time
-                index = int(np.floor(relative_time * sampling_rate))
-                return pulse(t, index, cumulative_phase)
-            cumulative_time += pulse.duration
-            cumulative_phase += pulse_phase
-        return 0
+    # return pulse_waveforms
 
-    old_w = np.stack([time(t) for t in time_evolution])
+    interpolated_curve = make_interp_spline(
+        time_evolution, pulse_waveforms, k=interp_order
+    )
 
-    if not np.allclose(old_w, pulse_waveforms):
-        print("non sono uguali")
-    return pulse_waveforms
-    # return time
+    return interpolated_curve
