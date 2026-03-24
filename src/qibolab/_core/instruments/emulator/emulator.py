@@ -32,9 +32,12 @@ from .hamiltonians import (
     Modulated,
     waveform,
 )
-from .results import acquisitions, index, results, select_acquisitions
+from .results import acquisitions, index, results
 
+# polynomial order used for interpolating the pulses with a spline function
 SPLINE_INTERP_ORDER = 3
+# GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations
+NYQUIST_FREQUENCY = 20
 
 __all__ = ["EmulatorController"]
 
@@ -42,7 +45,7 @@ __all__ = ["EmulatorController"]
 class EmulatorController(Controller):
     """Emulator controller."""
 
-    sampling_rate_: float = 1
+    sampling_rate_: float = results.states[1:]
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
@@ -160,17 +163,19 @@ class EmulatorController(Controller):
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
-        tlist_, time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        tlist_, index = np.unique(acquisitions(sequence_).values(), return_index=True)
+        # tlist_ = time_evolution[::200]
 
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
-            time=tlist_,
+            time=np.concatenate(([0], tlist_)),
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
             save_evolution=self.save_flag,
         )
-        return np.stack([s.full() for s in results.states])
+        return np.stack([s.full() for s in results.states[1:]]), index
 
     def _pulse_hamiltonian(
         self,
@@ -179,11 +184,11 @@ class EmulatorController(Controller):
     ) -> Optional[OperatorEvolution]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
-        time_evolution = tlist(sequence, self.sampling_rate, per_sample=20)
-        measurements_times = select_acquisitions(
-            acquisitions(sequence).values(),
-            time_evolution,
-        )
+        # processed sampling rate; field `sampling_rate` of the `EmulatorController`
+        # mimic a real hardware sampling rate, but it is insufficient for us to resolve
+        # the oscillation and correctly solve the system evolution, hence we
+        # set a ny
+        time_evolution = tlist(sequence)
 
         channels = [
             [
@@ -199,10 +204,7 @@ class EmulatorController(Controller):
                 sequence, configs, self.engine, self.sampling_rate
             )
         ]
-        return (
-            measurements_times,
-            (OperatorEvolution(channels) if len(channels) > 0 else None),
-        )
+        return OperatorEvolution(channels) if len(channels) > 0 else None
 
 
 def update_sequence(sequence: PulseSequence, updates: dict) -> PulseSequence:
@@ -217,35 +219,21 @@ def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Confi
     return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
 
 
-def tlist(
-    sequence: PulseSequence, sampling_rate: float, per_sample: float = 10
-) -> NDArray:
-    """Compute times for evolution.
+def tlist(sequence: PulseSequence) -> NDArray:
+    """Generate a time array for pulse sequence execution.
 
-    The frequency of times is double the sampling rate, to make sure
-    that all pulses features are resolved by the evolution.
-
-    This can be customized using the `per_sample` rate, e.g. to retrieve times at the
-    sampling rate itself, for pulses evaluation.
-
-    .. note::
-
-        As an optimization, if an acquisition is executed as the last
-        sequence operation, that's not taken into account, since it is not
-        simulated by the present emulator.
-
-        For long experiments, it is a mild optimization. But it critically speeds up
-        short experiments, given the usual relative duration of acquisitions and control
-        pulses.
+    This function creates a time array spanning from 0 to the end of the pulse sequence,
+    sampled at the Nyquist frequency. If the last element of the sequence is an Acquisition
+    or Readout operation, it is excluded from the duration calculation.
     """
+
     seq = (
         sequence[:-1]
         if isinstance(sequence[-1][1], (Acquisition, Readout))
         else sequence
     )
     end = max(seq.duration, 1)
-    rate = sampling_rate * per_sample
-    return np.arange(0, end, 1 / rate)
+    return np.arange(0, end, 1 / (2 * NYQUIST_FREQUENCY))
 
 
 def hamiltonian(
@@ -323,9 +311,11 @@ def channel_timings(
         cumulative_time = next_pulse_time
 
     # return pulse_waveforms
-
     interpolated_curve = make_interp_spline(
         time_evolution, pulse_waveforms, k=interp_order
     )
 
     return interpolated_curve
+
+
+per_sample = 20
