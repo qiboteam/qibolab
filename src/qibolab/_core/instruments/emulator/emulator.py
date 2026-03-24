@@ -1,6 +1,5 @@
 """Emulator controller."""
 
-import datetime
 import time
 from collections import defaultdict
 from collections.abc import Iterable
@@ -82,9 +81,6 @@ class EmulatorController(Controller):
             sweep_results = self._sweep(sequence, configs, sweepers)
             time.sleep(2)
 
-            t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
-            np.savez(f"./{t}_data_length_tomography", sweep_results[0])
-
             results_to_process += (
                 results(
                     # states in computational basis
@@ -161,11 +157,6 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
-
-        # breakpoint()
-        # res = np.stack([r.full() for r in results.states])
-        # t = datetime.datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
-        # np.savez(f'qutip_solution_{t}.npz', res)
 
         return select_acquisitions(
             results.states,
