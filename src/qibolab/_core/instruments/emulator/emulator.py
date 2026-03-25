@@ -231,7 +231,6 @@ class CudaqEmulatorController(EmulatorController):
             sweepers_shape.append(len(sweeper[0].values))
         sweepers_shape += list(sweep_acquisitions.shape[1:])
         sweep_acquisitions = np.stack(sweep_acquisitions).reshape(sweepers_shape)
-        self.sweep_acquisitions = sweep_acquisitions
         
         return sweep_acquisitions
 
