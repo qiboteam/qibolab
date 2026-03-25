@@ -14,7 +14,7 @@ from typing import Annotated, Literal, Optional, Union
 import numpy as np
 from pydantic import Field
 
-from ..serialize import Model, NdArray
+from ..serialize import Model, NdArray, eq
 from .filters import Filter
 
 __all__ = [
@@ -128,25 +128,7 @@ class AcquisitionConfig(Config):
     signal."""
 
     def __eq__(self, other) -> bool:
-        """Explicit configuration equality.
-
-        .. note::
-
-            the expliciti definition is required in order to solve the ambiguity about
-            the arrays equality
-        """
-        # FIXME: temporary solution to avoid error described in
-        # https://github.com/qiboteam/qibolab/pull/1312
-        raw_kernel_comparison = self.kernel == other.kernel
-        return (
-            (self.delay == other.delay)
-            and (self.smearing == other.smearing)
-            and (self.threshold == other.threshold)
-            and (self.iq_angle == other.iq_angle)
-            and raw_kernel_comparison
-            if isinstance(raw_kernel_comparison, bool)
-            else raw_kernel_comparison.all(),
-        )
+        return eq(self, other)
 
 
 class LogConfig(Config):
