@@ -58,13 +58,16 @@ class CudaqEngine(SimulationEngine):
     ):  
         # convert time to schedule
         schedule = self.engine.Schedule(time, ["t"])
-        
-        # TODO: check options for integrator
 
         """Evolve the system."""
         if time_hamiltonian is not None:        
             for op, waveform in time_hamiltonian.operators:
                 hamiltonian += self.engine.ScalarOperator(waveform) * op
+
+        if max_step_size:
+            integrator = self.engine.RungeKuttaIntegrator(max_step_size=max_step_size)
+        else:
+            integrator = self.engine.ScipyZvodeIntegrator()
         
         return self.engine.evolve(
             hamiltonian,
@@ -73,8 +76,7 @@ class CudaqEngine(SimulationEngine):
             initial_state, 
             collapse_operators,
             store_intermediate_results=self.engine.IntermediateResultSave.ALL,
-            ##integrator=self.engine.ScipyZvodeIntegrator(),
-            integrator=self.engine.RungeKuttaIntegrator(max_step_size=max_step_size),
+            integrator=integrator,
             **kwargs
         )
 

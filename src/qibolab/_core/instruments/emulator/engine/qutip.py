@@ -27,6 +27,7 @@ class QutipEngine(SimulationEngine):
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
         dimensions: dict = None,
+        max_step_size: float = None,
         **kwargs,
     ):
         """Evolve the system."""
