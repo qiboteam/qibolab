@@ -7,7 +7,7 @@ from .abstract import Operator, OperatorEvolution, SimulationEngine
 
 INTEGRATION_MAX_TIME_STEP = 0.02  # ns, min resolution of the integrator
 INTEGRATION_MULTIPLIER = (
-    100  # factor for computing max number of steps for the ode solver
+    200  # factor for computing max number of steps for the ode solver
 )
 INTEGRATION_MIN_TIME_STEP = 5e-3  # ns, max resolution of the integrator
 
@@ -45,7 +45,7 @@ class QutipEngine(SimulationEngine):
             else max_step / 10
         )
         nsteps = max(time_diff) / min_step * INTEGRATION_MULTIPLIER
-        options = {"min_step": min_step, "max_step": max_step, "nsteps": nsteps}
+        options = {"max_step": max_step, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
             hamiltonian = [hamiltonian] + time_hamiltonian.operators
