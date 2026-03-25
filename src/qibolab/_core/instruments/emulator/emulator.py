@@ -16,11 +16,9 @@ from qibolab._core.execution_parameters import ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import (
-    Acquisition,
     Delay,
     Pulse,
     PulseLike,
-    Readout,
     VirtualZ,
 )
 from qibolab._core.sequence import PulseSequence
@@ -45,7 +43,7 @@ __all__ = ["EmulatorController"]
 class EmulatorController(Controller):
     """Emulator controller."""
 
-    sampling_rate_: float = results.states[1:]
+    sampling_rate_: float = 1
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
@@ -115,7 +113,7 @@ class EmulatorController(Controller):
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray]:
         """Sweep over sequence.
 
         This function invokes itself recursively, adding an array
@@ -144,10 +142,12 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
+            results.append(sweep_sim[0])
+            measurement_indices = sweep_sim[1]
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
+        return np.stack(results), measurement_indices
 
     def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -158,14 +158,14 @@ class EmulatorController(Controller):
         the time-dependent Hamiltonian, evolves the initial state with optional collapse
         operators, and returns the resulting measurement data.
         """
-        # import pdbpp; pdbpp.set_trace()
         sequence_ = update_sequence(sequence, updates)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        tlist_, index = np.unique(acquisitions(sequence_).values(), return_index=True)
-        # tlist_ = time_evolution[::200]
+        measurement_times = np.array(list(acquisitions(sequence_).values()))
+        measurement_times[measurement_times == 0] = 1 / (2 * NYQUIST_FREQUENCY)
+        tlist_, index = np.unique(measurement_times, return_inverse=True)
 
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
@@ -227,12 +227,7 @@ def tlist(sequence: PulseSequence) -> NDArray:
     or Readout operation, it is excluded from the duration calculation.
     """
 
-    seq = (
-        sequence[:-1]
-        if isinstance(sequence[-1][1], (Acquisition, Readout))
-        else sequence
-    )
-    end = max(seq.duration, 1)
+    end = max(sequence.duration, 1)
     return np.arange(0, end, 1 / (2 * NYQUIST_FREQUENCY))
 
 
