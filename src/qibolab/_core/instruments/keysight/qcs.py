@@ -52,7 +52,11 @@ class KeysightQCS(Controller):
     """Subset of channels that require offset"""
 
     def connect(self):
-        self.backend = qcs.HclBackend(self.qcs_channel_map, hw_demod=True)
+        self.backend = qcs.HclBackend(
+            self.qcs_channel_map,
+            fpga_postprocessing=True,
+            suppress_rounding_warnings=True,
+        )
         self.backend.is_system_ready()
 
     def create_layer(
@@ -61,7 +65,7 @@ class KeysightQCS(Controller):
         configs: dict[str, Config],
         sweeper_channel_map: dict[ChannelId, qcs.Scalar],
         sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
-    ) -> tuple[qcs.Program, list[tuple[int, int]]]:
+    ) -> qcs.Layer:
 
         layer = qcs.Layer()
         # WAVEFORM COMPILATION

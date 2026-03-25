@@ -71,9 +71,7 @@ def process_acquisition_channel_pulse(
         sweep_param_map = sweeper_pulse_map.get(pulse.probe.id, {})
         qcs_pulse = qcs.RFWaveform(
             duration=sweep_param_map.get("duration", pulse.probe.duration * NS_TO_S),
-            envelope=generate_qcs_envelope(
-                pulse.probe.envelope, pulse.duration * NS_TO_S
-            ),
+            envelope=generate_qcs_envelope(pulse.probe.envelope),
             amplitude=sweep_param_map.get("amplitude", pulse.probe.amplitude),
             rf_frequency=frequency,
             instantaneous_phase=sweep_param_map.get(
@@ -118,7 +116,7 @@ def process_iq_channel_pulse(
     elif pulse.kind == "pulse":
         qcs_pulse = qcs.RFWaveform(
             duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
-            envelope=generate_qcs_envelope(pulse.envelope, pulse.duration * NS_TO_S),
+            envelope=generate_qcs_envelope(pulse.envelope),
             amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
             rf_frequency=frequency,
             instantaneous_phase=sweep_param_map.get(
@@ -181,9 +179,7 @@ def process_dc_channel_pulse(
         else:
             qcs_pulse = qcs.DCWaveform(
                 duration=sweep_param_map.get("duration", pulse.duration * NS_TO_S),
-                envelope=generate_qcs_envelope(
-                    pulse.envelope, pulse.duration * NS_TO_S
-                ),
+                envelope=generate_qcs_envelope(pulse.envelope),
                 amplitude=sweep_param_map.get("amplitude", pulse.amplitude),
             )
     else:
