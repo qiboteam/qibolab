@@ -41,7 +41,8 @@ def test_second_excited_state(platform: Platform):
     seq = q0.RX() | q0.RX12() | q0.MZ()
     acq_handle = list(seq.channel(platform.qubits[0].acquisition))[-1].id
     res = platform.execute([seq], nshots=1e4)[acq_handle]
-    assert pytest.approx(res.mean(), abs=1e-1) == 2
+    # by design of the emulator all the 2 states to be classified as 1
+    assert pytest.approx(res.mean(), abs=1e-1) == 1
 
 
 def test_virtualz_sequence(platform: Platform):
