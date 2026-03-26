@@ -145,7 +145,7 @@ def cyclic_results(
     return res_dict
 
 
-def cyclic_singleshot(
+def singleshot_results(
     state_probs: NDArray,
     measurement_mapping: NDArray,
     sequence: PulseSequence,
@@ -217,7 +217,7 @@ def results(
 
     if options.averaging_mode is AveragingMode.SINGLESHOT:
         assert options.nshots is not None
-        sim_results = cyclic_singleshot(
+        sim_results = singleshot_results(
             state_probs=probabilities,
             measurement_mapping=measurement_mapping,
             sequence=sequence,
