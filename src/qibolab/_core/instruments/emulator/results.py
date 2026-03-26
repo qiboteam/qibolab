@@ -34,7 +34,6 @@ def ndchoice(probabilities: NDArray, samples: int) -> NDArray:
         Generalized from https://stackoverflow.com/a/47722393, which presents the
         two-dimensional version.
     """
-    np.random.seed(123456)
     return (
         probabilities.cumsum(-1).reshape(*probabilities.shape, -1)
         > np.random.rand(*probabilities.shape[:-1], 1, samples)
