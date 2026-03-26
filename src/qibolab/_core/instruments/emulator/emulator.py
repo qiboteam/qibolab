@@ -70,22 +70,35 @@ class EmulatorController(Controller):
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
 
-        results_to_process = ()
-        for sequence in sequences_:
-            sweep_results = self._sweep(sequence, configs, sweepers)
-
-            results_to_process += (
-                results(
-                    # states in computational basis
-                    states=sweep_results[0],
-                    measurement_mapping=sweep_results[1],
-                    sequence=sequence,
-                    hamiltonian=cast(HamiltonianConfig, configs["hamiltonian"]),
-                    options=options,
-                ),
-            )
+        results_to_process = (
+            self._results(configs, sequence, options, sweepers)
+            for sequence in sequences_
+        )
 
         return reduce(or_, results_to_process)
+
+    def _results(
+        self,
+        configs: dict[str, Config],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ):
+        """
+        Generate results from an emulated quantum sequence execution.
+        Executes a sweep of the quantum sequence and processes the results
+        into a structured results object containing quantum states and measurement data.
+        """
+
+        sweep_results = self._sweep(sequence, configs, sweepers)
+        hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
+        return results(
+            # states in computational basis
+            states=sweep_results,
+            sequence=sequence,
+            hamiltonian=hamiltonian,
+            options=options,
+        )
 
     def _sweep(
         self,
@@ -93,7 +106,7 @@ class EmulatorController(Controller):
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
-    ) -> tuple[NDArray, NDArray]:
+    ) -> NDArray:
         """Sweep over sequence.
 
         This function invokes itself recursively, adding an array
@@ -122,20 +135,19 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
-            results.append(sweep_sim[0])
-            measurement_indices = sweep_sim[1]
+            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results), measurement_indices
+        return np.stack(results)
 
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> tuple[NDArray, NDArray]:
-        """Play single sequence on emulator.
+    ) -> NDArray:
+        """Execute a pulse sequence on the quantum emulator.
 
-        The array returned by this function has a single dimension, over
-        the various measurements included in the sequence.
+        This method updates the sequence parameters, generates the time grid, constructs
+        the time-dependent Hamiltonian, evolves the initial state with optional collapse
+        operators, and returns the resulting measurement data.
         """
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)

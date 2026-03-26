@@ -87,23 +87,24 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig) -> int:
 
 def select_acquisitions(
     states: list[Operator], acquisitions: Iterable[float], times: NDArray
-) -> tuple[NDArray, NDArray]:
-    """Select density matrices from states.
+) -> NDArray:
+    """
+    Select and organize quantum state acquisitions based on acquisition times.
 
-    First, retrieve acquisitions, and locate them in the tlist, to
-    isolate the expectations related to measurements.
+    This function filters quantum states corresponding to specified acquisition times
+    and maps them to unique acquisition values. It uses binary search to find the
+    nearest state index for each acquisition time.
 
-    The return type should be rank-3 array, where the last two are the density
-    matrices dimensions, while the first one should correspond to the acquisitions.
+    It returns a tuple containing 1 NumPy array containing the full density matrices
+    of the selected quantum states.
     """
     acq, index_pos = np.unique(list(acquisitions), return_inverse=True)
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([states[n].full() for n in samples]), index_pos
+    return np.stack([states[n].full() for n in samples])[index_pos]
 
 
 def cyclic_results(
     state_probs: NDArray,
-    measurement_mapping: NDArray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -118,15 +119,20 @@ def cyclic_results(
         - For integration acquisition type, imaginary components are set to zero.
     """
 
+    # Through the entire function state_probs has dimensions:
+    # (M, S_i, H_dim), where
+    # M is the number of measurements applied in the pulse sequence
+    # S_i is the number of iteration for each sweep in the experiment
+    # H_dim is the complete system dimension
     states_computational_idx = np.stack(
         np.unravel_index(np.arange(state_probs.shape[-1]), hamiltonian.dims)
     )
 
     res_dict = {}
-    for ro_dim, ro_id in zip(measurement_mapping, acquisitions(sequence).keys()):
+    for meas_ro, ro_id in zip(state_probs, acquisitions(sequence).keys()):
         i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
 
-        res = np.sum(state_probs[..., ro_dim, states_computational_idx[i] > 0], axis=-1)
+        res = np.sum(meas_ro[..., states_computational_idx[i] > 0], axis=-1)
         res = np.random.normal(res, scale=0.001)
 
         if options.acquisition_type is AcquisitionType.INTEGRATION:
@@ -136,6 +142,7 @@ def cyclic_results(
         if options.acquisition_type is AcquisitionType.DISCRIMINATION:
             res = np.clip(res, 0, 1)
 
+        # res is a (S_i, ...) array
         res_dict[ro_id] = res
 
     return res_dict
@@ -143,7 +150,6 @@ def cyclic_results(
 
 def singleshot_results(
     state_probs: NDArray,
-    measurement_mapping: NDArray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -158,20 +164,42 @@ def singleshot_results(
         - For integration acquisition type, imaginary components are set to zero.
     """
 
-    res_dict = {}
-    sampled = shots(np.moveaxis(state_probs, -2, 0), options.nshots)
+    # select only unique times of measurements
+    _, direct_map, inverse_map = np.unique(
+        list(acquisitions(sequence).values()),
+        return_index=True,
+        return_inverse=True,
+    )
+
+    # apply the direct mapping found in np.unique to the probability vector
+    # in order to sample at unique times and hence mantain correlation
+    # since we use the same shots for synchronous measurements.
+    unique_state_probs = state_probs[direct_map]
+
+    # shots function returns a vector of shape:
+    # (Nshots, M, S_i, H_dim), where
+    # Nshots is simply the number of shots we average on
+    # M is the number of measurements applied in the pulse sequence
+    # S_i is the number of iteration for each sweep in the experiment
+    # H_dim is the complete system dimension
+    sampled = shots(unique_state_probs, options.nshots)
+
     # move measurements dimension to the front, getting ready for extraction
-    measurements = np.moveaxis(sampled, 1, 0)
-    for ro_id, ro_dim in zip(acquisitions(sequence).keys(), measurement_mapping):
-        meas = measurements[ro_dim, ...]
+    # the shape now is: (M, Nshots, S_i, H_dim)
+    sampled = np.moveaxis(sampled, 1, 0)
+
+    res_dict = {}
+    for ro_id, inv_idx in zip(acquisitions(sequence).keys(), inverse_map):
         i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
         # states out of the qubit computational space are classified as 1
-        res = np.clip(np.stack(np.unravel_index(meas, hamiltonian.dims))[i], 0, 1)
+        # here sampled has dimensions (M, Nshots, S_i, H_dim)
+        res = np.clip(np.unravel_index(sampled[inv_idx], hamiltonian.dims)[i], 0, 1)
 
         if options.acquisition_type is AcquisitionType.INTEGRATION:
             zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
             res = np.stack((res, zeros), axis=-1)
 
+        # res is a (Nshots, S_i, ...) array
         res_dict[ro_id] = res
 
     return res_dict
@@ -179,7 +207,6 @@ def singleshot_results(
 
 def results(
     states: NDArray,
-    measurement_mapping: NDArray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -190,28 +217,31 @@ def results(
     result for the execution of this single sequence, thus suitable
     to be returned as is.
     """
+
+    # probability dimensions are:
+    # (S_i, M, H_dim), where
+    # S_i is the number of iteration for each sweep in the experiment
+    # M is the number of measurements applied in the pulse sequence
+    # H_dim is the complete system dimension
     probabilities = calculate_probabilities_from_density_matrix(
         states,
     )
 
-    sim_results = {}
-    if options.averaging_mode is AveragingMode.CYCLIC:
-        sim_results = cyclic_results(
-            state_probs=probabilities,
-            measurement_mapping=measurement_mapping,
-            sequence=sequence,
-            hamiltonian=hamiltonian,
-            options=options,
-        )
+    # here we move the -2 index of the probability array, hence it now becomes:
+    # (M, S_i, H_dim)
+    probabilities = np.moveaxis(probabilities, -2, 0)
 
-    if options.averaging_mode is AveragingMode.SINGLESHOT:
-        assert options.nshots is not None
-        sim_results = singleshot_results(
-            state_probs=probabilities,
-            measurement_mapping=measurement_mapping,
-            sequence=sequence,
-            hamiltonian=hamiltonian,
-            options=options,
-        )
-
-    return sim_results
+    results = (
+        singleshot_results
+        if options.averaging_mode is AveragingMode.SINGLESHOT
+        else cyclic_results
+    )
+    assert (options.averaging_mode is not AveragingMode.SINGLESHOT) or (
+        options.nshots is not None
+    ), "nshots must be specified for SINGLESHOT mode"
+    return results(
+        state_probs=probabilities,
+        sequence=sequence,
+        hamiltonian=hamiltonian,
+        options=options,
+    )
