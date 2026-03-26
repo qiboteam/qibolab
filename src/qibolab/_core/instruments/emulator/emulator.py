@@ -76,7 +76,11 @@ class EmulatorController(Controller):
         sequences_ = (seq.align_to_delays() for seq in sequences)
 
         results_to_process = (
+<<<<<<< HEAD
             self._play_sequence(configs, sequence, options, sweepers)
+=======
+            self._results(configs, sequence, options, sweepers)
+>>>>>>> 0b007c61 (applying review suggestiong and fixes)
             for sequence in sequences_
         )
 
