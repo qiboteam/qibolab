@@ -67,19 +67,35 @@ class EmulatorController(Controller):
     ) -> dict[int, Result]:
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
-        # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
-                results(
-                    # states in computational basis
-                    self._sweep(sequence, configs, sweepers),
-                    sequence,
-                    cast(HamiltonianConfig, configs["hamiltonian"]),
-                    options,
-                )
-                for sequence in sequences_
-            ),
+
+        results_to_process = (
+            self._results(configs, sequence, options, sweepers)
+            for sequence in sequences_
+        )
+
+        return reduce(or_, results_to_process)
+
+    def _results(
+        self,
+        configs: dict[str, Config],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ):
+        """
+        Generate results from an emulated quantum sequence execution.
+        Executes a sweep of the quantum sequence and processes the results
+        into a structured results object containing quantum states and measurement data.
+        """
+
+        sweep_results = self._sweep(sequence, configs, sweepers)
+        hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
+        return results(
+            # states in computational basis
+            states=sweep_results,
+            sequence=sequence,
+            hamiltonian=hamiltonian,
+            options=options,
         )
 
     def _sweep(
@@ -125,10 +141,11 @@ class EmulatorController(Controller):
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> NDArray:
-        """Play single sequence on emulator.
+        """Execute a pulse sequence on the quantum emulator.
 
-        The array returned by this function has a single dimension, over
-        the various measurements included in the sequence.
+        This method updates the sequence parameters, generates the time grid, constructs
+        the time-dependent Hamiltonian, evolves the initial state with optional collapse
+        operators, and returns the resulting measurement data.
         """
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
