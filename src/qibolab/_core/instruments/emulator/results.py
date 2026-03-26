@@ -105,8 +105,85 @@ def select_acquisitions(
     return np.stack([states[n].full() for n in samples])
 
 
+def cyclic_results(
+    state_probs: NDArray,
+    measurement_mapping: NDArray,
+    sequence: PulseSequence,
+    hamiltonian: HamiltonianConfig,
+    options: ExecutionParameters,
+) -> dict[int, Result]:
+    """Process measurement results from a cyclic quantum simulation, where the output for each measurement is
+    excited state population.
+    Computes readout results by projecting quantum state probabilities onto
+    measurement subspaces and applying configured post-processing.
+
+    Notes:
+        - States outside the computational subspace (values > 1) are classified as 1.
+        - For integration acquisition type, imaginary components are set to zero.
+    """
+
+    states_computational_idx = np.stack(
+        np.unravel_index(np.arange(state_probs.shape[-1]), hamiltonian.dims)
+    )
+
+    res_dict = {}
+    for ro_dim, ro_id in zip(measurement_mapping, acquisitions(sequence).keys()):
+        i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+
+        res = np.sum(state_probs[..., ro_dim, states_computational_idx[i] > 0], axis=-1)
+        res = np.random.normal(res, scale=0.001)
+
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
+            res = np.stack((res, zeros), axis=-1)
+
+        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+            res = np.clip(res, 0, 1)
+
+        res_dict[ro_id] = res
+
+    return res_dict
+
+
+def cyclic_singleshot(
+    state_probs: NDArray,
+    measurement_mapping: NDArray,
+    sequence: PulseSequence,
+    hamiltonian: HamiltonianConfig,
+    options: ExecutionParameters,
+) -> dict[int, Result]:
+    """Extract measurement results from simulated quantum state probabilities.
+    Performs single-shot measurement extraction from state probabilities by sampling
+    according to the specified number of shots and mapping readout operations to their
+    corresponding measurement results.
+
+    Notes:
+        - States outside the computational subspace (values > 1) are classified as 1.
+        - For integration acquisition type, imaginary components are set to zero.
+    """
+
+    res_dict = {}
+    sampled = shots(np.moveaxis(state_probs, -2, 0), options.nshots)
+    # move measurements dimension to the front, getting ready for extraction
+    measurements = np.moveaxis(sampled, 1, 0)
+    for ro_id, ro_dim in zip(acquisitions(sequence).keys(), measurement_mapping):
+        meas = measurements[ro_dim, ...]
+        i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+        # states out of the qubit computational space are classified as 1
+        res = np.clip(np.stack(np.unravel_index(meas, hamiltonian.dims))[i], 0, 1)
+
+        if options.acquisition_type is AcquisitionType.INTEGRATION:
+            zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
+            res = np.stack((res, zeros), axis=-1)
+
+        res_dict[ro_id] = res
+
+    return res_dict
+
+
 def results(
     states: NDArray,
+    measurement_mapping: NDArray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
     options: ExecutionParameters,
@@ -128,23 +205,24 @@ def results(
     # move measurements dimension to the front, getting ready for extraction
     measurements = np.moveaxis(sampled, 1, 0)
 
-    results = {}
-    # introduce cached measurements to avoid losing correlations
-    cache_measurements = {}
-    for (ro_id, sample), meas in zip(acquisitions(sequence).items(), measurements):
-        i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
-        cache_measurements.setdefault(sample, meas)
-        res = np.stack(np.unravel_index(cache_measurements[sample], hamiltonian.dims))[
-            i
-        ]
+    sim_results = {}
+    if options.averaging_mode is AveragingMode.CYCLIC:
+        sim_results = cyclic_results(
+            state_probs=probabilities,
+            measurement_mapping=measurement_mapping,
+            sequence=sequence,
+            hamiltonian=hamiltonian,
+            options=options,
+        )
 
-        if options.acquisition_type is AcquisitionType.INTEGRATION:
-            res = np.stack((res, np.zeros_like(res)), axis=-1)
-            res = np.random.normal(res, scale=0.001)
+    if options.averaging_mode is AveragingMode.SINGLESHOT:
+        assert options.nshots is not None
+        sim_results = cyclic_singleshot(
+            state_probs=probabilities,
+            measurement_mapping=measurement_mapping,
+            sequence=sequence,
+            hamiltonian=hamiltonian,
+            options=options,
+        )
 
-        if options.averaging_mode == AveragingMode.CYCLIC:
-            res = np.mean(res, axis=0)
-
-        results[ro_id] = res
-
-    return results
+    return sim_results
