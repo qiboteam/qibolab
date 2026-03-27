@@ -78,7 +78,6 @@ def _compute_duration(
 def _init_batch():
     """Helper function to initialise the batch tracking variables."""
     return {
-        "batch": [],
         "acq_memory": 0,
         "acq_number": 0,
         # an offset number of lines that is always there regardless of the
@@ -96,46 +95,47 @@ def _batch_sequences_by_cluster_memory_limits(
     options: ExecutionParameters,
 ) -> list[PulseSequence]:
     """Split sequences into batches that fit into the cluster memory"""
+    batch = []
     batch_memory = _init_batch()
-    batched_list: list[list[PulseSequence]] = []
+    batches: list[list[PulseSequence]] = []
     for ps in sequences:
         ps_memory = {
             "acq_memory": per_shot_memory(ps, sweepers, options),
             "acq_number": len(ps.acquisitions),
-            # The factor 1.59 is determined heuristically, for large number of gates
-            # and iterations the ratio of ps.data objects to Lines is approx 1.56
+            # The factor 1.6 is determined heuristically, for large number of gates
+            # and iterations the ratio of ps objects to Lines is approx 1.56
             # WARNING: it was determined by combining QRM and QRC instructions, but the
             # the two types of instructions may have a different factor.
             # TODO: use the number of post-compilation lines
-            "qcm_lines": sum(1 for psdata in ps.data if "drive" in psdata[0]) * 1.59,
-            "qrm_lines": sum(1 for psdata in ps.data if "acquisition" in psdata[0])
-            * 1.59,
+            "qcm_lines": sum(1.6 for psdata in ps if "drive" in psdata[0]),
+            "qrm_lines": sum(1.6 for psdata in ps if "acquisition" in psdata[0]),
         }
 
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
         memory_exceeded = any(
-            batch_memory[key] + ps_memory[key] > cluster_memory_limits[key]
-            for key in cluster_memory_limits
+            batch_memory[key] + ps_memory[key] > limit
+            for key, limit in cluster_memory_limits.items()
         )
         if memory_exceeded:
-            batched_list.append(batch_memory["batch"])
+            batches.append(batch)
             batch_memory = _init_batch()
+            batch = []
 
-        for key in ps_memory:
-            batch_memory[key] += ps_memory[key]
-        batch_memory["batch"].append(ps)
+        for key, mem in ps_memory.items():
+            batch_memory[key] += mem
+        batch.append(ps)
 
     # If the the loop over sequences ended with a non-empty batch, add it to the
     # list of batches
-    if batch_memory["batch"]:
-        batched_list.append(batch_memory["batch"])
+    if batch:
+        batches.append(batch)
 
     # Align the channels between batches of sequences
     batched_seqs = []
-    for batch_memory in batched_list:
-        batched = batch_memory[0]
-        for ps in batch_memory[1:]:
+    for batch in batches:
+        batched = batch[0]
+        for ps in batch[1:]:
             # the pipe operation aligns all channels so we only have to add the
             # Delay to a single channel
             assert options.relaxation_time is not None
