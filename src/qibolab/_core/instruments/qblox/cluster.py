@@ -75,7 +75,7 @@ def _compute_duration(
     return duration
 
 
-def _init_batch():
+def _init_batch() -> dict[str, int]:
     """Helper function to initialise the batch tracking variables."""
     return {
         "acq_memory": 0,
@@ -95,7 +95,7 @@ def _batch_sequences_by_cluster_memory_limits(
     options: ExecutionParameters,
 ) -> list[PulseSequence]:
     """Split sequences into batches that fit into the cluster memory"""
-    batch = []
+    batch: list[PulseSequence] = []
     batch_memory = _init_batch()
     batches: list[list[PulseSequence]] = []
     for ps in sequences:
@@ -127,17 +127,18 @@ def _batch_sequences_by_cluster_memory_limits(
         batch.append(ps)
 
     # If the the loop over sequences ended with a non-empty batch, add it to the
-    # list of batches
+    # list of batches.
     if batch:
         batches.append(batch)
 
-    # Align the channels between batches of sequences
-    batched_seqs = []
+    # Merge sequences in each batch into a single sequence.
+    batched_seqs: list[PulseSequence] = []
     for batch in batches:
         batched = batch[0]
         for ps in batch[1:]:
-            # the pipe operation aligns all channels so we only have to add the
-            # Delay to a single channel
+            # Append a Delay with the duration of the relaxation time at the end of each
+            # sequence. The pipe operation aligns all channels so we only have to add
+            # the Delay to a single channel
             assert options.relaxation_time is not None
             batched |= [(ps[0][0], Delay(duration=options.relaxation_time))]
             batched |= ps
