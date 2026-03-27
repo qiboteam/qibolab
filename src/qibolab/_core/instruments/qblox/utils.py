@@ -21,12 +21,10 @@ def per_shot_memory(
     """Compute the memory per shot."""
     # If options.averaging_mode.average, options.bins(sweepers) returns only sweep
     # dimensions (no shots dimension). In that case we must not drop the first entry.
-    if options.averaging_mode.average:
-        bins = np.prod(options.bins(sweepers))
-    else:
-        # Non-averaging (single shot) mode includes the shots dimension as the first
-        # entry. Drop it to get only the per-shot sweep dimensions.
-        bins = np.prod(options.bins(sweepers)[1:])
+    # Non-averaging (single shot) mode includes the shots dimension as the first entry.
+    # Drop it to get only the per-shot sweep dimensions.
+    bins_shape = options.bins(sweepers)
+    bins = np.prod(bins_shape if options.averaging_mode.average else bins_shape[1:])
     acquisitions = max(
         sum(1 for p in pulses if isinstance(p, (Acquisition, Readout)))
         for pulses in sequence.by_channel.values()

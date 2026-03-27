@@ -227,12 +227,11 @@ class Cluster(Controller):
         # If acquisition is cyclic (averaging over shots on hardware), we combine as
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
-        if options.averaging_mode.average:
-            batched_seqs = _batch_sequences_by_cluster_memory_limits(
-                sequences, sweepers, options
-            )
-        else:
-            batched_seqs = sequences
+        batched_seqs = (
+            _batch_sequences_by_cluster_memory_limits(sequences, sweepers, options)
+            if options.averaging_mode.average
+            else sequences
+        )
 
         # Execute each batch sequentially, and concatenate results
         log = Logger(configs)
