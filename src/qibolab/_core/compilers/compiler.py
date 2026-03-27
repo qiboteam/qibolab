@@ -108,18 +108,7 @@ class Compiler:
         if len(gate.qubits) == 2:
             pair = tuple(platform.qubit(q)[0] for q in qubits_ids)
             assert len(pair) == 2
-            if pair not in natives.two_qubit and pair[::-1] not in natives.two_qubit:
-                raise ValueError(
-                    f"2q gate for qubits {pair} is not defined by the "
-                    f"platform. The defined pairs are {list(natives.two_qubit.keys())}."
-                )
-            existing_pair = pair if pair in natives.two_qubit else pair[::-1]
-            nativegate = natives.two_qubit[existing_pair]
-            if existing_pair != pair and not nativegate.symmetric:
-                raise ValueError(
-                    f"2q gate for qubits {pair} is not symmetric, but the platform only "
-                    f"defines it for the reversed pair {existing_pair}."
-                )
+            nativegate = natives.two_qubit[pair]
             return rule(gate, nativegate)
 
         raise NotImplementedError(f"{type(gate)} is not a native gate.")

@@ -114,10 +114,17 @@ class TwoQubitContainer(dict[QubitPairId, TwoQubitNatives]):
         try:
             return super().__getitem__(key)
         except KeyError:
-            value = super().__getitem__((key[1], key[0]))
+            try:
+                value = super().__getitem__((key[1], key[0]))
+            except KeyError:
+                raise KeyError(
+                    f"No two-qubit gate for qubits {key} is defined in the platform."
+                )
             if value.symmetric:
                 return value
-            raise
+            raise KeyError(
+                f"Two-qubit gate {key} not symmetric and only {(key[1], key[0])} is defined in the platform."
+            )
 
 
 class NativeGates(Model):
