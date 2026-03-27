@@ -1,4 +1,4 @@
-from typing import Annotated, Union
+from typing import Annotated, Any, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -18,22 +18,26 @@ StateId = int
 
 
 def _join(pair: tuple[str, str]) -> str:
-    """ "Join a tuple of qubits into a string identifier. The reason for doing this is
-    that keys in JSON have to be strings."""
+    """Serialize a pair identifier to a JSON-friendly key.
+
+    Pydantic applies this serializer when dumping mappings that use
+    ``TransitionId`` or ``QubitPairId`` as keys, because JSON object keys must
+    be strings.
+    """
     return f"{pair[0]}-{pair[1]}"
 
 
-def _split(pair: Union[str, tuple]) -> tuple[str, str]:
-    """ "This function reverts the _join operation in case TransitionId or QubitPairId
-    is loaded from a JSON file where the key is the string constructed in _join.
+def _split(pair: Any) -> tuple[str, str]:
+    """Deserialize a pair identifier previously produced by :func:`_join`.
 
-    .. note::
+    If ``pair`` is a string in the form ``"a-b"``, it is converted to
+    ``("a", "b")`` before normal type validation. If ``pair`` is already a
+    tuple, it is returned unchanged.
 
-        Since it is used as a BeforeValidator, the type of pair may be neither str nor
-        tuple. In that case, the function will pass on pair without modification, and
-        the validation will fail later on when the type is checked against
-        tuple[StateId, StateId] for TransitionId or tuple[QubitId, QubitId] for
-        QubitPairId.
+    As a ``BeforeValidator``, this function may also receive values of unrelated
+    types (for example while validating union branches). These values are passed
+    through unchanged so later validation can decide whether they are valid for
+    the target type.
     """
     if isinstance(pair, str):
         a, b = pair.split("-")
