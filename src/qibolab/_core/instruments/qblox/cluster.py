@@ -93,6 +93,8 @@ def _batch_sequences_by_cluster_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
+    drive_channels: set[ChannelId],
+    acquisition_channels: set[ChannelId],
 ) -> list[PulseSequence]:
     """Split sequences into batches that fit into the cluster memory"""
     batch: list[PulseSequence] = []
@@ -107,8 +109,12 @@ def _batch_sequences_by_cluster_memory_limits(
             # WARNING: it was determined by combining QRM and QRC instructions, but the
             # the two types of instructions may have a different factor.
             # TODO: use the number of post-compilation lines
-            "qcm_lines": sum(1.6 for psdata in ps if "drive" in psdata[0]),
-            "qrm_lines": sum(1.6 for psdata in ps if "acquisition" in psdata[0]),
+            "qcm_lines": sum(
+                1.6 for channelid, _pulse in ps if channelid in drive_channels
+            ),
+            "qrm_lines": sum(
+                1.6 for channelid, _pulse in ps if channelid in acquisition_channels
+            ),
         }
 
         # TODO: track instruction memory usage per module instead of summing across
@@ -217,8 +223,24 @@ class Cluster(Controller):
         # If acquisition is cyclic (averaging over shots on hardware), we combine as
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
-        batched_seqs = (
-            _batch_sequences_by_cluster_memory_limits(sequences, sweepers, options)
+        drive_channels = {
+            channelid
+            for channelid, channelobj in self.channels.items()
+            if isinstance(channelobj, IqChannel) and channelid not in self._probes
+        }
+        acquisition_channels = {
+            channelid
+            for channelid, channelobj in self.channels.items()
+            if isinstance(channelobj, AcquisitionChannel)
+        }
+        batched_seqs: list[PulseSequence] = (
+            _batch_sequences_by_cluster_memory_limits(
+                sequences,
+                sweepers,
+                options,
+                drive_channels,
+                acquisition_channels,
+            )
             if options.averaging_mode.average
             else sequences
         )
