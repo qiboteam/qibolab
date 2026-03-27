@@ -9,7 +9,6 @@ import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
-from qibolab import Delay
 from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
 from qibolab._core.execution_parameters import (
     AcquisitionType,
@@ -23,6 +22,7 @@ from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
 from . import config
+from .batching import batch_sequences_by_cluster_memory_limits
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
@@ -32,12 +32,10 @@ from .utils import (
     batch_shots,
     concat_shots,
     lo_configs,
-    per_shot_memory,
     time_of_flights,
 )
 from .validate import (
     assert_channels_exclusion,
-    cluster_memory_limits,
     validate_sequence,
 )
 
@@ -73,83 +71,6 @@ def _compute_duration(
         [ps], sweepers, time_of_flight + wait_sync_duration
     )
     return duration
-
-
-def _init_batch() -> dict[str, int]:
-    """Helper function to initialise the batch tracking variables."""
-    return {
-        "acq_memory": 0,
-        "acq_number": 0,
-        # an offset number of lines that is always there regardless of the
-        # number of pulses played.
-        # WARNING: this was determined empirically from the lines for QRM and
-        # QCM, so the individual numbers may be lower.
-        "qcm_lines": 50,
-        "qrm_lines": 50,
-    }
-
-
-def _batch_sequences_by_cluster_memory_limits(
-    sequences: list[PulseSequence],
-    sweepers: list[ParallelSweepers],
-    options: ExecutionParameters,
-    drive_channels: set[ChannelId],
-    acquisition_channels: set[ChannelId],
-) -> list[PulseSequence]:
-    """Split sequences into batches that fit into the cluster memory"""
-    batch: list[PulseSequence] = []
-    batch_memory = _init_batch()
-    batches: list[list[PulseSequence]] = []
-    for ps in sequences:
-        ps_memory = {
-            "acq_memory": per_shot_memory(ps, sweepers, options),
-            "acq_number": len(ps.acquisitions),
-            # The factor 1.6 is determined heuristically, for large number of gates
-            # and iterations the ratio of ps objects to Lines is approx 1.56
-            # WARNING: it was determined by combining QRM and QRC instructions, but the
-            # the two types of instructions may have a different factor.
-            # TODO: use the number of post-compilation lines
-            "qcm_lines": sum(
-                1.6 for channelid, _pulse in ps if channelid in drive_channels
-            ),
-            "qrm_lines": sum(
-                1.6 for channelid, _pulse in ps if channelid in acquisition_channels
-            ),
-        }
-
-        # TODO: track instruction memory usage per module instead of summing across
-        # all modules.
-        memory_exceeded = any(
-            batch_memory[key] + ps_memory[key] > limit
-            for key, limit in cluster_memory_limits.items()
-        )
-        if memory_exceeded:
-            batches.append(batch)
-            batch_memory = _init_batch()
-            batch = []
-
-        for key, mem in ps_memory.items():
-            batch_memory[key] += mem
-        batch.append(ps)
-
-    # If the the loop over sequences ended with a non-empty batch, add it to the
-    # list of batches.
-    if batch:
-        batches.append(batch)
-
-    # Merge sequences in each batch into a single sequence.
-    batched_seqs: list[PulseSequence] = []
-    for batch in batches:
-        batched = batch[0]
-        for ps in batch[1:]:
-            # Append a Delay with the duration of the relaxation time at the end of each
-            # sequence. The pipe operation aligns all channels so we only have to add
-            # the Delay to a single channel
-            assert options.relaxation_time is not None
-            batched |= [(ps[0][0], Delay(duration=options.relaxation_time))]
-            batched |= ps
-        batched_seqs.append(batched)
-    return batched_seqs
 
 
 class ClusterConfigs(Model):
@@ -234,7 +155,7 @@ class Cluster(Controller):
             if isinstance(channelobj, AcquisitionChannel)
         }
         batched_seqs: list[PulseSequence] = (
-            _batch_sequences_by_cluster_memory_limits(
+            batch_sequences_by_cluster_memory_limits(
                 sequences,
                 sweepers,
                 options,
