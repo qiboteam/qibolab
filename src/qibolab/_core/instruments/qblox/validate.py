@@ -62,6 +62,14 @@ ACQUISITION_NUMBER = 2**5
 https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#:~:text=Square%20Weight%20Acquisitions
 """
 
+# There are used for the batching in cluster.py
+cluster_memory_limits = {
+    "acq_memory": ACQUISITION_MEMORY,
+    "acq_number": ACQUISITION_NUMBER,
+    "qcm_lines": QCM_INSTRUCTION_MEMORY,
+    "qrm_lines": QRM_INSTRUCTION_MEMORY,
+}
+
 
 def assert_channels_exclusion(ps: PulseSequence, excluded: set[ChannelId]) -> None:
     """Deny group of channels.

@@ -36,11 +36,8 @@ from .utils import (
     time_of_flights,
 )
 from .validate import (
-    ACQUISITION_MEMORY,
-    ACQUISITION_NUMBER,
-    QCM_INSTRUCTION_MEMORY,
-    QRM_INSTRUCTION_MEMORY,
     assert_channels_exclusion,
+    cluster_memory_limits,
     validate_sequence,
 )
 
@@ -93,14 +90,6 @@ def _init_batch():
     }
 
 
-_memory_limits = {
-    "acq_memory": ACQUISITION_MEMORY,
-    "acq_number": ACQUISITION_NUMBER,
-    "qcm_lines": QCM_INSTRUCTION_MEMORY,
-    "qrm_lines": QRM_INSTRUCTION_MEMORY,
-}
-
-
 def _batch_sequences_by_cluster_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
@@ -126,8 +115,8 @@ def _batch_sequences_by_cluster_memory_limits(
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
         memory_exceeded = any(
-            batch_memory[key] + ps_memory[key] > _memory_limits[key]
-            for key in _memory_limits
+            batch_memory[key] + ps_memory[key] > cluster_memory_limits[key]
+            for key in cluster_memory_limits
         )
         if memory_exceeded:
             batched_list.append(batch_memory["batch"])
