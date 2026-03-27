@@ -1,4 +1,4 @@
-from typing import Annotated, Union
+from typing import Annotated, TypeAlias, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -9,12 +9,8 @@ __all__ = ["Result"]
 QubitId = Annotated[Union[int, str], Field(union_mode="left_to_right")]
 """Qubit name."""
 
-QubitPairId = Annotated[
-    tuple[QubitId, QubitId],
-    BeforeValidator(lambda p: tuple(p.split("-")) if isinstance(p, str) else p),
-    PlainSerializer(lambda p: f"{p[0]}-{p[1]}"),
-]
-"""Type for holding ``QubitPair``s in the ``platform.pairs`` dictionary."""
+QubitPairKey: TypeAlias = tuple[QubitId, QubitId]
+"""Two-qubit pair key for static typing."""
 
 
 ChannelId = str
@@ -26,10 +22,9 @@ StateId = int
 
 
 def _split(pair: Union[str, tuple]) -> tuple[str, str]:
-    if isinstance(pair, str):
-        a, b = pair.split("-")
-        return a, b
-    return pair
+    tupled_pair = pair if isinstance(pair, tuple) else tuple(pair.split("-"))
+    assert len(tupled_pair) == 2
+    return tupled_pair
 
 
 def _join(pair: tuple[str, str]) -> str:
@@ -41,9 +36,8 @@ TransitionId = Annotated[
 ]
 """Identifier for a state transition."""
 
-QubitPairId = Annotated[
-    tuple[QubitId, QubitId], BeforeValidator(_split), PlainSerializer(_join)
-]
+
+QubitPairId = Annotated[QubitPairKey, BeforeValidator(_split), PlainSerializer(_join)]
 """Two-qubit active interaction identifier."""
 
 
