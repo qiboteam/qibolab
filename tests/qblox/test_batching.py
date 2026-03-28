@@ -34,8 +34,8 @@ def test_batch_sequences_by_cluster_memory_limits(monkeypatch):
         sequences=[_sequence(), _sequence(), _sequence()],
         sweepers=[],
         options=ExecutionParameters(relaxation_time=100),
-        drive_channels={"0/drive"},
-        acquisition_channels={"0/acquisition"},
+        qcm_channels={"0/drive"},
+        qrm_channels={"0/acquisition"},
     )
 
     assert len(merged_sequences) == 2
@@ -69,6 +69,6 @@ def test_batch_sequences_by_cluster_memory_limits_oversize_sequence_error_raise(
             sequences=[_sequence()],
             sweepers=[],
             options=ExecutionParameters(relaxation_time=100),
-            drive_channels={"0/drive"},
-            acquisition_channels={"0/acquisition"},
+            qcm_channels={"0/drive"},
+            qrm_channels={"0/acquisition"},
         )

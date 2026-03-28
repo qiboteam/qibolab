@@ -1,6 +1,5 @@
 import qblox_instruments
 
-from qibolab._core.components.channels import AcquisitionChannel, Channel
 from qibolab._core.identifier import ChannelId
 from qibolab._core.sequence import PulseSequence
 
@@ -103,18 +102,18 @@ def assert_acquisition_memory(acquisitions: list[Acquisition]) -> None:
     assert sum(a.num_bins for a in acquisitions) <= ACQUISITION_MEMORY
 
 
-def assert_instruction_memory(channel: Channel, lines: list[Line]):
-    mem = (
-        QRM_INSTRUCTION_MEMORY
-        if isinstance(channel, AcquisitionChannel)
-        else QCM_INSTRUCTION_MEMORY
-    )
+def assert_instruction_memory(lines: list[Line], is_qrm: bool) -> None:
+    """Assert instruction memory limitations.
+
+    The limit depends on the hosting module kind (QRM vs QCM), not on channel type.
+    """
+    mem = QRM_INSTRUCTION_MEMORY if is_qrm else QCM_INSTRUCTION_MEMORY
     assert len(lines) <= mem
 
 
-def validate_sequence(channel: Channel, sequence: Q1Sequence) -> None:
+def validate_sequence(sequence: Q1Sequence, is_qrm: bool) -> None:
     """Validate sequence elements."""
-    assert_instruction_memory(channel, sequence.program.lines)
+    assert_instruction_memory(sequence.program.lines, is_qrm)
     assert_acquisition_memory(list(sequence.acquisitions.values()))
     assert_waveform_memory(list(sequence.waveforms.values()))
     assert_weight_memory(list(sequence.weights.values()))

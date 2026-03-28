@@ -40,8 +40,8 @@ def _split_sequences_by_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
-    drive_channels: set[ChannelId],
-    acquisition_channels: set[ChannelId],
+    qcm_channels: set[ChannelId],
+    qrm_channels: set[ChannelId],
 ) -> list[list[PulseSequence]]:
     """Split sequences into batches that fit into the cluster memory.
 
@@ -60,10 +60,10 @@ def _split_sequences_by_memory_limits(
             # the two types of instructions may have a different factor.
             # TODO: use the number of post-compilation lines
             "qcm_lines": sum(
-                1.6 for channelid, _pulse in ps if channelid in drive_channels
+                1.6 for channelid, _pulse in ps if channelid in qcm_channels
             ),
             "qrm_lines": sum(
-                1.6 for channelid, _pulse in ps if channelid in acquisition_channels
+                1.6 for channelid, _pulse in ps if channelid in qrm_channels
             ),
         }
 
@@ -117,11 +117,11 @@ def batch_sequences_by_cluster_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
-    drive_channels: set[ChannelId],
-    acquisition_channels: set[ChannelId],
+    qcm_channels: set[ChannelId],
+    qrm_channels: set[ChannelId],
 ) -> list[PulseSequence]:
     """Split sequences into batches that fit into the cluster memory."""
     batches = _split_sequences_by_memory_limits(
-        sequences, sweepers, options, drive_channels, acquisition_channels
+        sequences, sweepers, options, qcm_channels, qrm_channels
     )
     return _merge_batch_sequences(batches, options)

@@ -144,23 +144,22 @@ class Cluster(Controller):
         # If acquisition is cyclic (averaging over shots on hardware), we combine as
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
-        drive_channels = {
+        qrm_slots = {
+            slot for slot, module in self._modules.items() if module.is_qrm_type
+        }
+        qrm_channels = {
             channelid
             for channelid, channelobj in self.channels.items()
-            if isinstance(channelobj, IqChannel) and channelid not in self._probes
+            if PortAddress.from_path(channelobj.path).slot in qrm_slots
         }
-        acquisition_channels = {
-            channelid
-            for channelid, channelobj in self.channels.items()
-            if isinstance(channelobj, AcquisitionChannel)
-        }
+        qcm_channels = set(self.channels) - qrm_channels
         batched_seqs: list[PulseSequence] = (
             batch_sequences_by_cluster_memory_limits(
                 sequences,
                 sweepers,
                 options,
-                drive_channels,
-                acquisition_channels,
+                qcm_channels,
+                qrm_channels,
             )
             if options.averaging_mode.average
             else sequences
@@ -197,8 +196,8 @@ class Cluster(Controller):
                     time_of_flights(configs),
                 )
                 for channelid, seq in sequences_.items():
-                    channel = self.channels[channelid]
-                    validate_sequence(channel, seq)
+                    slot = PortAddress.from_path(self.channels[channelid].path).slot
+                    validate_sequence(seq, self._modules[slot].is_qrm_type)
                 log.sequences(sequences_)
 
                 # then configure modules and sequencers
