@@ -24,6 +24,18 @@ def _init_batch() -> dict[str, int]:
     }
 
 
+def _exceeds_memory_limits(
+    batch_memory: dict[str, int], ps_memory: dict[str, int]
+) -> bool:
+    """Return whether adding ``ps_memory`` to ``batch_memory`` exceeds the
+    ``cluster_memory_limits``.
+    """
+    return any(
+        batch_memory[key] + ps_memory[key] > limit
+        for key, limit in cluster_memory_limits.items()
+    )
+
+
 def _split_sequences_by_memory_limits(
     sequences: list[PulseSequence],
     sweepers: list[ParallelSweepers],
@@ -55,13 +67,15 @@ def _split_sequences_by_memory_limits(
             ),
         }
 
+        # Check if the pulse sequence on its own exceeds the clusters memory limit
+        if _exceeds_memory_limits(_init_batch(), ps_memory):
+            raise ValueError(
+                "An individual sequence exceeds Qblox cluster memory limits"
+            )
+
         # TODO: track instruction memory usage per module instead of summing across
         # all modules.
-        memory_exceeded = any(
-            batch_memory[key] + ps_memory[key] > limit
-            for key, limit in cluster_memory_limits.items()
-        )
-        if memory_exceeded:
+        if _exceeds_memory_limits(batch_memory, ps_memory):
             batches.append(batch)
             batch_memory = _init_batch()
             batch = []
