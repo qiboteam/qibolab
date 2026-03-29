@@ -80,6 +80,7 @@ qrng = ["pyserial"]
 [tool.poe.tasks]
 test = "pytest"
 lint = "ruff check"
+benchmark-emulator = "python benchmarks/emulator_compare.py"
 lint-warnings = """
   ruff check --exit-zero \
   --select F,E,W,C90,N,UP,BLE,FBT,B,A,C4,T10,EM,EXE,ISC,ICN,LOG,G,INP,PIE,T20,PT,Q,RSE,\
