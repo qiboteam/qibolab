@@ -71,7 +71,7 @@ def _extract_probabilities(states: NDArray) -> NDArray:
     This function extracts the diagonal elements of each density matrix,
     which represent the probabilities of measurement outcomes.
 
-    Probabilities are normalized for fluctuations, taking the absolute value of diagonal elements.
+    Probabilities are normalized for fluctuations, taking the real value of diagonal elements.
 
     Examples
     --------
@@ -253,6 +253,9 @@ def results(
         if options.averaging_mode is AveragingMode.SINGLESHOT
         else _cyclic_results
     )
+
+    if options.averaging_mode is AveragingMode.SINGLESHOT and options.nshots is None:
+        raise ValueError("nshots must be specified for SINGLESHOT mode")
 
     return results(
         state_probs=probabilities,

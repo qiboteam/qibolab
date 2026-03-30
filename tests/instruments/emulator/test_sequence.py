@@ -134,8 +134,9 @@ def test_cnot_sequence(platform: Platform, setup: str):
     )
 
 
-@pytest.mark.skip(
-    "The fidelity for the test is not good, either a problem of calibration or problem with emulator."
+@pytest.mark.xfail(
+    reason="Known CZ fidelity issue (calibration/emulator mismatch).",
+    strict=False,
 )
 def test_cz_sequence(
     platform: Platform,
