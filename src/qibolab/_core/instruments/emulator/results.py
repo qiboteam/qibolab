@@ -51,19 +51,28 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
     return np.moveaxis(shots, -1, 0)
 
 
-def calculate_probabilities_from_density_matrix(
-    states: NDArray, subsystems: Iterable[QubitId], nsubsystems: int, d: int
-) -> NDArray:
-    """Compute probabilities from density matrix."""
-    states_ = np.reshape(states, states.shape[:-2] + 2 * nsubsystems * (d,))
-    marginal = np.einsum(
-        states_,
+def calculate_probabilities_from_density_matrix(states: NDArray) -> NDArray:
+    """
+    Calculate probabilities from a density matrix using diagonal elements.
+    This function extracts the diagonal elements of a density matrix and returns
+    their absolute values, which represent the probabilities of measurement outcomes.
+
+    Examples
+    --------
+    >>> dm = np.array([[0.9, 0.0], [0.0, 0.1]])
+    >>> probs = calculate_probabilities_from_density_matrix(dm)
+    >>> probs
+    array([0.9, 0.1])
+    """
+
+    diag = np.einsum(
+        states,
         # TODO: the `np.array()` wrapping call is only needed because of NumPy's type
         # annotation - in practice, it also works without
-        np.array([...] + list(range(nsubsystems)) * 2),
-        np.array([...] + list(subsystems)),
+        np.array([...] + [0, 0]),
+        np.array([...] + [0]),
     )
-    return np.abs(marginal).reshape((*states.shape[:-2], -1))
+    return np.abs(diag)
 
 
 def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
@@ -99,12 +108,12 @@ def select_acquisitions(
     and maps them to unique acquisition values. It uses binary search to find the
     nearest state index for each acquisition time.
 
-    It returns a tuple containing 1 NumPy array containing the full density matrices
-    of the selected quantum states.
+    It returns a NumPy array containing the full density matrices
+    of the selected quantum states, indexed by the original acquisition order.
     """
-    acq = np.array(list(acquisitions))
+    acq, index_pos = np.unique(list(acquisitions), return_inverse=True)
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([states[n].full() for n in samples])
+    return np.stack([states[n].full() for n in samples])[index_pos]
 
 
 def cyclic_results(
@@ -247,9 +256,10 @@ def results(
         if options.averaging_mode is AveragingMode.SINGLESHOT
         else cyclic_results
     )
-    assert (options.averaging_mode is not AveragingMode.SINGLESHOT) or (
-        options.nshots is not None
-    ), "nshots must be specified for SINGLESHOT mode"
+
+    if options.averaging_mode is AveragingMode.SINGLESHOT and options.nshots is None:
+        raise ValueError("nshots must be specified for SINGLESHOT mode")
+
     return results(
         state_probs=probabilities,
         sequence=sequence,
