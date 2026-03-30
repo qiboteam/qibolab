@@ -52,7 +52,19 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
 
 
 def calculate_probabilities_from_density_matrix(states: NDArray) -> NDArray:
-    """Compute probabilities from density matrix."""
+    """
+    Calculate probabilities from a density matrix using diagonal elements.
+    This function extracts the diagonal elements of a density matrix and returns
+    their absolute values, which represent the probabilities of measurement outcomes.
+
+    Examples
+    --------
+    >>> dm = np.array([[0.9, 0.0], [0.0, 0.1]])
+    >>> probs = calculate_probabilities_from_density_matrix(dm)
+    >>> probs
+    array([0.9, 0.1])
+    """
+
     diag = np.einsum(
         states,
         # TODO: the `np.array()` wrapping call is only needed because of NumPy's type
@@ -95,8 +107,8 @@ def select_acquisitions(
     and maps them to unique acquisition values. It uses binary search to find the
     nearest state index for each acquisition time.
 
-    It returns a tuple containing 1 NumPy array containing the full density matrices
-    of the selected quantum states.
+    It returns a NumPy array containing the full density matrices
+    of the selected quantum states, indexed by the original acquisition order.
     """
     acq, index_pos = np.unique(list(acquisitions), return_inverse=True)
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
@@ -236,9 +248,10 @@ def results(
         if options.averaging_mode is AveragingMode.SINGLESHOT
         else cyclic_results
     )
-    assert (options.averaging_mode is not AveragingMode.SINGLESHOT) or (
-        options.nshots is not None
-    ), "nshots must be specified for SINGLESHOT mode"
+
+    if options.averaging_mode is AveragingMode.SINGLESHOT and options.nshots is None:
+        raise ValueError("nshots must be specified for SINGLESHOT mode")
+
     return results(
         state_probs=probabilities,
         sequence=sequence,
