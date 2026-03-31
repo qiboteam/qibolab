@@ -1,14 +1,16 @@
 from functools import cached_property
 from typing import Union
+
 from numpy.typing import NDArray
 
-from .abstract import Operator, OperatorEvolution, SimulationEngine, EvolutionResult
+from .abstract import EvolutionResult, Operator, OperatorEvolution, SimulationEngine
 
 __all__ = ["QutipEngine", "QutipCuquantumEngine"]
 
 
 class QutipEngine(SimulationEngine):
     """Qutip simulation engine."""
+
     has_flipped_index: bool = False
 
     @cached_property
@@ -16,7 +18,7 @@ class QutipEngine(SimulationEngine):
         """Return the qutip engine."""
         # TODO: maybe it can be improved
         import qutip as qt
-        
+
         return qt
 
     def evolve(
@@ -62,7 +64,7 @@ class QutipEngine(SimulationEngine):
         return self.engine.basis(dimensions=dim, n=state)
 
     def get_state_dm(self, state: Operator, **kwargs) -> NDArray:
-        if state.type=='ket':
+        if state.type == "ket":
             state = self.engine.ket2dm(state)
         return state.full()
 
@@ -70,23 +72,29 @@ class QutipEngine(SimulationEngine):
         return results.states
 
     def relaxation_op(self, transition: list, dim: int, **kwargs) -> Operator:
-        return self.engine.basis(dim, transition[0]) * self.engine.basis(dim, transition[1]).dag()
+        return (
+            self.engine.basis(dim, transition[0])
+            * self.engine.basis(dim, transition[1]).dag()
+        )
 
     def dephasing_op(self, pair: list, dim: int, **kwargs) -> Operator:
-        return self.engine.basis(dim, pair[0]) * self.engine.basis(dim, pair[0]).dag() - self.engine.basis(dim, pair[1]) * self.engine.basis(dim, pair[1]).dag()
+        return (
+            self.engine.basis(dim, pair[0]) * self.engine.basis(dim, pair[0]).dag()
+            - self.engine.basis(dim, pair[1]) * self.engine.basis(dim, pair[1]).dag()
+        )
 
 
 class QutipCuquantumEngine(QutipEngine):
     """Qutip simulation engine using cuquantum."""
-    
+
     @cached_property
     def engine(self):
         """Return the qutip engine using cuquantum."""
         import qutip as qt
-
         import qutip_cuquantum
         from cuquantum.densitymat import WorkStream
+
         stream = WorkStream()
         qutip_cuquantum.set_as_default(stream)
-        
+
         return qt

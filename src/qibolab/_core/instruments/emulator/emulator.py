@@ -35,7 +35,7 @@ from .results import acquisitions, index, results, select_acquisitions
 
 __all__ = ["EmulatorController"]
 
-       
+
 class EmulatorController(Controller):
     """Emulator controller."""
 
@@ -147,7 +147,7 @@ class EmulatorController(Controller):
             dimensions=dimensions,
         )
         evolution_states = self.engine.get_evolution_states(results)
-        
+
         return select_acquisitions(
             evolution_states,
             acquisitions(sequence_).values(),
@@ -181,9 +181,9 @@ class CudaqEmulatorController(EmulatorController):
         updates: Optional[dict] = None,
     ) -> list:
         """Processes sweepers using _make_sweep_list to reconstruct the corresponding list of hamiltonians for batch execution."""
-        
+
         output_list = self._make_sweep_list(sequence, configs, sweepers, updates)
-        
+
         # retrieve dimensions from default config
         config = cast(HamiltonianConfig, configs["hamiltonian"])
         dimensions = config.hilbert_space_dims(self.engine.has_flipped_index)
@@ -191,7 +191,7 @@ class CudaqEmulatorController(EmulatorController):
         # for non-sweep executions, reshape output_list
         if isinstance(output_list, tuple):
             output_list = [output_list]
-        
+
         hamiltonian_list = list(get_flattened_list(output_list, 0))
         duration_list = list(get_flattened_list(output_list, 2))
         sequence_list = list(get_flattened_list(output_list, 1))
@@ -203,24 +203,27 @@ class CudaqEmulatorController(EmulatorController):
             hamiltonian=hamiltonian_list,
             initial_state=config.make_initial_state(self.engine, self.initial_state),
             time=tlist_,
-            collapse_operators=[config.dissipation(self.engine) for _ in hamiltonian_list],
+            collapse_operators=[
+                config.dissipation(self.engine) for _ in hamiltonian_list
+            ],
             time_hamiltonian=None,
             dimensions=dimensions,
         )
-        
+
         # for non-sweep executions, reshape output_list
         if not isinstance(results, list):
             results = [results]
 
         sweep_acquisitions = [
             select_acquisitions(
-                self.engine.get_evolution_states(results[i]), 
-                acquisitions(sequence).values(), 
+                self.engine.get_evolution_states(results[i]),
+                acquisitions(sequence).values(),
                 tlist_,
                 engine=self.engine,
                 statevector_dimension=np.prod(list(dimensions.values())),
-            ) 
-            for i, sequence in enumerate(sequence_list)]
+            )
+            for i, sequence in enumerate(sequence_list)
+        ]
 
         # stack all slices in a single array, along the current outermost dimension
         sweep_acquisitions = np.stack(sweep_acquisitions)
@@ -230,7 +233,7 @@ class CudaqEmulatorController(EmulatorController):
             sweepers_shape.append(len(sweeper[0].values))
         sweepers_shape += list(sweep_acquisitions.shape[1:])
         sweep_acquisitions = np.stack(sweep_acquisitions).reshape(sweepers_shape)
-        
+
         return sweep_acquisitions
 
     def _make_sweep_list(
@@ -240,8 +243,8 @@ class CudaqEmulatorController(EmulatorController):
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
     ) -> list:
-        """Adapted method from EmulatorController._sweep to generate list of evolve input tuples from sweepers."""  
-        
+        """Adapted method from EmulatorController._sweep to generate list of evolve input tuples from sweepers."""
+
         # use a default dictionary, merging existing values
         updates = defaultdict(dict) | ({} if updates is None else updates)
 
@@ -255,7 +258,7 @@ class CudaqEmulatorController(EmulatorController):
             if time_hamiltonian:
                 for op, waveform in time_hamiltonian.operators:
                     hamiltonian += self.engine.engine.ScalarOperator(waveform) * op
-            
+
             return (hamiltonian, sequence_, tlist_[-1])
 
         parsweep = sweepers[0]
@@ -273,7 +276,9 @@ class CudaqEmulatorController(EmulatorController):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            current_output = self._make_sweep_list(sequence, configs, sweepers[1:], updates)
+            current_output = self._make_sweep_list(
+                sequence, configs, sweepers[1:], updates
+            )
             output_list.append(current_output)
 
         return output_list
@@ -333,7 +338,9 @@ def hamiltonian(
 ) -> tuple[Operator, list[Modulated]]:
     n = hamiltonian.transmon_levels
     op = engine.expand(
-        config.operator(n=n, target=hilbert_space_index, engine=engine), hamiltonian.dims, hilbert_space_index
+        config.operator(n=n, target=hilbert_space_index, engine=engine),
+        hamiltonian.dims,
+        hilbert_space_index,
     )
     waveforms = (
         waveform(pulse, config, hamiltonian.qubits[pulse_index], sampling_rate)
@@ -389,6 +396,7 @@ def channel_time(
         return 0
 
     return time
+
 
 def get_flattened_list(lst, index):
     # index = 0 for hamiltonian, 1 for sequence, 2 for sequence duration

@@ -1,12 +1,11 @@
 from qibolab import ConfigKinds, DcChannel, Hardware, IqChannel, Qubit
+from qibolab._core.instruments.emulator.emulator import CudaqEmulatorController
+from qibolab._core.instruments.emulator.engine import CudaqEngine
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
-    EmulatorController,
     FluxEmulatorConfig,
     HamiltonianConfig,
 )
-from qibolab._core.instruments.emulator.emulator import CudaqEmulatorController
-from qibolab._core.instruments.emulator.engine import CudaqEngine
 
 ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
@@ -25,7 +24,9 @@ def create() -> Hardware:
         }
     # register the instruments
     instruments = {
-        "emulator": CudaqEmulatorController(address="0.0.0.0", channels=channels, engine=CudaqEngine()),
+        "emulator": CudaqEmulatorController(
+            address="0.0.0.0", channels=channels, engine=CudaqEngine()
+        ),
     }
 
     return Hardware(

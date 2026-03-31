@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Callable, Protocol, Union
+
 from numpy.typing import NDArray
 
 from ....serialize import Model
@@ -58,8 +59,9 @@ class OperatorEvolution:
 
 class SimulationEngine(Model, ABC):
     """Parent class for generic simulation engine."""
+
     has_flipped_index: bool = False
-    
+
     @property
     @abstractmethod
     def engine(self):

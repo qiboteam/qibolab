@@ -78,7 +78,10 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
             time += ev.duration
     return acq
 
-def index(ch: ChannelId, hconfig: HamiltonianConfig, engine_has_flipped_index: bool = False) -> int:    
+
+def index(
+    ch: ChannelId, hconfig: HamiltonianConfig, engine_has_flipped_index: bool = False
+) -> int:
     """Returns Hilbert space index from channel id."""
     if "coupler" in ch:
         target = int(ch.split("coupler_")[1].split("/")[0])
@@ -86,12 +89,13 @@ def index(ch: ChannelId, hconfig: HamiltonianConfig, engine_has_flipped_index: b
         target = int(ch.split("/")[0])
     return hconfig.hilbert_space_index(target, engine_has_flipped_index)
 
+
 def select_acquisitions(
-    states: list[Operator], 
-    acquisitions: Iterable[float], 
-    times: NDArray, 
+    states: list[Operator],
+    acquisitions: Iterable[float],
+    times: NDArray,
     engine: SimulationEngine,
-    statevector_dimension: Optional[int] = 0, 
+    statevector_dimension: Optional[int] = 0,
 ) -> NDArray:
     """Select density matrices from states.
 
@@ -103,7 +107,14 @@ def select_acquisitions(
     """
     acq = np.array(list(acquisitions))
     samples = np.minimum(np.searchsorted(times, acq), times.size - 1)
-    return np.stack([engine.get_state_dm(state=states[n], statevector_dimension=statevector_dimension) for n in samples])
+    return np.stack(
+        [
+            engine.get_state_dm(
+                state=states[n], statevector_dimension=statevector_dimension
+            )
+            for n in samples
+        ]
+    )
 
 
 def results(

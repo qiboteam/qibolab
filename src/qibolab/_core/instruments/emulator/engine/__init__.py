@@ -1,7 +1,7 @@
-from . import abstract, qutip, cudaq
+from . import abstract, cudaq, qutip
 from .abstract import *
-from .qutip import *
 from .cudaq import *
+from .qutip import *
 
 __all__ = []
 __all__.extend(abstract.__all__)
