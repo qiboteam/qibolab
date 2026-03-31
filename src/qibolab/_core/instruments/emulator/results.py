@@ -145,15 +145,12 @@ def cyclic_results(
     for meas_ro, ro_id in zip(state_probs, acquisitions(sequence).keys()):
         i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
 
-        res = np.sum(meas_ro[..., states_computational_idx[i] > 0], axis=-1)
-        res = np.random.normal(res, scale=0.001)
+        res = np.sum(meas_ro[..., states_computational_idx[i] >= 1], axis=-1)
 
         if options.acquisition_type is AcquisitionType.INTEGRATION:
+            res = np.random.normal(res, scale=0.001)
             zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
             res = np.stack((res, zeros), axis=-1)
-
-        if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-            res = np.clip(res, 0, 1)
 
         # res is a (S_i, ...) array
         res_dict[ro_id] = res
