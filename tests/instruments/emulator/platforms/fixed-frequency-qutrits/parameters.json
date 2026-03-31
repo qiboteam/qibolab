@@ -258,7 +258,19 @@
                         "0/drive",
                         {
                             "kind": "delay",
-                            "duration": 50.0
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "1/drive",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.0,
+                            "amplitude": 0.0,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 0.0
                         }
                     ],
                     [
@@ -298,7 +310,19 @@
                         "0/drive",
                         {
                             "kind": "delay",
-                            "duration": 50.0
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "1/drive",
+                        {
+                            "kind": "pulse",
+                            "duration": 56.0,
+                            "amplitude": 0.0,
+                            "envelope": {
+                                "kind": "rectangular"
+                            },
+                            "relative_phase": 3.1415936863071723
                         }
                     ],
                     [
