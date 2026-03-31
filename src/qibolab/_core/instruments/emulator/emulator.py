@@ -45,6 +45,7 @@ class EmulatorController(Controller):
     """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
     """Bounds for emulator."""
+    initial_state: list = None
 
     @property
     def sampling_rate(self) -> float:
@@ -141,7 +142,7 @@ class EmulatorController(Controller):
         dimensions = config.hilbert_space_dims(self.engine.has_flipped_index)
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
-            initial_state=config.initial_state(self.engine),
+            initial_state=config.make_initial_state(self.engine, self.initial_state),
             time=tlist_,
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
@@ -202,7 +203,7 @@ class CudaqEmulatorController(EmulatorController):
 
         results = self.engine.evolve(
             hamiltonian=hamiltonian_list,
-            initial_state=config.initial_state(self.engine),
+            initial_state=config.make_initial_state(self.engine, self.initial_state),
             time=tlist_,
             collapse_operators=[config.dissipation(self.engine) for _ in hamiltonian_list],
             time_hamiltonian=None,

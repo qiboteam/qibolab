@@ -7,7 +7,6 @@ from .abstract import Operator, OperatorEvolution, SimulationEngine, EvolutionRe
 
 __all__ = ["CudaqEngine"]
 
-
 class CudaqEngine(SimulationEngine):
     """CudaQ simulation engine."""
     max_qubit_dim: int = 3
@@ -100,7 +99,7 @@ class CudaqEngine(SimulationEngine):
         """Expand operator in larger Hilbert space - does nothing, feature built-in for cudaq, executed during runtime."""
         return op
 
-    def basis(self, dim: int, state: int) -> Operator:
+    def basis(self, dim: int, state: list) -> Operator:
         """Basis state for n levels system."""
         statevec = np.zeros(np.prod(dim))
         state_index = get_index(dim, state)

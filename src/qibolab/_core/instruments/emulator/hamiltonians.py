@@ -280,9 +280,13 @@ class HamiltonianConfig(Config):
             _setvalue(d, path, val)
         return self.model_validate(d)
 
-    def initial_state(self, engine: SimulationEngine) -> Operator:
-        """Initial state as ground state of the system."""
-        return engine.basis(self.dims, self.nqubits * [0])
+    def make_initial_state(self, engine: SimulationEngine, state=None) -> Operator:
+        """Set initial state to self.init_state if not None, or otherwise set initial state as ground state of the system."""
+        if state:
+            return engine.basis(self.dims, state)
+        else:
+            return engine.basis(self.dims, self.nqubits * [0])
+        
 
     def hilbert_space_index(self, qubit: QubitId, engine_has_flipped_index: bool = False) -> int:
         """Return Hilbert space index from qubit id."""
