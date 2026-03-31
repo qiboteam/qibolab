@@ -70,8 +70,6 @@ def _extract_probabilities(states: NDArray) -> NDArray:
 
     diag = np.einsum(
         states,
-        # TODO: the `np.array()` wrapping call is only needed because of NumPy's type
-        # annotation - in practice, it also works without
         np.array([...] + [0, 0]),
         np.array([...] + [0]),
     )

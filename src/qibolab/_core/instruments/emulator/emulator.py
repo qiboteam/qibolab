@@ -142,12 +142,10 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
-            results.append(sweep_sim[0])
-            measurement_indices = sweep_sim[1]
+            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results), measurement_indices
+        return np.stack(results)
 
     def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
@@ -175,7 +173,7 @@ class EmulatorController(Controller):
             time_hamiltonian=time_hamiltonian,
             save_evolution=self.save_flag,
         )
-        return np.stack([s.full() for s in results.states[1:]]), index
+        return np.stack([s.full() for s in results.states[1:]])[index]
 
     def _pulse_hamiltonian(
         self,
@@ -187,7 +185,7 @@ class EmulatorController(Controller):
         # processed sampling rate; field `sampling_rate` of the `EmulatorController`
         # mimic a real hardware sampling rate, but it is insufficient for us to resolve
         # the oscillation and correctly solve the system evolution, hence we
-        # set a ny
+        # set a nyquist frequency to define the timesteps in order to compute the solution
         time_evolution = tlist(sequence)
 
         channels = [
