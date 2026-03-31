@@ -10,7 +10,10 @@ from qblox_instruments.qcodes_drivers.module import Module
 from qcodes.instrument import find_or_create_instrument
 
 from qibolab._core.components import AcquisitionChannel, Configs, DcConfig, IqChannel
-from qibolab._core.execution_parameters import AcquisitionType, ExecutionParameters
+from qibolab._core.execution_parameters import (
+    AcquisitionType,
+    ExecutionParameters,
+)
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId
@@ -19,13 +22,22 @@ from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
 
 from . import config
+from .batching import batch_sequences_by_cluster_memory_limits
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
 from .results import AcquiredData, extract, integration_lenghts
 from .sequence import Q1Sequence, compile
-from .utils import batch_shots, concat_shots, lo_configs, time_of_flights
-from .validate import assert_channels_exclusion, validate_sequence
+from .utils import (
+    batch_shots,
+    concat_shots,
+    lo_configs,
+    time_of_flights,
+)
+from .validate import (
+    assert_channels_exclusion,
+    validate_sequence,
+)
 
 __all__ = ["Cluster"]
 
@@ -75,7 +87,6 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    bounds: str = "qblox/bounds"
     _cluster: Optional[qblox.Cluster] = None
 
     @property
@@ -129,19 +140,40 @@ class Cluster(Controller):
         sweepers: list[ParallelSweepers],
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
-        results = {}
-        log = Logger(configs)
 
-        # no unrolling yet: act one sequence at a time, and merge results
-        for ps in sequences:
+        # If acquisition is cyclic (averaging over shots on hardware), we combine as
+        # many sequences as possible in a single batch, according to the cluster
+        # memory limits.
+        qrm_slots = {
+            slot for slot, module in self._modules.items() if module.is_qrm_type
+        }
+        qrm_channels = {
+            channelid
+            for channelid, channelobj in self.channels.items()
+            if PortAddress.from_path(channelobj.path).slot in qrm_slots
+        }
+        qcm_channels = set(self.channels) - qrm_channels
+        batched_seqs: list[PulseSequence] = (
+            batch_sequences_by_cluster_memory_limits(
+                sequences,
+                sweepers,
+                options,
+                qcm_channels,
+                qrm_channels,
+            )
+            if options.averaging_mode.average
+            else sequences
+        )
+
+        # Execute each batch sequentially, and concatenate results
+        log = Logger(configs)
+        results = {}
+        for ps in batched_seqs:
             # full reset of the cluster, to erase leftover configurations and sequencer
             # synchronization registration
-            # NOTE: until not unrolled, each sequence execution should be independent
-            # TODO: once unrolled, this reset should be preserved, since it is required
-            # for multiple experiments sharing the same connection
+            # TODO: don't reset unnecessarily. In RB with depths 2**np.arange(11) the
+            # reset alone takes 14% of total execution time
             self.reset()
-            # split shots in batches, in case the required experiment exceeds the
-            # allowed memory
             psres = []
             for shots in batch_shots(ps, sweepers, options):
                 options_ = options.model_copy(update={"nshots": shots})
@@ -163,8 +195,9 @@ class Cluster(Controller):
                     self.sampling_rate,
                     time_of_flights(configs),
                 )
-                for seq in sequences_.values():
-                    validate_sequence(seq)
+                for channelid, seq in sequences_.items():
+                    slot = PortAddress.from_path(self.channels[channelid].path).slot
+                    validate_sequence(seq, self._modules[slot].is_qrm_type)
                 log.sequences(sequences_)
 
                 # then configure modules and sequencers
@@ -262,7 +295,6 @@ class Cluster(Controller):
                     self.channels,
                     configs,
                     acquisition,
-                    idx,
                     rf,
                     sequence=sequences_[ch],
                 )
@@ -311,7 +343,11 @@ class Cluster(Controller):
                     continue
 
                 # ensure acquisition status, and fetch results
-                self.cluster.get_acquisition_status(slot, seq, timeout=1)
+                acq_status = self.cluster.get_acquisition_status(slot, seq, timeout=1)
+                if acq_status is False:
+                    raise RuntimeError(
+                        f"Acquisition not completed. slot: {slot}, seq: {seq}."
+                    )
                 if acquisition is AcquisitionType.RAW:
                     for name in seq_acqs:
                         self.cluster.store_scope_acquisition(slot, seq, str(name))

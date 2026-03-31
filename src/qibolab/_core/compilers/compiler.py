@@ -108,7 +108,8 @@ class Compiler:
         if len(gate.qubits) == 2:
             pair = tuple(platform.qubit(q)[0] for q in qubits_ids)
             assert len(pair) == 2
-            return rule(gate, natives.two_qubit[pair])
+            nativegate = natives.two_qubit[pair]
+            return rule(gate, nativegate)
 
         raise NotImplementedError(f"{type(gate)} is not a native gate.")
 

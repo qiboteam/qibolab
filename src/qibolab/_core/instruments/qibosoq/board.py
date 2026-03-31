@@ -35,7 +35,6 @@ __all__ = ["RFSoC"]
 class RFSoC(Controller):
     """Instrument controlling RFSoC FPGAs."""
 
-    bounds: str = "rfsoc/bounds"
     _sampling_rate: float = 10e9
     cfg: rfsoc.Config = Field(default_factory=rfsoc.Config)
     """Configuration dictionary required for pulse execution."""

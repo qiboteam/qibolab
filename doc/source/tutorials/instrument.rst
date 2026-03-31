@@ -129,7 +129,7 @@ Let's see a minimal example:
             elif len(sequences) == 1:
                 sequence = sequences[0]
             else:
-                sequence, _ = unroll_sequences(sequences, options.relaxation_time)
+                raise NotImplementedError("MyController does not support unrolling.")
 
             # usually, some modification on the sequence, channel configs, or
             # parameters is needed so that the qibolab interface comply with the
