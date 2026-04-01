@@ -105,7 +105,7 @@ class KeysightQCS(Controller):
             elif isinstance(channel, DcChannel):
                 process_dc_channel_pulse(
                     layer=layer,
-                    pulses=pulse,
+                    pulse=pulse,
                     virtual_channel=virtual_channel,
                     sweeper_pulse_map=sweeper_pulse_map,
                 )
@@ -184,7 +184,7 @@ class KeysightQCS(Controller):
             if len(sequences) > 1 and sequence != sequences[-1]:
                 layer = qcs.Layer()
                 layer.insert(
-                    next(iter(self.virtual_channel_map.values())),
+                    self.virtual_channel_map[next(iter(sequence.channels))],
                     qcs.Delay(duration=options.relaxation_time * NS_TO_S),
                 )
                 layers.append(layer)
