@@ -1,5 +1,7 @@
 .. admonition:: Work in progress
 
+   This documentation is draft and may be incomplete.
+
 Emulator
 =========
 
