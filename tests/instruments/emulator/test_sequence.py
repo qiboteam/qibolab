@@ -136,7 +136,7 @@ def test_cnot_sequence(platform: Platform, setup: str):
 
 @pytest.mark.xfail(
     reason="Known CZ fidelity issue (calibration/emulator mismatch).",
-    strict=False,
+    strict=True,
 )
 def test_cz_sequence(
     platform: Platform,
