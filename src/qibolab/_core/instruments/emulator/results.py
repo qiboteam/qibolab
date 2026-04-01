@@ -51,16 +51,19 @@ def shots(probabilities: NDArray, nshots: int) -> NDArray:
     return np.moveaxis(shots, -1, 0)
 
 
-def calculate_probabilities_from_density_matrix(states: NDArray) -> NDArray:
+def _extract_probabilities(states: NDArray) -> NDArray:
     """
     Calculate probabilities from a density matrix using diagonal elements.
-    This function extracts the diagonal elements of a density matrix and returns
-    their absolute values, which represent the probabilities of measurement outcomes.
+
+    This function extracts the diagonal elements of each density matrix,
+    which represent the probabilities of measurement outcomes.
+
+    Probabilities are normalized for fluctuations, taking the absolute value of diagonal elements.
 
     Examples
     --------
     >>> dm = np.array([[0.9, 0.0], [0.0, 0.1]])
-    >>> probs = calculate_probabilities_from_density_matrix(dm)
+    >>> probs = _extract_probabilities(dm)
     >>> probs
     array([0.9, 0.1])
     """
@@ -72,7 +75,7 @@ def calculate_probabilities_from_density_matrix(states: NDArray) -> NDArray:
         np.array([...] + [0, 0]),
         np.array([...] + [0]),
     )
-    return np.abs(diag)
+    return np.clip(diag.real, 0, 1)
 
 
 def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
@@ -116,7 +119,7 @@ def select_acquisitions(
     return np.stack([states[n].full() for n in samples])[index_pos]
 
 
-def cyclic_results(
+def _cyclic_results(
     state_probs: NDArray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
@@ -126,39 +129,40 @@ def cyclic_results(
     excited state population.
     Computes readout results by projecting quantum state probabilities onto
     measurement subspaces and applying configured post-processing.
-
-    Notes:
-        - States outside the computational subspace (values > 1) are classified as 1.
-        - For integration acquisition type, imaginary components are set to zero.
     """
 
     # Through the entire function state_probs has dimensions:
-    # (M, S_i, H_dim), where
+    # (*S, M *H_dim), where
+    # *S is the number of iteration for each sweep in the experiment
     # M is the number of measurements applied in the pulse sequence
-    # S_i is the number of iteration for each sweep in the experiment
-    # H_dim is the complete system dimension
+    # *H_dim is the complete system dimension
     states_computational_idx = np.stack(
         np.unravel_index(np.arange(state_probs.shape[-1]), hamiltonian.dims)
     )
 
-    res_dict = {}
-    for meas_ro, ro_id in zip(state_probs, acquisitions(sequence).keys()):
-        i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
+    acq_id = acquisitions(sequence).keys()
+    # from every acquisition pulse id we get the corresponding channel, and from the channel we get the
+    # corresponding qubit index, which is then used to correctly permute the rows of states_computational_idx.
+    qubit_indices = [
+        index(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id
+    ]
+    permuted_states_computational_idx = states_computational_idx[qubit_indices]
 
-        res = np.sum(meas_ro[..., states_computational_idx[i] >= 1], axis=-1)
+    # applying a mask to select for each measurement the states that are outside the computational subspace, which are classified as 1
+    mask = permuted_states_computational_idx >= 1
 
-        if options.acquisition_type is AcquisitionType.INTEGRATION:
-            res = np.random.normal(res, scale=0.001)
-            zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
-            res = np.stack((res, zeros), axis=-1)
+    # res is a (M, *S, ...) array
+    res = np.moveaxis(np.sum(np.where(mask, state_probs, 0), axis=-1), -1, 0)
 
-        # res is a (S_i, ...) array
-        res_dict[ro_id] = res
+    if options.acquisition_type is AcquisitionType.INTEGRATION:
+        res = np.random.normal(res, scale=0.001)
+        zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
+        res = np.stack((res, zeros), axis=-1)
 
-    return res_dict
+    return dict(zip(acq_id, res))
 
 
-def singleshot_results(
+def _singleshot_results(
     state_probs: NDArray,
     sequence: PulseSequence,
     hamiltonian: HamiltonianConfig,
@@ -168,10 +172,6 @@ def singleshot_results(
     Performs single-shot measurement extraction from state probabilities by sampling
     according to the specified number of shots and mapping readout operations to their
     corresponding measurement results.
-
-    Notes:
-        - States outside the computational subspace (values > 1) are classified as 1.
-        - For integration acquisition type, imaginary components are set to zero.
     """
 
     # select only unique times of measurements
@@ -181,38 +181,47 @@ def singleshot_results(
         return_inverse=True,
     )
 
+    # here we move the -2 index of the probability array, hence it now becomes:
+    # (M, *S, *H_dim)
+    state_probs = np.moveaxis(state_probs, -2, 0)
+
     # apply the direct mapping found in np.unique to the probability vector
     # in order to sample at unique times and hence mantain correlation
     # since we use the same shots for synchronous measurements.
     unique_state_probs = state_probs[direct_map]
 
     # shots function returns a vector of shape:
-    # (Nshots, M, S_i, H_dim), where
+    # (Nshots, M, *S, *H_dim), where
     # Nshots is simply the number of shots we average on
     # M is the number of measurements applied in the pulse sequence
-    # S_i is the number of iteration for each sweep in the experiment
-    # H_dim is the complete system dimension
+    # *S is the number of iteration for each sweep in the experiment
+    # *H_dim is the complete system dimension
     sampled = shots(unique_state_probs, options.nshots)
 
     # move measurements dimension to the front, getting ready for extraction
-    # the shape now is: (M, Nshots, S_i, H_dim)
+    # the shape now is: (M, Nshots, *S, *H_dim)
     sampled = np.moveaxis(sampled, 1, 0)
 
-    res_dict = {}
-    for ro_id, inv_idx in zip(acquisitions(sequence).keys(), inverse_map):
-        i = index(sequence.pulse_channels(ro_id)[0], hamiltonian)
-        # states out of the qubit computational space are classified as 1
-        # here sampled has dimensions (M, Nshots, S_i, H_dim)
-        res = np.clip(np.unravel_index(sampled[inv_idx], hamiltonian.dims)[i], 0, 1)
+    acq_id = acquisitions(sequence).keys()
+    # from every acquisition pulse id we get the corresponding channel, and from the channel we get the
+    # corresponding qubit index, which is then used to correctly permute the rows of states_computational_idx.
+    qubit_indices = [
+        index(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id
+    ]
 
-        if options.acquisition_type is AcquisitionType.INTEGRATION:
-            zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
-            res = np.stack((res, zeros), axis=-1)
+    # res is a (M, M_unique, Nshots, *S, ...) array
+    res = np.stack(np.unravel_index(sampled[inverse_map], hamiltonian.dims))[
+        qubit_indices
+    ]
+    # using np.einsum, so res is a (M, Nshots, *S, ...) array
+    res = np.einsum(res, np.array([0, 0] + [...]), np.array([0] + [...]))
+    res = np.clip(res, 0, 1)
 
-        # res is a (Nshots, S_i, ...) array
-        res_dict[ro_id] = res
+    if options.acquisition_type is AcquisitionType.INTEGRATION:
+        zeros = np.zeros(res.shape) if np.ndim(res) != 0 else 0.0
+        res = np.stack((res, zeros), axis=-1)
 
-    return res_dict
+    return dict(zip(acq_id, res))
 
 
 def results(
@@ -229,11 +238,11 @@ def results(
     """
 
     # probability dimensions are:
-    # (S_i, M, H_dim), where
-    # S_i is the number of iteration for each sweep in the experiment
+    # (*S, M, *H_dim), where
+    # *S is the number of iteration for each sweep in the experiment
     # M is the number of measurements applied in the pulse sequence
-    # H_dim is the complete system dimension
-    probabilities = calculate_probabilities_from_density_matrix(
+    # *H_dim is the complete system dimension
+    probabilities = _extract_probabilities(
         states,
         range(hamiltonian.nqubits),
         hamiltonian.nqubits,
@@ -244,14 +253,10 @@ def results(
     # move measurements dimension to the front, getting ready for extraction
     measurements = np.moveaxis(sampled, 1, 0)
 
-    # here we move the -2 index of the probability array, hence it now becomes:
-    # (M, S_i, H_dim)
-    probabilities = np.moveaxis(probabilities, -2, 0)
-
     results = (
-        singleshot_results
+        _singleshot_results
         if options.averaging_mode is AveragingMode.SINGLESHOT
-        else cyclic_results
+        else _cyclic_results
     )
 
     if options.averaging_mode is AveragingMode.SINGLESHOT and options.nshots is None:
