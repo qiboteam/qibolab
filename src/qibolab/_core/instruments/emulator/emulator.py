@@ -161,8 +161,12 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        measurement_times = np.array(list(acquisitions(sequence_).values()))
-        measurement_times[measurement_times == 0] = 1 / (2 * NYQUIST_FREQUENCY)
+        measurement_times = np.array(list(acquisitions(sequence_).values())).astype(
+            float
+        )
+        measurement_times[measurement_times < 1 / (2 * NYQUIST_FREQUENCY)] = 1 / (
+            2 * NYQUIST_FREQUENCY
+        )
         tlist_, index = np.unique(measurement_times, return_inverse=True)
 
         results = self.engine.evolve(
@@ -296,9 +300,13 @@ def channel_timings(
         times_samples = np.floor(
             (time_evolution[pulse_times_idx] - cumulative_time) * sampling_rate
         ).astype(int)
-        pulse_waveforms[pulse_times_idx] = pulse(
-            time_evolution[pulse_times_idx], times_samples, cumulative_phase
-        )
+        # in case of virtual operations (such as VirtualZ or in general
+        # zero-duration pulses), we apply the phase modulation without
+        # affecting the waveform
+        if times_samples.size != 0:
+            pulse_waveforms[pulse_times_idx] = pulse(
+                time_evolution[pulse_times_idx], times_samples, cumulative_phase
+            )
 
         cumulative_phase += pulse.phase
         cumulative_time = next_pulse_time
