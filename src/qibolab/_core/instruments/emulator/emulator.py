@@ -69,13 +69,13 @@ class EmulatorController(Controller):
         sequences_ = (seq.align_to_delays() for seq in sequences)
 
         results_to_process = (
-            self._results(configs, sequence, options, sweepers)
+            self._play_sequence(configs, sequence, options, sweepers)
             for sequence in sequences_
         )
 
         return reduce(or_, results_to_process)
 
-    def _results(
+    def _play_sequence(
         self,
         configs: dict[str, Config],
         sequence: PulseSequence,
@@ -116,7 +116,7 @@ class EmulatorController(Controller):
         updates = defaultdict(dict) | ({} if updates is None else updates)
 
         if len(sweepers) == 0:
-            return self._play_sequence(sequence, configs, updates)
+            return self._evolve(sequence, configs, updates)
 
         parsweep = sweepers[0]
         # collect slices of results, corresponding to the current iteration
@@ -138,10 +138,10 @@ class EmulatorController(Controller):
         # stack all slices in a single array, along the current outermost dimension
         return np.stack(results)
 
-    def _play_sequence(
+    def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> NDArray:
-        """Execute a pulse sequence on the quantum emulator.
+        """Evolve a pulse sequence on the quantum emulator.
 
         This method updates the sequence parameters, generates the time grid, constructs
         the time-dependent Hamiltonian, evolves the initial state with optional collapse
