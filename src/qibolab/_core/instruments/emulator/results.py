@@ -191,15 +191,15 @@ def _singleshot_results(
     unique_state_probs = state_probs[direct_map]
 
     # shots function returns a vector of shape:
-    # (Nshots, M, *S, *H_dim), where
+    # (Nshots, M_unique, *S, *H_dim), where
     # Nshots is simply the number of shots we average on
-    # M is the number of measurements applied in the pulse sequence
+    # M_unique is the number of unique measurement times
     # *S is the number of iteration for each sweep in the experiment
     # *H_dim is the complete system dimension
     sampled = shots(unique_state_probs, options.nshots)
 
     # move measurements dimension to the front, getting ready for extraction
-    # the shape now is: (M, Nshots, *S, *H_dim)
+    # the shape now is: (M_unique, Nshots, *S, *H_dim)
     sampled = np.moveaxis(sampled, 1, 0)
 
     acq_id = acquisitions(sequence).keys()
@@ -209,7 +209,8 @@ def _singleshot_results(
         index(sequence.pulse_channels(ro_id)[0], hamiltonian) for ro_id in acq_id
     ]
 
-    # res is a (M, M_unique, Nshots, *S, ...) array
+    # we use inverse_map to expand back the sampled results
+    # res is a (M, M, Nshots, *S, ...) array
     res = np.stack(np.unravel_index(sampled[inverse_map], hamiltonian.dims))[
         qubit_indices
     ]
