@@ -272,7 +272,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 0.000013111737911171271
+                            "relative_phase": 0.0
                         }
                     ],
                     [
@@ -285,6 +285,13 @@
                                 "kind": "rectangular"
                             },
                             "relative_phase": 3.141604485498057
+                        }
+                    ],
+                    [
+                        "0/drive",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
                         }
                     ],
                     [
@@ -331,7 +338,7 @@
                             "envelope": {
                                 "kind": "rectangular"
                             },
-                            "relative_phase": 3.141605765327704
+                            "relative_phase": 3.141592653589793
                         }
                     ],
                     [
@@ -344,6 +351,13 @@
                                 "kind": "rectangular"
                             },
                             "relative_phase": 0.000011831908263815194
+                        }
+                    ],
+                    [
+                        "0/drive",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
                         }
                     ],
                     [
