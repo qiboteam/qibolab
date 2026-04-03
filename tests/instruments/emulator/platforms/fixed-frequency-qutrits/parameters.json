@@ -286,13 +286,6 @@
                         }
                     ],
                     [
-                        "0/drive",
-                        {
-                            "kind": "delay",
-                            "duration": 56.0
-                        }
-                    ],
-                    [
                         "1/drive",
                         {
                             "kind": "pulse",
@@ -302,6 +295,13 @@
                                 "kind": "rectangular"
                             },
                             "relative_phase": 0.0
+                        }
+                    ],
+                    [
+                        "0/drive",
+                        {
+                            "kind": "delay",
+                            "duration": 56.0
                         }
                     ],
                     [
@@ -345,13 +345,6 @@
                         }
                     ],
                     [
-                        "0/drive",
-                        {
-                            "kind": "delay",
-                            "duration": 56.0
-                        }
-                    ],
-                    [
                         "1/drive",
                         {
                             "kind": "pulse",
@@ -366,6 +359,13 @@
                     [
                         "0/drive",
                         {
+                            "kind": "delay",
+                            "duration": 56.0
+                        }
+                    ],
+                    [
+                        "0/drive",
+                        {
                             "kind": "pulse",
                             "duration": 20.0,
                             "amplitude": 0.200449,
@@ -375,6 +375,13 @@
                                 "beta": 0.25
                             },
                             "relative_phase": 0.0
+                        }
+                    ],
+                    [
+                        "0/drive1",
+                        {
+                            "kind": "delay",
+                            "duration": 20.0
                         }
                     ],
                     [
