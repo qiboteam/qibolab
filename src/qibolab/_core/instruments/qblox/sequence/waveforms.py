@@ -2,7 +2,6 @@ from collections.abc import Iterable, Sequence
 from typing import Annotated, Union, cast
 
 import numpy as np
-import numpy.typing as npt
 from pydantic import UUID4, AfterValidator
 
 from qibolab._core.pulses import Pulse, PulseId, PulseLike, Readout
@@ -75,13 +74,18 @@ def _waveform(
 
 def _deduplicate(
     pulses: Sequence[Pulse],
-) -> tuple[list[Pulse], npt.NDArray[np.int_]]:
-    """Deduplicate non-swept pulses
+) -> tuple[list[Pulse], list[int]]:
+    """Deduplicate non-swept pulses based on waveform-determining fields.
 
     The reason swept pulses are not deduplicated is that they are swept over duration so
     there will be no duplicates. It is still possible that a swept pulse is the same as
     a non-swept pulse but this is not a prominent enough use-case to justify accounting
     for it.
+
+    Deduplication is based on (duration, amplitude, envelope) only. The
+    ``relative_phase`` field is intentionally excluded because it does not affect the
+    uploaded waveform samples since it is handled via ``set_ph_delta`` in the Q1ASM
+    program.
 
     Args:
         pulses: A sequence of Pulse objects to deduplicate.
@@ -89,15 +93,15 @@ def _deduplicate(
     Returns:
         A tuple containing:
             - list[Pulse]: A list of unique pulses in order of first appearance.
-            - npt.NDArray[np.int_]: An array of indices mapping each original pulse to
-              its corresponding index in the deduplicated list.
+            - list[int]: A list of indices mapping each original pulse to its
+              corresponding index in the deduplicated list.
     """
-    hashes = np.array([hash(p) for p in pulses])
+    hashes = np.array([(p.duration, p.amplitude, hash(p.envelope)) for p in pulses])
     _, unique_idx, inverse_idx = np.unique(
-        hashes, return_index=True, return_inverse=True
+        hashes, axis=0, return_index=True, return_inverse=True
     )
     unique_pulses = np.array(pulses)[unique_idx]
-    return list(unique_pulses), inverse_idx
+    return list(unique_pulses), inverse_idx.tolist()
 
 
 def waveforms(
@@ -126,7 +130,7 @@ def waveforms(
     static = 2 * len(unique_pulses)
 
     # mapping from integer to unique WaveformSpec
-    waveform_specs: dict[int, WaveformSpec] = {  # non-swept
+    waveforms: dict[int, WaveformSpec] = {  # non-swept
         2 * k + ch: _waveform(
             pulse,
             comp,
@@ -150,7 +154,7 @@ def waveforms(
 
     # mapping that associate each element in the full list of pulses identified by
     # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
-    # waveform_specs
+    # waveforms
     indices_map: WaveformIndices = {  # non-swept
         (pulse.id, ch): (inv * 2 + ch, int(pulse.duration))
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
@@ -162,4 +166,4 @@ def waveforms(
         for ch, _ in enumerate(("i", "q"))
     }
 
-    return waveform_specs, indices_map
+    return waveforms, indices_map
