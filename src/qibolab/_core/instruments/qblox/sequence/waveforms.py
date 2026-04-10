@@ -185,6 +185,9 @@ def waveforms(
         for ch, comp in enumerate(("i", "q"))
     }
 
+    # perform deduplication of waveforms based on their sampled arrays, this is
+    # necessary _deduplicate_pulses only deduplicates non-unique Pulses, but not
+    # non-unique I and Q components.
     deduplicated_waveforms, orig_to_deduplicated = _deduplicate_waveforms(waveforms)
 
     # mapping that associate each element in the full list of pulses identified by
