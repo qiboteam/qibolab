@@ -3,12 +3,12 @@
 from collections import defaultdict
 
 from keysight import qcs
+from scipy.constants import nano
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.pulses import PulseId
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
-NS_TO_S = 1e-9
 HARDWARE_SWEEPER_MAX_POINTS = 24576
 SUPPORTED_CHANNEL_SWEEPERS = [Parameter.frequency]
 SUPPORTED_PULSE_SWEEPERS = [
@@ -82,7 +82,7 @@ def process_sweepers(
                 qcs.Array(
                     name=f"A{idx}_{idx2}",
                     value=(
-                        sweeper.values * NS_TO_S
+                        sweeper.values * nano
                         if sweeper.parameter is Parameter.duration
                         else sweeper.values
                     ),

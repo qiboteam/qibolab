@@ -7,6 +7,7 @@ from typing import ClassVar
 
 import numpy as np
 from keysight import qcs
+from scipy.constants import nano
 
 from qibolab._core.components import AcquisitionChannel, Config, DcChannel, IqChannel
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
@@ -23,8 +24,6 @@ from .pulse import (
 )
 from .results import fetch_result, parse_result
 from .sweep import process_sweepers
-
-NS_TO_S = 1e-9
 
 __all__ = ["KeysightQCS"]
 
@@ -44,7 +43,7 @@ class KeysightQCS(Controller):
     virtual_channel_map: dict[ChannelId, qcs.Channels]
     """Map of Qibolab channel IDs to QCS virtual channels."""
     sampling_rate: ClassVar[float] = (
-        qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * NS_TO_S
+        qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * nano
     )
     offset_channels: list[ChannelId] = []
     """Subset of channels that require offset"""
@@ -178,14 +177,14 @@ class KeysightQCS(Controller):
                 time_of_flight = configs[channel_id].delay
                 self.qcs_channel_map.get_physical_channels(channel)[
                     0
-                ].settings.delay.value = time_of_flight * NS_TO_S
+                ].settings.delay.value = time_of_flight * nano
 
             # Pad relaxation time delay after each sequence
             if len(sequences) > 1 and sequence != sequences[-1]:
                 layer = qcs.Layer()
                 layer.insert(
                     self.virtual_channel_map[next(iter(sequence.channels))],
-                    qcs.Delay(duration=options.relaxation_time * NS_TO_S),
+                    qcs.Delay(duration=options.relaxation_time * nano),
                 )
                 layers.append(layer)
 
