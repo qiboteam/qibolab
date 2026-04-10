@@ -143,13 +143,23 @@ def waveforms(
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
-    pulses = [
-        _pulse(e, e.id in amplitude_swept)
-        for e in sequence
-        if isinstance(e, (Pulse, Readout))
-    ]
+    """Build the waveform memory map and pulse-component index map for a sequence.
 
-    pulses_not_swept = [p for p in pulses if p not in duration_swept]
+    1. Split pulses into non-swept and duration-swept groups. Amplitude-swept pulses
+       have their amplitude reset to 1 so the sequencer scales them at runtime.
+    2. Deduplicate non-swept pulses structurally (by duration, amplitude, and envelope
+       hash) to avoid uploading identical waveforms for repeated pulses.
+    3. Sample waveforms: each unique pulse produces two entries (I, Q);
+    4. Deduplicate the sampled arrays a second time. This is mainly to catch cases where
+       unique envelopes share the same, non-unique, I or Q component.
+    5. Construct ``indices_map`` mapping ``(pulse UUID, quadrature)`` to the final
+       deduplicated memory index and the corresponding duration.
+    """
+    pulses_not_swept = [
+        _pulse(p, p.id in amplitude_swept)
+        for p in sequence
+        if isinstance(p, (Pulse, Readout)) and p not in duration_swept
+    ]
     pulses_swept = [
         (_pulse(p, p.id in amplitude_swept), duration_swept[p])
         for p in duration_swept
