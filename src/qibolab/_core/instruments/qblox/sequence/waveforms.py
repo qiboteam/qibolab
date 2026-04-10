@@ -75,7 +75,7 @@ def _waveform(
 
 def _deduplicate_pulses(
     pulses: Sequence[Pulse],
-) -> tuple[list[Pulse], npt.NDArray[np.intp]]:
+) -> tuple[list[Pulse], npt.NDArray[np.int_]]:
     """Deduplicate non-swept pulses based on waveform-determining fields.
 
     The reason swept pulses are not deduplicated is that they are swept over duration so
@@ -91,7 +91,7 @@ def _deduplicate_pulses(
     Returns:
         A tuple containing:
             - list[Pulse]: A list of unique pulses in order of first appearance.
-            - npt.NDArray[np.intp]: Array of indices mapping each original pulse
+            - npt.NDArray[np.int_]: Array of indices mapping each original pulse
               to its corresponding index in the deduplicated list.
     """
     hashes = np.array([(p.duration, p.amplitude, hash(p.envelope)) for p in pulses])
