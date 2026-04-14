@@ -5,7 +5,7 @@ This documentation is currently in draft form and may be incomplete.
 Emulator
 ========
 
-Qibolab provides an internal simulation instrument that enables the emulation of a variety of quantum chip configurations, including systems with single or multiple qubits, fixed- or tunable-frequency architectures, and optional couplers. This emulator allows users to execute virtual Qibolab or Qibocal experiments in a manner fully consistent with their execution on real quantum processing units (QPUs).
+Qibolab provides an internal simulation instrument that enables the emulation of a variety of quantum chip configurations, including systems with single or multiple qubits, fixed- or tunable-frequency architectures, and optional couplers. This emulator allows users to execute virtual Qibolab experiments in a manner fully consistent with their execution on real quantum processing units (QPUs).
 
 For a more detailed description of how Qibolab handles different QPUs (here referred to as :class:`.Platforms`), the reader is referred to :ref:Platform guidelines <main_doc_platform>.
 
