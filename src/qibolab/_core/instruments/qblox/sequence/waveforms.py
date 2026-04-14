@@ -73,31 +73,67 @@ def _waveform(
     )
 
 
-def _deduplicate(
+def _deduplicate_pulses(
     pulses: Sequence[Pulse],
 ) -> tuple[list[Pulse], npt.NDArray[np.int_]]:
-    """Deduplicate non-swept pulses
+    """Deduplicate non-swept pulses based on waveform-determining fields.
 
     The reason swept pulses are not deduplicated is that they are swept over duration so
     there will be no duplicates. It is still possible that a swept pulse is the same as
     a non-swept pulse but this is not a prominent enough use-case to justify accounting
     for it.
 
-    Args:
-        pulses: A sequence of Pulse objects to deduplicate.
+    Deduplication is based on (duration, amplitude, envelope) only. The
+    ``relative_phase`` field is intentionally excluded because it does not affect the
+    uploaded waveform samples since it is handled via ``set_ph_delta`` in the Q1ASM
+    program.
 
     Returns:
         A tuple containing:
-            - list[Pulse]: A list of unique pulses in order of first appearance.
-            - npt.NDArray[np.int_]: An array of indices mapping each original pulse to
-              its corresponding index in the deduplicated list.
+            - list[Pulse]: A list of unique pulses.
+            - npt.NDArray[np.int_]: Array of indices mapping each original pulse to its
+              corresponding index in the deduplicated list.
     """
-    hashes = np.array([hash(p) for p in pulses])
+    hashes = np.array([(p.duration, p.amplitude, hash(p.envelope)) for p in pulses])
     _, unique_idx, inverse_idx = np.unique(
-        hashes, return_index=True, return_inverse=True
+        hashes, axis=0, return_index=True, return_inverse=True
     )
     unique_pulses = np.array(pulses)[unique_idx]
     return list(unique_pulses), inverse_idx
+
+
+def _deduplicate_waveforms(
+    waveforms: dict[WaveformIndex, WaveformSpec],
+) -> tuple[dict[WaveformIndex, WaveformSpec], dict[WaveformIndex, WaveformIndex]]:
+    """Deduplicate waveforms by sampled waveform arrays.
+
+    Returns:
+        A tuple containing:
+            - dict[WaveformIndex, WaveformSpec]: The unique waveforms re-indexed from 0.
+            - dict[WaveformIndex, WaveformIndex]: Mapping from each original waveform
+              index to its deduplicated waveform index.
+    """
+
+    waveforms_ = list(waveforms.values())
+    waveform_arrays = np.array([waveform.waveform.data for waveform in waveforms_])
+    _, unique_idx, inverse_idx = np.unique(
+        waveform_arrays, axis=0, return_index=True, return_inverse=True
+    )
+
+    deduplicated = {
+        new_index: waveforms_[orig_index].model_copy(
+            update={
+                "waveform": waveforms_[orig_index].waveform.model_copy(
+                    update={"index": new_index}
+                )
+            }
+        )
+        for new_index, orig_index in enumerate(unique_idx)
+    }
+
+    orig_to_deduplicated_index = dict(zip(waveforms, inverse_idx))
+
+    return deduplicated, orig_to_deduplicated_index
 
 
 def waveforms(
@@ -106,27 +142,37 @@ def waveforms(
     amplitude_swept: set[PulseId],
     duration_swept: dict[PulseLike, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
-    pulses = [
-        _pulse(e, e.id in amplitude_swept)
-        for e in sequence
-        if isinstance(e, (Pulse, Readout))
-    ]
+    """Build the waveform memory map and pulse-component index map for a sequence.
 
-    pulses_not_swept = [p for p in pulses if p not in duration_swept]
+    1. Split pulses into non-swept and duration-swept groups. Amplitude-swept pulses
+       have their amplitude reset to 1 so the sequencer scales them at runtime.
+    2. Deduplicate non-swept pulses structurally (by duration, amplitude, and envelope
+       hash) to avoid uploading identical waveforms for repeated pulses.
+    3. Sample waveforms: each unique pulse produces two entries (I, Q);
+    4. Deduplicate the sampled arrays a second time. This is mainly to catch cases where
+       unique envelopes share the same, non-unique, I or Q component.
+    5. Construct ``indices_map`` mapping ``(pulse UUID, quadrature)`` to the final
+       deduplicated memory index and the corresponding duration.
+    """
+    pulses_not_swept = [
+        _pulse(p, p.id in amplitude_swept)
+        for p in sequence
+        if isinstance(p, (Pulse, Readout)) and p not in duration_swept
+    ]
     pulses_swept = [
         (_pulse(p, p.id in amplitude_swept), duration_swept[p])
         for p in duration_swept
         if isinstance(p, (Pulse, Readout))
     ]
 
-    unique_pulses, inverse_idx = _deduplicate(pulses_not_swept)
+    unique_pulses, inverse_idx = _deduplicate_pulses(pulses_not_swept)
 
     # the ids for the swept pulses start counting from `static` since up to here we need
     # two indices (i and q) for each unique non-swept pulse
     static = 2 * len(unique_pulses)
 
     # mapping from integer to unique WaveformSpec
-    waveform_specs: dict[int, WaveformSpec] = {  # non-swept
+    waveforms: dict[int, WaveformSpec] = {  # non-swept
         2 * k + ch: _waveform(
             pulse,
             comp,
@@ -148,18 +194,26 @@ def waveforms(
         for ch, comp in enumerate(("i", "q"))
     }
 
+    # perform deduplication of waveforms based on their sampled arrays, this is
+    # necessary _deduplicate_pulses only deduplicates non-unique Pulses, but not
+    # non-unique I and Q components.
+    deduplicated_waveforms, orig_to_deduplicated = _deduplicate_waveforms(waveforms)
+
     # mapping that associate each element in the full list of pulses identified by
     # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
-    # waveform_specs
+    # waveforms
     indices_map: WaveformIndices = {  # non-swept
-        (pulse.id, ch): (inv * 2 + ch, int(pulse.duration))
+        (pulse.id, ch): (int(orig_to_deduplicated[inv * 2 + ch]), int(pulse.duration))
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
         for ch, _ in enumerate(("i", "q"))
     } | {  # swept
-        (pulse.id, 2 * i + ch): (static + 2 * k + ch, int(duration))
+        (pulse.id, 2 * i + ch): (
+            int(orig_to_deduplicated[static + 2 * k + ch]),
+            int(duration),
+        )
         for k, (pulse, sweep) in enumerate(pulses_swept)
         for i, duration in enumerate(np.arange(*sweep.irange))
         for ch, _ in enumerate(("i", "q"))
     }
 
-    return waveform_specs, indices_map
+    return deduplicated_waveforms, indices_map

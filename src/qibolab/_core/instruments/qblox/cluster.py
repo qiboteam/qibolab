@@ -215,11 +215,11 @@ class Cluster(Controller):
                 log.data(data)
 
                 # process raw results to adhere to standard format
-                lenghts = integration_lenghts(sequences_, sequencers, self._modules)
+                lengths = integration_lenghts(sequences_, sequencers, self._modules)
                 psres.append(
                     extract(
                         data,
-                        lenghts,
+                        lengths,
                         options_.acquisition_type,
                         options_.results_shape(sweepers_),
                     )
@@ -244,7 +244,7 @@ class Cluster(Controller):
         sequencers with no sequence provided. In which case, it will attempt to assign
         sequencers to all available channels (as opposed to just those involved in the
         experiment, and thus in the sequences).
-        For the sake of simplifiying the usage of this function, a default acquisition
+        For the sake of simplifying the usage of this function, a default acquisition
         type is provided (:attr:`AcquisitionType.INTEGRATION`). The only true
         alternative to this value is :attr:`AcquisitionType.RAW`, since further
         configurations are required to operate in scope mode.

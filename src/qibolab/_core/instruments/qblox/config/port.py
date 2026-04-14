@@ -28,13 +28,13 @@ QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
 There are two different ways to add an offset to the waveform played by the QCM module:
 
 - digitally summing an offset, which could be controlled both in real-time and by
-  conifgurations
-- adding an offset directly to the outcoming signal
+  configurations
+- adding an offset directly to the outgoing signal
 
 
 Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
 <https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
-a conversion is neeeded, because the first option will be defined in the interval (-1,
+a conversion is needed, because the first option will be defined in the interval (-1,
 1) in the parameters (internally mapping the floats on a suitable integers range), while
 the second is directly expressed in Volt.
 Hence, the conversion factor of ``2.5``.
@@ -295,7 +295,7 @@ def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict
     compatible values, and raises otherwise.
     Compatible here means equal (by comparison) among values which are set. For a value
     which may appear multiple times is allowed to be unset some of them, in which case
-    is implicitly set by the other occurences (as opposed to be compatible with its
+    is implicitly set by the other occurrences (as opposed to be compatible with its
     reset value).
     """
 
