@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
-from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import (
@@ -67,6 +67,13 @@ class EmulatorController(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
+
+        if (
+            options.averaging_mode is AveragingMode.SINGLESHOT
+            and options.nshots is None
+        ):
+            raise ValueError("nshots must be specified for SINGLESHOT mode")
+
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
 

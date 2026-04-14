@@ -1,3 +1,16 @@
+"""
+In this module we often recall, for the sake of a better interpretation of the whole pipeline, the transformed dimensions of the simulation's results tensor.
+Generally this tensor will have the shape (*S, M *H_dim) (or its permutations),
+where:
+- *S is the number of iteration for each sweep in the experiment
+- M is the number of measurements applied in the pulse sequence
+- *H_dim is the complete system dimension
+
+In the results processing also, when simulating SINGLESHOTS, we'll add two dimensions:
+- Nshots, which is simply the number of shots we average on
+- M_unique, which is the number of unique measurement times
+"""
+
 from collections.abc import Iterable
 
 import numpy as np
@@ -131,10 +144,7 @@ def _cyclic_results(
     """
 
     # Through the entire function state_probs has dimensions:
-    # (*S, M *H_dim), where
-    # *S is the number of iteration for each sweep in the experiment
-    # M is the number of measurements applied in the pulse sequence
-    # *H_dim is the complete system dimension
+    # (*S, M *H_dim)
     states_computational_idx = np.stack(
         np.unravel_index(np.arange(state_probs.shape[-1]), hamiltonian.dims)
     )
@@ -190,11 +200,7 @@ def _singleshot_results(
     unique_state_probs = state_probs[direct_map]
 
     # shots function returns a vector of shape:
-    # (Nshots, M_unique, *S, *H_dim), where
-    # Nshots is simply the number of shots we average on
-    # M_unique is the number of unique measurement times
-    # *S is the number of iteration for each sweep in the experiment
-    # *H_dim is the complete system dimension
+    # (Nshots, M_unique, *S, *H_dim)
     sampled = shots(unique_state_probs, options.nshots)
 
     # move measurements dimension to the front, getting ready for extraction
@@ -238,10 +244,7 @@ def results(
     """
 
     # probability dimensions are:
-    # (*S, M, *H_dim), where
-    # *S is the number of iteration for each sweep in the experiment
-    # M is the number of measurements applied in the pulse sequence
-    # *H_dim is the complete system dimension
+    # (*S, M, *H_dim)
     probabilities = _extract_probabilities(
         states,
     )
@@ -251,9 +254,6 @@ def results(
         if options.averaging_mode is AveragingMode.SINGLESHOT
         else _cyclic_results
     )
-
-    if options.averaging_mode is AveragingMode.SINGLESHOT and options.nshots is None:
-        raise ValueError("nshots must be specified for SINGLESHOT mode")
 
     return results(
         state_probs=probabilities,
