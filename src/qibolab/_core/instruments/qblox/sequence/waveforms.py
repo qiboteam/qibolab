@@ -90,9 +90,9 @@ def _deduplicate_pulses(
 
     Returns:
         A tuple containing:
-            - list[Pulse]: A list of unique pulses in order of first appearance.
-            - npt.NDArray[np.int_]: Array of indices mapping each original pulse
-              to its corresponding index in the deduplicated list.
+            - list[Pulse]: A list of unique pulses.
+            - npt.NDArray[np.int_]: Array of indices mapping each original pulse to its
+              corresponding index in the deduplicated list.
     """
     hashes = np.array([(p.duration, p.amplitude, hash(p.envelope)) for p in pulses])
     _, unique_idx, inverse_idx = np.unique(
@@ -109,8 +109,7 @@ def _deduplicate_waveforms(
 
     Returns:
         A tuple containing:
-            - dict[WaveformIndex, WaveformSpec]: The unique waveforms re-indexed from 0
-              in order of first appearance.
+            - dict[WaveformIndex, WaveformSpec]: The unique waveforms re-indexed from 0.
             - dict[WaveformIndex, WaveformIndex]: Mapping from each original waveform
               index to its deduplicated waveform index.
     """
