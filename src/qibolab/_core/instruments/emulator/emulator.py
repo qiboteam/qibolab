@@ -38,6 +38,8 @@ NYQUIST_FREQUENCY = 20
 """GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
 SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
 """Minimum time the emulator can resolve"""
+MIN_MEASURE_TIME = 1
+"""ns, it is the shortest time it is possible to perform a measurement."""
 
 
 __all__ = ["EmulatorController"]
@@ -165,7 +167,7 @@ class EmulatorController(Controller):
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
         measurement_times = np.array(list(acquisitions(sequence_).values()))
-        measurement_times[measurement_times < SAMPLING_INTERVAL] = SAMPLING_INTERVAL
+        measurement_times[measurement_times < MIN_MEASURE_TIME] = MIN_MEASURE_TIME
         tlist_, index = np.unique(measurement_times, return_inverse=True)
 
         results = self.engine.evolve(
