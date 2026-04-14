@@ -4,10 +4,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from operator import or_
-from typing import Callable, Optional, cast
+from typing import Optional, cast
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.interpolate import BSpline, make_interp_spline
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
@@ -15,11 +16,9 @@ from qibolab._core.execution_parameters import AveragingMode, ExecutionParameter
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import (
-    Acquisition,
     Delay,
     Pulse,
     PulseLike,
-    Readout,
     VirtualZ,
 )
 from qibolab._core.sequence import PulseSequence
@@ -31,7 +30,17 @@ from .hamiltonians import (
     Modulated,
     waveform,
 )
-from .results import acquisitions, index, results, select_acquisitions
+from .results import acquisitions, index, results
+
+SPLINE_INTERP_ORDER = 3
+"""Polynomial order used for interpolating the pulses with a spline function."""
+NYQUIST_FREQUENCY = 20
+"""GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
+SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
+"""Minimum time the emulator can resolve"""
+MIN_MEASURE_TIME = 1
+"""ns, it is the shortest time it is possible to perform a measurement."""
+
 
 __all__ = ["EmulatorController"]
 
@@ -45,6 +54,9 @@ class EmulatorController(Controller):
     """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
     """Bounds for emulator."""
+    save: bool = False
+    """Flag for saving the full system evolution computed from the simulation
+    backend. In order to set it True modify `platform.py` file in the platform folder."""
 
     @property
     def sampling_rate(self) -> float:
@@ -113,7 +125,7 @@ class EmulatorController(Controller):
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: Optional[dict] = None,
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray]:
         """Sweep over sequence.
 
         This function invokes itself recursively, adding an array
@@ -157,33 +169,46 @@ class EmulatorController(Controller):
         operators, and returns the resulting measurement data.
         """
         sequence_ = update_sequence(sequence, updates)
-        tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)
         configs_ = update_configs(configs, updates)
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
+        measurement_times = np.array(list(acquisitions(sequence_).values()))
+        measurement_times[measurement_times < MIN_MEASURE_TIME] = MIN_MEASURE_TIME
+        tlist_, index = np.unique(measurement_times, return_inverse=True)
+
         results = self.engine.evolve(
             hamiltonian=hamiltonian,
             initial_state=config.initial_state(self.engine),
-            time=tlist_,
+            time=np.concatenate(([0], tlist_)),
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
+            save_evolution=self.save,
         )
-        return select_acquisitions(
-            results.states,
-            acquisitions(sequence_).values(),
-            tlist_,
-        )
+        return np.stack([s.full() for s in results.states[1:]])[index]
 
     def _pulse_hamiltonian(
-        self, sequence: PulseSequence, configs: dict[str, Config]
+        self,
+        sequence: PulseSequence,
+        configs: dict[str, Config],
     ) -> Optional[OperatorEvolution]:
         """Construct Hamiltonian time dependent term for qutip simulation."""
+
+        # processed sampling rate; field `sampling_rate` of the `EmulatorController`
+        # mimic a real hardware sampling rate, but it is insufficient for us to resolve
+        # the oscillation and correctly solve the system evolution, hence we
+        # set a nyquist frequency to define the timesteps in order to compute the solution
+        times = tlist(sequence)
 
         channels = [
             [
                 operator,
-                channel_time(waveforms, sampling_rate=self.sampling_rate),
+                channel_coefficients(
+                    waveforms,
+                    sampling_rate=self.sampling_rate,
+                    times=times,
+                    interp_order=SPLINE_INTERP_ORDER,
+                ),
             ]
             for operator, waveforms in hamiltonians(
                 sequence, configs, self.engine, self.sampling_rate
@@ -204,35 +229,16 @@ def update_configs(configs: dict[str, Config], updates: dict) -> dict[str, Confi
     return {k: c.model_copy(update=updates.get(k, {})) for k, c in configs.items()}
 
 
-def tlist(
-    sequence: PulseSequence, sampling_rate: float, per_sample: float = 2
-) -> NDArray:
-    """Compute times for evolution.
+def tlist(sequence: PulseSequence) -> NDArray:
+    """Generate a time array for pulse sequence execution.
 
-    The frequency of times is double the sampling rate, to make sure
-    that all pulses features are resolved by the evolution.
-
-    This can be customized using the `per_sample` rate, e.g. to retrieve times at the
-    sampling rate itself, for pulses evaluation.
-
-    .. note::
-
-        As an optimization, if an acquisition is executed as the last
-        sequence operation, that's not taken into account, since it is not
-        simulated by the present emulator.
-
-        For long experiments, it is a mild optimization. But it critically speeds up
-        short experiments, given the usual relative duration of acquisitions and control
-        pulses.
+    This function creates a time array spanning from 0 to the end of the pulse sequence,
+    sampled at the Nyquist frequency. If the last element of the sequence is an Acquisition
+    or Readout operation, it is excluded from the duration calculation.
     """
-    seq = (
-        sequence[:-1]
-        if isinstance(sequence[-1][1], (Acquisition, Readout))
-        else sequence
-    )
-    end = max(seq.duration, 1)
-    rate = sampling_rate * per_sample
-    return np.arange(0, end, 1 / rate)
+
+    end = max(sequence.duration, SAMPLING_INTERVAL)
+    return np.arange(0, end, SAMPLING_INTERVAL)
 
 
 def hamiltonian(
@@ -277,26 +283,39 @@ def hamiltonians(
     )
 
 
-def channel_time(
+def channel_coefficients(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
-) -> Callable[[float], float]:
-    """Wrap time function for specific channel.
-
-    Used to avoid late binding issues.
+    times: NDArray,
+    interp_order: int = 3,
+) -> BSpline:
+    """
+    Generate a B-spline interpolation of waveforms over a time evolution.
+    This function processes a sequence of pulses, accumulating their waveforms
+    over time and applying phase modulation. The resulting waveform is then interpolated
+    into a smooth B-spline curve for time evolution analysis.
     """
 
-    def time(t: float) -> float:
-        cumulative_time = 0
-        cumulative_phase = 0
-        for pulse in waveforms:
-            pulse_phase = pulse.phase
-            if cumulative_time <= t < cumulative_time + pulse.duration:
-                relative_time = t - cumulative_time
-                index = int(np.floor(relative_time * sampling_rate))
-                return pulse(t, index, cumulative_phase)
-            cumulative_time += pulse.duration
-            cumulative_phase += pulse_phase
-        return 0
+    pulse_waveforms = np.zeros_like(times)
 
-    return time
+    cumulative_phase = 0
+    cumulative_time = 0
+    for pulse in waveforms:
+        next_pulse_time = cumulative_time + pulse.duration
+        pulse_times_idx = (times >= cumulative_time) & (times < next_pulse_time)
+        times_samples = np.floor(
+            (times[pulse_times_idx] - cumulative_time) * sampling_rate
+        ).astype(int)
+        # in case of virtual operations (such as VirtualZ or in general
+        # zero-duration pulses), we apply the phase jump without
+        # affecting the waveform
+        if times_samples.size != 0:
+            pulse_waveforms[pulse_times_idx] = pulse(
+                times[pulse_times_idx], times_samples, cumulative_phase
+            )
+
+        cumulative_phase += pulse.phase
+        cumulative_time = next_pulse_time
+
+    # return pulse_waveforms
+    return make_interp_spline(times, pulse_waveforms, k=interp_order)

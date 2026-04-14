@@ -2,6 +2,7 @@ from functools import cached_property
 from typing import Literal, Optional, Union
 
 import numpy as np
+from numpy.typing import NDArray
 from pydantic import Field
 from qibo.config import raise_error
 from scipy.constants import giga
@@ -9,7 +10,7 @@ from scipy.constants import giga
 from ...components import Config
 from ...identifier import QubitId, QubitPairId, TransitionId
 from ...parameters import Update, _setvalue
-from ...pulses import Delay, Pulse, PulseLike, VirtualZ
+from ...pulses import Delay, IqWaveform, Pulse, PulseLike, VirtualZ
 from ...serialize import Model
 from .engine import Operator, SimulationEngine
 
@@ -173,7 +174,7 @@ class FluxPulse(Model):
         """Virtual Z phase."""
         return 0
 
-    def __call__(self, t, sample, phase):
+    def __call__(self, times: NDArray, samples: NDArray, phase: float) -> IqWaveform:
         i, _ = self.envelopes
         # we are passing the relative frequency because the term with the offset
         # is already included in the time-independent part of the Hamiltonian
@@ -183,7 +184,7 @@ class FluxPulse(Model):
             * np.pi
             * (
                 self.qubit.detuned_frequency(
-                    self.config.voltage_to_flux * (i[sample] + self.config.offset)
+                    self.config.voltage_to_flux * (i[samples] + self.config.offset)
                 )
                 - self.qubit.detuned_frequency(self.config.flux)
             )
@@ -204,30 +205,30 @@ class ModulatedDrive(Model):
     """Sampling rate."""
 
     @cached_property
-    def envelopes(self):
+    def envelopes(self) -> IqWaveform:
         """Pulse envelopes."""
         return self.pulse.envelopes(self.sampling_rate)
 
     @property
-    def duration(self):
+    def duration(self) -> float:
         """Duration of the pulse."""
         return self.pulse.duration
 
     @property
-    def omega(self):
+    def omega(self) -> float:
         return 2 * np.pi * self.config.frequency / giga
 
     @property
-    def rabi_omega(self):
+    def rabi_omega(self) -> float:
         return 2 * np.pi * self.config.rabi_frequency / giga
 
-    def __call__(self, t, sample, phase):
+    def __call__(self, times: NDArray, samples: NDArray, phase: float) -> IqWaveform:
         i, q = self.envelopes
-        phi = self.omega * t + self.pulse.relative_phase + phase
+        phi = self.omega * times + self.pulse.relative_phase + phase
         return (
             self.rabi_omega
             * self.config.scale_factor
-            * (np.cos(phi) * i[sample] + np.sin(phi) * q[sample])
+            * (np.cos(phi) * i[samples] + np.sin(phi) * q[samples])
         )
 
 
