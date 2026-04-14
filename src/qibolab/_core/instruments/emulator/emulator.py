@@ -32,10 +32,13 @@ from .hamiltonians import (
 )
 from .results import acquisitions, index, results
 
-# polynomial order used for interpolating the pulses with a spline function
 SPLINE_INTERP_ORDER = 3
-# GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations
+"""Polynomial order used for interpolating the pulses with a spline function."""
 NYQUIST_FREQUENCY = 20
+"""GHz, Nyquist frequency used for computing the solution and resolve qubit oscillations."""
+SAMPLING_INTERVAL = 1 / (2 * NYQUIST_FREQUENCY)
+"""Minimum time the emulator can resolve"""
+
 
 __all__ = ["EmulatorController"]
 
@@ -49,7 +52,7 @@ class EmulatorController(Controller):
     """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
     """Bounds for emulator."""
-    save_flag: bool = False
+    save: bool = False
     """Flag for saving the full system evolution computed from the simulation
     backend. In order to set it True modify `platform.py` file in the platform folder."""
 
@@ -161,12 +164,8 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        measurement_times = np.array(list(acquisitions(sequence_).values())).astype(
-            float
-        )
-        measurement_times[measurement_times < 1 / (2 * NYQUIST_FREQUENCY)] = 1 / (
-            2 * NYQUIST_FREQUENCY
-        )
+        measurement_times = np.array(list(acquisitions(sequence_).values()))
+        measurement_times[measurement_times < SAMPLING_INTERVAL] = SAMPLING_INTERVAL
         tlist_, index = np.unique(measurement_times, return_inverse=True)
 
         results = self.engine.evolve(
@@ -175,7 +174,7 @@ class EmulatorController(Controller):
             time=np.concatenate(([0], tlist_)),
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
-            save_evolution=self.save_flag,
+            save_evolution=self.save,
         )
         return np.stack([s.full() for s in results.states[1:]])[index]
 
@@ -190,15 +189,15 @@ class EmulatorController(Controller):
         # mimic a real hardware sampling rate, but it is insufficient for us to resolve
         # the oscillation and correctly solve the system evolution, hence we
         # set a nyquist frequency to define the timesteps in order to compute the solution
-        time_evolution = tlist(sequence)
+        times = tlist(sequence)
 
         channels = [
             [
                 operator,
-                channel_timings(
+                channel_coefficients(
                     waveforms,
                     sampling_rate=self.sampling_rate,
-                    time_evolution=time_evolution,
+                    times=times,
                     interp_order=SPLINE_INTERP_ORDER,
                 ),
             ]
@@ -229,8 +228,8 @@ def tlist(sequence: PulseSequence) -> NDArray:
     or Readout operation, it is excluded from the duration calculation.
     """
 
-    end = max(sequence.duration, 1)
-    return np.arange(0, end, 1 / (2 * NYQUIST_FREQUENCY))
+    end = max(sequence.duration, SAMPLING_INTERVAL)
+    return np.arange(0, end, SAMPLING_INTERVAL)
 
 
 def hamiltonian(
@@ -275,48 +274,39 @@ def hamiltonians(
     )
 
 
-def channel_timings(
+def channel_coefficients(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
-    time_evolution: NDArray,
+    times: NDArray,
     interp_order: int = 3,
 ) -> BSpline:
     """
-    Generate a B-spline interpolation of modulated waveforms over a time evolution.
-    This function processes a sequence of modulated pulses, accumulating their waveforms
+    Generate a B-spline interpolation of waveforms over a time evolution.
+    This function processes a sequence of pulses, accumulating their waveforms
     over time and applying phase modulation. The resulting waveform is then interpolated
     into a smooth B-spline curve for time evolution analysis.
     """
 
-    pulse_waveforms = np.zeros_like(time_evolution)
+    pulse_waveforms = np.zeros_like(times)
 
     cumulative_phase = 0
     cumulative_time = 0
     for pulse in waveforms:
         next_pulse_time = cumulative_time + pulse.duration
-        pulse_times_idx = (time_evolution >= cumulative_time) & (
-            time_evolution < next_pulse_time
-        )
+        pulse_times_idx = (times >= cumulative_time) & (times < next_pulse_time)
         times_samples = np.floor(
-            (time_evolution[pulse_times_idx] - cumulative_time) * sampling_rate
+            (times[pulse_times_idx] - cumulative_time) * sampling_rate
         ).astype(int)
         # in case of virtual operations (such as VirtualZ or in general
-        # zero-duration pulses), we apply the phase modulation without
+        # zero-duration pulses), we apply the phase jump without
         # affecting the waveform
         if times_samples.size != 0:
             pulse_waveforms[pulse_times_idx] = pulse(
-                time_evolution[pulse_times_idx], times_samples, cumulative_phase
+                times[pulse_times_idx], times_samples, cumulative_phase
             )
 
         cumulative_phase += pulse.phase
         cumulative_time = next_pulse_time
 
     # return pulse_waveforms
-    interpolated_curve = make_interp_spline(
-        time_evolution, pulse_waveforms, k=interp_order
-    )
-
-    return interpolated_curve
-
-
-per_sample = 20
+    return make_interp_spline(times, pulse_waveforms, k=interp_order)
