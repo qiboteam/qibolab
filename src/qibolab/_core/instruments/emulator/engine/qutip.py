@@ -1,17 +1,22 @@
 from functools import cached_property
-from typing import Iterable, Union
+from pathlib import Path
+from typing import Any, Iterable, Union
 
 import numpy as np
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
-INTEGRATION_MAX_TIME_STEP = 0.02  # ns, min resolution of the integrator
-INTEGRATION_MULTIPLIER = (
-    200  # factor for computing max number of steps for the ode solver
-)
-INTEGRATION_MIN_TIME_STEP = 5e-3  # ns, max resolution of the integrator
-
 __all__ = ["QutipEngine"]
+
+INTEGRATION_MAX_TIME_STEP = 0.02
+"""ns, min resolution of the integrator"""
+INTEGRATION_MULTIPLIER = 200
+"""factor for computing max number of steps for the ode solver"""
+INTEGRATION_MIN_TIME_STEP = 5e-3
+"""ns, max resolution of the integrator"""
+
+HAMILTONIAN_FILENAME = "System_Hamiltonian"
+STATE_FILENAME = "State_Evolution"
 
 
 class QutipEngine(SimulationEngine):
@@ -24,6 +29,27 @@ class QutipEngine(SimulationEngine):
         import qutip as qt
 
         return qt
+
+    def dump_results(self, hamiltonian: Operator, sim_results: Any) -> None:
+        """Save the Hamiltonian and simulation results to files with incremented naming."""
+
+        directory = Path.cwd()
+        count_1 = sum(
+            1
+            for file in directory.iterdir()
+            if file.is_file() and HAMILTONIAN_FILENAME in file.name
+        )
+        count_2 = sum(
+            1
+            for file in directory.iterdir()
+            if file.is_file() and STATE_FILENAME in file.name
+        )
+        count = max(count_1, count_2)
+
+        self.engine.qsave(hamiltonian, f"{HAMILTONIAN_FILENAME}_{count}")
+        self.engine.qsave(sim_results, f"{STATE_FILENAME}_{count}")
+
+        return
 
     def evolve(
         self,
@@ -60,25 +86,7 @@ class QutipEngine(SimulationEngine):
         )
 
         if save_evolution:
-            from pathlib import Path
-
-            directory = Path(".")
-            filename_1 = "System_Hamiltonian"
-            filename_2 = "State_Evolution"
-            count_1 = sum(
-                1
-                for file in directory.iterdir()
-                if file.is_file() and filename_1 in file.name
-            )
-            count_2 = sum(
-                1
-                for file in directory.iterdir()
-                if file.is_file() and filename_2 in file.name
-            )
-            count = max(count_1, count_2)
-
-            self.engine.qsave(hamiltonian, f"{filename_1}_{count}")
-            self.engine.qsave(sim_results, f"{filename_2}_{count}")
+            self.dump_results(hamiltonian=hamiltonian, sim_results=sim_results)
 
         return sim_results
 
