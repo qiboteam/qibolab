@@ -41,7 +41,7 @@ def test_waveforms_deduplicate_equal_components_across_distinct_iq_pairs():
     assert q_a_index != q_b_index != i_a_index
 
 
-def test_waveforms_deduplicate_equal_components_across_distinct_length():
+def test_waveforms_deduplicate_across_distinct_lengths():
     pulse_a = Pulse(
         duration=6,
         amplitude=1.0,
