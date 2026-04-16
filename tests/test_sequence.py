@@ -4,6 +4,7 @@ from pydantic import TypeAdapter
 
 from qibolab._core.pulses import (
     Acquisition,
+    Align,
     Delay,
     Drag,
     Gaussian,
@@ -211,13 +212,42 @@ def test_juxtapose():
         assert channel == target_channels[i]
         assert isinstance(pulse, target_pulse_types[i])
 
-    # Check aliases
-    sa1 = deepcopy(s1)
-    sc1 = deepcopy(s1)
-    sa1 |= s2
-    sc1.juxtapose(s2)
-    assert sa1 == sc1
-    assert sc1 == s1 | s2
+
+def test_pipe():
+    p1 = Pulse(duration=40, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    s1 = PulseSequence([("ch1", p1)])
+    p2 = Pulse(duration=60, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    s2 = PulseSequence([("ch2", p2)])
+
+    # |= inserts an Align marker before appending other
+    s1_ior = deepcopy(s1)
+    s1_ior |= s2
+    assert any(isinstance(p, Align) for _, p in s1_ior)
+    compiled = s1_ior.align_to_delays()
+    assert not any(isinstance(p, Align) for _, p in compiled)
+    assert compiled.channels == {"ch1", "ch2"}
+    assert compiled.channel_duration("ch1") == 40
+    assert compiled.channel_duration("ch2") == 100
+    assert compiled.duration == 100
+
+    # | does not modify the original
+    s1_or = s1 | s2
+    assert s1 == PulseSequence([("ch1", p1)])
+    assert s1_or.align_to_delays() == compiled
+
+    # with shared channels: all ``self'' channels are synced before appending ``other''
+    p3 = Pulse(duration=20, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    p4 = Pulse(duration=80, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    p5 = Pulse(duration=50, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    p6 = Pulse(duration=30, amplitude=0.9, envelope=Drag(rel_sigma=0.2, beta=1))
+    s3 = PulseSequence([("ch1", p3), ("ch2", p4)])
+    s4 = PulseSequence([("ch1", p5), ("ch2", p6)])
+    s3 |= s4
+    compiled2 = s3.align_to_delays()
+    # ch1: 20 + Delay(60) + 50 = 130, ch2: 80 + 30 = 110
+    assert compiled2.channel_duration("ch1") == 20 + 60 + 50
+    assert compiled2.channel_duration("ch2") == 80 + 30
+    assert compiled2.duration == 130
 
 
 def test_copy():

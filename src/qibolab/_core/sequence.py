@@ -85,11 +85,7 @@ class PulseSequence(UserList[_Element]):
 
     def channel_duration(self, channel: ChannelId) -> float:
         """Duration of the given channel."""
-        sequence = (
-            self.align_to_delays()
-            if any(isinstance(pulse, Align) for _, pulse in self)
-            else self
-        )
+        sequence = self.align_to_delays()
         return sum(pulse.duration for pulse in sequence.channel(channel))
 
     def pulse_channels(self, pulse_id: PulseId) -> list[ChannelId]:
@@ -150,20 +146,16 @@ class PulseSequence(UserList[_Element]):
         self.extend(other)
 
     def __ior__(self, other: Iterable[_Element]) -> "PulseSequence":
-        """Juxtapose two sequences.
-
-        Alias to :meth:`concatenate`.
-        """
-        self.align(self.channels)
+        """Pipe two sequences. ``other'' starts after ``self`` ends."""
+        other_channels = PulseSequence(other).channels
+        self.align(self.channels | other_channels)
         self.extend(other)
         return self
 
     def __or__(self, other: Iterable[_Element]) -> "PulseSequence":
-        """Juxtapose two sequences.
+        """Pipe two sequences.
 
         A copy is made, and no input is altered.
-
-        Other than that, it is based on :meth:`concatenate`.
         """
         copy = self.copy()
         copy |= other

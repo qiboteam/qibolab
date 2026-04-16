@@ -9,7 +9,7 @@ from ...execution_parameters import (
     ExecutionParameters,
 )
 from ...identifier import ChannelId, QubitId, Result
-from ...pulses import Acquisition, PulseId, Readout
+from ...pulses import Acquisition, Align, PulseId, Readout
 from ...sequence import PulseSequence
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig
@@ -69,11 +69,13 @@ def calculate_probabilities_from_density_matrix(
 def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
     """Compute acquisitions' times."""
     acq = {}
-    for ch in sequence.channels:
+    sequence_ = sequence.align_to_delays()
+    for ch in sequence_.channels:
         time = 0
-        for ev in sequence.channel(ch):
+        for ev in sequence_.channel(ch):
             if isinstance(ev, (Acquisition, Readout)):
                 acq[ev.id] = time
+            assert not isinstance(ev, Align)
             time += ev.duration
 
     return acq
