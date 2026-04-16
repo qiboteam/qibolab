@@ -67,7 +67,7 @@ def test_waveforms_deduplicate_across_distinct_lengths():
         duration_swept={},
     )
 
-    # ThrTwoee unique Q components plus two unique I components.
+    # Two unique Q components plus two unique I components.
     assert len(waveform_specs) == 4
 
     i_a_index, _ = indices_map[(pulse_a.id, 0)]
