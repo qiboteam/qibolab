@@ -140,6 +140,11 @@ class PulseSequence(UserList[_Element]):
             - ``other``
 
         Guarantee simultaneous start and no overlap.
+
+        .. deprecated:: 0.3.0
+            This is deprecated since 0.2.14. Use align_to_delays instead.
+
+
         """
         _synchronize(self, PulseSequence(other).channels | self.channels)
         self.extend(other)
@@ -149,7 +154,8 @@ class PulseSequence(UserList[_Element]):
 
         Alias to :meth:`concatenate`.
         """
-        self.juxtapose(other)
+        self.align(self.channels)
+        self.extend(other)
         return self
 
     def __or__(self, other: Iterable[_Element]) -> "PulseSequence":
@@ -163,7 +169,7 @@ class PulseSequence(UserList[_Element]):
         copy |= other
         return copy
 
-    def align(self, channels: list[ChannelId]) -> Align:
+    def align(self, channels: Iterable[ChannelId]) -> Align:
         """Introduce align commands to the sequence."""
         align = Align()
         for channel in channels:

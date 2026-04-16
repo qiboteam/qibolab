@@ -149,6 +149,7 @@ class Readout(_PulseLike):
 
     acquisition: Acquisition
     probe: Pulse
+    time_of_flight: float = 0.0
 
     @classmethod
     def from_probe(cls, probe: Pulse):
@@ -161,7 +162,7 @@ class Readout(_PulseLike):
     @property
     def duration(self) -> float:
         """Duration in ns."""
-        return self.acquisition.duration
+        return self.acquisition.duration + self.time_of_flight
 
     @property
     def id(self) -> PulseId:
