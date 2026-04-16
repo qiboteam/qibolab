@@ -72,7 +72,6 @@ class Q1Sequence(Model):
         options: ExecutionParameters,
         sampling_rate: float,
         channel: set[ChannelId],
-        time_of_flight: Optional[float],
         duration: float,
     ) -> "Q1Sequence":
         padding = (
@@ -106,7 +105,6 @@ class Q1Sequence(Model):
                 options,
                 sweepers,
                 channel,
-                time_of_flight,
                 int(padding),
             ),
         )
@@ -153,7 +151,6 @@ def compile(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
-    time_of_flights: dict[ChannelId, float],
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
     sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
@@ -164,7 +161,6 @@ def compile(
             options,
             sampling_rate,
             _effective_channels(ch, seq),
-            time_of_flights.get(ch),
             duration,
         )
         for ch, seq in (sweeper_channels | sequence.by_channel).items()
