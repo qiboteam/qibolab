@@ -39,7 +39,7 @@ def _virtualz(pulse: VirtualZ, element: str, parameters: Parameters):
     qua.frame_rotation_2pi(phase, element)
 
 
-def _play_multiple_waveforms(element: str, parameters: Parameters):
+def _play_multiple_waveforms(element: str, parameters: Parameters, pulse: Optional[Pulse] = None):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     assert not parameters.interpolated
     assert parameters.interpolated_op is None
@@ -48,7 +48,7 @@ def _play_multiple_waveforms(element: str, parameters: Parameters):
             if parameters.amplitude is not None:
                 sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
-                qua.play(sweep_op, element)
+                qua.play(sweep_op, element, chirp=pulse.chirp)
 
 
 def _play_single_waveform(
@@ -56,6 +56,7 @@ def _play_single_waveform(
     element: str,
     parameters: Parameters,
     acquisition: Optional[Acquisition] = None,
+    pulse: Optional[Pulse] = None
 ):
     if parameters.amplitude is not None:
         op = parameters.amplitude_op * parameters.amplitude
@@ -66,9 +67,20 @@ def _play_single_waveform(
             # sweeping duration using interpolation
             # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
             assert len(parameters.duration_ops) == 0
-            qua.play(parameters.interpolated_op, element, duration=parameters.duration)
+            if pulse is not None and pulse.chirp is not None:
+                qua.play(
+                    parameters.interpolated_op,
+                    element,
+                    duration=parameters.duration,
+                    chirp=pulse.chirp
+                )
+            else:
+                qua.play(parameters.interpolated_op, element, duration=parameters.duration)
         else:
-            qua.play(op, element)
+            if pulse is not None and pulse.chirp is not None:
+                qua.play(op, element, chirp=pulse.chirp)
+            else:
+                qua.play(op, element)
 
 
 def _play(
@@ -76,14 +88,15 @@ def _play(
     element: str,
     parameters: Parameters,
     acquisition: Optional[Acquisition] = None,
+    pulse: Optional[Pulse] = None
 ):
     if parameters.phase is not None:
         qua.frame_rotation_2pi(parameters.phase, element)
 
     if len(parameters.duration_ops) > 0:
-        _play_multiple_waveforms(element, parameters)
+        _play_multiple_waveforms(element, parameters, pulse)
     else:
-        _play_single_waveform(op, element, parameters, acquisition)
+        _play_single_waveform(op, element, parameters, acquisition, pulse)
 
     if parameters.phase is not None:
         qua.reset_frame(element)
@@ -106,10 +119,10 @@ def play(args: ExecutionArguments):
         op = operation(pulse)
         params = args.parameters[pulse.id]
         if isinstance(pulse, Pulse):
-            _play(op, element, params)
+            _play(op, element, params, pulse=pulse)
         elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
-            _play(op, element, params, acquisition)
+            _play(op, element, params, acquisition, pulse=pulse)
         elif isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, VirtualZ):

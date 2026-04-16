@@ -1,6 +1,6 @@
 """Pulse class."""
 
-from typing import Annotated, Literal, Union, cast
+from typing import Annotated, Literal, Union, cast, Optional, Tuple, List
 from uuid import uuid4
 
 import numpy as np
@@ -74,6 +74,15 @@ class Pulse(_PulseLike):
     """
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
+
+    chirp: Optional[
+    Union[
+        Tuple[int, str],                  # (rate, units)
+        Tuple[List[int], str],           # piecewise uniform
+        Tuple[List[int], List[int], str] # piecewise non-uniform
+    ]
+    ] = None
+    """Optional frequency chirp parameters (QUA-style)."""
 
     def i(self, sampling_rate: float) -> Waveform:
         """Compute the envelope of the waveform i component."""
