@@ -222,7 +222,8 @@ def test_pipe():
     # |= inserts an Align marker before appending other
     s1_ior = deepcopy(s1)
     s1_ior |= s2
-    assert any(isinstance(p, Align) for _, p in s1_ior)
+    assert isinstance(list(s1_ior.channel("ch1"))[1], Align)
+    assert isinstance(list(s1_ior.channel("ch2"))[0], Align)
     compiled = s1_ior.align_to_delays()
     assert not any(isinstance(p, Align) for _, p in compiled)
     assert compiled.channels == {"ch1", "ch2"}
