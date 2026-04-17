@@ -145,7 +145,7 @@ def test_apply_to_last_two_axes():
     assert pytest.approx(a) == b
 
 
-def test_resultz():
+def test_results():
     densities = random_states((2,) * 2, (3, 2))
     sequence = PulseSequence(
         [("0/drive", Pulse(duration=20, amplitude=0.8, envelope=Rectangular()))]
