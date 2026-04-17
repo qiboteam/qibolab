@@ -69,10 +69,9 @@ def calculate_probabilities_from_density_matrix(
 def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
     """Compute acquisitions' times."""
     acq = {}
-    sequence_ = sequence.align_to_delays()
-    for ch in sequence_.channels:
+    for ch in sequence.channels:
         time = 0
-        for ev in sequence_.channel(ch):
+        for ev in sequence.channel(ch):
             if isinstance(ev, (Acquisition, Readout)):
                 acq[ev.id] = time
             assert not isinstance(ev, Align)

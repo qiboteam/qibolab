@@ -153,15 +153,16 @@ def test_results():
     hamiltonian = HamiltonianConfig(qubits={q: Qubit() for q in range(2)})
     options = ExecutionParameters(nshots=1000)
 
+    sequence_ = sequence.align_to_delays()
     fres = former_results(
         states=densities,
-        sequence=sequence,
+        sequence=sequence_,
         hamiltonian=hamiltonian,
         options=options,
     )
     res = results(
         states=densities,
-        sequence=sequence,
+        sequence=sequence_,
         hamiltonian=hamiltonian,
         options=options,
     )
