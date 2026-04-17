@@ -1,5 +1,6 @@
 """Emulator controller."""
 
+import time
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
@@ -12,8 +13,12 @@ from numpy.typing import NDArray
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
 from qibolab._core.execution_parameters import ExecutionParameters
-from qibolab._core.identifier import Result
+from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
+from qibolab._core.instruments.emulator.hamiltonians import (
+    DriveEmulatorConfig,
+    FluxEmulatorConfig,
+)
 from qibolab._core.pulses import (
     Acquisition,
     Delay,
@@ -68,19 +73,24 @@ class EmulatorController(Controller):
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
         # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
+
+        results_to_process = ()
+        for sequence in sequences_:
+            sweep_results = self._sweep(sequence, configs, sweepers)
+            time.sleep(2)
+
+            results_to_process += (
                 results(
                     # states in computational basis
-                    self._sweep(sequence, configs, sweepers),
-                    sequence,
-                    cast(HamiltonianConfig, configs["hamiltonian"]),
-                    options,
-                )
-                for sequence in sequences_
-            ),
-        )
+                    states=sweep_results[0],
+                    measurement_mapping=sweep_results[1],
+                    sequence=sequence,
+                    hamiltonian=cast(HamiltonianConfig, configs["hamiltonian"]),
+                    options=options,
+                ),
+            )
+
+        return reduce(or_, results_to_process)
 
     def _sweep(
         self,
@@ -117,14 +127,16 @@ class EmulatorController(Controller):
                         updates[channel].update({sweeper.parameter.name: value})
 
             # append new slice for the current parallel value
-            results.append(self._sweep(sequence, configs, sweepers[1:], updates))
+            sweep_sim = self._sweep(sequence, configs, sweepers[1:], updates)
+            results.append(sweep_sim[0])
+            measurement_indices = sweep_sim[1]
 
         # stack all slices in a single array, along the current outermost dimension
-        return np.stack(results)
+        return np.stack(results), measurement_indices
 
     def _play_sequence(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray:
+    ) -> tuple[NDArray, NDArray]:
         """Play single sequence on emulator.
 
         The array returned by this function has a single dimension, over
@@ -143,6 +155,7 @@ class EmulatorController(Controller):
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
         )
+
         return select_acquisitions(
             results.states,
             acquisitions(sequence_).values(),
@@ -213,19 +226,35 @@ def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
     hamiltonian: HamiltonianConfig,
-    hilbert_space_index: int,
+    channel: ChannelId,
     engine: SimulationEngine,
     sampling_rate: float,
 ) -> tuple[Operator, list[Modulated]]:
-    n = hamiltonian.transmon_levels
-    op = engine.expand(
-        config.operator(n=n, engine=engine), hamiltonian.dims, hilbert_space_index
-    )
+
+    hilbert_space_index = index(channel, hamiltonian)
+    ham_qubit = hamiltonian.qubits[hilbert_space_index]
+
+    if isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
+        op = sum(
+            engine.expand(o, hamiltonian.dims, hamiltonian.hilbert_space_index(int(q)))
+            for (q, o) in config.operator(
+                hamiltonian=hamiltonian, channel=channel, engine=engine
+            )
+        )
+
+    else:
+        op = engine.expand(
+            config.operator(n=ham_qubit.transmon_levels, engine=engine),
+            hamiltonian.dims,
+            hilbert_space_index,
+        )
+
     waveforms = (
-        waveform(pulse, config, hamiltonian.qubits[hilbert_space_index], sampling_rate)
+        waveform(pulse, config, ham_qubit, sampling_rate)
         for pulse in pulses
         if isinstance(pulse, (Pulse, Delay, VirtualZ))
     )
+
     return (op, [w for w in waveforms if w is not None])
 
 
@@ -236,19 +265,21 @@ def hamiltonians(
     sampling_rate: float,
 ) -> Iterable[tuple[Operator, list[Modulated]]]:
     hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
-    return (
-        hamiltonian(
-            sequence.channel(ch),
-            configs[ch],
-            hconfig,
-            index(ch, hconfig),
-            engine,
-            sampling_rate,
-        )
-        for ch in sequence.channels
+
+    hamiltonians_array = ()
+    for ch in sequence.channels:
         # TODO: drop the following, and treat acquisitions just as empty channels
-        if not isinstance(configs[ch], AcquisitionConfig)
-    )
+        if not isinstance(configs[ch], AcquisitionConfig):
+            new_terms = hamiltonian(
+                sequence.channel(ch),
+                configs[ch],
+                hconfig,
+                ch,
+                engine,
+                sampling_rate,
+            )
+            hamiltonians_array += (new_terms,)
+    return hamiltonians_array
 
 
 def channel_time(
