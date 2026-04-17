@@ -228,8 +228,8 @@ def test_pipe():
     assert not any(isinstance(p, Align) for _, p in compiled)
     assert compiled.channels == {"ch1", "ch2"}
     assert compiled.channel_duration("ch1") == 40
-    assert compiled.channel_duration("ch2") == 100
-    assert compiled.duration == 100
+    assert compiled.channel_duration("ch2") == 40 + 60
+    assert compiled.duration == 40 + 60
 
     # | does not modify the original
     s1_or = s1 | s2
@@ -245,8 +245,7 @@ def test_pipe():
     s4 = PulseSequence([("ch1", p5), ("ch2", p6)])
     s3 |= s4
     compiled2 = s3.align_to_delays()
-    # ch1: 20 + Delay(60) + 50 = 130, ch2: 80 + 30 = 110
-    assert compiled2.channel_duration("ch1") == 20 + 60 + 50
+    assert compiled2.channel_duration("ch1") == 20 + 60 + 50  # 60 is from delay
     assert compiled2.channel_duration("ch2") == 80 + 30
     assert compiled2.duration == 130
 
