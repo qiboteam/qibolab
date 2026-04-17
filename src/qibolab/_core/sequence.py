@@ -85,11 +85,7 @@ class PulseSequence(UserList[_Element]):
 
     def channel_duration(self, channel: ChannelId) -> float:
         """Duration of the given channel."""
-        sequence = (
-            self.align_to_delays()
-            if any(isinstance(pulse, Align) for _, pulse in self)
-            else self
-        )
+        sequence = self.align_to_delays()
         return sum(pulse.duration for pulse in sequence.channel(channel))
 
     def pulse_channels(self, pulse_id: PulseId) -> list[ChannelId]:
@@ -140,30 +136,32 @@ class PulseSequence(UserList[_Element]):
             - ``other``
 
         Guarantee simultaneous start and no overlap.
+
+        .. deprecated:: 0.3.0
+            This is deprecated since 0.2.14. Use align_to_delays instead.
+
+
         """
         _synchronize(self, PulseSequence(other).channels | self.channels)
         self.extend(other)
 
     def __ior__(self, other: Iterable[_Element]) -> "PulseSequence":
-        """Juxtapose two sequences.
-
-        Alias to :meth:`concatenate`.
-        """
-        self.juxtapose(other)
+        """Pipe two sequences. ``other'' starts after ``self`` ends."""
+        other_channels = PulseSequence(other).channels
+        self.align(self.channels | other_channels)
+        self.extend(other)
         return self
 
     def __or__(self, other: Iterable[_Element]) -> "PulseSequence":
-        """Juxtapose two sequences.
+        """Pipe two sequences.
 
         A copy is made, and no input is altered.
-
-        Other than that, it is based on :meth:`concatenate`.
         """
         copy = self.copy()
         copy |= other
         return copy
 
-    def align(self, channels: list[ChannelId]) -> Align:
+    def align(self, channels: Iterable[ChannelId]) -> Align:
         """Introduce align commands to the sequence."""
         align = Align()
         for channel in channels:

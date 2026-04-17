@@ -26,7 +26,7 @@ def _fill_empty_lenghts(
     }
 
 
-def integration_lenghts(
+def integration_lengths(
     sequences: dict[ChannelId, Q1Sequence],
     sequencers: SequencerMap,
     modules: dict[SlotId, Module],

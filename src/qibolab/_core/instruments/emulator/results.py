@@ -9,7 +9,7 @@ from ...execution_parameters import (
     ExecutionParameters,
 )
 from ...identifier import ChannelId, QubitId, Result
-from ...pulses import Acquisition, PulseId, Readout
+from ...pulses import Acquisition, Align, PulseId, Readout
 from ...sequence import PulseSequence
 from .engine import Operator
 from .hamiltonians import HamiltonianConfig
@@ -74,6 +74,7 @@ def acquisitions(sequence: PulseSequence) -> dict[PulseId, float]:
         for ev in sequence.channel(ch):
             if isinstance(ev, (Acquisition, Readout)):
                 acq[ev.id] = time
+            assert not isinstance(ev, Align)
             time += ev.duration
 
     return acq
