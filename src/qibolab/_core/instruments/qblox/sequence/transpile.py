@@ -188,6 +188,16 @@ def _second_pass(
         return [new_line, *block[1:]], state.model_copy(
             update={"nwait": state.nwait + 1}
         )
+    if isinstance(block[0].instruction, Wait):
+        instr = block[0].instruction
+        assert isinstance(instr, Wait) and isinstance(instr.duration, int)
+        new_duration = instr.duration - state.nwait_to_subtract[state.nwait]
+        new_line = Line(
+            label=block[0].label,
+            instruction=Wait(duration=new_duration),
+            comment=block[0].comment,
+        )
+        return [new_line], state.model_copy(update={"nwait": state.nwait + 1})
     return block, state
 
 
