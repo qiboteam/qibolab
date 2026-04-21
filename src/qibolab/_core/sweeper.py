@@ -127,15 +127,14 @@ class Sweeper(Model):
         if self.range is not None:
             return self.range
         assert self.values is not None
-        if len(self.values) >= 2:
-            steps = np.diff(self.values)
-            if not np.allclose(steps, steps[0]):
-                raise ValueError(
-                    "Increments between subsequent values in the sweeper are not fixed."
-                )
-        else:
+        if len(self.values) < 2:
             raise ValueError(
                 "Sweeper values need to contain at least 2 values to infer a range."
+            )
+        steps = np.diff(self.values)
+        if not np.allclose(steps, steps[0]):
+            raise ValueError(
+                "Increments between subsequent values in the sweeper are not fixed."
             )
         step = self.values[1] - self.values[0]
         return (self.values[0], self.values[-1] + step, step)
