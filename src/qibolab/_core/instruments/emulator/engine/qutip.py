@@ -1,6 +1,6 @@
 from functools import cached_property
 from typing import Union
-
+import numpy as np
 from numpy.typing import NDArray
 
 from .abstract import EvolutionResult, Operator, OperatorEvolution, SimulationEngine
@@ -64,9 +64,13 @@ class QutipEngine(SimulationEngine):
         return self.engine.basis(dimensions=dim, n=state)
 
     def get_state_dm(self, state: Operator, **kwargs) -> NDArray:
+        """Convert QuTiP density matrix object to ndarray and enforce Hermiticity."""
         if state.type == "ket":
             state = self.engine.ket2dm(state)
-        return state.full()
+        #return state.full()
+        rho = np.array(state.full(), dtype=np.complex128)
+
+        return 0.5 * (rho + rho.conj().T)
 
     def get_evolution_states(self, results: EvolutionResult) -> list:
         return results.states

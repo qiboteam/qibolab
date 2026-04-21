@@ -123,19 +123,28 @@ class CudaqEngine(SimulationEngine):
         return self.engine.State.from_data(np.array(statevec, dtype=np.complex128))
 
     def get_state_dm(self, state: Operator, statevector_dimension: int = 0) -> NDArray:
-        state_dm = self.engine.amplitudes(state)
-        try:
-            state_dm[0, 1]
-        except:
-            state_dm_len = len(state_dm)
-            if state_dm_len == statevector_dimension**2:
-                state_dm = state_dm.reshape(
-                    [statevector_dimension, statevector_dimension]
-                )
-            else:
-                state_dm = np.outer(state_dm, np.conjugate(state_dm))
+        """Extract density matrix from a CUDA-Q state payload and enforce Hermiticity.
 
-        return state_dm
+        For mixed-state outputs, CUDA-Q returns the density matrix payload in a
+        conjugated form relative to the QuTiP convention.
+        Conjugate mixed-state payloads here so both backends return density matrices
+        in the same representation.
+        """
+        state_data = np.array(self.engine.amplitudes(state), dtype=np.complex128)
+
+        try:
+            state_data[0, 1]
+            rho = state_data.conj()
+        except:
+            if len(state_data) == statevector_dimension**2:
+                rho = state_data.reshape(
+                    [statevector_dimension, statevector_dimension]
+                ).conj()
+            else:
+                rho = np.outer(state_data, np.conjugate(state_data))
+
+        return 0.5 * (rho + rho.conj().T)
+
 
     def get_evolution_states(self, results: EvolutionResult) -> list:
         return results.intermediate_states()
