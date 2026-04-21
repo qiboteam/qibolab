@@ -66,9 +66,9 @@ class Sweeper(Model):
             qubit = platform.qubits[0]
             natives = platform.natives.single_qubit[0]
             sequence = natives.MZ.create_sequence()
-            parameter_range = np.random.randint(10, size=10)
+            parameter_range = (7e9, 7e9 + 1e6, 0.2e6)
             sweeper = Sweeper(
-                parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe]
+                parameter=Parameter.frequency, range=parameter_range, channels=[qubit.probe]
             )
             platform.execute([sequence], [[sweeper]])
     """
@@ -127,6 +127,16 @@ class Sweeper(Model):
         if self.range is not None:
             return self.range
         assert self.values is not None
+        if len(self.values) >= 2:
+            steps = np.diff(self.values)
+            if not np.allclose(steps, steps[0]):
+                raise ValueError(
+                    "Increments between subsequent values in the sweeper are not fixed."
+                )
+        else:
+            raise ValueError(
+                "Sweeper values need to contain at least 2 values to infer a range."
+            )
         step = self.values[1] - self.values[0]
         return (self.values[0], self.values[-1] + step, step)
 
