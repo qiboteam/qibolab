@@ -223,6 +223,7 @@ class Cluster(Controller):
                     options_,
                     self.sampling_rate,
                 )
+                # import ipdb; ipdb.set_trace()
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
                     validate_sequence(seq, self._modules[slot].is_qrm_type)

@@ -92,7 +92,7 @@ class Instr(Model):
         This is required to unambiguously deserialize the instruction. Cf.
         :meth:`instr`.
 
-        It is kind of surrogate of Pyantic's discriminated unions, without the need of
+        It is kind of surrogate of Pydantic's discriminated unions, without the need of
         manually labeling each class, since the label is derived from the type.
         """
         if "instr" in data:
@@ -267,7 +267,7 @@ class Sub(Instr):
 
 
 class And(Instr):
-    """Bit-wise conjuction.
+    """Bit-wise conjunction.
 
     Bit-wise AND :attr:`a` and :attr:`b` and move the result to :attr:`destination`.
 
@@ -282,7 +282,7 @@ class And(Instr):
 
 
 class Or(Instr):
-    """Bit-wise disjuction.
+    """Bit-wise disjunction.
 
     Bit-wise OR :attr:`a` and :attr:`b` and move the result to :attr:`destination`.
 
@@ -297,7 +297,7 @@ class Or(Instr):
 
 
 class Xor(Instr):
-    """Bit-wise exclusive disjuction.
+    """Bit-wise exclusive disjunction.
 
     Bit-wise XOR :attr:`a` and :attr:`b` and move the result to :attr:`destination`.
 
@@ -523,7 +523,10 @@ class UpdParam(Instr):
     Update the latched parameters, and then wait for :attr:`duration` nanoseconds.
     """
 
-    duration: Immediate
+    # Although the Qblox documentation defines upd_param as an Immediate, only jump
+    # instructions require references. For upd_param, duration is restricted to
+    # MultiBaseInt.
+    duration: MultiBaseInt
 
 
 class Play(Instr):
@@ -659,7 +662,7 @@ class WaitTrigger(Instr):
 
 
 class WaitSync(Instr):
-    """Syncronization.
+    """Synchronization.
 
     Wait for SYNQ to complete on all connected sequencers over all
     connected instruments.

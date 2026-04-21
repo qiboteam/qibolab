@@ -160,7 +160,8 @@ def experiment(
     The synchronization (`wait_sync`) will guarantee the common start of all involved
     channels, which is otherwise hard to control (and debug).
     """
-    return [UpdParam(duration=4), WaitSync(duration=4)] + [
+    # Wait(40) creates a buffer to subtract update_params durations if needed
+    return [UpdParam(duration=4), WaitSync(duration=4), Wait(duration=40)] + [
         inst
         for block in (event(pulse, waveforms, acquisitions) for pulse in sequence)
         for inst in block

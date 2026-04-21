@@ -1,5 +1,6 @@
+from collections import defaultdict
 from functools import reduce
-from typing import Optional, cast
+from typing import Callable, Optional, cast
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +14,7 @@ from ..q1asm.ast_ import (
     Reference,
     Register,
     Sub,
+    UpdParam,
     Wait,
 )
 from .asm import Registers
@@ -23,7 +25,32 @@ MAX_WAIT = 2**16 - 1
 
 
 class State(BaseModel):
+    pass
+
+
+class FirstPassState(State):
+    """
+    - nwait: Tracks the number of Wait instructions encountered. This is used to label
+      waits, and to coordinate duration adjustments due to UpdParam instructions.
+    - nwait_to_subtract: Maps each wait index to the total duration that should be
+      subtracted from that wait due to UpdParam instructions. This subtraction is done
+      in the second pass.
+    """
+
     nwait: int = 0
+    nwait_to_subtract: defaultdict[int, int] = defaultdict(int)
+
+
+class SecondPassState(State):
+    """``nwait_to_subtract`` is set during the first pass and remains unchanged here.
+    The first Wait we encounter in the second loop has id 1, not id 0, therefore we
+    initialize nwait with an offset of 1. Key 0 in ``nwait_to_subtract`` is non-zero due
+    to the initial UpdParam that is prepended for all channels and therefore  does not
+    need to be compensated.
+    """
+
+    nwait: int = 1
+    nwait_to_subtract: defaultdict[int, int] = defaultdict(int)
 
 
 def _long_wait(duration: int, n: int) -> Block:
@@ -46,6 +73,10 @@ def _long_wait(duration: int, n: int) -> Block:
 
 
 def _decompose_wait(instr: Wait, n: int) -> Optional[Block]:
+    """
+    Decompose a wait instruction into a loop if its duration exceeds MAX_WAIT, splitting
+    it into a remainder and repeated MAX_WAIT-sized waits to fit hardware limits.
+    """
     duration = instr.duration
     if not isinstance(duration, int) or duration <= MAX_WAIT:
         return None
@@ -85,9 +116,16 @@ def _decompose_move(instr: Move) -> Optional[Block]:
 LineTransformed = list[Line]
 
 
-def _line_transform(line: Line, state: State) -> tuple[LineTransformed, State]:
+def _first_pass(
+    line: Line, state: FirstPassState
+) -> tuple[LineTransformed, FirstPassState]:
+    """Decomposes long Wait and negative Move instructions into valid Q1ASM blocks if
+    needed, updating the state (e.g., wait counter). Returns the transformed lines and
+    updated state. All other instructions are returned unchanged.
+    """
     instr = line.instruction
     block, state = (
+        # if Wait, increment state.nwait and decompose into a loop if needed
         (
             _decompose_wait(instr, state.nwait),
             state.model_copy(update={"nwait": state.nwait + 1}),
@@ -95,6 +133,21 @@ def _line_transform(line: Line, state: State) -> tuple[LineTransformed, State]:
         if isinstance(instr, Wait)
         else (_decompose_move(instr), state)
         if isinstance(instr, Move)
+        # if UpdParam with duration, update state.nwait_to_subtract to account for the
+        # wait time that will be subtracted from the Wait instruction in the _second_pass
+        else (
+            None,
+            state.model_copy(
+                update={
+                    "nwait_to_subtract": state.nwait_to_subtract
+                    | {
+                        state.nwait: state.nwait_to_subtract[state.nwait]
+                        + instr.duration
+                    }
+                }
+            ),
+        )
+        if isinstance(instr, UpdParam)
         else (None, state)
     )
 
@@ -116,12 +169,37 @@ def _line_transform(line: Line, state: State) -> tuple[LineTransformed, State]:
     ], state
 
 
-def _line_transform_apply(
-    value: tuple[list[LineTransformed], State], line: Line
-) -> tuple[list[LineTransformed], State]:
-    """Accumulate."""
-    transformed, state = _line_transform(line, value[1])
-    return (value[0] + [transformed]), state
+def _second_pass(
+    block: LineTransformed, state: SecondPassState
+) -> tuple[LineTransformed, SecondPassState]:
+    """Subtracts the additional duration incurred due to UpdParam from Wait instructions
+    to ensure alignment between channels.
+    """
+    # this is only true in the case of the wait blocks merged in step 1.
+    if len(block) > 1:
+        instr = block[0].instruction
+        assert isinstance(instr, Wait) and isinstance(instr.duration, int)
+        new_duration = instr.duration - state.nwait_to_subtract[state.nwait]
+        new_line = Line(
+            label=block[0].label,
+            instruction=Wait(duration=new_duration),
+            comment=block[0].comment,
+        )
+        return [new_line, *block[1:]], state.model_copy(
+            update={"nwait": state.nwait + 1}
+        )
+    return block, state
+
+
+def _line_transform_apply(f: Callable) -> Callable:
+    def reduction(
+        value: tuple[list[LineTransformed], State], line: Line
+    ) -> tuple[list[LineTransformed], State]:
+        """Accumulate."""
+        transformed, state = f(line, value[1])
+        return (value[0] + [transformed]), state
+
+    return reduction
 
 
 class _WaitBatch(BaseModel):
@@ -176,7 +254,12 @@ def _block_transform(block: Block) -> list[Line]:
 
 def transpile(prog: Block) -> Program:
     block_replaced = _block_transform(prog)
-    lines_replaced, _state = reduce(
-        _line_transform_apply, block_replaced, ([], State())
+    lines_first_pass, first_pass_state = reduce(
+        _line_transform_apply(_first_pass), block_replaced, ([], FirstPassState())
     )
-    return Program(elements=[line for block in lines_replaced for line in block])
+    lines_second_pass, _state = reduce(
+        _line_transform_apply(_second_pass),
+        lines_first_pass,
+        ([], SecondPassState(nwait_to_subtract=first_pass_state.nwait_to_subtract)),
+    )
+    return Program(elements=[line for block in lines_second_pass for line in block])
