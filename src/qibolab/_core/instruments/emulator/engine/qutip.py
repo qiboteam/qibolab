@@ -1,5 +1,6 @@
 from functools import cached_property
 from typing import Union
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -67,7 +68,7 @@ class QutipEngine(SimulationEngine):
         """Convert QuTiP density matrix object to ndarray and enforce Hermiticity."""
         if state.type == "ket":
             state = self.engine.ket2dm(state)
-        #return state.full()
+        # return state.full()
         rho = np.array(state.full(), dtype=np.complex128)
 
         return 0.5 * (rho + rho.conj().T)

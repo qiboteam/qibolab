@@ -145,7 +145,6 @@ class CudaqEngine(SimulationEngine):
 
         return 0.5 * (rho + rho.conj().T)
 
-
     def get_evolution_states(self, results: EvolutionResult) -> list:
         return results.intermediate_states()
 
