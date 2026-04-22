@@ -25,10 +25,6 @@ MAX_WAIT = 2**16 - 1
 
 
 class State(BaseModel):
-    pass
-
-
-class FirstPassState(State):
     """
     - nwait: Tracks the number of Wait instructions encountered. This is used to label
       waits, and to coordinate duration adjustments due to UpdParam instructions.
@@ -38,18 +34,6 @@ class FirstPassState(State):
     """
 
     nwait: int = 0
-    nwait_to_subtract: defaultdict[int, int] = defaultdict(int)
-
-
-class SecondPassState(State):
-    """``nwait_to_subtract`` is set during the first pass and remains unchanged here.
-    The first Wait we encounter in the second loop has id 1, not id 0, therefore we
-    initialize nwait with an offset of 1. Key 0 in ``nwait_to_subtract`` is non-zero due
-    to the initial UpdParam that is prepended for all channels and therefore  does not
-    need to be compensated.
-    """
-
-    nwait: int = 1
     nwait_to_subtract: defaultdict[int, int] = defaultdict(int)
 
 
@@ -116,21 +100,23 @@ def _decompose_move(instr: Move) -> Optional[Block]:
 LineTransformed = list[Line]
 
 
-def _first_pass(
-    line: Line, state: FirstPassState
-) -> tuple[LineTransformed, FirstPassState]:
+def _first_pass(line: list[Line], state: State) -> tuple[LineTransformed, State]:
     """Decomposes long Wait and negative Move instructions into valid Q1ASM blocks if
     needed, updating the state (e.g., wait counter). Returns the transformed lines and
     updated state. All other instructions are returned unchanged.
     """
-    instr = line.instruction
+    assert len(line) == 1
+    line_ = line[0]
+    instr = line_.instruction
     block, state = (
         # if Wait, increment state.nwait and decompose into a loop if needed
         (
             _decompose_wait(instr, state.nwait),
             state.model_copy(update={"nwait": state.nwait + 1}),
         )
-        if isinstance(instr, Wait)
+        # we skip Waits in registers because we do not need to decompose them and for
+        # second pass we cannot subtract the duration from them.
+        if isinstance(instr, Wait) and not isinstance(instr.duration, Register)
         else (_decompose_move(instr), state)
         if isinstance(instr, Move)
         # if UpdParam with duration, update state.nwait_to_subtract to account for the
@@ -153,25 +139,23 @@ def _first_pass(
 
     # default
     if block is None:
-        return [line], state
+        return [line_], state
 
     assert isinstance(block[0], Instruction)
     return [
         el if isinstance(el, Line) else Line.instr(el)
         for el in (
             (
-                Line(instruction=block[0], label=line.label, comment=line.comment),
+                Line(instruction=block[0], label=line_.label, comment=line_.comment),
                 *(el for el in block[1:]),
             )
             if block is not None
-            else [line]
+            else [line_]
         )
     ], state
 
 
-def _second_pass(
-    block: LineTransformed, state: SecondPassState
-) -> tuple[LineTransformed, SecondPassState]:
+def _second_pass(block: LineTransformed, state: State) -> tuple[LineTransformed, State]:
     """Subtracts the additional duration incurred due to UpdParam from Wait instructions
     to ensure alignment between channels.
     """
@@ -181,7 +165,7 @@ def _second_pass(
     # index 0 since the loop is repeated 3 times and duration/3 might not be an integer
     # value.
     instr = block[0].instruction
-    if isinstance(instr, Wait):
+    if isinstance(instr, Wait) and not isinstance(instr.duration, Register):
         assert isinstance(instr.duration, int)
         new_duration = instr.duration - state.nwait_to_subtract[state.nwait]
         if new_duration < 0:
@@ -205,12 +189,17 @@ def _second_pass(
     return block, state
 
 
-def _line_transform_apply(f: Callable) -> Callable:
+def _line_transform_apply(
+    f: Callable[[list[Line], State], tuple[LineTransformed, State]],
+) -> Callable[
+    [tuple[list[LineTransformed], State], list[Line]],
+    tuple[list[LineTransformed], State],
+]:
     def reduction(
-        value: tuple[list[LineTransformed], State], line: Line
+        value: tuple[list[LineTransformed], State], block: list[Line]
     ) -> tuple[list[LineTransformed], State]:
         """Accumulate."""
-        transformed, state = f(line, value[1])
+        transformed, state = f(block, value[1])
         return (value[0] + [transformed]), state
 
     return reduction
@@ -269,11 +258,13 @@ def _block_transform(block: Block) -> list[Line]:
 def transpile(prog: Block) -> Program:
     block_replaced = _block_transform(prog)
     lines_first_pass, first_pass_state = reduce(
-        _line_transform_apply(_first_pass), block_replaced, ([], FirstPassState())
+        _line_transform_apply(_first_pass),
+        [[line] for line in block_replaced],
+        ([], State()),
     )
     lines_second_pass, _state = reduce(
         _line_transform_apply(_second_pass),
         lines_first_pass,
-        ([], SecondPassState(nwait_to_subtract=first_pass_state.nwait_to_subtract)),
+        ([], State(nwait=1, nwait_to_subtract=first_pass_state.nwait_to_subtract)),
     )
     return Program(elements=[line for block in lines_second_pass for line in block])
