@@ -5,6 +5,7 @@ from typing import Callable, Optional, cast
 from pydantic import BaseModel, Field
 
 from ..q1asm.ast_ import (
+    Acquire,
     Block,
     Instruction,
     Line,
@@ -14,6 +15,7 @@ from ..q1asm.ast_ import (
     Program,
     Reference,
     Register,
+    SetPhDelta,
     Sub,
     UpdParam,
     Wait,
@@ -34,10 +36,16 @@ class State(BaseModel):
     - subtract_from_count: Maps each wait index to the total duration that should be
       subtracted from that wait due to UpdParam instructions. This subtraction is done
       in the second pass.
+    - merge_phd_delta: if True, we can merge SetPhDelta that are not separated by a
+      real-time instruction and instead are separated by upd_params. Also This means the
+      upd_params can be removed and the duration no longer has to be subtracted.
     """
 
     count_rt_instr: int = 0
     subtract_from_count: defaultdict[int, int] = defaultdict(int)
+    merge_ph_delta: bool = True
+    sum_ph_delta: int = 0
+    first_upd_params: int = True
 
 
 def _long_wait(duration: int, n: int) -> Block:
@@ -146,6 +154,8 @@ def _first_pass(line: list[Line], state: State) -> tuple[LineTransformed, State]
             state.model_copy(update={"count_rt_instr": state.count_rt_instr + 1}),
         )
         if isinstance(instr, Play)
+        else (None, state.model_copy(update={"merge_ph_delta": False}))
+        if isinstance(instr, SetPhDelta) and isinstance(instr.value, Register)
         else (None, state)
     )
 
@@ -172,7 +182,22 @@ def _second_pass(block: LineTransformed, state: State) -> tuple[LineTransformed,
     to ensure alignment between channels.
     """
     instr = block[0].instruction
-    if (
+    if state.merge_ph_delta:
+        if isinstance(instr, SetPhDelta):
+            assert isinstance(instr.value, int)
+            return [], state.model_copy(
+                update={"sum_ph_delta": state.sum_ph_delta + instr.value}
+            )
+        if isinstance(instr, Play) or isinstance(instr, Acquire):
+            if int(state.sum_ph_delta % 1e9) > 0:
+                line = Line(instruction=SetPhDelta(value=int(state.sum_ph_delta % 1e9)))
+                return [line, *block], state.model_copy(update={"sum_ph_delta": 0})
+        if isinstance(instr, UpdParam):
+            if state.first_upd_params:
+                return block, state.model_copy(update={"first_upd_params": False})
+            else:
+                return [], state
+    elif (
         (isinstance(instr, Wait) and not isinstance(instr.duration, Register))
         or isinstance(instr, Play)
     ) and state.subtract_from_count[state.count_rt_instr] > 0:
@@ -274,12 +299,6 @@ def transpile(prog: Block) -> Program:
     blocks_second_pass, _state = reduce(
         _line_transform_apply(_second_pass),
         blocks_first_pass,
-        (
-            [],
-            State(
-                count_rt_instr=1,
-                subtract_from_count=first_pass_state.subtract_from_count,
-            ),
-        ),
+        ([], first_pass_state.model_copy(update={"count_rt_instr": 1})),
     )
     return Program(elements=[line for block in blocks_second_pass for line in block])

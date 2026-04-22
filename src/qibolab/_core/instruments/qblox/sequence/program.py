@@ -119,7 +119,6 @@ def program(
     ]
     singleshot = options.averaging_mode is AveragingMode.SINGLESHOT
     pulses = {p[0].id for p in sweepseq}
-
     return transpile(
         [
             el
