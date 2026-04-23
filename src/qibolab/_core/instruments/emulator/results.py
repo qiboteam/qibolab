@@ -21,7 +21,7 @@ from ...execution_parameters import (
     AveragingMode,
     ExecutionParameters,
 )
-from ...identifier import ChannelId, QubitId, Result
+from ...identifier import ChannelId, Result
 from ...pulses import Acquisition, Align, PulseId, Readout
 from ...sequence import PulseSequence
 from .engine import Operator
@@ -246,16 +246,7 @@ def results(
 
     # probability dimensions are:
     # (*S, M, *H_dim)
-    probabilities = _extract_probabilities(
-        states,
-        range(hamiltonian.nqubits),
-        hamiltonian.nqubits,
-        hamiltonian.transmon_levels,
-    )
-    assert options.nshots is not None
-    sampled = shots(np.moveaxis(probabilities, -2, 0), options.nshots)
-    # move measurements dimension to the front, getting ready for extraction
-    measurements = np.moveaxis(sampled, 1, 0)
+    probabilities = _extract_probabilities(states)
 
     results = (
         _singleshot_results
