@@ -184,15 +184,15 @@ def waveforms(
         for k, pulse in enumerate(unique_pulses)
         for ch, comp in enumerate(("i", "q"))
     } | {  # swept
-        static + 2 * k + ch: _waveform(
+        static + 2 * k + ch + d: _waveform(
             pulse,
             comp,
             sampling_rate,
             duration=cast(float, duration),
-            index=static + 2 * k + ch,
+            index=static + 2 * sweep.irange[-1] * k + 2 * d + ch,
         )
         for k, (pulse, sweep) in enumerate(pulses_swept)
-        for duration in np.arange(*sweep.irange)
+        for d, duration in enumerate(np.arange(*sweep.irange))
         for ch, comp in enumerate(("i", "q"))
     }
 
