@@ -110,21 +110,19 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     assert len(block) == 1
     line = block[0]
     instr = line.instruction
-    # increment state.count_rt_instr upon encountering realtime instructions
+    # Increment state.count_rt_instr upon encountering realtime instructions
     updated_block, updated_state = (
         (
             _decompose_wait(instr, state.count_rt_instr),
             state.model_copy(update={"count_rt_instr": state.count_rt_instr + 1}),
         )
-        # we skip Waits in registers because we do not need to decompose them and for
+        # We skip Waits in registers because we do not need to decompose them and for
         # second pass subtracting duration would require subtracting from the initial
-        # value of the register, bt would be painful if the result becomes negative
-        # which is not unlikely if a duration sweep starts at 0.
+        # value of the register.
         if isinstance(instr, Wait) and not isinstance(instr.duration, Register)
         else (_decompose_move(instr), state)
         if isinstance(instr, Move)
-        # if UpdParam with duration, update state.subtract_from_count to account for the
-        # wait time that will be subtracted from the Wait instruction in the _second_pass
+        # Increment subtract_from_count with the UpdParam duration
         else (
             None,
             state.model_copy(
