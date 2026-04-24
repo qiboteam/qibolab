@@ -31,8 +31,7 @@ class State(BaseModel):
       is used to provide unique labels for loops around waits, and to coordinate
       duration adjustments due to UpdParam instructions.
     - subtract_from_count: Maps each wait index to the total duration that should be
-      subtracted from that wait due to UpdParam instructions that follow it (meaning we
-      don't subtract the first UpdParam since there was no RT instruction before). This
+      subtracted from that wait due to UpdParam instructions that **follow** it. This
       subtraction is done in the second pass.
     """
 
@@ -70,7 +69,7 @@ def _decompose_wait(instr: Wait, n: int) -> Optional[Block]:
     return _long_wait(duration, n)
 
 
-def _negative_move(instr: Move):
+def _negative_move(instr: Move) -> Block:
     """Compile negative value sets.
 
     Apparently, the only place where negative numbers are not allowed
@@ -86,33 +85,31 @@ def _negative_move(instr: Move):
     https://docs.qblox.com/en/main/cluster/troubleshooting.html#:~:text=How%20do%20I%20set%20negative%20numbers
     """
     src = cast(int, instr.source)
+    assert src < 0
     dest = instr.destination
     return [Move(source=0, destination=dest), Sub(a=dest, b=abs(src), destination=dest)]
 
 
 def _decompose_move(instr: Move) -> Optional[Block]:
     src = instr.source
-    if isinstance(src, Register):
-        return None
-    assert isinstance(src, int)
-    if src >= 0:
+    if isinstance(src, Register) or (isinstance(src, int) and src >= 0):
         return None
     return _negative_move(instr)
 
 
-LineTransformed = list[Line]
-
-
-def _first_pass(line: list[Line], state: State) -> tuple[LineTransformed, State]:
+def _first_pass(block: Block, state: State) -> tuple[list[Line], State]:
     """Decomposes long Wait and negative Move instructions into valid Q1ASM blocks if
     needed, updating the state (e.g., wait counter). Returns the transformed lines and
     updated state. All other instructions are returned unchanged.
     """
-    assert len(line) == 1
-    line_ = line[0]
-    instr = line_.instruction
+    # _first_pass is called through _line_transform_apply and therefore receives as
+    # input a list of Lines (a block), even though prior to the first pass each block
+    # contains only a single Line.
+    assert len(block) == 1
+    line = block[0]
+    instr = line.instruction
     # increment state.count_rt_instr upon encountering realtime instructions
-    block, state_ = (
+    updated_block, updated_state = (
         (
             _decompose_wait(instr, state.count_rt_instr),
             state.model_copy(update={"count_rt_instr": state.count_rt_instr + 1}),
@@ -150,24 +147,17 @@ def _first_pass(line: list[Line], state: State) -> tuple[LineTransformed, State]
     )
 
     # default
-    if block is None:
-        return [line_], state_
+    if updated_block is None:
+        return [line], updated_state
 
-    assert isinstance(block[0], Instruction)
+    assert isinstance(updated_block[0], Instruction)
     return [
-        el if isinstance(el, Line) else Line.instr(el)
-        for el in (
-            (
-                Line(instruction=block[0], label=line_.label, comment=line_.comment),
-                *(el for el in block[1:]),
-            )
-            if block is not None
-            else [line_]
-        )
-    ], state_
+        Line(instruction=updated_block[0], label=line.label, comment=line.comment),
+        *[el if isinstance(el, Line) else Line.instr(el) for el in updated_block[1:]],
+    ], updated_state
 
 
-def _second_pass(block: LineTransformed, state: State) -> tuple[LineTransformed, State]:
+def _second_pass(block: list[Line], state: State) -> tuple[list[Line], State]:
     """Subtracts the additional duration incurred due to UpdParam from Wait instructions
     to ensure alignment between channels.
     """
@@ -182,33 +172,38 @@ def _second_pass(block: LineTransformed, state: State) -> tuple[LineTransformed,
         # an integer value.
         assert isinstance(instr.duration, int)
         new_duration = instr.duration - state.subtract_from_count[state.count_rt_instr]
-        assert new_duration >= 0
-        new_line = Line(
-            label=block[0].label,
-            instruction=instr.model_copy(update={"duration": new_duration}),
-            comment=block[0].comment,
-        )
-        result = [new_line, *block[1:]]
-        return result, state.model_copy(
+        if new_duration < 0:
+            raise ValueError(
+                "Wait/Play duration underflow: computed duration is negative: "
+                f"{new_duration}. Possibly there are too many uninterrupted virtual-Z "
+                " gates. If so, consider merging them."
+            )
+        updated_block = [
+            block[0].model_copy(
+                update={
+                    "instruction": instr.model_copy(update={"duration": new_duration})
+                }
+            ),
+            *block[1:],
+        ]
+        return updated_block, state.model_copy(
             update={"count_rt_instr": state.count_rt_instr + 1}
         )
     return block, state
 
 
 def _line_transform_apply(
-    f: Callable[[list[Line], State], tuple[LineTransformed, State]],
+    f: Callable[[list[Line], State], tuple[list[Line], State]],
 ) -> Callable[
-    [tuple[list[LineTransformed], State], list[Line]],
-    tuple[list[LineTransformed], State],
+    [tuple[list[list[Line]], State], list[Line]],
+    tuple[list[list[Line]], State],
 ]:
     def reduction(
-        value: tuple[list[LineTransformed], State], block: list[Line]
-    ) -> tuple[list[LineTransformed], State]:
-        """Transform a block using f, and append to the accumulator. Defined to work
-        with functools.reduce
-        """
-        transformed, state = f(block, value[1])
-        return (value[0] + [transformed]), state
+        accumulator: tuple[list[list[Line]], State], block: list[Line]
+    ) -> tuple[list[list[Line]], State]:
+        """Transform a block using f, and append to the accumulator."""
+        transformed, state = f(block, accumulator[1])
+        return (accumulator[0] + [transformed]), state
 
     return reduction
 
@@ -259,6 +254,10 @@ def _merge_wait(block: list[Line]) -> list[Line]:
 
 
 def _block_transform(block: Block) -> list[Line]:
+    """
+    Converts all Lineables in a block to Line objects if not already, then merges
+    consecutive static Wait instructions.
+    """
     lines = [el if isinstance(el, Line) else Line.instr(el) for el in block]
     return _merge_wait(lines)
 
@@ -270,6 +269,8 @@ def transpile(prog: Block) -> Program:
         [[line] for line in block_replaced],
         ([], State()),
     )
+    # since we subtract the duration upd_params that come after the RT instruction,
+    # the count_rt_instr is initialized at 1.
     blocks_second_pass, _state = reduce(
         _line_transform_apply(_second_pass),
         blocks_first_pass,
