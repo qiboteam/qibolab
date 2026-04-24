@@ -27,13 +27,13 @@ MAX_WAIT = 2**16 - 1
 
 class State(BaseModel):
     """
-    - count_rt_instr: Tracks the number of Wait instructions encountered. This is used
-      to label waits, and to coordinate duration adjustments due to UpdParam
-      instructions. While acquire is also a real-time instruction, we cannot reduce the
-      duration of the acquire instruction.
+    - count_rt_instr: Tracks the number of Wait or Play instructions encountered. This
+      is used to provide unique labels for loops around waits, and to coordinate
+      duration adjustments due to UpdParam instructions.
     - subtract_from_count: Maps each wait index to the total duration that should be
-      subtracted from that wait due to UpdParam instructions. This subtraction is done
-      in the second pass.
+      subtracted from that wait due to UpdParam instructions that follow it (meaning we
+      don't subtract the first UpdParam since there was no RT instruction before). This
+      subtraction is done in the second pass.
     """
 
     count_rt_instr: int = 0
@@ -118,7 +118,7 @@ def _first_pass(line: list[Line], state: State) -> tuple[LineTransformed, State]
             state.model_copy(update={"count_rt_instr": state.count_rt_instr + 1}),
         )
         # we skip Waits in registers because we do not need to decompose them and for
-        # second pass subracting duration would require subtracting from the initial
+        # second pass subtracting duration would require subtracting from the initial
         # value of the register, bt would be painful if the result becomes negative
         # which is not unlikely if a duration sweep starts at 0.
         if isinstance(instr, Wait) and not isinstance(instr.duration, Register)
@@ -164,7 +164,7 @@ def _first_pass(line: list[Line], state: State) -> tuple[LineTransformed, State]
             if block is not None
             else [line_]
         )
-    ], state
+    ], state_
 
 
 def _second_pass(block: LineTransformed, state: State) -> tuple[LineTransformed, State]:
