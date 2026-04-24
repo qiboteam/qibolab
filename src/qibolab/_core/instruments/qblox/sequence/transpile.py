@@ -24,6 +24,8 @@ __all__ = []
 
 MAX_WAIT = 2**16 - 1
 
+LineBlock = list[Line]
+
 
 class State(BaseModel):
     """
@@ -97,14 +99,14 @@ def _decompose_move(instr: Move) -> Optional[Block]:
     return _negative_move(instr)
 
 
-def _first_pass(block: Block, state: State) -> tuple[list[Line], State]:
+def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     """Decomposes long Wait and negative Move instructions into valid Q1ASM blocks if
     needed, updating the state (e.g., wait counter). Returns the transformed lines and
     updated state. All other instructions are returned unchanged.
     """
     # _first_pass is called through _line_transform_apply and therefore receives as
-    # input a list of Lines (a block), even though prior to the first pass each block
-    # contains only a single Line.
+    # input a block, even though prior to the first pass each block contains only a
+    # single Line.
     assert len(block) == 1
     line = block[0]
     instr = line.instruction
@@ -157,7 +159,7 @@ def _first_pass(block: Block, state: State) -> tuple[list[Line], State]:
     ], updated_state
 
 
-def _second_pass(block: list[Line], state: State) -> tuple[list[Line], State]:
+def _second_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     """Subtracts the additional duration incurred due to UpdParam from Wait instructions
     to ensure alignment between channels.
     """
@@ -193,14 +195,14 @@ def _second_pass(block: list[Line], state: State) -> tuple[list[Line], State]:
 
 
 def _line_transform_apply(
-    f: Callable[[list[Line], State], tuple[list[Line], State]],
+    f: Callable[[LineBlock, State], tuple[LineBlock, State]],
 ) -> Callable[
-    [tuple[list[list[Line]], State], list[Line]],
-    tuple[list[list[Line]], State],
+    [tuple[list[LineBlock], State], LineBlock],
+    tuple[list[LineBlock], State],
 ]:
     def reduction(
-        accumulator: tuple[list[list[Line]], State], block: list[Line]
-    ) -> tuple[list[list[Line]], State]:
+        accumulator: tuple[list[LineBlock], State], block: LineBlock
+    ) -> tuple[list[LineBlock], State]:
         """Transform a block using f, and append to the accumulator."""
         transformed, state = f(block, accumulator[1])
         return (accumulator[0] + [transformed]), state
@@ -223,7 +225,7 @@ class _WaitBatch(BaseModel):
             self.label = line.label
 
     @property
-    def lines(self) -> list[Line]:
+    def lines(self) -> LineBlock:
         return (
             [
                 Line(
@@ -237,7 +239,7 @@ class _WaitBatch(BaseModel):
         )
 
 
-def _merge_wait(block: list[Line]) -> list[Line]:
+def _merge_wait(block: LineBlock) -> LineBlock:
     """Merge subsequent static (immediate) waits."""
     batch = _WaitBatch()
     new = []
@@ -253,7 +255,7 @@ def _merge_wait(block: list[Line]) -> list[Line]:
     return new + batch.lines
 
 
-def _block_transform(block: Block) -> list[Line]:
+def _block_transform(block: Block) -> LineBlock:
     """
     Converts all Lineables in a block to Line objects if not already, then merges
     consecutive static Wait instructions.
@@ -263,10 +265,10 @@ def _block_transform(block: Block) -> list[Line]:
 
 
 def transpile(prog: Block) -> Program:
-    block_replaced = _block_transform(prog)
+    lines = _block_transform(prog)
     blocks_first_pass, first_pass_state = reduce(
         _line_transform_apply(_first_pass),
-        [[line] for line in block_replaced],
+        [[line] for line in lines],
         ([], State()),
     )
     # since we subtract the duration upd_params that come after the RT instruction,
