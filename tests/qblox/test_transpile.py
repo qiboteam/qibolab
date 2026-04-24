@@ -67,9 +67,9 @@ def test_updparam_dont_subtract_from_register_wait():
 
 
 def test_negative_duration_assertion():
-    # Wait(5), UpdParam(10) should fail because we want to subtract more than we can
+    # Wait(5), UpdParam(10) should fail because we want to subtract 10ns from the Wait.
     block = [Wait(duration=5), UpdParam(duration=10)]
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         transpile(block)
 
 
