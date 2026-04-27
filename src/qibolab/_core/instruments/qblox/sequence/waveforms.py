@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Sequence
+from itertools import count
 from typing import Annotated, Union, cast
 
 import numpy as np
@@ -169,16 +170,18 @@ def waveforms(
 
     unique_pulses, inverse_idx = _deduplicate_pulses(pulses_not_swept)
 
+    # setting a counter for non-swept waveforms
+    counter = count(0, 1)
     # mapping non-swept waveforms from integer to unique WaveformSpec
     non_swept_waveforms: dict[int, WaveformSpec] = {
-        2 * k + ch: _waveform(
+        (ind := next(counter)): _waveform(
             pulse,
             comp,
             sampling_rate,
-            index=k * 2 + ch,
+            index=ind,
         )
-        for k, pulse in enumerate(unique_pulses)
-        for ch, comp in enumerate(("i", "q"))
+        for pulse in unique_pulses
+        for comp in ("i", "q")
     }
 
     # perform deduplication of non-swept waveforms based on their sampled arrays, this is
@@ -191,39 +194,46 @@ def waveforms(
     # the ids for the swept pulses start counting from `static` since up to here we need
     # two indices (i and q) for each unique non-swept pulse
     static = max(deduplicated_waveforms.keys()) + 1
+    # setting the counter to the number of deduplicated waveforms + 1
+    counter = count(static, 1)
 
     # mapping swept waveforms from integer to unique WaveformSpec
     swept_waveforms: dict[int, WaveformSpec] = {  # swept
-        int(static + 2 * sweep.irange[1] * k + 2 * d + ch): _waveform(
+        (ind := next(counter)): _waveform(
             pulse,
             comp,
             sampling_rate,
             duration=cast(float, duration),
-            index=static + 2 * sweep.irange[1] * k + 2 * d + ch,
+            index=int(ind),
         )
-        for k, (pulse, sweep) in enumerate(pulses_swept)
+        for pulse, sweep in pulses_swept
         # sweep.irange == (start, stop, step), hence max_sweep = sweep.irange[1]
-        for d, duration in enumerate(np.arange(*sweep.irange))
-        for ch, comp in enumerate(("i", "q"))
+        for duration in np.arange(*sweep.irange)
+        for comp in ("i", "q")
     }
 
     deduplicated_waveforms |= swept_waveforms
 
+    # resetting the counter
+    counter = count(0, 1)
     # mapping that associate each element in the full list of pulses identified by
     # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
     # waveforms
     indices_map: WaveformIndices = {  # non-swept
-        (pulse.id, ch): (int(orig_to_deduplicated[inv * 2 + ch]), int(pulse.duration))
+        (pulse.id, (ind := next(counter))): (
+            int(orig_to_deduplicated[inv * 2 + ind]),
+            int(pulse.duration),
+        )
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
-        for ch, _ in enumerate(("i", "q"))
+        for _ in ("i", "q")
     } | {  # swept
-        (pulse.id, 2 * d + ch): (
-            int(static + 2 * sweep.irange[-1] * k + 2 * d + ch),
+        (pulse.id, (ind := next(counter))): (
+            ind,
             int(duration),
         )
-        for k, (pulse, sweep) in enumerate(pulses_swept)
-        for d, duration in enumerate(np.arange(*sweep.irange))
-        for ch, _ in enumerate(("i", "q"))
+        for pulse, sweep in pulses_swept
+        for duration in np.arange(*sweep.irange)
+        for _ in ("i", "q")
     }
 
     return deduplicated_waveforms, indices_map
