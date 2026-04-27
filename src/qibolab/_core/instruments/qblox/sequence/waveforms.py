@@ -142,7 +142,7 @@ def waveforms(
     sequence: Iterable[PulseLike],
     sampling_rate: float,
     amplitude_swept: set[PulseId],
-    duration_swept: dict[PulseLike, Sweeper],
+    duration_swept: dict[PulseId, Sweeper],
 ) -> tuple[dict[WaveformIndex, WaveformSpec], WaveformIndices]:
     """Build the waveform memory map and pulse-component index map for a sequence.
 
@@ -156,25 +156,21 @@ def waveforms(
     5. Construct ``indices_map`` mapping ``(pulse UUID, quadrature)`` to the final
        deduplicated memory index and the corresponding duration.
     """
-    pulses_not_swept = [
-        _pulse(p, p.id in amplitude_swept)
-        for p in sequence
-        if isinstance(p, (Pulse, Readout)) and p not in duration_swept
-    ]
-    pulses_swept = [
-        (_pulse(p, p.id in amplitude_swept), duration_swept[p])
-        for p in duration_swept
-        if isinstance(p, (Pulse, Readout))
-    ]
+
+    pulses_not_swept, pulses_swept = [], []
+    for p in sequence:
+        if isinstance(p, (Pulse, Readout)):
+            if p.id in duration_swept:
+                pulses_swept.append(
+                    (_pulse(p, p.id in amplitude_swept), duration_swept[p.id])
+                )
+            else:
+                pulses_not_swept.append(_pulse(p, p.id in amplitude_swept))
 
     unique_pulses, inverse_idx = _deduplicate_pulses(pulses_not_swept)
 
-    # the ids for the swept pulses start counting from `static` since up to here we need
-    # two indices (i and q) for each unique non-swept pulse
-    static = 2 * len(unique_pulses)
-
-    # mapping from integer to unique WaveformSpec
-    waveforms: dict[int, WaveformSpec] = {  # non-swept
+    # mapping non-swept waveforms from integer to unique WaveformSpec
+    non_swept_waveforms: dict[int, WaveformSpec] = {
         2 * k + ch: _waveform(
             pulse,
             comp,
@@ -183,23 +179,35 @@ def waveforms(
         )
         for k, pulse in enumerate(unique_pulses)
         for ch, comp in enumerate(("i", "q"))
-    } | {  # swept
-        static + 2 * k + ch + d: _waveform(
+    }
+
+    # perform deduplication of non-swept waveforms based on their sampled arrays, this is
+    # necessary _deduplicate_pulses only deduplicates non-unique Pulses, but not
+    # non-unique I and Q components.
+    deduplicated_waveforms, orig_to_deduplicated = _deduplicate_waveforms(
+        non_swept_waveforms
+    )
+
+    # the ids for the swept pulses start counting from `static` since up to here we need
+    # two indices (i and q) for each unique non-swept pulse
+    static = max(deduplicated_waveforms.keys()) + 1
+
+    # mapping swept waveforms from integer to unique WaveformSpec
+    swept_waveforms: dict[int, WaveformSpec] = {  # swept
+        int(static + 2 * sweep.irange[1] * k + 2 * d + ch): _waveform(
             pulse,
             comp,
             sampling_rate,
             duration=cast(float, duration),
-            index=static + 2 * sweep.irange[-1] * k + 2 * d + ch,
+            index=static + 2 * sweep.irange[1] * k + 2 * d + ch,
         )
         for k, (pulse, sweep) in enumerate(pulses_swept)
+        # sweep.irange == (start, stop, step), hence max_sweep = sweep.irange[1]
         for d, duration in enumerate(np.arange(*sweep.irange))
         for ch, comp in enumerate(("i", "q"))
     }
 
-    # perform deduplication of waveforms based on their sampled arrays, this is
-    # necessary _deduplicate_pulses only deduplicates non-unique Pulses, but not
-    # non-unique I and Q components.
-    deduplicated_waveforms, orig_to_deduplicated = _deduplicate_waveforms(waveforms)
+    deduplicated_waveforms |= swept_waveforms
 
     # mapping that associate each element in the full list of pulses identified by
     # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
@@ -209,12 +217,12 @@ def waveforms(
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
         for ch, _ in enumerate(("i", "q"))
     } | {  # swept
-        (pulse.id, 2 * i + ch): (
-            int(orig_to_deduplicated[static + 2 * k + ch]),
+        (pulse.id, 2 * d + ch): (
+            int(static + 2 * sweep.irange[-1] * k + 2 * d + ch),
             int(duration),
         )
         for k, (pulse, sweep) in enumerate(pulses_swept)
-        for i, duration in enumerate(np.arange(*sweep.irange))
+        for d, duration in enumerate(np.arange(*sweep.irange))
         for ch, _ in enumerate(("i", "q"))
     }
 

@@ -85,7 +85,7 @@ class Q1Sequence(Model):
                 p.id for p in swept_pulses(sweepers, {Parameter.amplitude})
             },
             duration_swept={
-                k: v
+                k.id: v
                 for k, v in swept_pulses(sweepers, {Parameter.duration}).items()
                 if isinstance(k, (Pulse, Readout)) and k in sequence
             },
