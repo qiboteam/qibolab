@@ -99,6 +99,22 @@ def _decompose_move(instr: Move) -> Optional[Block]:
     return _negative_move(instr)
 
 
+def _update_subtract_from_count(state: State, duration: int) -> State:
+    """
+    Returns a new State with subtract_from_count updated for the current count_rt_instr,
+    incrementing by the given duration.
+    """
+    return state.model_copy(
+        update={
+            "subtract_from_count": state.subtract_from_count
+            | {
+                state.count_rt_instr: state.subtract_from_count[state.count_rt_instr]
+                + duration
+            }
+        }
+    )
+
+
 def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     """Decomposes long Wait and negative Move instructions into valid Q1ASM blocks if
     needed, updating the state (e.g., wait counter). Returns the transformed lines and
@@ -122,20 +138,7 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
         else (_decompose_move(instr), state)
         if isinstance(instr, Move)
         # Increment subtract_from_count with the UpdParam duration
-        else (
-            None,
-            state.model_copy(
-                update={
-                    "subtract_from_count": state.subtract_from_count
-                    | {
-                        state.count_rt_instr: state.subtract_from_count[
-                            state.count_rt_instr
-                        ]
-                        + instr.duration
-                    }
-                }
-            ),
-        )
+        else (None, _update_subtract_from_count(state, instr.duration))
         if isinstance(instr, UpdParam)
         else (
             None,
