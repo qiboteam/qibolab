@@ -81,7 +81,7 @@ def test_waveforms_deduplicate_across_distinct_lengths():
 
 def test_waveforms_duration_sweeper():
 
-    # non-swept pulses with shared I component but distinct Q components
+    # non-swept pulse with shared I component and distinct Q components
     pulse_a = Pulse(
         duration=4,
         amplitude=1.0,
@@ -92,6 +92,18 @@ def test_waveforms_duration_sweeper():
     )
 
     # swept pulses
+    pulse_b = Pulse(
+        duration=4,
+        amplitude=1.0,
+        envelope=Rectangular(),
+    )
+
+    sweeper_b = Sweeper(
+        parameter=Parameter.duration,
+        range=(0, 2, 1),
+        pulses=[pulse_b],
+    )
+
     pulse_c = Pulse(
         duration=4,
         amplitude=1.0,
@@ -100,37 +112,25 @@ def test_waveforms_duration_sweeper():
 
     sweeper_c = Sweeper(
         parameter=Parameter.duration,
-        range=(0, 2, 1),
+        range=(0, 5, 2),
         pulses=[pulse_c],
     )
 
-    pulse_d = Pulse(
-        duration=4,
-        amplitude=1.0,
-        envelope=Rectangular(),
-    )
-
-    sweeper_d = Sweeper(
-        parameter=Parameter.duration,
-        range=(0, 5, 2),
-        pulses=[pulse_d],
-    )
-
     waveform_specs, indices_map = waveforms(
-        sequence=[pulse_a, pulse_c, pulse_d],
+        sequence=[pulse_a, pulse_b, pulse_c],
         sampling_rate=1.0,
         amplitude_swept=set(),
         duration_swept={
+            pulse_b.id: sweeper_b,
             pulse_c.id: sweeper_c,
-            pulse_d.id: sweeper_d,
         },
     )
 
     # Two unique Q components plus one shared I component.
     assert len(waveform_specs) == (
         1
+        + len(np.arange(*sweeper_b.irange)) * 2
         + len(np.arange(*sweeper_c.irange)) * 2
-        + len(np.arange(*sweeper_d.irange)) * 2
     )
 
     i_a_index, _ = indices_map[(pulse_a.id, 0)]
@@ -142,9 +142,9 @@ def test_waveforms_duration_sweeper():
     for ch in (0, 1):
         swept_indices.pop(swept_indices.index(indices_map[(pulse_a.id, ch)]))
 
-    # ensure the swept_indices are their number is compatible with the sweeper ranges and all distinct
+    # ensure the swept_indices length is is compatible with the sweeper ranges and all distinct
     assert (
         len(swept_indices)
-        == len(np.arange(*sweeper_c.irange)) * 2 + len(np.arange(*sweeper_d.irange)) * 2
+        == len(np.arange(*sweeper_b.irange)) * 2 + len(np.arange(*sweeper_c.irange)) * 2
     )
     assert len(swept_indices) == len(set(swept_indices))

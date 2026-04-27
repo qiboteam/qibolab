@@ -1,6 +1,6 @@
 from collections.abc import Iterable, Sequence
 from itertools import count
-from typing import Annotated, Union, cast
+from typing import Annotated, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -158,7 +158,8 @@ def waveforms(
        deduplicated memory index and the corresponding duration.
     """
 
-    pulses_not_swept, pulses_swept = [], []
+    pulses_not_swept: list[Pulse] = []
+    pulses_swept: list[tuple[Pulse, Sweeper]] = []
     for p in sequence:
         if isinstance(p, (Pulse, Readout)):
             if p.id in duration_swept:
@@ -198,13 +199,13 @@ def waveforms(
     counter = count(static, 1)
 
     # mapping swept waveforms from integer to unique WaveformSpec
-    swept_waveforms: dict[int, WaveformSpec] = {  # swept
+    swept_waveforms: dict[int, WaveformSpec] = {
         (ind := next(counter)): _waveform(
             pulse,
             comp,
             sampling_rate,
-            duration=cast(float, duration),
-            index=int(ind),
+            duration=duration,
+            index=ind,
         )
         for pulse, sweep in pulses_swept
         # sweep.irange == (start, stop, step), hence max_sweep = sweep.irange[1]
