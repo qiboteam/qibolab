@@ -105,8 +105,12 @@ def test_interleaved_updparam_wait():
 
 
 def test_updparam_before_play_increments_counter():
-    play = Play(wave_0=0, wave_1=0, duration=10)
-    block = [play, UpdParam(duration=4), Wait(duration=8), UpdParam(duration=2)]
+    block = [
+        Play(wave_0=0, wave_1=0, duration=10),
+        UpdParam(duration=4),
+        Wait(duration=8),
+        UpdParam(duration=2),
+    ]
     prog = transpile(block)
     instructions = _instructions(prog)
     assert instructions == [
@@ -114,4 +118,19 @@ def test_updparam_before_play_increments_counter():
         UpdParam(duration=4),
         Wait(duration=6),
         UpdParam(duration=2),
+    ]
+
+
+def test_updparam_does_not_subtract_from_play_with_register():
+    block_reg0 = [
+        Play(wave_0=0, wave_1=0, duration=10),
+        Play(wave_0=Register(number=0), wave_1=Register(number=1), duration=10),
+        UpdParam(duration=4),
+    ]
+    prog_reg0 = transpile(block_reg0)
+    instructions_reg0 = _instructions(prog_reg0)
+    assert instructions_reg0 == [
+        Play(wave_0=0, wave_1=0, duration=6),
+        Play(wave_0=Register(number=0), wave_1=Register(number=1), duration=10),
+        UpdParam(duration=4),
     ]
