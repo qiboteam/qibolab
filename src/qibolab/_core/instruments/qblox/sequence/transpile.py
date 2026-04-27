@@ -108,8 +108,7 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     # input a block, even though prior to the first pass each block contains only a
     # single Line.
     assert len(block) == 1
-    line = block[0]
-    instr = line.instruction
+    instr = block[0].instruction
     # Increment state.count_rt_instr upon encountering realtime instructions
     updated_block, updated_state = (
         (
@@ -151,11 +150,13 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
 
     # default
     if updated_block is None:
-        return [line], updated_state
+        return block, updated_state
 
     assert isinstance(updated_block[0], Instruction)
     return [
-        Line(instruction=updated_block[0], label=line.label, comment=line.comment),
+        Line(
+            instruction=updated_block[0], label=block[0].label, comment=block[0].comment
+        ),
         *[el if isinstance(el, Line) else Line.instr(el) for el in updated_block[1:]],
     ], updated_state
 
