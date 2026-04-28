@@ -26,8 +26,6 @@ class DriveEmulatorConfig(Config):
     """Frequency of drive."""
     rabi_frequency: float = 1e9
     """Rabi frequency [Hz]"""
-    scale_factor: float = 1
-    """Scaling factor."""
 
     @staticmethod
     def operator(n: int, engine: SimulationEngine) -> Operator:
@@ -225,11 +223,7 @@ class ModulatedDrive(Model):
     def __call__(self, times: NDArray, samples: NDArray, phase: float) -> IqWaveform:
         i, q = self.envelopes
         phi = self.omega * times + self.pulse.relative_phase + phase
-        return (
-            self.rabi_omega
-            * self.config.scale_factor
-            * (np.cos(phi) * i[samples] + np.sin(phi) * q[samples])
-        )
+        return self.rabi_omega * (np.cos(phi) * i[samples] + np.sin(phi) * q[samples])
 
 
 class ModulatedDelay(Model):

@@ -52,12 +52,12 @@
             "rabi_frequency": 73961602.0,
             "frequency": 4097774837.0
         },
-        "0/drive_1": {
+        "0/drive1": {
             "kind": "drive-emulator",
             "rabi_frequency": 73961602.0,
             "frequency": 4341572427.0
         },
-        "0/drive_12": {
+        "0/drive12": {
             "kind": "drive-emulator",
             "frequency": 3825900000.0
         },
@@ -78,12 +78,12 @@
             "rabi_frequency": 204184190.5,
             "frequency": 4341572427.0
         },
-        "1/drive_0": {
+        "1/drive0": {
             "kind": "drive-emulator",
             "rabi_frequency": 204184190.5,
             "frequency": 4097789922.0
         },
-        "1/drive_12": {
+        "1/drive12": {
             "kind": "drive-emulator",
             "frequency": 4083600000.0
         },
@@ -111,7 +111,9 @@
                             "duration": 80.0,
                             "amplitude": 0.17056115896043478,
                             "envelope": {
-                                "kind": "rectangular"
+                                "kind": "drag",
+                                "rel_sigma": 0.2,
+                                "beta": -0.6179189071894656
                             },
                             "relative_phase": 0.0
                         }
@@ -120,7 +122,7 @@
                 "RX90": null,
                 "RX12": [
                     [
-                        "0/drive_12",
+                        "0/drive12",
                         {
                             "kind": "pulse",
                             "duration": 20.0,
@@ -177,7 +179,7 @@
                 "RX90": null,
                 "RX12": [
                     [
-                        "1/drive_12",
+                        "1/drive12",
                         {
                             "kind": "pulse",
                             "duration": 20.0,
