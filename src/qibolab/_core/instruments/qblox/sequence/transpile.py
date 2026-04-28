@@ -115,18 +115,16 @@ def _decompose_move(instr: Move) -> Optional[Block]:
 
 
 # This is used for the type-hints and nothing else.
-class _StaticWait:
+class _StaticRealTimeInstruction:
     duration: int
 
 
-def _is_static_wait(instr: Instruction) -> TypeGuard[_StaticWait]:
+def _is_static_wait(instr: Instruction) -> TypeGuard[_StaticRealTimeInstruction]:
     return isinstance(instr, Wait) and isinstance(instr.duration, int)
 
 
-def _is_static_play(instr: Instruction) -> bool:
-    return isinstance(instr, Play) and (
-        isinstance(instr.wave_0, int) and isinstance(instr.wave_1, int)
-    )
+def _is_static_play(instr: Instruction) -> TypeGuard[_StaticRealTimeInstruction]:
+    return isinstance(instr, Play) and isinstance(instr.duration, int)
 
 
 def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
