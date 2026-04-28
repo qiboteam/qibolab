@@ -106,9 +106,8 @@ def test_register_init_shifted_by_updparam_after_wait_register():
     ]
     prog = transpile(block)
     instructions = _instructions(prog)
-    expected = [
+    assert instructions == [
         Move(source=96, destination=Register(number=regnum)),
         Wait(duration=Register(number=regnum)),
         UpdParam(duration=4),
     ]
-    assert instructions == expected, f"Expected {expected}, got {instructions}"
