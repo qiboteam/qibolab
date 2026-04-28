@@ -194,7 +194,7 @@ def waveforms(
 
     # the ids for the swept pulses start counting from `static` since up to here we need
     # two indices (i and q) for each unique non-swept pulse
-    static = max(deduplicated_waveforms.keys()) + 1
+    static = 0 if not deduplicated_waveforms else max(deduplicated_waveforms.keys()) + 1
     # setting the counter to the number of deduplicated waveforms + 1
     counter = count(static, 1)
 
