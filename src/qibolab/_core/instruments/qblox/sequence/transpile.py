@@ -1,6 +1,7 @@
+import typing
 from collections import defaultdict
 from functools import reduce
-from typing import Callable, Optional, TypeGuard, cast
+from typing import Callable, Optional, TypeGuard
 
 from pydantic import BaseModel, Field
 
@@ -29,32 +30,56 @@ LineBlock = list[Line]
 
 class State(BaseModel):
     """
-    - count_rt_instr: Tracks the number of Wait or Play instructions encountered. This
-      is used to provide unique labels for loops around waits, and to coordinate
-      duration adjustments due to UpdParam instructions.
-    - subtract_from_count: Maps each wait index to the total duration that should be
-      subtracted from that wait due to UpdParam instructions that **follow** it. This
-      subtraction is done in the second pass.
+    - **last_encountered_static**: Tracks the number of Wait or Play instructions
+      encountered that have a static duration. This is used to provide unique labels for
+      loops around waits, and to coordinate duration adjustments due to UpdParam
+      instructions.
+    - **subtract_from_static**: Maps each real-time instruction with a static duration,
+      to the total duration that should be subtracted from that instruction due to
+      UpdParam instructions that _follow_ it. This subtraction is done in the second
+      pass.
+    - **last_encountered_register**: Tracks the register number most recently seen in a
+      Wait(Register) or Play(Register) instruction, used to associate following UpdParam
+      durations with the correct register for shifting.
+    - **register_shifts**: Maps register numbers to the total duration that should be
+      subtracted from their initialization, for Waits or Plays using registers.
     """
 
-    count_rt_instr: int = 0
-    subtract_from_count: defaultdict[int, int] = defaultdict(int)
+    last_encountered_static: int = 0
+    subtract_from_static: defaultdict[int, int] = defaultdict(int)
+    last_encountered_register: Optional[int] = None
+    register_shifts: defaultdict[int, int] = defaultdict(int)
 
     def increment_rt_counter(self) -> "State":
-        return self.model_copy(update={"count_rt_instr": self.count_rt_instr + 1})
+        return self.set_last_encountered_register(None).model_copy(
+            update={"last_encountered_static": self.last_encountered_static + 1}
+        )
 
-    def record_upd_param_duration(self, duration: int) -> "State":
-        key = self.count_rt_instr
+    def record_static_shift(self, duration: int) -> "State":
+        key = self.last_encountered_static
         return self.model_copy(
             update={
-                "subtract_from_count": self.subtract_from_count
-                | {key: self.subtract_from_count[key] + duration}
+                "subtract_from_static": self.subtract_from_static
+                | {key: self.subtract_from_static[key] + duration}
+            }
+        )
+
+    def set_last_encountered_register(self, regnum: int | None) -> "State":
+        return self.model_copy(update={"last_encountered_register": regnum})
+
+    def record_register_shift(self, shift: int) -> "State":
+        key = self.last_encountered_register
+        assert key is not None
+        return self.model_copy(
+            update={
+                "register_shifts": self.register_shifts
+                | {key: self.register_shifts[key] + shift}
             }
         )
 
     @property
     def duration_to_subtract(self) -> int:
-        return self.subtract_from_count[self.count_rt_instr]
+        return self.subtract_from_static[self.last_encountered_static]
 
 
 def _long_wait(duration: int, n: int) -> Block:
@@ -101,8 +126,8 @@ def _negative_move(instr: Move) -> Block:
 
     https://docs.qblox.com/en/main/cluster/troubleshooting.html#:~:text=How%20do%20I%20set%20negative%20numbers
     """
-    src = cast(int, instr.source)
-    assert src < 0
+    src = instr.source
+    assert isinstance(src, int) and src < 0
     dest = instr.destination
     return [Move(source=0, destination=dest), Sub(a=dest, b=abs(src), destination=dest)]
 
@@ -114,8 +139,7 @@ def _decompose_move(instr: Move) -> Optional[Block]:
     return _negative_move(instr)
 
 
-# This is used for the type-hints and nothing else.
-class _StaticRealTimeInstruction:
+class _StaticRealTimeInstruction(typing.Protocol):
     duration: int
 
 
@@ -143,7 +167,9 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
         return block, state.increment_rt_counter()
 
     if isinstance(instr, UpdParam):
-        return block, state.record_upd_param_duration(instr.duration)
+        if state.last_encountered_register is not None:
+            return block, state.record_register_shift(instr.duration)
+        return block, state.record_static_shift(instr.duration)
 
     if isinstance(instr, Move):
         decomposed = _decompose_move(instr)
@@ -151,6 +177,13 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
             return block, state
         decomposed_block = _convert_to_lines(decomposed, line)
         return decomposed_block, state
+
+    if (isinstance(instr, Wait) or isinstance(instr, Play)) and isinstance(
+        instr.duration, Register
+    ):
+        regnum = instr.duration.number
+        state = state.set_last_encountered_register(regnum)
+        return block, state
 
     return block, state
 
@@ -191,19 +224,35 @@ def _second_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     """
     instr = block[0].instruction
 
-    if not (_is_static_wait(instr) or _is_static_play(instr)):
-        return block, state
+    if _is_static_wait(instr) or _is_static_play(instr):
+        block = _adjust_realtime_instruction_duration(block, state)
 
-    block = _adjust_realtime_instruction_duration(block, state)
+        # If needed, decompose long waits after duration has been corrected
+        instr = block[0].instruction
+        if _is_static_wait(instr) and instr.duration > MAX_WAIT:
+            block = _convert_to_lines(
+                _long_wait(instr.duration, state.last_encountered_static), block[0]
+            )
 
-    # If needed, decompose long waits after duration has been corrected
-    instr = block[0].instruction
-    if _is_static_wait(instr) and instr.duration > MAX_WAIT:
-        block = _convert_to_lines(
-            _long_wait(instr.duration, state.count_rt_instr), block[0]
-        )
+        return block, state.increment_rt_counter()
 
-    return block, state.increment_rt_counter()
+    if (
+        isinstance(instr, Move)
+        and isinstance(instr.destination, Register)
+        and instr.destination.number in state.register_shifts
+    ):
+        assert isinstance(instr.source, int)
+        block_ = [
+            instr.model_copy(
+                update={
+                    "source": instr.source
+                    - state.register_shifts[instr.destination.number]
+                }
+            )
+        ]
+        return _convert_to_lines(block_, block[0]), state
+
+    return block, state
 
 
 def _line_transform_apply(
@@ -284,10 +333,10 @@ def transpile(prog: Block) -> Program:
         ([], State()),
     )
     # since we subtract the duration upd_params that come after the RT instruction,
-    # the count_rt_instr is initialized at 1.
+    # the last_encountered_static is initialized at 1.
     blocks_second_pass, _state = reduce(
         _line_transform_apply(_second_pass),
         blocks_first_pass,
-        ([], first_pass_state.model_copy(update={"count_rt_instr": 1})),
+        ([], first_pass_state.model_copy(update={"last_encountered_static": 1})),
     )
     return Program(elements=[line for block in blocks_second_pass for line in block])
