@@ -1,0 +1,103 @@
+{
+    "single_qubits": {
+        "0": {
+            "resonator": {
+                "bare_frequency": 7126456704.093388,
+                "dressed_frequency": 7126942534.0,
+                "depletion_time": null,
+                "bare_frequency_amplitude": 1.0
+            },
+            "qubit": {
+                "frequency_01": 4097774837.0,
+                "frequency_12": 3825900000.0,
+                "maximum_frequency": null,
+                "asymmetry": null,
+                "sweetspot": 0.0,
+                "flux_coefficients": null
+            },
+            "readout": {
+                "fidelity": 0.8779840848806366,
+                "coupling": 37893039.1586464,
+                "effective_temperature": 0.05245734110649072,
+                "ground_state": [
+                    -0.00029878240651608066,
+                    -0.0008064942699113132
+                ],
+                "excited_state": [
+                    0.00031086539547098914,
+                    -0.00035444155851942536
+                ],
+                "qudits_frequency": {
+                    "1": 7125994492.279291
+                }
+            },
+            "t1": [
+                35227.00127200906,
+                0.0
+            ],
+            "t2": [
+                13089.714711478351,
+                0.0
+            ],
+            "t2_spin_echo": [
+                26217.106891435193,
+                0.0
+            ],
+            "rb_fidelity": [
+                0.0,
+                0.0
+            ]
+        },
+        "1": {
+            "resonator": {
+                "bare_frequency": 7209496355.567989,
+                "dressed_frequency": 7210029721.995961,
+                "depletion_time": null,
+                "bare_frequency_amplitude": 1.0
+            },
+            "qubit": {
+                "frequency_01": 4341572427.0,
+                "frequency_12": 4083600000.0,
+                "maximum_frequency": null,
+                "asymmetry": null,
+                "sweetspot": 0.0,
+                "flux_coefficients": null
+            },
+            "readout": {
+                "fidelity": 0.8740053050397878,
+                "coupling": 667834.0867967606,
+                "effective_temperature": 0.07076479269981745,
+                "ground_state": [
+                    -0.00026763173677324034,
+                    -8.929009308112544e-6
+                ],
+                "excited_state": [
+                    -0.00047142548601287684,
+                    0.0007663128551392686
+                ],
+                "qudits_frequency": {
+                    "1": 7210029721.995961
+                }
+            },
+            "t1": [
+                19635.26940773619,
+                0.0
+            ],
+            "t2": [
+                16987.4357232036,
+                0.0
+            ],
+            "t2_spin_echo": [
+                20879.70548214635,
+                0.0
+            ],
+            "rb_fidelity": [
+                0.0,
+                0.0
+            ]
+        }
+    },
+    "two_qubits": {},
+    "readout_mitigation_matrix": null,
+    "flux_crosstalk_matrix": null
+}
