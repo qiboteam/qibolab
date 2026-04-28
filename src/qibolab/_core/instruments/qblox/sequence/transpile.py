@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import reduce
-from typing import Callable, Optional, cast
+from typing import Callable, Optional, TypeGuard, cast
 
 from pydantic import BaseModel, Field
 
@@ -40,6 +40,22 @@ class State(BaseModel):
     count_rt_instr: int = 0
     subtract_from_count: defaultdict[int, int] = defaultdict(int)
 
+    def increment_rt_counter(self) -> "State":
+        return self.model_copy(update={"count_rt_instr": self.count_rt_instr + 1})
+
+    def record_upd_param_duration(self, duration: int) -> "State":
+        key = self.count_rt_instr
+        return self.model_copy(
+            update={
+                "subtract_from_count": self.subtract_from_count
+                | {key: self.subtract_from_count[key] + duration}
+            }
+        )
+
+    @property
+    def duration_to_subtract(self) -> int:
+        return self.subtract_from_count[self.count_rt_instr]
+
 
 def _long_wait(duration: int, n: int) -> Block:
     """Split a statically long wait.
@@ -60,15 +76,14 @@ def _long_wait(duration: int, n: int) -> Block:
     ]
 
 
-def _decompose_wait(instr: Wait, n: int) -> Optional[Block]:
-    """
-    Decompose a wait instruction into a loop if its duration exceeds MAX_WAIT, splitting
-    it into a remainder and repeated MAX_WAIT-sized waits to fit hardware limits.
-    """
-    duration = instr.duration
-    if not isinstance(duration, int) or duration <= MAX_WAIT:
-        return None
-    return _long_wait(duration, n)
+def _convert_to_lines(decomposed: Block, origin: Line) -> LineBlock:
+    """Convert a Block into Lines, applying the origin's label and comment
+    to the first instruction."""
+    assert isinstance(decomposed[0], Instruction)
+    return [
+        Line(instruction=decomposed[0], label=origin.label, comment=origin.comment),
+        *[el if isinstance(el, Line) else Line.instr(el) for el in decomposed[1:]],
+    ]
 
 
 def _negative_move(instr: Move) -> Block:
@@ -80,7 +95,7 @@ def _negative_move(instr: Move) -> Block:
     https://docs.qblox.com/en/main/tutorials/q1asm_tutorials/intermediate/nco_control_adv.html#:~:text=Internally,%20the%20processor%20stores
 
     Thus, we compile instructions setting negative values as suggested:
-    first setting them to 0, than subtracting the desired amount. This
+    first setting them to 0, then subtracting the desired amount. This
     is more reliable than manually complementing the number, since it
     makes no assumption about the registers size.
 
@@ -99,19 +114,18 @@ def _decompose_move(instr: Move) -> Optional[Block]:
     return _negative_move(instr)
 
 
-def _update_subtract_from_count(state: State, duration: int) -> State:
-    """
-    Returns a new State with subtract_from_count updated for the current count_rt_instr,
-    incrementing by the given duration.
-    """
-    return state.model_copy(
-        update={
-            "subtract_from_count": state.subtract_from_count
-            | {
-                state.count_rt_instr: state.subtract_from_count[state.count_rt_instr]
-                + duration
-            }
-        }
+# This is used for the type-hints and nothing else.
+class _StaticWait:
+    duration: int
+
+
+def _is_static_wait(instr: Instruction) -> TypeGuard[_StaticWait]:
+    return isinstance(instr, Wait) and isinstance(instr.duration, int)
+
+
+def _is_static_play(instr: Instruction) -> bool:
+    return isinstance(instr, Play) and (
+        isinstance(instr.wave_0, int) and isinstance(instr.wave_1, int)
     )
 
 
@@ -124,49 +138,26 @@ def _first_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
     # input a block, even though prior to the first pass each block contains only a
     # single Line.
     assert len(block) == 1
-    instr = block[0].instruction
-    # Increment state.count_rt_instr upon encountering realtime instructions
-    updated_block, updated_state = (
-        (
-            _decompose_wait(instr, state.count_rt_instr),
-            state.model_copy(update={"count_rt_instr": state.count_rt_instr + 1}),
-        )
-        # We skip Waits in registers because we do not need to decompose them and for
-        # second pass subtracting duration would require subtracting from the initial
-        # value of the register.
-        if isinstance(instr, Wait) and not isinstance(instr.duration, Register)
-        else (_decompose_move(instr), state)
-        if isinstance(instr, Move)
-        # Increment subtract_from_count with the UpdParam duration
-        else (None, _update_subtract_from_count(state, instr.duration))
-        if isinstance(instr, UpdParam)
-        else (
-            None,
-            state.model_copy(update={"count_rt_instr": state.count_rt_instr + 1}),
-        )
-        if isinstance(instr, Play)
-        and not (
-            isinstance(instr.wave_0, Register) or isinstance(instr.wave_1, Register)
-        )
-        else (None, state)
-    )
+    line = block[0]
+    instr = line.instruction
 
-    # default
-    if updated_block is None:
-        return block, updated_state
+    if _is_static_wait(instr) or _is_static_play(instr):
+        return block, state.increment_rt_counter()
 
-    assert isinstance(updated_block[0], Instruction)
-    return [
-        Line(
-            instruction=updated_block[0], label=block[0].label, comment=block[0].comment
-        ),
-        *[el if isinstance(el, Line) else Line.instr(el) for el in updated_block[1:]],
-    ], updated_state
+    if isinstance(instr, UpdParam):
+        return block, state.record_upd_param_duration(instr.duration)
+
+    if isinstance(instr, Move):
+        decomposed = _decompose_move(instr)
+        if decomposed is None:
+            return block, state
+        decomposed_block = _convert_to_lines(decomposed, line)
+        return decomposed_block, state
+
+    return block, state
 
 
-def _adjust_realtime_instruction_duration(
-    block: LineBlock, state: State
-) -> tuple[LineBlock, State]:
+def _adjust_realtime_instruction_duration(block: LineBlock, state: State) -> LineBlock:
     """
     Adjusts the duration of Wait or Play instructions by subtracting any additional
     duration incurred due to following UpdParam instructions, ensuring correct timing.
@@ -180,7 +171,7 @@ def _adjust_realtime_instruction_duration(
     instr = block[0].instruction
     assert isinstance(instr, Play) or isinstance(instr, Wait)
     assert isinstance(instr.duration, int)
-    new_duration = instr.duration - state.subtract_from_count[state.count_rt_instr]
+    new_duration = instr.duration - state.duration_to_subtract
     if new_duration < 0:
         raise ValueError(
             "Wait/Play duration underflow: computed duration is negative: "
@@ -193,24 +184,28 @@ def _adjust_realtime_instruction_duration(
         ),
         *block[1:],
     ]
-    return updated_block, state.model_copy(
-        update={"count_rt_instr": state.count_rt_instr + 1}
-    )
+    return updated_block
 
 
 def _second_pass(block: LineBlock, state: State) -> tuple[LineBlock, State]:
-    """Subtracts the additional duration incurred due to UpdParam from Wait instructions
-    to ensure alignment between channels.
+    """Subtracts the additional duration incurred due to UpdParam from Wait or Play
+    real-time instructions to ensure alignment between channels.
     """
     instr = block[0].instruction
-    if (isinstance(instr, Wait) and not isinstance(instr.duration, Register)) or (
-        isinstance(instr, Play)
-        and not (
-            isinstance(instr.wave_0, Register) or isinstance(instr.wave_1, Register)
+
+    if not (_is_static_wait(instr) or _is_static_play(instr)):
+        return block, state
+
+    block = _adjust_realtime_instruction_duration(block, state)
+
+    # If needed, decompose long waits after duration has been corrected
+    instr = block[0].instruction
+    if _is_static_wait(instr) and instr.duration > MAX_WAIT:
+        block = _convert_to_lines(
+            _long_wait(instr.duration, state.count_rt_instr), block[0]
         )
-    ):
-        block, state = _adjust_realtime_instruction_duration(block, state)
-    return block, state
+
+    return block, state.increment_rt_counter()
 
 
 def _line_transform_apply(

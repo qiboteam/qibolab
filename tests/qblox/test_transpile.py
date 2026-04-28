@@ -82,7 +82,7 @@ def test_long_wait_decomposition_and_subtraction():
         Wait(duration=4461),
         Move(source=1, destination=Register(number=3)),
         Wait(duration=65535),
-        Loop(a=Register(number=3), address=Reference(label="wait0")),
+        Loop(a=Register(number=3), address=Reference(label="wait1")),
         UpdParam(duration=4),
     ]
 
