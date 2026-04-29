@@ -75,13 +75,12 @@ class Pulse(_PulseLike):
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
 
-    chirp: Optional[
-        Union[
-            Tuple[int, str],  # (rate, units)
-            Tuple[List[int], str],  # piecewise uniform
-            Tuple[List[int], List[int], str],  # piecewise non-uniform
-        ]
-    ] = None
+    chirp: (
+        None
+        | tuple[int, str]  # (rate, units)
+        | tuple[list[int], str]  # piecewise uniform
+        | tuple[list[int], list[int], str]  # piecewise non-uniform
+    )
     """Optional frequency chirp parameters (QUA-style)."""
 
     def i(self, sampling_rate: float) -> Waveform:
