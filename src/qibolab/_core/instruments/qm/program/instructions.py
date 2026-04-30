@@ -51,7 +51,11 @@ def _play_multiple_waveforms(
                 sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
                 if parameters.chirp_rate is not None:
-                    qua.play(sweep_op, element, chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"))
+                    qua.play(
+                        sweep_op,
+                        element,
+                        chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"),
+                    )
                 else:
                     qua.play(sweep_op, element)
 
@@ -85,7 +89,11 @@ def _play_single_waveform(
                 )
         else:
             if parameters.chirp_rate is not None:
-                qua.play(op, element, chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"))
+                qua.play(
+                    op,
+                    element,
+                    chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"),
+                )
             else:
                 qua.play(op, element)
 
