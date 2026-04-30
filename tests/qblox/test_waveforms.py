@@ -81,7 +81,7 @@ def test_waveforms_deduplicate_across_distinct_lengths():
 
 def test_waveforms_duration_sweeper():
 
-    # non-swept pulse with shared I component and distinct Q components
+    # non-swept pulse with same I and Q components
     pulse_a = Pulse(
         duration=4,
         amplitude=1.0,
