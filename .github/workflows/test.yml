@@ -3,8 +3,7 @@ name: tests
 on:
   workflow_dispatch:
   push:
-  pull_request:
-    types: opened
+  pull_request: # (opened, synchronize, reopened)
 
 jobs:
   build:
