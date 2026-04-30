@@ -20,7 +20,6 @@ class Parameters:
     amplitude_op: Optional[str] = None
 
     phase: Optional[_Variable] = None
-
     duration: Optional[_Variable] = None
     duration_ops: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
@@ -32,6 +31,12 @@ class Parameters:
     sampling_rate: int = 1
     chirp_rate: Optional[float] = None
     chirp_time: Optional[int] = None
+    @property
+    def chirp(self) -> Optional[tuple]:
+        if self.chirp_rate is None:
+            return None
+        return (self.chirp_rate, self.chirp_time, "Hz/nsec")
+
     @property
     def chirp(self) -> Optional[tuple]:
         if self.chirp_rate is None:

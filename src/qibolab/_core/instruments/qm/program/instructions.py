@@ -50,14 +50,7 @@ def _play_multiple_waveforms(
             if parameters.amplitude is not None:
                 sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
-                if parameters.chirp_rate is not None:
-                    qua.play(
-                        sweep_op,
-                        element,
-                        chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"),
-                    )
-                else:
-                    qua.play(sweep_op, element)
+                qua.play(sweep_op, element, chirp=parameters.chirp)
 
 
 def _play_single_waveform(
@@ -76,26 +69,14 @@ def _play_single_waveform(
             # sweeping duration using interpolation
             # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
             assert len(parameters.duration_ops) == 0
-            if parameters.chirp_rate is not None:
-                qua.play(
-                    parameters.interpolated_op,
-                    element,
-                    duration=parameters.duration,
-                    chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"),
-                )
-            else:
-                qua.play(
-                    parameters.interpolated_op, element, duration=parameters.duration
-                )
+            qua.play(
+                parameters.interpolated_op,
+                element,
+                duration=parameters.duration,
+                chirp=parameters.chirp,
+            )
         else:
-            if parameters.chirp_rate is not None:
-                qua.play(
-                    op,
-                    element,
-                    chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"),
-                )
-            else:
-                qua.play(op, element)
+            qua.play(op, element, chirp=parameters.chirp)
 
 
 def _play(
@@ -103,7 +84,6 @@ def _play(
     element: str,
     parameters: Parameters,
     acquisition: Optional[Acquisition] = None,
-    pulse: Optional[Pulse] = None,
 ):
     if parameters.phase is not None:
         qua.frame_rotation_2pi(parameters.phase, element)
