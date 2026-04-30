@@ -50,7 +50,10 @@ def _play_multiple_waveforms(
             if parameters.amplitude is not None:
                 sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
-                qua.play(sweep_op, element, chirp=pulse.chirp)
+                if parameters.chirp_rate is not None:
+                    qua.play(sweep_op, element, chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"))
+                else:
+                    qua.play(sweep_op, element)
 
 
 def _play_single_waveform(
@@ -69,20 +72,20 @@ def _play_single_waveform(
             # sweeping duration using interpolation
             # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
             assert len(parameters.duration_ops) == 0
-            if pulse is not None and pulse.chirp is not None:
+            if parameters.chirp_rate is not None:
                 qua.play(
                     parameters.interpolated_op,
                     element,
                     duration=parameters.duration,
-                    chirp=pulse.chirp,
+                    chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"),
                 )
             else:
                 qua.play(
                     parameters.interpolated_op, element, duration=parameters.duration
                 )
         else:
-            if pulse is not None and pulse.chirp is not None:
-                qua.play(op, element, chirp=pulse.chirp)
+            if parameters.chirp_rate is not None:
+                qua.play(op, element, chirp=(parameters.chirp_rate, parameters.chirp_time, "Hz/nsec"))
             else:
                 qua.play(op, element)
 
@@ -98,9 +101,9 @@ def _play(
         qua.frame_rotation_2pi(parameters.phase, element)
 
     if len(parameters.duration_ops) > 0:
-        _play_multiple_waveforms(element, parameters, pulse)
+        _play_multiple_waveforms(element, parameters)
     else:
-        _play_single_waveform(op, element, parameters, acquisition, pulse)
+        _play_single_waveform(op, element, parameters, acquisition)
 
     if parameters.phase is not None:
         qua.reset_frame(element)
@@ -123,10 +126,10 @@ def play(args: ExecutionArguments):
         op = operation(pulse)
         params = args.parameters[pulse.id]
         if isinstance(pulse, Pulse):
-            _play(op, element, params, pulse=pulse)
+            _play(op, element, params)
         elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))
-            _play(op, element, params, acquisition, pulse=pulse)
+            _play(op, element, params, acquisition)
         elif isinstance(pulse, Delay):
             _delay(pulse, element, params)
         elif isinstance(pulse, VirtualZ):

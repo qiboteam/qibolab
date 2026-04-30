@@ -30,6 +30,8 @@ class Parameters:
     lo_frequency: Optional[int] = None
     max_offset: float = 0.5
     sampling_rate: int = 1
+    chirp_rate: Optional[float] = None
+    chirp_time: Optional[int] = None
 
 
 @dataclass
