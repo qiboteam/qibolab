@@ -13,7 +13,7 @@ from qibolab._core.sweeper import Sweeper
 __all__ = []
 
 QuadratureIndex = int
-"""Index of the quadrature component (even=1, odd=Q)."""
+"""Index of the quadrature component (even=I, odd=Q)."""
 ComponentId = tuple[UUID4, QuadratureIndex]
 """Index of an individual pulse component.
 
@@ -105,7 +105,7 @@ def _deduplicate_pulses(
 
 def _deduplicate_waveforms(
     waveforms: list[WaveformSpec],
-) -> tuple[list[WaveformSpec], dict[WaveformIndex, WaveformIndex]]:
+) -> tuple[list[WaveformSpec], list[WaveformIndex]]:
     """Deduplicate waveforms by sampled waveform arrays.
 
     Returns:
