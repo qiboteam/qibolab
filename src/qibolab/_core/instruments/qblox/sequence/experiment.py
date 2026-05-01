@@ -10,9 +10,11 @@ from qibolab._core.sweeper import Parameter
 
 from ..q1asm.ast_ import (
     Acquire,
+    Add,
     Block,
     Instruction,
     Line,
+    Move,
     Play,
     Register,
     SetPhDelta,
@@ -72,17 +74,24 @@ def play(
             p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
         }
         return (
-            ([SetPhDelta(value=phase)] if phase != 0 else [])
+            (
+                [
+                    Add(
+                        a=Registers.phase.value,
+                        b=phase,
+                        destination=Registers.phase.value,
+                    )
+                ]
+                if phase != 0
+                else []
+            )
+            + ([SetPhDelta(value=Registers.phase.value)])
             + (
                 [play_pulse(pulse, waveforms)]
                 if len(duration_sweep) == 0
                 else play_duration_swept(duration_sweep)
             )
-            + (
-                [SetPhDelta(value=minus_phase), UpdParam(duration=4)]
-                if phase != 0
-                else []
-            )
+            + ([Move(source=minus_phase, destination=Registers.phase.value)])
         )
     if isinstance(pulse, Delay):
         return [
@@ -95,12 +104,13 @@ def play(
         ]
     if isinstance(pulse, VirtualZ):
         return [
-            SetPhDelta(
-                value=int(convert(pulse.phase, Parameter.relative_phase))
+            Add(
+                a=Registers.phase.value,
+                b=int(convert(pulse.phase, Parameter.relative_phase))
                 if len(params) == 0
-                else next(iter(params)).reg
-            ),
-            UpdParam(duration=4),
+                else next(iter(params)).reg,
+                destination=Registers.phase.value,
+            )
         ]
     if isinstance(pulse, Acquisition):
         acq = acquisitions[pulse.id]
