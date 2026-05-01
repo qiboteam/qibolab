@@ -215,6 +215,10 @@ def waveforms(
     # waveforms
     indices_map: WaveformIndices = {
         (pulse.id, iq_idx): (
+            # here we are using the inverse index to map back to the original list of waveforms;
+            # the waveform list used to generate the `orig_to_deduplicated`
+            # mapping is ordered pulse-wise, hence I-Q components of the same pulse are
+            # adjacent, that's why we can use `inv * 2 + iq_idx` to get the correct index
             orig_to_deduplicated[inv * 2 + iq_idx],
             int(pulse.duration),
         )
