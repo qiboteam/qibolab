@@ -13,7 +13,7 @@ from qibolab._core.sweeper import Sweeper
 __all__ = []
 
 QuadratureIndex = int
-"""Index of the quadrature component (0=I, 1=Q)."""
+"""Index of the quadrature component (even=1, odd=Q)."""
 ComponentId = tuple[UUID4, QuadratureIndex]
 """Index of an individual pulse component.
 
@@ -192,7 +192,7 @@ def waveforms(
     # the ids for the swept pulses start counting from `static` since up to here we need
     # two indices (i and q) for each unique non-swept pulse
     static = len(deduplicated_waveforms)
-    # setting the counter to the number of deduplicated waveforms + 1
+    # setting the counter to the number of deduplicated waveforms
     counter = count(static)
     # mapping swept waveforms from integer to unique WaveformSpec
     swept_waveforms: list[WaveformSpec] = [
@@ -210,26 +210,32 @@ def waveforms(
 
     deduplicated_waveforms += swept_waveforms
 
-    # setting a second counter
-    counter = count(static)
     # mapping that associate each element in the full list of pulses identified by
     # (UUID, i or q) to an integer that can be associated with a WaveformSpec through
     # waveforms
-    indices_map: WaveformIndices = {  # non-swept
+    indices_map: WaveformIndices = {
         (pulse.id, iq_idx): (
             orig_to_deduplicated[inv * 2 + iq_idx],
             int(pulse.duration),
         )
         for inv, pulse in zip(inverse_idx, pulses_not_swept)
         for iq_idx, _ in enumerate(("i", "q"))
-    } | {  # swept
-        (pulse.id, (idx := next(counter))): (
-            idx,
-            int(duration),
-        )
-        for pulse, sweep in pulses_swept
-        for duration in np.arange(*sweep.irange)
-        for _ in ("i", "q")
     }
+
+    # this offset is necessary since we want to keep track of the index for swept waveforms
+    # while we are resetting the counter for every swept pulse
+    offset = static
+    for pulse, sweep in pulses_swept:
+        # resetting the counter for every spwept pulse
+        counter = count()
+        indices_map |= {  # swept
+            (pulse.id, (idx := next(counter))): (
+                idx + offset,
+                int(duration),
+            )
+            for duration in np.arange(*sweep.irange)
+            for _ in ("i", "q")
+        }
+        offset += next(counter)
 
     return dict(enumerate(deduplicated_waveforms)), indices_map
