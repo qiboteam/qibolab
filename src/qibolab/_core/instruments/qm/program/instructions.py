@@ -40,7 +40,7 @@ def _virtualz(pulse: VirtualZ, element: str, parameters: Parameters):
 
 
 def _play_multiple_waveforms(
-    element: str, parameters: Parameters, pulse: Optional[Pulse] = None
+    element: str, parameters: Parameters
 ):
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     assert not parameters.interpolated
@@ -57,8 +57,7 @@ def _play_single_waveform(
     op: str,
     element: str,
     parameters: Parameters,
-    acquisition: Optional[Acquisition] = None,
-    pulse: Optional[Pulse] = None,
+    acquisition: Optional[Acquisition] = None
 ):
     if parameters.amplitude is not None:
         op = parameters.amplitude_op * parameters.amplitude
