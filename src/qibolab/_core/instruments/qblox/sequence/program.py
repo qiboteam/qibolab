@@ -97,11 +97,11 @@ def program(
     sweepers: list[ParallelSweepers],
     channel: set[ChannelId],
     padding: int,
+    merged_vzs: bool,
 ) -> Program:
     """Generate sequencer program."""
     assert options.nshots is not None
     assert options.relaxation_time is not None
-
     loops_ = loops(
         sweepers,
         options.nshots,
@@ -113,7 +113,7 @@ def program(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
     experiment_ = [
-        *experiment(sweepseq, waveforms, acquisitions),
+        *experiment(sweepseq, waveforms, acquisitions, merged_vzs),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
         Wait(duration=min(padding, 4)),
     ]

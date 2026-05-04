@@ -19,7 +19,7 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
+from qibolab._core.sweeper import ParallelSweepers, Parameter, normalize_sweepers
 
 from . import config
 from .batching import batch_sequences_by_cluster_memory_limits
@@ -178,6 +178,18 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
+        # If there are no sweepers present, the phases can be summed to simplify
+        # the pulse sequences.
+        phase_sweeper_present = any(
+            sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
+            for parallel_sweepers in sweepers
+            for sweeper in parallel_sweepers
+        )
+        processed_sequences = [
+            ps if phase_sweeper_present else ps.to_vzs().collect_vzs()
+            for ps in sequences
+        ]
+
         # If acquisition is cyclic (averaging over shots on hardware), we combine as
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
@@ -191,7 +203,7 @@ class Cluster(Controller):
         }
         qcm_channels = set(self.channels) - qrm_channels
         batched_seqs = _batch_sequences(
-            sequences, sweepers, options, qcm_channels, qrm_channels, configs
+            processed_sequences, sweepers, options, qcm_channels, qrm_channels, configs
         )
 
         # Execute each batch sequentially, and concatenate results
@@ -222,6 +234,7 @@ class Cluster(Controller):
                     sweepers_,
                     options_,
                     self.sampling_rate,
+                    merged_vzs=not phase_sweeper_present,
                 )
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot

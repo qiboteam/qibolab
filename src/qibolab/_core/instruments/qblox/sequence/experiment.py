@@ -62,37 +62,42 @@ def play(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
+    merged_vzs: bool,
 ) -> Block:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
     params = parpulse[1]
-
     if isinstance(pulse, Pulse):
-        phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
-        minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
-        duration_sweep = {
-            p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
-        }
-        return (
-            (
-                [
-                    Add(
-                        a=Registers.phase.value,
-                        b=phase,
-                        destination=Registers.phase.value,
-                    )
-                ]
-                if phase != 0
-                else []
+        if merged_vzs:
+            assert pulse.relative_phase == 0.0
+            return [play_pulse(pulse, waveforms)]
+        else:
+            phase = int(convert(pulse.relative_phase, Parameter.relative_phase))
+            minus_phase = int(convert(-pulse.relative_phase, Parameter.relative_phase))
+            duration_sweep = {
+                p.role: p.reg for p in params if p.role.value[1] is Parameter.duration
+            }
+            return (
+                (
+                    [
+                        Add(
+                            a=Registers.phase.value,
+                            b=phase,
+                            destination=Registers.phase.value,
+                        )
+                    ]
+                    if phase != 0
+                    else []
+                )
+                + ([SetPhDelta(value=Registers.phase.value)])
+                + (
+                    [play_pulse(pulse, waveforms)]
+                    if len(duration_sweep) == 0
+                    else play_duration_swept(duration_sweep)
+                )
+                + ([Move(source=minus_phase, destination=Registers.phase.value)])
             )
-            + ([SetPhDelta(value=Registers.phase.value)])
-            + (
-                [play_pulse(pulse, waveforms)]
-                if len(duration_sweep) == 0
-                else play_duration_swept(duration_sweep)
-            )
-            + ([Move(source=minus_phase, destination=Registers.phase.value)])
-        )
+
     if isinstance(pulse, Delay):
         return [
             Line(
@@ -103,15 +108,20 @@ def play(
             else Wait(duration=next(iter(params)).reg)
         ]
     if isinstance(pulse, VirtualZ):
-        return [
-            Add(
-                a=Registers.phase.value,
-                b=int(convert(pulse.phase, Parameter.relative_phase))
-                if len(params) == 0
-                else next(iter(params)).reg,
-                destination=Registers.phase.value,
-            )
-        ]
+        if merged_vzs:
+            return [
+                SetPhDelta(value=int(convert(pulse.phase, Parameter.relative_phase)))
+            ]
+        else:
+            return [
+                Add(
+                    a=Registers.phase.value,
+                    b=int(convert(pulse.phase, Parameter.relative_phase))
+                    if len(params) == 0
+                    else next(iter(params)).reg,
+                    destination=Registers.phase.value,
+                )
+            ]
     if isinstance(pulse, Acquisition):
         acq = acquisitions[pulse.id]
         return [
@@ -142,13 +152,14 @@ def event(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
+    merged_vzs: bool,
 ) -> Block:
     params = parpulse[1]
     return [
         inst
         for block in (
             *(update_instructions(p.role, p.reg) for p in params),
-            *(play(parpulse, waveforms, acquisitions),),
+            *(play(parpulse, waveforms, acquisitions, merged_vzs),),
             *(reset_instructions(p.role, p.reg) for p in reversed(list(params))),
         )
         for inst in block
@@ -159,6 +170,7 @@ def experiment(
     sequence: SweepSequence,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
+    merged_vzs: bool,
 ) -> Block:
     """Representation of the actual experiment to be executed.
 
@@ -172,6 +184,8 @@ def experiment(
     """
     return [UpdParam(duration=4), WaitSync(duration=4)] + [
         inst
-        for block in (event(pulse, waveforms, acquisitions) for pulse in sequence)
+        for block in (
+            event(pulse, waveforms, acquisitions, merged_vzs) for pulse in sequence
+        )
         for inst in block
     ]
