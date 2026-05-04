@@ -36,6 +36,8 @@ class Parameters:
     def chirp(self) -> Optional[tuple]:
         if self.chirp_rate is None:
             return None
+        if self.chirp_time is None:
+            return (self.chirp_rate, "Hz/nsec")
         return (self.chirp_rate, self.chirp_time, "Hz/nsec")
 
 
