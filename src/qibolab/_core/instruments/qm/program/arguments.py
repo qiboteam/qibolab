@@ -31,6 +31,7 @@ class Parameters:
     sampling_rate: int = 1
     chirp_rate: Optional[float] = None
     chirp_time: Optional[int] = None
+    chirp_units: str = "Hz/nsec"
 
     @property
     def chirp(self) -> Optional[tuple]:
@@ -38,7 +39,7 @@ class Parameters:
             return None
         if self.chirp_time is None:
             return (self.chirp_rate, "Hz/nsec")
-        return (self.chirp_rate, self.chirp_time, "Hz/nsec")
+        return (self.chirp_rate, self.chirp_time, self.chirp_units)
 
 
 @dataclass
