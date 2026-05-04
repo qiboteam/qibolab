@@ -81,21 +81,21 @@ def play(
                 (
                     [
                         Add(
-                            a=Registers.phase.value,
+                            a=Registers.phase_delta.value,
                             b=phase,
-                            destination=Registers.phase.value,
+                            destination=Registers.phase_delta.value,
                         )
                     ]
                     if phase != 0
                     else []
                 )
-                + ([SetPhDelta(value=Registers.phase.value)])
+                + ([SetPhDelta(value=Registers.phase_delta.value)])
                 + (
                     [play_pulse(pulse, waveforms)]
                     if len(duration_sweep) == 0
                     else play_duration_swept(duration_sweep)
                 )
-                + ([Move(source=minus_phase, destination=Registers.phase.value)])
+                + ([Move(source=minus_phase, destination=Registers.phase_delta.value)])
             )
 
     if isinstance(pulse, Delay):
@@ -115,11 +115,11 @@ def play(
         else:
             return [
                 Add(
-                    a=Registers.phase.value,
+                    a=Registers.phase_delta.value,
                     b=int(convert(pulse.phase, Parameter.relative_phase))
                     if len(params) == 0
                     else next(iter(params)).reg,
-                    destination=Registers.phase.value,
+                    destination=Registers.phase_delta.value,
                 )
             ]
     if isinstance(pulse, Acquisition):

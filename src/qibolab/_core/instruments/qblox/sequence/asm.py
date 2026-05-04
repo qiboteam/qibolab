@@ -16,7 +16,7 @@ class Registers(Enum):
     bin_reset = Register(number=1)
     shots = Register(number=2)
     wait = Register(number=3)
-    phase = Register(number=4)
+    phase_delta = Register(number=4)
 
     @classmethod
     def first_available(cls) -> int:

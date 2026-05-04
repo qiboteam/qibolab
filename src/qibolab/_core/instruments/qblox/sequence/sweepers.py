@@ -209,7 +209,7 @@ _SWEEP_UPDATE: dict[Parameter, _Update] = {
     ),
     Parameter.relative_phase: _Update(
         update=lambda v: Add(
-            a=Registers.phase.value, b=v, destination=Registers.phase.value
+            a=Registers.phase_delta.value, b=v, destination=Registers.phase_delta.value
         ),
         reset=None,
     ),
