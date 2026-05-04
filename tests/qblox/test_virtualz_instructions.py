@@ -11,7 +11,7 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 
 
-def test_virtualz_with_phase_sweeper_add_and_register():
+def test_virtualz_with_phase_sweeper():
     vz = VirtualZ(phase=0.25)
     seq = PulseSequence([("ch1", vz)])
     sweeper = Sweeper(
@@ -36,7 +36,7 @@ def test_virtualz_with_phase_sweeper_add_and_register():
     )
 
 
-def test_virtualz_without_phase_sweeper_setphdelta_and_no_register():
+def test_virtualz_without_phase_sweeper():
     vz = VirtualZ(phase=0.25)
     seq = PulseSequence([("ch1", vz)])
     options = ExecutionParameters(nshots=1, relaxation_time=10)
