@@ -263,14 +263,21 @@ class PulseSequence(UserList[_Element]):
         return seqs
 
     def to_vzs(self) -> "PulseSequence":
-        """Split relative phases to :class:`VirtualZ` elements.
+        """Transform :class:`Pulse` relative phases to :class:`VirtualZ` elements.
 
-        The basic formula just relies on the composition of Pauli matrices' exponential
-        and it is available from many sources. One of those could be MM p. 626.
+        The relative phase for a pulse can be applied to the pulse itself, or applying
+        the inverse transformation to the reference frame, right before and right after
+        the pulse itself.
 
-        .. todo::
+        This method realizes this mapping from :class:`Pulse` relative phases to
+        :class:`VirtualZ`, leaving all relative phases to their default value of
+        ``0.0``.
+        The method is compatible with the presence of further :class:`VirtualZ` in the
+        original sequence.
 
-            Add MM as a proper reference, such that it ends up in the bibliography
+        The basic formula just relies on the composition of Pauli matrices'
+        exponential. Cf. :cite:t:`Manenti:2023zzn`, Sec. 14.6.4 (or any other similar
+        reference).
         """
         return PulseSequence(
             [
@@ -290,6 +297,15 @@ class PulseSequence(UserList[_Element]):
         )
 
     def to_relative_phases(self) -> "PulseSequence":
+        """Embed :class:`VirtualZ` transformations into :class:`Pulse` relative phases.
+
+        This method implements a transformation which is the conceptual opposite of the
+        one realized by :meth:`to_vzs`.
+        The two functions are not exactly inverse to each other, since there could be
+        multiple :class:`VirtualZ` in the original sequence (which would be collapsed by
+        a round trip), and pulses' relative phases and frame transformations can
+        coexist.
+        """
         seq = PulseSequence()
         phases = defaultdict(float)
 
