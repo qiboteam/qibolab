@@ -4,7 +4,16 @@ from itertools import groupby
 from typing import Optional
 
 from qibolab._core.identifier import ChannelId
-from qibolab._core.instruments.qblox.q1asm.ast_ import SetAwgGain, SetAwgOffs, SetFreq
+from qibolab._core.instruments.qblox.q1asm.ast_ import (
+    Add,
+    Instruction,
+    Register,
+    SetAwgGain,
+    SetAwgOffs,
+    SetFreq,
+    Value,
+)
+from qibolab._core.instruments.qblox.sequence.asm import Registers
 from qibolab._core.pulses.pulse import (
     Pulse,
     PulseId,
@@ -13,12 +22,6 @@ from qibolab._core.pulses.pulse import (
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, Parameter, Range, Sweeper
 
-from ..q1asm.ast_ import (
-    Instruction,
-    Register,
-    SetPhDelta,
-    Value,
-)
 from .asm import MAX_PARAM, convert
 
 __all__ = []
@@ -204,7 +207,12 @@ _SWEEP_UPDATE: dict[Parameter, _Update] = {
             value_1=MAX_PARAM[Parameter.amplitude],
         ),
     ),
-    Parameter.relative_phase: _Update(update=lambda v: SetPhDelta(value=v), reset=None),
+    Parameter.relative_phase: _Update(
+        update=lambda v: Add(
+            a=Registers.phase_delta.value, b=v, destination=Registers.phase_delta.value
+        ),
+        reset=None,
+    ),
     Parameter.duration: _Update(update=None, reset=None),
 }
 

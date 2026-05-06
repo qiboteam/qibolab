@@ -73,6 +73,7 @@ class Q1Sequence(Model):
         sampling_rate: float,
         channel: set[ChannelId],
         duration: float,
+        merged_vzs: bool,
     ) -> "Q1Sequence":
         padding = (
             duration
@@ -106,6 +107,7 @@ class Q1Sequence(Model):
                 sweepers,
                 channel,
                 int(padding),
+                merged_vzs,
             ),
         )
 
@@ -151,6 +153,7 @@ def compile(
     sweepers: list[ParallelSweepers],
     options: ExecutionParameters,
     sampling_rate: float,
+    merged_vzs: bool,
 ) -> dict[ChannelId, Q1Sequence]:
     duration = sequence.duration
     sweeper_channels = {ch: [] for ch in swept_channels(sweepers)}
@@ -162,6 +165,7 @@ def compile(
             sampling_rate,
             _effective_channels(ch, seq),
             duration,
+            merged_vzs,
         )
         for ch, seq in (sweeper_channels | sequence.by_channel).items()
     }
