@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import numpy as np
+import pytest
 from pydantic import TypeAdapter
 
 from qibolab._core.pulses import (
@@ -405,3 +407,154 @@ def test_readouts():
 
     aslist = TypeAdapter(PulseSequence).dump_python(sequence)
     assert PulseSequence.load(aslist) == sequence
+
+
+def test_phases_collect(prng: np.random.Generator) -> None:
+    """Compare a sequence of individual phases after collection.
+
+    Since the virtual rotations are the only elements present in the sequence, we expect
+    them to be collected in a single rotation, equal to the sum.
+    """
+    phases = prng.random(10)
+    phases_seq = PulseSequence([("ch", VirtualZ(phase=ph)) for ph in phases])
+    collected = phases_seq.collect_vzs()
+    event = collected[0][1]
+    assert isinstance(event, VirtualZ)
+    assert pytest.approx(event.phase) == np.sum(phases)
+
+
+def test_phases_blocks_collect(prng: np.random.Generator) -> None:
+    """Compare blocks of phases after collection.
+
+    Similar to the former test, :func:`test_phases_collect`, but in this case multiple
+    segments are present, separated by pulses' execution. Which act as a barrier for the
+    phase collection.
+    """
+    phases_blocks = [prng.random(n) for n in (5, 3, 8)]
+    blocks_seqs = (
+        (("ch", VirtualZ(phase=ph)) for ph in phases) for phases in phases_blocks
+    )
+    pulse_seq = [("ch", Pulse(duration=10, amplitude=0.1, envelope=Rectangular()))]
+    phases_blocks_seq = PulseSequence(
+        [ev for block in blocks_seqs for subseq in (block, pulse_seq) for ev in subseq]
+    )
+    blocks_collected = phases_blocks_seq.collect_vzs()
+    for i, phases in enumerate(phases_blocks):
+        vz = blocks_collected[2 * i][1]
+        assert isinstance(vz, VirtualZ)
+        assert pytest.approx(vz.phase) == phases.sum()
+
+
+def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
+    """Compare phase values after relative phases to virtual rotations conversion.
+
+    Each relative phase gets compiled into two different phase rotations, before and
+    after the pulse execution, to change the reference frame only for that individual
+    operation.
+    """
+    phases = prng.random(10)
+    seq = PulseSequence(
+        [
+            (
+                f"ch{i}",
+                Pulse(
+                    duration=10,
+                    amplitude=0.1,
+                    envelope=Rectangular(),
+                    relative_phase=ph,
+                ),
+            )
+            for i, ph in enumerate(phases)
+        ]
+    )
+    vzs_seq = seq.to_vzs()
+    forward: list[float] = []
+    backward: list[float] = []
+    for i in range(10):
+        pre, pulse, post = vzs_seq[3 * i : 3 * (i + 1)]
+        assert pre[0] == post[0] == pulse[0] == f"ch{i}"
+        assert isinstance(pre[1], VirtualZ)
+        forward.append(pre[1].phase)
+        assert isinstance(pulse[1], Pulse)
+        assert pytest.approx(pulse[1].relative_phase) == 0
+        assert isinstance(post[1], VirtualZ)
+        backward.append(post[1].phase)
+
+    assert pytest.approx(forward) == phases == pytest.approx(-np.array(backward))
+
+
+def test_relative_phases_to_collected_vzs(prng: np.random.Generator) -> None:
+    """Compare phase values after relative phases expansion and collection.
+
+    Similar to the former test, :func:`test_relative_phases_to_vzs`, but this takes
+    place on a single channel, to be able to benchmark a successive virtual rotations
+    collection process.
+    """
+    phases = prng.random(10)
+    seq = PulseSequence(
+        [
+            (
+                "ch",
+                Pulse(
+                    duration=10,
+                    amplitude=0.1,
+                    envelope=Rectangular(),
+                    relative_phase=ph,
+                ),
+            )
+            for ph in phases
+        ]
+    )
+
+    collected_vzs_seq = seq.to_vzs().collect_vzs()
+    collected_phases: list[float] = []
+    for i in range(10):
+        vz, pulse = collected_vzs_seq[2 * i : 2 * (i + 1)]
+        assert vz[0] == pulse[0] == "ch"
+        assert isinstance(vz[1], VirtualZ)
+        collected_phases.append(vz[1].phase)
+        assert isinstance(pulse[1], Pulse)
+        assert pytest.approx(pulse[1].relative_phase) == 0
+
+    assert pytest.approx(collected_phases) == np.diff(phases, prepend=0.0)
+    assert isinstance(collected_vzs_seq[-1][1], VirtualZ)
+    assert pytest.approx(collected_vzs_seq[-1][1].phase) == -phases[-1]
+
+
+def test_vzs_to_relative_phases(prng: np.random.Generator) -> None:
+    """Compare phase values after virtual rotations to relative phases conversion.
+
+    First compare multiple ones on different channels, than on a single one. The two
+    cases are distinct, since the virtual rotations are intended to be accumulated on a
+    channel.
+    """
+    phases = prng.random(10)
+    seq = PulseSequence(
+        [
+            (f"ch{i}", ev)
+            for i, ph in enumerate(phases)
+            for ev in (
+                VirtualZ(phase=ph),
+                Pulse(duration=10, amplitude=0.1, envelope=Rectangular()),
+            )
+        ]
+    )
+    relph_seq = seq.to_relative_phases()
+    for ph, ev in zip(phases, relph_seq):
+        assert isinstance(ev[1], Pulse)
+        assert pytest.approx(ev[1].relative_phase) == ph
+
+    seq = PulseSequence(
+        [
+            ("ch", ev)
+            for ph in phases
+            for ev in (
+                VirtualZ(phase=ph),
+                Pulse(duration=10, amplitude=0.1, envelope=Rectangular()),
+            )
+        ]
+    )
+    relph_1ch_seq = seq.to_relative_phases()
+    for ph, ev in zip(np.add.accumulate(phases), relph_1ch_seq):
+        assert isinstance(ev[1], Pulse)
+        assert pytest.approx(ev[1].relative_phase) == ph

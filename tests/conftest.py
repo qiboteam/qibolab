@@ -22,6 +22,11 @@ def seed():
     np.random.seed(42)
 
 
+@pytest.fixture(scope="session")
+def prng() -> np.random.Generator:
+    return np.random.default_rng(seed=42)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--platform",
