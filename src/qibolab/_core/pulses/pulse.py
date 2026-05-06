@@ -80,7 +80,7 @@ class Pulse(_PulseLike):
         | tuple[int, str]  # (rate, units)
         | tuple[list[int], str]  # piecewise uniform
         | tuple[list[int], list[int], str]  # piecewise non-uniform
-    )
+    ) = None
     """Optional frequency chirp parameters (QUA-style)."""
 
     def i(self, sampling_rate: float) -> Waveform:
