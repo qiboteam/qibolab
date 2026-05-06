@@ -16,7 +16,7 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses.pulse import PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
 from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
@@ -26,7 +26,7 @@ from .batching import batch_sequences_by_cluster_memory_limits
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
-from .results import AcquiredData, extract, integration_lenghts
+from .results import AcquiredData, extract, integration_lengths
 from .sequence import Q1Sequence, compile
 from .utils import (
     batch_shots,
@@ -71,6 +71,43 @@ def _compute_duration(
         [ps], sweepers, time_of_flight + wait_sync_duration
     )
     return duration
+
+
+def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
+    time_of_flights_ = time_of_flights(configs)
+    return PulseSequence(
+        [
+            (
+                ch,
+                ev
+                if not isinstance(ev, Readout)
+                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
+            )
+            for ch, ev in sequence
+        ]
+    )
+
+
+def _batch_sequences(
+    sequences: list[PulseSequence],
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    qcm_channels: set[ChannelId],
+    qrm_channels: set[ChannelId],
+    configs: Configs,
+) -> list[PulseSequence]:
+    batched_seqs = (
+        batch_sequences_by_cluster_memory_limits(
+            sequences,
+            sweepers,
+            options,
+            qcm_channels,
+            qrm_channels,
+        )
+        if options.averaging_mode.average
+        else sequences
+    )
+    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
 
 
 class ClusterConfigs(Model):
@@ -153,16 +190,8 @@ class Cluster(Controller):
             if PortAddress.from_path(channelobj.path).slot in qrm_slots
         }
         qcm_channels = set(self.channels) - qrm_channels
-        batched_seqs: list[PulseSequence] = (
-            batch_sequences_by_cluster_memory_limits(
-                sequences,
-                sweepers,
-                options,
-                qcm_channels,
-                qrm_channels,
-            )
-            if options.averaging_mode.average
-            else sequences
+        batched_seqs = _batch_sequences(
+            sequences, sweepers, options, qcm_channels, qrm_channels, configs
         )
 
         # Execute each batch sequentially, and concatenate results
@@ -193,7 +222,6 @@ class Cluster(Controller):
                     sweepers_,
                     options_,
                     self.sampling_rate,
-                    time_of_flights(configs),
                 )
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
@@ -215,7 +243,7 @@ class Cluster(Controller):
                 log.data(data)
 
                 # process raw results to adhere to standard format
-                lengths = integration_lenghts(sequences_, sequencers, self._modules)
+                lengths = integration_lengths(sequences_, sequencers, self._modules)
                 psres.append(
                     extract(
                         data,

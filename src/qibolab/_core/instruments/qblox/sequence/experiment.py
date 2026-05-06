@@ -1,5 +1,3 @@
-from typing import Optional
-
 from qibolab._core.pulses.pulse import (
     Acquisition,
     Align,
@@ -62,7 +60,6 @@ def play(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
-    time_of_flight: Optional[float],
 ) -> Block:
     """Process the individual pulse in experiment."""
     pulse = parpulse[0]
@@ -118,13 +115,14 @@ def play(
         raise NotImplementedError("Align operation not yet supported by Qblox.")
     if isinstance(pulse, Readout):
         acq = acquisitions[pulse.id]
-        delay = int(time_of_flight) if time_of_flight is not None else 4
         return [
-            play_pulse(pulse.probe, waveforms).update({"duration": delay}),
+            play_pulse(pulse.probe, waveforms).update(
+                {"duration": int(pulse.time_of_flight)}
+            ),
             Acquire(
                 acquisition=acq.acquisition.index,
                 bin=Registers.bin.value,
-                duration=int(pulse.duration),
+                duration=int(pulse.acquisition.duration),
             ),
         ]
     raise NotImplementedError(f"Instruction {type(pulse)} unsupported by Qblox driver.")
@@ -134,14 +132,13 @@ def event(
     parpulse: ParameterizedPulse,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
-    time_of_flight: Optional[float],
 ) -> Block:
     params = parpulse[1]
     return [
         inst
         for block in (
             *(update_instructions(p.role, p.reg) for p in params),
-            *(play(parpulse, waveforms, acquisitions, time_of_flight),),
+            *(play(parpulse, waveforms, acquisitions),),
             *(reset_instructions(p.role, p.reg) for p in reversed(list(params))),
         )
         for inst in block
@@ -152,7 +149,6 @@ def experiment(
     sequence: SweepSequence,
     waveforms: WaveformIndices,
     acquisitions: dict[MeasureId, AcquisitionSpec],
-    time_of_flight: Optional[float],
 ) -> Block:
     """Representation of the actual experiment to be executed.
 
@@ -166,8 +162,6 @@ def experiment(
     """
     return [UpdParam(duration=4), WaitSync(duration=4)] + [
         inst
-        for block in (
-            event(pulse, waveforms, acquisitions, time_of_flight) for pulse in sequence
-        )
+        for block in (event(pulse, waveforms, acquisitions) for pulse in sequence)
         for inst in block
     ]

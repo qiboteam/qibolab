@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 
 from qibolab._core.components import Config
 from qibolab._core.components.configs import AcquisitionConfig
-from qibolab._core.execution_parameters import ExecutionParameters
+from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import Result
 from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses import (
@@ -65,21 +65,44 @@ class EmulatorController(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
+
+        if (
+            options.averaging_mode is AveragingMode.SINGLESHOT
+            and options.nshots is None
+        ):
+            raise ValueError("nshots must be specified for SINGLESHOT mode")
+
         # convert align to delays
         sequences_ = (seq.align_to_delays() for seq in sequences)
-        # just merge the results of multiple executions in a single dictionary
-        return reduce(
-            or_,
-            (
-                results(
-                    # states in computational basis
-                    self._sweep(sequence, configs, sweepers),
-                    sequence,
-                    cast(HamiltonianConfig, configs["hamiltonian"]),
-                    options,
-                )
-                for sequence in sequences_
-            ),
+
+        results_to_process = (
+            self._play_sequence(configs, sequence, options, sweepers)
+            for sequence in sequences_
+        )
+
+        return reduce(or_, results_to_process)
+
+    def _play_sequence(
+        self,
+        configs: dict[str, Config],
+        sequence: PulseSequence,
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ):
+        """
+        Generate results from an emulated quantum sequence execution.
+        Executes a sweep of the quantum sequence and processes the results
+        into a structured results object containing quantum states and measurement data.
+        """
+
+        sweep_results = self._sweep(sequence, configs, sweepers)
+        hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
+        return results(
+            # states in computational basis
+            states=sweep_results,
+            sequence=sequence,
+            hamiltonian=hamiltonian,
+            options=options,
         )
 
     def _sweep(
@@ -100,7 +123,7 @@ class EmulatorController(Controller):
         updates = defaultdict(dict) | ({} if updates is None else updates)
 
         if len(sweepers) == 0:
-            return self._play_sequence(sequence, configs, updates)
+            return self._evolve(sequence, configs, updates)
 
         parsweep = sweepers[0]
         # collect slices of results, corresponding to the current iteration
@@ -122,13 +145,14 @@ class EmulatorController(Controller):
         # stack all slices in a single array, along the current outermost dimension
         return np.stack(results)
 
-    def _play_sequence(
+    def _evolve(
         self, sequence: PulseSequence, configs: dict[str, Config], updates: dict
     ) -> NDArray:
-        """Play single sequence on emulator.
+        """Evolve a pulse sequence on the quantum emulator.
 
-        The array returned by this function has a single dimension, over
-        the various measurements included in the sequence.
+        This method updates the sequence parameters, generates the time grid, constructs
+        the time-dependent Hamiltonian, evolves the initial state with optional collapse
+        operators, and returns the resulting measurement data.
         """
         sequence_ = update_sequence(sequence, updates)
         tlist_ = tlist(sequence_, self.sampling_rate, per_sample=2)

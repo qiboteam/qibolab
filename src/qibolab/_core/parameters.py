@@ -314,7 +314,7 @@ def _channel_config(id: ChannelId, channel: Channel) -> dict[ChannelId, Config]:
         if channel.lo is not None:
             configs[channel.lo] = OscillatorConfig(frequency=0, power=0)
         if channel.mixer is not None:
-            configs[channel.mixer] = IqMixerConfig(frequency=0, power=0)
+            configs[channel.mixer] = IqMixerConfig()
         return configs
     return {id: Config()}
 

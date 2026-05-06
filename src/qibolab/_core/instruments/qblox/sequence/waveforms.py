@@ -115,9 +115,11 @@ def _deduplicate_waveforms(
     """
 
     waveforms_ = list(waveforms.values())
-    waveform_arrays = np.array([waveform.waveform.data for waveform in waveforms_])
+    waveform_arrays = np.array(
+        [waveform.waveform.data.tobytes() for waveform in waveforms_]
+    )
     _, unique_idx, inverse_idx = np.unique(
-        waveform_arrays, axis=0, return_index=True, return_inverse=True
+        waveform_arrays, return_index=True, return_inverse=True
     )
 
     deduplicated = {

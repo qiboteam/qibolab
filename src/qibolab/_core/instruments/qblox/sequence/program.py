@@ -1,5 +1,4 @@
 from collections.abc import Iterable, Sequence
-from typing import Optional
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -97,7 +96,6 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     channel: set[ChannelId],
-    time_of_flight: Optional[float],
     padding: int,
 ) -> Program:
     """Generate sequencer program."""
@@ -115,7 +113,7 @@ def program(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
     experiment_ = [
-        *experiment(sweepseq, waveforms, acquisitions, time_of_flight),
+        *experiment(sweepseq, waveforms, acquisitions),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
         Wait(duration=min(padding, 4)),
     ]
