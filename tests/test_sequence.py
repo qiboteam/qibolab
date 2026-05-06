@@ -435,7 +435,35 @@ def test_phases_blocks_collect(prng: np.random.Generator) -> None:
 
 
 def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
-    pass
+    phases = prng.random(10)
+    seq = PulseSequence(
+        [
+            (
+                f"ch{i}",
+                Pulse(
+                    duration=10,
+                    amplitude=0.1,
+                    envelope=Rectangular(),
+                    relative_phase=ph,
+                ),
+            )
+            for i, ph in enumerate(phases)
+        ]
+    )
+    vzs_seq = seq.to_vzs()
+    forward: list[float] = []
+    backward: list[float] = []
+    for i in range(10):
+        pre, pulse, post = vzs_seq[3 * i : 3 * (i + 1)]
+        assert pre[0] == post[0] == pulse[0] == f"ch{i}"
+        assert isinstance(pre[1], VirtualZ)
+        forward.append(pre[1].phase)
+        assert isinstance(pulse[1], Pulse)
+        assert pytest.approx(pulse[1].relative_phase) == 0
+        assert isinstance(post[1], VirtualZ)
+        backward.append(post[1].phase)
+
+    assert pytest.approx(forward) == phases == pytest.approx(-np.array(backward))
 
 
 def test_vzs_to_relative_phases(prng: np.random.Generator) -> None:
