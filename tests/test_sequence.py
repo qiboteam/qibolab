@@ -410,6 +410,11 @@ def test_readouts():
 
 
 def test_phases_collect(prng: np.random.Generator) -> None:
+    """Compare a sequence of individual phases after collection.
+
+    Since the virtual rotations are the only elements present in the sequence, we expect
+    them to be collected in a single rotation, equal to the sum.
+    """
     phases = prng.random(10)
     phases_seq = PulseSequence([("ch", VirtualZ(phase=ph)) for ph in phases])
     collected = phases_seq.collect_vzs()
@@ -419,6 +424,12 @@ def test_phases_collect(prng: np.random.Generator) -> None:
 
 
 def test_phases_blocks_collect(prng: np.random.Generator) -> None:
+    """Compare blocks of phases after collection.
+
+    Similar to the former test, :func:`test_phases_collect`, but in this case multiple
+    segments are present, separated by pulses' execution. Which act as a barrier for the
+    phase collection.
+    """
     phases_blocks = [prng.random(n) for n in (5, 3, 8)]
     blocks_seqs = (
         (("ch", VirtualZ(phase=ph)) for ph in phases) for phases in phases_blocks
@@ -435,6 +446,12 @@ def test_phases_blocks_collect(prng: np.random.Generator) -> None:
 
 
 def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
+    """Compare phase values after relative phases to virtual rotations conversion.
+
+    Each relative phase gets compiled into two different phase rotations, before and
+    after the pulse execution, to change the reference frame only for that individual
+    operation.
+    """
     phases = prng.random(10)
     seq = PulseSequence(
         [
@@ -467,6 +484,12 @@ def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
 
 
 def test_vzs_to_relative_phases(prng: np.random.Generator) -> None:
+    """Compare phase values after virtual rotations to relative phases conversion.
+
+    First compare multiple ones on different channels, than on a single one. The two
+    cases are distinct, since the virtual rotations are intended to be accumulated on a
+    channel.
+    """
     phases = prng.random(10)
     seq = PulseSequence(
         [
