@@ -48,7 +48,7 @@ def _play_multiple_waveforms(element: str, parameters: Parameters):
             if parameters.amplitude is not None:
                 sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
-                qua.play(sweep_op, element)
+                qua.play(sweep_op, element, chirp=parameters.chirp)
 
 
 def _play_single_waveform(
@@ -66,9 +66,14 @@ def _play_single_waveform(
             # sweeping duration using interpolation
             # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
             assert len(parameters.duration_ops) == 0
-            qua.play(parameters.interpolated_op, element, duration=parameters.duration)
+            qua.play(
+                parameters.interpolated_op,
+                element,
+                duration=parameters.duration,
+                chirp=parameters.chirp,
+            )
         else:
-            qua.play(op, element)
+            qua.play(op, element, chirp=parameters.chirp)
 
 
 def _play(

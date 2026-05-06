@@ -20,7 +20,6 @@ class Parameters:
     amplitude_op: Optional[str] = None
 
     phase: Optional[_Variable] = None
-
     duration: Optional[_Variable] = None
     duration_ops: list[tuple[float, str]] = field(default_factory=list)
     interpolated: bool = False
@@ -30,6 +29,17 @@ class Parameters:
     lo_frequency: Optional[int] = None
     max_offset: float = 0.5
     sampling_rate: int = 1
+    chirp_rate: Optional[float] = None
+    chirp_time: Optional[int] = None
+    chirp_units: str = "Hz/nsec"
+
+    @property
+    def chirp(self) -> Optional[tuple]:
+        if self.chirp_rate is None:
+            return None
+        if self.chirp_time is None:
+            return (self.chirp_rate, self.chirp_units)
+        return (self.chirp_rate, self.chirp_time, self.chirp_units)
 
 
 @dataclass

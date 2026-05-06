@@ -465,7 +465,12 @@ class QmController(Controller):
             channel, pulse, sampling_rate, max_voltage
         )
 
-    def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
+    def register_pulses(
+        self,
+        configs: dict[str, Config],
+        sequence: PulseSequence,
+        args: ExecutionArguments,
+    ):
         """Adds all pulses except measurements of a given sequence in the QM
         ``config``.
 
@@ -475,6 +480,12 @@ class QmController(Controller):
         for id, pulse in sequence:
             if isinstance(pulse, Pulse):
                 self.register_pulse(id, configs[id], pulse)
+                if pulse.chirp is not None:
+                    args.parameters[pulse.id].chirp_rate = pulse.chirp[0]
+                    args.parameters[pulse.id].chirp_time = (
+                        pulse.chirp[1] if len(pulse.chirp) == 3 else None
+                    )
+                    args.parameters[pulse.id].chirp_units = pulse.chirp[-1]
             elif isinstance(pulse, Readout):
                 self.register_pulse(id, configs[id], pulse)
 
@@ -650,12 +661,12 @@ class QmController(Controller):
                         self.configure_channel(id, configs)
 
                 probe_map = self.configure_channels(configs, sequence.channels)
-                self.register_pulses(configs, sequence)
                 acquisitions = self.register_acquisitions(configs, sequence, options)
 
                 args = ExecutionArguments(
                     sequence, acquisitions, options.relaxation_time
                 )
+                self.register_pulses(configs, sequence)
                 self.preprocess_sweeps(sweepers, configs, args, probe_map)
                 qua_program = program(args, options, sweepers)
 
