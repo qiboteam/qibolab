@@ -483,6 +483,44 @@ def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
     assert pytest.approx(forward) == phases == pytest.approx(-np.array(backward))
 
 
+def test_relative_phases_to_collected_vzs(prng: np.random.Generator) -> None:
+    """Compare phase values after relative phases expansion and collection.
+
+    Similar to the former test, :func:`test_relative_phases_to_vzs`, but this takes
+    place on a single channel, to be able to benchmark a successive virtual rotations
+    collection process.
+    """
+    phases = prng.random(10)
+    seq = PulseSequence(
+        [
+            (
+                "ch",
+                Pulse(
+                    duration=10,
+                    amplitude=0.1,
+                    envelope=Rectangular(),
+                    relative_phase=ph,
+                ),
+            )
+            for ph in phases
+        ]
+    )
+
+    collected_vzs_seq = seq.to_vzs().collect_vzs()
+    collected_phases: list[float] = []
+    for i in range(10):
+        vz, pulse = collected_vzs_seq[2 * i : 2 * (i + 1)]
+        assert vz[0] == pulse[0] == "ch"
+        assert isinstance(vz[1], VirtualZ)
+        collected_phases.append(vz[1].phase)
+        assert isinstance(pulse[1], Pulse)
+        assert pytest.approx(pulse[1].relative_phase) == 0
+
+    assert pytest.approx(collected_phases) == np.diff(phases, prepend=0.0)
+    assert isinstance(collected_vzs_seq[-1][1], VirtualZ)
+    assert pytest.approx(collected_vzs_seq[-1][1].phase) == -phases[-1]
+
+
 def test_vzs_to_relative_phases(prng: np.random.Generator) -> None:
     """Compare phase values after virtual rotations to relative phases conversion.
 
