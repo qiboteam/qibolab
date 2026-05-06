@@ -409,10 +409,34 @@ def test_readouts():
     assert PulseSequence.load(aslist) == sequence
 
 
-def test_phases_transforms(prng: np.random.Generator) -> None:
+def test_phases_collect(prng: np.random.Generator) -> None:
     phases = prng.random(10)
-    sequence = PulseSequence([("ch", VirtualZ(phase=ph)) for ph in phases])
-    collected = sequence.collect_vzs()
+    phases_seq = PulseSequence([("ch", VirtualZ(phase=ph)) for ph in phases])
+    collected = phases_seq.collect_vzs()
     event = collected[0][1]
     assert isinstance(event, VirtualZ)
     assert pytest.approx(event.phase) == np.sum(phases)
+
+
+def test_phases_blocks_collect(prng: np.random.Generator) -> None:
+    phases_blocks = [prng.random(n) for n in (5, 3, 8)]
+    blocks_seqs = (
+        (("ch", VirtualZ(phase=ph)) for ph in phases) for phases in phases_blocks
+    )
+    pulse_seq = [("ch", Pulse(duration=10, amplitude=0.1, envelope=Rectangular()))]
+    phases_blocks_seq = PulseSequence(
+        [ev for block in blocks_seqs for subseq in (block, pulse_seq) for ev in subseq]
+    )
+    blocks_collected = phases_blocks_seq.collect_vzs()
+    for i, phases in enumerate(phases_blocks):
+        vz = blocks_collected[2 * i][1]
+        assert isinstance(vz, VirtualZ)
+        assert pytest.approx(vz.phase) == phases.sum()
+
+
+def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
+    pass
+
+
+def test_vzs_to_relative_phases(prng: np.random.Generator) -> None:
+    pass
