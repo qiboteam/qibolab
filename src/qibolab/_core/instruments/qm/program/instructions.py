@@ -39,7 +39,13 @@ def _virtualz(pulse: VirtualZ, element: str, parameters: Parameters):
     qua.frame_rotation_2pi(phase, element)
 
 
+<<<<<<< HEAD
 def _play_multiple_waveforms(element: str, parameters: Parameters):
+=======
+def _play_multiple_waveforms(
+    element: str, parameters: Parameters
+):
+>>>>>>> dfedcb5b5a5cc40d2ed61df73638a3f22ca3d220
     """Sweeping pulse duration using distinctly uploaded waveforms."""
     assert not parameters.interpolated
     assert parameters.interpolated_op is None
@@ -55,7 +61,11 @@ def _play_single_waveform(
     op: str,
     element: str,
     parameters: Parameters,
+<<<<<<< HEAD
     acquisition: Optional[Acquisition] = None,
+=======
+    acquisition: Optional[Acquisition] = None
+>>>>>>> dfedcb5b5a5cc40d2ed61df73638a3f22ca3d220
 ):
     if parameters.amplitude is not None:
         op = parameters.amplitude_op * parameters.amplitude

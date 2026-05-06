@@ -37,6 +37,11 @@ class Parameters:
     def chirp(self) -> Optional[tuple]:
         if self.chirp_rate is None:
             return None
+<<<<<<< HEAD
+=======
+        if self.chirp_time is None:
+            return (self.chirp_rate, self.chirp_units)
+>>>>>>> dfedcb5b5a5cc40d2ed61df73638a3f22ca3d220
         return (self.chirp_rate, self.chirp_time, self.chirp_units)
 
 
