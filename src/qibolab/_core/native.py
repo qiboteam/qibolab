@@ -113,5 +113,5 @@ class TwoQubitNatives(NativeContainer):
         and control qubits."""
         return all(
             info.metadata[0]["symmetric"] or getattr(self, fld) is None
-            for fld, info in self.model_fields.items()
+            for fld, info in type(self).model_fields.items()
         )
