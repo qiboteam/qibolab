@@ -19,7 +19,7 @@ from qibolab._core.instruments.abstract import Controller
 from qibolab._core.pulses.pulse import PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
+from qibolab._core.sweeper import ParallelSweepers, Parameter, normalize_sweepers
 
 from . import config
 from .batching import batch_sequences_by_cluster_memory_limits
@@ -110,6 +110,27 @@ def _batch_sequences(
     return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
 
 
+def _merge_phases_if_no_phase_sweeper(
+    sweepers: list[ParallelSweepers],
+    sequences: list[PulseSequence],
+) -> tuple[list[PulseSequence], bool]:
+    """
+    Process pulse sequences based on the presence of phase sweepers.
+
+    If any sweeper in the provided list is a phase or relative_phase sweeper,
+    the sequences are returned unchanged. Otherwise, the phases in the sequences
+    are summed to simplify the pulse sequences.
+    """
+    phase_sweeper_present = any(
+        sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
+        for parallel_sweepers in sweepers
+        for sweeper in parallel_sweepers
+    )
+    return [
+        ps if phase_sweeper_present else ps.to_vzs().collect_vzs() for ps in sequences
+    ], phase_sweeper_present
+
+
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
     sequencers: dict[int, dict[int, config.SequencerConfig]]
@@ -178,6 +199,10 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
+        processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
+            sweepers, sequences
+        )
+
         # If acquisition is cyclic (averaging over shots on hardware), we combine as
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
@@ -191,7 +216,7 @@ class Cluster(Controller):
         }
         qcm_channels = set(self.channels) - qrm_channels
         batched_seqs = _batch_sequences(
-            sequences, sweepers, options, qcm_channels, qrm_channels, configs
+            processed_sequences, sweepers, options, qcm_channels, qrm_channels, configs
         )
 
         # Execute each batch sequentially, and concatenate results
@@ -222,6 +247,7 @@ class Cluster(Controller):
                     sweepers_,
                     options_,
                     self.sampling_rate,
+                    merged_vzs=not phase_sweeper_present,
                 )
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
