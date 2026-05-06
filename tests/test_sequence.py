@@ -467,4 +467,33 @@ def test_relative_phases_to_vzs(prng: np.random.Generator) -> None:
 
 
 def test_vzs_to_relative_phases(prng: np.random.Generator) -> None:
-    pass
+    phases = prng.random(10)
+    seq = PulseSequence(
+        [
+            (f"ch{i}", ev)
+            for i, ph in enumerate(phases)
+            for ev in (
+                VirtualZ(phase=ph),
+                Pulse(duration=10, amplitude=0.1, envelope=Rectangular()),
+            )
+        ]
+    )
+    relph_seq = seq.to_relative_phases()
+    for ph, ev in zip(phases, relph_seq):
+        assert isinstance(ev[1], Pulse)
+        assert pytest.approx(ev[1].relative_phase) == ph
+
+    seq = PulseSequence(
+        [
+            ("ch", ev)
+            for ph in phases
+            for ev in (
+                VirtualZ(phase=ph),
+                Pulse(duration=10, amplitude=0.1, envelope=Rectangular()),
+            )
+        ]
+    )
+    relph_1ch_seq = seq.to_relative_phases()
+    for ph, ev in zip(np.add.accumulate(phases), relph_1ch_seq):
+        assert isinstance(ev[1], Pulse)
+        assert pytest.approx(ev[1].relative_phase) == ph
