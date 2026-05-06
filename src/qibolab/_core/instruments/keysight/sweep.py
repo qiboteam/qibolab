@@ -9,11 +9,13 @@ from qibolab._core.pulses import PulseId
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 NS_TO_S = 1e-9
+HARDWARE_SWEEPER_MAX_POINTS = 24576
 SUPPORTED_CHANNEL_SWEEPERS = [Parameter.frequency]
 SUPPORTED_PULSE_SWEEPERS = [
     Parameter.amplitude,
     Parameter.duration,
     Parameter.relative_phase,
+    Parameter.phase,
 ]
 
 
@@ -45,8 +47,9 @@ def process_sweepers(
     for idx, parallel_sweeper in enumerate(reversed(sweepers)):
         sweep_values: list[qcs.Array] = []
         sweep_variables: list[qcs.Variable] = []
-        # Currently nested hardware sweeping is not supported
-        hardware_sweeping = len(hardware_sweepers + software_sweepers) == 0
+        # Hardware sweeping is supported up to 8 sweepers
+        # If a software sweeper has been declared, every sweeper after must be swept in software
+        hardware_sweeping = len(hardware_sweepers) < 9 or len(software_sweepers) == 0
 
         for idx2, sweeper in enumerate(parallel_sweeper):
             qcs_variable = qcs.Scalar(
@@ -61,8 +64,10 @@ def process_sweepers(
                 if not probe_channel_ids.isdisjoint(sweeper.channels):
                     hardware_sweeping = False
             elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
-                # Duration is not supported with hardware sweeping
-                if sweeper.parameter is Parameter.duration:
+                # Duration is not supported with hardware sweeping for non-delay pulses
+                if sweeper.parameter is Parameter.duration and any(
+                    [pulse.kind != "delay" for pulse in sweeper.pulses]
+                ):
                     hardware_sweeping = False
 
                 for pulse in sweeper.pulses:
@@ -84,6 +89,15 @@ def process_sweepers(
                     dtype=float,
                 )
             )
+
+        # For the hardware sweeper, there is a memory limit for the number of variables x values
+        # However, this is determined by the total number of hardware sweepers and not individual sweepers
+        # Here we just check a single dimension and let the machine fail if the limit is exceeded
+        if (
+            hardware_sweeping
+            and len(sweep_values) * len(sweeper.values) > HARDWARE_SWEEPER_MAX_POINTS
+        ):
+            hardware_sweeping = False
         if hardware_sweeping:
             hardware_sweepers.append((sweep_values, sweep_variables))
         else:

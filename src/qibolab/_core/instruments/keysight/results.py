@@ -31,9 +31,9 @@ def fetch_result(
     if acquisition_type is AcquisitionType.RAW:
         raw = results.get_trace(channel, averaging)
     elif acquisition_type is AcquisitionType.INTEGRATION:
-        raw = results.get_iq(channel, averaging)
+        raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
-        raw = results.get_classified(channel, averaging)
+        raw = results.get_classified(channel, averaging, acq_index=None)
     else:
         raise ValueError("Acquisition type unrecognized")
     return raw
@@ -55,10 +55,8 @@ def parse_result(result: np.ndarray, options: ExecutionParameters) -> np.ndarray
         and options.acquisition_type is not AcquisitionType.INTEGRATION
     ):
         return result
-    # For single shot, qibolab expects result format (nshots, ...)
-    # QCS returns (..., nshots), so we need to shuffle the arrays
     if options.averaging_mode is AveragingMode.SINGLESHOT:
-        result = np.moveaxis(result, -1, 0)
+        return result
     # For IQ data, QCS returns complex results
     if options.acquisition_type is not AcquisitionType.INTEGRATION:
         return result
