@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import numpy as np
+import pytest
 from pydantic import TypeAdapter
 
 from qibolab._core.pulses import (
@@ -405,3 +407,12 @@ def test_readouts():
 
     aslist = TypeAdapter(PulseSequence).dump_python(sequence)
     assert PulseSequence.load(aslist) == sequence
+
+
+def test_phases_transforms(prng: np.random.Generator) -> None:
+    phases = prng.random(10)
+    sequence = PulseSequence([("ch", VirtualZ(phase=ph)) for ph in phases])
+    collected = sequence.collect_vzs()
+    event = collected[0][1]
+    assert isinstance(event, VirtualZ)
+    assert pytest.approx(event.phase) == np.sum(phases)
