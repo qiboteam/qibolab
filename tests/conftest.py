@@ -23,7 +23,7 @@ def seed():
 
 
 @pytest.fixture(scope="session")
-def prng() -> np.random.Generator:
+def rng() -> np.random.Generator:
     return np.random.default_rng(seed=42)
 
 

@@ -88,7 +88,7 @@ Contents
     :maxdepth: 2
     :caption: Appendix
 
-    refrences
+    references
     Publications <https://qibo.science/qibo/stable/appendix/citing-qibo.html>
 
 .. toctree::
