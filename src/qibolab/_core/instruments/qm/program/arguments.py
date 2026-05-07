@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Literal
 
 from qm.qua._dsl import _Variable  # for type declaration only
 
@@ -29,8 +30,8 @@ class Parameters:
     lo_frequency: int | None = None
     max_offset: float = 0.5
     sampling_rate: int = 1
-    chirp_rate: Optional[float] = None
-    chirp_time: Optional[int] = None
+    chirp_rate: float | None = None
+    chirp_time: int | None = None
     chirp_units: Literal[
         "Hz/nsec",
         "mHz/nsec",
@@ -44,7 +45,7 @@ class Parameters:
     ] = "Hz/nsec"
 
     @property
-    def chirp(self) -> Optional[tuple]:
+    def chirp(self) -> tuple | None:
         if self.chirp_rate is None:
             return None
         if self.chirp_time is None:
