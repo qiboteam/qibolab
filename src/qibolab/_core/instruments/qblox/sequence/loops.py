@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Optional
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.sequence.asm import label
@@ -40,7 +39,7 @@ class LoopSpec(Model):
     """Register used for the loop counter."""
     length: int
     """Iteration length."""
-    id: Optional[int]
+    id: int | None
     """Iteration index.
 
     `None` marks the loop as the shots loop.

@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Annotated, Optional
+from typing import Annotated
 
 import numpy as np
 from pydantic import PlainSerializer, PlainValidator
@@ -24,7 +24,7 @@ from .waveforms import Waveform, WaveformIndex, waveforms
 __all__ = ["Q1Sequence"]
 
 
-def _weight_len(w: Optional[Weight]) -> Optional[int]:
+def _weight_len(w: Weight | None) -> int | None:
     return len(w.data) if w is not None else None
 
 
@@ -122,7 +122,7 @@ class Q1Sequence(Model):
         return len(self.program.elements) == 0
 
     @property
-    def integration_lengths(self) -> dict[MeasureId, Optional[int]]:
+    def integration_lengths(self) -> dict[MeasureId, int | None]:
         """Determine the integration lengths fixed by weights.
 
         Returns ``None`` for those acquisitions which are non-weighted, since the length

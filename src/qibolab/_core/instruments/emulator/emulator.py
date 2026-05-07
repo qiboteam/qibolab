@@ -1,10 +1,10 @@
 """Emulator controller."""
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import reduce
 from operator import or_
-from typing import Callable, Optional, cast
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -110,7 +110,7 @@ class EmulatorController(Controller):
         sequence: PulseSequence,
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
-        updates: Optional[dict] = None,
+        updates: dict | None = None,
     ) -> NDArray:
         """Sweep over sequence.
 
@@ -175,7 +175,7 @@ class EmulatorController(Controller):
 
     def _pulse_hamiltonian(
         self, sequence: PulseSequence, configs: dict[str, Config]
-    ) -> Optional[OperatorEvolution]:
+    ) -> OperatorEvolution | None:
         """Construct Hamiltonian time dependent term for qutip simulation."""
 
         channels = [

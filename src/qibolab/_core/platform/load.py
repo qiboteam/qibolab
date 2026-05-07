@@ -1,7 +1,6 @@
 import importlib.util
 import os
 from pathlib import Path
-from typing import Optional, Union
 
 from ..parameters import Hardware
 from .platform import Platform
@@ -36,7 +35,7 @@ def _search(name: str, paths: list[Path]) -> Path:
     )
 
 
-def _load(platform: Path) -> Union[Platform, Hardware]:
+def _load(platform: Path) -> Platform | Hardware:
     """Load the platform module."""
     module_name = "platform"
     spec = importlib.util.spec_from_file_location(module_name, platform / PLATFORM)
@@ -45,7 +44,7 @@ def _load(platform: Path) -> Union[Platform, Hardware]:
     return module.create()
 
 
-def locate_platform(name: str, paths: Optional[list[Path]] = None) -> Path:
+def locate_platform(name: str, paths: list[Path] | None = None) -> Path:
     """Locate platform's path.
 
     The ``name`` corresponds to the name of the folder in which the platform is defined,

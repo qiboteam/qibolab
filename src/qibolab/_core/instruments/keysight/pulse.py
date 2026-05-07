@@ -2,7 +2,6 @@
 
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import Union
 
 from keysight import qcs
 
@@ -32,7 +31,7 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
 def process_acquisition_channel_pulses(
     program: qcs.Program,
     pulses: Iterable[PulseLike],
-    frequency: Union[float, qcs.Scalar],
+    frequency: float | qcs.Scalar,
     virtual_channel: qcs.Channels,
     probe_virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
@@ -86,7 +85,7 @@ def process_acquisition_channel_pulses(
 def process_iq_channel_pulses(
     program: qcs.Program,
     pulses: Iterable[PulseLike],
-    frequency: Union[float, qcs.Scalar],
+    frequency: float | qcs.Scalar,
     virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
 ):

@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import Optional, cast
+from typing import cast
 
 from pydantic import BaseModel, Field
 
@@ -45,7 +45,7 @@ def _long_wait(duration: int, n: int) -> Block:
     ]
 
 
-def _decompose_wait(instr: Wait, n: int) -> Optional[Block]:
+def _decompose_wait(instr: Wait, n: int) -> Block | None:
     duration = instr.duration
     if not isinstance(duration, int) or duration <= MAX_WAIT:
         return None
@@ -72,7 +72,7 @@ def _negative_move(instr: Move):
     return [Move(source=0, destination=dest), Sub(a=dest, b=abs(src), destination=dest)]
 
 
-def _decompose_move(instr: Move) -> Optional[Block]:
+def _decompose_move(instr: Move) -> Block | None:
     src = instr.source
     if isinstance(src, Register):
         return None
@@ -127,7 +127,7 @@ def _line_transform_apply(
 class _WaitBatch(BaseModel):
     duration: int = 0
     comment: list[str] = Field(default_factory=list)
-    label: Optional[str] = None
+    label: str | None = None
 
     def increment(self, line: Line):
         instr = line.instruction

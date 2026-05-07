@@ -1,5 +1,3 @@
-from typing import Optional
-
 from qm import qua
 from qm.qua import declare, fixed, for_
 
@@ -55,7 +53,7 @@ def _play_single_waveform(
     op: str,
     element: str,
     parameters: Parameters,
-    acquisition: Optional[Acquisition] = None,
+    acquisition: Acquisition | None = None,
 ):
     if parameters.amplitude is not None:
         op = parameters.amplitude_op * parameters.amplitude
@@ -75,7 +73,7 @@ def _play(
     op: str,
     element: str,
     parameters: Parameters,
-    acquisition: Optional[Acquisition] = None,
+    acquisition: Acquisition | None = None,
 ):
     if parameters.phase is not None:
         qua.frame_rotation_2pi(parameters.phase, element)

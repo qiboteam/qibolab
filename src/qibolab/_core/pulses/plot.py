@@ -1,7 +1,6 @@
 """Plotting tools for pulses and related entities."""
 
 from collections import defaultdict
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +37,7 @@ def waveform(wf: Waveform, filename=None):
     plt.close()
 
 
-def pulse(pulse_: Pulse, freq: Optional[float] = None, filename: Optional[str] = None):
+def pulse(pulse_: Pulse, freq: float | None = None, filename: str | None = None):
     """Plot the pulse envelope and modulated waveforms.
 
     Args:
