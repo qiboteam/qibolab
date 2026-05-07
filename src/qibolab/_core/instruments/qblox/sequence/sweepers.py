@@ -1,7 +1,6 @@
 from collections.abc import Callable, Iterable
 from enum import Enum, auto
 from itertools import groupby
-from typing import Optional
 
 from qibolab._core.identifier import ChannelId
 from qibolab._core.instruments.qblox.q1asm.ast_ import (
@@ -77,11 +76,11 @@ class Param(Model):
     """Increment."""
     role: ParamRole
     """The parameter type."""
-    pulse: Optional[PulseId]
+    pulse: PulseId | None
     """The target pulse (if the sweeper targets pulses)."""
-    channel: Optional[ChannelId]
+    channel: ChannelId | None
     """The target channel (if the sweeper targets channels)."""
-    loop: Optional[int] = None
+    loop: int | None = None
     """The loop which is associated to."""
 
     @property
@@ -191,8 +190,8 @@ def params(sweepers: list[ParallelSweepers], allocated: int) -> list[Param]:
 
 
 class _Update(Model):
-    update: Optional[Callable[[Value], Instruction]]
-    reset: Optional[Callable[[Value], Instruction]]
+    update: Callable[[Value], Instruction] | None
+    reset: Callable[[Value], Instruction] | None
 
 
 _SWEEP_UPDATE: dict[Parameter, _Update] = {

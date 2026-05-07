@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 import numpy as np
 
@@ -78,15 +78,15 @@ class SingleQubitNatives(NativeContainer):
     """Container with the native single-qubit gates acting on a specific
     qubit."""
 
-    RX: Optional[Native] = None
+    RX: Native | None = None
     """Pulse to drive the qubit from state 0 to state 1."""
-    RX90: Optional[Native] = None
+    RX90: Native | None = None
     """Pulse to drive the qubit from state 0 to state +"""
-    RX12: Optional[Native] = None
+    RX12: Native | None = None
     """Pulse to drive to qubit from state 1 to state 2."""
-    MZ: Optional[Native] = None
+    MZ: Native | None = None
     """Measurement pulse."""
-    CP: Optional[Native] = None
+    CP: Native | None = None
     """Pulse to activate coupler."""
 
     def R(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
@@ -105,9 +105,9 @@ class TwoQubitNatives(NativeContainer):
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Annotated[Optional[Native], {"symmetric": True}] = None
-    CNOT: Annotated[Optional[Native], {"symmetric": False}] = None
-    iSWAP: Annotated[Optional[Native], {"symmetric": True}] = None
+    CZ: Annotated[Native | None, {"symmetric": True}] = None
+    CNOT: Annotated[Native | None, {"symmetric": False}] = None
+    iSWAP: Annotated[Native | None, {"symmetric": True}] = None
 
     @property
     def symmetric(self):

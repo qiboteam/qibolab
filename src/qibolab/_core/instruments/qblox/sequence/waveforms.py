@@ -1,6 +1,6 @@
 from collections.abc import Iterable, Sequence
 from itertools import count
-from typing import Annotated, Union
+from typing import Annotated
 
 import numpy as np
 import numpy.typing as npt
@@ -36,7 +36,7 @@ class WaveformSpec(Model):
     duration: int
 
 
-def _pulse(event: Union[Pulse, Readout], amplitude_swept: bool) -> Pulse:
+def _pulse(event: Pulse | Readout, amplitude_swept: bool) -> Pulse:
     """Extract pulse from event.
 
     Accounts for nested pulses within :class:`Readout` operations.

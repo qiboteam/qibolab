@@ -17,7 +17,12 @@ __all__ = [
 
 InOutType = Union[tuple[str, int], tuple[str, int, int]]
 OctavePort = TypedDict("OpxPlusPort", {"port": tuple[str, int]})
-Port = TypedDict("Port", {"port": InOutType})
+
+
+class Port(TypedDict):
+    port: InOutType
+
+
 ConnectivityType = Union[str, tuple[str, int]]
 
 
@@ -123,8 +128,13 @@ class AcquireOctaveElement:
         )
 
 
-MwInput = TypedDict("MwInput", {"port": tuple[str, int, int], "upconverter": int})
-MwOutput = TypedDict("MwOutput", {"port": tuple[str, int, int]})
+class MwInput(TypedDict):
+    port: tuple[str, int, int]
+    upconverter: int
+
+
+class MwOutput(TypedDict):
+    port: tuple[str, int, int]
 
 
 def _to_mw_fem_input(channel: Channel, upconverter: int):

@@ -2,7 +2,7 @@ import json
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from qblox_instruments import Cluster
 
@@ -16,7 +16,7 @@ from .sequence import Q1Sequence
 __all__ = []
 
 
-def _check(configs: Configs) -> Optional[Path]:
+def _check(configs: Configs) -> Path | None:
     if "log" in configs:
         assert isinstance(configs["log"], LogConfig)
         return configs["log"].path

@@ -1,5 +1,4 @@
 import hashlib
-from typing import List
 
 import numpy as np
 import numpy.typing as npt
@@ -15,7 +14,7 @@ class ShaExtractor(Extractor):
     def num_raw_samples(self, n: int) -> int:
         return 22 * (n // 4 + 1)
 
-    def extract(self, raw: List[int]) -> npt.NDArray:
+    def extract(self, raw: list[int]) -> npt.NDArray:
         extracted = []
         for i in range(len(raw) // 22):
             stream = "".join(

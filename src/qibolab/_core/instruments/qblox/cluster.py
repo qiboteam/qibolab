@@ -3,7 +3,7 @@ import warnings
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
-from typing import Optional, cast
+from typing import cast
 
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
@@ -145,7 +145,7 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    _cluster: Optional[qblox.Cluster] = None
+    _cluster: qblox.Cluster | None = None
 
     @property
     def cluster(self) -> qblox.Cluster:
@@ -287,7 +287,7 @@ class Cluster(Controller):
         self,
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
-        sequences: Optional[dict[ChannelId, Q1Sequence]] = None,
+        sequences: dict[ChannelId, Q1Sequence] | None = None,
     ) -> tuple[SequencerMap, ClusterConfigs]:
         """Configure modules and sequencers.
 

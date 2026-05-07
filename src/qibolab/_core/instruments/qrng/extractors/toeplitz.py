@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 import numpy.typing as npt
 from scipy.linalg import toeplitz
@@ -76,7 +74,7 @@ class ToeplitzExtractor(Extractor):
     def num_raw_samples(self, n: int) -> int:
         return 2 * n * (self.precision_bits // self.extraction_ratio)
 
-    def extract(self, raw: List[int]) -> npt.NDArray:
+    def extract(self, raw: list[int]) -> npt.NDArray:
         extracted = toeplitz_extract(
             np.array(raw), self.input_bits, self.extraction_ratio
         ).astype(int)

@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -13,4 +13,4 @@ class QcsAcquisitionConfig(AcquisitionConfig):
 
     kind: Literal["qcs-acquisition"] = "qcs-acquisition"
 
-    state_iq_values: Annotated[Optional[NdArray], Field(repr=False)] = None
+    state_iq_values: Annotated[NdArray | None, Field(repr=False)] = None

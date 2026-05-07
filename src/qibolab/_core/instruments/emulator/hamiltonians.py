@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Literal, Optional, Union
+from typing import Literal, Union
 
 import numpy as np
 from pydantic import Field
@@ -362,7 +362,7 @@ def waveform(
     config: Config,
     qubit: Qubit,
     sampling_rate: float,
-) -> Optional[ControlLine]:
+) -> ControlLine | None:
     """Convert pulse to hamiltonian."""
     if not isinstance(config, (DriveEmulatorConfig, FluxEmulatorConfig)):
         return None

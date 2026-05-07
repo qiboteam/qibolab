@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional
+from typing import Any
 
 from qblox_instruments import SequencerStatus, SequencerStatuses
 
@@ -98,7 +98,7 @@ class MockCluster:
         return json.dumps(self.records)
 
     @property
-    def sequences(self) -> dict[tuple[int, int], Optional[dict]]:
+    def sequences(self) -> dict[tuple[int, int], dict | None]:
         return {
             k: v
             for k, v in {
@@ -117,7 +117,7 @@ class MockCluster:
         }
 
     @property
-    def programs(self) -> dict[tuple[int, int], Optional[dict]]:
+    def programs(self) -> dict[tuple[int, int], dict | None]:
         return {
             id_: seq["program"] if seq is not None else None
             for id_, seq in self.sequences.items()

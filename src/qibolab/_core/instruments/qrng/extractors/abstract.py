@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 import numpy.typing as npt
 
@@ -18,5 +17,5 @@ class Extractor(Model, ABC):
         """
 
     @abstractmethod
-    def extract(self, raw: List[int]) -> npt.NDArray:
+    def extract(self, raw: list[int]) -> npt.NDArray:
         """Extract uniformly distributed integers from the device samples."""

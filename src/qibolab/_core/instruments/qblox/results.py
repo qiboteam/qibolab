@@ -1,6 +1,6 @@
 from functools import reduce
 from operator import or_
-from typing import Optional, TypedDict
+from typing import TypedDict
 from uuid import UUID
 
 import numpy as np
@@ -17,7 +17,7 @@ __all__ = []
 
 
 def _fill_empty_lenghts(
-    weighted: dict[acquisition.MeasureId, Optional[int]],
+    weighted: dict[acquisition.MeasureId, int | None],
     defaults: dict[tuple[SlotId, SequencerId], int],
     locations: dict[acquisition.MeasureId, tuple[SlotId, SequencerId]],
 ) -> dict[acquisition.MeasureId, int]:

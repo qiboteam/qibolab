@@ -85,7 +85,7 @@ class OctaveOutput:
     output_mode: OctaveOutputModes = "triggered"
 
     @classmethod
-    def from_config(cls, config: Union[OscillatorConfig, OctaveOscillatorConfig]):
+    def from_config(cls, config: OscillatorConfig | OctaveOscillatorConfig):
         kwargs = dict(LO_frequency=config.frequency, gain=config.power)
         if isinstance(config, OctaveOscillatorConfig):
             kwargs["output_mode"] = config.output_mode
@@ -109,9 +109,7 @@ class Controller:
     """https://docs.quantum-machines.co/latest/docs/Introduction/config/?h=opx10#controllers"""
     analog_outputs: dict[int, dict] = field(default_factory=dict)
     digital_outputs: dict[int, dict] = field(default_factory=dict)
-    analog_inputs: dict[int, Union[AnalogInput, MwFemInput]] = field(
-        default_factory=dict
-    )
+    analog_inputs: dict[int, AnalogInput | MwFemInput] = field(default_factory=dict)
 
     def _set_default_inputs(self):
         """Add default inputs in controller config section.
@@ -146,7 +144,7 @@ class Opx1000:
 
 @dataclass
 class Octave:
-    connectivity: Union[str, tuple[str, int]]
+    connectivity: str | tuple[str, int]
     RF_outputs: dict[int, OctaveOutput] = field(default_factory=dict)
     RF_inputs: dict[int, OctaveInput] = field(default_factory=dict)
 
