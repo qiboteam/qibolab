@@ -480,12 +480,6 @@ class QmController(Controller):
         for id, pulse in sequence:
             if isinstance(pulse, Pulse):
                 self.register_pulse(id, configs[id], pulse)
-                if pulse.chirp is not None:
-                    args.parameters[pulse.id].chirp_rate = pulse.chirp[0]
-                    args.parameters[pulse.id].chirp_time = (
-                        pulse.chirp[1] if len(pulse.chirp) == 3 else None
-                    )
-                    args.parameters[pulse.id].chirp_units = pulse.chirp[-1]
             elif isinstance(pulse, Readout):
                 self.register_pulse(id, configs[id], pulse)
 
@@ -662,11 +656,10 @@ class QmController(Controller):
 
                 probe_map = self.configure_channels(configs, sequence.channels)
                 acquisitions = self.register_acquisitions(configs, sequence, options)
-
+                self.register_pulses(configs, sequence)
                 args = ExecutionArguments(
                     sequence, acquisitions, options.relaxation_time
                 )
-                self.register_pulses(configs, sequence)
                 self.preprocess_sweeps(sweepers, configs, args, probe_map)
                 qua_program = program(args, options, sweepers)
 
