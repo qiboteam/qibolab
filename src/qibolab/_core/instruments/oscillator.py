@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -35,9 +35,9 @@ class Device(Protocol):
 class LocalOscillatorSettings(InstrumentSettings):
     """Local oscillator parameters that are saved in the platform runcard."""
 
-    power: Optional[float] = None
-    frequency: Optional[float] = None
-    ref_osc_source: Optional[str] = None
+    power: float | None = None
+    frequency: float | None = None
+    ref_osc_source: str | None = None
 
 
 def _setter(instrument, parameter, value):
@@ -71,11 +71,11 @@ class LocalOscillator(Instrument):
     qubits and resonators. They cannot be used to play or sweep pulses.
     """
 
-    device: Optional[Device] = None
-    settings: Optional[InstrumentSettings] = Field(
+    device: Device | None = None
+    settings: InstrumentSettings | None = Field(
         default_factory=lambda: LocalOscillatorSettings()
     )
-    turn_off_on_disconnect: Optional[bool] = True
+    turn_off_on_disconnect: bool | None = True
 
     frequency = _property("frequency")
     power = _property("power")

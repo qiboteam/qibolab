@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Union
+from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -10,7 +10,7 @@ from .extractors import Extractor, ShaExtractor
 __all__ = ["QRNG"]
 
 
-def read(port: Serial, n: int = 1, nbytes: int = 4) -> List[int]:
+def read(port: Serial, n: int = 1, nbytes: int = 4) -> list[int]:
     """Read raw samples from the QRNG device serial output.
 
     In the entropy mode of the device, these typically follow a
@@ -44,7 +44,7 @@ class QRNG(Instrument):
     address: str
     baudrate: int = 115200
     extractor: Extractor = ShaExtractor()
-    port: Optional[Serial] = None
+    port: Serial | None = None
 
     bytes_per_number: int = 4
     """Number of bytes to read from serial port to generate one raw sample."""
@@ -58,7 +58,7 @@ class QRNG(Instrument):
             self.port.close()
             self.port = None
 
-    def read(self, n: int) -> List[int]:
+    def read(self, n: int) -> list[int]:
         """Read raw samples from the QRNG device serial output.
 
         In the entropy mode of the device, these typically follow a
@@ -69,7 +69,7 @@ class QRNG(Instrument):
         """
         return read(self.port, n, self.bytes_per_number)
 
-    def random(self, size: Optional[Union[int, Sequence[int]]] = None) -> npt.NDArray:
+    def random(self, size: int | Sequence[int] | None = None) -> npt.NDArray:
         """Returns random floats following uniform distribution in [0, 1].
 
         Args:

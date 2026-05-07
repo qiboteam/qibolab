@@ -1,5 +1,4 @@
 from dataclasses import asdict, dataclass, field
-from typing import Optional, Union
 
 import numpy as np
 
@@ -64,7 +63,7 @@ class Configuration:
     controllers: Controllers = field(default_factory=Controllers)
     octaves: dict[str, Octave] = field(default_factory=dict)
     elements: dict[str, Element] = field(default_factory=dict)
-    pulses: dict[str, Union[QmPulse, QmAcquisition]] = field(default_factory=dict)
+    pulses: dict[str, QmPulse | QmAcquisition] = field(default_factory=dict)
     waveforms: dict[str, Waveform] = field(default_factory=dict)
     digital_waveforms: dict = field(
         default_factory=lambda: DEFAULT_DIGITAL_WAVEFORMS.copy()
@@ -105,7 +104,7 @@ class Configuration:
         channel: IqChannel,
         config: IqConfig,
         lo_config: MwFemOscillatorConfig,
-        id: Optional[ChannelId] = None,
+        id: ChannelId | None = None,
     ):
         controller = self.controllers[channel.device]
         if channel.port in controller.analog_outputs:
@@ -125,7 +124,7 @@ class Configuration:
         channel: IqChannel,
         config: IqConfig,
         lo_config: OscillatorConfig,
-        id: Optional[ChannelId] = None,
+        id: ChannelId | None = None,
     ):
         port = channel.port
         octave = self.octaves[channel.device]
@@ -194,7 +193,7 @@ class Configuration:
         pulse: Pulse,
         sampling_rate: int,
         max_voltage: float,
-        element: Optional[str] = None,
+        element: str | None = None,
         dc: bool = False,
     ):
         if dc:

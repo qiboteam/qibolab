@@ -1,8 +1,9 @@
 """Abstract engine for platform emulation."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Protocol, Union
+from typing import Protocol
 
 from ....serialize import Model
 
@@ -50,9 +51,7 @@ class EvolutionResult(Protocol):
 class OperatorEvolution:
     """Abstract operator evolution interface."""
 
-    operators: list[Union[Operator, TimeDependentOperator]] = field(
-        default_factory=list
-    )
+    operators: list[Operator | TimeDependentOperator] = field(default_factory=list)
 
 
 class SimulationEngine(Model, ABC):
@@ -92,7 +91,7 @@ class SimulationEngine(Model, ABC):
 
     @abstractmethod
     def expand(
-        self, op: Operator, targets: Union[int, list[int]], dims: list[int]
+        self, op: Operator, targets: int | list[int], dims: list[int]
     ) -> Operator:
         """Expand operator in larger Hilbert space."""
 

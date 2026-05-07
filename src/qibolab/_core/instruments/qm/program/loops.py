@@ -1,12 +1,11 @@
 import warnings
-from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 from qm.qua import Cast, Variable
 
 
-def from_array(var: Variable, array: Union[npt.NDArray, list]):
+def from_array(var: Variable, array: npt.NDArray | list):
     """Function parametrizing the QUA `for_` loop from a python array.
 
     Taken from qualang_tools to avoid the dependency.

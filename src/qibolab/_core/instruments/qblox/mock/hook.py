@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 
 import qblox_instruments as qblox
 import qcodes.instrument
@@ -12,7 +12,7 @@ qcodes_find_or_create_instrument = qcodes.instrument.find_or_create_instrument
 
 
 def find_or_create_instrument(
-    instrument_class: Type[Instrument], *args, **kwargs
+    instrument_class: type[Instrument], *args, **kwargs
 ) -> Any:
     if issubclass(instrument_class, qblox.Cluster):
         return MockCluster(*args, **kwargs)

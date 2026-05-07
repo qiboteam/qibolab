@@ -2,7 +2,8 @@ import inspect
 import re
 import shutil
 import textwrap
-from typing import Annotated, Any, Iterable, Optional, Sequence, Union
+from collections.abc import Iterable, Sequence
+from typing import Annotated, Any, Union
 
 from pydantic import (
     AfterValidator,
@@ -124,7 +125,7 @@ class Instr(Model):
             {k: v for k, v in self.model_dump().items() if k != "instr"}.values()
         )
 
-    def asm(self, key_width: Optional[int] = None) -> str:
+    def asm(self, key_width: int | None = None) -> str:
         key = self.keyword()
         if key_width is None:
             key_width = len(key)
@@ -698,7 +699,7 @@ INSTRUCTIONS = {
 }
 
 
-def _format_comment(text: str, width: Optional[int] = None) -> str:
+def _format_comment(text: str, width: int | None = None) -> str:
     lines = [""]
     for block in text.splitlines():
         lines.extend(
@@ -718,14 +719,14 @@ class Comment(str):
     ) -> core_schema.CoreSchema:
         return core_schema.no_info_after_validator_function(cls, handler(str))
 
-    def asm(self, width: Optional[int] = None) -> str:
+    def asm(self, width: int | None = None) -> str:
         return _format_comment(self, width) + "\n"
 
 
 class Line(Model):
     instruction: Instruction
-    label: Optional[str] = None
-    comment: Optional[Annotated[str, AfterValidator(lambda c: c.strip())]] = None
+    label: str | None = None
+    comment: Annotated[str, AfterValidator(lambda c: c.strip())] | None = None
 
     def __rich_repr__(self):
         yield self.instruction
@@ -744,10 +745,10 @@ class Line(Model):
 
     def asm(
         self,
-        width: Optional[int] = None,
-        label_width: Optional[int] = None,
-        instr_name_width: Optional[int] = None,
-        instr_width: Optional[int] = None,
+        width: int | None = None,
+        label_width: int | None = None,
+        instr_name_width: int | None = None,
+        instr_width: int | None = None,
     ) -> str:
         if label_width is None:
             label_width = len(self.label) if self.label is not None else -2
@@ -801,7 +802,7 @@ class Program(Model):
 
         return cls(elements=elements_)
 
-    def asm(self, width: Optional[int] = None, comments: bool = True) -> str:
+    def asm(self, width: int | None = None, comments: bool = True) -> str:
         max_label_len = max(
             (
                 len(line.label)

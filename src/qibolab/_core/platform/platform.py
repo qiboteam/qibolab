@@ -4,7 +4,7 @@ import logging
 import signal
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from ..components import Config
 from ..components.channels import Channel
@@ -214,7 +214,7 @@ class Platform:
     def execute(
         self,
         sequences: list[PulseSequence],
-        sweepers: Optional[list[ParallelSweepers]] = None,
+        sweepers: list[ParallelSweepers] | None = None,
         **options,
     ) -> dict[PulseId, Result]:
         """Execute pulse sequences.
@@ -276,8 +276,8 @@ class Platform:
         path: Path,
         instruments: InstrumentMap,
         qubits: QubitMap,
-        couplers: Optional[QubitMap] = None,
-        name: Optional[str] = None,
+        couplers: QubitMap | None = None,
+        name: str | None = None,
     ) -> "Platform":
         """Dump platform."""
         parameters = Parameters.model_validate_json((path / PARAMETERS).read_text())
