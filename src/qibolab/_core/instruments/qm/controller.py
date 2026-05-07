@@ -465,12 +465,7 @@ class QmController(Controller):
             channel, pulse, sampling_rate, max_voltage
         )
 
-    def register_pulses(
-        self,
-        configs: dict[str, Config],
-        sequence: PulseSequence,
-        args: ExecutionArguments,
-    ):
+    def register_pulses(self, configs: dict[str, Config], sequence: PulseSequence):
         """Adds all pulses except measurements of a given sequence in the QM
         ``config``.
 
@@ -655,8 +650,9 @@ class QmController(Controller):
                         self.configure_channel(id, configs)
 
                 probe_map = self.configure_channels(configs, sequence.channels)
-                acquisitions = self.register_acquisitions(configs, sequence, options)
                 self.register_pulses(configs, sequence)
+                acquisitions = self.register_acquisitions(configs, sequence, options)
+
                 args = ExecutionArguments(
                     sequence, acquisitions, options.relaxation_time
                 )
