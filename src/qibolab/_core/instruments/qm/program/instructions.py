@@ -1,4 +1,3 @@
-from typing import Optional
 from qm import qua
 from qm.qua import declare, fixed, for_
 
