@@ -33,31 +33,48 @@ def fetch_result(
     elif acquisition_type is AcquisitionType.INTEGRATION:
         raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
-        raw = results.get_classified(channel, averaging, acq_index=None)
+        # As of QCS 2.6.4, get_classified does not work for averaging=True, this will be handled by parse_result
+        # TODO: Remove this after Keysight patches it
+        raw = results.get_classified(channel, False, acq_index=None)
     else:
         raise ValueError("Acquisition type unrecognized")
     return raw
 
 
-def parse_result(result: np.ndarray, options: ExecutionParameters) -> np.ndarray:
+def parse_result(
+    result: np.ndarray, options: ExecutionParameters, singleshot_dim=None
+) -> np.ndarray:
     """Parses resulting numpy array into Qibolab expected array shape.
 
     Arguments:
         result (np.ndarray): Result array from QCS.
         options (ExecutionParameters): Execution settings.
-        sweepers (list[ParallelSweepers]): Array of array of sweepers.
+        singleshot_dim (int): Axis position of the number of shots, used for single-shot with hardware sweepers.
 
     Returns:
         parsed_result (np.ndarray): Parsed numpy array.
     """
+
     if (
-        options.averaging_mode is not AveragingMode.SINGLESHOT
-        and options.acquisition_type is not AcquisitionType.INTEGRATION
+        options.averaging_mode is AveragingMode.SINGLESHOT
+        and singleshot_dim is not None
     ):
-        return result
-    if options.averaging_mode is AveragingMode.SINGLESHOT:
-        return result
-    # For IQ data, QCS returns complex results
-    if options.acquisition_type is not AcquisitionType.INTEGRATION:
-        return result
-    return np.moveaxis(np.stack([np.real(result), np.imag(result)]), 0, -1)
+        # Current result shape is software_sweepers x nshots x hardware_sweepers
+        # Qibolab expects the shape of nshots x sweepers
+        result = np.moveaxis(result, singleshot_dim, 0)
+
+    # If the state discrimination is expected, we can directly return the result or average it in software
+    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+        if options.averaging_mode is not AveragingMode.SINGLESHOT:
+            # TODO: Refactor this after Keysight patches it
+            return (
+                np.average(result, axis=0)
+                if singleshot_dim is None
+                else np.average(result, axis=singleshot_dim)
+            )
+        else:
+            return result
+
+    # Else, the IQ integrated result is expected
+    # Current result dtype is complex, and we need to unwrap it into the I and Q components
+    return np.stack([np.real(result), np.imag(result)], axis=-1)

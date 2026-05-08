@@ -180,7 +180,7 @@ class KeysightQCS(Controller):
                 ].settings.delay.value = time_of_flight * nano
 
             # Pad relaxation time delay after each sequence
-            if len(sequences) > 1 and sequence != sequences[-1]:
+            if sequence != sequences[-1]:
                 layer = qcs.Layer()
                 layer.insert(
                     self.virtual_channel_map[next(iter(sequence.channels))],
@@ -198,6 +198,8 @@ class KeysightQCS(Controller):
 
         ret: dict[PulseId, np.ndarray] = {}
         averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
+        singleshot_dim = len(hardware_sweepers) if len(software_sweepers) > 0 else None
+
         for channel, input_ops in acquisition_map.items():
             raw = next(
                 iter(
@@ -211,10 +213,16 @@ class KeysightQCS(Controller):
             )
 
             if len(input_ops) == 1:
-                ret[input_ops[0].id] = parse_result(raw, options)
+                # If only one measurement is requested, raw is at worst an array of
+                # (software_sweepers x nshots x hardware_sweepers)
+                ret[input_ops[0].id] = parse_result(raw, options, singleshot_dim)
             else:
-                for result, input_op in zip(raw.T, input_ops):
-                    ret[input_op.id] = parse_result(result, options)
+                # If multiple measurements are requested, raw is instead an array of
+                # (software_sweepers x nshots x hardware_sweepers x input_ops)
+                for idx, input_op in enumerate(input_ops):
+                    ret[input_op.id] = parse_result(
+                        raw[..., idx], options, singleshot_dim
+                    )
 
         return ret
 
