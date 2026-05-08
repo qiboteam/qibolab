@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Protocol, Union
+from typing import Protocol
 
 from scipy.interpolate import BSpline
 

@@ -1,6 +1,7 @@
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Iterable, Union
+from typing import Any
+from collections.abc import Iterable
 
 import numpy as np
 
