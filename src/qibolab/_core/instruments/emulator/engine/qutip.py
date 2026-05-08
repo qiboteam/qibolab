@@ -36,6 +36,8 @@ class QutipEngine(SimulationEngine):
     ) -> None:
         """Save the Hamiltonian and simulation results to files with incremented naming."""
 
+        dump_dir.mkdir(parents=True, exist_ok=True)
+
         count_1 = sum(
             1
             for file in dump_dir.iterdir()

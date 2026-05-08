@@ -35,7 +35,6 @@ def create() -> Hardware:
     while directory.exists():
         directory = Path.cwd() / f"{dump_dir}_{counter}"
         counter += 1
-    directory.mkdir()
 
     # register the instruments
     instruments = {
@@ -43,7 +42,7 @@ def create() -> Hardware:
             address="0.0.0.0",
             channels=channels,
             sampling_rate_=2,
-            save_dir=directory,
+            save_dir=None,
         ),
     }
 
