@@ -10,7 +10,7 @@ from qibolab._core.pulses import PulseId
 from qibolab._core.sweeper import ParallelSweepers, Parameter
 
 HARDWARE_SWEEPER_MAX_POINTS = 24576
-SUPPORTED_CHANNEL_SWEEPERS = [Parameter.frequency]
+SUPPORTED_CHANNEL_SWEEPERS = [Parameter.frequency, Parameter.offset]
 SUPPORTED_PULSE_SWEEPERS = [
     Parameter.amplitude,
     Parameter.duration,

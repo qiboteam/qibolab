@@ -46,7 +46,7 @@ class KeysightQCS(Controller):
         qcs.SAMPLE_RATES[qcs.InstrumentEnum.M5300AWG] * nano
     )
     offset_channels: list[ChannelId] = []
-    """Subset of channels that require offset"""
+    """Subset of channels that require DC offset"""
 
     def connect(self):
         self.backend = qcs.HclBackend(
@@ -55,6 +55,19 @@ class KeysightQCS(Controller):
             suppress_rounding_warnings=True,
         )
         self.backend.is_system_ready()
+
+    def configure_offset(self, channel: qcs.Channels, offset: float | qcs.Scalar):
+        """Configures the DC offset of a given Keysight channel object.
+
+        Arguments:
+            channel (qcs.Channels): Keysight channel object.
+            offset (float | qcs.Scalar): Channel DC offset.
+        """
+        physical_channel = self.backend.channel_mapper.get_physical_channels(channel)[0]
+        if isinstance(offset, qcs.Scalar):
+            physical_channel.settings.constrain("offset", offset)
+        else:
+            physical_channel.settings.offset.value = offset
 
     def create_layer(
         self,
@@ -121,22 +134,6 @@ class KeysightQCS(Controller):
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
 
-        # Configure channel offsets
-        workaround_layer = qcs.Layer()
-        empty_pulse = qcs.DCWaveform(
-            duration=20e-9, amplitude=0, envelope=qcs.ConstantEnvelope()
-        )
-
-        for virtual_channel_id in self.offset_channels:
-            offset = configs[virtual_channel_id].offset
-            virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
-            physical_channel = self.backend.channel_mapper.get_physical_channels(
-                virtual_channel
-            )[0]
-            physical_channel.settings.offset.value = offset
-
-            workaround_layer.insert(target=virtual_channel, operations=empty_pulse)
-
         (
             hardware_sweepers,
             software_sweepers,
@@ -154,11 +151,31 @@ class KeysightQCS(Controller):
             ),
         )
 
+        # Configure channel offsets
+        # NOTE: Currently DC offsets are activated by configuring PhysicalChannel.settings.offset.value
+        # and having an operation on the channel
+        dc_offset_layer = qcs.Layer()
+        empty_pulse = qcs.DCWaveform(
+            duration=20e-9, amplitude=0, envelope=qcs.ConstantEnvelope()
+        )
+
+        for virtual_channel_id in self.offset_channels:
+            offset = sweeper_channel_map.get(
+                virtual_channel_id, configs[virtual_channel_id].offset
+            )
+
+            virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
+            self.configure_offset(virtual_channel, offset)
+            # NOTE: Currently we cannot have empty operations such as delays on channels
+            # So we need a zero-amplitude pulse to activate the channel and its offset
+            dc_offset_layer.insert(target=virtual_channel, operations=empty_pulse)
+
         acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(list)
         # For each sequence, we assign it to a layer
         # Each layer indicates a sequence of pulses/operations that are synchronized to start at the same time
         # The program will perform all channel operations in a layer before progressing to the next layer
-        layers = [workaround_layer]
+
+        layers = [dc_offset_layer]
         for sequence in sequences:
             layers.append(
                 self.create_layer(
