@@ -261,18 +261,6 @@
                     [
                         "1/drive",
                         {
-                            "kind": "align"
-                        }
-                    ],
-                    [
-                        "0/drive",
-                        {
-                            "kind": "align"
-                        }
-                    ],
-                    [
-                        "1/drive",
-                        {
                             "kind": "pulse",
                             "duration": 20.0,
                             "amplitude": 0.100396,
