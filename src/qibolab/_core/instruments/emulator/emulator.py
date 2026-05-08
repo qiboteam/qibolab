@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import reduce
 from operator import or_
+from pathlib import Path
 from typing import cast
 
 import numpy as np
@@ -52,7 +53,7 @@ class EmulatorController(Controller):
     """SimulationEngine. Default is QutipEngine."""
     bounds: str = "emulator/bounds"
     """Bounds for emulator."""
-    save: bool = False
+    save_dir: Path | None = None
     """Flag for saving the full system evolution computed from the simulation
     backend. In order to set it True modify `platform.py` file in the platform folder."""
 
@@ -171,7 +172,9 @@ class EmulatorController(Controller):
         config = cast(HamiltonianConfig, configs_["hamiltonian"])
         hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        measurement_times = np.array(list(acquisitions(sequence_).values()))
+        measurement_times = np.array(
+            list(acquisitions(sequence_).values()), dtype=float
+        )
         measurement_times[measurement_times < SAMPLING_INTERVAL] = SAMPLING_INTERVAL
         tlist_, index = np.unique(measurement_times, return_inverse=True)
 
@@ -181,7 +184,7 @@ class EmulatorController(Controller):
             time=np.concatenate(([0], tlist_)),
             collapse_operators=config.dissipation(self.engine),
             time_hamiltonian=time_hamiltonian,
-            save_evolution=self.save,
+            save_evolution=self.save_dir,
         )
         return np.stack([s.full() for s in results.states[1:]])[index]
 

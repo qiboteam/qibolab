@@ -1,7 +1,7 @@
+from collections.abc import Iterable
 from functools import cached_property
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable
 
 import numpy as np
 
@@ -31,24 +31,27 @@ class QutipEngine(SimulationEngine):
 
         return qt
 
-    def dump_results(self, hamiltonian: Operator, sim_results: Any) -> None:
+    def dump_results(
+        self, hamiltonian: Operator, sim_results: Any, dump_dir: Path
+    ) -> None:
         """Save the Hamiltonian and simulation results to files with incremented naming."""
 
-        directory = Path.cwd()
         count_1 = sum(
             1
-            for file in directory.iterdir()
+            for file in dump_dir.iterdir()
             if file.is_file() and HAMILTONIAN_FILENAME in file.name
         )
         count_2 = sum(
             1
-            for file in directory.iterdir()
+            for file in dump_dir.iterdir()
             if file.is_file() and STATE_FILENAME in file.name
         )
         count = max(count_1, count_2)
 
-        self.engine.qsave(hamiltonian, f"{HAMILTONIAN_FILENAME}_{count}")
-        self.engine.qsave(sim_results, f"{STATE_FILENAME}_{count}")
+        self.engine.qsave(
+            hamiltonian, str(dump_dir) + f"/{HAMILTONIAN_FILENAME}_{count}"
+        )
+        self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
         return
 
@@ -86,8 +89,12 @@ class QutipEngine(SimulationEngine):
             **kwargs,
         )
 
-        if save_evolution:
-            self.dump_results(hamiltonian=hamiltonian, sim_results=sim_results)
+        if save_evolution is not None:
+            self.dump_results(
+                hamiltonian=hamiltonian,
+                sim_results=sim_results,
+                dump_dir=save_evolution,
+            )
 
         return sim_results
 

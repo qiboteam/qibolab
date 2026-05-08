@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from qibolab import ConfigKinds, Hardware, IqChannel, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
@@ -26,12 +28,22 @@ def create() -> Hardware:
         qubit.drive: IqChannel(mixer=None, lo=None),
         qubits[1].drive_extra[1, 2]: IqChannel(mixer=None, lo=None),
     }
+
+    dump_dir = "qutip_data"
+    counter = 0
+    directory = Path.cwd() / f"{dump_dir}_{counter}"
+    while directory.exists():
+        directory = Path.cwd() / f"{dump_dir}_{counter}"
+        counter += 1
+    directory.mkdir()
+
     # register the instruments
     instruments = {
         "emulator": EmulatorController(
             address="0.0.0.0",
             channels=channels,
             sampling_rate_=2,
+            save_dir=directory,
         ),
     }
 
