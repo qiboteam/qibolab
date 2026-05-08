@@ -19,15 +19,12 @@ SUPPORTED_PULSE_SWEEPERS = [
 ]
 
 
-def process_sweepers(
-    sweepers: list[ParallelSweepers], probe_channel_ids: set[ChannelId]
-):
+def process_sweepers(sweepers: list[ParallelSweepers]):
     """Processes Qibocal sweepers into QCS sweepers. Currently nested hardware
     sweepers are not supported, so they will default to software sweeping.
 
     Arguments:
         sweepers (list[ParallelSweepers]): Array of array of sweepers.
-        probe_channel_ids (list[int]): Array of channel IDs for probe channels.
 
     Returns:
         hardware_sweepers (list[tuple[list[qcs.Array], list[qcs.Scalar]]]): Array of hardware-based QCS sweepers.
@@ -61,9 +58,6 @@ def process_sweepers(
                 sweeper_channel_map.update(
                     {channel_id: qcs_variable for channel_id in sweeper.channels}
                 )
-                # Readout frequency is not supported with hardware sweeping
-                if not probe_channel_ids.isdisjoint(sweeper.channels):
-                    hardware_sweeping = False
             elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
                 # Duration is not supported with hardware sweeping for non-delay pulses
                 if sweeper.parameter is Parameter.duration and any(

@@ -137,17 +137,12 @@ class KeysightQCS(Controller):
 
             workaround_layer.insert(target=virtual_channel, operations=empty_pulse)
 
-        probe_channel_ids = {
-            chan.probe
-            for chan in self.channels.values()
-            if isinstance(chan, AcquisitionChannel)
-        }
         (
             hardware_sweepers,
             software_sweepers,
             sweeper_channel_map,
             sweeper_pulse_map,
-        ) = process_sweepers(sweepers, probe_channel_ids)
+        ) = process_sweepers(sweepers)
         # Here we are telling the program to run hardware sweepers first, then software sweepers
         # It is essential that we match the original sweeper order to the modified sweeper order
         # to reconcile the results at the end
