@@ -45,12 +45,12 @@ the section ``configs``. Here is an example
                 "0/drive": {
                     "kind": "drive-emulator",
                     "frequency": 5e9,
-                    "scale_factor": 0.1591549,
+                    "rabi_frequency": 159154900.0,
                 },
                 "0/drive12": {
                     "kind": "drive-emulator",
                     "frequency": 4.8e9,
-                    "scale_factor": 0.1591549,
+                    "rabi_frequency": 159154900.0,
                 },
                 "0/flux": {"kind": "flux-emulator", "offset": 0.02},
                 "0/probe": {"kind": "iq", "frequency": 5200000000.0},
