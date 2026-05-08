@@ -52,14 +52,12 @@
       "0/drive": {
         "kind": "drive-emulator",
         "frequency": 4.953e9,
-        "rabi_frequency": 20e6,
-        "scale_factor": 10
+        "rabi_frequency": 20e7
       },
       "1/drive": {
         "kind": "drive-emulator",
         "frequency":  4.919e9,
-        "rabi_frequency": 20e6,
-        "scale_factor": 10
+        "rabi_frequency": 20e7
       },
       "0/flux": {
         "kind": "flux-emulator",
