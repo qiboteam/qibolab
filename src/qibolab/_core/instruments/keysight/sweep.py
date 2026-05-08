@@ -38,6 +38,7 @@ def process_sweepers(
     """
     hardware_sweepers: list[tuple[list[qcs.Array], list[qcs.Scalar]]] = []
     software_sweepers: list[tuple[list[qcs.Array], list[qcs.Scalar]]] = []
+    sweeper_points = 0
 
     # Mapper for pulses that are controlled by a sweeper and the parameter to be swept
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]] = defaultdict(dict)
@@ -89,14 +90,9 @@ def process_sweepers(
                     dtype=float,
                 )
             )
-
-        # For the hardware sweeper, there is a memory limit for the number of variables x values
-        # However, this is determined by the total number of hardware sweepers and not individual sweepers
-        # Here we just check a single dimension and let the machine fail if the limit is exceeded
-        if (
-            hardware_sweeping
-            and len(sweep_values) * len(sweeper.values) > HARDWARE_SWEEPER_MAX_POINTS
-        ):
+        sweeper_points += len(sweep_values) * len(sweeper.values)
+        # For the hardware sweeper, there is a memory limit for the total number of variables x values
+        if hardware_sweeping and sweeper_points > HARDWARE_SWEEPER_MAX_POINTS:
             hardware_sweeping = False
         if hardware_sweeping:
             hardware_sweepers.append((sweep_values, sweep_variables))
