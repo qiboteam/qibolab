@@ -152,8 +152,6 @@ class KeysightQCS(Controller):
         )
 
         # Configure channel offsets
-        # NOTE: Currently DC offsets are activated by configuring PhysicalChannel.settings.offset.value
-        # and having an operation on the channel
         dc_offset_layer = qcs.Layer()
         empty_pulse = qcs.DCWaveform(
             duration=20e-9, amplitude=0, envelope=qcs.ConstantEnvelope()
@@ -166,7 +164,7 @@ class KeysightQCS(Controller):
 
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
             self.configure_offset(virtual_channel, offset)
-            # NOTE: Currently we cannot have empty operations such as delays on channels
+            # FIXME: Currently we cannot have empty operations such as delays on channels
             # So we need a zero-amplitude pulse to activate the channel and its offset
             dc_offset_layer.insert(target=virtual_channel, operations=empty_pulse)
 
@@ -201,12 +199,16 @@ class KeysightQCS(Controller):
                 layers.append(layer)
 
         program.extend(*layers)
-        # Retry running the sequence if the program fails at runtime
+        # FIXME: Instrument experiences random crashes at runtime
+        # A partial workaround is to re-launch the job and hope the instrument has not crashed
         try:
             results = self.backend.apply(program).results
+        except RuntimeError:
+            # If coming from the other branch, rest before attempting a retrial
             time.sleep(0.2)
-        except Exception:
             results = self.backend.apply(program).results
+        # Force a break to prevent race conditions on the instrument side
+        time.sleep(0.2)
 
         ret: dict[PulseId, np.ndarray] = {}
         averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
