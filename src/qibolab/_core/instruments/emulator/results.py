@@ -252,9 +252,6 @@ def results(
         else _cyclic_results
     )
 
-    if options.averaging_mode is AveragingMode.SINGLESHOT and options.nshots is None:
-        raise ValueError("nshots must be specified for SINGLESHOT mode")
-
     return results(
         state_probs=probabilities,
         sequence=sequence,

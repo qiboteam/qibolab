@@ -1,7 +1,7 @@
 """Emulator controller."""
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from functools import reduce
 from operator import or_
 from typing import cast

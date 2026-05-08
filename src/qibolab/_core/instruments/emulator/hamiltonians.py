@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Literal, Union
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -252,8 +252,8 @@ class ModulatedVirtualZ(Model):
         raise_error(ValueError, "VirtualZ doesn't have waveform.")
 
 
-Modulated = Union[ModulatedDrive, ModulatedDelay, ModulatedVirtualZ]
-ControlLine = Union[Modulated, FluxPulse]
+Modulated = ModulatedDrive | ModulatedDelay | ModulatedVirtualZ
+ControlLine = Modulated | FluxPulse
 
 
 class HamiltonianConfig(Config):
