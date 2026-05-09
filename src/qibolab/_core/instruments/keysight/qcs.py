@@ -215,7 +215,7 @@ class KeysightQCS(Controller):
 
         ret: dict[PulseId, np.ndarray] = {}
         averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
-        singleshot_dim = len(hardware_sweepers) if len(software_sweepers) > 0 else None
+        singleshot_dim = len(software_sweepers) if len(software_sweepers) > 0 else None
 
         for channel, input_ops in acquisition_map.items():
             raw = next(
