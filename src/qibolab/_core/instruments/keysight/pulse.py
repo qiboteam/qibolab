@@ -1,7 +1,6 @@
 """Utils for pulse handling."""
 
 from collections import defaultdict
-from typing import Union
 
 import numpy as np
 from keysight import qcs
@@ -34,7 +33,7 @@ def generate_qcs_envelope(shape: Envelope) -> qcs.Envelope:
 def process_acquisition_channel_pulse(
     layer: qcs.Layer,
     pulse: PulseLike,
-    frequency: Union[float, qcs.Scalar],
+    frequency: float | qcs.Scalar,
     virtual_channel: qcs.Channels,
     probe_virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
@@ -45,8 +44,8 @@ def process_acquisition_channel_pulse(
 
     Arguments:
         layer (qcs.Layer): Layer object for the current sequence.
-        pulses (Iterable[PulseLike]): Array of pulse objects to be processed.
-        frequency (Union[float, qcs.Scalar]): Frequency of the channel.
+        pulse (PulseLike): Pulse object to be processed.
+        frequency (float | qcs.Scalar): Frequency of the channel.
         virtual_channel (qcs.Channels): QCS virtual digitizer channel.
         probe_virtual_channel (qcs.Channels): QCS virtual AWG channel connected to the digitzer.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
@@ -91,7 +90,7 @@ def process_acquisition_channel_pulse(
 def process_iq_channel_pulse(
     layer: qcs.Layer,
     pulse: PulseLike,
-    frequency: Union[float, qcs.Scalar],
+    frequency: float | qcs.Scalar,
     virtual_channel: qcs.Channels,
     sweeper_pulse_map: defaultdict[PulseId, dict[str, qcs.Scalar]],
 ):
@@ -100,8 +99,8 @@ def process_iq_channel_pulse(
 
     Arguments:
         layer (qcs.Layer): Layer object for the current sequence.
-        pulses (Iterable[PulseLike]): Array of pulse objects to be processed.
-        frequency (Union[float, qcs.Scalar]): Frequency of the channel.
+        pulse (PulseLike): Pulse object to be processed.
+        frequency (float | qcs.Scalar): Frequency of the channel.
         virtual_channel (qcs.Channels): QCS virtual RF AWG channel.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.
@@ -142,7 +141,7 @@ def process_dc_channel_pulse(
 
     Arguments:
         layer (qcs.Layer): Layer object for the current sequence.
-        pulses (Iterable[PulseLike]): Array of pulse objects to be processed.
+        pulse (PulseLike): Pulse object to be processed.
         virtual_channel (qcs.Channels): QCS virtual baseband AWG channel.
         sweeper_pulse_map (defaultdict[PulseId, dict[str, qcs.Scalar]]): Map of pulse ID to map of parameter
         to be swept and corresponding QCS variable.

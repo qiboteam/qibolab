@@ -54,7 +54,7 @@ Supported instruments
 Qibolab supports the following control instruments:
 
 * Quantum Machines
-* QBlox
+* Qblox
 * Xilinx RFSoCs
 
 In order to use Qibolab on with one of these instruments chosen instrument,

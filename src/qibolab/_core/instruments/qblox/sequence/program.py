@@ -1,5 +1,4 @@
 from collections.abc import Iterable, Sequence
-from typing import Optional
 
 from qibolab._core.execution_parameters import AveragingMode, ExecutionParameters
 from qibolab._core.identifier import ChannelId
@@ -54,6 +53,10 @@ def setup(
                 instruction=Move(source=0, destination=Registers.bin_reset.value),
                 comment="init bin reset",
             ),
+            Line(
+                instruction=Move(source=0, destination=Registers.phase_delta.value),
+                comment="init delta phase register",
+            ),
         ]
         + [
             Line(
@@ -97,13 +100,12 @@ def program(
     options: ExecutionParameters,
     sweepers: list[ParallelSweepers],
     channel: set[ChannelId],
-    time_of_flight: Optional[float],
     padding: int,
+    merged_vzs: bool,
 ) -> Program:
     """Generate sequencer program."""
     assert options.nshots is not None
     assert options.relaxation_time is not None
-
     loops_ = loops(
         sweepers,
         options.nshots,
@@ -115,7 +117,7 @@ def program(
         sequence, [p for v in indexed_params.values() for p in v.pulse]
     )
     experiment_ = [
-        *experiment(sweepseq, waveforms, acquisitions, time_of_flight),
+        *experiment(sweepseq, waveforms, acquisitions, merged_vzs),
         # Enforce a minimum wait of 4 ns corresponding to one clock cycle
         Wait(duration=min(padding, 4)),
     ]

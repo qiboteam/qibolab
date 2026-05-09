@@ -1,5 +1,4 @@
 from functools import cached_property
-from typing import Union
 
 from .abstract import Operator, OperatorEvolution, SimulationEngine
 
@@ -49,7 +48,7 @@ class QutipEngine(SimulationEngine):
         """Tensor product of a list of operators."""
         return self.engine.tensor(*operators)
 
-    def expand(self, op: Operator, targets: Union[int, list[int]], dims: list[int]):
+    def expand(self, op: Operator, targets: int | list[int], dims: list[int]):
         """Expand operator in larger Hilbert space."""
         return self.engine.expand_operator(op, targets, dims)
 

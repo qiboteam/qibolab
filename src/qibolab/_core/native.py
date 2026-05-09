@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 import numpy as np
 
@@ -37,9 +37,10 @@ def rotation(
 ) -> PulseSequence:
     """Create a sequence for single-qubit rotation.
 
-    ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
-    If ``rx90`` is True the rotation will be performed starting from an RX90 pulse doubling its amplitude,
-    if the amplitude is greater than 0.5 two pulses are played.
+    ``theta`` will be the angle of the rotation, while ``phi`` the angle that the
+    rotation axis forms with x axis. If ``rx90`` is True the rotation will be performed
+    starting from an RX90 pulse doubling its amplitude, if the amplitude is greater than
+    0.5 two pulses are played.
     """
     theta, phi = _normalize_angles(theta, phi)
     ch, pulse = seq[0]
@@ -77,21 +78,22 @@ class SingleQubitNatives(NativeContainer):
     """Container with the native single-qubit gates acting on a specific
     qubit."""
 
-    RX: Optional[Native] = None
+    RX: Native | None = None
     """Pulse to drive the qubit from state 0 to state 1."""
-    RX90: Optional[Native] = None
+    RX90: Native | None = None
     """Pulse to drive the qubit from state 0 to state +"""
-    RX12: Optional[Native] = None
+    RX12: Native | None = None
     """Pulse to drive to qubit from state 1 to state 2."""
-    MZ: Optional[Native] = None
+    MZ: Native | None = None
     """Measurement pulse."""
-    CP: Optional[Native] = None
+    CP: Native | None = None
     """Pulse to activate coupler."""
 
     def R(self, theta: float = np.pi, phi: float = 0.0) -> PulseSequence:
         """Create a sequence for single-qubit rotation.
 
-        ``theta`` will be the angle of the rotation, while ``phi`` the angle that the rotation axis forms with x axis.
+        ``theta`` will be the angle of the rotation, while ``phi`` the angle that the
+        rotation axis forms with x axis.
         """
         if self.RX90 is not None:
             return rotation(self.RX90(), theta, phi, rx90=True)
@@ -103,9 +105,9 @@ class TwoQubitNatives(NativeContainer):
     """Container with the native two-qubit gates acting on a specific pair of
     qubits."""
 
-    CZ: Annotated[Optional[Native], {"symmetric": True}] = None
-    CNOT: Annotated[Optional[Native], {"symmetric": False}] = None
-    iSWAP: Annotated[Optional[Native], {"symmetric": True}] = None
+    CZ: Annotated[Native | None, {"symmetric": True}] = None
+    CNOT: Annotated[Native | None, {"symmetric": False}] = None
+    iSWAP: Annotated[Native | None, {"symmetric": True}] = None
 
     @property
     def symmetric(self):
@@ -113,5 +115,5 @@ class TwoQubitNatives(NativeContainer):
         and control qubits."""
         return all(
             info.metadata[0]["symmetric"] or getattr(self, fld) is None
-            for fld, info in self.model_fields.items()
+            for fld, info in type(self).model_fields.items()
         )

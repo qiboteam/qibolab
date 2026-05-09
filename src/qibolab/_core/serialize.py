@@ -2,7 +2,7 @@
 
 import base64
 import io
-from typing import Annotated, TypeVar, Union
+from typing import Annotated, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -17,7 +17,7 @@ def ndarray_serialize(ar: npt.NDArray) -> str:
     return base64.standard_b64encode(buffer.read()).decode()
 
 
-def ndarray_deserialize(x: Union[str, npt.NDArray]) -> npt.NDArray:
+def ndarray_deserialize(x: str | npt.NDArray) -> npt.NDArray:
     """Deserialize array."""
     if isinstance(x, np.ndarray):
         return x

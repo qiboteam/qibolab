@@ -9,7 +9,7 @@ configuration defined by these classes.
 
 from functools import reduce
 from pathlib import Path
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal, Union
 
 import numpy as np
 from pydantic import Field
@@ -118,12 +118,12 @@ class AcquisitionConfig(Config):
     # FIXME: this is temporary solution to deliver the information to drivers
     # until we make acquisition channels first class citizens in the sequences
     # so that each acquisition command carries the info with it.
-    threshold: Optional[float] = None
+    threshold: float | None = None
     """Signal threshold for discriminating ground and excited states."""
-    iq_angle: Optional[float] = None
+    iq_angle: float | None = None
     """Signal angle in the IQ-plane for disciminating ground and excited
     states."""
-    kernel: Annotated[Optional[NdArray], Field(repr=False)] = None
+    kernel: Annotated[NdArray | None, Field(repr=False)] = None
     """Integration weights to be used when post-processing the acquired
     signal."""
 

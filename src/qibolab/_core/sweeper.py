@@ -1,6 +1,7 @@
+from collections.abc import Collection
 from enum import Enum, auto
 from functools import cache
-from typing import Any, Collection, Optional
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -66,26 +67,26 @@ class Sweeper(Model):
             qubit = platform.qubits[0]
             natives = platform.natives.single_qubit[0]
             sequence = natives.MZ.create_sequence()
-            parameter_range = np.random.randint(10, size=10)
+            parameter_range = (7e9, 7e9 + 1e6, 0.2e6)
             sweeper = Sweeper(
-                parameter=Parameter.frequency, values=parameter_range, channels=[qubit.probe]
+                parameter=Parameter.frequency, range=parameter_range, channels=[qubit.probe]
             )
             platform.execute([sequence], [[sweeper]])
     """
 
     parameter: Parameter
     """Parameter to be swept."""
-    values: Optional[npt.NDArray] = None
+    values: npt.NDArray | None = None
     """Array of parameter values to sweep over."""
-    range: Optional[Range] = None
+    range: Range | None = None
     """Tuple of ``(start, stop, step)``.
 
     To sweep over the array ``np.arange(start, stop, step)``.
     Can be provided instead of ``values`` for more efficient sweeps on some instruments.
     """
-    pulses: Optional[list[PulseLike]] = None
+    pulses: list[PulseLike] | None = None
     """List of `qibolab.Pulse` to be swept."""
-    channels: Optional[list[ChannelId]] = None
+    channels: list[ChannelId] | None = None
     """List of channel names for which the parameter should be swept."""
 
     @model_validator(mode="after")
@@ -127,6 +128,15 @@ class Sweeper(Model):
         if self.range is not None:
             return self.range
         assert self.values is not None
+        if len(self.values) < 2:
+            raise ValueError(
+                "Sweeper values need to contain at least 2 values to infer a range."
+            )
+        steps = np.diff(self.values)
+        if not np.allclose(steps, steps[0]):
+            raise ValueError(
+                "Increments between subsequent values in the sweeper are not fixed."
+            )
         step = self.values[1] - self.values[0]
         return (self.values[0], self.values[-1] + step, step)
 
@@ -235,7 +245,7 @@ def _split_sweepers(sweepers: list[ParallelSweepers]) -> list[ParallelSweepers]:
     ]
 
 
-def _lo_frequency(lo: Optional[OscillatorConfig]) -> float:
+def _lo_frequency(lo: OscillatorConfig | None) -> float:
     return lo.frequency if lo is not None else 0.0
 
 
@@ -269,8 +279,8 @@ def _subtract_offset(
 
 def normalize_sweepers(
     sweepers: list[ParallelSweepers],
-    los: Optional[dict[ChannelId, OscillatorConfig]] = None,
-    offsets: Optional[dict[ChannelId, float]] = None,
+    los: dict[ChannelId, OscillatorConfig] | None = None,
+    offsets: dict[ChannelId, float] | None = None,
 ) -> list[ParallelSweepers]:
     sweepers = _split_sweepers(sweepers)
     sweepers = _subtract_lo(sweepers, los) if los is not None else sweepers

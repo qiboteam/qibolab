@@ -18,8 +18,6 @@ make sure that there is only one copy of configuration for a component, plus use
 share a component, because channels will refer to the same name for the component under discussion.
 """
 
-from typing import Optional
-
 from ..identifier import ChannelId
 from ..serialize import Model
 
@@ -38,7 +36,7 @@ class Channel(Model):
     def port(self) -> int:
         return int(self.path)
 
-    def iqout(self, id_: ChannelId) -> Optional[ChannelId]:
+    def iqout(self, id_: ChannelId) -> ChannelId | None:
         """Extract associated IQ output channel.
 
         This is the identity for each IQ output channel identifier, while it retrieves the
@@ -63,13 +61,13 @@ class DcChannel(Channel):
 class IqChannel(Channel):
     """Channel that can be used to send IQ pulses."""
 
-    mixer: Optional[str] = None
+    mixer: str | None = None
     """Name of the IQ mixer component corresponding to this channel.
 
     None, if the channel does not have a mixer, or it does not need
     configuration.
     """
-    lo: Optional[str] = None
+    lo: str | None = None
     """Name of the local oscillator component corresponding to this channel.
 
     None, if the channel does not have an LO, or it is not configurable.
@@ -77,12 +75,12 @@ class IqChannel(Channel):
 
 
 class AcquisitionChannel(Channel):
-    twpa_pump: Optional[str] = None
+    twpa_pump: str | None = None
     """Name of the TWPA pump component.
 
     None, if there is no TWPA, or it is not configurable.
     """
-    probe: Optional[ChannelId] = None
+    probe: ChannelId | None = None
     """Name of the corresponding measure/probe channel.
 
     FIXME: This is temporary solution to be able to relate acquisition channel to corresponding probe channel wherever needed in drivers,

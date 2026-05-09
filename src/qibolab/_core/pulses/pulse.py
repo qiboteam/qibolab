@@ -75,6 +75,14 @@ class Pulse(_PulseLike):
     relative_phase: float = 0.0
     """Relative phase of the pulse, in radians."""
 
+    chirp: (
+        None
+        | tuple[int, str]  # (rate, units)
+        | tuple[list[int], str]  # piecewise uniform
+        | tuple[list[int], list[int], str]  # piecewise non-uniform
+    ) = None
+    """Optional frequency chirp parameters (QUA-style)."""
+
     def i(self, sampling_rate: float) -> Waveform:
         """Compute the envelope of the waveform i component."""
         samples = int(self.duration * sampling_rate)
@@ -149,6 +157,7 @@ class Readout(_PulseLike):
 
     acquisition: Acquisition
     probe: Pulse
+    time_of_flight: float = 0.0
 
     @classmethod
     def from_probe(cls, probe: Pulse):
@@ -161,7 +170,7 @@ class Readout(_PulseLike):
     @property
     def duration(self) -> float:
         """Duration in ns."""
-        return self.acquisition.duration
+        return self.acquisition.duration + self.time_of_flight
 
     @property
     def id(self) -> PulseId:

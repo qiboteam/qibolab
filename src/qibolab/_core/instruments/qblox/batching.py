@@ -101,7 +101,8 @@ def _merge_batch_sequences(
     """
     merged_batches: list[PulseSequence] = []
     for batch in batches:
-        batched = batch[0]
+        # copy to avoid mutating the input pulse sequence
+        batched = batch[0].copy()
         for ps in batch[1:]:
             # Place a Delay with the duration of the relaxation time between each
             # sequence. The pipe operation aligns all channels so we only have to add

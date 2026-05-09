@@ -1,5 +1,3 @@
-from typing import Optional
-
 from qm import qua
 from qm.qua import declare, fixed, for_
 
@@ -48,14 +46,14 @@ def _play_multiple_waveforms(element: str, parameters: Parameters):
             if parameters.amplitude is not None:
                 sweep_op = sweep_op * parameters.amplitude
             with qua.case_(value):
-                qua.play(sweep_op, element)
+                qua.play(sweep_op, element, chirp=parameters.chirp)
 
 
 def _play_single_waveform(
     op: str,
     element: str,
     parameters: Parameters,
-    acquisition: Optional[Acquisition] = None,
+    acquisition: Acquisition | None = None,
 ):
     if parameters.amplitude is not None:
         op = parameters.amplitude_op * parameters.amplitude
@@ -66,16 +64,21 @@ def _play_single_waveform(
             # sweeping duration using interpolation
             # distinctly uploaded waveforms are handled by ``_play_multiple_waveforms``
             assert len(parameters.duration_ops) == 0
-            qua.play(parameters.interpolated_op, element, duration=parameters.duration)
+            qua.play(
+                parameters.interpolated_op,
+                element,
+                duration=parameters.duration,
+                chirp=parameters.chirp,
+            )
         else:
-            qua.play(op, element)
+            qua.play(op, element, chirp=parameters.chirp)
 
 
 def _play(
     op: str,
     element: str,
     parameters: Parameters,
-    acquisition: Optional[Acquisition] = None,
+    acquisition: Acquisition | None = None,
 ):
     if parameters.phase is not None:
         qua.frame_rotation_2pi(parameters.phase, element)
@@ -106,6 +109,12 @@ def play(args: ExecutionArguments):
         op = operation(pulse)
         params = args.parameters[pulse.id]
         if isinstance(pulse, Pulse):
+            if pulse.chirp is not None:
+                args.parameters[pulse.id].chirp_rate = pulse.chirp[0]
+                args.parameters[pulse.id].chirp_time = (
+                    pulse.chirp[1] if len(pulse.chirp) == 3 else None
+                )
+                args.parameters[pulse.id].chirp_units = pulse.chirp[-1]
             _play(op, element, params)
         elif isinstance(pulse, Readout):
             acquisition = args.acquisitions.get((op, element))

@@ -1,6 +1,6 @@
 from enum import Enum, auto
 from math import prod
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import Field
 from scipy.constants import nano
@@ -55,7 +55,7 @@ T = TypeVar("T")
 
 
 # TODO: lift for general usage in Qibolab
-def default(value: Optional[T], default: T) -> T:
+def default(value: T | None, default: T) -> T:
     """None replacement shortcut."""
     return value if value is not None else default
 
@@ -63,12 +63,12 @@ def default(value: Optional[T], default: T) -> T:
 class ExecutionParameters(Model):
     """Data structure to deal with execution parameters."""
 
-    nshots: Optional[int] = None
+    nshots: int | None = None
     """Number of shots to sample from the experiment.
 
     Default is the runcard value.
     """
-    relaxation_time: Optional[int] = None
+    relaxation_time: int | None = None
     """Time to wait for the qubit to relax to its ground Sample between shots
     in ns.
 

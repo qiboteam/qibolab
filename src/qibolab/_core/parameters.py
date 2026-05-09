@@ -5,7 +5,7 @@ JSON <parameters_json>` example.
 """
 
 from collections.abc import Callable, Iterable, Mapping
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any, Union
 
 from pydantic import (
     BeforeValidator,
@@ -314,15 +314,15 @@ def _channel_config(id: ChannelId, channel: Channel) -> dict[ChannelId, Config]:
         if channel.lo is not None:
             configs[channel.lo] = OscillatorConfig(frequency=0, power=0)
         if channel.mixer is not None:
-            configs[channel.mixer] = IqMixerConfig(frequency=0, power=0)
+            configs[channel.mixer] = IqMixerConfig()
         return configs
     return {id: Config()}
 
 
 def initialize_parameters(
     hardware: Hardware,
-    natives: Optional[set[str]] = None,
-    pairs: Optional[list[str]] = None,
+    natives: set[str] | None = None,
+    pairs: list[str] | None = None,
 ) -> Parameters:
     """Generates default ``Parameters`` for a given hardware configuration."""
     natives = set(natives if natives is not None else ())

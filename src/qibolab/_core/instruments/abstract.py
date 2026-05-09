@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from pydantic import ConfigDict, Field
 
@@ -31,7 +30,7 @@ class Instrument(Model, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=False, extra="allow")
 
     address: str
-    settings: Optional[InstrumentSettings] = None
+    settings: InstrumentSettings | None = None
 
     @property
     def signature(self):

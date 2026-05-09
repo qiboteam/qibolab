@@ -3,11 +3,13 @@ name: tests
 on:
   workflow_dispatch:
   push:
+  merge_group:
   pull_request:
-    types: opened
+    types: [labeled, opened]
 
 jobs:
   build:
+    if: contains(github.event.pull_request.labels.*.name, 'run-workflow') || github.event_name == 'push'
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]

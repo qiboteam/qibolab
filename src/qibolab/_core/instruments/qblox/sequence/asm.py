@@ -16,6 +16,7 @@ class Registers(Enum):
     bin_reset = Register(number=1)
     shots = Register(number=2)
     wait = Register(number=3)
+    phase_delta = Register(number=4)
 
     @classmethod
     def first_available(cls) -> int:
@@ -38,7 +39,7 @@ MAX_PARAM = {
 }
 """Maximum range for parameters.
 
-Declared in https://docs.qblox.com/en/main/cluster/q1_sequence_processor.html#q1-instructions
+Declared in https://docs.qblox.com/en/v0.16.0/cluster/q1_sequence_processor.html#q1-instructions
 
 Ranges may be one-sided (just positive) or two-sided. This is accounted for in
 :func:`convert`.

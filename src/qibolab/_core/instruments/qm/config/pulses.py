@@ -107,7 +107,7 @@ class Waveforms:
 @dataclass(frozen=True)
 class QmPulse:
     length: int
-    waveforms: Union[Waveforms, dict[str, str]]
+    waveforms: Waveforms | dict[str, str]
     digital_marker: str = "ON"
     operation: str = "control"
 

@@ -3,7 +3,7 @@ import warnings
 from collections import defaultdict
 from functools import cached_property
 from itertools import groupby
-from typing import Optional, cast
+from typing import cast
 
 import qblox_instruments as qblox
 from qblox_instruments.qcodes_drivers.module import Module
@@ -16,17 +16,17 @@ from qibolab._core.execution_parameters import (
 )
 from qibolab._core.identifier import ChannelId, Result
 from qibolab._core.instruments.abstract import Controller
-from qibolab._core.pulses.pulse import PulseId
+from qibolab._core.pulses.pulse import PulseId, Readout
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.serialize import Model
-from qibolab._core.sweeper import ParallelSweepers, normalize_sweepers
+from qibolab._core.sweeper import ParallelSweepers, Parameter, normalize_sweepers
 
 from . import config
 from .batching import batch_sequences_by_cluster_memory_limits
 from .config import PortAddress
 from .identifiers import SequencerMap, SlotId
 from .log import Logger
-from .results import AcquiredData, extract, integration_lenghts
+from .results import AcquiredData, extract, integration_lengths
 from .sequence import Q1Sequence, compile
 from .utils import (
     batch_shots,
@@ -73,6 +73,64 @@ def _compute_duration(
     return duration
 
 
+def _add_time_of_flight(sequence: PulseSequence, configs: Configs) -> PulseSequence:
+    time_of_flights_ = time_of_flights(configs)
+    return PulseSequence(
+        [
+            (
+                ch,
+                ev
+                if not isinstance(ev, Readout)
+                else ev.model_copy(update={"time_of_flight": time_of_flights_[ch]}),
+            )
+            for ch, ev in sequence
+        ]
+    )
+
+
+def _batch_sequences(
+    sequences: list[PulseSequence],
+    sweepers: list[ParallelSweepers],
+    options: ExecutionParameters,
+    qcm_channels: set[ChannelId],
+    qrm_channels: set[ChannelId],
+    configs: Configs,
+) -> list[PulseSequence]:
+    batched_seqs = (
+        batch_sequences_by_cluster_memory_limits(
+            sequences,
+            sweepers,
+            options,
+            qcm_channels,
+            qrm_channels,
+        )
+        if options.averaging_mode.average
+        else sequences
+    )
+    return [_add_time_of_flight(b, configs).align_to_delays() for b in batched_seqs]
+
+
+def _merge_phases_if_no_phase_sweeper(
+    sweepers: list[ParallelSweepers],
+    sequences: list[PulseSequence],
+) -> tuple[list[PulseSequence], bool]:
+    """
+    Process pulse sequences based on the presence of phase sweepers.
+
+    If any sweeper in the provided list is a phase or relative_phase sweeper,
+    the sequences are returned unchanged. Otherwise, the phases in the sequences
+    are summed to simplify the pulse sequences.
+    """
+    phase_sweeper_present = any(
+        sweeper.parameter in {Parameter.relative_phase, Parameter.phase}
+        for parallel_sweepers in sweepers
+        for sweeper in parallel_sweepers
+    )
+    return [
+        ps if phase_sweeper_present else ps.to_vzs().collect_vzs() for ps in sequences
+    ], phase_sweeper_present
+
+
 class ClusterConfigs(Model):
     modules: dict[int, config.ModuleConfig]
     sequencers: dict[int, dict[int, config.SequencerConfig]]
@@ -87,7 +145,7 @@ class Cluster(Controller):
     As described in:
     https://docs.qblox.com/en/main/getting_started/setup.html#connecting-to-multiple-instruments
     """
-    _cluster: Optional[qblox.Cluster] = None
+    _cluster: qblox.Cluster | None = None
 
     @property
     def cluster(self) -> qblox.Cluster:
@@ -141,6 +199,10 @@ class Cluster(Controller):
     ) -> dict[PulseId, Result]:
         """Execute the given experiment."""
 
+        processed_sequences, phase_sweeper_present = _merge_phases_if_no_phase_sweeper(
+            sweepers, sequences
+        )
+
         # If acquisition is cyclic (averaging over shots on hardware), we combine as
         # many sequences as possible in a single batch, according to the cluster
         # memory limits.
@@ -153,16 +215,8 @@ class Cluster(Controller):
             if PortAddress.from_path(channelobj.path).slot in qrm_slots
         }
         qcm_channels = set(self.channels) - qrm_channels
-        batched_seqs: list[PulseSequence] = (
-            batch_sequences_by_cluster_memory_limits(
-                sequences,
-                sweepers,
-                options,
-                qcm_channels,
-                qrm_channels,
-            )
-            if options.averaging_mode.average
-            else sequences
+        batched_seqs = _batch_sequences(
+            processed_sequences, sweepers, options, qcm_channels, qrm_channels, configs
         )
 
         # Execute each batch sequentially, and concatenate results
@@ -193,7 +247,7 @@ class Cluster(Controller):
                     sweepers_,
                     options_,
                     self.sampling_rate,
-                    time_of_flights(configs),
+                    merged_vzs=not phase_sweeper_present,
                 )
                 for channelid, seq in sequences_.items():
                     slot = PortAddress.from_path(self.channels[channelid].path).slot
@@ -215,11 +269,11 @@ class Cluster(Controller):
                 log.data(data)
 
                 # process raw results to adhere to standard format
-                lenghts = integration_lenghts(sequences_, sequencers, self._modules)
+                lengths = integration_lengths(sequences_, sequencers, self._modules)
                 psres.append(
                     extract(
                         data,
-                        lenghts,
+                        lengths,
                         options_.acquisition_type,
                         options_.results_shape(sweepers_),
                     )
@@ -233,7 +287,7 @@ class Cluster(Controller):
         self,
         configs: Configs,
         acquisition: AcquisitionType = AcquisitionType.INTEGRATION,
-        sequences: Optional[dict[ChannelId, Q1Sequence]] = None,
+        sequences: dict[ChannelId, Q1Sequence] | None = None,
     ) -> tuple[SequencerMap, ClusterConfigs]:
         """Configure modules and sequencers.
 
@@ -244,7 +298,7 @@ class Cluster(Controller):
         sequencers with no sequence provided. In which case, it will attempt to assign
         sequencers to all available channels (as opposed to just those involved in the
         experiment, and thus in the sequences).
-        For the sake of simplifiying the usage of this function, a default acquisition
+        For the sake of simplifying the usage of this function, a default acquisition
         type is provided (:attr:`AcquisitionType.INTEGRATION`). The only true
         alternative to this value is :attr:`AcquisitionType.RAW`, since further
         configurations are required to operate in scope mode.

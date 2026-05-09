@@ -1,6 +1,5 @@
 import re
 from collections import defaultdict
-from typing import Optional, Union
 
 from qibolab._core.components.channels import (
     AcquisitionChannel,
@@ -25,7 +24,7 @@ def _chtype(mod: str, input: bool) -> tuple[str, type[Channel]]:
     raise ValueError
 
 
-def _port_channels(mod: str, port: Union[int, str], slot: int) -> dict:
+def _port_channels(mod: str, port: int | str, slot: int) -> dict:
     if isinstance(port, str) and port.startswith("io"):
         return {
             "probe": IqChannel(path=f"{slot}/o{port[2:]}"),
@@ -48,7 +47,7 @@ def _premap(cluster: dict):
     return d
 
 
-def map_ports(cluster: dict, qubits: dict, couplers: Optional[dict] = None) -> dict:
+def map_ports(cluster: dict, qubits: dict, couplers: dict | None = None) -> dict:
     """Extract channels from compact representation.
 
     Conventions:
@@ -107,7 +106,7 @@ def _digits(string: str) -> QubitId:
     return _qubit_id(res[1]) if res is not None else ""
 
 
-def _out_port(port: Union[str, int]) -> QubitId:
+def _out_port(port: str | int) -> QubitId:
     return port if isinstance(port, int) else _digits(port)
 
 

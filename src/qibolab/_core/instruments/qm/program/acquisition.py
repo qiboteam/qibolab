@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 from qm import qua
@@ -114,7 +113,7 @@ def assign_variables_to_element(element, *variables):
 class RawAcquisition(Acquisition):
     """QUA variables used for raw waveform acquisition."""
 
-    adc_stream: Optional[_ResultSource] = None
+    adc_stream: _ResultSource | None = None
     """Stream to collect raw ADC data."""
 
     def declare(self):
@@ -145,11 +144,11 @@ class RawAcquisition(Acquisition):
 class IntegratedAcquisition(Acquisition):
     """QUA variables used for integrated acquisition."""
 
-    i: Optional[_Variable] = None
-    q: Optional[_Variable] = None
+    i: _Variable | None = None
+    q: _Variable | None = None
     """Variables to save the (I, Q) values acquired from a single shot."""
-    istream: Optional[_ResultSource] = None
-    qstream: Optional[_ResultSource] = None
+    istream: _ResultSource | None = None
+    qstream: _ResultSource | None = None
     """Streams to collect the results of all shots."""
 
     def declare(self):
@@ -199,17 +198,17 @@ class ShotsAcquisition(Acquisition):
     Threshold and angle must be given in order to classify shots.
     """
 
-    threshold: Optional[float] = None
+    threshold: float | None = None
     """Threshold to be used for classification of single shots."""
-    angle: Optional[float] = None
+    angle: float | None = None
     """Angle in the IQ plane to be used for classification of single shots."""
 
-    i: Optional[_Variable] = None
-    q: Optional[_Variable] = None
+    i: _Variable | None = None
+    q: _Variable | None = None
     """Variables to save the (I, Q) values acquired from a single shot."""
-    shot: Optional[_Variable] = None
+    shot: _Variable | None = None
     """Variable for calculating an individual shots."""
-    shots: Optional[_ResultSource] = None
+    shots: _ResultSource | None = None
     """Stream to collect multiple shots."""
 
     def __post_init__(self):

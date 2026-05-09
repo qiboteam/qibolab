@@ -22,6 +22,11 @@ def seed():
     np.random.seed(42)
 
 
+@pytest.fixture(scope="session")
+def rng() -> np.random.Generator:
+    return np.random.default_rng(seed=42)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--platform",
@@ -110,9 +115,9 @@ def execute(connected_platform: Platform) -> Execution:
         acquisition_type: AcquisitionType,
         averaging_mode: AveragingMode,
         nshots: int = 1000,
-        sweepers: Optional[list[ParallelSweepers]] = None,
-        sequence: Optional[PulseSequence] = None,
-        target: Optional[int] = None,
+        sweepers: list[ParallelSweepers] | None = None,
+        sequence: PulseSequence | None = None,
+        target: int | None = None,
     ) -> npt.NDArray:
         options = dict(
             nshots=nshots,

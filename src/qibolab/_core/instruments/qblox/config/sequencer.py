@@ -1,5 +1,5 @@
 import json
-from typing import Optional, cast
+from typing import cast
 
 import numpy as np
 from pydantic import ConfigDict
@@ -24,7 +24,7 @@ from .port import PortAddress
 __all__ = []
 
 
-def _integration_length(sequence: Q1Sequence) -> Optional[int]:
+def _integration_length(sequence: Q1Sequence) -> int | None:
     """Find integration length based on sequence waveform lengths."""
     lengths = {
         line.instruction.duration
@@ -46,22 +46,22 @@ class SequencerConfig(Model):
     # static validation
     model_config = ConfigDict(frozen=False)
 
-    address: Optional[str] = None
+    address: str | None = None
     # the following attributes are automatically processed and set
-    sequence: Optional[dict] = None
-    sync_en: Optional[bool] = None
-    offset_awg_path0: Optional[float] = None
-    offset_awg_path1: Optional[float] = None
-    marker_ovr_en: Optional[bool] = None
-    marker_ovr_value: Optional[int] = None
-    integration_length_acq: Optional[int] = None
-    thresholded_acq_rotation: Optional[float] = None
-    thresholded_acq_threshold: Optional[float] = None
-    demod_en_acq: Optional[bool] = None
-    nco_freq: Optional[int] = None
-    mod_en_awg: Optional[bool] = None
-    mixer_corr_gain_ratio: Optional[float] = None
-    mixer_corr_phase_offset_degree: Optional[float] = None
+    sequence: dict | None = None
+    sync_en: bool | None = None
+    offset_awg_path0: float | None = None
+    offset_awg_path1: float | None = None
+    marker_ovr_en: bool | None = None
+    marker_ovr_value: int | None = None
+    integration_length_acq: int | None = None
+    thresholded_acq_rotation: float | None = None
+    thresholded_acq_threshold: float | None = None
+    demod_en_acq: bool | None = None
+    nco_freq: int | None = None
+    mod_en_awg: bool | None = None
+    mixer_corr_gain_ratio: float | None = None
+    mixer_corr_phase_offset_degree: float | None = None
 
     @classmethod
     def build(
@@ -72,7 +72,7 @@ class SequencerConfig(Model):
         configs: Configs,
         acquisition: AcquisitionType,
         rf: bool,
-        sequence: Optional[Q1Sequence] = None,
+        sequence: Q1Sequence | None = None,
     ) -> "SequencerConfig":
         config = configs[channel_id]
 

@@ -1,5 +1,5 @@
 from itertools import groupby
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,13 +28,13 @@ QCM_SWEEP_TO_OFFSET = 2.5 / np.sqrt(2)
 There are two different ways to add an offset to the waveform played by the QCM module:
 
 - digitally summing an offset, which could be controlled both in real-time and by
-  conifgurations
-- adding an offset directly to the outcoming signal
+  configurations
+- adding an offset directly to the outgoing signal
 
 
 Since the QCM supplies outputs at 5 Vpp (`documented as +/-2.5 V
 <https://docs.qblox.com/en/main/products/architecture/modules/qcm.html#specifications>`_),
-a conversion is neeeded, because the first option will be defined in the interval (-1,
+a conversion is needed, because the first option will be defined in the interval (-1,
 1) in the parameters (internally mapping the floats on a suitable integers range), while
 the second is directly expressed in Volt.
 Hence, the conversion factor of ``2.5``.
@@ -58,7 +58,7 @@ eventually clipping the signal and reducing the power range.
 
 class PortAddress(Model):
     slot: SlotId
-    ports: tuple[int, Optional[int]]
+    ports: tuple[int, int | None]
     input: bool = False
 
     @classmethod
@@ -130,30 +130,30 @@ class PortConfig(BaseModel):
 
     path: str = Field(exclude=True)
     # DC offset
-    offset: Optional[float] = None
+    offset: float | None = None
     # LO parameters
-    lo_en: Optional[bool] = None
-    lo_freq: Optional[int] = None
-    att: Optional[int] = None
+    lo_en: bool | None = None
+    lo_freq: int | None = None
+    att: int | None = None
     # mixer calibration
-    offset_path0: Optional[float] = None
-    offset_path1: Optional[float] = None
+    offset_path0: float | None = None
+    offset_path1: float | None = None
     # filters
-    fir_config: Optional[FilterConfig] = None
-    exp0_config: Optional[FilterConfig] = None
-    exp1_config: Optional[FilterConfig] = None
-    exp2_config: Optional[FilterConfig] = None
-    exp3_config: Optional[FilterConfig] = None
+    fir_config: FilterConfig | None = None
+    exp0_config: FilterConfig | None = None
+    exp1_config: FilterConfig | None = None
+    exp2_config: FilterConfig | None = None
+    exp3_config: FilterConfig | None = None
     ## filter coefficients
-    fir_coeffs: Optional[list[float]] = None
-    exp0_time_constant: Optional[float] = None
-    exp0_amplitude: Optional[float] = None
-    exp1_time_constant: Optional[float] = None
-    exp1_amplitude: Optional[float] = None
-    exp2_time_constant: Optional[float] = None
-    exp2_amplitude: Optional[float] = None
-    exp3_time_constant: Optional[float] = None
-    exp3_amplitude: Optional[float] = None
+    fir_coeffs: list[float] | None = None
+    exp0_time_constant: float | None = None
+    exp0_amplitude: float | None = None
+    exp1_time_constant: float | None = None
+    exp1_amplitude: float | None = None
+    exp2_time_constant: float | None = None
+    exp2_amplitude: float | None = None
+    exp3_time_constant: float | None = None
+    exp3_amplitude: float | None = None
 
     @classmethod
     def build(
@@ -162,8 +162,8 @@ class PortConfig(BaseModel):
         config: Config,
         in_: bool,
         out: bool,
-        lo: Optional[OscillatorConfig],
-        mixer: Optional[IqMixerConfig],
+        lo: OscillatorConfig | None,
+        mixer: IqMixerConfig | None,
     ) -> "PortConfig":
         """Create port configuration for the desired channel.
 
@@ -295,7 +295,7 @@ def deduplicate_configs(configs: list[tuple[str, StrDict]]) -> dict[str, StrDict
     compatible values, and raises otherwise.
     Compatible here means equal (by comparison) among values which are set. For a value
     which may appear multiple times is allowed to be unset some of them, in which case
-    is implicitly set by the other occurences (as opposed to be compatible with its
+    is implicitly set by the other occurrences (as opposed to be compatible with its
     reset value).
     """
 
