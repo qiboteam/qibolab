@@ -177,7 +177,10 @@ class KeysightQCS(Controller):
         for sequence in sequences:
             layers.append(
                 self.create_layer(
-                    sequence, configs, sweeper_channel_map, sweeper_pulse_map
+                    sequence.align_to_delays(),
+                    configs,
+                    sweeper_channel_map,
+                    sweeper_pulse_map,
                 )
             )
             for channel_id, input_op in sequence.acquisitions:
