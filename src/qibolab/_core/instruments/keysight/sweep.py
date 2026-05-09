@@ -58,8 +58,11 @@ def process_sweepers(sweepers: list[ParallelSweepers]):
                 sweeper_channel_map.update(
                     {channel_id: qcs_variable for channel_id in sweeper.channels}
                 )
+                # Offset must be software swept
+                if sweeper.parameter is Parameter.offset:
+                    hardware_sweeping = False
             elif sweeper.parameter in SUPPORTED_PULSE_SWEEPERS:
-                # Duration is not supported with hardware sweeping for non-delay pulses
+                # Duration can only be swept in hardware for delays
                 if sweeper.parameter is Parameter.duration and any(
                     [pulse.kind != "delay" for pulse in sweeper.pulses]
                 ):
