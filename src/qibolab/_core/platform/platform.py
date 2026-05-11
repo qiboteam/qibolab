@@ -279,7 +279,7 @@ class Platform:
         couplers: QubitMap | None = None,
         name: str | None = None,
     ) -> "Platform":
-        """Dump platform."""
+        """Load platform."""
         parameters = Parameters.model_validate_json((path / PARAMETERS).read_text())
         return cls(
             name=name if name is not None else path.name,
@@ -293,7 +293,7 @@ class Platform:
         """Dump platform."""
         (path / PARAMETERS).write_text(self.parameters.model_dump_json(indent=4))
 
-    def _element(self, qubit: QubitId, coupler=False) -> tuple[QubitId, Qubit]:
+    def _element(self, qubit: QubitId, coupler: bool = False) -> tuple[QubitId, Qubit]:
         elements = self.qubits if not coupler else self.couplers
         try:
             return qubit, elements[qubit]

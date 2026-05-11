@@ -70,7 +70,7 @@ class NativeContainer(Model):
     def ensure(self, name: str) -> Native:
         value = getattr(self, name)
         if value is None:
-            raise MissingNative(value)
+            raise MissingNative(name)
         return value
 
 
