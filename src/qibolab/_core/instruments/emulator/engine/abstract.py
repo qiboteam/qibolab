@@ -1,9 +1,10 @@
 """Abstract engine for platform emulation."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
+
+from scipy.interpolate import BSpline
 
 from ....serialize import Model
 
@@ -36,7 +37,7 @@ class TimeDependentOperator(Protocol):
 
     operator: Operator
     """Operator."""
-    time: Callable[[float, dict], float]
+    time: BSpline
     """Time function."""
 
 

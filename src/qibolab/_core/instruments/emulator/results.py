@@ -71,7 +71,7 @@ def _extract_probabilities(states: NDArray) -> NDArray:
     This function extracts the diagonal elements of each density matrix,
     which represent the probabilities of measurement outcomes.
 
-    Probabilities are normalized for fluctuations, taking the absolute value of diagonal elements.
+    Probabilities are normalized for fluctuations, taking the real value of diagonal elements.
 
     Examples
     --------
@@ -83,8 +83,6 @@ def _extract_probabilities(states: NDArray) -> NDArray:
 
     diag = np.einsum(
         states,
-        # TODO: the `np.array()` wrapping call is only needed because of NumPy's type
-        # annotation - in practice, it also works without
         np.array([...] + [0, 0]),
         np.array([...] + [0]),
     )
