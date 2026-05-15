@@ -51,8 +51,6 @@ class EmulatorController(Controller):
     """Sampling rate used during simulation."""
     engine: SimulationEngine = QutipEngine()
     """SimulationEngine. Default is QutipEngine."""
-    bounds: str = "emulator/bounds"
-    """Bounds for emulator."""
     save_dir: Path | None = None
     """Flag for saving the full system evolution computed from the simulation
     backend. In order to set it True modify `platform.py` file in the platform folder."""
@@ -206,7 +204,6 @@ class EmulatorController(Controller):
                     waveforms,
                     sampling_rate=self.sampling_rate,
                     times=times,
-                    interp_order=SPLINE_INTERP_ORDER,
                 ),
             ]
             for operator, waveforms in hamiltonians(
@@ -286,7 +283,6 @@ def channel_coefficients(
     waveforms: Iterable[Modulated],
     sampling_rate: int,
     times: NDArray,
-    interp_order: int = 3,
 ) -> BSpline:
     """
     Generate a B-spline interpolation of waveforms over a time evolution.
@@ -317,4 +313,4 @@ def channel_coefficients(
         cumulative_time = next_pulse_time
 
     # return pulse_waveforms
-    return make_interp_spline(times, pulse_waveforms, k=interp_order)
+    return make_interp_spline(times, pulse_waveforms, k=SPLINE_INTERP_ORDER)

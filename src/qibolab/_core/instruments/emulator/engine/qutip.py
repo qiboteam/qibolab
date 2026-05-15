@@ -55,8 +55,6 @@ class QutipEngine(SimulationEngine):
         )
         self.engine.qsave(sim_results, str(dump_dir) + f"/{STATE_FILENAME}_{count}")
 
-        return
-
     def evolve(
         self,
         hamiltonian: Operator,
@@ -71,12 +69,9 @@ class QutipEngine(SimulationEngine):
 
         time_diff = np.diff(time)
         max_step = min(min(time_diff), INTEGRATION_MAX_TIME_STEP)
-        min_step = (
-            INTEGRATION_MIN_TIME_STEP
-            if max_step > INTEGRATION_MIN_TIME_STEP
-            else max_step / 10
-        )
-        nsteps = max(time_diff) / min_step * INTEGRATION_MULTIPLIER
+        nsteps = max(time_diff) / INTEGRATION_MIN_TIME_STEP * INTEGRATION_MULTIPLIER
+        # not every SciPy solvers accepts as parameters min_step, that's why we
+        # define nsteps instead
         options = {"max_step": max_step, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
