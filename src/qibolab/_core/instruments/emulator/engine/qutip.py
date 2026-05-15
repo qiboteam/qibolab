@@ -68,11 +68,10 @@ class QutipEngine(SimulationEngine):
         """Evolve the system."""
 
         time_diff = np.diff(time)
-        max_step = min(min(time_diff), INTEGRATION_MAX_TIME_STEP)
         nsteps = max(time_diff) / INTEGRATION_MIN_TIME_STEP * INTEGRATION_MULTIPLIER
         # not every SciPy solvers accepts as parameters min_step, that's why we
         # define nsteps instead
-        options = {"max_step": max_step, "nsteps": nsteps}
+        options = {"max_step": INTEGRATION_MAX_TIME_STEP, "nsteps": nsteps}
 
         if time_hamiltonian is not None:
             hamiltonian = [hamiltonian] + time_hamiltonian.operators
