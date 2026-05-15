@@ -62,7 +62,7 @@ class QutipEngine(SimulationEngine):
         time: Iterable[float],
         time_hamiltonian: OperatorEvolution = None,
         collapse_operators: list[Operator] = None,
-        save_evolution: bool = False,
+        save_evolution: Path | None = None,
         **kwargs,
     ):
         """Evolve the system."""
