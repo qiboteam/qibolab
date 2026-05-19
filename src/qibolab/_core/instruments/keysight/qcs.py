@@ -181,9 +181,10 @@ class KeysightQCS(Controller):
                 acquisition_map[channel].append(input_op)
                 # Add time of flight
                 time_of_flight = configs[channel_id].delay
-                self.qcs_channel_map.get_physical_channels(channel)[
-                    0
-                ].settings.delay.value = time_of_flight * nano
+                if time_of_flight != 0:
+                    self.qcs_channel_map.get_physical_channels(channel)[
+                        0
+                    ].settings.delay.value = time_of_flight * nano
 
             # Pad relaxation time delay after each sequence
             if sequence != sequences[-1]:
