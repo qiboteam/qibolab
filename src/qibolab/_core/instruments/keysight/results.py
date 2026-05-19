@@ -33,9 +33,7 @@ def fetch_result(
     elif acquisition_type is AcquisitionType.INTEGRATION:
         raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
-        # As of QCS 2.6.4, get_classified does not work for averaging=True, this will be handled by parse_result
-        # TODO: Remove this after Keysight patches it
-        raw = results.get_classified(channel, False, acq_index=None)
+        raw = results.get_classified(channel, averaging, acq_index=None)
     else:
         raise ValueError("Acquisition type unrecognized")
     return raw
@@ -63,17 +61,9 @@ def parse_result(
         # Qibolab expects the shape of nshots x sweepers
         result = np.moveaxis(result, singleshot_dim, 0)
 
-    # If the state discrimination is expected, we can directly return the result or average it in software
+    # If state discrimination is requested, no further processing is required
     if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-        if options.averaging_mode is not AveragingMode.SINGLESHOT:
-            # TODO: Refactor this after Keysight patches it
-            return (
-                np.average(result, axis=0)
-                if singleshot_dim is None
-                else np.average(result, axis=singleshot_dim)
-            )
-        else:
-            return result
+        return result
 
     # Else, the IQ integrated result is expected
     # Current result dtype is complex, and we need to unwrap it into the I and Q components
