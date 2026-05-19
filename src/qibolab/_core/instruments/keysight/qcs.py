@@ -64,10 +64,7 @@ class KeysightQCS(Controller):
             offset (float | qcs.Scalar): Channel DC offset.
         """
         physical_channel = self.backend.channel_mapper.get_physical_channels(channel)[0]
-        if isinstance(offset, qcs.Scalar):
-            physical_channel.settings.constrain("offset", offset)
-        else:
-            physical_channel.settings.offset.value = offset
+        self.backend.set_bb_dc_offset(physical_channel.address, offset)
 
     def create_layer(
         self,
@@ -152,11 +149,6 @@ class KeysightQCS(Controller):
         )
 
         # Configure channel offsets
-        dc_offset_layer = qcs.Layer()
-        empty_pulse = qcs.DCWaveform(
-            duration=20e-9, amplitude=0, envelope=qcs.ConstantEnvelope()
-        )
-
         for virtual_channel_id in self.offset_channels:
             offset = sweeper_channel_map.get(
                 virtual_channel_id, configs[virtual_channel_id].offset
@@ -164,16 +156,13 @@ class KeysightQCS(Controller):
 
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
             self.configure_offset(virtual_channel, offset)
-            # FIXME: Currently we cannot have empty operations such as delays on channels
-            # So we need a zero-amplitude pulse to activate the channel and its offset
-            dc_offset_layer.insert(target=virtual_channel, operations=empty_pulse)
 
         acquisition_map: defaultdict[qcs.Channels, list[InputOps]] = defaultdict(list)
         # For each sequence, we assign it to a layer
         # Each layer indicates a sequence of pulses/operations that are synchronized to start at the same time
         # The program will perform all channel operations in a layer before progressing to the next layer
 
-        layers = [dc_offset_layer]
+        layers = []
         for sequence in sequences:
             layers.append(
                 self.create_layer(
