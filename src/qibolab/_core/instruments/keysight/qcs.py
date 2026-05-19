@@ -128,8 +128,12 @@ class KeysightQCS(Controller):
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
     ) -> dict[int, Result]:
+        # Set shot-to-shot delay
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
+        # Set averaging mode to speed up execution if necessary
+        averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
+        self.backend._publish_every_shot = not averaging
 
         (
             hardware_sweepers,
@@ -203,7 +207,6 @@ class KeysightQCS(Controller):
         time.sleep(0.2)
 
         ret: dict[PulseId, np.ndarray] = {}
-        averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
         singleshot_dim = len(software_sweepers) if len(software_sweepers) > 0 else None
 
         for channel, input_ops in acquisition_map.items():
