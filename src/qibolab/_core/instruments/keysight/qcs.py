@@ -27,8 +27,30 @@ from .sweep import process_sweepers
 
 __all__ = ["KeysightQCS"]
 
+NUM_OP_LIMIT = 10_000
+MIN_BATCHING = 5
 
-def sweeper_reducer(
+
+def _custom_batching(sequences: list[PulseSequence]):
+    """Helper method to split sequences into smaller subsequences"""
+    subsequence: list[PulseSequence] = []
+    num_operations = 0
+    for seq in sequences:
+        subsequence.append(seq)
+        num_operations += len(seq)
+
+        # If the total number of operations exceeds NUM_OP_LIMIT, the current batch is yielded
+        # This is ignored if the number of sequences in the current batch has not reached MIN_BATCHING
+        if (
+            num_operations > NUM_OP_LIMIT and len(subsequence) > MIN_BATCHING
+        ) or seq == sequences[-1]:
+            yield subsequence
+            # Reset the batch of sequences
+            subsequence = []
+            num_operations = 0
+
+
+def _sweeper_reducer(
     program: qcs.Program, sweepers: tuple[list[qcs.Array], list[qcs.Scalar]]
 ):
     """Helper method to unpack the QCS sweep parameters when processing sweepers."""
@@ -130,7 +152,22 @@ class KeysightQCS(Controller):
         sequences: list[PulseSequence],
         options: ExecutionParameters,
         sweepers: list[ParallelSweepers],
-    ) -> dict[int, Result]:
+    ) -> dict[PulseId, Result]:
+        if len(sequences) == 1:
+            return self._play(configs, sequences, options, sweepers)
+        ret = {}
+        for subseq in _custom_batching(sequences):
+            ret.update(self._play(configs, subseq, options, sweepers))
+        return ret
+
+    def _play(
+        self,
+        configs: dict[str, Config],
+        sequences: list[PulseSequence],
+        options: ExecutionParameters,
+        sweepers: list[ParallelSweepers],
+    ) -> dict[PulseId, Result]:
+        # Set shot-to-shot delay time
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
 
@@ -144,9 +181,9 @@ class KeysightQCS(Controller):
         # It is essential that we match the original sweeper order to the modified sweeper order
         # to reconcile the results at the end
         program = reduce(
-            sweeper_reducer,
+            _sweeper_reducer,
             software_sweepers,
-            reduce(sweeper_reducer, hardware_sweepers, qcs.Program()).n_shots(
+            reduce(_sweeper_reducer, hardware_sweepers, qcs.Program()).n_shots(
                 options.nshots
             ),
         )
