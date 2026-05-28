@@ -33,7 +33,10 @@ def fetch_result(
     elif acquisition_type is AcquisitionType.INTEGRATION:
         raw = results.get_iq(channel, averaging, acq_index=None)
     elif acquisition_type is AcquisitionType.DISCRIMINATION:
-        raw = results.get_classified(channel, averaging, acq_index=None)
+        if averaging:
+            raw = results.get_qubit_state_counts(channel, acq_index=None)
+        else:
+            raw = results.get_classified(channel, acq_index=None)
     else:
         raise ValueError("Acquisition type unrecognized")
     return raw
@@ -61,10 +64,24 @@ def parse_result(
         # Qibolab expects the shape of nshots x sweepers
         result = np.moveaxis(result, singleshot_dim, 0)
 
-    # If state discrimination is requested, no further processing is required
-    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
-        return result
+    # IQ data
+    if options.acquisition_type is AcquisitionType.INTEGRATION:
+        # Current result dtype is complex, and we need to unwrap it into the I and Q components
+        return np.stack([np.real(result), np.imag(result)], axis=-1)
 
-    # Else, the IQ integrated result is expected
-    # Current result dtype is complex, and we need to unwrap it into the I and Q components
-    return np.stack([np.real(result), np.imag(result)], axis=-1)
+    # Qubit state data
+    if options.acquisition_type is AcquisitionType.DISCRIMINATION:
+        # If no averaging was requested, we can pass the data as-is
+        if options.averaging_mode is AveragingMode.SINGLESHOT:
+            return result
+        # Otherwise, the data is in the form of state counts
+        else:
+            if result.shape == (2,):
+                # If there are no sweepers, we can just average directly
+                return result[1] / sum(result)
+            else:
+                # If there are sweepers, the shape is (sweepers x state_count_dim)
+                # We average over the last dimension to get the excited state probability
+                return result[..., 1] / np.sum(result, axis=-1)
+
+    return result
