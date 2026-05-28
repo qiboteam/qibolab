@@ -27,6 +27,8 @@ from .sweep import process_sweepers
 
 __all__ = ["KeysightQCS"]
 
+RAMP_RATE = 1  # 1V/s
+
 
 def sweeper_reducer(
     program: qcs.Program, sweepers: tuple[list[qcs.Array], list[qcs.Scalar]]
@@ -56,7 +58,7 @@ class KeysightQCS(Controller):
         )
         self.backend.is_system_ready()
 
-    def configure_offset(self, channel: qcs.Channels, offset: float | qcs.Scalar):
+    def configure_offset(self, channel: qcs.Channels, offset: float):
         """Configures the DC offset of a given Keysight channel object.
 
         Arguments:
@@ -64,7 +66,9 @@ class KeysightQCS(Controller):
             offset (float | qcs.Scalar): Channel DC offset.
         """
         physical_channel = self.backend.channel_mapper.get_physical_channels(channel)[0]
-        self.backend.set_bb_dc_offset(physical_channel.address, offset)
+        self.backend.set_bb_dc_offset(
+            physical_channel.address, offset, ramping_rate=RAMP_RATE
+        )
 
     def create_layer(
         self,
@@ -131,7 +135,7 @@ class KeysightQCS(Controller):
         # Set shot-to-shot delay
         if options.relaxation_time is not None:
             self.backend._init_time = int(options.relaxation_time)
-        # Set averaging mode to speed up execution if necessary
+        # Set hardware averaging to speed up result retrival
         averaging = options.averaging_mode is not AveragingMode.SINGLESHOT
         self.backend._publish_every_shot = not averaging
 
@@ -140,10 +144,10 @@ class KeysightQCS(Controller):
             software_sweepers,
             sweeper_channel_map,
             sweeper_pulse_map,
-        ) = process_sweepers(sweepers)
-        # Here we are telling the program to run hardware sweepers first, then software sweepers
-        # It is essential that we match the original sweeper order to the modified sweeper order
-        # to reconcile the results at the end
+        ) = process_sweepers(sweepers, self.virtual_channel_map)
+        # Here we are telling the instrument to run hardware sweepers first, then software sweepers
+        # The order of sweeping is determined by the argument order and no re-arrangement is performed
+        # @see process_sweepers for hardware/software sweeping decision logic
         program = reduce(
             sweeper_reducer,
             software_sweepers,
@@ -154,10 +158,7 @@ class KeysightQCS(Controller):
 
         # Configure channel offsets
         for virtual_channel_id in self.offset_channels:
-            offset = sweeper_channel_map.get(
-                virtual_channel_id, configs[virtual_channel_id].offset
-            )
-
+            offset = configs[virtual_channel_id].offset
             virtual_channel = self.virtual_channel_map.get(virtual_channel_id)
             self.configure_offset(virtual_channel, offset)
 
